@@ -520,7 +520,7 @@ const TeamManagementPage: React.FC = () => {
           <p className="text-xs text-gray-500 mt-1">Ajuste os filtros de pesquisa ou adicione um novo membro.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
           {filteredProfiles.map((person) => {
             const age = calculateAge(person.birth_date)
 
@@ -532,76 +532,74 @@ const TeamManagementPage: React.FC = () => {
                   person.status === 'injured' ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-200'
                 }`}
               >
-                <div className="p-3.5 space-y-2.5">
+                <div className="p-2.5 sm:p-3.5 space-y-2 sm:space-y-2.5">
                   {/* Top Bar: Number, Positions Badge, Status Badge */}
-                  <div className="flex justify-between items-center gap-1.5">
-                    <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="flex justify-between items-center gap-1">
+                    <div className="flex items-center gap-1 min-w-0">
                       {person.jersey_number ? (
-                        <span className="w-6 h-6 rounded-md bg-csc-dark text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                        <span className="w-5 h-5 sm:w-6 sm:h-6 rounded bg-csc-dark text-white flex items-center justify-center font-black text-[10px] sm:text-xs shrink-0 shadow-2xs">
                           {person.jersey_number}
                         </span>
                       ) : (
-                        <span className="w-6 h-6 rounded-md bg-gray-100 text-gray-400 flex items-center justify-center font-bold text-[10px] shrink-0">
+                        <span className="w-5 h-5 sm:w-6 sm:h-6 rounded bg-gray-100 text-gray-400 flex items-center justify-center font-bold text-[9px] sm:text-[10px] shrink-0">
                           -
                         </span>
                       )}
                       <div className="flex flex-wrap gap-1 items-center truncate">
-                        {parsePositions(person.position).slice(0, 2).map((pos, idx) => (
+                        {parsePositions(person.position).slice(0, 1).map((pos, idx) => (
                           <span 
                             key={idx}
-                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded border truncate ${
-                              idx === 0 ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-gray-50 text-gray-700 border-gray-200'
-                            }`}
+                            className="text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 rounded border bg-amber-50 text-amber-900 border-amber-200 truncate max-w-[65px] sm:max-w-none"
                           >
                             {pos}
                           </span>
                         ))}
-                        {parsePositions(person.position).length > 2 && (
-                          <span className="text-[9px] text-gray-400 font-bold">
-                            +{parsePositions(person.position).length - 2}
+                        {parsePositions(person.position).length > 1 && (
+                          <span className="text-[8px] sm:text-[9px] text-gray-400 font-bold">
+                            +{parsePositions(person.position).length - 1}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shrink-0 ${
+                    <span className={`text-[8px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-0.5 sm:gap-1 shrink-0 ${
                       person.status === 'active' ? 'bg-green-100 text-green-800' :
                       person.status === 'injured' ? 'bg-red-100 text-red-800 animate-pulse' :
                       'bg-gray-100 text-gray-600'
                     }`}>
-                      {person.status === 'active' ? <CheckCircle2 size={10}/> :
-                       person.status === 'injured' ? <HeartPulse size={10}/> :
-                       <XCircle size={10}/>}
-                      {person.status === 'active' ? 'Ativo' :
-                       person.status === 'injured' ? 'Lesionado' : 'Inativo'}
+                      {person.status === 'active' ? <CheckCircle2 size={9}/> :
+                       person.status === 'injured' ? <HeartPulse size={9}/> :
+                       <XCircle size={9}/>}
+                      <span className="hidden xs:inline">{person.status === 'active' ? 'Ativo' : person.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
+                      <span className="xs:hidden">{person.status === 'active' ? 'OK' : person.status === 'injured' ? 'Les.' : 'Inat.'}</span>
                     </span>
                   </div>
 
                   {/* Player Main Info: Photo + Name with embedded Nickname + Role Badges */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     {person.photo_url ? (
                       <img
                         src={person.photo_url}
                         alt={person.name}
-                        className="w-11 h-11 rounded-full object-cover border border-csc-dark/20 shadow-2xs shrink-0"
+                        className="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover border border-csc-dark/20 shadow-2xs shrink-0"
                       />
                     ) : (
-                      <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-csc-dark to-csc-light/60 text-white flex items-center justify-center font-black text-base shadow-2xs shrink-0">
+                      <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-csc-dark to-csc-light/60 text-white flex items-center justify-center font-black text-xs sm:text-base shadow-2xs shrink-0">
                         {person.name.charAt(0).toUpperCase()}
                       </div>
                     )}
                     
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-extrabold text-gray-900 text-sm leading-snug truncate group-hover:text-csc-dark transition-colors">
+                      <h3 className="font-extrabold text-gray-900 text-xs sm:text-sm leading-snug truncate group-hover:text-csc-dark transition-colors">
                         {formatDisplayName(person.name, person.nickname)}
                       </h3>
                       
                       {/* Role Badges */}
-                      <div className="flex flex-wrap gap-1 mt-1">
+                      <div className="flex flex-wrap gap-0.5 sm:gap-1 mt-0.5 sm:mt-1">
                         {extractRolesFromProfile(person).map((r) => (
                           <span
                             key={r}
-                            className={`text-[8.5px] font-black px-1.5 py-0.2 rounded border ${
+                            className={`text-[7.5px] sm:text-[8.5px] font-black px-1 sm:px-1.5 py-0.2 rounded border ${
                               r === 'admin'
                                 ? 'bg-csc-gold text-csc-dark border-amber-300'
                                 : r === 'coach'
@@ -609,14 +607,14 @@ const TeamManagementPage: React.FC = () => {
                                 : 'bg-emerald-700 text-white border-emerald-800'
                             }`}
                           >
-                            {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
+                            {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Trein.' : '⚽ Jog.'}
                           </span>
                         ))}
                       </div>
 
                       {person.member_number && (
-                        <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5 truncate">
-                          Sócio nº {person.member_number} {age ? `• ${age} anos` : ''}
+                        <p className="text-[8.5px] sm:text-[9.5px] text-gray-400 font-semibold mt-0.5 truncate">
+                          Sócio nº {person.member_number} {age ? `• ${age}a` : ''}
                         </p>
                       )}
                     </div>
@@ -624,16 +622,16 @@ const TeamManagementPage: React.FC = () => {
 
                   {/* Informação de Contacto (Estática, não acionável) */}
                   {(person.phone || person.email) && (
-                    <div className="pt-2 border-t border-gray-100 space-y-1 text-[11px] text-gray-500">
+                    <div className="pt-1.5 sm:pt-2 border-t border-gray-100 space-y-0.5 sm:space-y-1 text-[10px] sm:text-[11px] text-gray-500">
                       {person.phone && (
-                        <div className="flex items-center gap-1.5 truncate">
-                          <Phone size={11} className="text-gray-400 shrink-0" />
+                        <div className="flex items-center gap-1 sm:gap-1.5 truncate">
+                          <Phone size={10} className="text-gray-400 shrink-0" />
                           <span className="truncate">{person.phone}</span>
                         </div>
                       )}
                       {person.email && (
-                        <div className="flex items-center gap-1.5 truncate">
-                          <Mail size={11} className="text-gray-400 shrink-0" />
+                        <div className="flex items-center gap-1 sm:gap-1.5 truncate">
+                          <Mail size={10} className="text-gray-400 shrink-0" />
                           <span className="truncate">{person.email}</span>
                         </div>
                       )}
@@ -642,13 +640,13 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* Card Footer */}
-                <div className="bg-gray-50/90 px-3 py-2 border-t border-gray-100 flex items-center justify-between text-xs">
-                  <span className="text-[11px] font-bold text-gray-400 group-hover:text-csc-dark transition-colors">
-                    Ver Ficha →
+                <div className="bg-gray-50/90 px-2.5 py-1.5 sm:px-3 sm:py-2 border-t border-gray-100 flex items-center justify-between text-xs">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 group-hover:text-csc-dark transition-colors">
+                    Ficha →
                   </span>
 
                   {isCoachOrAdmin && (
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-0.5 sm:gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -658,7 +656,7 @@ const TeamManagementPage: React.FC = () => {
                         className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50 transition-colors"
                         title="Associar a Utilizador Registado"
                       >
-                        <Link2 size={14} />
+                        <Link2 size={13} />
                       </button>
 
                       <button
@@ -670,7 +668,7 @@ const TeamManagementPage: React.FC = () => {
                         className="p-1 text-gray-500 hover:text-csc-dark rounded hover:bg-white transition-colors"
                         title="Editar Ficha"
                       >
-                        <Edit2 size={14} />
+                        <Edit2 size={13} />
                       </button>
 
                       {isAdmin && (
@@ -683,7 +681,7 @@ const TeamManagementPage: React.FC = () => {
                           className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-white transition-colors"
                           title="Eliminar Membro"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={13} />
                         </button>
                       )}
                     </div>
