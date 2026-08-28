@@ -37,37 +37,37 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-150 flex flex-col md:flex-row">
       {/* Mobile Header */}
-      <div className="bg-blue-900 text-white flex items-center justify-between p-3 md:hidden border-b-2 border-gray-800">
+      <div className="bg-csc-dark text-white flex items-center justify-between p-3 md:hidden border-b-2 border-csc-light/20">
         <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-12 object-contain" />
         <div className="flex items-center gap-3">
-          <Link to="/settings" className="text-blue-200 hover:text-white transition-colors" title="Definições">
+          <Link to="/settings" className="text-gray-300 hover:text-white transition-colors" title="Definições">
             <Settings size={20} />
           </Link>
-          <span className="text-xs bg-blue-800 px-2 py-0.5 rounded capitalize font-bold">
+          <span className="text-xs bg-csc-light px-2 py-0.5 rounded capitalize font-bold">
             {profile?.role === 'admin' ? 'Admin' : profile?.role === 'coach' ? 'Treinador' : 'Jogador'}
           </span>
         </div>
       </div>
 
       {/* Desktop Sidebar Navigation */}
-      <aside className="bg-blue-900 text-white w-64 flex-shrink-0 flex-col justify-between hidden md:flex border-r-2 border-gray-800">
+      <aside className="bg-csc-dark text-white w-64 flex-shrink-0 flex-col justify-between hidden md:flex border-r-2 border-csc-light/20">
         <div className="p-6">
-          <div className="border-b border-blue-800 pb-4 mb-6">
+          <div className="border-b border-csc-light/30 pb-4 mb-6">
             <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-16 w-full object-contain" />
           </div>
           
           {profile && (
-            <div className="flex items-center space-x-3 mb-6 bg-blue-950 p-3 rounded-xl border border-blue-800">
+            <div className="flex items-center space-x-3 mb-6 bg-black/20 p-3 rounded-xl border border-csc-light/30">
               {profile.photo_url ? (
                 <img src={profile.photo_url} alt="Profile" className="w-10 h-10 rounded-full object-cover" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-full bg-csc-light flex items-center justify-center font-bold">
                   {profile.name.charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="overflow-hidden">
                 <p className="font-semibold truncate text-sm">{profile.name}</p>
-                <span className="text-[10px] bg-blue-800 px-2 py-0.5 rounded capitalize font-bold">
+                <span className="text-[10px] bg-csc-light px-2 py-0.5 rounded capitalize font-bold">
                   {profile.role === 'admin' ? 'Administrador' : profile.role === 'coach' ? 'Treinador' : 'Jogador'}
                 </span>
               </div>
@@ -84,7 +84,7 @@ const Layout: React.FC = () => {
                   to={item.path}
                   className={`
                     flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors font-bold text-sm
-                    ${isActive ? 'bg-blue-800 text-white border-2 border-gray-800' : 'text-blue-200 hover:bg-blue-850 hover:text-white'}
+                    ${isActive ? 'bg-csc-light text-white shadow-md' : 'text-gray-300 hover:bg-csc-light/40 hover:text-white'}
                   `}
                 >
                   <Icon size={18} />
@@ -95,10 +95,10 @@ const Layout: React.FC = () => {
           </nav>
         </div>
 
-        <div className="p-6 border-t border-blue-800">
+        <div className="p-6 border-t border-csc-light/30">
           <button
             onClick={() => signOut()}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-300 hover:bg-blue-800 hover:text-red-150 transition-colors font-bold text-sm"
+            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-300 hover:bg-black/20 hover:text-red-400 transition-colors font-bold text-sm"
           >
             <LogOut size={18} />
             <span>Sair da Conta</span>
@@ -112,12 +112,12 @@ const Layout: React.FC = () => {
       </main>
 
       {/* Mobile Bottom Navigation (Home, Agenda, Dashboards, Quotas, Contactos, Eventos) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-800 px-1 py-2 flex justify-around items-center md:hidden z-40 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 bg-csc-dark border-t-2 border-csc-light/20 px-1 py-2 flex justify-around items-center md:hidden z-40 shadow-lg">
         {/* Home */}
         <Link 
           to="/" 
           className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
-            ${location.pathname === '/' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
+            ${location.pathname === '/' ? 'text-csc-gold bg-csc-light/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'}
           `}
         >
           <Home size={20} />
@@ -128,7 +128,7 @@ const Layout: React.FC = () => {
         <Link 
           to="/calendar" 
           className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
-            ${location.pathname === '/calendar' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
+            ${location.pathname === '/calendar' ? 'text-csc-gold bg-csc-light/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'}
           `}
         >
           <Calendar size={20} />
@@ -139,7 +139,7 @@ const Layout: React.FC = () => {
         <Link 
           to="/stats" 
           className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
-            ${location.pathname === '/stats' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
+            ${location.pathname === '/stats' ? 'text-csc-gold bg-csc-light/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'}
           `}
         >
           <BarChart3 size={20} />
@@ -150,7 +150,7 @@ const Layout: React.FC = () => {
         <Link 
           to={profile?.role === 'admin' ? '/finance' : '/settings'} 
           className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
-            ${location.pathname === '/finance' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
+            ${location.pathname === '/finance' ? 'text-csc-gold bg-csc-light/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'}
           `}
         >
           <Landmark size={20} />
@@ -161,7 +161,7 @@ const Layout: React.FC = () => {
         <Link 
           to="/team-management" 
           className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
-            ${location.pathname === '/team-management' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
+            ${location.pathname === '/team-management' ? 'text-csc-gold bg-csc-light/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'}
           `}
         >
           <Users size={20} />
@@ -173,7 +173,7 @@ const Layout: React.FC = () => {
           <Link 
             to="/events" 
             className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
-              ${location.pathname === '/events' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
+              ${location.pathname === '/events' ? 'text-csc-gold bg-csc-light/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'}
             `}
           >
             <PlusCircle size={20} />

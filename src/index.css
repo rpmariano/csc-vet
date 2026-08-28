@@ -1,8 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --color-csc-dark: #164f16;
+  --color-csc-light: #009662;
+  --color-csc-gold: #e3c04d;
+  --color-csc-blue: #005296;
+  --color-csc-red: #ef3223;
+  --color-csc-black: #3c3008;
+
+  --font-sans: "Helvetica", "Arial", sans-serif;
+  --font-display: "Montserrat", "Helvetica", sans-serif;
+}
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-sans);
   background-color: #f3f4f6;
   color: #1f2937;
 }
