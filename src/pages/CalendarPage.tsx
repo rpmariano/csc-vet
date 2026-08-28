@@ -120,6 +120,13 @@ const CalendarPage: React.FC = () => {
     }
   }, [dateTime])
 
+  // Desativar recorrência em convívios
+  useEffect(() => {
+    if (type === 'gathering') {
+      setIsRecurring(false)
+    }
+  }, [type])
+
   const calculateRecurringDates = (startIsoString: string, endDayString: string, weekdays: number[]) => {
     if (!startIsoString || !endDayString || weekdays.length === 0) return []
     const start = new Date(startIsoString)
@@ -1686,100 +1693,102 @@ const CalendarPage: React.FC = () => {
                 />
               </div>
 
-              {/* SELEÇÃO DE RECORRÊNCIA (Repetição Semanal) */}
-              <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={isRecurring}
-                      onChange={(e) => setIsRecurring(e.target.checked)}
-                      className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
-                    />
-                    <span className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                      <Repeat size={16} className="text-csc-gold" />
-                      <span>Marcar com Recorrência Semanal</span>
-                    </span>
-                  </label>
+              {/* SELEÇÃO DE RECORRÊNCIA (Apenas para Jogos e Treinos) */}
+              {type !== 'gathering' && (
+                <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={isRecurring}
+                        onChange={(e) => setIsRecurring(e.target.checked)}
+                        className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
+                      />
+                      <span className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                        <Repeat size={16} className="text-csc-gold" />
+                        <span>Marcar {type === 'practice' ? 'Treino' : 'Jogo'} com Recorrência Semanal</span>
+                      </span>
+                    </label>
+                    {isRecurring && (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-csc-gold text-csc-dark shadow-2xs">
+                        Recorrência Ativa
+                      </span>
+                    )}
+                  </div>
+
                   {isRecurring && (
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-csc-gold text-csc-dark shadow-2xs">
-                      Recorrência Ativa
-                    </span>
+                    <div className="pt-2 space-y-3 border-t border-amber-200/60 text-xs">
+                      {/* Dias da Semana */}
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-1.5">
+                          Dias da semana em que se realiza o evento:
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            { label: 'Seg', val: 1 },
+                            { label: 'Ter', val: 2 },
+                            { label: 'Qua', val: 3 },
+                            { label: 'Qui', val: 4 },
+                            { label: 'Sex', val: 5 },
+                            { label: 'Sáb', val: 6 },
+                            { label: 'Dom', val: 0 }
+                          ].map(d => {
+                            const isChecked = recurrenceWeekdays.includes(d.val)
+                            return (
+                              <button
+                                key={d.val}
+                                type="button"
+                                onClick={() => {
+                                  setRecurrenceWeekdays(prev => 
+                                    prev.includes(d.val) 
+                                      ? prev.filter(v => v !== d.val) 
+                                      : [...prev, d.val]
+                                  )
+                                }}
+                                className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                                  isChecked 
+                                    ? 'bg-csc-dark text-white shadow-xs font-black' 
+                                    : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                                }`}
+                              >
+                                {d.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Data Limite da Recorrência */}
+                      <div>
+                        <label className="block font-bold text-gray-700 mb-1">
+                          Repetir até à data (Data Final) *
+                        </label>
+                        <input
+                          type="date"
+                          required={isRecurring}
+                          value={recurrenceEndDate}
+                          min={dateTime ? dateTime.split('T')[0] : undefined}
+                          onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                          className="w-full sm:w-60 px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                        />
+                      </div>
+
+                      {/* Contador e Pré-visualização em tempo real */}
+                      {dateTime && recurrenceEndDate && recurrenceWeekdays.length > 0 && (() => {
+                        const generated = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
+                        return (
+                          <div className="p-2.5 bg-white border border-amber-200 rounded-lg font-medium text-amber-950 flex items-center gap-2">
+                            <CalendarRange size={16} className="text-csc-gold shrink-0" />
+                            <span>
+                              ✨ Serão criados <strong>{generated.length} eventos</strong> entre {new Date(dateTime).toLocaleDateString('pt-PT')} e {new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}.
+                            </span>
+                          </div>
+                        )
+                      })()}
+                    </div>
                   )}
                 </div>
-
-                {isRecurring && (
-                  <div className="pt-2 space-y-3 border-t border-amber-200/60 text-xs">
-                    {/* Dias da Semana */}
-                    <div>
-                      <label className="block font-bold text-gray-700 mb-1.5">
-                        Dias da semana em que se realiza o evento:
-                      </label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[
-                          { label: 'Seg', val: 1 },
-                          { label: 'Ter', val: 2 },
-                          { label: 'Qua', val: 3 },
-                          { label: 'Qui', val: 4 },
-                          { label: 'Sex', val: 5 },
-                          { label: 'Sáb', val: 6 },
-                          { label: 'Dom', val: 0 }
-                        ].map(d => {
-                          const isChecked = recurrenceWeekdays.includes(d.val)
-                          return (
-                            <button
-                              key={d.val}
-                              type="button"
-                              onClick={() => {
-                                setRecurrenceWeekdays(prev => 
-                                  prev.includes(d.val) 
-                                    ? prev.filter(v => v !== d.val) 
-                                    : [...prev, d.val]
-                                )
-                              }}
-                              className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
-                                isChecked 
-                                  ? 'bg-csc-dark text-white shadow-xs font-black' 
-                                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-                              }`}
-                            >
-                              {d.label}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Data Limite da Recorrência */}
-                    <div>
-                      <label className="block font-bold text-gray-700 mb-1">
-                        Repetir até à data (Data Final) *
-                      </label>
-                      <input
-                        type="date"
-                        required={isRecurring}
-                        value={recurrenceEndDate}
-                        min={dateTime ? dateTime.split('T')[0] : undefined}
-                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                        className="w-full sm:w-60 px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
-                      />
-                    </div>
-
-                    {/* Contador e Pré-visualização em tempo real */}
-                    {dateTime && recurrenceEndDate && recurrenceWeekdays.length > 0 && (() => {
-                      const generated = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
-                      return (
-                        <div className="p-2.5 bg-white border border-amber-200 rounded-lg font-medium text-amber-950 flex items-center gap-2">
-                          <CalendarRange size={16} className="text-csc-gold shrink-0" />
-                          <span>
-                            ✨ Serão criados <strong>{generated.length} eventos</strong> entre {new Date(dateTime).toLocaleDateString('pt-PT')} e {new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}.
-                          </span>
-                        </div>
-                      )
-                    })()}
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* SELEÇÃO DE JOGADORES (CONVOCATÓRIA) */}
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
