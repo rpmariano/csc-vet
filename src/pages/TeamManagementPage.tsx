@@ -101,6 +101,35 @@ const TeamManagementPage: React.FC = () => {
   const isCoachOrAdmin = currentUserProfile && ['coach', 'admin'].includes(currentUserProfile.role)
   const isAdmin = currentUserProfile?.role === 'admin'
 
+  const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
+    const emailMap = new Map<string, Profile>()
+
+    // 1. Iniciar com todos os 31 atletas do plantel (dados do PDF)
+    INITIAL_PLAYERS_DATA.forEach((seedPlayer, idx) => {
+      const emailKey = (seedPlayer.email || `player-${idx}@csc.pt`).toLowerCase().trim()
+      emailMap.set(emailKey, {
+        ...seedPlayer,
+        id: `seed-${idx}`,
+      } as Profile)
+    })
+
+    // 2. Sobrepor perfis do Supabase (que têm UUIDs reais, fotos carregadas e edições mais recentes)
+    remoteProfiles.forEach((remotePlayer) => {
+      if (remotePlayer.email) {
+        const emailKey = remotePlayer.email.toLowerCase().trim()
+        const existing = emailMap.get(emailKey)
+        emailMap.set(emailKey, {
+          ...(existing || {}),
+          ...remotePlayer,
+        })
+      } else {
+        emailMap.set(remotePlayer.id, remotePlayer)
+      }
+    })
+
+    return Array.from(emailMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  }
+
   const fetchProfiles = async () => {
     setLoading(true)
     try {
@@ -109,39 +138,51 @@ const TeamManagementPage: React.FC = () => {
         .select('*')
         .order('name', { ascending: true })
 
-      if (error) throw error
-      if (data && data.length > 0) {
-        setProfiles(data as Profile[])
-      } else {
-        // Fallback to initial player list if DB is empty
-        setProfiles(INITIAL_PLAYERS_DATA.map((p, idx) => ({ ...p, id: `seed-${idx}` })) as Profile[])
+      if (error) {
+        console.warn('Supabase query error, fallback to merged dataset:', error)
       }
+      setProfiles(mergeProfilesWithSeedData((data as Profile[]) || []))
     } catch (err) {
       console.error(err)
-      setProfiles(INITIAL_PLAYERS_DATA.map((p, idx) => ({ ...p, id: `seed-${idx}` })) as Profile[])
+      setProfiles(mergeProfilesWithSeedData([]))
     } finally {
       setLoading(false)
     }
   }
 
   const handleSyncInitialPlayers = async () => {
-    if (!confirm('Deseja migrar e sincronizar todos os 31 atletas do PDF para a base de dados Supabase?')) return
+    if (!confirm('Deseja sincronizar e gravar todos os 31 atletas do PDF na base de dados Supabase?')) return
     setIsSyncingInitialData(true)
     try {
-      let count = 0
+      // 1. Obter registos existentes por email para evitar conflitos
+      const { data: existingData } = await supabase.from('profiles').select('id, email')
+      const existingByEmail = new Map(
+        (existingData || [])
+          .filter(p => !!p.email)
+          .map(p => [p.email.toLowerCase().trim(), p.id])
+      )
+
+      let countSuccess = 0
       for (const p of INITIAL_PLAYERS_DATA) {
-        const { error } = await supabase
-          .from('profiles')
-          .upsert({
-            ...p,
-            medical_notes: encodeRolesToNotes(p.medical_notes, [p.role || 'player']),
-          }, { onConflict: 'email' })
-        if (!error) count++
+        const emailKey = p.email.toLowerCase().trim()
+        const payload = {
+          ...p,
+          medical_notes: encodeRolesToNotes(p.medical_notes, [p.role || 'player']),
+        }
+        const existingId = existingByEmail.get(emailKey)
+        if (existingId) {
+          const { error } = await supabase.from('profiles').update(payload).eq('id', existingId)
+          if (!error) countSuccess++
+        } else {
+          const { error } = await supabase.from('profiles').insert([payload])
+          if (!error) countSuccess++
+        }
       }
-      alert(`Migração concluída com sucesso! ${count} atletas processados.`)
+
+      alert(`Sincronização concluída com sucesso! ${countSuccess} atletas processados na base de dados.`)
       await fetchProfiles()
     } catch (err: any) {
-      alert('Erro na migração: ' + (err.message || 'Verifique a base de dados'))
+      alert('Erro na sincronização: ' + (err.message || 'Verifique a base de dados'))
     } finally {
       setIsSyncingInitialData(false)
     }
@@ -337,7 +378,7 @@ const TeamManagementPage: React.FC = () => {
     }
 
     try {
-      if (isEditing && formId) {
+      if (isEditing && formId && !formId.startsWith('seed-')) {
         const { error } = await supabase
           .from('profiles')
           .update(payload)
@@ -346,12 +387,27 @@ const TeamManagementPage: React.FC = () => {
         if (error) throw error
         alert('Ficha de membro atualizada!')
       } else {
-        const { error } = await supabase
+        // Verificar se já existe perfil na BD com este email
+        const { data: existing } = await supabase
           .from('profiles')
-          .insert([payload])
+          .select('id')
+          .eq('email', formEmail)
+          .maybeSingle()
 
-        if (error) throw error
-        alert('Novo membro criado com sucesso!')
+        if (existing?.id) {
+          const { error } = await supabase
+            .from('profiles')
+            .update(payload)
+            .eq('id', existing.id)
+          if (error) throw error
+          alert('Ficha de membro atualizada na base de dados!')
+        } else {
+          const { error } = await supabase
+            .from('profiles')
+            .insert([payload])
+          if (error) throw error
+          alert('Novo membro gravado com sucesso na base de dados!')
+        }
       }
 
       setIsFormModalOpen(false)
@@ -364,9 +420,13 @@ const TeamManagementPage: React.FC = () => {
   const handleDeleteMember = async (id: string, name: string) => {
     if (!confirm(`Tem a certeza que deseja eliminar o membro "${name}"?`)) return
     try {
-      const { error } = await supabase.from('profiles').delete().eq('id', id)
-      if (error) throw error
-      setProfiles(prev => prev.filter(p => p.id !== id))
+      if (id.startsWith('seed-')) {
+        setProfiles(prev => prev.filter(p => p.id !== id))
+      } else {
+        const { error } = await supabase.from('profiles').delete().eq('id', id)
+        if (error) throw error
+        setProfiles(prev => prev.filter(p => p.id !== id))
+      }
       if (selectedProfile?.id === id) setIsDetailModalOpen(false)
     } catch (err: any) {
       alert('Erro ao eliminar membro: ' + err.message)
