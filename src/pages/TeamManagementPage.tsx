@@ -1088,11 +1088,11 @@ const TeamManagementPage: React.FC = () => {
 
       {/* MODAL 1: CRIAR / EDITAR FICHA DE MEMBRO */}
       {isFormModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 lg:p-6 z-50 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl xl:max-w-5xl w-full p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-200">
             <button
               onClick={() => setIsFormModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors"
             >
               <X size={22} />
             </button>
@@ -1597,307 +1597,422 @@ const TeamManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER) */}
+      {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER PC & MOBILE) */}
       {isDetailModalOpen && selectedProfile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl space-y-5">
-            <button
-              onClick={() => setIsDetailModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1 cursor-pointer"
-            >
-              <X size={22} />
-            </button>
-
-            {/* Profile Header */}
-            <div className="flex items-center gap-4 border-b pb-5">
-              {selectedProfile.photo_url ? (
-                <img
-                  src={selectedProfile.photo_url}
-                  alt={selectedProfile.name}
-                  className="w-18 h-18 rounded-2xl object-cover border-2 border-csc-dark shadow-md"
-                />
-              ) : (
-                <div className="w-18 h-18 rounded-2xl bg-csc-dark text-white flex items-center justify-center font-black text-2xl shadow-md">
-                  {selectedProfile.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-xl font-black text-gray-900 truncate">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 lg:p-6 z-50 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-4 sm:p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-200 space-y-6">
+            
+            {/* Top Bar Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="w-10 h-10 rounded-2xl bg-csc-dark text-csc-gold font-black flex items-center justify-center text-lg shadow-sm border border-amber-300">
+                  {selectedProfile.jersey_number ? `#${selectedProfile.jersey_number}` : '⚽'}
+                </span>
+                <div>
+                  <span className="text-[10px] uppercase font-black tracking-widest text-gray-400 block">
+                    Ficha Oficial de Atleta • Plantel CSC
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 leading-tight">
                     {formatDisplayName(selectedProfile.name, selectedProfile.nickname || selectedProfile.shirt_name)}
                   </h2>
-                  {selectedProfile.jersey_number && (
-                    <span className="bg-csc-dark text-white text-xs font-black px-2 py-0.5 rounded">
-                      #{selectedProfile.jersey_number}
-                    </span>
-                  )}
-                  {selectedProfile.kit_size && (
-                    <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2 py-0.5 rounded">
-                      Tam: {selectedProfile.kit_size}
-                    </span>
-                  )}
-                </div>
-
-                {/* Role Badges */}
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {extractRolesFromProfile(selectedProfile).map((r) => (
-                    <span
-                      key={r}
-                      className={`text-[10px] font-black px-2 py-0.5 rounded border ${
-                        r === 'admin'
-                          ? 'bg-csc-gold text-csc-dark border-amber-300'
-                          : r === 'coach'
-                          ? 'bg-blue-500 text-white border-blue-600'
-                          : 'bg-emerald-700 text-white border-emerald-800'
-                      }`}
-                    >
-                      {r === 'admin' ? '🛡️ Administrador / Direção' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  {parsePositions(selectedProfile.position).map((pos, idx) => (
-                    <span key={idx} className="text-xs font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200">
-                      {pos}
-                    </span>
-                  ))}
-                  <span className="text-gray-300">•</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                    selectedProfile.status === 'active' ? 'bg-green-100 text-green-800' :
-                    selectedProfile.status === 'injured' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
-                    {selectedProfile.status === 'active' ? 'Ativo' :
-                     selectedProfile.status === 'injured' ? 'Lesionado' : 'Inativo'}
-                  </span>
                 </div>
               </div>
-            </div>
 
-            {/* Campo Tático com as posições do atleta destacadas */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Shield size={14} className="text-csc-dark" />
-                <span>Posicionamento no Campo</span>
-              </h4>
-              <SoccerPitchSelector
-                selectedPositions={parsePositions(selectedProfile.position)}
-                onChange={() => {}}
-                readOnly={true}
-              />
-            </div>
-
-            {/* 1. Dados Pessoais & Fiscais */}
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Users size={14} className="text-csc-dark" />
-                <span>Identificação & Dados Fiscais</span>
-              </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-                <div>
-                  <p className="text-gray-400 font-bold uppercase text-[10px]">NIF / Contribuinte</p>
-                  <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.nif || 'Não registado'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 font-bold uppercase text-[10px]">Nº CC / Passaporte</p>
-                  <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.id_number || 'Não registado'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 font-bold uppercase text-[10px]">Validade do CC</p>
-                  <p className="font-extrabold text-gray-800 mt-0.5">
-                    {selectedProfile.id_card_expiry ? new Date(selectedProfile.id_card_expiry).toLocaleDateString('pt-PT') : 'Não registada'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-400 font-bold uppercase text-[10px]">Idade / Nascimento</p>
-                  <p className="font-extrabold text-gray-800 mt-0.5">
-                    {selectedProfile.birth_date ? (
-                      `${calculateAge(selectedProfile.birth_date)} anos (${new Date(selectedProfile.birth_date).toLocaleDateString('pt-PT')})`
-                    ) : 'Não registada'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-400 font-bold uppercase text-[10px]">Nacionalidade</p>
-                  <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 font-bold uppercase text-[10px]">Nº de Sócio</p>
-                  <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.member_number || 'Não atribuído'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 2. Morada & Residência */}
-            {(selectedProfile.address || selectedProfile.city) && (
-              <div className="space-y-1.5">
-                <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileText size={14} className="text-csc-dark" />
-                  <span>Morada & Residência</span>
-                </h4>
-                <div className="text-xs bg-gray-50 p-3.5 rounded-xl border border-gray-200 space-y-1">
-                  {selectedProfile.address && (
-                    <p className="font-semibold text-gray-800">{selectedProfile.address}</p>
-                  )}
-                  {(selectedProfile.postal_code || selectedProfile.city) && (
-                    <p className="text-gray-500 font-medium">
-                      {selectedProfile.postal_code} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 3. Dados Bancários */}
-            {selectedProfile.iban && (
-              <div className="space-y-1.5">
-                <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Shield size={14} className="text-csc-dark" />
-                  <span>Dados Bancários (Débito Direto)</span>
-                </h4>
-                <div className="text-xs bg-gray-50 p-3 rounded-xl border border-gray-200 font-mono text-gray-800 font-bold">
-                  {selectedProfile.iban}
-                </div>
-              </div>
-            )}
-
-            {/* 4. Contactos */}
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider">Contactos</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <a href={`tel:${selectedProfile.phone}`} className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 font-semibold text-gray-800">
-                  <Phone size={14} className="text-csc-dark" />
-                  <span>{selectedProfile.phone || 'Sem telefone'}</span>
-                </a>
-                <a href={`mailto:${selectedProfile.email}`} className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 font-semibold text-gray-800 truncate">
-                  <Mail size={14} className="text-csc-dark" />
-                  <span className="truncate">{selectedProfile.email}</span>
-                </a>
-              </div>
-            </div>
-
-            {/* 5. Saúde & Emergência */}
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                <HeartPulse size={14} className="text-red-600" />
-                <span>Saúde & Contacto de Emergência</span>
-              </h4>
-              <div className="p-3 bg-red-50/60 border border-red-200 rounded-xl space-y-2 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 font-semibold">Contacto Emergência:</span>
-                  <span className="font-bold text-gray-900">
-                    {selectedProfile.emergency_contact_name || 'Nenhum'} 
-                    {selectedProfile.emergency_contact_phone ? ` (${selectedProfile.emergency_contact_phone})` : ''}
-                  </span>
-                </div>
-                {cleanNotesFromRolesTag(selectedProfile.medical_notes) && (
-                  <div className="pt-2 border-t border-red-200/60">
-                    <span className="text-gray-600 font-semibold block mb-0.5">Notas Médicas:</span>
-                    <p className="text-gray-800 font-medium">{cleanNotesFromRolesTag(selectedProfile.medical_notes)}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 6. Documentos Anexados & RGPD */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileText size={14} className="text-csc-dark" />
-                  <span>Documentação & RGPD</span>
-                </h4>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-100 text-green-800 flex items-center gap-1">
-                  <CheckCircle2 size={11} /> RGPD Aceite
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                {selectedProfile.id_document_url ? (
-                  <a
-                    href={selectedProfile.id_document_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-blue-700 font-bold hover:bg-blue-100 transition-colors text-center"
-                  >
-                    <FileText size={18} />
-                    <span>Doc. Identificação</span>
-                    <span className="text-[10px] underline flex items-center gap-0.5">Abrir <ExternalLink size={10}/></span>
-                  </a>
-                ) : (
-                  <div className="p-3 bg-gray-50 border border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 text-center">
-                    <FileText size={18} />
-                    <span>Sem CC anexado</span>
-                  </div>
-                )}
-
-                {selectedProfile.insurance_doc_url ? (
-                  <a
-                    href={selectedProfile.insurance_doc_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-purple-700 font-bold hover:bg-purple-100 transition-colors text-center"
-                  >
-                    <Shield size={18} />
-                    <span>Seguro Desportivo</span>
-                    <span className="text-[10px] underline flex items-center gap-0.5">Abrir <ExternalLink size={10}/></span>
-                  </a>
-                ) : (
-                  <div className="p-3 bg-gray-50 border border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 text-center">
-                    <Shield size={18} />
-                    <span>Sem Seguro</span>
-                  </div>
-                )}
-
-                {selectedProfile.medical_exam_doc_url ? (
-                  <a
-                    href={selectedProfile.medical_exam_doc_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-emerald-700 font-bold hover:bg-emerald-100 transition-colors text-center"
-                  >
-                    <HeartPulse size={18} />
-                    <span>Atestado Médico</span>
-                    <span className="text-[10px] underline flex items-center gap-0.5">Abrir <ExternalLink size={10}/></span>
-                  </a>
-                ) : (
-                  <div className="p-3 bg-gray-50 border border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 text-center">
-                    <HeartPulse size={18} />
-                    <span>Sem Atestado</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            {isCoachOrAdmin && (
-              <div className="pt-3 border-t flex flex-wrap justify-between items-center gap-2">
-                <button
-                  onClick={() => {
-                    const profileToAssociate = selectedProfile
-                    setIsDetailModalOpen(false)
-                    openAssociateModal(profileToAssociate)
-                  }}
-                  className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <Link2 size={14} />
-                  <span>Associar Conta de Utilizador</span>
-                </button>
-
-                <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                {isCoachOrAdmin && (
                   <button
                     onClick={() => {
                       setIsDetailModalOpen(false)
                       openEditModal(selectedProfile)
                     }}
-                    className="px-4 py-2 bg-csc-dark text-white rounded-lg text-xs font-bold hover:bg-csc-dark/80 transition-colors flex items-center gap-1.5 shadow cursor-pointer"
+                    className="px-3.5 py-1.5 bg-csc-dark text-white rounded-xl text-xs font-bold hover:bg-csc-dark/85 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Edit2 size={13} />
+                    <span className="hidden sm:inline">Editar Ficha</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors"
+                  title="Fechar"
+                >
+                  <X size={22} />
+                </button>
+              </div>
+            </div>
+
+            {/* Desktop 2-Column Grid (Traditional PC Dossier) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* COLUNA ESQUERDA: Cartão de Identidade Desportiva + Campo Tático (lg:col-span-5 xl:col-span-4) */}
+              <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+                {/* Hero ID Card */}
+                <div className="bg-gradient-to-br from-amber-50/80 via-white to-gray-50 p-5 rounded-2xl border-2 border-amber-200 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-csc-dark/10 to-transparent pointer-events-none" />
+
+                  {/* Photo with Gold Ring */}
+                  <div className="relative mb-3 z-10">
+                    {selectedProfile.photo_url ? (
+                      <img
+                        src={selectedProfile.photo_url}
+                        alt={selectedProfile.name}
+                        className="w-24 h-24 rounded-2xl object-cover border-2 border-csc-gold shadow-md"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-csc-dark to-emerald-900 text-white flex items-center justify-center font-black text-3xl shadow-md border-2 border-csc-gold">
+                        {selectedProfile.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+
+                    {selectedProfile.jersey_number && (
+                      <span className="absolute -bottom-2 -right-2 bg-csc-dark text-csc-gold font-black text-xs px-2 py-0.5 rounded-lg border-2 border-white shadow-xs">
+                        #{selectedProfile.jersey_number}
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className="font-black text-gray-900 text-lg leading-tight">
+                    {formatDisplayName(selectedProfile.name, selectedProfile.nickname || selectedProfile.shirt_name)}
+                  </h3>
+
+                  {selectedProfile.shirt_name && (
+                    <p className="text-xs font-bold text-amber-900 mt-0.5">
+                      Camisola: "{selectedProfile.shirt_name}"
+                    </p>
+                  )}
+
+                  {/* Status */}
+                  <div className="mt-2">
+                    <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-2xs ${
+                      selectedProfile.status === 'active' ? 'bg-green-100 text-green-800 border border-green-200' :
+                      selectedProfile.status === 'injured' ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse' :
+                      'bg-gray-100 text-gray-600 border border-gray-200'
+                    }`}>
+                      {selectedProfile.status === 'active' ? <CheckCircle2 size={12}/> :
+                       selectedProfile.status === 'injured' ? <HeartPulse size={12}/> :
+                       <XCircle size={12}/>}
+                      <span>{selectedProfile.status === 'active' ? 'Ativo / Disponível' : selectedProfile.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
+                    </span>
+                  </div>
+
+                  {/* Role Badges */}
+                  <div className="flex flex-wrap justify-center gap-1 mt-3">
+                    {extractRolesFromProfile(selectedProfile).map((r) => (
+                      <span
+                        key={r}
+                        className={`text-[9.5px] font-black px-2 py-0.5 rounded border ${
+                          r === 'admin'
+                            ? 'bg-amber-100 text-amber-900 border-amber-300'
+                            : r === 'coach'
+                            ? 'bg-blue-100 text-blue-800 border-blue-200'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        }`}
+                      >
+                        {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Quick Meta Pills */}
+                  <div className="grid grid-cols-2 gap-2 w-full mt-4 pt-3 border-t border-gray-200 text-xs">
+                    <div className="bg-white p-2 rounded-xl border border-gray-200">
+                      <span className="text-gray-400 block text-[9px] uppercase font-bold">Equipamento</span>
+                      <span className="font-extrabold text-gray-800">Tam: {selectedProfile.kit_size || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2 rounded-xl border border-gray-200">
+                      <span className="text-gray-400 block text-[9px] uppercase font-bold">Nº de Sócio</span>
+                      <span className="font-extrabold text-gray-800">{selectedProfile.member_number ? `#${selectedProfile.member_number}` : '-'}</span>
+                    </div>
+                  </div>
+
+                  {/* Contact Buttons */}
+                  <div className="w-full mt-3 space-y-1.5">
+                    {selectedProfile.phone && (
+                      <a
+                        href={`tel:${selectedProfile.phone}`}
+                        className="w-full py-2 px-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Phone size={13} className="text-csc-dark" />
+                        <span>{selectedProfile.phone}</span>
+                      </a>
+                    )}
+                    {selectedProfile.email && (
+                      <a
+                        href={`mailto:${selectedProfile.email}`}
+                        className="w-full py-2 px-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 flex items-center justify-center gap-2 transition-colors truncate"
+                      >
+                        <Mail size={13} className="text-csc-dark" />
+                        <span className="truncate">{selectedProfile.email}</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Campo Tático */}
+                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Shield size={14} className="text-csc-dark" />
+                      <span>Posicionamento Tático</span>
+                    </h4>
+                    <span className="text-[10px] font-extrabold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
+                      {parsePositions(selectedProfile.position).join(', ') || 'Não definido'}
+                    </span>
+                  </div>
+
+                  <SoccerPitchSelector
+                    selectedPositions={parsePositions(selectedProfile.position)}
+                    onChange={() => {}}
+                    readOnly={true}
+                  />
+                </div>
+              </div>
+
+              {/* COLUNA DIREITA: Dossier Completo Cadastral (lg:col-span-7 xl:col-span-8) */}
+              <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+                
+                {/* 1. Identificação & Dados Fiscais */}
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
+                  <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Users size={14} className="text-csc-dark" />
+                    <span>1. Identificação & Dados Fiscais</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 text-xs">
+                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Nome Completo</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.name}</p>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Nome na Camisola</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5">
+                        {selectedProfile.birth_date ? (
+                          `${new Date(selectedProfile.birth_date).toLocaleDateString('pt-PT')} (${calculateAge(selectedProfile.birth_date)} anos)`
+                        ) : '-'}
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5 font-mono">{selectedProfile.nif || '-'}</p>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5 font-mono">{selectedProfile.id_number || '-'}</p>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Validade do CC</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5">
+                        {selectedProfile.id_card_expiry ? new Date(selectedProfile.id_card_expiry).toLocaleDateString('pt-PT') : '-'}
+                      </p>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Nacionalidade</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Morada & Residência */}
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
+                  <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText size={14} className="text-csc-dark" />
+                    <span>2. Morada & Residência</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.address || 'Não registada'}</p>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5">
+                        {selectedProfile.postal_code || '-'} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Dados Bancários (Débito Direto) */}
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
+                  <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Shield size={14} className="text-csc-dark" />
+                    <span>3. Dados Bancários & Quotas</span>
+                  </h4>
+
+                  <div className="bg-white p-3 rounded-xl border border-gray-150 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
+                      <p className="font-black text-gray-900 font-mono text-xs sm:text-sm mt-0.5">
+                        {selectedProfile.iban || 'Nenhum IBAN registado'}
+                      </p>
+                    </div>
+                    {selectedProfile.iban && (
+                      <span className="text-[10px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                        ✓ Ativo
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Saúde & Contacto de Emergência */}
+                <div className="bg-red-50/50 p-4 rounded-2xl border border-red-200 space-y-3">
+                  <h4 className="text-xs font-black text-red-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <HeartPulse size={14} className="text-red-600" />
+                    <span>4. Saúde & Contacto de Emergência</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="bg-white p-3 rounded-xl border border-red-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Contacto de Emergência</p>
+                      <p className="font-extrabold text-gray-900 mt-0.5">
+                        {selectedProfile.emergency_contact_name || 'Não registado'}
+                      </p>
+                      {selectedProfile.emergency_contact_phone && (
+                        <p className="text-gray-600 font-semibold mt-0.5">
+                          Tel: {selectedProfile.emergency_contact_phone}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-red-150">
+                      <p className="text-gray-400 font-bold uppercase text-[9px]">Notas Médicas / Alergias</p>
+                      <p className="font-medium text-gray-800 mt-0.5">
+                        {cleanNotesFromRolesTag(selectedProfile.medical_notes) || 'Nenhuma restrição médica registada'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Documentos Anexados & RGPD */}
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText size={14} className="text-csc-dark" />
+                      <span>5. Documentação Oficial & RGPD</span>
+                    </h4>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-100 text-green-800 flex items-center gap-1">
+                      <CheckCircle2 size={11} /> RGPD Consentido
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                    {selectedProfile.id_document_url ? (
+                      <a
+                        href={selectedProfile.id_document_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-blue-700 font-bold hover:bg-blue-100 transition-colors text-center"
+                      >
+                        <FileText size={18} />
+                        <span>Doc. Identificação</span>
+                        <span className="text-[10px] underline flex items-center gap-0.5">Abrir Documento <ExternalLink size={10}/></span>
+                      </a>
+                    ) : (
+                      <div className="p-3 bg-white border border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 text-center">
+                        <FileText size={18} />
+                        <span>Sem CC Anexado</span>
+                      </div>
+                    )}
+
+                    {selectedProfile.insurance_doc_url ? (
+                      <a
+                        href={selectedProfile.insurance_doc_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-purple-700 font-bold hover:bg-purple-100 transition-colors text-center"
+                      >
+                        <Shield size={18} />
+                        <span>Seguro Desportivo</span>
+                        <span className="text-[10px] underline flex items-center gap-0.5">Abrir Apólice <ExternalLink size={10}/></span>
+                      </a>
+                    ) : (
+                      <div className="p-3 bg-white border border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 text-center">
+                        <Shield size={18} />
+                        <span>Sem Seguro Anexado</span>
+                      </div>
+                    )}
+
+                    {selectedProfile.medical_exam_doc_url ? (
+                      <a
+                        href={selectedProfile.medical_exam_doc_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-emerald-700 font-bold hover:bg-emerald-100 transition-colors text-center"
+                      >
+                        <HeartPulse size={18} />
+                        <span>Atestado Médico</span>
+                        <span className="text-[10px] underline flex items-center gap-0.5">Abrir Exame <ExternalLink size={10}/></span>
+                      </a>
+                    ) : (
+                      <div className="p-3 bg-white border border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 text-center">
+                        <HeartPulse size={18} />
+                        <span>Sem Atestado Anexado</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Bottom Actions Footer */}
+            <div className="pt-4 border-t border-gray-200 flex flex-wrap justify-between items-center gap-3">
+              {isCoachOrAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const profileToAssociate = selectedProfile
+                    setIsDetailModalOpen(false)
+                    openAssociateModal(profileToAssociate)
+                  }}
+                  className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <Link2 size={15} />
+                  <span>Associar a Conta de Utilizador</span>
+                </button>
+              )}
+
+              <div className="flex items-center gap-2 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Fechar
+                </button>
+                {isCoachOrAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDetailModalOpen(false)
+                      openEditModal(selectedProfile)
+                    }}
+                    className="px-5 py-2.5 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
                   >
                     <Edit2 size={14} />
                     <span>Editar Ficha</span>
                   </button>
-                </div>
+                )}
               </div>
-            )}
+            </div>
+
           </div>
         </div>
       )}
