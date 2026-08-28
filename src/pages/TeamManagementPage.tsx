@@ -520,81 +520,79 @@ const TeamManagementPage: React.FC = () => {
           <p className="text-xs text-gray-500 mt-1">Ajuste os filtros de pesquisa ou adicione um novo membro.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
           {filteredProfiles.map((person) => {
             const age = calculateAge(person.birth_date)
-            const hasIdDoc = Boolean(person.id_document_url)
-            const hasInsurance = Boolean(person.insurance_doc_url)
-            const hasMedical = Boolean(person.medical_exam_doc_url)
 
             return (
               <div
                 key={person.id}
-                className={`bg-white rounded-2xl shadow-sm border transition-all hover:shadow-md flex flex-col justify-between overflow-hidden ${
-                  person.status === 'injured' ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-150'
+                onClick={() => openDetailModal(person)}
+                className={`bg-white rounded-xl shadow-2xs border transition-all duration-150 hover:shadow-md hover:border-csc-dark/40 cursor-pointer flex flex-col justify-between overflow-hidden group ${
+                  person.status === 'injured' ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-200'
                 }`}
               >
-                <div className="p-5">
-                  {/* Top Bar: Number & Status Badge */}
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-2">
+                <div className="p-3.5 space-y-2.5">
+                  {/* Top Bar: Number, Positions Badge, Status Badge */}
+                  <div className="flex justify-between items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       {person.jersey_number ? (
-                        <span className="w-8 h-8 rounded-lg bg-csc-dark text-white flex items-center justify-center font-black text-sm shadow-inner">
+                        <span className="w-6 h-6 rounded-md bg-csc-dark text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
                           {person.jersey_number}
                         </span>
                       ) : (
-                        <span className="w-8 h-8 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center font-bold text-xs">
+                        <span className="w-6 h-6 rounded-md bg-gray-100 text-gray-400 flex items-center justify-center font-bold text-[10px] shrink-0">
                           -
                         </span>
                       )}
-                      <div>
-                        <div className="flex flex-wrap gap-1 items-center">
-                          {parsePositions(person.position).map((pos, idx) => (
-                            <span 
-                              key={idx}
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${
-                                idx === 0 ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-gray-50 text-gray-700 border-gray-200'
-                              }`}
-                            >
-                              {pos}
-                            </span>
-                          ))}
-                        </div>
-                        {person.member_number && (
-                          <p className="text-[10px] text-gray-400 font-semibold mt-0.5">Sócio nº {person.member_number}</p>
+                      <div className="flex flex-wrap gap-1 items-center truncate">
+                        {parsePositions(person.position).slice(0, 2).map((pos, idx) => (
+                          <span 
+                            key={idx}
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded border truncate ${
+                              idx === 0 ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-gray-50 text-gray-700 border-gray-200'
+                            }`}
+                          >
+                            {pos}
+                          </span>
+                        ))}
+                        {parsePositions(person.position).length > 2 && (
+                          <span className="text-[9px] text-gray-400 font-bold">
+                            +{parsePositions(person.position).length - 2}
+                          </span>
                         )}
                       </div>
                     </div>
 
-                    <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 ${
+                    <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shrink-0 ${
                       person.status === 'active' ? 'bg-green-100 text-green-800' :
                       person.status === 'injured' ? 'bg-red-100 text-red-800 animate-pulse' :
                       'bg-gray-100 text-gray-600'
                     }`}>
-                      {person.status === 'active' ? <CheckCircle2 size={12}/> :
-                       person.status === 'injured' ? <HeartPulse size={12}/> :
-                       <XCircle size={12}/>}
+                      {person.status === 'active' ? <CheckCircle2 size={10}/> :
+                       person.status === 'injured' ? <HeartPulse size={10}/> :
+                       <XCircle size={10}/>}
                       {person.status === 'active' ? 'Ativo' :
                        person.status === 'injured' ? 'Lesionado' : 'Inativo'}
                     </span>
                   </div>
 
-                  {/* Player Main Info & Role Badges */}
-                  <div className="flex items-center gap-3.5 my-3">
+                  {/* Player Main Info: Photo + Name with embedded Nickname + Role Badges */}
+                  <div className="flex items-center gap-3">
                     {person.photo_url ? (
                       <img
                         src={person.photo_url}
                         alt={person.name}
-                        className="w-14 h-14 rounded-full object-cover border-2 border-csc-dark/20 shadow-sm"
+                        className="w-11 h-11 rounded-full object-cover border border-csc-dark/20 shadow-2xs shrink-0"
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-csc-dark to-csc-light/60 text-white flex items-center justify-center font-black text-xl shadow-sm">
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-csc-dark to-csc-light/60 text-white flex items-center justify-center font-black text-base shadow-2xs shrink-0">
                         {person.name.charAt(0).toUpperCase()}
                       </div>
                     )}
                     
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-extrabold text-gray-900 text-base leading-tight truncate">
+                      <h3 className="font-extrabold text-gray-900 text-sm leading-snug truncate group-hover:text-csc-dark transition-colors">
                         {formatDisplayName(person.name, person.nickname)}
                       </h3>
                       
@@ -603,7 +601,7 @@ const TeamManagementPage: React.FC = () => {
                         {extractRolesFromProfile(person).map((r) => (
                           <span
                             key={r}
-                            className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${
+                            className={`text-[8.5px] font-black px-1.5 py-0.2 rounded border ${
                               r === 'admin'
                                 ? 'bg-csc-gold text-csc-dark border-amber-300'
                                 : r === 'coach'
@@ -616,87 +614,76 @@ const TeamManagementPage: React.FC = () => {
                         ))}
                       </div>
 
-                      <p className="text-xs text-gray-500 mt-1">
-                        {person.nationality || 'Portuguesa'} {age ? `• ${age} anos` : ''}
-                      </p>
+                      {person.member_number && (
+                        <p className="text-[9.5px] text-gray-400 font-semibold mt-0.5 truncate">
+                          Sócio nº {person.member_number} {age ? `• ${age} anos` : ''}
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  {/* Contact Shortcuts */}
-                  <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5 text-xs text-gray-600">
-                    {person.phone && (
-                      <a
-                        href={`tel:${person.phone}`}
-                        className="flex items-center gap-2 hover:text-csc-dark truncate"
-                      >
-                        <Phone size={13} className="text-gray-400 shrink-0" />
-                        <span className="font-medium">{person.phone}</span>
-                      </a>
-                    )}
-                    <a
-                      href={`mailto:${person.email}`}
-                      className="flex items-center gap-2 hover:text-csc-dark truncate"
-                    >
-                      <Mail size={13} className="text-gray-400 shrink-0" />
-                      <span className="truncate">{person.email}</span>
-                    </a>
-                  </div>
-
-                  {/* Documents Pills */}
-                  <div className="mt-3 pt-2 flex flex-wrap gap-1.5">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                      hasIdDoc ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-400 border border-gray-200'
-                    }`}>
-                      <FileText size={10} /> CC {hasIdDoc ? '✓' : '✗'}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                      hasInsurance ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-gray-50 text-gray-400 border border-gray-200'
-                    }`}>
-                      <Shield size={10} /> Seguro {hasInsurance ? '✓' : '✗'}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                      hasMedical ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-50 text-gray-400 border border-gray-200'
-                    }`}>
-                      <HeartPulse size={10} /> Atestado {hasMedical ? '✓' : '✗'}
-                    </span>
-                  </div>
+                  {/* Informação de Contacto (Estática, não acionável) */}
+                  {(person.phone || person.email) && (
+                    <div className="pt-2 border-t border-gray-100 space-y-1 text-[11px] text-gray-500">
+                      {person.phone && (
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Phone size={11} className="text-gray-400 shrink-0" />
+                          <span className="truncate">{person.phone}</span>
+                        </div>
+                      )}
+                      {person.email && (
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Mail size={11} className="text-gray-400 shrink-0" />
+                          <span className="truncate">{person.email}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Card Footer Actions */}
-                <div className="bg-gray-50 px-4 py-2.5 border-t border-gray-150 flex items-center justify-between">
-                  <button
-                    onClick={() => openDetailModal(person)}
-                    className="text-xs font-bold text-csc-dark hover:underline flex items-center gap-1"
-                  >
-                    <span>Ver Ficha Completa</span>
-                  </button>
+                {/* Card Footer */}
+                <div className="bg-gray-50/90 px-3 py-2 border-t border-gray-100 flex items-center justify-between text-xs">
+                  <span className="text-[11px] font-bold text-gray-400 group-hover:text-csc-dark transition-colors">
+                    Ver Ficha →
+                  </span>
 
                   {isCoachOrAdmin && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => openAssociateModal(person)}
-                        className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1 text-xs font-bold"
-                        title="Associar a Utilizador Registado na App"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openAssociateModal(person)
+                        }}
+                        className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50 transition-colors"
+                        title="Associar a Utilizador Registado"
                       >
-                        <Link2 size={15} />
-                        <span className="hidden sm:inline">Associar</span>
+                        <Link2 size={14} />
                       </button>
 
                       <button
-                        onClick={() => openEditModal(person)}
-                        className="p-1.5 text-gray-500 hover:text-csc-dark rounded-lg hover:bg-white transition-colors"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openEditModal(person)
+                        }}
+                        className="p-1 text-gray-500 hover:text-csc-dark rounded hover:bg-white transition-colors"
                         title="Editar Ficha"
                       >
-                        <Edit2 size={15} />
+                        <Edit2 size={14} />
                       </button>
 
                       {isAdmin && (
                         <button
-                          onClick={() => handleDeleteMember(person.id, person.name)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-white transition-colors"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteMember(person.id, person.name)
+                          }}
+                          className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-white transition-colors"
                           title="Eliminar Membro"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={14} />
                         </button>
                       )}
                     </div>
