@@ -13,6 +13,8 @@ interface Field {
 interface Opponent {
   id: string
   name: string
+  initials?: string
+  logo_url?: string
   contact_name: string
   contact_phone: string
   home_field_id: string | null
@@ -48,9 +50,13 @@ const AdminDashboard: React.FC = () => {
   const [fieldAddress, setFieldAddress] = useState('')
 
   const [oppName, setOppName] = useState('')
+  const [oppInitials, setOppInitials] = useState('')
+  const [oppLogo, setOppLogo] = useState<File | null>(null)
   const [oppContact, setOppContact] = useState('')
   const [oppPhone, setOppPhone] = useState('')
   const [oppField, setOppField] = useState('')
+
+  const [uploadingOppLogo, setUploadingOppLogo] = useState(false)
 
   const [tourName, setTourName] = useState('')
   const [tourSeason, setTourSeason] = useState('')
@@ -152,15 +158,47 @@ const AdminDashboard: React.FC = () => {
   const handleCreateOpponent = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!oppName) return
-    const payload = {
-      name: oppName,
-      contact_name: oppContact,
-      contact_phone: oppPhone,
-      home_field_id: oppField || null
-    }
-    const { error } = await supabase.from('opponents').insert([payload])
-    if (!error) {
-      setOppName(''); setOppContact(''); setOppPhone(''); setOppField(''); fetchData()
+
+    setUploadingOppLogo(true)
+    let publicLogoUrl: string | null = null
+
+    try {
+      if (oppLogo) {
+        const fileExt = oppLogo.name.split('.').pop()
+        const fileName = `opp_${Math.random()}.${fileExt}`
+        
+        const { error: uploadError } = await supabase.storage
+          .from('club_assets')
+          .upload(fileName, oppLogo, { upsert: true })
+
+        if (uploadError) throw uploadError
+
+        const { data } = supabase.storage.from('club_assets').getPublicUrl(fileName)
+        publicLogoUrl = data.publicUrl
+      }
+
+      const payload = {
+        name: oppName,
+        initials: oppInitials || null,
+        logo_url: publicLogoUrl,
+        contact_name: oppContact,
+        contact_phone: oppPhone,
+        home_field_id: oppField || null
+      }
+      const { error } = await supabase.from('opponents').insert([payload])
+      if (error) throw error
+
+      setOppName('')
+      setOppInitials('')
+      setOppLogo(null)
+      setOppContact('')
+      setOppPhone('')
+      setOppField('')
+      fetchData()
+    } catch (err: any) {
+      alert('Erro ao criar adversário: ' + err.message)
+    } finally {
+      setUploadingOppLogo(false)
     }
   }
 
@@ -272,6 +310,14 @@ const AdminDashboard: React.FC = () => {
                     <input type="text" required value={oppName} onChange={e => setOppName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: Pescadores CC" />
                   </div>
                   <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Siglas</label>
+                    <input type="text" value={oppInitials} onChange={e => setOppInitials(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: PCC" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Símbolo (Logótipo)</label>
+                    <input type="file" accept="image/*" onChange={e => setOppLogo(e.target.files ? e.target.files[0] : null)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
+                  </div>
+                  <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Campo Habitual</label>
                     <select value={oppField} onChange={e => setOppField(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white">
                       <option value="">Nenhum</option>
@@ -288,7 +334,9 @@ const AdminDashboard: React.FC = () => {
                     <label className="block text-sm font-bold text-gray-700 mb-1">Telefone</label>
                     <input type="text" value={oppPhone} onChange={e => setOppPhone(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: 910 000 000" />
                   </div>
-                  <button type="submit" className="w-full bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow">Adicionar Adversário</button>
+                  <button type="submit" disabled={uploadingOppLogo} className="w-full bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow disabled:opacity-50">
+                    {uploadingOppLogo ? 'A enviar...' : 'Adicionar Adversário'}
+                  </button>
                 </form>
               )}
 
@@ -385,11 +433,20 @@ const AdminDashboard: React.FC = () => {
                   <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2">Adversários Registados ({opponents.length})</h3>
                   {opponents.length === 0 ? <p className="text-gray-500 text-sm">Nenhum adversário encontrado.</p> : opponents.map(o => (
                     <div key={o.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div>
-                        <p className="font-bold text-sm text-csc-dark">{o.name}</p>
-                        <div className="flex gap-4 mt-1 text-xs text-gray-500">
-                          {o.contact_name && <span>👤 {o.contact_name}</span>}
-                          {o.contact_phone && <span>📞 {o.contact_phone}</span>}
+                      <div className="flex items-center gap-3">
+                        {o.logo_url ? (
+                          <img src={o.logo_url} alt={o.initials || o.name} className="w-10 h-10 object-contain bg-white rounded-md border p-0.5" />
+                        ) : (
+                          <div className="w-10 h-10 bg-gray-200 border border-gray-300 rounded-md flex items-center justify-center font-bold text-gray-500 text-[10px]">
+                            {o.initials || o.name.substring(0, 3).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-bold text-sm text-csc-dark">{o.name} {o.initials && <span className="text-gray-500 font-normal ml-1">({o.initials})</span>}</p>
+                          <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                            {o.contact_name && <span>👤 {o.contact_name}</span>}
+                            {o.contact_phone && <span>📞 {o.contact_phone}</span>}
+                          </div>
                         </div>
                       </div>
                       <button onClick={() => handleDeleteOpponent(o.id)} className="text-red-400 hover:text-red-600 p-2"><Trash2 size={16} /></button>

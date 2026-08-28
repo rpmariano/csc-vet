@@ -39,6 +39,8 @@ ALTER TABLE public.fields ENABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS public.opponents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
+    initials TEXT,
+    logo_url TEXT,
     contact_name TEXT,
     contact_phone TEXT,
     home_field_id UUID REFERENCES public.fields(id) ON DELETE SET NULL,
