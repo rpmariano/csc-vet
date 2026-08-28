@@ -21,8 +21,8 @@ const Layout: React.FC = () => {
   }
 
   const menuItems = [
-    { name: 'Home', path: '/', icon: Home, roles: ['player', 'coach', 'admin'] },
-    { name: 'Calendário', path: '/calendar', icon: Calendar, roles: ['player', 'coach', 'admin'] },
+    { name: 'Home / Eventos', path: '/', icon: Home, roles: ['player', 'coach', 'admin'] },
+    { name: 'Agenda', path: '/calendar', icon: Calendar, roles: ['player', 'coach', 'admin'] },
     { name: 'Estatísticas', path: '/stats', icon: BarChart3, roles: ['player', 'coach', 'admin'] },
     { name: 'Comunicados', path: '/announcements', icon: FileText, roles: ['coach', 'admin'] },
     { name: 'Gestão Equipa', path: '/team-management', icon: Users, roles: ['admin'] },
@@ -37,9 +37,14 @@ const Layout: React.FC = () => {
       {/* Mobile Header */}
       <div className="bg-blue-900 text-white flex items-center justify-between p-4 md:hidden border-b-2 border-gray-800">
         <h1 className="text-xl font-black tracking-wider">VETERANOS F.C.</h1>
-        <span className="text-xs bg-blue-800 px-2 py-0.5 rounded capitalize">
-          {profile?.role === 'admin' ? 'Admin' : profile?.role === 'coach' ? 'Treinador' : 'Jogador'}
-        </span>
+        <div className="flex items-center gap-3">
+          <Link to="/settings" className="text-blue-200 hover:text-white transition-colors" title="Definições">
+            <Settings size={20} />
+          </Link>
+          <span className="text-xs bg-blue-800 px-2 py-0.5 rounded capitalize font-bold">
+            {profile?.role === 'admin' ? 'Admin' : profile?.role === 'coach' ? 'Treinador' : 'Jogador'}
+          </span>
+        </div>
       </div>
 
       {/* Desktop Sidebar Navigation */}
@@ -104,55 +109,61 @@ const Layout: React.FC = () => {
         <Outlet />
       </main>
 
-      {/* Mobile Bottom Navigation (Matching Wireframe) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-800 p-3 flex justify-around items-center md:hidden z-40 shadow-lg">
-        <Link 
-          to="/" 
-          className={`w-10 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-lg transition-all
-            ${location.pathname === '/' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
-          `}
-        >
-          A
-        </Link>
-        <Link 
-          to="/stats" 
-          className={`w-10 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-lg transition-all
-            ${location.pathname === '/stats' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
-          `}
-        >
-          D
-        </Link>
-        <Link 
-          to={profile?.role === 'admin' ? '/finance' : '/settings'} 
-          className={`w-10 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-lg transition-all
-            ${location.pathname === '/finance' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
-          `}
-        >
-          Q
-        </Link>
+      {/* Mobile Bottom Navigation (Agenda, Dashboards, Quotas, Contactos, Eventos) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-800 px-2 py-2 flex justify-around items-center md:hidden z-40 shadow-lg">
+        {/* Agenda */}
         <Link 
           to="/calendar" 
-          className={`w-10 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-lg transition-all
-            ${location.pathname === '/calendar' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
+          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all
+            ${location.pathname === '/calendar' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
           `}
         >
-          E
+          <Calendar size={20} />
+          <span className="text-[10px] font-bold mt-0.5">Agenda</span>
         </Link>
+
+        {/* Dashboards */}
         <Link 
-          to={profile?.role === 'admin' || profile?.role === 'coach' ? '/announcements' : '/'} 
-          className={`w-10 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-lg transition-all
-            ${location.pathname === '/announcements' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
+          to="/stats" 
+          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all
+            ${location.pathname === '/stats' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
           `}
         >
-          C
+          <BarChart3 size={20} />
+          <span className="text-[10px] font-bold mt-0.5">Dashboards</span>
         </Link>
+
+        {/* Quotas */}
         <Link 
-          to="/settings" 
-          className={`px-2 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-xs transition-all
-            ${location.pathname === '/settings' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
+          to={profile?.role === 'admin' ? '/finance' : '/settings'} 
+          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all
+            ${location.pathname === '/finance' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
           `}
         >
-          Perfil
+          <Landmark size={20} />
+          <span className="text-[10px] font-bold mt-0.5">Quotas</span>
+        </Link>
+
+        {/* Contactos */}
+        <Link 
+          to="/team-management" 
+          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all
+            ${location.pathname === '/team-management' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
+          `}
+        >
+          <Users size={20} />
+          <span className="text-[10px] font-bold mt-0.5">Contactos</span>
+        </Link>
+
+        {/* Eventos (Página Home com o detalhe de treinos e jogos do dia) */}
+        <Link 
+          to="/" 
+          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all
+            ${location.pathname === '/' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
+          `}
+        >
+          <Home size={20} />
+          <span className="text-[10px] font-bold mt-0.5">Eventos</span>
         </Link>
       </div>
     </div>
