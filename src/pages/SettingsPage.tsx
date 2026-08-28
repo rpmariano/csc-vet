@@ -117,7 +117,7 @@ const SettingsPage: React.FC = () => {
           <div className="pt-4 border-t border-gray-100 space-y-3">
             <div className="flex items-center space-x-2 text-gray-805 font-bold">
               <Shield size={18} className="text-csc-dark" />
-              <span>Posições no Campo (Esquema Tático 4-4-2)</span>
+              <span>Posições no Campo</span>
             </div>
             <p className="text-xs text-gray-500">
               Selecione as posições que tem preferência ou aptidão em desempenhar no relvado:

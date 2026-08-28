@@ -27,11 +27,14 @@ import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSe
 
 const POSITIONS = [
   'Guarda-redes',
-  'Defesa Central',
+  'Defesa Central Esquerdo',
+  'Defesa Central Direito',
   'Lateral Direito',
   'Lateral Esquerdo',
   'Médio Defensivo',
   'Médio Centro',
+  'Médio Centro Esquerdo',
+  'Médio Centro Direito',
   'Médio Ofensivo',
   'Extremo Direito',
   'Extremo Esquerdo',
@@ -844,10 +847,10 @@ const TeamManagementPage: React.FC = () => {
                   <span className="text-[10px] text-gray-400 font-bold">Múltiplas posições e papéis permitidos</span>
                 </h3>
 
-                {/* 2.1 Campo de Futebol Interativo 4-4-2 */}
+                {/* 2.1 Campo de Futebol Interativo */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-2">
-                    Posições no Campo (Esquema Tático 4-4-2):
+                    Posições no Campo:
                   </label>
                   <SoccerPitchSelector
                     selectedPositions={formPositions}
@@ -1175,11 +1178,11 @@ const TeamManagementPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Campo Tático 4-4-2 com as posições do atleta destacadas */}
+            {/* Campo Tático com as posições do atleta destacadas */}
             <div className="space-y-2">
               <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
                 <Shield size={14} className="text-csc-dark" />
-                <span>Posicionamento no Campo (4-4-2)</span>
+                <span>Posicionamento no Campo</span>
               </h4>
               <SoccerPitchSelector
                 selectedPositions={parsePositions(selectedProfile.position)}

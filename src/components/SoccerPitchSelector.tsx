@@ -11,28 +11,30 @@ export interface PitchPosition {
 }
 
 export const PITCH_POSITIONS: PitchPosition[] = [
-  // Avançados (4-4-2: 2 Pontas de Lança)
-  { id: 'pl_left', name: 'Ponta de Lança', short: 'PL', category: 'att', topPercent: 14, leftPercent: 33 },
-  { id: 'pl_right', name: 'Segundo Avançado', short: 'SA', category: 'att', topPercent: 14, leftPercent: 67 },
+  // Linha de Ataque (3 Avançados)
+  { id: 'ee', name: 'Extremo Esquerdo', short: 'EE', category: 'att', topPercent: 16, leftPercent: 16 },
+  { id: 'pl', name: 'Ponta de Lança', short: 'PL', category: 'att', topPercent: 12, leftPercent: 50 },
+  { id: 'ed', name: 'Extremo Direito', short: 'ED', category: 'att', topPercent: 16, leftPercent: 84 },
 
-  // Médios (4-4-2: Extremo Esq, Médio Centro, Médio Def, Extremo Dir)
-  { id: 'ee', name: 'Extremo Esquerdo', short: 'EE', category: 'mid', topPercent: 40, leftPercent: 14 },
-  { id: 'mc', name: 'Médio Centro', short: 'MC', category: 'mid', topPercent: 42, leftPercent: 38 },
-  { id: 'mdc', name: 'Médio Defensivo', short: 'MDC', category: 'mid', topPercent: 42, leftPercent: 62 },
-  { id: 'ed', name: 'Extremo Direito', short: 'ED', category: 'mid', topPercent: 40, leftPercent: 86 },
+  // Linha de Meio-Campo (3 Médios)
+  { id: 'mce', name: 'Médio Centro Esquerdo', short: 'MCE', category: 'mid', topPercent: 38, leftPercent: 28 },
+  { id: 'mdc', name: 'Médio Defensivo', short: 'MDC', category: 'mid', topPercent: 48, leftPercent: 50 },
+  { id: 'mcd', name: 'Médio Centro Direito', short: 'MCD', category: 'mid', topPercent: 38, leftPercent: 72 },
 
-  // Defesas (4-4-2: Lateral Esq, 2 Centrais, Lateral Dir)
-  { id: 'le', name: 'Lateral Esquerdo', short: 'LE', category: 'def', topPercent: 68, leftPercent: 14 },
-  { id: 'dc_left', name: 'Defesa Central', short: 'DC', category: 'def', topPercent: 71, leftPercent: 38 },
-  { id: 'dc_right', name: 'Defesa Central (Dir)', short: 'DC', category: 'def', topPercent: 71, leftPercent: 62 },
-  { id: 'ld', name: 'Lateral Direito', short: 'LD', category: 'def', topPercent: 68, leftPercent: 86 },
+  // Linha Defensiva (4 Defesas - Centrais individualizados)
+  { id: 'le', name: 'Lateral Esquerdo', short: 'LE', category: 'def', topPercent: 70, leftPercent: 14 },
+  { id: 'dce', name: 'Defesa Central Esquerdo', short: 'DCE', category: 'def', topPercent: 72, leftPercent: 38 },
+  { id: 'dcd', name: 'Defesa Central Direito', short: 'DCD', category: 'def', topPercent: 72, leftPercent: 62 },
+  { id: 'ld', name: 'Lateral Direito', short: 'LD', category: 'def', topPercent: 70, leftPercent: 86 },
 
   // Guarda-Redes
-  { id: 'gr', name: 'Guarda-redes', short: 'GR', category: 'gk', topPercent: 88, leftPercent: 50 },
+  { id: 'gr', name: 'Guarda-redes', short: 'GR', category: 'gk', topPercent: 90, leftPercent: 50 },
 ]
 
 export const EXTRA_POSITIONS = [
+  'Médio Centro',
   'Médio Ofensivo',
+  'Segundo Avançado',
   'Treinador / Equipa Técnica',
   'Dirigente / Staff'
 ]
@@ -43,18 +45,22 @@ export const normalizePositionName = (raw: string): string => {
   if (s.toLowerCase().includes('guarda')) return 'Guarda-redes'
   if (s.toLowerCase().includes('lateral dir')) return 'Lateral Direito'
   if (s.toLowerCase().includes('lateral esq')) return 'Lateral Esquerdo'
-  if (s.toLowerCase().includes('defesa central') || s.toLowerCase() === 'central') return 'Defesa Central'
-  if (s.toLowerCase().includes('médio def') || s.toLowerCase().includes('trinco')) return 'Médio Defensivo'
+  if (s.toLowerCase().includes('central esq') || s.toLowerCase() === 'dce') return 'Defesa Central Esquerdo'
+  if (s.toLowerCase().includes('central dir') || s.toLowerCase() === 'dcd') return 'Defesa Central Direito'
+  if (s.toLowerCase().includes('defesa central') || s.toLowerCase() === 'central') return 'Defesa Central Esquerdo'
+  if (s.toLowerCase().includes('médio def') || s.toLowerCase().includes('trinco') || s.toLowerCase() === 'mdc') return 'Médio Defensivo'
   if (s.toLowerCase().includes('médio of') || s.toLowerCase().includes('10')) return 'Médio Ofensivo'
+  if (s.toLowerCase().includes('médio centro esq') || s.toLowerCase() === 'mce') return 'Médio Centro Esquerdo'
+  if (s.toLowerCase().includes('médio centro dir') || s.toLowerCase() === 'mcd') return 'Médio Centro Direito'
   if (s.toLowerCase().includes('médio centro') || s.toLowerCase() === 'médio') return 'Médio Centro'
-  if (s.toLowerCase().includes('extremo dir') || s.toLowerCase().includes('ala dir')) return 'Extremo Direito'
-  if (s.toLowerCase().includes('extremo esq') || s.toLowerCase().includes('ala esq')) return 'Extremo Esquerdo'
-  if (s.toLowerCase().includes('segundo avançado') || s.toLowerCase().includes('segundo avancado')) return 'Segundo Avançado'
-  if (s.toLowerCase().includes('ponta de lança') || s.toLowerCase().includes('avançado') || s.toLowerCase().includes('avancado')) return 'Ponta de Lança'
+  if (s.toLowerCase().includes('extremo dir') || s.toLowerCase().includes('ala dir') || s.toLowerCase() === 'ed') return 'Extremo Direito'
+  if (s.toLowerCase().includes('extremo esq') || s.toLowerCase().includes('ala esq') || s.toLowerCase() === 'ee') return 'Extremo Esquerdo'
+  if (s.toLowerCase().includes('segundo avançado') || s.toLowerCase().includes('segundo avancado') || s.toLowerCase() === 'sa') return 'Segundo Avançado'
+  if (s.toLowerCase().includes('ponta de lança') || s.toLowerCase().includes('avançado') || s.toLowerCase().includes('avancado') || s.toLowerCase() === 'pl') return 'Ponta de Lança'
   return s
 }
 
-// Converter string de posições guardadas (ex: "Defesa Central, Lateral Direito") para array
+// Converter string de posições guardadas para array
 export const parsePositions = (positionStr?: string | null): string[] => {
   if (!positionStr || !positionStr.trim()) return ['Médio Centro']
   return positionStr
@@ -96,7 +102,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* Campo Visual 4-4-2 */}
+      {/* Campo Visual */}
       <div className="relative w-full max-w-md mx-auto aspect-[4/5] bg-gradient-to-b from-emerald-800 via-emerald-700 to-emerald-900 rounded-2xl p-3 shadow-inner border-2 border-emerald-600/60 overflow-hidden select-none">
         
         {/* Linhas do Relvado (Soccer Field Markings) */}
@@ -122,11 +128,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
           <div className="absolute bottom-16 left-1/2 w-20 h-8 border-t-2 border-white/40 rounded-t-full -translate-x-1/2" />
         </div>
 
-        {/* Marcador Tático 4-4-2 no Topo */}
-        <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-xs text-white/90 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-white/15 z-10 flex items-center gap-1">
-          <span>⚽ Campo 4-4-2</span>
-        </div>
-
+        {/* Indicador de Seleção no Topo */}
         <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-xs text-csc-gold text-[10px] font-black px-2.5 py-0.5 rounded-full border border-white/15 z-10">
           <span>{selectedPositions.length} {selectedPositions.length === 1 ? 'posição' : 'posições'}</span>
         </div>
@@ -182,10 +184,10 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
         })}
       </div>
 
-      {/* Posições Adicionais de Médio Ofensivo / Staff / Treinador */}
+      {/* Posições Adicionais & Funções Técnicas */}
       <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
         <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-          Outras Posições & Funções Técnicas:
+          Outras Posições & Funções:
         </p>
         <div className="flex flex-wrap gap-2">
           {EXTRA_POSITIONS.map(pos => {
