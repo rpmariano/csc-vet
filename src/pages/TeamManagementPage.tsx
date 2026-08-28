@@ -88,7 +88,6 @@ const TeamManagementPage: React.FC = () => {
   const [formEmergencyName, setFormEmergencyName] = useState('')
   const [formEmergencyPhone, setFormEmergencyPhone] = useState('')
   const [formMedicalNotes, setFormMedicalNotes] = useState('')
-  const [isSyncingInitialData, setIsSyncingInitialData] = useState(false)
 
   // Upload URLs & Status
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
@@ -146,47 +145,6 @@ const TeamManagementPage: React.FC = () => {
       setProfiles(mergeProfilesWithSeedData([]))
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSyncInitialPlayers = async () => {
-    if (!confirm('Deseja sincronizar e gravar todos os 31 atletas do PDF na base de dados Supabase?')) return
-    setIsSyncingInitialData(true)
-    try {
-      // 1. Obter registos existentes por email para evitar conflitos
-      const { data: existingData } = await supabase.from('profiles').select('id, email')
-      const existingByEmail = new Map(
-        (existingData || [])
-          .filter(p => !!p.email)
-          .map(p => [p.email.toLowerCase().trim(), p.id])
-      )
-
-      let countSuccess = 0
-      for (const p of INITIAL_PLAYERS_DATA) {
-        const emailKey = p.email.toLowerCase().trim()
-        const payload = {
-          ...p,
-          medical_notes: encodeRolesToNotes(p.medical_notes, [p.role || 'player']),
-        }
-        const existingId = existingByEmail.get(emailKey)
-        if (existingId) {
-          const { error } = await supabase.from('profiles').update(payload).eq('id', existingId)
-          if (!error) countSuccess++
-        } else {
-          const { error } = await supabase.from('profiles').insert([{
-            ...payload,
-            id: crypto.randomUUID()
-          }])
-          if (!error) countSuccess++
-        }
-      }
-
-      alert(`Sincronização concluída com sucesso! ${countSuccess} atletas processados na base de dados.`)
-      await fetchProfiles()
-    } catch (err: any) {
-      alert('Erro na sincronização: ' + (err.message || 'Verifique a base de dados'))
-    } finally {
-      setIsSyncingInitialData(false)
     }
   }
 
@@ -583,23 +541,10 @@ const TeamManagementPage: React.FC = () => {
             <Users size={32} />
             <span>Gestão do Plantel & Membros</span>
           </h1>
-          <p className="text-gray-550 mt-1 text-sm">
-            Fichas completas dos atletas, dados fiscais, moradas, IBAN, equipamento, contactos de emergência e documentos.
-          </p>
         </div>
 
         {isCoachOrAdmin && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={handleSyncInitialPlayers}
-              disabled={isSyncingInitialData}
-              className="flex items-center space-x-2 bg-csc-gold text-csc-dark border border-amber-300 px-3.5 py-2.5 rounded-xl font-black hover:bg-amber-400 transition-colors shadow-xs shrink-0 text-xs cursor-pointer active:scale-95"
-              title="Importar e sincronizar os 31 jogadores do documento PDF com a base de dados"
-            >
-              <Sparkles size={15} />
-              <span>{isSyncingInitialData ? 'A sincronizar...' : 'Sincronizar Plantel (PDF)'}</span>
-            </button>
-
+          <div className="flex items-center gap-2">
             <button
               onClick={openCreateModal}
               className="flex items-center space-x-2 bg-csc-dark text-white px-4 py-2.5 rounded-xl font-bold hover:bg-csc-dark/80 transition-colors shadow-md shrink-0 text-xs sm:text-sm cursor-pointer active:scale-95"
@@ -652,98 +597,46 @@ const TeamManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Metrics Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl p-4 border border-gray-150 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 font-bold">
-            {totalCount}
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-semibold uppercase">Total Plantel</p>
-            <p className="text-sm font-extrabold text-gray-850">Membros</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 border border-green-150 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-green-700 font-bold">
-            {activeCount}
-          </div>
-          <div>
-            <p className="text-xs text-green-700 font-semibold uppercase">Disponíveis</p>
-            <p className="text-sm font-extrabold text-green-800">Ativos</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 border border-red-150 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-700 font-bold">
-            {injuredCount}
-          </div>
-          <div>
-            <p className="text-xs text-red-700 font-semibold uppercase">Departamento Médico</p>
-            <p className="text-sm font-extrabold text-red-800">Lesionados</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 border border-gray-150 shadow-sm flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 font-bold">
-            {inactiveCount}
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-semibold uppercase">Indisponíveis</p>
-            <p className="text-sm font-extrabold text-gray-700">Inativos</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters & Search */}
-      <div className="bg-white rounded-xl border border-gray-150 p-4 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
+      {/* Barra de Pesquisa + Filtro de Posição + Alternador de Vista (Posicionada Acima dos Cards) */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-3.5 sm:p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          {/* Pesquisa */}
           <div className="flex-1 relative">
-            <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+            <Search size={16} className="absolute left-3.5 top-3 text-gray-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Pesquisar por nome, nome na camisola, posição ou nº camisola..."
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark"
+              className="w-full pl-9.5 pr-4 py-2 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
             />
           </div>
 
-          <div className="flex gap-2 items-center flex-wrap">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-700"
-            >
-              <option value="all">Todos os Estados</option>
-              <option value="active">🟢 Ativos</option>
-              <option value="injured">🔴 Lesionados</option>
-              <option value="inactive">⚪ Inativos</option>
-            </select>
-
+          {/* Filtro por Posição & Alternador de Vista */}
+          <div className="flex gap-2 items-center flex-wrap shrink-0 justify-between sm:justify-end">
             <select
               value={positionFilter}
               onChange={(e) => setPositionFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-700 max-w-[180px]"
+              className="px-3.5 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-bold text-gray-700 max-w-[190px] shadow-2xs cursor-pointer"
             >
               <option value="all">Todas as Posições</option>
               {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
             </select>
 
-            {/* Alternador Duplo de Vista (Hipótese 1: Lista vs Hipótese 3: Cartas) */}
-            <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0 ml-auto">
+            {/* Alternador Duplo de Vista (Lista vs Cartas) */}
+            <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   setViewMode('list')
                   localStorage.setItem('csc_team_view_mode', 'list')
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
                   viewMode === 'list'
                     ? 'bg-white text-csc-dark shadow-xs'
                     : 'text-gray-500 hover:text-gray-800'
                 }`}
-                title="Vista em Lista Compacta (Estilo Sofascore)"
+                title="Vista em Lista Compacta"
               >
                 <List size={15} />
                 <span className="hidden sm:inline">Lista</span>
@@ -755,12 +648,12 @@ const TeamManagementPage: React.FC = () => {
                   setViewMode('cards')
                   localStorage.setItem('csc_team_view_mode', 'cards')
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
                   viewMode === 'cards'
                     ? 'bg-white text-csc-dark shadow-xs'
                     : 'text-gray-500 hover:text-gray-800'
                 }`}
-                title="Vista em Cartas de Futebol (Estilo FUT)"
+                title="Vista em Cartas (FUT)"
               >
                 <LayoutGrid size={15} />
                 <span className="hidden sm:inline">Cartas</span>
@@ -768,6 +661,93 @@ const TeamManagementPage: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Cards de Status (Filtram ao Clicar) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* Total Plantel (Todos) */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter('all')}
+          className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
+            statusFilter === 'all'
+              ? 'bg-amber-50/80 border-csc-dark ring-2 ring-csc-dark shadow-md scale-102'
+              : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
+            statusFilter === 'all' ? 'bg-csc-dark text-csc-gold' : 'bg-gray-100 text-gray-700'
+          }`}>
+            {totalCount}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Total Plantel</p>
+            <p className="text-sm font-black text-gray-900 leading-tight">Membros</p>
+          </div>
+        </button>
+
+        {/* Ativos / Disponíveis */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
+          className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
+            statusFilter === 'active'
+              ? 'bg-emerald-50 border-emerald-600 ring-2 ring-emerald-600 shadow-md scale-102'
+              : 'bg-white border-gray-200 hover:border-emerald-200 hover:bg-emerald-50/30'
+          }`}
+        >
+          <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
+            statusFilter === 'active' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-800'
+          }`}>
+            {activeCount}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] text-emerald-700 font-bold uppercase tracking-wider">Disponíveis</p>
+            <p className="text-sm font-black text-emerald-900 leading-tight">Ativos</p>
+          </div>
+        </button>
+
+        {/* Lesionados / Dpto Médico */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'injured' ? 'all' : 'injured')}
+          className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
+            statusFilter === 'injured'
+              ? 'bg-red-50 border-red-600 ring-2 ring-red-600 shadow-md scale-102'
+              : 'bg-white border-gray-200 hover:border-red-200 hover:bg-red-50/30'
+          }`}
+        >
+          <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
+            statusFilter === 'injured' ? 'bg-red-600 text-white animate-pulse' : 'bg-red-100 text-red-800'
+          }`}>
+            {injuredCount}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] text-red-700 font-bold uppercase tracking-wider">Dpto. Médico</p>
+            <p className="text-sm font-black text-red-900 leading-tight">Lesionados</p>
+          </div>
+        </button>
+
+        {/* Inativos */}
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive')}
+          className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
+            statusFilter === 'inactive'
+              ? 'bg-gray-100 border-gray-600 ring-2 ring-gray-600 shadow-md scale-102'
+              : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
+            statusFilter === 'inactive' ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-600'
+          }`}>
+            {inactiveCount}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Indisponíveis</p>
+            <p className="text-sm font-black text-gray-700 leading-tight">Inativos</p>
+          </div>
+        </button>
       </div>
 
       {/* Profiles View */}
