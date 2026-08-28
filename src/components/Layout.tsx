@@ -37,8 +37,8 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-150 flex flex-col md:flex-row">
       {/* Mobile Header */}
-      <div className="bg-blue-900 text-white flex items-center justify-between p-4 md:hidden border-b-2 border-gray-800">
-        <h1 className="text-xl font-black tracking-wider">VETERANOS F.C.</h1>
+      <div className="bg-blue-900 text-white flex items-center justify-between p-3 md:hidden border-b-2 border-gray-800">
+        <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-12 object-contain" />
         <div className="flex items-center gap-3">
           <Link to="/settings" className="text-blue-200 hover:text-white transition-colors" title="Definições">
             <Settings size={20} />
@@ -52,9 +52,9 @@ const Layout: React.FC = () => {
       {/* Desktop Sidebar Navigation */}
       <aside className="bg-blue-900 text-white w-64 flex-shrink-0 flex-col justify-between hidden md:flex border-r-2 border-gray-800">
         <div className="p-6">
-          <h1 className="text-2xl font-black tracking-wider border-b border-blue-800 pb-4 mb-6">
-            VETERANOS F.C.
-          </h1>
+          <div className="border-b border-blue-800 pb-4 mb-6">
+            <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-16 w-full object-contain" />
+          </div>
           
           {profile && (
             <div className="flex items-center space-x-3 mb-6 bg-blue-950 p-3 rounded-xl border border-blue-800">
