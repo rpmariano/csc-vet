@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Bell, Calendar, DollarSign, MapPin, Clock, Info } from 'lucide-react'
+import { Bell, Calendar, DollarSign, MapPin, Clock, Info, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
@@ -167,6 +168,8 @@ const Home: React.FC = () => {
     }
   }
 
+  const pendingCallupsCount = myCallups.filter(c => c.status === 'called').length
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -178,6 +181,27 @@ const Home: React.FC = () => {
   return (
     <div className="max-w-md mx-auto space-y-5 pb-16">
       
+      {/* ALERTA DE CONVOCATÓRIAS PENDENTES */}
+      {pendingCallupsCount > 0 && (
+        <div className="bg-amber-500 text-white rounded-2xl p-4 shadow-md flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-3">
+            <AlertCircle size={24} className="shrink-0" />
+            <div>
+              <p className="font-extrabold text-sm">
+                Tens {pendingCallupsCount} {pendingCallupsCount === 1 ? 'convocatória pendente' : 'convocatórias pendentes'}!
+              </p>
+              <p className="text-xs text-amber-100">Confirma a tua disponibilidade para os próximos jogos.</p>
+            </div>
+          </div>
+          <Link
+            to="/calendar"
+            className="bg-white text-amber-800 text-xs font-bold px-3 py-1.5 rounded-lg shadow shrink-0 hover:bg-amber-50"
+          >
+            Ver
+          </Link>
+        </div>
+      )}
+
       {/* 1. SECÇÃO: Comunicações */}
       <div className="bg-white rounded-2xl border-2 border-gray-800 p-5 shadow-sm">
         <h2 className="text-xl font-black text-gray-900 mb-3 flex items-center gap-2">
@@ -254,33 +278,52 @@ const Home: React.FC = () => {
           </div>
 
           {/* Convocatória ligada a este jogo */}
-          {myCallups.filter(c => c.event_id === nextMatch.id).map(call => (
-            <div key={call.id} className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-500">Convocatória:</span>
-              <div className="flex gap-2">
-                {call.status === 'called' ? (
-                  <>
+          {(() => {
+            const currentMatchCallup = myCallups.find(c => c.event_id === nextMatch.id)
+            if (!currentMatchCallup) return null
+
+            return (
+              <div className="mt-5 pt-4 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500">A tua convocatória:</span>
+                    <p className="text-xs font-extrabold mt-0.5">
+                      {currentMatchCallup.status === 'confirmed' ? (
+                        <span className="text-green-700 flex items-center gap-1"><CheckCircle2 size={14}/> Presença Confirmada</span>
+                      ) : currentMatchCallup.status === 'declined' ? (
+                        <span className="text-red-700 flex items-center gap-1"><XCircle size={14}/> Marcaste Ausência</span>
+                      ) : (
+                        <span className="text-amber-700">A aguardar a tua resposta</span>
+                      )}
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-1.5">
                     <button
-                      onClick={() => handleCallupResponse(call.id, 'confirmed')}
-                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded-lg font-bold transition-colors"
+                      onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
+                      className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm ${
+                        currentMatchCallup.status === 'confirmed'
+                          ? 'bg-green-700 text-white'
+                          : 'bg-green-50 text-green-700 border border-green-300 hover:bg-green-100'
+                      }`}
                     >
                       Confirmar
                     </button>
                     <button
-                      onClick={() => handleCallupResponse(call.id, 'declined')}
-                      className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded-lg font-bold transition-colors"
+                      onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
+                      className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm ${
+                        currentMatchCallup.status === 'declined'
+                          ? 'bg-red-700 text-white'
+                          : 'bg-red-50 text-red-700 border border-red-300 hover:bg-red-100'
+                      }`}
                     >
                       Recusar
                     </button>
-                  </>
-                ) : (
-                  <span className={`text-xs font-bold px-2 py-1 rounded ${call.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {call.status === 'confirmed' ? 'Confirmado' : 'Recusado'}
-                  </span>
-                )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })()}
         </div>
       )}
 
