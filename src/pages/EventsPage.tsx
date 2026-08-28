@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Plus, Trash2, MapPin, Clock, Check, Shield, Users, CheckCircle2, XCircle, HelpCircle, X, UserPlus } from 'lucide-react'
+import { Plus, Trash2, MapPin, Clock, Check, Shield, Users, CheckCircle2, XCircle, HelpCircle, X, UserPlus, Search, RotateCcw } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
@@ -47,6 +47,7 @@ const EventsPage: React.FC = () => {
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
+  const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   
   const [loading, setLoading] = useState(true)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -119,6 +120,17 @@ const EventsPage: React.FC = () => {
 
   const handleSelectAll = () => setSelectedPlayerIds(allPlayers.map(p => p.id))
   const handleClearAll = () => setSelectedPlayerIds([])
+  const handleRepeatLastCallup = () => {
+    const sortedEvents = [...events].sort((a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime())
+    const lastEventWithCallups = sortedEvents.find(e => (eventCallups[e.id] || []).length > 0)
+    
+    if (lastEventWithCallups && eventCallups[lastEventWithCallups.id]) {
+      const lastPlayerIds = eventCallups[lastEventWithCallups.id].map(c => c.player_id)
+      setSelectedPlayerIds(lastPlayerIds)
+    } else {
+      alert('Ainda não existem convocatórias anteriores para repetir.')
+    }
+  }
   const togglePlayer = (id: string) => {
     setSelectedPlayerIds(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id])
   }
@@ -400,39 +412,66 @@ const EventsPage: React.FC = () => {
 
             {/* SELEÇÃO DE JOGADORES NA CONVOCATÓRIA */}
             <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-2.5">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                 <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
                   <Users size={14} className="text-csc-dark" />
                   <span>Convocatória ({selectedPlayerIds.length})</span>
                 </span>
-                <div className="flex gap-2 text-xs">
-                  <button type="button" onClick={handleSelectAll} className="font-bold text-csc-dark hover:underline">Todos</button>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={handleRepeatLastCallup}
+                    className="font-bold text-csc-dark bg-white border border-gray-300 px-1.5 py-0.5 rounded text-[11px] hover:bg-gray-50 flex items-center gap-1 shadow-sm"
+                    title="Repetir a última convocatória"
+                  >
+                    <RotateCcw size={10} /> Repetir
+                  </button>
+                  <button type="button" onClick={handleSelectAll} className="font-bold text-csc-dark hover:underline text-[11px]">Todos</button>
                   <span className="text-gray-300">|</span>
-                  <button type="button" onClick={handleClearAll} className="font-bold text-gray-500 hover:underline">Limpar</button>
+                  <button type="button" onClick={handleClearAll} className="font-bold text-gray-500 hover:underline text-[11px]">Limpar</button>
                 </div>
               </div>
 
+              {/* Barra de Pesquisa */}
+              <div className="relative">
+                <Search size={12} className="absolute left-2.5 top-2 text-gray-400" />
+                <input
+                  type="text"
+                  value={playerSearchTerm}
+                  onChange={(e) => setPlayerSearchTerm(e.target.value)}
+                  placeholder="Pesquisar por nome..."
+                  className="w-full pl-7 pr-3 py-1 text-xs bg-white border border-gray-300 rounded-lg outline-none focus:ring-1 focus:ring-csc-dark"
+                />
+              </div>
+
               <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto p-1 bg-white border border-gray-200 rounded-lg">
-                {allPlayers.map(p => {
-                  const isSel = selectedPlayerIds.includes(p.id)
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => togglePlayer(p.id)}
-                      className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-xs transition-colors ${
-                        isSel ? 'bg-csc-dark/5 font-bold text-csc-dark' : 'text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSel}
-                        onChange={() => {}}
-                        className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 pointer-events-none"
-                      />
-                      <span className="truncate">{p.name}</span>
-                    </div>
-                  )
-                })}
+                {allPlayers
+                  .filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase()))
+                  .map(p => {
+                    const isSel = selectedPlayerIds.includes(p.id)
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => togglePlayer(p.id)}
+                        className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-xs transition-colors ${
+                          isSel ? 'bg-csc-dark/5 font-bold text-csc-dark' : 'text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSel}
+                          onChange={() => {}}
+                          className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 pointer-events-none"
+                        />
+                        <span className="truncate">{p.name}</span>
+                      </div>
+                    )
+                  })}
+                {allPlayers.filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase())).length === 0 && (
+                  <div className="text-center py-2 text-xs text-gray-500">
+                    Nenhum jogador com "{playerSearchTerm}".
+                  </div>
+                )}
               </div>
             </div>
 

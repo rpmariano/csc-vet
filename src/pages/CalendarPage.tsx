@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { MapPin, Clock, Plus, X, Award, Users, CheckCircle2, XCircle, HelpCircle, UserPlus, Trash2 } from 'lucide-react'
+import { MapPin, Clock, Plus, X, Award, Users, CheckCircle2, XCircle, HelpCircle, UserPlus, Trash2, Search, RotateCcw } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
@@ -46,6 +46,7 @@ const CalendarPage: React.FC = () => {
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [managingCallupsInModal, setManagingCallupsInModal] = useState(false)
+  const [playerSearchTerm, setPlayerSearchTerm] = useState('')
 
   // Form states
   const [title, setTitle] = useState('')
@@ -130,6 +131,18 @@ const CalendarPage: React.FC = () => {
 
   const handleClearPlayers = () => {
     setSelectedPlayerIds([])
+  }
+
+  const handleRepeatLastCallup = () => {
+    const sortedEvents = [...events].sort((a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime())
+    const lastEventWithCallups = sortedEvents.find(e => (eventCallups[e.id] || []).length > 0)
+    
+    if (lastEventWithCallups && eventCallups[lastEventWithCallups.id]) {
+      const lastPlayerIds = eventCallups[lastEventWithCallups.id].map(c => c.player_id)
+      setSelectedPlayerIds(lastPlayerIds)
+    } else {
+      alert('Ainda não existem convocatórias anteriores para repetir.')
+    }
   }
 
   const togglePlayerSelection = (playerId: string) => {
@@ -748,19 +761,27 @@ const CalendarPage: React.FC = () => {
 
               {/* SELEÇÃO DE JOGADORES (CONVOCATÓRIA) */}
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <label className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
                       <Users size={16} className="text-csc-dark" />
                       <span>Convocatória Inicial ({selectedPlayerIds.length} selecionados)</span>
                     </label>
-                    <p className="text-[11px] text-gray-500">Os atletas selecionados receberão notificação para responder.</p>
+                    <p className="text-[11px] text-gray-500">Selecione os atletas a convocar para este jogo/treino.</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={handleRepeatLastCallup}
+                      className="font-bold text-csc-dark bg-white border border-gray-300 px-2 py-1 rounded hover:bg-gray-50 flex items-center gap-1 shadow-sm"
+                      title="Repetir a lista de convocados do jogo anterior"
+                    >
+                      <RotateCcw size={12} /> Repetir Última
+                    </button>
                     <button
                       type="button"
                       onClick={handleSelectAllPlayers}
-                      className="text-xs font-bold text-csc-dark hover:underline"
+                      className="font-bold text-csc-dark hover:underline"
                     >
                       Todos
                     </button>
@@ -768,34 +789,62 @@ const CalendarPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleClearPlayers}
-                      className="text-xs font-bold text-gray-500 hover:underline"
+                      className="font-bold text-gray-500 hover:underline"
                     >
                       Limpar
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1 bg-white border border-gray-200 rounded-lg">
-                  {allPlayers.map(p => {
-                    const isSelected = selectedPlayerIds.includes(p.id)
-                    return (
-                      <div
-                        key={p.id}
-                        onClick={() => togglePlayerSelection(p.id)}
-                        className={`flex items-center gap-2 p-2 rounded-md cursor-pointer text-xs border transition-colors ${
-                          isSelected ? 'bg-csc-dark/5 border-csc-dark font-bold text-csc-dark' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {}} // controlado pelo onClick pai
-                          className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 focus:ring-0 pointer-events-none"
-                        />
-                        <span className="truncate">{p.name}</span>
-                      </div>
-                    )
-                  })}
+                {/* Barra de Pesquisa de Jogadores */}
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={playerSearchTerm}
+                    onChange={(e) => setPlayerSearchTerm(e.target.value)}
+                    placeholder="Pesquisar jogador por nome..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg outline-none focus:ring-1 focus:ring-csc-dark"
+                  />
+                  {playerSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setPlayerSearchTerm('')}
+                      className="absolute right-2.5 top-2 text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto p-1 bg-white border border-gray-200 rounded-lg">
+                  {allPlayers
+                    .filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase()))
+                    .map(p => {
+                      const isSelected = selectedPlayerIds.includes(p.id)
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => togglePlayerSelection(p.id)}
+                          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer text-xs border transition-colors ${
+                            isSelected ? 'bg-csc-dark/5 border-csc-dark font-bold text-csc-dark' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {}} // controlado pelo onClick pai
+                            className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 focus:ring-0 pointer-events-none"
+                          />
+                          <span className="truncate">{p.name}</span>
+                        </div>
+                      )
+                    })}
+                  {allPlayers.filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase())).length === 0 && (
+                    <div className="col-span-2 text-center py-3 text-xs text-gray-500">
+                      Nenhum jogador encontrado com "{playerSearchTerm}".
+                    </div>
+                  )}
                 </div>
               </div>
 
