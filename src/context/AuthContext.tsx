@@ -32,6 +32,9 @@ export interface Profile {
 interface AuthContextType {
   user: User | null
   profile: Profile | null
+  actualRole: UserRole | null
+  isSimulatingRole: boolean
+  setSimulatedRole: (role: UserRole | null) => void
   loading: boolean
   signOut: () => Promise<void>
 }
@@ -40,7 +43,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const [actualProfile, setActualProfile] = useState<Profile | null>(null)
+  const [simulatedRole, setSimulatedRoleState] = useState<UserRole | null>(() => {
+    return (localStorage.getItem('csc_simulated_role') as UserRole) || null
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -63,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (currentUser) {
           await fetchProfile(currentUser.id)
         } else {
-          setProfile(null)
+          setActualProfile(null)
           setLoading(false)
         }
       }
@@ -85,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('Erro ao obter perfil:', error)
       } else if (data) {
-        setProfile(data as Profile)
+        setActualProfile(data as Profile)
       }
     } catch (err) {
       console.error('Erro de rede ao obter perfil:', err)
@@ -94,16 +100,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
+  const setSimulatedRole = (role: UserRole | null) => {
+    if (actualProfile?.role !== 'admin') return
+
+    if (role && role !== 'admin') {
+      localStorage.setItem('csc_simulated_role', role)
+      setSimulatedRoleState(role)
+    } else {
+      localStorage.removeItem('csc_simulated_role')
+      setSimulatedRoleState(null)
+    }
+  }
+
   const signOut = async () => {
     setLoading(true)
+    localStorage.removeItem('csc_simulated_role')
+    setSimulatedRoleState(null)
     await supabase.auth.signOut()
     setUser(null)
-    setProfile(null)
+    setActualProfile(null)
     setLoading(false)
   }
 
+  const actualRole = actualProfile?.role ?? null
+  const isSimulatingRole = actualRole === 'admin' && simulatedRole !== null && simulatedRole !== 'admin'
+
+  const effectiveProfile: Profile | null = actualProfile
+    ? {
+        ...actualProfile,
+        role: isSimulatingRole && simulatedRole ? simulatedRole : actualProfile.role
+      }
+    : null
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile: effectiveProfile, 
+      actualRole, 
+      isSimulatingRole, 
+      setSimulatedRole, 
+      loading, 
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   )
