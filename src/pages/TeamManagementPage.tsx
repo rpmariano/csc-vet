@@ -23,6 +23,7 @@ import {
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
+import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 
 const POSITIONS = [
   'Guarda-redes',
@@ -35,6 +36,7 @@ const POSITIONS = [
   'Extremo Direito',
   'Extremo Esquerdo',
   'Ponta de Lança',
+  'Segundo Avançado',
   'Treinador / Equipa Técnica',
   'Dirigente / Staff'
 ]
@@ -61,12 +63,12 @@ const TeamManagementPage: React.FC = () => {
   const [formNickname, setFormNickname] = useState('')
   const [formEmail, setFormEmail] = useState('')
   const [formPhone, setFormPhone] = useState('')
-  const [formRole, setFormRole] = useState<UserRole>('player')
+  const [formRoles, setFormRoles] = useState<UserRole[]>(['player'])
   const [formStatus, setFormStatus] = useState<ProfileStatus>('active')
   const [formJerseyNumber, setFormJerseyNumber] = useState<number | ''>('')
   const [formBirthDate, setFormBirthDate] = useState('')
   const [formNationality, setFormNationality] = useState('Portuguesa')
-  const [formPosition, setFormPosition] = useState('Médio Centro')
+  const [formPositions, setFormPositions] = useState<string[]>(['Médio Centro'])
   const [formIdNumber, setFormIdNumber] = useState('')
   const [formMemberNumber, setFormMemberNumber] = useState('')
   const [formEmergencyName, setFormEmergencyName] = useState('')
@@ -124,12 +126,12 @@ const TeamManagementPage: React.FC = () => {
     setFormNickname('')
     setFormEmail('')
     setFormPhone('')
-    setFormRole('player')
+    setFormRoles(['player'])
     setFormStatus('active')
     setFormJerseyNumber('')
     setFormBirthDate('')
     setFormNationality('Portuguesa')
-    setFormPosition('Médio Centro')
+    setFormPositions(['Médio Centro'])
     setFormIdNumber('')
     setFormMemberNumber('')
     setFormEmergencyName('')
@@ -153,12 +155,19 @@ const TeamManagementPage: React.FC = () => {
     setFormNickname(p.nickname || '')
     setFormEmail(p.email || '')
     setFormPhone(p.phone || '')
-    setFormRole(p.role || 'player')
+    
+    // Iniciar papéis atribuídos
+    const roles: UserRole[] = []
+    if (p.role === 'admin') roles.push('admin')
+    if (p.role === 'coach' || p.position?.includes('Treinador')) roles.push('coach')
+    if (p.role === 'player' || roles.length === 0) roles.push('player')
+    setFormRoles(roles)
+
     setFormStatus(p.status || 'active')
     setFormJerseyNumber(p.jersey_number !== undefined && p.jersey_number !== null ? p.jersey_number : '')
     setFormBirthDate(p.birth_date || '')
     setFormNationality(p.nationality || 'Portuguesa')
-    setFormPosition(p.position || 'Médio Centro')
+    setFormPositions(parsePositions(p.position))
     setFormIdNumber(p.id_number || '')
     setFormMemberNumber(p.member_number || '')
     setFormEmergencyName(p.emergency_contact_name || '')
@@ -212,6 +221,16 @@ const TeamManagementPage: React.FC = () => {
     }
   }
 
+  const toggleRole = (r: UserRole) => {
+    if (formRoles.includes(r)) {
+      if (formRoles.length > 1) {
+        setFormRoles(formRoles.filter(item => item !== r))
+      }
+    } else {
+      setFormRoles([...formRoles, r])
+    }
+  }
+
   const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formName || !formEmail) {
@@ -219,17 +238,25 @@ const TeamManagementPage: React.FC = () => {
       return
     }
 
+    const primaryRole: UserRole = formRoles.includes('admin') 
+      ? 'admin' 
+      : formRoles.includes('coach') 
+      ? 'coach' 
+      : 'player'
+
+    const positionStr = formPositions.length > 0 ? formPositions.join(', ') : 'Médio Centro'
+
     const payload = {
       name: formName,
       nickname: formNickname || null,
       email: formEmail,
       phone: formPhone || null,
-      role: formRole,
+      role: primaryRole,
       status: formStatus,
       jersey_number: formJerseyNumber !== '' ? Number(formJerseyNumber) : null,
       birth_date: formBirthDate || null,
       nationality: formNationality || null,
-      position: formPosition || null,
+      position: positionStr,
       id_number: formIdNumber || null,
       member_number: formMemberNumber || null,
       emergency_contact_name: formEmergencyName || null,
@@ -524,9 +551,20 @@ const TeamManagementPage: React.FC = () => {
                         </span>
                       )}
                       <div>
-                        <span className="text-xs font-bold text-gray-700">{person.position || 'Jogador'}</span>
+                        <div className="flex flex-wrap gap-1 items-center">
+                          {parsePositions(person.position).map((pos, idx) => (
+                            <span 
+                              key={idx}
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${
+                                idx === 0 ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-gray-50 text-gray-700 border-gray-200'
+                              }`}
+                            >
+                              {pos}
+                            </span>
+                          ))}
+                        </div>
                         {person.member_number && (
-                          <p className="text-[10px] text-gray-400 font-semibold">Sócio nº {person.member_number}</p>
+                          <p className="text-[10px] text-gray-400 font-semibold mt-0.5">Sócio nº {person.member_number}</p>
                         )}
                       </div>
                     </div>
@@ -544,7 +582,7 @@ const TeamManagementPage: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Player Main Info */}
+                  {/* Player Main Info & Role Badges */}
                   <div className="flex items-center gap-3.5 my-3">
                     {person.photo_url ? (
                       <img
@@ -567,7 +605,25 @@ const TeamManagementPage: React.FC = () => {
                           "{person.nickname}"
                         </p>
                       )}
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      
+                      {/* Role Badges */}
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {person.role === 'admin' && (
+                          <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-csc-gold text-csc-dark border border-amber-300">
+                            🛡️ Admin
+                          </span>
+                        )}
+                        {(person.role === 'coach' || person.position?.includes('Treinador')) && (
+                          <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-blue-500 text-white">
+                            📋 Treinador
+                          </span>
+                        )}
+                        <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-700 text-white">
+                          ⚽ Jogador
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-gray-500 mt-1">
                         {person.nationality || 'Portuguesa'} {age ? `• ${age} anos` : ''}
                       </p>
                     </div>
@@ -780,22 +836,101 @@ const TeamManagementPage: React.FC = () => {
 
               {/* 2. DADOS DESPORTIVOS & PAPEL */}
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Shield size={14} className="text-csc-dark" />
-                  <span>2. Dados Desportivos & Função</span>
+                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Shield size={14} className="text-csc-dark" />
+                    <span>2. Dados Desportivos & Função</span>
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-bold">Múltiplas posições e papéis permitidos</span>
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Posição no Campo</label>
-                    <select
-                      value={formPosition}
-                      onChange={(e) => setFormPosition(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                {/* 2.1 Campo de Futebol Interativo 4-4-2 */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-2">
+                    Posições no Campo (Esquema Tático 4-4-2):
+                  </label>
+                  <SoccerPitchSelector
+                    selectedPositions={formPositions}
+                    onChange={setFormPositions}
+                  />
+                </div>
+
+                {/* 2.2 Papéis no Sistema (1, 2 ou 3 funções) */}
+                <div className="pt-2 border-t border-gray-200">
+                  <label className="block text-xs font-bold text-gray-700 mb-2">
+                    Papel / Funções no Sistema (Selecione 1, 2 ou 3):
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {/* Jogador */}
+                    <button
+                      type="button"
+                      onClick={() => toggleRole('player')}
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                        formRoles.includes('player')
+                          ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-400/50 shadow-xs'
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                      }`}
                     >
-                      {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
-                    </select>
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <span className="text-base">⚽</span>
+                        <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                          formRoles.includes('player') ? 'bg-emerald-600 text-white' : 'border border-gray-300'
+                        }`}>
+                          {formRoles.includes('player') && <Check size={12} className="stroke-[3]" />}
+                        </div>
+                      </div>
+                      <span className="text-xs font-extrabold text-gray-900">Jogador</span>
+                      <span className="text-[10px] text-gray-500 mt-0.5 leading-tight">Atleta nas convocatórias e estatísticas</span>
+                    </button>
+
+                    {/* Treinador */}
+                    <button
+                      type="button"
+                      onClick={() => toggleRole('coach')}
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                        formRoles.includes('coach')
+                          ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-400/50 shadow-xs'
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <span className="text-base">📋</span>
+                        <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                          formRoles.includes('coach') ? 'bg-blue-600 text-white' : 'border border-gray-300'
+                        }`}>
+                          {formRoles.includes('coach') && <Check size={12} className="stroke-[3]" />}
+                        </div>
+                      </div>
+                      <span className="text-xs font-extrabold text-gray-900">Treinador</span>
+                      <span className="text-[10px] text-gray-500 mt-0.5 leading-tight">Equipa técnica, criação de treinos e jogos</span>
+                    </button>
+
+                    {/* Administrador / Direção */}
+                    <button
+                      type="button"
+                      onClick={() => toggleRole('admin')}
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                        formRoles.includes('admin')
+                          ? 'bg-amber-50 border-csc-gold ring-2 ring-csc-gold/50 shadow-xs'
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <span className="text-base">🛡️</span>
+                        <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                          formRoles.includes('admin') ? 'bg-csc-dark text-csc-gold' : 'border border-gray-300'
+                        }`}>
+                          {formRoles.includes('admin') && <Check size={12} className="stroke-[3]" />}
+                        </div>
+                      </div>
+                      <span className="text-xs font-extrabold text-gray-900">Administrador / Direção</span>
+                      <span className="text-[10px] text-gray-500 mt-0.5 leading-tight">Acesso total, finanças, sócios e clube</span>
+                    </button>
                   </div>
+                </div>
+
+                {/* 2.3 Camisola & Estado de Atividade */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">Número da Camisola</label>
                     <input
@@ -807,21 +942,6 @@ const TeamManagementPage: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
                       placeholder="Ex: 10"
                     />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Papel no Sistema</label>
-                    <select
-                      value={formRole}
-                      onChange={(e) => setFormRole(e.target.value as UserRole)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-semibold"
-                    >
-                      <option value="player">Jogador</option>
-                      <option value="coach">Treinador</option>
-                      <option value="admin">Administrador / Direção</option>
-                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">Estado de Atividade</label>
@@ -1018,8 +1138,30 @@ const TeamManagementPage: React.FC = () => {
                 {selectedProfile.nickname && (
                   <p className="text-xs font-bold text-csc-dark italic">"{selectedProfile.nickname}"</p>
                 )}
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs font-semibold text-gray-600">{selectedProfile.position || 'Jogador'}</span>
+
+                {/* Role Badges */}
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {selectedProfile.role === 'admin' && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-csc-gold text-csc-dark border border-amber-300">
+                      🛡️ Administrador / Direção
+                    </span>
+                  )}
+                  {(selectedProfile.role === 'coach' || selectedProfile.position?.includes('Treinador')) && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-500 text-white">
+                      📋 Treinador
+                    </span>
+                  )}
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-700 text-white">
+                    ⚽ Jogador
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  {parsePositions(selectedProfile.position).map((pos, idx) => (
+                    <span key={idx} className="text-xs font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200">
+                      {pos}
+                    </span>
+                  ))}
                   <span className="text-gray-300">•</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
                     selectedProfile.status === 'active' ? 'bg-green-100 text-green-800' :
@@ -1031,6 +1173,19 @@ const TeamManagementPage: React.FC = () => {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Campo Tático 4-4-2 com as posições do atleta destacadas */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Shield size={14} className="text-csc-dark" />
+                <span>Posicionamento no Campo (4-4-2)</span>
+              </h4>
+              <SoccerPitchSelector
+                selectedPositions={parsePositions(selectedProfile.position)}
+                onChange={() => {}}
+                readOnly={true}
+              />
             </div>
 
             {/* General Info Grid */}
