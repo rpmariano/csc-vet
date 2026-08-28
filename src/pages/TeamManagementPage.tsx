@@ -27,6 +27,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth, extractRolesFromProfile, encodeRolesToNotes, cleanNotesFromRolesTag, formatDisplayName } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
+import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 
 const POSITIONS = [
   'Guarda-redes',
@@ -62,30 +63,40 @@ const TeamManagementPage: React.FC = () => {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null)
   const [isEditing, setIsEditing] = useState(false)
 
-  // Form State
+  // Form State - Expanded with PDF fields
   const [formId, setFormId] = useState<string | null>(null)
   const [formName, setFormName] = useState('')
   const [formNickname, setFormNickname] = useState('')
+  const [formShirtName, setFormShirtName] = useState('')
   const [formEmail, setFormEmail] = useState('')
   const [formPhone, setFormPhone] = useState('')
   const [formRoles, setFormRoles] = useState<UserRole[]>(['player'])
   const [formStatus, setFormStatus] = useState<ProfileStatus>('active')
   const [formJerseyNumber, setFormJerseyNumber] = useState<number | ''>('')
+  const [formKitSize, setFormKitSize] = useState('L')
   const [formBirthDate, setFormBirthDate] = useState('')
   const [formNationality, setFormNationality] = useState('Portuguesa')
   const [formPositions, setFormPositions] = useState<string[]>(['Médio Centro'])
+  const [formAddress, setFormAddress] = useState('')
+  const [formPostalCode, setFormPostalCode] = useState('')
+  const [formCity, setFormCity] = useState('')
+  const [formNif, setFormNif] = useState('')
   const [formIdNumber, setFormIdNumber] = useState('')
+  const [formIdCardExpiry, setFormIdCardExpiry] = useState('')
+  const [formIban, setFormIban] = useState('')
+  const [formGdprConsent, setFormGdprConsent] = useState(true)
   const [formMemberNumber, setFormMemberNumber] = useState('')
   const [formEmergencyName, setFormEmergencyName] = useState('')
   const [formEmergencyPhone, setFormEmergencyPhone] = useState('')
   const [formMedicalNotes, setFormMedicalNotes] = useState('')
+  const [isSyncingInitialData, setIsSyncingInitialData] = useState(false)
 
   // Upload URLs & Status
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [idDocUrl, setIdDocUrl] = useState<string | null>(null)
   const [insuranceDocUrl, setInsuranceDocUrl] = useState<string | null>(null)
   const [medicalExamDocUrl, setMedicalExamDocUrl] = useState<string | null>(null)
-  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null) // name of the field uploading
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
 
   const isCoachOrAdmin = currentUserProfile && ['coach', 'admin'].includes(currentUserProfile.role)
   const isAdmin = currentUserProfile?.role === 'admin'
@@ -99,13 +110,40 @@ const TeamManagementPage: React.FC = () => {
         .order('name', { ascending: true })
 
       if (error) throw error
-      if (data) {
+      if (data && data.length > 0) {
         setProfiles(data as Profile[])
+      } else {
+        // Fallback to initial player list if DB is empty
+        setProfiles(INITIAL_PLAYERS_DATA.map((p, idx) => ({ ...p, id: `seed-${idx}` })) as Profile[])
       }
     } catch (err) {
       console.error(err)
+      setProfiles(INITIAL_PLAYERS_DATA.map((p, idx) => ({ ...p, id: `seed-${idx}` })) as Profile[])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSyncInitialPlayers = async () => {
+    if (!confirm('Deseja migrar e sincronizar todos os 31 atletas do PDF para a base de dados Supabase?')) return
+    setIsSyncingInitialData(true)
+    try {
+      let count = 0
+      for (const p of INITIAL_PLAYERS_DATA) {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({
+            ...p,
+            medical_notes: encodeRolesToNotes(p.medical_notes, [p.role || 'player']),
+          }, { onConflict: 'email' })
+        if (!error) count++
+      }
+      alert(`Migração concluída com sucesso! ${count} atletas processados.`)
+      await fetchProfiles()
+    } catch (err: any) {
+      alert('Erro na migração: ' + (err.message || 'Verifique a base de dados'))
+    } finally {
+      setIsSyncingInitialData(false)
     }
   }
 
@@ -129,15 +167,24 @@ const TeamManagementPage: React.FC = () => {
     setFormId(null)
     setFormName('')
     setFormNickname('')
+    setFormShirtName('')
     setFormEmail('')
     setFormPhone('')
     setFormRoles(['player'])
     setFormStatus('active')
     setFormJerseyNumber('')
+    setFormKitSize('L')
     setFormBirthDate('')
     setFormNationality('Portuguesa')
     setFormPositions(['Médio Centro'])
+    setFormAddress('')
+    setFormPostalCode('')
+    setFormCity('')
+    setFormNif('')
     setFormIdNumber('')
+    setFormIdCardExpiry('')
+    setFormIban('')
+    setFormGdprConsent(true)
     setFormMemberNumber('')
     setFormEmergencyName('')
     setFormEmergencyPhone('')
@@ -158,6 +205,7 @@ const TeamManagementPage: React.FC = () => {
     setFormId(p.id)
     setFormName(p.name || '')
     setFormNickname(p.nickname || '')
+    setFormShirtName(p.shirt_name || p.nickname || '')
     setFormEmail(p.email || '')
     setFormPhone(p.phone || '')
     
@@ -167,10 +215,18 @@ const TeamManagementPage: React.FC = () => {
 
     setFormStatus(p.status || 'active')
     setFormJerseyNumber(p.jersey_number !== undefined && p.jersey_number !== null ? p.jersey_number : '')
+    setFormKitSize(p.kit_size || 'L')
     setFormBirthDate(p.birth_date || '')
     setFormNationality(p.nationality || 'Portuguesa')
     setFormPositions(parsePositions(p.position))
+    setFormAddress(p.address || '')
+    setFormPostalCode(p.postal_code || '')
+    setFormCity(p.city || '')
+    setFormNif(p.nif || '')
     setFormIdNumber(p.id_number || '')
+    setFormIdCardExpiry(p.id_card_expiry || '')
+    setFormIban(p.iban || '')
+    setFormGdprConsent(p.gdpr_consent !== false)
     setFormMemberNumber(p.member_number || '')
     setFormEmergencyName(p.emergency_contact_name || '')
     setFormEmergencyPhone(p.emergency_contact_phone || '')
@@ -251,16 +307,25 @@ const TeamManagementPage: React.FC = () => {
 
     const payload = {
       name: formName,
-      nickname: formNickname || null,
+      nickname: formNickname || formShirtName || null,
+      shirt_name: formShirtName || formNickname || null,
       email: formEmail,
       phone: formPhone || null,
       role: primaryRole,
       status: formStatus,
       jersey_number: formJerseyNumber !== '' ? Number(formJerseyNumber) : null,
+      kit_size: formKitSize || null,
       birth_date: formBirthDate || null,
       nationality: formNationality || null,
       position: positionStr,
+      address: formAddress || null,
+      postal_code: formPostalCode || null,
+      city: formCity || null,
+      nif: formNif || null,
       id_number: formIdNumber || null,
+      id_card_expiry: formIdCardExpiry || null,
+      iban: formIban || null,
+      gdpr_consent: formGdprConsent,
       member_number: formMemberNumber || null,
       emergency_contact_name: formEmergencyName || null,
       emergency_contact_phone: formEmergencyPhone || null,
@@ -418,18 +483,30 @@ const TeamManagementPage: React.FC = () => {
             <span>Gestão do Plantel & Membros</span>
           </h1>
           <p className="text-gray-550 mt-1 text-sm">
-            Fichas completas dos atletas, contactos de emergência, registo médico e apólices de seguro.
+            Fichas completas dos atletas, dados fiscais, moradas, IBAN, equipamento, contactos de emergência e documentos.
           </p>
         </div>
 
         {isCoachOrAdmin && (
-          <button
-            onClick={openCreateModal}
-            className="flex items-center space-x-2 bg-csc-dark text-white px-4 py-2.5 rounded-xl font-bold hover:bg-csc-dark/80 transition-colors shadow-md shrink-0"
-          >
-            <Plus size={18} />
-            <span>Adicionar Membro</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleSyncInitialPlayers}
+              disabled={isSyncingInitialData}
+              className="flex items-center space-x-2 bg-csc-gold text-csc-dark border border-amber-300 px-3.5 py-2.5 rounded-xl font-black hover:bg-amber-400 transition-colors shadow-xs shrink-0 text-xs cursor-pointer active:scale-95"
+              title="Importar e sincronizar os 31 jogadores do documento PDF com a base de dados"
+            >
+              <Sparkles size={15} />
+              <span>{isSyncingInitialData ? 'A sincronizar...' : 'Sincronizar Plantel (PDF)'}</span>
+            </button>
+
+            <button
+              onClick={openCreateModal}
+              className="flex items-center space-x-2 bg-csc-dark text-white px-4 py-2.5 rounded-xl font-bold hover:bg-csc-dark/80 transition-colors shadow-md shrink-0 text-xs sm:text-sm cursor-pointer active:scale-95"
+            >
+              <Plus size={18} />
+              <span>Adicionar Membro</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -865,16 +942,16 @@ const TeamManagementPage: React.FC = () => {
               {isEditing ? 'Editar Ficha do Membro' : 'Criar Ficha de Novo Membro'}
             </h2>
             <p className="text-xs text-gray-500 mb-6">
-              Preencha os dados cadastrais, contactos e anexe a respetiva documentação legal/desportiva.
+              Preencha os dados cadastrais, fiscais, morada, equipamento, contactos e anexe a documentação legal.
             </p>
 
             <form onSubmit={handleSaveMember} className="space-y-6">
               
-              {/* 1. DADOS PESSOAIS & IDENTIFICAÇÃO */}
+              {/* 1. DADOS PESSOAIS & IDENTIFICAÇÃO FISCAL */}
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
                 <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
                   <Users size={14} className="text-csc-dark" />
-                  <span>1. Identificação Pessoal</span>
+                  <span>1. Identificação Pessoal & Fiscal</span>
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -886,41 +963,20 @@ const TeamManagementPage: React.FC = () => {
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                      placeholder="Ex: Cristiano Ronaldo"
+                      placeholder="Ex: André Gomes Marques do Couto"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Alcunha / Nome Desportivo</label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nome na Camisola / Alcunha</label>
                     <input
                       type="text"
-                      value={formNickname}
-                      onChange={(e) => setFormNickname(e.target.value)}
+                      value={formShirtName || formNickname}
+                      onChange={(e) => {
+                        setFormShirtName(e.target.value)
+                        setFormNickname(e.target.value)
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                      placeholder="Ex: CR7 / O Mágico"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Email *</label>
-                    <input
-                      type="email"
-                      required
-                      value={formEmail}
-                      onChange={(e) => setFormEmail(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                      placeholder="atleta@clube.pt"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Telemóvel</label>
-                    <input
-                      type="tel"
-                      value={formPhone}
-                      onChange={(e) => setFormPhone(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                      placeholder="912 345 678"
+                      placeholder="Ex: A. COUTO / Tochê"
                     />
                   </div>
                 </div>
@@ -946,40 +1002,125 @@ const TeamManagementPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nº CC / Passaporte</label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nº de Contribuinte (NIF)</label>
+                    <input
+                      type="text"
+                      value={formNif}
+                      onChange={(e) => setFormNif(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      placeholder="228649129"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nº Cartão de Cidadão / Passaporte</label>
                     <input
                       type="text"
                       value={formIdNumber}
                       onChange={(e) => setFormIdNumber(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                      placeholder="12345678"
+                      placeholder="11960727"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Validade do Cartão de Cidadão</label>
+                    <input
+                      type="date"
+                      value={formIdCardExpiry}
+                      onChange={(e) => setFormIdCardExpiry(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* 2. MORADA & RESIDÊNCIA */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
+                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText size={14} className="text-csc-dark" />
+                  <span>2. Morada & Residência</span>
+                </h3>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Nº de Sócio do Clube</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Morada (Rua, Nº e Andar)</label>
                   <input
                     type="text"
-                    value={formMemberNumber}
-                    onChange={(e) => setFormMemberNumber(e.target.value)}
+                    value={formAddress}
+                    onChange={(e) => setFormAddress(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                    placeholder="Ex: 1420"
+                    placeholder="Rua Serra da Arrábida, LT 1263, 3 Esq."
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Código Postal</label>
+                    <input
+                      type="text"
+                      value={formPostalCode}
+                      onChange={(e) => setFormPostalCode(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      placeholder="2975-164"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Localidade</label>
+                    <input
+                      type="text"
+                      value={formCity}
+                      onChange={(e) => setFormCity(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      placeholder="Cascais / Alcabideche"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* 2. DADOS DESPORTIVOS & PAPEL */}
+              {/* 3. CONTACTOS */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
+                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Phone size={14} className="text-csc-dark" />
+                  <span>3. Contactos</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Email *</label>
+                    <input
+                      type="email"
+                      required
+                      value={formEmail}
+                      onChange={(e) => setFormEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      placeholder="atleta@clube.pt"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Telemóvel</label>
+                    <input
+                      type="tel"
+                      value={formPhone}
+                      onChange={(e) => setFormPhone(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      placeholder="912 345 678"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. DADOS DESPORTIVOS, EQUIPAMENTO & PAPEL */}
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
                 <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <Shield size={14} className="text-csc-dark" />
-                    <span>2. Dados Desportivos & Função</span>
+                    <span>4. Dados Desportivos, Equipamento & Função</span>
                   </span>
                   <span className="text-[10px] text-gray-400 font-bold">Múltiplas posições e papéis permitidos</span>
                 </h3>
 
-                {/* 2.1 Campo de Futebol Interativo */}
+                {/* 4.1 Campo de Futebol Interativo */}
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-2">
                     Posições no Campo:
@@ -990,7 +1131,7 @@ const TeamManagementPage: React.FC = () => {
                   />
                 </div>
 
-                {/* 2.2 Papéis no Sistema (1, 2 ou 3 funções) */}
+                {/* 4.2 Papéis no Sistema (1, 2 ou 3 funções) */}
                 <div className="pt-2 border-t border-gray-200">
                   <label className="block text-xs font-bold text-gray-700 mb-2">
                     Papel / Funções no Sistema (Selecione 1, 2 ou 3):
@@ -1000,7 +1141,7 @@ const TeamManagementPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => toggleRole('player')}
-                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('player')
                           ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-400/50 shadow-xs'
                           : 'bg-white border-gray-200 hover:bg-gray-50'
@@ -1022,7 +1163,7 @@ const TeamManagementPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => toggleRole('coach')}
-                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('coach')
                           ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-400/50 shadow-xs'
                           : 'bg-white border-gray-200 hover:bg-gray-50'
@@ -1044,7 +1185,7 @@ const TeamManagementPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => toggleRole('admin')}
-                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('admin')
                           ? 'bg-amber-50 border-csc-gold ring-2 ring-csc-gold/50 shadow-xs'
                           : 'bg-white border-gray-200 hover:bg-gray-50'
@@ -1064,10 +1205,10 @@ const TeamManagementPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 2.3 Camisola & Estado de Atividade */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200">
+                {/* 4.3 Camisola, Tamanho de Equipamento & Estado */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Número da Camisola</label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nº da Camisola</label>
                     <input
                       type="number"
                       min="1"
@@ -1078,6 +1219,22 @@ const TeamManagementPage: React.FC = () => {
                       placeholder="Ex: 10"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Tamanho Equipamento</label>
+                    <select
+                      value={formKitSize}
+                      onChange={(e) => setFormKitSize(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-bold"
+                    >
+                      <option value="S">S</option>
+                      <option value="M">M</option>
+                      <option value="L">L</option>
+                      <option value="XL">XL</option>
+                      <option value="XXL">XXL</option>
+                    </select>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">Estado de Atividade</label>
                     <select
@@ -1093,11 +1250,42 @@ const TeamManagementPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* 3. SAÚDE & EMERGÊNCIA */}
+              {/* 5. DADOS BANCÁRIOS & QUOTAS */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
+                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Shield size={14} className="text-csc-dark" />
+                  <span>5. Dados Bancários & Quotas</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">IBAN (Débito Direto / Quotas)</label>
+                    <input
+                      type="text"
+                      value={formIban}
+                      onChange={(e) => setFormIban(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-mono"
+                      placeholder="PT50 0000 0000 0000 0000 0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nº de Sócio do Clube</label>
+                    <input
+                      type="text"
+                      value={formMemberNumber}
+                      onChange={(e) => setFormMemberNumber(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      placeholder="Ex: 1420"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 6. SAÚDE & EMERGÊNCIA */}
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
                 <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
                   <HeartPulse size={14} className="text-red-600" />
-                  <span>3. Saúde & Contacto de Emergência</span>
+                  <span>6. Saúde & Contacto de Emergência</span>
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1135,11 +1323,11 @@ const TeamManagementPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* 4. UPLOAD DE DOCUMENTOS */}
+              {/* 7. UPLOAD DE DOCUMENTOS & RGPD */}
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
                 <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
                   <FileText size={14} className="text-csc-dark" />
-                  <span>4. Documentos & Fotografia (Upload)</span>
+                  <span>7. Documentos & Proteção de Dados (RGPD)</span>
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1212,20 +1400,34 @@ const TeamManagementPage: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Consentimento RGPD */}
+                <div className="p-3 bg-white border border-gray-200 rounded-lg flex items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    id="gdpr_consent"
+                    checked={formGdprConsent}
+                    onChange={(e) => setFormGdprConsent(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-csc-dark rounded border-gray-300 focus:ring-csc-dark"
+                  />
+                  <label htmlFor="gdpr_consent" className="text-xs text-gray-700 font-medium cursor-pointer">
+                    Aceita que os seus dados sejam processados pela política de proteção de dados (RGPD) do Grupo Dramático e Sportivo de Cascais.
+                  </label>
+                </div>
               </div>
 
               <div className="pt-2 flex gap-3">
                 <button
                   type="button"
                   onClick={() => setIsFormModalOpen(false)}
-                  className="flex-1 py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 text-sm"
+                  className="flex-1 py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 text-sm cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={uploadingDoc !== null}
-                  className="flex-1 py-3 rounded-xl font-bold text-white bg-csc-dark hover:bg-csc-dark/80 transition-colors shadow-md text-sm flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-xl font-bold text-white bg-csc-dark hover:bg-csc-dark/80 transition-colors shadow-md text-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Save size={16} />
                   <span>{isEditing ? 'Guardar Alterações' : 'Criar Membro'}</span>
@@ -1239,10 +1441,10 @@ const TeamManagementPage: React.FC = () => {
       {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER) */}
       {isDetailModalOpen && selectedProfile && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl space-y-6">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl space-y-5">
             <button
               onClick={() => setIsDetailModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1 cursor-pointer"
             >
               <X size={22} />
             </button>
@@ -1262,13 +1464,18 @@ const TeamManagementPage: React.FC = () => {
               )}
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl font-black text-gray-900 truncate">
-                    {formatDisplayName(selectedProfile.name, selectedProfile.nickname)}
+                    {formatDisplayName(selectedProfile.name, selectedProfile.nickname || selectedProfile.shirt_name)}
                   </h2>
                   {selectedProfile.jersey_number && (
                     <span className="bg-csc-dark text-white text-xs font-black px-2 py-0.5 rounded">
                       #{selectedProfile.jersey_number}
+                    </span>
+                  )}
+                  {selectedProfile.kit_size && (
+                    <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2 py-0.5 rounded">
+                      Tam: {selectedProfile.kit_size}
                     </span>
                   )}
                 </div>
@@ -1323,32 +1530,81 @@ const TeamManagementPage: React.FC = () => {
               />
             </div>
 
-            {/* General Info Grid */}
-            <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50 p-4 rounded-xl border border-gray-200">
-              <div>
-                <p className="text-gray-400 font-bold uppercase">Nº de Sócio</p>
-                <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.member_number || 'Não atribuído'}</p>
-              </div>
-              <div>
-                <p className="text-gray-400 font-bold uppercase">Nº Identificação (CC)</p>
-                <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.id_number || 'Não registado'}</p>
-              </div>
-              <div>
-                <p className="text-gray-400 font-bold uppercase">Idade / Nascimento</p>
-                <p className="font-extrabold text-gray-800 mt-0.5">
-                  {selectedProfile.birth_date ? (
-                    `${calculateAge(selectedProfile.birth_date)} anos (${new Date(selectedProfile.birth_date).toLocaleDateString('pt-PT')})`
-                  ) : 'Não registada'}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-400 font-bold uppercase">Nacionalidade</p>
-                <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
+            {/* 1. Dados Pessoais & Fiscais */}
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Users size={14} className="text-csc-dark" />
+                <span>Identificação & Dados Fiscais</span>
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs bg-gray-50 p-3.5 rounded-xl border border-gray-200">
+                <div>
+                  <p className="text-gray-400 font-bold uppercase text-[10px]">NIF / Contribuinte</p>
+                  <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.nif || 'Não registado'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 font-bold uppercase text-[10px]">Nº CC / Passaporte</p>
+                  <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.id_number || 'Não registado'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 font-bold uppercase text-[10px]">Validade do CC</p>
+                  <p className="font-extrabold text-gray-800 mt-0.5">
+                    {selectedProfile.id_card_expiry ? new Date(selectedProfile.id_card_expiry).toLocaleDateString('pt-PT') : 'Não registada'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400 font-bold uppercase text-[10px]">Idade / Nascimento</p>
+                  <p className="font-extrabold text-gray-800 mt-0.5">
+                    {selectedProfile.birth_date ? (
+                      `${calculateAge(selectedProfile.birth_date)} anos (${new Date(selectedProfile.birth_date).toLocaleDateString('pt-PT')})`
+                    ) : 'Não registada'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400 font-bold uppercase text-[10px]">Nacionalidade</p>
+                  <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 font-bold uppercase text-[10px]">Nº de Sócio</p>
+                  <p className="font-extrabold text-gray-800 mt-0.5">{selectedProfile.member_number || 'Não atribuído'}</p>
+                </div>
               </div>
             </div>
 
-            {/* Contactos */}
-            <div className="space-y-2">
+            {/* 2. Morada & Residência */}
+            {(selectedProfile.address || selectedProfile.city) && (
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText size={14} className="text-csc-dark" />
+                  <span>Morada & Residência</span>
+                </h4>
+                <div className="text-xs bg-gray-50 p-3.5 rounded-xl border border-gray-200 space-y-1">
+                  {selectedProfile.address && (
+                    <p className="font-semibold text-gray-800">{selectedProfile.address}</p>
+                  )}
+                  {(selectedProfile.postal_code || selectedProfile.city) && (
+                    <p className="text-gray-500 font-medium">
+                      {selectedProfile.postal_code} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Dados Bancários */}
+            {selectedProfile.iban && (
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Shield size={14} className="text-csc-dark" />
+                  <span>Dados Bancários (Débito Direto)</span>
+                </h4>
+                <div className="text-xs bg-gray-50 p-3 rounded-xl border border-gray-200 font-mono text-gray-800 font-bold">
+                  {selectedProfile.iban}
+                </div>
+              </div>
+            )}
+
+            {/* 4. Contactos */}
+            <div className="space-y-1.5">
               <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider">Contactos</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <a href={`tel:${selectedProfile.phone}`} className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 font-semibold text-gray-800">
@@ -1362,11 +1618,11 @@ const TeamManagementPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Saúde & Emergência */}
-            <div className="space-y-2">
+            {/* 5. Saúde & Emergência */}
+            <div className="space-y-1.5">
               <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
                 <HeartPulse size={14} className="text-red-600" />
-                <span>Saúde & Emergência</span>
+                <span>Saúde & Contacto de Emergência</span>
               </h4>
               <div className="p-3 bg-red-50/60 border border-red-200 rounded-xl space-y-2 text-xs">
                 <div className="flex justify-between items-center">
@@ -1385,12 +1641,17 @@ const TeamManagementPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Documentos Anexados */}
+            {/* 6. Documentos Anexados & RGPD */}
             <div className="space-y-2">
-              <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                <FileText size={14} className="text-csc-dark" />
-                <span>Documentação Anexada</span>
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText size={14} className="text-csc-dark" />
+                  <span>Documentação & RGPD</span>
+                </h4>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-100 text-green-800 flex items-center gap-1">
+                  <CheckCircle2 size={11} /> RGPD Aceite
+                </span>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 {selectedProfile.id_document_url ? (
@@ -1458,7 +1719,7 @@ const TeamManagementPage: React.FC = () => {
                     setIsDetailModalOpen(false)
                     openAssociateModal(profileToAssociate)
                   }}
-                  className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
+                  className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <Link2 size={14} />
                   <span>Associar Conta de Utilizador</span>
@@ -1470,7 +1731,7 @@ const TeamManagementPage: React.FC = () => {
                       setIsDetailModalOpen(false)
                       openEditModal(selectedProfile)
                     }}
-                    className="px-4 py-2 bg-csc-dark text-white rounded-lg text-xs font-bold hover:bg-csc-dark/80 transition-colors flex items-center gap-1.5 shadow"
+                    className="px-4 py-2 bg-csc-dark text-white rounded-lg text-xs font-bold hover:bg-csc-dark/80 transition-colors flex items-center gap-1.5 shadow cursor-pointer"
                   >
                     <Edit2 size={14} />
                     <span>Editar Ficha</span>

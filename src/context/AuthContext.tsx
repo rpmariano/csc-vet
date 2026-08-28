@@ -9,6 +9,7 @@ export interface Profile {
   id: string
   name: string
   nickname?: string | null
+  shirt_name?: string | null
   email: string
   phone?: string | null
   photo_url?: string | null
@@ -16,10 +17,18 @@ export interface Profile {
   roles?: UserRole[]
   status: ProfileStatus
   jersey_number?: number | null
+  kit_size?: string | null
   birth_date?: string | null
   nationality?: string | null
   position?: string | null
+  address?: string | null
+  postal_code?: string | null
+  city?: string | null
+  nif?: string | null
   id_number?: string | null
+  id_card_expiry?: string | null
+  iban?: string | null
+  gdpr_consent?: boolean | null
   member_number?: string | null
   emergency_contact_name?: string | null
   emergency_contact_phone?: string | null
