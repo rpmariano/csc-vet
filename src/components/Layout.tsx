@@ -194,13 +194,13 @@ const Layout: React.FC = () => {
                   </div>
                 )}
 
-                {/* 2. Informação & Comunicação */}
-                <div>
-                  <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-2">
-                    Informação & Desporto
-                  </p>
-                  <div className="space-y-1">
-                    {(isAdmin || isCoach) && (
+                {/* 2. Informação & Comunicação (Apenas Admin/Treinador) */}
+                {(isAdmin || isCoach) && (
+                  <div>
+                    <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-2">
+                      Informação & Desporto
+                    </p>
+                    <div className="space-y-1">
                       <Link
                         to="/announcements"
                         onClick={() => setIsMobileMenuOpen(false)}
@@ -211,20 +211,20 @@ const Layout: React.FC = () => {
                         <FileText size={16} className="text-amber-400" />
                         <span>Comunicados & Avisos</span>
                       </Link>
-                    )}
 
-                    <Link
-                      to="/stats"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                        location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
-                      }`}
-                    >
-                      <BarChart3 size={16} className="text-purple-400" />
-                      <span>Estatísticas & Desempenho</span>
-                    </Link>
+                      <Link
+                        to="/stats"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
+                          location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
+                        }`}
+                      >
+                        <BarChart3 size={16} className="text-purple-400" />
+                        <span>Estatísticas & Desempenho</span>
+                      </Link>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* 3. Conta & Definições */}
                 <div>
@@ -325,15 +325,17 @@ const Layout: React.FC = () => {
                   <span>Agenda</span>
                 </Link>
 
-                <Link
-                  to="/team-management"
-                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                    location.pathname === '/team-management' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <Users size={17} className={location.pathname === '/team-management' ? 'text-csc-dark' : 'text-emerald-400'} />
-                  <span>Plantel</span>
-                </Link>
+                {(isAdmin || isCoach) && (
+                  <Link
+                    to="/team-management"
+                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                      location.pathname === '/team-management' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <Users size={17} className={location.pathname === '/team-management' ? 'text-csc-dark' : 'text-emerald-400'} />
+                    <span>Plantel</span>
+                  </Link>
+                )}
 
                 {(isAdmin || isCoach) ? (
                   <Link
@@ -391,13 +393,13 @@ const Layout: React.FC = () => {
               </div>
             )}
 
-            {/* 3. INFORMAÇÃO & DESPORTO */}
-            <div>
-              <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-3">
-                Informação & Desporto
-              </p>
-              <div className="space-y-1">
-                {(isAdmin || isCoach) && (
+            {/* 3. INFORMAÇÃO & DESPORTO (Apenas Admin/Treinador) */}
+            {(isAdmin || isCoach) && (
+              <div>
+                <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-3">
+                  Informação & Desporto
+                </p>
+                <div className="space-y-1">
                   <Link
                     to="/announcements"
                     className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
@@ -407,9 +409,7 @@ const Layout: React.FC = () => {
                     <FileText size={17} className={location.pathname === '/announcements' ? 'text-csc-dark' : 'text-amber-400'} />
                     <span>Comunicados & Avisos</span>
                   </Link>
-                )}
 
-                {(isAdmin || isCoach) && (
                   <Link
                     to="/stats"
                     className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
@@ -419,9 +419,9 @@ const Layout: React.FC = () => {
                     <BarChart3 size={17} className={location.pathname === '/stats' ? 'text-csc-dark' : 'text-purple-400'} />
                     <span>Estatísticas & Desempenho</span>
                   </Link>
-                )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* 4. CONTA & DEFINIÇÕES */}
             <div>
@@ -506,16 +506,18 @@ const Layout: React.FC = () => {
           </Link>
         )}
 
-        {/* 4. Plantel */}
-        <Link 
-          to="/team-management" 
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
-            ${location.pathname === '/team-management' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
-          `}
-        >
-          <Users size={19} />
-          <span className="text-[9px] font-bold mt-0.5">Plantel</span>
-        </Link>
+        {/* 4. Plantel (Apenas para Treinadores/Admins) */}
+        {(isAdmin || isCoach) && (
+          <Link 
+            to="/team-management" 
+            className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+              ${location.pathname === '/team-management' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
+            `}
+          >
+            <Users size={19} />
+            <span className="text-[9px] font-bold mt-0.5">Plantel</span>
+          </Link>
+        )}
 
         {/* 5. Menu dos Traços (☰ Menu) */}
         <button
