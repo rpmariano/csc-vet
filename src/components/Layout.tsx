@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { 
   Home, 
@@ -8,16 +8,13 @@ import {
   Users, 
   LogOut, 
   FileText, 
-  Landmark,
-  Menu,
-  X
+  Landmark
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const Layout: React.FC = () => {
   const { profile, signOut } = useAuth()
   const location = useLocation()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const isRole = (roles: string[]) => {
     return profile && roles.includes(profile.role)
@@ -36,27 +33,24 @@ const Layout: React.FC = () => {
   const filteredMenu = menuItems.filter(item => isRole(item.roles))
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
-      {/* Mobile Navbar */}
-      <div className="bg-blue-900 text-white flex items-center justify-between p-4 md:hidden">
-        <h1 className="text-xl font-bold tracking-wider">VETERANOS F.C.</h1>
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1 focus:outline-none">
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+    <div className="min-h-screen bg-gray-150 flex flex-col md:flex-row">
+      {/* Mobile Header */}
+      <div className="bg-blue-900 text-white flex items-center justify-between p-4 md:hidden border-b-2 border-gray-800">
+        <h1 className="text-xl font-black tracking-wider">VETERANOS F.C.</h1>
+        <span className="text-xs bg-blue-800 px-2 py-0.5 rounded capitalize">
+          {profile?.role === 'admin' ? 'Admin' : profile?.role === 'coach' ? 'Treinador' : 'Jogador'}
+        </span>
       </div>
 
-      {/* Sidebar Navigation */}
-      <aside className={`
-        bg-blue-900 text-white w-full md:w-64 flex-shrink-0 flex flex-col justify-between
-        ${mobileMenuOpen ? 'block' : 'hidden'} md:block
-      `}>
+      {/* Desktop Sidebar Navigation */}
+      <aside className="bg-blue-900 text-white w-64 flex-shrink-0 flex-col justify-between hidden md:flex border-r-2 border-gray-800">
         <div className="p-6">
-          <h1 className="text-2xl font-bold tracking-wider hidden md:block border-b border-blue-800 pb-4 mb-6">
+          <h1 className="text-2xl font-black tracking-wider border-b border-blue-800 pb-4 mb-6">
             VETERANOS F.C.
           </h1>
           
           {profile && (
-            <div className="flex items-center space-x-3 mb-6 bg-blue-950 p-3 rounded-lg">
+            <div className="flex items-center space-x-3 mb-6 bg-blue-950 p-3 rounded-xl border border-blue-800">
               {profile.photo_url ? (
                 <img src={profile.photo_url} alt="Profile" className="w-10 h-10 rounded-full object-cover" />
               ) : (
@@ -65,8 +59,8 @@ const Layout: React.FC = () => {
                 </div>
               )}
               <div className="overflow-hidden">
-                <p className="font-semibold truncate">{profile.name}</p>
-                <span className="text-xs bg-blue-800 px-2 py-0.5 rounded capitalize">
+                <p className="font-semibold truncate text-sm">{profile.name}</p>
+                <span className="text-[10px] bg-blue-800 px-2 py-0.5 rounded capitalize font-bold">
                   {profile.role === 'admin' ? 'Administrador' : profile.role === 'coach' ? 'Treinador' : 'Jogador'}
                 </span>
               </div>
@@ -81,14 +75,13 @@ const Layout: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.path}
-                  onClick={() => setMobileMenuOpen(false)}
                   className={`
-                    flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors
-                    ${isActive ? 'bg-blue-800 text-white' : 'text-blue-200 hover:bg-blue-850 hover:text-white'}
+                    flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors font-bold text-sm
+                    ${isActive ? 'bg-blue-800 text-white border-2 border-gray-800' : 'text-blue-200 hover:bg-blue-850 hover:text-white'}
                   `}
                 >
-                  <Icon size={20} />
-                  <span className="font-medium">{item.name}</span>
+                  <Icon size={18} />
+                  <span>{item.name}</span>
                 </Link>
               )
             })}
@@ -98,18 +91,70 @@ const Layout: React.FC = () => {
         <div className="p-6 border-t border-blue-800">
           <button
             onClick={() => signOut()}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-red-300 hover:bg-blue-800 hover:text-red-100 transition-colors"
+            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-300 hover:bg-blue-800 hover:text-red-150 transition-colors font-bold text-sm"
           >
-            <LogOut size={20} />
-            <span className="font-medium">Sair da Conta</span>
+            <LogOut size={18} />
+            <span>Sair da Conta</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-lg md:max-w-7xl mx-auto w-full pb-24 md:pb-8">
         <Outlet />
       </main>
+
+      {/* Mobile Bottom Navigation (Matching Wireframe) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-800 p-3 flex justify-around items-center md:hidden z-40 shadow-lg">
+        <Link 
+          to="/" 
+          className={`w-10 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-lg transition-all
+            ${location.pathname === '/' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
+          `}
+        >
+          A
+        </Link>
+        <Link 
+          to="/stats" 
+          className={`w-10 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-lg transition-all
+            ${location.pathname === '/stats' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
+          `}
+        >
+          D
+        </Link>
+        <Link 
+          to={profile?.role === 'admin' ? '/finance' : '/settings'} 
+          className={`w-10 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-lg transition-all
+            ${location.pathname === '/finance' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
+          `}
+        >
+          Q
+        </Link>
+        <Link 
+          to="/calendar" 
+          className={`w-10 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-lg transition-all
+            ${location.pathname === '/calendar' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
+          `}
+        >
+          E
+        </Link>
+        <Link 
+          to={profile?.role === 'admin' || profile?.role === 'coach' ? '/announcements' : '/'} 
+          className={`w-10 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-lg transition-all
+            ${location.pathname === '/announcements' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
+          `}
+        >
+          C
+        </Link>
+        <Link 
+          to="/settings" 
+          className={`px-2 h-10 border-2 rounded-xl flex items-center justify-center font-bold text-xs transition-all
+            ${location.pathname === '/settings' ? 'border-green-600 bg-green-100 text-green-800 shadow-sm' : 'border-green-500 text-green-700 hover:bg-green-50'}
+          `}
+        >
+          Perfil
+        </Link>
+      </div>
     </div>
   )
 }
