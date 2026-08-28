@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Plus, Trash2, MapPin, Clock, Check, Shield, Users, CheckCircle2, XCircle, HelpCircle, X, UserPlus, Search, RotateCcw, AlertTriangle, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, MapPin, Clock, Check, Shield, Users, CheckCircle2, XCircle, HelpCircle, X, UserPlus, Search, RotateCcw, AlertTriangle, ExternalLink, Repeat, CalendarRange } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
@@ -68,6 +68,45 @@ const EventsPage: React.FC = () => {
   const [tournamentId, setTournamentId] = useState('')
   const [opponentId, setOpponentId] = useState('')
   const [homeAway, setHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
+
+  // Recurrence states
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<number[]>([3]) // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
+
+  // Pre-select weekday when dateTime changes
+  useEffect(() => {
+    if (dateTime) {
+      const d = new Date(dateTime)
+      const day = d.getDay()
+      if (!isNaN(day)) {
+        setRecurrenceWeekdays([day])
+      }
+    }
+  }, [dateTime])
+
+  const calculateRecurringDates = (startIsoString: string, endDayString: string, weekdays: number[]) => {
+    if (!startIsoString || !endDayString || weekdays.length === 0) return []
+    const start = new Date(startIsoString)
+    const end = new Date(endDayString + 'T23:59:59')
+    const result: Date[] = []
+
+    if (start > end) return []
+
+    const hours = start.getHours()
+    const minutes = start.getMinutes()
+    const current = new Date(start)
+
+    while (current <= end) {
+      if (weekdays.includes(current.getDay())) {
+        const d = new Date(current)
+        d.setHours(hours, minutes, 0, 0)
+        result.push(d)
+      }
+      current.setDate(current.getDate() + 1)
+    }
+    return result
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -176,41 +215,93 @@ const EventsPage: React.FC = () => {
     e.preventDefault()
     setSuccessMessage(null)
     try {
-      const newEvent = {
-        title,
-        type,
-        date_time: new Date(dateTime).toISOString(),
-        meeting_time: meetingTime || null,
-        field_id: fieldId || null,
-        location: !fieldId ? locationText : null,
-        description,
-        max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
-        is_friendly: type === 'match' ? isFriendly : false,
-        tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
-        opponent_id: type === 'match' ? (opponentId || null) : null,
-        home_away: type === 'match' ? homeAway : null,
-        created_by: profile?.id
-      }
+      let createdEventsList: Event[] = []
 
-      const { data: createdEvent, error } = await supabase
-        .from('events')
-        .insert([newEvent])
-        .select()
-        .single()
+      if (isRecurring && recurrenceEndDate && recurrenceWeekdays.length > 0) {
+        const dates = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
+        if (dates.length === 0) {
+          alert('Nenhuma data encontrada para os dias da semana e intervalo escolhidos.')
+          return
+        }
 
-      if (error) throw error
-
-      // Inserir convocatórias se houver atletas selecionados
-      if (createdEvent && selectedPlayerIds.length > 0) {
-        const rows = selectedPlayerIds.map(pId => ({
-          event_id: createdEvent.id,
-          player_id: pId,
-          status: 'called'
+        const eventsToInsert = dates.map(d => ({
+          title,
+          type,
+          date_time: d.toISOString(),
+          meeting_time: meetingTime || null,
+          field_id: fieldId || null,
+          location: !fieldId ? locationText : null,
+          description,
+          max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
+          is_friendly: type === 'match' ? isFriendly : false,
+          tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
+          opponent_id: type === 'match' ? (opponentId || null) : null,
+          home_away: type === 'match' ? homeAway : null,
+          created_by: profile?.id
         }))
-        await supabase.from('callups').insert(rows)
+
+        const { data: createdBatch, error } = await supabase
+          .from('events')
+          .insert(eventsToInsert)
+          .select()
+
+        if (error) throw error
+        if (createdBatch) createdEventsList = createdBatch as Event[]
+
+        // Inserir convocatórias para todos os eventos da recorrência
+        if (createdEventsList.length > 0 && selectedPlayerIds.length > 0) {
+          const allCallups: any[] = []
+          createdEventsList.forEach(ev => {
+            selectedPlayerIds.forEach(pId => {
+              allCallups.push({
+                event_id: ev.id,
+                player_id: pId,
+                status: 'called'
+              })
+            })
+          })
+          await supabase.from('callups').insert(allCallups)
+        }
+
+        setSuccessMessage(`✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`)
+      } else {
+        const newEvent = {
+          title,
+          type,
+          date_time: new Date(dateTime).toISOString(),
+          meeting_time: meetingTime || null,
+          field_id: fieldId || null,
+          location: !fieldId ? locationText : null,
+          description,
+          max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
+          is_friendly: type === 'match' ? isFriendly : false,
+          tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
+          opponent_id: type === 'match' ? (opponentId || null) : null,
+          home_away: type === 'match' ? homeAway : null,
+          created_by: profile?.id
+        }
+
+        const { data: createdEvent, error } = await supabase
+          .from('events')
+          .insert([newEvent])
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Inserir convocatórias se houver atletas selecionados
+        if (createdEvent && selectedPlayerIds.length > 0) {
+          const rows = selectedPlayerIds.map(pId => ({
+            event_id: createdEvent.id,
+            player_id: pId,
+            status: 'called'
+          }))
+          await supabase.from('callups').insert(rows)
+        }
+
+        setSuccessMessage('Evento criado e convocatória enviada com sucesso!')
       }
 
-      setSuccessMessage('Evento criado e convocatória enviada com sucesso!')
       fetchData()
       
       // Reset form
@@ -225,6 +316,8 @@ const EventsPage: React.FC = () => {
       setIsFriendly(false)
       setHomeAway('home')
       setMaxPlayers(16)
+      setIsRecurring(false)
+      setRecurrenceEndDate('')
       setSelectedPlayerIds(allPlayers.filter(p => isPlayerEligible(p, type)).map(p => p.id))
     } catch (err: any) {
       console.error(err)
@@ -468,6 +561,98 @@ const EventsPage: React.FC = () => {
                 rows={2}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm"
               />
+            </div>
+
+            {/* SELEÇÃO DE RECORRÊNCIA */}
+            <div className="p-3.5 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
+                  />
+                  <span className="font-bold text-gray-900 flex items-center gap-1.5">
+                    <Repeat size={14} className="text-csc-gold" />
+                    <span>Marcar Treino/Evento Recorrente</span>
+                  </span>
+                </label>
+                {isRecurring && (
+                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-csc-gold text-csc-dark">
+                    Recorrência
+                  </span>
+                )}
+              </div>
+
+              {isRecurring && (
+                <div className="pt-2 space-y-2.5 border-t border-amber-200/60">
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">
+                      Dias da semana:
+                    </label>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { label: 'Seg', val: 1 },
+                        { label: 'Ter', val: 2 },
+                        { label: 'Qua', val: 3 },
+                        { label: 'Qui', val: 4 },
+                        { label: 'Sex', val: 5 },
+                        { label: 'Sáb', val: 6 },
+                        { label: 'Dom', val: 0 }
+                      ].map(d => {
+                        const isChecked = recurrenceWeekdays.includes(d.val)
+                        return (
+                          <button
+                            key={d.val}
+                            type="button"
+                            onClick={() => {
+                              setRecurrenceWeekdays(prev => 
+                                prev.includes(d.val) 
+                                  ? prev.filter(v => v !== d.val) 
+                                  : [...prev, d.val]
+                              )
+                            }}
+                            className={`px-2.5 py-1 rounded-md font-bold text-[11px] transition-all ${
+                              isChecked 
+                                ? 'bg-csc-dark text-white font-black shadow-2xs' 
+                                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                            }`}
+                          >
+                            {d.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-gray-700 mb-1">
+                      Repetir até à data (Data Final) *
+                    </label>
+                    <input
+                      type="date"
+                      required={isRecurring}
+                      value={recurrenceEndDate}
+                      min={dateTime ? dateTime.split('T')[0] : undefined}
+                      onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg outline-none focus:ring-1 focus:ring-csc-dark text-xs bg-white"
+                    />
+                  </div>
+
+                  {dateTime && recurrenceEndDate && recurrenceWeekdays.length > 0 && (() => {
+                    const generated = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
+                    return (
+                      <div className="p-2 bg-white border border-amber-200 rounded-md font-medium text-amber-950 flex items-center gap-1.5 text-[11px]">
+                        <CalendarRange size={14} className="text-csc-gold shrink-0" />
+                        <span>
+                          ✨ Serão criados <strong>{generated.length} eventos</strong> até {new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}.
+                        </span>
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
             </div>
 
             {/* SELEÇÃO DE JOGADORES NA CONVOCATÓRIA */}

@@ -19,7 +19,11 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   CalendarDays as CalendarDaysIcon,
-  List as ListIcon
+  List as ListIcon,
+  Repeat,
+  Edit,
+  Save,
+  CalendarRange
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -33,8 +37,8 @@ interface Event {
   date_time: string
   location: string
   description: string
-  is_friendly?: boolean
-  tournament_name?: string
+  is_friendly?: boolean | null
+  tournament_name?: string | null
   max_players?: number | null
   opponent?: {
     name: string
@@ -78,13 +82,63 @@ const CalendarPage: React.FC = () => {
 
   // Form states
   const [title, setTitle] = useState('')
-  const [type, setType] = useState<'practice' | 'match' | 'gathering'>('match')
+  const [type, setType] = useState<'practice' | 'match' | 'gathering'>('practice')
   const [dateTime, setDateTime] = useState('')
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [isFriendly, setIsFriendly] = useState(false)
   const [tournamentName, setTournamentName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState<number | ''>(16)
+
+  // Recurrence states
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<number[]>([3]) // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
+
+  // Edit Event states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editType, setEditType] = useState<'practice' | 'match' | 'gathering'>('practice')
+  const [editDateTime, setEditDateTime] = useState('')
+  const [editLocation, setEditLocation] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editMaxPlayers, setEditMaxPlayers] = useState<number | ''>(16)
+  const [editTournamentName, setEditTournamentName] = useState('')
+  const [editIsFriendly, setEditIsFriendly] = useState(false)
+
+  // Pre-select weekday when dateTime changes
+  useEffect(() => {
+    if (dateTime) {
+      const d = new Date(dateTime)
+      const day = d.getDay()
+      if (!isNaN(day)) {
+        setRecurrenceWeekdays([day])
+      }
+    }
+  }, [dateTime])
+
+  const calculateRecurringDates = (startIsoString: string, endDayString: string, weekdays: number[]) => {
+    if (!startIsoString || !endDayString || weekdays.length === 0) return []
+    const start = new Date(startIsoString)
+    const end = new Date(endDayString + 'T23:59:59')
+    const result: Date[] = []
+
+    if (start > end) return []
+
+    const hours = start.getHours()
+    const minutes = start.getMinutes()
+    const current = new Date(start)
+
+    while (current <= end) {
+      if (weekdays.includes(current.getDay())) {
+        const d = new Date(current)
+        d.setHours(hours, minutes, 0, 0)
+        result.push(d)
+      }
+      current.setDate(current.getDate() + 1)
+    }
+    return result
+  }
 
   const fetchEventsAndData = async () => {
     setLoading(true)
@@ -118,19 +172,13 @@ const CalendarPage: React.FC = () => {
           },
           {
             id: '2',
-            title: 'Veteranos F.C. vs GD Cascais',
+            title: 'CSC vs Belenenses Veteranos',
             type: 'match',
             date_time: new Date(Date.now() + 86400000 * 5).toISOString(),
-            location: 'Estádio de Cascais',
-            description: 'Grande jogo contra o rival de Cascais.',
-            is_friendly: false,
-            tournament_name: 'Torneio Inter-concelhos'
+            location: 'Estádio do Restelo',
+            description: 'Jogo da 3ª Jornada da Liga de Veteranos.'
           }
         ])
-      }
-
-      if (profilesRes.data) {
-        setAllPlayers(profilesRes.data as Profile[])
       }
 
       if (callupsRes.data) {
@@ -140,6 +188,10 @@ const CalendarPage: React.FC = () => {
           map[c.event_id].push(c as CallupWithPlayer)
         })
         setEventCallups(map)
+      }
+
+      if (profilesRes.data) {
+        setAllPlayers(profilesRes.data as Profile[])
       }
     } catch (err) {
       console.error(err)
@@ -215,34 +267,82 @@ const CalendarPage: React.FC = () => {
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const newEvent = {
-        title,
-        type,
-        date_time: new Date(dateTime).toISOString(),
-        location,
-        description,
-        max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
-        is_friendly: type === 'match' ? isFriendly : undefined,
-        tournament_name: type === 'match' ? tournamentName : undefined,
-        created_by: profile?.id
-      }
+      let createdEventsList: Event[] = []
 
-      const { data: createdEvent, error } = await supabase
-        .from('events')
-        .insert([newEvent])
-        .select()
-        .single()
+      if (isRecurring && recurrenceEndDate && recurrenceWeekdays.length > 0) {
+        const dates = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
+        if (dates.length === 0) {
+          alert('Nenhuma data encontrada para os dias da semana e intervalo escolhidos.')
+          return
+        }
 
-      if (error) throw error
-
-      // Se houver jogadores selecionados, criar convocatórias
-      if (createdEvent && selectedPlayerIds.length > 0) {
-        const callupRows = selectedPlayerIds.map(playerId => ({
-          event_id: createdEvent.id,
-          player_id: playerId,
-          status: 'called'
+        const eventsToInsert = dates.map(d => ({
+          title,
+          type,
+          date_time: d.toISOString(),
+          location,
+          description,
+          max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
+          is_friendly: type === 'match' ? isFriendly : undefined,
+          tournament_name: type === 'match' ? tournamentName : undefined,
+          created_by: profile?.id
         }))
-        await supabase.from('callups').insert(callupRows)
+
+        const { data: createdBatch, error } = await supabase
+          .from('events')
+          .insert(eventsToInsert)
+          .select()
+
+        if (error) throw error
+        if (createdBatch) createdEventsList = createdBatch as Event[]
+
+        // Inserir convocatórias para todos os eventos criados
+        if (createdEventsList.length > 0 && selectedPlayerIds.length > 0) {
+          const allCallups: any[] = []
+          createdEventsList.forEach(ev => {
+            selectedPlayerIds.forEach(pId => {
+              allCallups.push({
+                event_id: ev.id,
+                player_id: pId,
+                status: 'called'
+              })
+            })
+          })
+          await supabase.from('callups').insert(allCallups)
+        }
+
+        alert(`✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`)
+      } else {
+        const newEvent = {
+          title,
+          type,
+          date_time: new Date(dateTime).toISOString(),
+          location,
+          description,
+          max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
+          is_friendly: type === 'match' ? isFriendly : undefined,
+          tournament_name: type === 'match' ? tournamentName : undefined,
+          created_by: profile?.id
+        }
+
+        const { data: createdEvent, error } = await supabase
+          .from('events')
+          .insert([newEvent])
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Se houver jogadores selecionados, criar convocatórias
+        if (createdEvent && selectedPlayerIds.length > 0) {
+          const callupRows = selectedPlayerIds.map(playerId => ({
+            event_id: createdEvent.id,
+            player_id: playerId,
+            status: 'called'
+          }))
+          await supabase.from('callups').insert(callupRows)
+        }
+        alert('Evento criado com sucesso!')
       }
 
       fetchEventsAndData()
@@ -255,9 +355,72 @@ const CalendarPage: React.FC = () => {
       setTournamentName('')
       setIsFriendly(false)
       setMaxPlayers(16)
+      setIsRecurring(false)
+      setRecurrenceEndDate('')
       setSelectedPlayerIds([])
     } catch (err: any) {
       alert('Erro ao guardar o evento: ' + (err.message || 'Verifique a base de dados'))
+    }
+  }
+
+  // --- EDIT EVENT SPECIFIC HANDLERS ---
+  const handleStartEditEvent = (ev: Event) => {
+    setEditTitle(ev.title)
+    setEditType(ev.type)
+    const d = new Date(ev.date_time)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const localIso = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    setEditDateTime(localIso)
+    setEditLocation(ev.location || '')
+    setEditDescription(ev.description || '')
+    setEditMaxPlayers(ev.max_players ?? 16)
+    setEditTournamentName(ev.tournament_name || '')
+    setEditIsFriendly(Boolean(ev.is_friendly))
+    setIsEditModalOpen(true)
+  }
+
+  const handleSaveEditedEvent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedEvent) return
+    try {
+      const payload = {
+        title: editTitle,
+        type: editType,
+        date_time: new Date(editDateTime).toISOString(),
+        location: editLocation,
+        description: editDescription,
+        max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
+        tournament_name: editType === 'match' ? editTournamentName : null,
+        is_friendly: editType === 'match' ? editIsFriendly : false
+      }
+
+      const { error } = await supabase
+        .from('events')
+        .update(payload)
+        .eq('id', selectedEvent.id)
+
+      if (error) throw error
+
+      setSelectedEvent(prev => prev ? { ...prev, ...payload } : null)
+      setIsEditModalOpen(false)
+      fetchEventsAndData()
+      alert('Evento atualizado com sucesso!')
+    } catch (err: any) {
+      alert('Erro ao atualizar evento: ' + (err.message || 'Erro'))
+    }
+  }
+
+  const handleDeleteSpecificEvent = async (eventId: string) => {
+    if (!confirm('Tem a certeza que deseja eliminar este evento da agenda?')) return
+    try {
+      const { error } = await supabase.from('events').delete().eq('id', eventId)
+      if (error) throw error
+      setSelectedEvent(null)
+      setIsEditModalOpen(false)
+      fetchEventsAndData()
+      alert('Evento eliminado!')
+    } catch (err: any) {
+      alert('Erro ao eliminar evento: ' + (err.message || 'Erro'))
     }
   }
 
@@ -952,19 +1115,43 @@ const CalendarPage: React.FC = () => {
               <X size={22} />
             </button>
 
-            <div className="flex items-center gap-2 mb-2">
-              <span className={`
-                text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider
-                ${selectedEvent.type === 'match' ? 'bg-csc-light/20 text-csc-dark' : selectedEvent.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}
-              `}>
-                {selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}
-              </span>
-
-              {selectedEvent.tournament_name && (
-                <span className="flex items-center space-x-1 text-xs text-csc-dark bg-gray-100 px-2 py-0.5 rounded font-medium">
-                  <Award size={13} />
-                  <span>{selectedEvent.tournament_name} {selectedEvent.is_friendly ? '(Amigável)' : ''}</span>
+            <div className="flex items-center justify-between gap-2 mb-2 pr-8">
+              <div className="flex items-center gap-2">
+                <span className={`
+                  text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider
+                  ${selectedEvent.type === 'match' ? 'bg-csc-light/20 text-csc-dark' : selectedEvent.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}
+                `}>
+                  {selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}
                 </span>
+
+                {selectedEvent.tournament_name && (
+                  <span className="flex items-center space-x-1 text-xs text-csc-dark bg-gray-100 px-2 py-0.5 rounded font-medium">
+                    <Award size={13} />
+                    <span>{selectedEvent.tournament_name} {selectedEvent.is_friendly ? '(Amigável)' : ''}</span>
+                  </span>
+                )}
+              </div>
+
+              {isCoachOrAdmin && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleStartEditEvent(selectedEvent)}
+                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-2xs"
+                    title="Editar dados deste dia específico"
+                  >
+                    <Edit size={13} />
+                    <span>Editar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
+                    className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Eliminar este evento da agenda"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               )}
             </div>
 
@@ -1325,6 +1512,101 @@ const CalendarPage: React.FC = () => {
                 />
               </div>
 
+              {/* SELEÇÃO DE RECORRÊNCIA (Repetição Semanal) */}
+              <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={isRecurring}
+                      onChange={(e) => setIsRecurring(e.target.checked)}
+                      className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
+                    />
+                    <span className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                      <Repeat size={16} className="text-csc-gold" />
+                      <span>Marcar com Recorrência Semanal</span>
+                    </span>
+                  </label>
+                  {isRecurring && (
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-csc-gold text-csc-dark shadow-2xs">
+                      Recorrência Ativa
+                    </span>
+                  )}
+                </div>
+
+                {isRecurring && (
+                  <div className="pt-2 space-y-3 border-t border-amber-200/60 text-xs">
+                    {/* Dias da Semana */}
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1.5">
+                        Dias da semana em que se realiza o evento:
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { label: 'Seg', val: 1 },
+                          { label: 'Ter', val: 2 },
+                          { label: 'Qua', val: 3 },
+                          { label: 'Qui', val: 4 },
+                          { label: 'Sex', val: 5 },
+                          { label: 'Sáb', val: 6 },
+                          { label: 'Dom', val: 0 }
+                        ].map(d => {
+                          const isChecked = recurrenceWeekdays.includes(d.val)
+                          return (
+                            <button
+                              key={d.val}
+                              type="button"
+                              onClick={() => {
+                                setRecurrenceWeekdays(prev => 
+                                  prev.includes(d.val) 
+                                    ? prev.filter(v => v !== d.val) 
+                                    : [...prev, d.val]
+                                )
+                              }}
+                              className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                                isChecked 
+                                  ? 'bg-csc-dark text-white shadow-xs font-black' 
+                                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                              }`}
+                            >
+                              {d.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Data Limite da Recorrência */}
+                    <div>
+                      <label className="block font-bold text-gray-700 mb-1">
+                        Repetir até à data (Data Final) *
+                      </label>
+                      <input
+                        type="date"
+                        required={isRecurring}
+                        value={recurrenceEndDate}
+                        min={dateTime ? dateTime.split('T')[0] : undefined}
+                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                        className="w-full sm:w-60 px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                      />
+                    </div>
+
+                    {/* Contador e Pré-visualização em tempo real */}
+                    {dateTime && recurrenceEndDate && recurrenceWeekdays.length > 0 && (() => {
+                      const generated = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
+                      return (
+                        <div className="p-2.5 bg-white border border-amber-200 rounded-lg font-medium text-amber-950 flex items-center gap-2">
+                          <CalendarRange size={16} className="text-csc-gold shrink-0" />
+                          <span>
+                            ✨ Serão criados <strong>{generated.length} eventos</strong> entre {new Date(dateTime).toLocaleDateString('pt-PT')} e {new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}.
+                          </span>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
+              </div>
+
               {/* SELEÇÃO DE JOGADORES (CONVOCATÓRIA) */}
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1449,8 +1731,149 @@ const CalendarPage: React.FC = () => {
                 type="submit"
                 className="w-full bg-csc-dark text-white py-3 rounded-xl font-bold hover:bg-csc-dark/80 transition-colors shadow-md mt-4 text-sm"
               >
-                Criar Evento e Enviar Convocatória
+                {isRecurring ? 'Criar Eventos Recorrentes e Enviar Convocatórias' : 'Criar Evento e Enviar Convocatória'}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: EDITAR EVENTO ESPECÍFICO */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
+            <button
+              onClick={() => setIsEditModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-2 mb-1">
+              <Edit size={20} className="text-csc-gold" />
+              <h2 className="text-xl font-black text-csc-dark">Editar Dados do Evento</h2>
+            </div>
+            <p className="text-xs text-gray-500 mb-5">
+              Altera a data, horário, localização ou detalhes deste dia específico na agenda.
+            </p>
+
+            <form onSubmit={handleSaveEditedEvent} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Título do Evento *</label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
+                  <select
+                    value={editType}
+                    onChange={(e) => setEditType(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                  >
+                    <option value="practice">Treino</option>
+                    <option value="match">Jogo</option>
+                    <option value="gathering">Convívio</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Nº Máximo Convocados</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={editMaxPlayers}
+                    onChange={(e) => setEditMaxPlayers(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                  />
+                </div>
+              </div>
+
+              {editType === 'match' && (
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2.5 text-xs">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="editIsFriendly"
+                      checked={editIsFriendly}
+                      onChange={(e) => setEditIsFriendly(e.target.checked)}
+                      className="h-3.5 w-3.5 text-csc-dark focus:ring-csc-dark border-gray-300 rounded"
+                    />
+                    <label htmlFor="editIsFriendly" className="ml-2 font-semibold text-gray-700">
+                      Jogo Amigável
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">Nome do Torneio / Liga</label>
+                    <input
+                      type="text"
+                      value={editTournamentName}
+                      onChange={(e) => setEditTournamentName(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white"
+                      placeholder="Ex: Liga de Veteranos"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={editDateTime}
+                    onChange={(e) => setEditDateTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Localização *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-gray-200 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-csc-dark text-white rounded-lg text-xs font-bold hover:bg-black transition-colors flex items-center gap-1.5 shadow"
+                >
+                  <Save size={14} />
+                  <span>Guardar Alterações</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>
