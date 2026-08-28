@@ -60,6 +60,8 @@ const Login: React.FC = () => {
     }
   }
 
+  const isConfigured = !!import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('placeholder');
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-150 px-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 border border-gray-100">
@@ -69,6 +71,12 @@ const Login: React.FC = () => {
             {isSignUp ? 'Crie a sua conta de jogador' : 'Faça login para aceder à sua área'}
           </p>
         </div>
+
+        {!isConfigured && (
+          <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-xs mb-6 border border-amber-200 font-semibold leading-relaxed">
+            ⚠️ O site foi compilado sem ligação ao Supabase. Por favor, confirme que adicionou os "Secrets" (VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY) nas definições do seu repositório no GitHub.
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm mb-6 border border-red-200">
