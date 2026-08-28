@@ -1,7 +1,8 @@
 -- Migração da Tabela de Perfis e Importação de Jogadores do PDF
 
--- 1. Garantir UUID default e adicionar colunas novas à tabela profiles (se não existirem)
+-- 1. Garantir remoção da restrição de chave estrangeira com auth.users (permite atletas sem conta de login criada), UUID default e colunas novas
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 ALTER TABLE public.profiles ALTER COLUMN id SET DEFAULT gen_random_uuid();
 
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS nickname TEXT;
