@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Plus, Trash2, MapPin, Clock, Check, Shield, Users, CheckCircle2, XCircle, HelpCircle, X, UserPlus, Search, RotateCcw } from 'lucide-react'
+import { Plus, Trash2, MapPin, Clock, Check, Shield, Users, CheckCircle2, XCircle, HelpCircle, X, UserPlus, Search, RotateCcw, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
@@ -17,6 +17,7 @@ interface Event {
   tournament_id?: string | null
   opponent_id?: string | null
   home_away?: 'home' | 'away' | 'neutral' | null
+  max_players?: number | null
 }
 
 interface Field { id: string; name: string }
@@ -60,6 +61,7 @@ const EventsPage: React.FC = () => {
   const [fieldId, setFieldId] = useState('')
   const [locationText, setLocationText] = useState('') // fallback for informal gatherings
   const [description, setDescription] = useState('')
+  const [maxPlayers, setMaxPlayers] = useState<number | ''>(16)
   
   // Match specifics
   const [isFriendly, setIsFriendly] = useState(false)
@@ -159,6 +161,14 @@ const EventsPage: React.FC = () => {
       alert('Este jogador está lesionado e não pode ser convocado para jogos ou treinos (apenas convívios).')
       return
     }
+
+    const willSelect = !selectedPlayerIds.includes(id)
+    if (willSelect && maxPlayers !== '' && selectedPlayerIds.length >= Number(maxPlayers)) {
+      if (!confirm(`⚠️ Aviso de Limite: A convocatória já atingiu o limite definido de ${maxPlayers} jogadores (${selectedPlayerIds.length} selecionados).\n\nDeseja selecionar este atleta a mais mesmo assim?`)) {
+        return
+      }
+    }
+
     setSelectedPlayerIds(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id])
   }
 
@@ -174,6 +184,7 @@ const EventsPage: React.FC = () => {
         field_id: fieldId || null,
         location: !fieldId ? locationText : null,
         description,
+        max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
         is_friendly: type === 'match' ? isFriendly : false,
         tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
         opponent_id: type === 'match' ? (opponentId || null) : null,
@@ -213,7 +224,8 @@ const EventsPage: React.FC = () => {
       setOpponentId('')
       setIsFriendly(false)
       setHomeAway('home')
-      setSelectedPlayerIds(allPlayers.map(p => p.id))
+      setMaxPlayers(16)
+      setSelectedPlayerIds(allPlayers.filter(p => isPlayerEligible(p, type)).map(p => p.id))
     } catch (err: any) {
       console.error(err)
       alert("Erro ao criar evento: " + (err.message || 'Verifique a base de dados'))
@@ -229,6 +241,15 @@ const EventsPage: React.FC = () => {
   }
 
   const handleAddPlayerToCallup = async (eventId: string, playerId: string) => {
+    if (activeCallupModalEvent?.max_players) {
+      const currentCallupsCount = eventCallups[eventId]?.length || 0
+      if (currentCallupsCount >= activeCallupModalEvent.max_players) {
+        if (!confirm(`⚠️ Aviso: Este evento tem um limite máximo de ${activeCallupModalEvent.max_players} jogadores (já tem ${currentCallupsCount} convocados).\n\nDeseja adicionar mais um atleta mesmo assim?`)) {
+          return
+        }
+      }
+    }
+
     try {
       const { data, error } = await supabase.from('callups').insert([{
         event_id: eventId,
@@ -379,25 +400,37 @@ const EventsPage: React.FC = () => {
               </div>
             )}
 
-            <div className="flex gap-4">
-              <div className="flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Data e Hora *</label>
                 <input
                   type="datetime-local"
                   required
                   value={dateTime}
                   onChange={(e) => setDateTime(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
                 />
               </div>
-              <div className="w-1/3">
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Concentração</label>
                 <input
                   type="time"
                   value={meetingTime}
                   onChange={(e) => setMeetingTime(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
                   title="Hora de chegada ao balneário"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Nº Máx Convocados</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={maxPlayers}
+                  onChange={(e) => setMaxPlayers(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
+                  placeholder="Ex: 16"
                 />
               </div>
             </div>
@@ -442,7 +475,9 @@ const EventsPage: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                 <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
                   <Users size={14} className="text-csc-dark" />
-                  <span>Convocatória ({selectedPlayerIds.length})</span>
+                  <span>
+                    Convocatória ({selectedPlayerIds.length}{maxPlayers !== '' ? ` / ${maxPlayers} máx` : ''})
+                  </span>
                 </span>
                 <div className="flex items-center gap-1.5 text-xs">
                   <button
@@ -458,6 +493,20 @@ const EventsPage: React.FC = () => {
                   <button type="button" onClick={handleClearAll} className="font-bold text-gray-500 hover:underline text-[11px]">Limpar</button>
                 </div>
               </div>
+
+              {/* Banner de Aviso de Limite */}
+              {maxPlayers !== '' && selectedPlayerIds.length > Number(maxPlayers) && (
+                <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 font-bold flex items-center gap-1.5 animate-pulse">
+                  <AlertTriangle size={14} className="shrink-0 text-red-600" />
+                  <span>Aviso: Ultrapassou o limite definido de {maxPlayers} jogadores ({selectedPlayerIds.length} selecionados)!</span>
+                </div>
+              )}
+              {maxPlayers !== '' && selectedPlayerIds.length === Number(maxPlayers) && (
+                <div className="p-1.5 bg-green-50 border border-green-200 rounded-lg text-xs text-green-800 font-bold flex items-center gap-1.5">
+                  <CheckCircle2 size={13} className="shrink-0 text-green-600" />
+                  <span>Limite máximo de {maxPlayers} jogadores preenchido.</span>
+                </div>
+              )}
 
               {/* Barra de Pesquisa */}
               <div className="relative">

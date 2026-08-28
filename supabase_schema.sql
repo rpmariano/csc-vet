@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS public.events (
     home_away match_location_type,
     home_score INTEGER,
     away_score INTEGER,
+    max_players INTEGER,
     created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );

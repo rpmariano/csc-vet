@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { MapPin, Clock, Plus, X, Award, Users, CheckCircle2, XCircle, HelpCircle, UserPlus, Trash2, Search, RotateCcw } from 'lucide-react'
+import { MapPin, Clock, Plus, X, Award, Users, CheckCircle2, XCircle, HelpCircle, UserPlus, Trash2, Search, RotateCcw, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
@@ -14,6 +14,7 @@ interface Event {
   description: string
   is_friendly?: boolean
   tournament_name?: string
+  max_players?: number | null
   opponent?: {
     name: string
     initials: string
@@ -56,6 +57,7 @@ const CalendarPage: React.FC = () => {
   const [description, setDescription] = useState('')
   const [isFriendly, setIsFriendly] = useState(false)
   const [tournamentName, setTournamentName] = useState('')
+  const [maxPlayers, setMaxPlayers] = useState<number | ''>(16)
 
   const fetchEventsAndData = async () => {
     setLoading(true)
@@ -171,6 +173,13 @@ const CalendarPage: React.FC = () => {
       return
     }
 
+    const willSelect = !selectedPlayerIds.includes(playerId)
+    if (willSelect && maxPlayers !== '' && selectedPlayerIds.length >= Number(maxPlayers)) {
+      if (!confirm(`⚠️ Aviso de Limite: A convocatória já atingiu o limite definido de ${maxPlayers} jogadores (${selectedPlayerIds.length} selecionados).\n\nDeseja selecionar este atleta a mais mesmo assim?`)) {
+        return
+      }
+    }
+
     setSelectedPlayerIds(prev => 
       prev.includes(playerId) ? prev.filter(id => id !== playerId) : [...prev, playerId]
     )
@@ -185,6 +194,7 @@ const CalendarPage: React.FC = () => {
         date_time: new Date(dateTime).toISOString(),
         location,
         description,
+        max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
         is_friendly: type === 'match' ? isFriendly : undefined,
         tournament_name: type === 'match' ? tournamentName : undefined,
         created_by: profile?.id
@@ -217,6 +227,7 @@ const CalendarPage: React.FC = () => {
       setDateTime('')
       setTournamentName('')
       setIsFriendly(false)
+      setMaxPlayers(16)
       setSelectedPlayerIds([])
     } catch (err: any) {
       alert('Erro ao guardar o evento: ' + (err.message || 'Verifique a base de dados'))
@@ -267,6 +278,15 @@ const CalendarPage: React.FC = () => {
 
   // Treinador adiciona jogador a um evento existente no modal
   const handleAddPlayerToCallup = async (eventId: string, playerId: string) => {
+    if (selectedEvent?.max_players) {
+      const currentCallupsCount = eventCallups[eventId]?.length || 0
+      if (currentCallupsCount >= selectedEvent.max_players) {
+        if (!confirm(`⚠️ Aviso: Este evento tem um limite máximo de ${selectedEvent.max_players} jogadores (já tem ${currentCallupsCount} convocados).\n\nDeseja adicionar mais um atleta mesmo assim?`)) {
+          return
+        }
+      }
+    }
+
     try {
       const { data, error } = await supabase.from('callups').insert([{
         event_id: eventId,
@@ -510,10 +530,19 @@ const CalendarPage: React.FC = () => {
               return (
                 <div className="mt-6 pt-5 border-t border-gray-200">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
-                      <Users size={20} className="text-csc-dark" />
-                      <span>Convocatória ({callups.length})</span>
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                        <Users size={20} className="text-csc-dark" />
+                        <span>
+                          Convocatória ({callups.length}{selectedEvent.max_players ? ` / ${selectedEvent.max_players} máx` : ''})
+                        </span>
+                      </h3>
+                      {selectedEvent.max_players && callups.length > selectedEvent.max_players && (
+                        <span className="text-[10px] bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded">
+                          Excede limite (+{callups.length - selectedEvent.max_players})
+                        </span>
+                      )}
+                    </div>
 
                     {isCoachOrAdmin && (
                       <button
@@ -758,7 +787,7 @@ const CalendarPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Data e Hora *</label>
                   <input
@@ -766,7 +795,7 @@ const CalendarPage: React.FC = () => {
                     required
                     value={dateTime}
                     onChange={(e) => setDateTime(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
                   />
                 </div>
                 <div>
@@ -776,8 +805,20 @@ const CalendarPage: React.FC = () => {
                     required
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
                     placeholder="Ex: Campo Sintético"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Nº Máximo Convocados</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={maxPlayers}
+                    onChange={(e) => setMaxPlayers(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
+                    placeholder="Ex: 16"
                   />
                 </div>
               </div>
@@ -788,7 +829,7 @@ const CalendarPage: React.FC = () => {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
                   placeholder="Horário de chegada, equipamento a levar..."
                 />
               </div>
@@ -799,7 +840,9 @@ const CalendarPage: React.FC = () => {
                   <div>
                     <label className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
                       <Users size={16} className="text-csc-dark" />
-                      <span>Convocatória Inicial ({selectedPlayerIds.length} selecionados)</span>
+                      <span>
+                        Convocatória Inicial ({selectedPlayerIds.length}{maxPlayers !== '' ? ` / ${maxPlayers} máx` : ''})
+                      </span>
                     </label>
                     <p className="text-[11px] text-gray-500">Selecione os atletas a convocar para este jogo/treino.</p>
                   </div>
@@ -829,6 +872,20 @@ const CalendarPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Banner de Aviso de Limite */}
+                {maxPlayers !== '' && selectedPlayerIds.length > Number(maxPlayers) && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 font-bold flex items-center gap-2 animate-pulse">
+                    <AlertTriangle size={16} className="shrink-0 text-red-600" />
+                    <span>Aviso: O número de atletas convocados ({selectedPlayerIds.length}) ultrapassa o limite definido de {maxPlayers} jogadores!</span>
+                  </div>
+                )}
+                {maxPlayers !== '' && selectedPlayerIds.length === Number(maxPlayers) && (
+                  <div className="p-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-800 font-bold flex items-center gap-2">
+                    <CheckCircle2 size={15} className="shrink-0 text-green-600" />
+                    <span>Limite máximo de {maxPlayers} convocados preenchido a 100%.</span>
+                  </div>
+                )}
 
                 {/* Barra de Pesquisa de Jogadores */}
                 <div className="relative">
