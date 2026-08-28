@@ -25,7 +25,7 @@ import {
   Save,
   CalendarRange
 } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
@@ -496,6 +496,24 @@ const CalendarPage: React.FC = () => {
       }
     } catch (err: any) {
       alert('Erro ao adicionar jogador: ' + err.message)
+    }
+  }
+
+  const handleUpdateCallupStatus = async (callupId: string, eventId: string, newStatus: 'confirmed' | 'declined' | 'called') => {
+    try {
+      const { error } = await supabase
+        .from('callups')
+        .update({ status: newStatus })
+        .eq('id', callupId)
+
+      if (error) throw error
+
+      setEventCallups(prev => ({
+        ...prev,
+        [eventId]: (prev[eventId] || []).map(c => c.id === callupId ? { ...c, status: newStatus } : c)
+      }))
+    } catch (err: any) {
+      alert('Erro ao atualizar RSVP: ' + err.message)
     }
   }
 
@@ -1435,16 +1453,33 @@ const CalendarPage: React.FC = () => {
                             <CheckCircle2 size={13} /> Confirmados ({confirmedList.length})
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            {confirmedList.map(c => (
-                              <div key={c.id} className="flex items-center justify-between p-2 bg-green-50/60 rounded-lg border border-green-200 text-xs">
-                                <span className="font-bold text-gray-800 truncate">{c.player?.name || 'Jogador'}</span>
-                                {isCoachOrAdmin && (
-                                  <button onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} className="text-red-400 hover:text-red-600 ml-2" title="Remover da convocatória">
-                                    <Trash2 size={12} />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
+                            {confirmedList.map(c => {
+                              const roles = extractRolesFromProfile(c.player as any)
+                              return (
+                                <div key={c.id} className="flex items-center justify-between p-2 bg-green-50/70 rounded-xl border border-green-200 text-xs">
+                                  <div className="min-w-0 flex-1 mr-2">
+                                    <span className="font-bold text-gray-800 truncate block">{c.player?.name || 'Membro'}</span>
+                                    <div className="flex gap-1 mt-0.5">
+                                      {roles.map(r => (
+                                        <span key={r} className="text-[8px] font-black px-1 rounded bg-green-200/80 text-green-900">
+                                          {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  {isCoachOrAdmin && (
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'declined')} className="p-1 text-red-600 hover:bg-red-100 rounded" title="Marcar como Recusado">
+                                        <XCircle size={13} />
+                                      </button>
+                                      <button onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} className="p-1 text-gray-400 hover:text-red-600 rounded" title="Remover da convocatória">
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
                       )}
@@ -1456,16 +1491,36 @@ const CalendarPage: React.FC = () => {
                             <HelpCircle size={13} /> Aguardam Resposta ({pendingList.length})
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            {pendingList.map(c => (
-                              <div key={c.id} className="flex items-center justify-between p-2 bg-amber-50/60 rounded-lg border border-amber-200 text-xs">
-                                <span className="font-semibold text-gray-700 truncate">{c.player?.name || 'Jogador'}</span>
-                                {isCoachOrAdmin && (
-                                  <button onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} className="text-red-400 hover:text-red-600 ml-2" title="Remover da convocatória">
-                                    <Trash2 size={12} />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
+                            {pendingList.map(c => {
+                              const roles = extractRolesFromProfile(c.player as any)
+                              return (
+                                <div key={c.id} className="flex items-center justify-between p-2 bg-amber-50/70 rounded-xl border border-amber-200 text-xs">
+                                  <div className="min-w-0 flex-1 mr-2">
+                                    <span className="font-semibold text-gray-800 truncate block">{c.player?.name || 'Membro'}</span>
+                                    <div className="flex gap-1 mt-0.5">
+                                      {roles.map(r => (
+                                        <span key={r} className="text-[8px] font-black px-1 rounded bg-amber-200/80 text-amber-900">
+                                          {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  {isCoachOrAdmin && (
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'confirmed')} className="p-1 text-green-700 hover:bg-green-100 rounded" title="Marcar como Confirmado">
+                                        <CheckCircle2 size={13} />
+                                      </button>
+                                      <button onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'declined')} className="p-1 text-red-600 hover:bg-red-100 rounded" title="Marcar como Recusado">
+                                        <XCircle size={13} />
+                                      </button>
+                                      <button onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} className="p-1 text-gray-400 hover:text-red-600 rounded" title="Remover da convocatória">
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
                       )}
@@ -1477,16 +1532,33 @@ const CalendarPage: React.FC = () => {
                             <XCircle size={13} /> Recusados / Indisponíveis ({declinedList.length})
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            {declinedList.map(c => (
-                              <div key={c.id} className="flex items-center justify-between p-2 bg-red-50/60 rounded-lg border border-red-200 text-xs">
-                                <span className="font-semibold text-gray-500 line-through truncate">{c.player?.name || 'Jogador'}</span>
-                                {isCoachOrAdmin && (
-                                  <button onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} className="text-red-400 hover:text-red-600 ml-2" title="Remover da convocatória">
-                                    <Trash2 size={12} />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
+                            {declinedList.map(c => {
+                              const roles = extractRolesFromProfile(c.player as any)
+                              return (
+                                <div key={c.id} className="flex items-center justify-between p-2 bg-red-50/70 rounded-xl border border-red-200 text-xs">
+                                  <div className="min-w-0 flex-1 mr-2">
+                                    <span className="font-semibold text-gray-500 line-through truncate block">{c.player?.name || 'Membro'}</span>
+                                    <div className="flex gap-1 mt-0.5">
+                                      {roles.map(r => (
+                                        <span key={r} className="text-[8px] font-black px-1 rounded bg-red-200/80 text-red-900">
+                                          {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  {isCoachOrAdmin && (
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'confirmed')} className="p-1 text-green-700 hover:bg-green-100 rounded" title="Marcar como Confirmado">
+                                        <CheckCircle2 size={13} />
+                                      </button>
+                                      <button onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} className="p-1 text-gray-400 hover:text-red-600 rounded" title="Remover da convocatória">
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
                       )}
