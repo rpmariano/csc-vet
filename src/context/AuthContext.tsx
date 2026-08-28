@@ -3,15 +3,30 @@ import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 
 export type UserRole = 'player' | 'coach' | 'admin'
+export type ProfileStatus = 'active' | 'inactive' | 'injured'
 
 export interface Profile {
   id: string
   name: string
+  nickname?: string | null
   email: string
-  phone: string | null
-  photo_url: string | null
+  phone?: string | null
+  photo_url?: string | null
   role: UserRole
-  status: 'active' | 'inactive'
+  status: ProfileStatus
+  jersey_number?: number | null
+  birth_date?: string | null
+  nationality?: string | null
+  position?: string | null
+  id_number?: string | null
+  member_number?: string | null
+  emergency_contact_name?: string | null
+  emergency_contact_phone?: string | null
+  medical_notes?: string | null
+  id_document_url?: string | null
+  insurance_doc_url?: string | null
+  medical_exam_doc_url?: string | null
+  created_at?: string
 }
 
 interface AuthContextType {

@@ -29,7 +29,7 @@ const Layout: React.FC = () => {
     { name: 'Comunicados', path: '/announcements', icon: FileText, roles: ['coach', 'admin'] },
     { name: 'Criar Eventos', path: '/events', icon: PlusCircle, roles: ['coach', 'admin'] },
     { name: 'Backoffice', path: '/admin', icon: Settings, roles: ['coach', 'admin'] },
-    { name: 'Gestão Equipa', path: '/team-management', icon: Users, roles: ['admin'] },
+    { name: 'Gestão Equipa', path: '/team-management', icon: Users, roles: ['coach', 'admin'] },
     { name: 'Financeiro', path: '/finance', icon: Landmark, roles: ['admin'] },
     { name: 'Definições', path: '/settings', icon: Settings, roles: ['player', 'coach', 'admin'] },
   ]

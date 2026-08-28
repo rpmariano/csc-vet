@@ -11,15 +11,28 @@ CREATE TYPE tournament_status AS ENUM ('agendado', 'ativo', 'terminado');
 CREATE TYPE event_status AS ENUM ('agendado', 'concluído', 'adiado', 'cancelado');
 CREATE TYPE match_location_type AS ENUM ('home', 'away', 'neutral');
 
--- 2. Tabela de Perfis (perfis adicionais ligados a auth.users)
+-- 2. Tabela de Perfis (perfis de atletas, equipa técnica e dirigentes)
 CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
+    nickname TEXT,
     email TEXT NOT NULL,
     phone TEXT,
     photo_url TEXT,
     role user_role NOT NULL DEFAULT 'player',
-    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'injured')),
+    jersey_number INTEGER,
+    birth_date DATE,
+    nationality TEXT DEFAULT 'Portuguesa',
+    position TEXT,
+    id_number TEXT,
+    member_number TEXT,
+    emergency_contact_name TEXT,
+    emergency_contact_phone TEXT,
+    medical_notes TEXT,
+    id_document_url TEXT,
+    insurance_doc_url TEXT,
+    medical_exam_doc_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 

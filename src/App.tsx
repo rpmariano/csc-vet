@@ -39,11 +39,11 @@ const App: React.FC = () => {
                   <Route path="/announcements" element={<AnnouncementsPage />} />
                   <Route path="/events" element={<EventsPage />} />
                   <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/team-management" element={<TeamManagementPage />} />
                 </Route>
 
                 {/* Admin Only */}
                 <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                  <Route path="/team-management" element={<TeamManagementPage />} />
                   <Route path="/finance" element={<FinancePage />} />
                 </Route>
               </Route>

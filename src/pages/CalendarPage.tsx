@@ -229,7 +229,7 @@ const CalendarPage: React.FC = () => {
             player: {
               id: profile.id,
               name: profile.name,
-              photo_url: profile.photo_url
+              photo_url: profile.photo_url || null
             }
           })
         }
