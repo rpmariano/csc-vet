@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        fetchProfile(session.user.id, session.user.email, session.user.phone)
       } else {
         setLoading(false)
       }
@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(currentUser)
         
         if (currentUser) {
-          await fetchProfile(currentUser.id)
+          await fetchProfile(currentUser.id, currentUser.email, currentUser.phone)
         } else {
           setActualProfile(null)
           setLoading(false)
@@ -80,21 +80,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [])
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, userEmail?: string | null, userPhone?: string | null) => {
     try {
-      const { data, error } = await supabase
+      // 1. Procurar perfil pelo ID do utilizador
+      let { data } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
 
-      if (error) {
-        console.error('Erro ao obter perfil:', error)
-      } else if (data) {
+      // 2. Se não encontrar pelo ID mas tivermos o email, procurar ficha criada previamente
+      if (!data && userEmail) {
+        const { data: matchByEmail } = await supabase
+          .from('profiles')
+          .select('*')
+          .ilike('email', userEmail)
+          .maybeSingle()
+
+        if (matchByEmail) {
+          const oldId = matchByEmail.id
+          // Migrar os dados para o novo ID do auth
+          const { error: updateErr } = await supabase
+            .from('profiles')
+            .update({ id: userId })
+            .eq('id', oldId)
+
+          if (!updateErr) {
+            // Atualizar referências de convocatórias e quotas
+            await Promise.allSettled([
+              supabase.from('callups').update({ player_id: userId }).eq('player_id', oldId),
+              supabase.from('dues').update({ player_id: userId }).eq('player_id', oldId)
+            ])
+            data = { ...matchByEmail, id: userId }
+          } else {
+            data = matchByEmail
+          }
+        }
+      }
+
+      // 3. Se ainda não existir perfil, criar um registo base
+      if (!data) {
+        const newProfile: Partial<Profile> = {
+          id: userId,
+          name: user?.user_metadata?.name || (userEmail ? userEmail.split('@')[0] : 'Novo Atleta'),
+          email: userEmail || '',
+          phone: userPhone || null,
+          role: 'player',
+          status: 'active'
+        }
+
+        const { data: created, error: createErr } = await supabase
+          .from('profiles')
+          .insert([newProfile])
+          .select()
+          .single()
+
+        if (!createErr && created) {
+          data = created
+        }
+      }
+
+      if (data) {
         setActualProfile(data as Profile)
       }
     } catch (err) {
-      console.error('Erro de rede ao obter perfil:', err)
+      console.error('Erro ao obter perfil:', err)
     } finally {
       setLoading(false)
     }

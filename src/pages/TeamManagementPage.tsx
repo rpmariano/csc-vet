@@ -14,7 +14,11 @@ import {
   XCircle, 
   X, 
   ExternalLink,
-  Save
+  Save,
+  Link2,
+  UserCheck,
+  Sparkles,
+  Check
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -271,6 +275,86 @@ const TeamManagementPage: React.FC = () => {
       if (selectedProfile?.id === id) setIsDetailModalOpen(false)
     } catch (err: any) {
       alert('Erro ao eliminar membro: ' + err.message)
+    }
+  }
+
+  // --- USER ACCOUNT ASSOCIATION STATES & LOGIC ---
+  const [associatingPlayer, setAssociatingPlayer] = useState<Profile | null>(null)
+  const [associateSearchTerm, setAssociateSearchTerm] = useState('')
+  const [selectedUserToAssociate, setSelectedUserToAssociate] = useState<Profile | null>(null)
+  const [associatingLoading, setAssociatingLoading] = useState(false)
+
+  const openAssociateModal = (p: Profile) => {
+    setAssociatingPlayer(p)
+    setAssociateSearchTerm('')
+    setSelectedUserToAssociate(null)
+  }
+
+  const handleConfirmAssociate = async (sourcePlayer: Profile, targetUser: Profile) => {
+    if (sourcePlayer.id === targetUser.id) {
+      alert('Este jogador já está associado a esta conta.')
+      return
+    }
+
+    if (!confirm(`Tem a certeza que deseja associar a conta de "${targetUser.email}" (${targetUser.name}) à ficha do jogador "${sourcePlayer.name}"?`)) {
+      return
+    }
+
+    setAssociatingLoading(true)
+    try {
+      const targetUserId = targetUser.id
+      const sourcePlayerId = sourcePlayer.id
+
+      // 1. Atualizar referências de convocatórias e quotas para a conta destino
+      await Promise.allSettled([
+        supabase.from('callups').update({ player_id: targetUserId }).eq('player_id', sourcePlayerId),
+        supabase.from('dues').update({ player_id: targetUserId }).eq('player_id', sourcePlayerId)
+      ])
+
+      // 2. Unificar campos no perfil de destino preservando dados da ficha
+      const mergedPayload = {
+        name: sourcePlayer.name || targetUser.name,
+        nickname: sourcePlayer.nickname || targetUser.nickname,
+        phone: sourcePlayer.phone || targetUser.phone,
+        role: sourcePlayer.role || targetUser.role || 'player',
+        status: sourcePlayer.status || targetUser.status || 'active',
+        jersey_number: sourcePlayer.jersey_number !== undefined && sourcePlayer.jersey_number !== null ? sourcePlayer.jersey_number : targetUser.jersey_number,
+        birth_date: sourcePlayer.birth_date || targetUser.birth_date,
+        nationality: sourcePlayer.nationality || targetUser.nationality || 'Portuguesa',
+        position: sourcePlayer.position || targetUser.position || 'Médio Centro',
+        id_number: sourcePlayer.id_number || targetUser.id_number,
+        member_number: sourcePlayer.member_number || targetUser.member_number,
+        emergency_contact_name: sourcePlayer.emergency_contact_name || targetUser.emergency_contact_name,
+        emergency_contact_phone: sourcePlayer.emergency_contact_phone || targetUser.emergency_contact_phone,
+        medical_notes: sourcePlayer.medical_notes || targetUser.medical_notes,
+        photo_url: sourcePlayer.photo_url || targetUser.photo_url,
+        id_document_url: sourcePlayer.id_document_url || targetUser.id_document_url,
+        insurance_doc_url: sourcePlayer.insurance_doc_url || targetUser.insurance_doc_url,
+        medical_exam_doc_url: sourcePlayer.medical_exam_doc_url || targetUser.medical_exam_doc_url
+      }
+
+      // 3. Atualizar o perfil de destino
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(mergedPayload)
+        .eq('id', targetUserId)
+
+      if (updateError) throw updateError
+
+      // 4. Eliminar o registo placeholder original se for um perfil separado
+      await supabase.from('profiles').delete().eq('id', sourcePlayerId)
+
+      alert(`Jogador "${sourcePlayer.name}" associado com sucesso à conta "${targetUser.email}"!`)
+      setAssociatingPlayer(null)
+      setSelectedUserToAssociate(null)
+      if (selectedProfile?.id === sourcePlayerId) {
+        setIsDetailModalOpen(false)
+      }
+      fetchProfiles()
+    } catch (err: any) {
+      alert('Erro ao associar utilizador: ' + (err.message || 'Verifique a base de dados'))
+    } finally {
+      setAssociatingLoading(false)
     }
   }
 
@@ -541,12 +625,22 @@ const TeamManagementPage: React.FC = () => {
                   {isCoachOrAdmin && (
                     <div className="flex items-center gap-1">
                       <button
+                        onClick={() => openAssociateModal(person)}
+                        className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1 text-xs font-bold"
+                        title="Associar a Utilizador Registado na App"
+                      >
+                        <Link2 size={15} />
+                        <span className="hidden sm:inline">Associar</span>
+                      </button>
+
+                      <button
                         onClick={() => openEditModal(person)}
                         className="p-1.5 text-gray-500 hover:text-csc-dark rounded-lg hover:bg-white transition-colors"
                         title="Editar Ficha"
                       >
                         <Edit2 size={15} />
                       </button>
+
                       {isAdmin && (
                         <button
                           onClick={() => handleDeleteMember(person.id, person.name)}
@@ -1067,22 +1161,212 @@ const TeamManagementPage: React.FC = () => {
 
             {/* Modal Actions */}
             {isCoachOrAdmin && (
-              <div className="pt-3 border-t flex justify-end gap-2">
+              <div className="pt-3 border-t flex flex-wrap justify-between items-center gap-2">
                 <button
                   onClick={() => {
+                    const profileToAssociate = selectedProfile
                     setIsDetailModalOpen(false)
-                    openEditModal(selectedProfile)
+                    openAssociateModal(profileToAssociate)
                   }}
-                  className="px-4 py-2 bg-csc-dark text-white rounded-lg text-xs font-bold hover:bg-csc-dark/80 transition-colors flex items-center gap-1.5 shadow"
+                  className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
                 >
-                  <Edit2 size={14} />
-                  <span>Editar Ficha</span>
+                  <Link2 size={14} />
+                  <span>Associar Conta de Utilizador</span>
                 </button>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setIsDetailModalOpen(false)
+                      openEditModal(selectedProfile)
+                    }}
+                    className="px-4 py-2 bg-csc-dark text-white rounded-lg text-xs font-bold hover:bg-csc-dark/80 transition-colors flex items-center gap-1.5 shadow"
+                  >
+                    <Edit2 size={14} />
+                    <span>Editar Ficha</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
+
+      {/* MODAL 3: ASSOCIAR UTILIZADOR A JOGADOR */}
+      {associatingPlayer && (() => {
+        // Encontrar potenciais coincidências por email ou telefone
+        const potentialMatches = profiles.filter(p => 
+          p.id !== associatingPlayer.id && (
+            (p.email && associatingPlayer.email && p.email.trim().toLowerCase() === associatingPlayer.email.trim().toLowerCase()) ||
+            (p.phone && associatingPlayer.phone && p.phone.trim() === associatingPlayer.phone.trim())
+          )
+        )
+
+        const otherUsers = profiles.filter(p => 
+          p.id !== associatingPlayer.id && 
+          !potentialMatches.some(m => m.id === p.id) && (
+            !associateSearchTerm || 
+            (p.name && p.name.toLowerCase().includes(associateSearchTerm.toLowerCase())) ||
+            (p.email && p.email.toLowerCase().includes(associateSearchTerm.toLowerCase())) ||
+            (p.phone && p.phone.includes(associateSearchTerm))
+          )
+        )
+
+        return (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+            <div className="bg-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
+              <button
+                onClick={() => {
+                  setAssociatingPlayer(null)
+                  setSelectedUserToAssociate(null)
+                }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+
+              {/* Cabeçalho */}
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="p-2.5 bg-blue-100 rounded-xl text-blue-700">
+                  <Link2 size={22} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-gray-900">
+                    Associar Utilizador a {associatingPlayer.name}
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Liga uma conta de utilizador registada na app à ficha deste jogador
+                  </p>
+                </div>
+              </div>
+
+              {/* Informação do Jogador Atual */}
+              <div className="mt-4 p-3.5 bg-gray-50 rounded-xl border border-gray-200 text-xs flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-gray-850">{associatingPlayer.name} {associatingPlayer.nickname ? `("${associatingPlayer.nickname}")` : ''}</p>
+                  <p className="text-gray-500 mt-0.5 font-medium">Email na ficha: <strong className="text-gray-700">{associatingPlayer.email}</strong></p>
+                  {associatingPlayer.phone && <p className="text-gray-500 font-medium">Tel: <strong className="text-gray-700">{associatingPlayer.phone}</strong></p>}
+                </div>
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-csc-gold text-csc-dark rounded">
+                  Ficha de Jogador
+                </span>
+              </div>
+
+              {/* 1. Sugestões Automáticas / Coincidências Encontradas */}
+              {potentialMatches.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-green-800">
+                    <Sparkles size={16} className="text-green-600" />
+                    <span>Coincidência Automática Detetada por Email/Contacto!</span>
+                  </div>
+                  {potentialMatches.map(match => (
+                    <div
+                      key={match.id}
+                      className="p-3.5 bg-green-50/80 border-2 border-green-400 rounded-xl flex items-center justify-between gap-3 shadow-xs"
+                    >
+                      <div className="text-xs">
+                        <p className="font-bold text-green-950 text-sm">{match.name}</p>
+                        <p className="text-green-800 font-medium">{match.email}</p>
+                        {match.phone && <p className="text-green-700 text-[11px]">Tel: {match.phone}</p>}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={associatingLoading}
+                        onClick={() => handleConfirmAssociate(associatingPlayer, match)}
+                        className="px-3.5 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-xs font-bold transition-colors shadow-xs shrink-0 flex items-center gap-1"
+                      >
+                        <UserCheck size={14} />
+                        <span>Associar Imediatamente</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* 2. Pesquisa e Seleção de Outro Utilizador Registado */}
+              <div className="mt-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider">
+                    {potentialMatches.length > 0 ? 'Ou escolher outro utilizador registado' : 'Selecionar Utilizador Registado na App'}
+                  </h4>
+                </div>
+
+                <div className="relative">
+                  <Search size={15} className="absolute left-3 top-2.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={associateSearchTerm}
+                    onChange={(e) => setAssociateSearchTerm(e.target.value)}
+                    placeholder="Pesquisar utilizador por nome, email ou telefone..."
+                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                  />
+                </div>
+
+                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 border border-gray-150 rounded-xl p-2 bg-gray-50/50">
+                  {otherUsers.length === 0 ? (
+                    <p className="text-center py-6 text-xs text-gray-400 font-medium">
+                      Nenhum outro utilizador encontrado.
+                    </p>
+                  ) : (
+                    otherUsers.map(user => {
+                      const isSelected = selectedUserToAssociate?.id === user.id
+
+                      return (
+                        <div
+                          key={user.id}
+                          onClick={() => setSelectedUserToAssociate(user)}
+                          className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between ${
+                            isSelected 
+                              ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50 shadow-xs' 
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-white bg-white/70'
+                          }`}
+                        >
+                          <div>
+                            <p className="font-bold text-gray-900">{user.name}</p>
+                            <p className="text-gray-500 text-[11px]">{user.email} {user.phone ? `• ${user.phone}` : ''}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 capitalize">
+                              {user.role}
+                            </span>
+                            {isSelected && <Check size={16} className="text-csc-dark font-black" />}
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Botões do Rodapé */}
+              <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAssociatingPlayer(null)
+                    setSelectedUserToAssociate(null)
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+
+                {selectedUserToAssociate && (
+                  <button
+                    type="button"
+                    disabled={associatingLoading}
+                    onClick={() => handleConfirmAssociate(associatingPlayer, selectedUserToAssociate)}
+                    className="px-4 py-2 bg-csc-dark hover:bg-black text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                  >
+                    <UserCheck size={15} />
+                    <span>{associatingLoading ? 'A associar...' : `Vincular a ${selectedUserToAssociate.name}`}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
