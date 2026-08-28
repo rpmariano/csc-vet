@@ -40,8 +40,7 @@ const POSITIONS = [
   'Médio Direito',
   'Médio Ofensivo',
   'Ponta de Lança (Esq)',
-  'Ponta de Lança (Dir)',
-  'Ponta de Lança'
+  'Ponta de Lança (Dir)'
 ]
 
 const TeamManagementPage: React.FC = () => {

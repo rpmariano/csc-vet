@@ -50,7 +50,9 @@ export const normalizePositionName = (raw: string): string => {
   if (s.toLowerCase().includes('médio centro') || s.toLowerCase() === 'médio') return 'Médio Defensivo'
   if (s.toLowerCase().includes('extremo dir') || s.toLowerCase().includes('ala dir') || s.toLowerCase() === 'ed') return 'Médio Direito'
   if (s.toLowerCase().includes('extremo esq') || s.toLowerCase().includes('ala esq') || s.toLowerCase() === 'ee') return 'Médio Esquerdo'
-  if (s.toLowerCase().includes('ponta de lança') || s.toLowerCase().includes('avançado') || s.toLowerCase().includes('avancado') || s.toLowerCase() === 'pl') return 'Ponta de Lança'
+  if (s.toLowerCase().includes('ponta de lança') && s.toLowerCase().includes('esq')) return 'Ponta de Lança (Esq)'
+  if (s.toLowerCase().includes('ponta de lança') && s.toLowerCase().includes('dir')) return 'Ponta de Lança (Dir)'
+  if (s.toLowerCase().includes('ponta de lança') || s.toLowerCase().includes('avançado') || s.toLowerCase().includes('avancado') || s.toLowerCase() === 'pl') return 'Ponta de Lança (Esq)'
   return s
 }
 

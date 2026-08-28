@@ -19,7 +19,8 @@ import {
   Calendar,
   Sparkles,
   PartyPopper,
-  Trophy
+  Trophy,
+  Edit
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
@@ -209,7 +210,94 @@ const EventsPage: React.FC = () => {
   const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<number[]>([3]) // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
 
+  // Estados para Edição de Evento
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editType, setEditType] = useState<'practice' | 'match' | 'gathering'>('gathering')
+  const [editEventDate, setEditEventDate] = useState('')
+  const [editEventTime, setEditEventTime] = useState('20:00')
+  const [editMeetingTime, setEditMeetingTime] = useState('')
+  const [editFieldId, setEditFieldId] = useState('')
+  const [editLocationText, setEditLocationText] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editMaxPlayers, setEditMaxPlayers] = useState<number | ''>('')
+  const [editIsFriendly, setEditIsFriendly] = useState(false)
+  const [editTournamentId, setEditTournamentId] = useState('')
+  const [editOpponentId, setEditOpponentId] = useState('')
+  const [editHomeAway, setEditHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
+
+  const openEditModal = (ev: Event) => {
+    setEditingEvent(ev)
+    setEditTitle(ev.title)
+    setEditType(ev.type)
+    
+    // Parse date and time
+    const d = new Date(ev.date_time)
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const hours = String(d.getHours()).padStart(2, '0')
+      const minutes = String(d.getMinutes()).padStart(2, '0')
+      setEditEventDate(`${year}-${month}-${day}`)
+      setEditEventTime(`${hours}:${minutes}`)
+    } else {
+      setEditEventDate(new Date().toISOString().split('T')[0])
+      setEditEventTime('20:00')
+    }
+
+    setEditMeetingTime(ev.meeting_time ? ev.meeting_time.substring(0, 5) : '')
+    setEditFieldId(ev.field_id || '')
+    setEditLocationText(ev.location || '')
+    setEditDescription(ev.description || '')
+    setEditMaxPlayers(ev.max_players ?? '')
+    setEditIsFriendly(ev.is_friendly ?? false)
+    setEditTournamentId(ev.tournament_id || '')
+    setEditOpponentId(ev.opponent_id || '')
+    setEditHomeAway(ev.home_away || 'home')
+  }
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingEvent) return
+    setIsSavingEdit(true)
+    try {
+      const fullIsoDateTime = new Date(`${editEventDate}T${editEventTime}:00`).toISOString()
+      const payload: any = {
+        title: editTitle.trim(),
+        type: editType,
+        date_time: fullIsoDateTime,
+        meeting_time: editMeetingTime ? `${editMeetingTime}:00` : null,
+        field_id: editFieldId || null,
+        location: !editFieldId ? (editLocationText.trim() || null) : null,
+        description: editDescription.trim() || null,
+        max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
+        is_friendly: editType === 'match' ? editIsFriendly : false,
+        tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
+        opponent_id: editType === 'match' ? (editOpponentId || null) : null,
+        home_away: editType === 'match' ? editHomeAway : null,
+      }
+
+      const { error } = await supabase
+        .from('events')
+        .update(payload)
+        .eq('id', editingEvent.id)
+
+      if (error) throw error
+
+      setEditingEvent(null)
+      setSuccessMessage('✨ Evento atualizado com sucesso!')
+      await fetchData()
+    } catch (err: any) {
+      console.error(err)
+      alert('Erro ao atualizar evento: ' + (err.message || 'Erro de ligação'))
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
 
   // Pre-select weekday when eventDate changes
   useEffect(() => {
@@ -1149,13 +1237,22 @@ const EventsPage: React.FC = () => {
                         </div>
 
                         {isCoachOrAdmin && (
-                          <button
-                            onClick={() => handleDeleteEvent(event.id)}
-                            className="text-gray-400 hover:text-red-600 p-1.5 rounded-xl hover:bg-red-50 transition-colors cursor-pointer shrink-0"
-                            title="Eliminar evento"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div className="flex gap-1 shrink-0">
+                            <button
+                              onClick={() => openEditModal(event)}
+                              className="text-gray-400 hover:text-blue-600 p-1.5 rounded-xl hover:bg-blue-50 transition-colors cursor-pointer"
+                              title="Editar evento"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEvent(event.id)}
+                              className="text-gray-400 hover:text-red-600 p-1.5 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
+                              title="Eliminar evento"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         )}
                       </div>
 
@@ -1522,6 +1619,127 @@ const EventsPage: React.FC = () => {
           </div>
         </div>
       )}
+      {/* ====== MODAL DE EDIÇÃO DE EVENTO ====== */}
+      {editingEvent && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onClick={() => setEditingEvent(null)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-5 rounded-t-3xl flex justify-between items-center z-10">
+              <h3 className="text-lg font-black text-gray-900">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
+              <button onClick={() => setEditingEvent(null)} className="text-gray-400 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 cursor-pointer"><X size={20} /></button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
+              {/* Tipo */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Tipo</label>
+                <select value={editType} onChange={e => setEditType(e.target.value as any)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-medium bg-white">
+                  <option value="practice">Treino</option>
+                  <option value="match">Jogo</option>
+                  <option value="gathering">Convívio</option>
+                </select>
+              </div>
+
+              {/* Título */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Título</label>
+                <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" />
+              </div>
+
+              {/* Data e Hora */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Data</label>
+                  <input type="date" value={editEventDate} onChange={e => setEditEventDate(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Hora</label>
+                  <input type="time" value={editEventTime} onChange={e => setEditEventTime(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" />
+                </div>
+              </div>
+
+              {/* Hora de Concentração */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Hora de Concentração (opcional)</label>
+                <input type="time" value={editMeetingTime} onChange={e => setEditMeetingTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" />
+              </div>
+
+              {/* Local */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">📍 Local</label>
+                <select value={editFieldId} onChange={e => setEditFieldId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-medium bg-white">
+                  <option value="">-- Escolher Campo/Instalação --</option>
+                  {fields.map(f => (
+                    <option key={f.id} value={f.id}>🏟️ {f.name} {f.address ? `(${f.address})` : ''}</option>
+                  ))}
+                </select>
+                {!editFieldId && (
+                  <input type="text" value={editLocationText} onChange={e => setEditLocationText(e.target.value)} className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" placeholder="Ou digite o local manualmente..." />
+                )}
+              </div>
+
+              {/* Campos específicos para Jogos */}
+              {editType === 'match' && (
+                <div className="space-y-3 border-t border-gray-200 pt-3">
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-bold text-gray-700">Amigável?</label>
+                    <input type="checkbox" checked={editIsFriendly} onChange={e => setEditIsFriendly(e.target.checked)} className="w-4 h-4 rounded" />
+                  </div>
+
+                  {!editIsFriendly && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Torneio/Competição</label>
+                      <select value={editTournamentId} onChange={e => setEditTournamentId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white">
+                        <option value="">-- Selecionar --</option>
+                        {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Adversário</label>
+                    <select value={editOpponentId} onChange={e => setEditOpponentId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white">
+                      <option value="">-- Selecionar --</option>
+                      {opponents.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Casa/Fora</label>
+                    <select value={editHomeAway} onChange={e => setEditHomeAway(e.target.value as any)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white">
+                      <option value="home">Casa</option>
+                      <option value="away">Fora</option>
+                      <option value="neutral">Neutro</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Limite de Convocados */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Limite de Convocados (opcional)</label>
+                <input type="number" min="1" max="50" value={editMaxPlayers} onChange={e => setEditMaxPlayers(e.target.value ? Number(e.target.value) : '')} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" placeholder="Ex: 18" />
+              </div>
+
+              {/* Descrição */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
+                <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white resize-none" placeholder="Informações adicionais, ementa do convívio..." />
+              </div>
+
+              {/* Botões */}
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditingEvent(null)} className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={isSavingEdit} className="flex-1 px-4 py-2.5 bg-csc-dark hover:bg-csc-dark/90 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50">
+                  {isSavingEdit ? 'A guardar...' : '💾 Guardar Alterações'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
