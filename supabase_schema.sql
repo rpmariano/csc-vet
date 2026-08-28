@@ -7,6 +7,10 @@ CREATE TYPE callup_status AS ENUM ('called', 'confirmed', 'declined');
 CREATE TYPE due_status AS ENUM ('pending', 'paid', 'late');
 CREATE TYPE transaction_type AS ENUM ('income', 'expense');
 
+CREATE TYPE tournament_status AS ENUM ('agendado', 'ativo', 'terminado');
+CREATE TYPE event_status AS ENUM ('agendado', 'concluído', 'adiado', 'cancelado');
+CREATE TYPE match_location_type AS ENUM ('home', 'away', 'neutral');
+
 -- 2. Tabela de Perfis (perfis adicionais ligados a auth.users)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -22,16 +26,53 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Habilitar RLS em profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+-- Tabela de Campos/Estádios
+CREATE TABLE IF NOT EXISTS public.fields (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    address TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+ALTER TABLE public.fields ENABLE ROW LEVEL SECURITY;
+
+-- Tabela de Adversários
+CREATE TABLE IF NOT EXISTS public.opponents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    contact_name TEXT,
+    contact_phone TEXT,
+    home_field_id UUID REFERENCES public.fields(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+ALTER TABLE public.opponents ENABLE ROW LEVEL SECURITY;
+
+-- Tabela de Torneios
+CREATE TABLE IF NOT EXISTS public.tournaments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    season TEXT,
+    status tournament_status NOT NULL DEFAULT 'agendado',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+ALTER TABLE public.tournaments ENABLE ROW LEVEL SECURITY;
+
 -- 3. Tabela de Eventos
 CREATE TABLE IF NOT EXISTS public.events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     type event_type NOT NULL,
     date_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    location TEXT NOT NULL,
+    meeting_time TIME,
+    field_id UUID REFERENCES public.fields(id) ON DELETE SET NULL,
     description TEXT,
+    status event_status NOT NULL DEFAULT 'agendado',
+    related_gathering_id UUID REFERENCES public.events(id) ON DELETE SET NULL,
     is_friendly BOOLEAN DEFAULT FALSE,
-    tournament_name TEXT,
+    tournament_id UUID REFERENCES public.tournaments(id) ON DELETE SET NULL,
+    opponent_id UUID REFERENCES public.opponents(id) ON DELETE SET NULL,
+    home_away match_location_type,
+    home_score INTEGER,
+    away_score INTEGER,
     created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -241,6 +282,16 @@ CREATE POLICY "Apenas admins acedem e gerem transações"
 ON public.transactions FOR ALL 
 TO authenticated 
 USING (public.get_user_role() = 'admin');
+
+-- 9. Políticas para CAMPOS, ADVERSÁRIOS E TORNEIOS
+CREATE POLICY "Campos legíveis por todos" ON public.fields FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Apenas treinadores e admins gerem campos" ON public.fields FOR ALL TO authenticated USING (public.get_user_role() IN ('coach', 'admin'));
+
+CREATE POLICY "Adversários legíveis por todos" ON public.opponents FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Apenas treinadores e admins gerem adversários" ON public.opponents FOR ALL TO authenticated USING (public.get_user_role() IN ('coach', 'admin'));
+
+CREATE POLICY "Torneios legíveis por todos" ON public.tournaments FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Apenas treinadores e admins gerem torneios" ON public.tournaments FOR ALL TO authenticated USING (public.get_user_role() IN ('coach', 'admin'));
 
 
 --------------------------------------------------------------------------------

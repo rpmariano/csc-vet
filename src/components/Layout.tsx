@@ -27,6 +27,7 @@ const Layout: React.FC = () => {
     { name: 'Estatísticas', path: '/stats', icon: BarChart3, roles: ['player', 'coach', 'admin'] },
     { name: 'Comunicados', path: '/announcements', icon: FileText, roles: ['coach', 'admin'] },
     { name: 'Criar Eventos', path: '/events', icon: PlusCircle, roles: ['coach', 'admin'] },
+    { name: 'Backoffice', path: '/admin', icon: Settings, roles: ['coach', 'admin'] },
     { name: 'Gestão Equipa', path: '/team-management', icon: Users, roles: ['admin'] },
     { name: 'Financeiro', path: '/finance', icon: Landmark, roles: ['admin'] },
     { name: 'Definições', path: '/settings', icon: Settings, roles: ['player', 'coach', 'admin'] },
