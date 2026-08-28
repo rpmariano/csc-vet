@@ -1,25 +1,28 @@
 import React from 'react'
-import { Check, X, Shield } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 
 export interface PitchPosition {
   id: string
   name: string
   short: string
-  category: 'gk' | 'def' | 'mid' | 'att' | 'staff'
+  category: 'gk' | 'def' | 'mid' | 'att'
   topPercent: number
   leftPercent: number
 }
 
 export const PITCH_POSITIONS: PitchPosition[] = [
-  // Linha de Ataque (3 Avançados)
-  { id: 'ee', name: 'Extremo Esquerdo', short: 'EE', category: 'att', topPercent: 16, leftPercent: 16 },
-  { id: 'pl', name: 'Ponta de Lança', short: 'PL', category: 'att', topPercent: 12, leftPercent: 50 },
-  { id: 'ed', name: 'Extremo Direito', short: 'ED', category: 'att', topPercent: 16, leftPercent: 84 },
+  // Linha de Ataque (2 Avançados)
+  { id: 'pl_esq', name: 'Ponta de Lança (Esq)', short: 'PL', category: 'att', topPercent: 13, leftPercent: 34 },
+  { id: 'pl_dir', name: 'Ponta de Lança (Dir)', short: 'PL', category: 'att', topPercent: 13, leftPercent: 66 },
 
-  // Linha de Meio-Campo (3 Médios)
-  { id: 'mce', name: 'Médio Centro Esquerdo', short: 'MCE', category: 'mid', topPercent: 38, leftPercent: 28 },
-  { id: 'mdc', name: 'Médio Defensivo', short: 'MDC', category: 'mid', topPercent: 48, leftPercent: 50 },
-  { id: 'mcd', name: 'Médio Centro Direito', short: 'MCD', category: 'mid', topPercent: 38, leftPercent: 72 },
+  // Meio-Campo em Losango (4 Médios)
+  // Vértice Superior (Apoio ao Ataque)
+  { id: 'mco', name: 'Médio Ofensivo', short: 'MCO', category: 'mid', topPercent: 29, leftPercent: 50 },
+  // Laterais do Losango
+  { id: 'me', name: 'Médio Esquerdo', short: 'ME', category: 'mid', topPercent: 43, leftPercent: 22 },
+  { id: 'md', name: 'Médio Direito', short: 'MD', category: 'mid', topPercent: 43, leftPercent: 78 },
+  // Vértice Inferior (Trinco / Proteção Defensiva)
+  { id: 'mdc', name: 'Médio Defensivo', short: 'MDC', category: 'mid', topPercent: 55, leftPercent: 50 },
 
   // Linha Defensiva (4 Defesas - Centrais individualizados)
   { id: 'le', name: 'Lateral Esquerdo', short: 'LE', category: 'def', topPercent: 70, leftPercent: 14 },
@@ -29,14 +32,6 @@ export const PITCH_POSITIONS: PitchPosition[] = [
 
   // Guarda-Redes
   { id: 'gr', name: 'Guarda-redes', short: 'GR', category: 'gk', topPercent: 90, leftPercent: 50 },
-]
-
-export const EXTRA_POSITIONS = [
-  'Médio Centro',
-  'Médio Ofensivo',
-  'Segundo Avançado',
-  'Treinador / Equipa Técnica',
-  'Dirigente / Staff'
 ]
 
 // Normalizar nomes de posições comuns
@@ -49,20 +44,19 @@ export const normalizePositionName = (raw: string): string => {
   if (s.toLowerCase().includes('central dir') || s.toLowerCase() === 'dcd') return 'Defesa Central Direito'
   if (s.toLowerCase().includes('defesa central') || s.toLowerCase() === 'central') return 'Defesa Central Esquerdo'
   if (s.toLowerCase().includes('médio def') || s.toLowerCase().includes('trinco') || s.toLowerCase() === 'mdc') return 'Médio Defensivo'
-  if (s.toLowerCase().includes('médio of') || s.toLowerCase().includes('10')) return 'Médio Ofensivo'
-  if (s.toLowerCase().includes('médio centro esq') || s.toLowerCase() === 'mce') return 'Médio Centro Esquerdo'
-  if (s.toLowerCase().includes('médio centro dir') || s.toLowerCase() === 'mcd') return 'Médio Centro Direito'
-  if (s.toLowerCase().includes('médio centro') || s.toLowerCase() === 'médio') return 'Médio Centro'
-  if (s.toLowerCase().includes('extremo dir') || s.toLowerCase().includes('ala dir') || s.toLowerCase() === 'ed') return 'Extremo Direito'
-  if (s.toLowerCase().includes('extremo esq') || s.toLowerCase().includes('ala esq') || s.toLowerCase() === 'ee') return 'Extremo Esquerdo'
-  if (s.toLowerCase().includes('segundo avançado') || s.toLowerCase().includes('segundo avancado') || s.toLowerCase() === 'sa') return 'Segundo Avançado'
+  if (s.toLowerCase().includes('médio of') || s.toLowerCase().includes('10') || s.toLowerCase() === 'mco') return 'Médio Ofensivo'
+  if (s.toLowerCase().includes('médio esq') || s.toLowerCase() === 'me') return 'Médio Esquerdo'
+  if (s.toLowerCase().includes('médio dir') || s.toLowerCase() === 'md') return 'Médio Direito'
+  if (s.toLowerCase().includes('médio centro') || s.toLowerCase() === 'médio') return 'Médio Defensivo'
+  if (s.toLowerCase().includes('extremo dir') || s.toLowerCase().includes('ala dir') || s.toLowerCase() === 'ed') return 'Médio Direito'
+  if (s.toLowerCase().includes('extremo esq') || s.toLowerCase().includes('ala esq') || s.toLowerCase() === 'ee') return 'Médio Esquerdo'
   if (s.toLowerCase().includes('ponta de lança') || s.toLowerCase().includes('avançado') || s.toLowerCase().includes('avancado') || s.toLowerCase() === 'pl') return 'Ponta de Lança'
   return s
 }
 
 // Converter string de posições guardadas para array
 export const parsePositions = (positionStr?: string | null): string[] => {
-  if (!positionStr || !positionStr.trim()) return ['Médio Centro']
+  if (!positionStr || !positionStr.trim()) return ['Médio Defensivo']
   return positionStr
     .split(',')
     .map(p => p.trim())
@@ -93,7 +87,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
     if (isPosSelected(normalized)) {
       // Remover
       const next = selectedPositions.filter(p => normalizePositionName(p) !== normalized)
-      onChange(next.length > 0 ? next : ['Médio Centro'])
+      onChange(next.length > 0 ? next : ['Médio Defensivo'])
     } else {
       // Adicionar
       onChange([...selectedPositions, normalized])
@@ -182,35 +176,6 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
             </button>
           )
         })}
-      </div>
-
-      {/* Posições Adicionais & Funções Técnicas */}
-      <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
-        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-          Outras Posições & Funções:
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {EXTRA_POSITIONS.map(pos => {
-            const selected = isPosSelected(pos)
-            return (
-              <button
-                key={pos}
-                type="button"
-                disabled={readOnly}
-                onClick={() => togglePosition(pos)}
-                className={`text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
-                  selected
-                    ? 'bg-csc-dark text-csc-gold ring-2 ring-csc-gold shadow-xs'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
-                }`}
-              >
-                <Shield size={13} className={selected ? 'text-csc-gold' : 'text-gray-400'} />
-                <span>{pos}</span>
-                {selected && <Check size={13} />}
-              </button>
-            )
-          })}
-        </div>
       </div>
 
       {/* Resumo de Posições Selecionadas com Botões de Remoção */}

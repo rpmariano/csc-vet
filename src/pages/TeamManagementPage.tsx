@@ -32,16 +32,12 @@ const POSITIONS = [
   'Lateral Direito',
   'Lateral Esquerdo',
   'Médio Defensivo',
-  'Médio Centro',
-  'Médio Centro Esquerdo',
-  'Médio Centro Direito',
+  'Médio Esquerdo',
+  'Médio Direito',
   'Médio Ofensivo',
-  'Extremo Direito',
-  'Extremo Esquerdo',
-  'Ponta de Lança',
-  'Segundo Avançado',
-  'Treinador / Equipa Técnica',
-  'Dirigente / Staff'
+  'Ponta de Lança (Esq)',
+  'Ponta de Lança (Dir)',
+  'Ponta de Lança'
 ]
 
 const TeamManagementPage: React.FC = () => {
@@ -927,7 +923,7 @@ const TeamManagementPage: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-xs font-extrabold text-gray-900">Administrador / Direção</span>
-                      <span className="text-[10px] text-gray-500 mt-0.5 leading-tight">Acesso total, finanças, sócios e clube</span>
+                      <span className="text-[10px] text-gray-500 mt-0.5 leading-tight">Acesso total, finanças e administração app</span>
                     </button>
                   </div>
                 </div>
