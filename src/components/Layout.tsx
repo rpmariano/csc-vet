@@ -27,10 +27,6 @@ const Layout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
 
-  const isRole = (roles: string[]) => {
-    return profile && roles.includes(profile.role)
-  }
-
   const isAdmin = profile?.role === 'admin'
   const isCoach = profile?.role === 'coach'
   const isActualAdmin = actualRole === 'admin'
@@ -39,20 +35,6 @@ const Layout: React.FC = () => {
     setSimulatedRole(role)
     setIsRoleModalOpen(false)
   }
-
-  const desktopMenuItems = [
-    { name: 'Home', path: '/', icon: Home, roles: ['player', 'coach', 'admin'] },
-    { name: 'Agenda', path: '/calendar', icon: Calendar, roles: ['player', 'coach', 'admin'] },
-    { name: 'Estatísticas', path: '/stats', icon: BarChart3, roles: ['player', 'coach', 'admin'] },
-    { name: 'Comunicados', path: '/announcements', icon: FileText, roles: ['coach', 'admin'] },
-    { name: 'Criar Eventos', path: '/events', icon: PlusCircle, roles: ['coach', 'admin'] },
-    { name: 'Backoffice', path: '/admin', icon: Shield, roles: ['coach', 'admin'] },
-    { name: 'Gestão Plantel', path: '/team-management', icon: Users, roles: ['coach', 'admin'] },
-    { name: 'Financeiro', path: '/finance', icon: Landmark, roles: ['admin'] },
-    { name: 'Definições', path: '/settings', icon: Settings, roles: ['player', 'coach', 'admin'] },
-  ]
-
-  const filteredDesktopMenu = desktopMenuItems.filter(item => isRole(item.roles))
 
   return (
     <div className="min-h-screen bg-gray-150 flex flex-col md:flex-row">
@@ -315,24 +297,149 @@ const Layout: React.FC = () => {
             </div>
           )}
 
-          <nav className="space-y-1">
-            {filteredDesktopMenu.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.path
-              return (
+          {/* Navegação Desktop Estruturada (Mesma Lógica da App) */}
+          <nav className="space-y-4 overflow-y-auto pr-1">
+            {/* 1. SECÇÃO PRINCIPAL / SACOS */}
+            <div>
+              <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-3">
+                Principal
+              </p>
+              <div className="space-y-1">
                 <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`
-                    flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors font-bold text-sm
-                    ${isActive ? 'bg-csc-light text-white shadow-md' : 'text-gray-300 hover:bg-csc-light/40 hover:text-white'}
-                  `}
+                  to="/"
+                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                    location.pathname === '/' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                  }`}
                 >
-                  <Icon size={18} />
-                  <span>{item.name}</span>
+                  <Home size={17} className={location.pathname === '/' ? 'text-csc-dark' : 'text-csc-gold'} />
+                  <span>Home</span>
                 </Link>
-              )
-            })}
+
+                <Link
+                  to="/calendar"
+                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                    location.pathname === '/calendar' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Calendar size={17} className={location.pathname === '/calendar' ? 'text-csc-dark' : 'text-blue-400'} />
+                  <span>Agenda</span>
+                </Link>
+
+                <Link
+                  to="/team-management"
+                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                    location.pathname === '/team-management' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Users size={17} className={location.pathname === '/team-management' ? 'text-csc-dark' : 'text-emerald-400'} />
+                  <span>Plantel</span>
+                </Link>
+
+                {(isAdmin || isCoach) ? (
+                  <Link
+                    to="/events"
+                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                      location.pathname === '/events' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <PlusCircle size={17} className={location.pathname === '/events' ? 'text-csc-dark' : 'text-amber-400'} />
+                    <span>Criar Evento</span>
+                  </Link>
+                ) : (
+                  <Link
+                    to="/stats"
+                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                      location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <BarChart3 size={17} className={location.pathname === '/stats' ? 'text-csc-dark' : 'text-purple-400'} />
+                    <span>Estatísticas</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* 2. ADMINISTRAÇÃO & CLUBE (Apenas Admin/Treinador) */}
+            {(isAdmin || isCoach) && (
+              <div>
+                <p className="text-[10px] uppercase font-black text-csc-gold tracking-wider mb-1.5 px-3">
+                  Administração & Clube
+                </p>
+                <div className="space-y-1">
+                  <Link
+                    to="/admin"
+                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                      location.pathname === '/admin' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <Shield size={17} className={location.pathname === '/admin' ? 'text-csc-dark' : 'text-csc-gold'} />
+                    <span>Backoffice & Clube</span>
+                  </Link>
+
+                  {isAdmin && (
+                    <Link
+                      to="/finance"
+                      className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                        location.pathname === '/finance' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <Landmark size={17} className={location.pathname === '/finance' ? 'text-csc-dark' : 'text-emerald-400'} />
+                      <span>Financeiro & Quotas</span>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 3. INFORMAÇÃO & DESPORTO */}
+            <div>
+              <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-3">
+                Informação & Desporto
+              </p>
+              <div className="space-y-1">
+                {(isAdmin || isCoach) && (
+                  <Link
+                    to="/announcements"
+                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                      location.pathname === '/announcements' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <FileText size={17} className={location.pathname === '/announcements' ? 'text-csc-dark' : 'text-amber-400'} />
+                    <span>Comunicados & Avisos</span>
+                  </Link>
+                )}
+
+                {(isAdmin || isCoach) && (
+                  <Link
+                    to="/stats"
+                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                      location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <BarChart3 size={17} className={location.pathname === '/stats' ? 'text-csc-dark' : 'text-purple-400'} />
+                    <span>Estatísticas & Desempenho</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* 4. CONTA & DEFINIÇÕES */}
+            <div>
+              <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-3">
+                Conta
+              </p>
+              <div className="space-y-1">
+                <Link
+                  to="/settings"
+                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                    location.pathname === '/settings' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Settings size={17} className={location.pathname === '/settings' ? 'text-csc-dark' : 'text-gray-300'} />
+                  <span>Definições do Perfil</span>
+                </Link>
+              </div>
+            </div>
           </nav>
         </div>
 
