@@ -13,6 +13,7 @@ import AnnouncementsPage from './pages/AnnouncementsPage'
 import TeamManagementPage from './pages/TeamManagementPage'
 import FinancePage from './pages/FinancePage'
 import SettingsPage from './pages/SettingsPage'
+import EventsPage from './pages/EventsPage'
 
 const App: React.FC = () => {
   return (
@@ -33,6 +34,7 @@ const App: React.FC = () => {
               {/* Coach and Admin Only */}
               <Route element={<ProtectedRoute allowedRoles={['coach', 'admin']} />}>
                 <Route path="/announcements" element={<AnnouncementsPage />} />
+                <Route path="/events" element={<EventsPage />} />
               </Route>
 
               {/* Admin Only */}

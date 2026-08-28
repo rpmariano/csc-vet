@@ -8,7 +8,8 @@ import {
   Users, 
   LogOut, 
   FileText, 
-  Landmark
+  Landmark,
+  PlusCircle
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -21,10 +22,11 @@ const Layout: React.FC = () => {
   }
 
   const menuItems = [
-    { name: 'Home / Eventos', path: '/', icon: Home, roles: ['player', 'coach', 'admin'] },
+    { name: 'Home', path: '/', icon: Home, roles: ['player', 'coach', 'admin'] },
     { name: 'Agenda', path: '/calendar', icon: Calendar, roles: ['player', 'coach', 'admin'] },
     { name: 'Estatísticas', path: '/stats', icon: BarChart3, roles: ['player', 'coach', 'admin'] },
     { name: 'Comunicados', path: '/announcements', icon: FileText, roles: ['coach', 'admin'] },
+    { name: 'Criar Eventos', path: '/events', icon: PlusCircle, roles: ['coach', 'admin'] },
     { name: 'Gestão Equipa', path: '/team-management', icon: Users, roles: ['admin'] },
     { name: 'Financeiro', path: '/finance', icon: Landmark, roles: ['admin'] },
     { name: 'Definições', path: '/settings', icon: Settings, roles: ['player', 'coach', 'admin'] },
@@ -109,62 +111,75 @@ const Layout: React.FC = () => {
         <Outlet />
       </main>
 
-      {/* Mobile Bottom Navigation (Agenda, Dashboards, Quotas, Contactos, Eventos) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-800 px-2 py-2 flex justify-around items-center md:hidden z-40 shadow-lg">
+      {/* Mobile Bottom Navigation (Home, Agenda, Dashboards, Quotas, Contactos, Eventos) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-800 px-1 py-2 flex justify-around items-center md:hidden z-40 shadow-lg">
+        {/* Home */}
+        <Link 
+          to="/" 
+          className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
+            ${location.pathname === '/' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
+          `}
+        >
+          <Home size={20} />
+          <span className="text-[9px] font-bold mt-0.5">Home</span>
+        </Link>
+
         {/* Agenda */}
         <Link 
           to="/calendar" 
-          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all
+          className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
             ${location.pathname === '/calendar' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
           `}
         >
           <Calendar size={20} />
-          <span className="text-[10px] font-bold mt-0.5">Agenda</span>
+          <span className="text-[9px] font-bold mt-0.5">Agenda</span>
         </Link>
 
         {/* Dashboards */}
         <Link 
           to="/stats" 
-          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all
+          className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
             ${location.pathname === '/stats' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
           `}
         >
           <BarChart3 size={20} />
-          <span className="text-[10px] font-bold mt-0.5">Dashboards</span>
+          <span className="text-[9px] font-bold mt-0.5">Dashboards</span>
         </Link>
 
         {/* Quotas */}
         <Link 
           to={profile?.role === 'admin' ? '/finance' : '/settings'} 
-          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all
+          className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
             ${location.pathname === '/finance' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
           `}
         >
           <Landmark size={20} />
-          <span className="text-[10px] font-bold mt-0.5">Quotas</span>
+          <span className="text-[9px] font-bold mt-0.5">Quotas</span>
         </Link>
 
         {/* Contactos */}
         <Link 
           to="/team-management" 
-          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all
+          className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
             ${location.pathname === '/team-management' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
           `}
         >
           <Users size={20} />
-          <span className="text-[10px] font-bold mt-0.5">Contactos</span>
+          <span className="text-[9px] font-bold mt-0.5">Contactos</span>
         </Link>
 
-        {/* Eventos (Página Home com o detalhe de treinos e jogos do dia) */}
-        <Link 
-          to="/" 
-          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all
-            ${location.pathname === '/' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
-          `}
-        >
-          <Home size={20} />
-          <span className="text-[10px] font-bold mt-0.5">Eventos</span>
-        </Link>
+        {/* Eventos (Apenas visível para Treinador e Admin) */}
+        {profile && ['coach', 'admin'].includes(profile.role) && (
+          <Link 
+            to="/events" 
+            className={`flex flex-col items-center justify-center w-12 py-1 rounded-xl transition-all
+              ${location.pathname === '/events' ? 'text-green-700 bg-green-50' : 'text-gray-600'}
+            `}
+          >
+            <PlusCircle size={20} />
+            <span className="text-[9px] font-bold mt-0.5">Eventos</span>
+          </Link>
+        )}
       </div>
     </div>
   )
