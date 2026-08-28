@@ -21,7 +21,7 @@ import {
   Check
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { useAuth, extractRolesFromProfile, encodeRolesToNotes, cleanNotesFromRolesTag } from '../context/AuthContext'
+import { useAuth, extractRolesFromProfile, encodeRolesToNotes, cleanNotesFromRolesTag, formatDisplayName } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 
@@ -595,13 +595,8 @@ const TeamManagementPage: React.FC = () => {
                     
                     <div className="flex-1 min-w-0">
                       <h3 className="font-extrabold text-gray-900 text-base leading-tight truncate">
-                        {person.name}
+                        {formatDisplayName(person.name, person.nickname)}
                       </h3>
-                      {person.nickname && (
-                        <p className="text-xs font-bold text-csc-dark italic truncate">
-                          "{person.nickname}"
-                        </p>
-                      )}
                       
                       {/* Role Badges */}
                       <div className="flex flex-wrap gap-1 mt-1">
@@ -1126,16 +1121,15 @@ const TeamManagementPage: React.FC = () => {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-black text-gray-900 truncate">{selectedProfile.name}</h2>
+                  <h2 className="text-xl font-black text-gray-900 truncate">
+                    {formatDisplayName(selectedProfile.name, selectedProfile.nickname)}
+                  </h2>
                   {selectedProfile.jersey_number && (
                     <span className="bg-csc-dark text-white text-xs font-black px-2 py-0.5 rounded">
                       #{selectedProfile.jersey_number}
                     </span>
                   )}
                 </div>
-                {selectedProfile.nickname && (
-                  <p className="text-xs font-bold text-csc-dark italic">"{selectedProfile.nickname}"</p>
-                )}
 
                 {/* Role Badges */}
                 <div className="flex flex-wrap gap-1 mt-1">

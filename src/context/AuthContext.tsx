@@ -36,6 +36,17 @@ export const encodeRolesToNotes = (notes: string | null | undefined, roles: User
   return clean ? `${clean} ${tag}` : tag
 }
 
+export const formatDisplayName = (name: string, nickname?: string | null): string => {
+  if (!name) return ''
+  if (!nickname || !nickname.trim()) return name
+  const cleanNick = nickname.trim().replace(/^["']|["']$/g, '')
+  const parts = name.trim().split(/\s+/)
+  if (parts.length > 1) {
+    return `${parts[0]} "${cleanNick}" ${parts.slice(1).join(' ')}`
+  }
+  return `${parts[0]} "${cleanNick}"`
+}
+
 export const cleanNotesFromRolesTag = (notes: string | null | undefined): string | null => {
   if (!notes) return null
   const cleaned = notes.replace(/<!--roles:[^>]+-->/g, '').trim()

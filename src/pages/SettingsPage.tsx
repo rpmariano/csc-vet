@@ -7,6 +7,7 @@ import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSe
 const SettingsPage: React.FC = () => {
   const { profile, assignedRoles } = useAuth()
   const [name, setName] = useState('')
+  const [nickname, setNickname] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [formPositions, setFormPositions] = useState<string[]>(['Médio Centro'])
@@ -15,6 +16,7 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     if (profile) {
       setName(profile.name)
+      setNickname(profile.nickname || '')
       setEmail(profile.email)
       setPhone(profile.phone || '')
       setFormPositions(parsePositions(profile.position))
@@ -30,7 +32,7 @@ const SettingsPage: React.FC = () => {
       const positionStr = formPositions.length > 0 ? formPositions.join(', ') : 'Médio Centro'
       const { error } = await supabase
         .from('profiles')
-        .update({ name, phone, position: positionStr })
+        .update({ name, nickname: nickname || null, phone, position: positionStr })
         .eq('id', profile.id)
 
       if (error) throw error
@@ -81,15 +83,27 @@ const SettingsPage: React.FC = () => {
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Nome Completo</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Nome Completo</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Alcunha / Nome Desportivo</label>
+              <input
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
+                placeholder="Ex: CR7 / O Mágico"
+              />
+            </div>
           </div>
 
           <div>
