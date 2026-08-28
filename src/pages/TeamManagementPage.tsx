@@ -513,6 +513,40 @@ const TeamManagementPage: React.FC = () => {
     }
   }
 
+  // Procura de sugestões inteligentes de associação
+  const associationSuggestions = React.useMemo(() => {
+    const registeredUsersWithoutKit = profiles.filter(p => !p.id.startsWith('seed-') && (!p.jersey_number || !p.kit_size))
+    const unlinkedSquadProfiles = profiles.filter(p => p.id.startsWith('seed-'))
+
+    const suggestions: { user: Profile; player: Profile }[] = []
+
+    registeredUsersWithoutKit.forEach(userP => {
+      const uEmail = (userP.email || '').toLowerCase().trim()
+      const uPhone = (userP.phone || '').trim()
+      const uName = (userP.name || '').toLowerCase().trim()
+
+      const match = unlinkedSquadProfiles.find(squadP => {
+        const sEmail = (squadP.email || '').toLowerCase().trim()
+        const sPhone = (squadP.phone || '').trim()
+        const sName = (squadP.name || '').toLowerCase().trim()
+        const sNick = (squadP.nickname || '').toLowerCase().trim()
+
+        return (
+          (uEmail && sEmail && uEmail === sEmail) ||
+          (uPhone && sPhone && uPhone === sPhone) ||
+          (uName && sName && (uName.includes(sName) || sName.includes(uName))) ||
+          (uName && sNick && uName.includes(sNick))
+        )
+      })
+
+      if (match) {
+        suggestions.push({ user: userP, player: match })
+      }
+    })
+
+    return suggestions
+  }, [profiles])
+
   // Filtered list
   const filteredProfiles = profiles.filter(p => {
     const matchesSearch = 
@@ -569,6 +603,47 @@ const TeamManagementPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Banner de Sugestões Inteligentes de Associação para Treinadores/Admins */}
+      {isCoachOrAdmin && associationSuggestions.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-50 to-emerald-500/10 border-2 border-amber-300 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles size={18} className="text-amber-600 animate-pulse" />
+              <h3 className="text-sm font-black text-gray-900">
+                Sugestões de Associação Automática ({associationSuggestions.length} conta{associationSuggestions.length > 1 ? 's' : ''} detetada{associationSuggestions.length > 1 ? 's' : ''})
+              </h3>
+            </div>
+            <span className="text-[10px] bg-amber-200 text-amber-900 font-extrabold px-2 py-0.5 rounded-full">
+              Smart Link
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {associationSuggestions.map(({ user: u, player: pl }, idx) => (
+              <div key={idx} className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-gray-900 truncate">
+                    👤 Conta: {u.name} <span className="text-gray-400 font-normal">({u.email})</span>
+                  </p>
+                  <p className="text-[11px] text-amber-900 font-bold truncate mt-0.5">
+                    ⚽ Ficha: #{pl.jersey_number} {pl.name} {pl.nickname ? `"${pl.nickname}"` : ''}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={associatingLoading}
+                  onClick={() => handleConfirmAssociate(pl, u)}
+                  className="px-3 py-1.5 bg-csc-dark hover:bg-csc-dark/85 text-white text-xs font-black rounded-lg shrink-0 shadow-xs cursor-pointer active:scale-95 flex items-center gap-1"
+                >
+                  <Link2 size={13} />
+                  <span>Associar</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Metrics Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

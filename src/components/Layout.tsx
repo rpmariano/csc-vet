@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
+import { AutoAssociationModal } from './AutoAssociationModal'
 
 const Layout: React.FC = () => {
   const { profile, actualRole, isSimulatingRole, setSimulatedRole, assignedRoles, signOut } = useAuth()
@@ -665,6 +666,9 @@ const Layout: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Associação Inteligente Automática para novos atletas */}
+      <AutoAssociationModal />
     </div>
   )
 }
