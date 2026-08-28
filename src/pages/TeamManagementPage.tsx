@@ -24,7 +24,7 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { useAuth, extractRolesFromProfile, encodeRolesToNotes, cleanNotesFromRolesTag, formatDisplayName } from '../context/AuthContext'
+import { useAuth, extractRolesFromProfile, encodeRolesToNotes, cleanNotesFromRolesTag } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
@@ -66,7 +66,6 @@ const TeamManagementPage: React.FC = () => {
   // Form State - Expanded with PDF fields
   const [formId, setFormId] = useState<string | null>(null)
   const [formName, setFormName] = useState('')
-  const [formNickname, setFormNickname] = useState('')
   const [formShirtName, setFormShirtName] = useState('')
   const [formEmail, setFormEmail] = useState('')
   const [formPhone, setFormPhone] = useState('')
@@ -174,7 +173,10 @@ const TeamManagementPage: React.FC = () => {
           const { error } = await supabase.from('profiles').update(payload).eq('id', existingId)
           if (!error) countSuccess++
         } else {
-          const { error } = await supabase.from('profiles').insert([payload])
+          const { error } = await supabase.from('profiles').insert([{
+            ...payload,
+            id: crypto.randomUUID()
+          }])
           if (!error) countSuccess++
         }
       }
@@ -207,7 +209,6 @@ const TeamManagementPage: React.FC = () => {
   const resetForm = () => {
     setFormId(null)
     setFormName('')
-    setFormNickname('')
     setFormShirtName('')
     setFormEmail('')
     setFormPhone('')
@@ -245,7 +246,6 @@ const TeamManagementPage: React.FC = () => {
   const openEditModal = (p: Profile) => {
     setFormId(p.id)
     setFormName(p.name || '')
-    setFormNickname(p.nickname || '')
     setFormShirtName(p.shirt_name || p.nickname || '')
     setFormEmail(p.email || '')
     setFormPhone(p.phone || '')
@@ -351,8 +351,8 @@ const TeamManagementPage: React.FC = () => {
 
     const payload = {
       name: formName.trim(),
-      nickname: sanitizeText(formNickname) || sanitizeText(formShirtName),
-      shirt_name: sanitizeText(formShirtName) || sanitizeText(formNickname),
+      shirt_name: sanitizeText(formShirtName),
+      nickname: sanitizeText(formShirtName),
       email: formEmail.trim().toLowerCase(),
       phone: sanitizeText(formPhone),
       role: primaryRole,
@@ -405,9 +405,13 @@ const TeamManagementPage: React.FC = () => {
           if (error) throw error
           alert('Ficha de membro atualizada na base de dados!')
         } else {
+          const newId = crypto.randomUUID()
           const { error } = await supabase
             .from('profiles')
-            .insert([payload])
+            .insert([{
+              ...payload,
+              id: newId
+            }])
           if (error) throw error
           alert('Novo membro gravado com sucesso na base de dados!')
         }
@@ -532,13 +536,13 @@ const TeamManagementPage: React.FC = () => {
         const sEmail = (squadP.email || '').toLowerCase().trim()
         const sPhone = (squadP.phone || '').trim()
         const sName = (squadP.name || '').toLowerCase().trim()
-        const sNick = (squadP.nickname || '').toLowerCase().trim()
+        const sShirt = (squadP.shirt_name || '').toLowerCase().trim()
 
         return (
           (uEmail && sEmail && uEmail === sEmail) ||
           (uPhone && sPhone && uPhone === sPhone) ||
           (uName && sName && (uName.includes(sName) || sName.includes(uName))) ||
-          (uName && sNick && uName.includes(sNick))
+          (uName && sShirt && uName.includes(sShirt))
         )
       })
 
@@ -554,7 +558,7 @@ const TeamManagementPage: React.FC = () => {
   const filteredProfiles = profiles.filter(p => {
     const matchesSearch = 
       (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (p.nickname && p.nickname.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.shirt_name && p.shirt_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (p.position && p.position.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (p.jersey_number && p.jersey_number.toString().includes(searchTerm))
 
@@ -630,7 +634,7 @@ const TeamManagementPage: React.FC = () => {
                     👤 Conta: {u.name} <span className="text-gray-400 font-normal">({u.email})</span>
                   </p>
                   <p className="text-[11px] text-amber-900 font-bold truncate mt-0.5">
-                    ⚽ Ficha: #{pl.jersey_number} {pl.name} {pl.nickname ? `"${pl.nickname}"` : ''}
+                    ⚽ Ficha: #{pl.jersey_number} {pl.name} {pl.shirt_name ? `(${pl.shirt_name})` : ''}
                   </p>
                 </div>
                 <button
@@ -700,7 +704,7 @@ const TeamManagementPage: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Pesquisar por nome, alcunha, posição ou nº camisola..."
+              placeholder="Pesquisar por nome, nome na camisola, posição ou nº camisola..."
               className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark"
             />
           </div>
@@ -819,7 +823,7 @@ const TeamManagementPage: React.FC = () => {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-black text-gray-900 text-sm sm:text-base leading-tight group-hover:text-csc-dark transition-colors">
-                        {formatDisplayName(person.name, person.nickname || person.shirt_name)}
+                        {person.name}
                       </h3>
 
                       {/* Role Badges */}
@@ -992,10 +996,10 @@ const TeamManagementPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Name with embedded nickname */}
+                  {/* Name */}
                   <div className="w-full">
                     <h3 className="font-black text-gray-900 text-base leading-tight truncate group-hover:text-csc-dark transition-colors">
-                      {formatDisplayName(person.name, person.nickname || person.shirt_name)}
+                      {person.name}
                     </h3>
 
                     {/* Positions Ribbon */}
@@ -1129,16 +1133,13 @@ const TeamManagementPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nome na Camisola / Alcunha</label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nome na Camisola</label>
                     <input
                       type="text"
-                      value={formShirtName || formNickname}
-                      onChange={(e) => {
-                        setFormShirtName(e.target.value)
-                        setFormNickname(e.target.value)
-                      }}
+                      value={formShirtName}
+                      onChange={(e) => setFormShirtName(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                      placeholder="Ex: A. COUTO / Tochê"
+                      placeholder="Ex: A. COUTO"
                     />
                   </div>
                 </div>
@@ -1616,7 +1617,7 @@ const TeamManagementPage: React.FC = () => {
                     Ficha Oficial de Atleta • Plantel CSC
                   </span>
                   <h2 className="text-xl sm:text-2xl font-black text-gray-900 leading-tight">
-                    {formatDisplayName(selectedProfile.name, selectedProfile.nickname || selectedProfile.shirt_name)}
+                    {selectedProfile.name}
                   </h2>
                 </div>
               </div>
@@ -1675,12 +1676,12 @@ const TeamManagementPage: React.FC = () => {
                   </div>
 
                   <h3 className="font-black text-gray-900 text-lg leading-tight">
-                    {formatDisplayName(selectedProfile.name, selectedProfile.nickname || selectedProfile.shirt_name)}
+                    {selectedProfile.name}
                   </h3>
 
                   {selectedProfile.shirt_name && (
                     <p className="text-xs font-bold text-amber-900 mt-0.5">
-                      Camisola: "{selectedProfile.shirt_name}"
+                      Nome na Camisola: "{selectedProfile.shirt_name}"
                     </p>
                   )}
 

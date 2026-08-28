@@ -180,9 +180,9 @@ export const AutoAssociationModal: React.FC = () => {
                   <h3 className="font-black text-gray-900 text-base leading-tight">
                     {matchedPlayer.name}
                   </h3>
-                  {matchedPlayer.nickname && (
+                  {matchedPlayer.shirt_name && (
                     <p className="text-xs font-bold text-amber-900">
-                      Alcunha: "{matchedPlayer.nickname}"
+                      Nome na Camisola: "{matchedPlayer.shirt_name}"
                     </p>
                   )}
                   <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px]">
@@ -280,7 +280,7 @@ export const AutoAssociationModal: React.FC = () => {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-black text-gray-900 truncate group-hover:text-csc-dark">
-                        {p.name} {p.nickname ? `"${p.nickname}"` : ''}
+                        {p.name} {p.shirt_name ? `(${p.shirt_name})` : ''}
                       </p>
                       <p className="text-[10px] text-gray-500 truncate">
                         {p.position} {p.kit_size ? `• Tam: ${p.kit_size}` : ''}

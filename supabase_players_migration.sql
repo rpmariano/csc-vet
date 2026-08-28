@@ -1,6 +1,10 @@
 -- Migração da Tabela de Perfis e Importação de Jogadores do PDF
 
--- 1. Adicionar colunas novas à tabela profiles (se não existirem)
+-- 1. Garantir UUID default e adicionar colunas novas à tabela profiles (se não existirem)
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+ALTER TABLE public.profiles ALTER COLUMN id SET DEFAULT gen_random_uuid();
+
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS nickname TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS shirt_name TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS kit_size TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS address TEXT;
