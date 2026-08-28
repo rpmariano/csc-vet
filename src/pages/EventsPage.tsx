@@ -24,6 +24,83 @@ import {
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
+import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
+
+const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
+  const emailMap = new Map<string, Profile>()
+
+  // 1. Iniciar com todos os 31 atletas do plantel (dados do PDF)
+  INITIAL_PLAYERS_DATA.forEach((seedPlayer, idx) => {
+    const emailKey = (seedPlayer.email || `player-${idx}@csc.pt`).toLowerCase().trim()
+    emailMap.set(emailKey, {
+      ...seedPlayer,
+      id: `seed-${idx}`,
+    } as Profile)
+  })
+
+  // 2. Sobrepor perfis do Supabase (que têm UUIDs reais, fotos carregadas e edições mais recentes)
+  remoteProfiles.forEach((remotePlayer) => {
+    if (remotePlayer.email) {
+      const emailKey = remotePlayer.email.toLowerCase().trim()
+      const existing = emailMap.get(emailKey)
+      emailMap.set(emailKey, {
+        ...(existing || {}),
+        ...remotePlayer,
+      })
+    } else {
+      emailMap.set(remotePlayer.id, remotePlayer)
+    }
+  })
+
+  return Array.from(emailMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+}
+
+const ensurePlayerIdsForSupabase = async (pIds: string[], playerList: Profile[]): Promise<string[]> => {
+  const playerMap = new Map<string, Profile>(playerList.map(p => [p.id, p]))
+  const resolvedIds: string[] = []
+
+  for (const id of pIds) {
+    if (!id.startsWith('seed-')) {
+      resolvedIds.push(id)
+      continue
+    }
+    const seedP = playerMap.get(id)
+    if (!seedP) continue
+
+    try {
+      if (seedP.email) {
+        const { data: existing } = await supabase.from('profiles').select('id').eq('email', seedP.email).maybeSingle()
+        if (existing && existing.id) {
+          seedP.id = existing.id
+          resolvedIds.push(existing.id)
+          continue
+        }
+      }
+      
+      const newId = crypto.randomUUID()
+      const { error } = await supabase.from('profiles').insert([{
+        id: newId,
+        name: seedP.name,
+        shirt_name: seedP.shirt_name || null,
+        jersey_number: seedP.jersey_number || null,
+        position: seedP.position || null,
+        role: seedP.role || 'player',
+        status: seedP.status || 'active',
+        email: seedP.email || null,
+        phone: seedP.phone || null,
+        birth_date: seedP.birth_date || null
+      }])
+      if (!error) {
+        seedP.id = newId
+        resolvedIds.push(newId)
+      }
+    } catch (err) {
+      console.error('Error ensuring profile exists:', err)
+    }
+  }
+
+  return resolvedIds
+}
 
 export const TrainingIcon: React.FC<{ size?: number; className?: string }> = ({ size = 20, className = '' }) => (
   <svg 
@@ -192,8 +269,9 @@ const EventsPage: React.FC = () => {
       if (oRes.data) setOpponents(oRes.data)
       if (tRes.data) setTournaments(tRes.data)
       if (profRes.data) {
-        setAllPlayers(profRes.data as Profile[])
-        const initialEligible = (profRes.data as Profile[]).filter(p => p.status !== 'inactive')
+        const merged = mergeProfilesWithSeedData((profRes.data as Profile[]) || [])
+        setAllPlayers(merged)
+        const initialEligible = merged.filter(p => p.status !== 'inactive')
         setSelectedPlayerIds(initialEligible.map(p => p.id))
       }
 
@@ -354,9 +432,10 @@ const EventsPage: React.FC = () => {
         if (createdBatch) createdEventsList = createdBatch as Event[]
 
         if (createdEventsList.length > 0 && selectedPlayerIds.length > 0) {
+          const validIds = await ensurePlayerIdsForSupabase(selectedPlayerIds, allPlayers)
           const allCallups: any[] = []
           createdEventsList.forEach(ev => {
-            selectedPlayerIds.forEach(pId => {
+            validIds.forEach(pId => {
               allCallups.push({
                 event_id: ev.id,
                 player_id: pId,
@@ -364,7 +443,9 @@ const EventsPage: React.FC = () => {
               })
             })
           })
-          await supabase.from('callups').insert(allCallups)
+          if (allCallups.length > 0) {
+            await supabase.from('callups').insert(allCallups)
+          }
         }
 
         setSuccessMessage(`✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`)
@@ -394,12 +475,15 @@ const EventsPage: React.FC = () => {
         if (error) throw error
 
         if (createdEvent && selectedPlayerIds.length > 0) {
-          const rows = selectedPlayerIds.map(pId => ({
+          const validIds = await ensurePlayerIdsForSupabase(selectedPlayerIds, allPlayers)
+          const rows = validIds.map(pId => ({
             event_id: createdEvent.id,
             player_id: pId,
             status: 'called'
           }))
-          await supabase.from('callups').insert(rows)
+          if (rows.length > 0) {
+            await supabase.from('callups').insert(rows)
+          }
         }
 
         setSuccessMessage('🎉 Evento criado e convocatória enviada aos membros!')
@@ -451,9 +535,15 @@ const EventsPage: React.FC = () => {
 
   const handleAddPlayerToCallup = async (eventId: string, playerId: string) => {
     try {
+      const [validPlayerId] = await ensurePlayerIdsForSupabase([playerId], allPlayers)
+      if (!validPlayerId) {
+        alert('Não foi possível processar o atleta.')
+        return
+      }
+
       const { data, error } = await supabase.from('callups').insert([{
         event_id: eventId,
-        player_id: playerId,
+        player_id: validPlayerId,
         status: 'called'
       }]).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)').single()
 
@@ -845,9 +935,6 @@ const EventsPage: React.FC = () => {
                     {totalCount} Membros
                   </span>
                 </div>
-                <p className="text-[11px] text-gray-500">
-                  Convoca todos os elementos do clube (os 3 perfis) ou seleciona um a um:
-                </p>
               </div>
 
               {/* Botões Rápidos de Convocatória Geral */}
