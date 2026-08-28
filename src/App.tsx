@@ -17,7 +17,7 @@ import SettingsPage from './pages/SettingsPage'
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <Router>
+      <Router basename={import.meta.env.BASE_URL}>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
