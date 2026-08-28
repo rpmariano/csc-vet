@@ -838,19 +838,19 @@ const CalendarPage: React.FC = () => {
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
         </div>
       ) : viewMode === 'calendar' ? (
-        <div className="space-y-6">
-          {/* Grelha do Calendário Mensal */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-150 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Coluna Esquerda: Grelha do Calendário Mensal Compacta */}
+          <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-150 overflow-hidden">
             {/* Cabeçalho dos Dias da Semana */}
-            <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200 text-center py-2.5">
+            <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200 text-center py-2">
               {weekDayNames.map((w, idx) => (
-                <div key={w} className={`text-xs font-black uppercase tracking-wider ${idx >= 5 ? 'text-amber-700' : 'text-gray-500'}`}>
+                <div key={w} className={`text-[11px] font-black uppercase tracking-wider ${idx >= 5 ? 'text-amber-700' : 'text-gray-500'}`}>
                   {w}
                 </div>
               ))}
             </div>
 
-            {/* Células dos Dias */}
+            {/* Células dos Dias Compactas */}
             <div className="grid grid-cols-7 auto-rows-fr border-b border-gray-100 divide-x divide-y divide-gray-100">
               {calendarDays.map((cell, idx) => {
                 const dayEvents = getEventsForDate(cell.date)
@@ -860,15 +860,15 @@ const CalendarPage: React.FC = () => {
                   <div
                     key={idx}
                     onClick={() => setSelectedDate(cell.date)}
-                    className={`min-h-[75px] sm:min-h-[105px] p-1.5 sm:p-2 cursor-pointer transition-all flex flex-col justify-between ${
-                      !cell.isCurrentMonth ? 'bg-gray-50/60 opacity-40' : 'bg-white hover:bg-gray-50/80'
+                    className={`min-h-[44px] sm:min-h-[58px] p-1 sm:p-1.5 cursor-pointer transition-all flex flex-col justify-between ${
+                      !cell.isCurrentMonth ? 'bg-gray-50/50 opacity-30' : 'bg-white hover:bg-gray-50/80'
                     } ${
-                      cell.isSelected ? 'ring-2 ring-csc-gold ring-inset bg-amber-50/30' : ''
+                      cell.isSelected ? 'ring-2 ring-csc-gold ring-inset bg-amber-50/40 font-black' : ''
                     }`}
                   >
                     {/* Topo da Célula: Número do Dia */}
                     <div className="flex items-center justify-between">
-                      <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full transition-colors ${
+                      <span className={`text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full transition-colors ${
                         cell.isToday 
                           ? 'bg-csc-gold text-csc-dark font-black shadow-xs' 
                           : cell.isSelected 
@@ -878,55 +878,50 @@ const CalendarPage: React.FC = () => {
                         {cell.date.getDate()}
                       </span>
 
-                      {/* Contador em mobile se tiver múltiplos eventos */}
                       {hasEvents && (
-                        <span className="sm:hidden text-[9px] font-black px-1.5 py-0.2 rounded-full bg-csc-dark text-white">
+                        <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-csc-dark text-white shadow-2xs">
                           {dayEvents.length}
                         </span>
                       )}
                     </div>
 
-                    {/* Eventos no Dia */}
-                    <div className="mt-1 space-y-1 overflow-hidden">
-                      {/* Vista Desktop: Pílulas de eventos */}
-                      <div className="hidden sm:block space-y-1">
-                        {dayEvents.slice(0, 3).map(ev => {
-                          const timeStr = new Date(ev.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
-                          return (
-                            <div
-                              key={ev.id}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedEvent(ev)
-                              }}
-                              className={`text-[10px] px-1.5 py-0.5 rounded font-bold truncate flex items-center gap-1 shadow-2xs hover:opacity-85 ${
-                                ev.type === 'match' 
-                                  ? 'bg-blue-100 text-blue-900 border border-blue-200' 
-                                  : ev.type === 'practice' 
-                                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' 
-                                  : 'bg-purple-100 text-purple-900 border border-purple-200'
-                              }`}
-                              title={`${ev.title} (${timeStr})`}
-                            >
-                              <span>{ev.type === 'match' ? '⚽' : ev.type === 'practice' ? '🏃' : '🍻'}</span>
-                              <span className="opacity-75">{timeStr}</span>
-                              <span className="truncate">{ev.type === 'match' && ev.opponent ? (ev.opponent.initials || ev.opponent.name) : ev.title}</span>
-                            </div>
-                          )
-                        })}
-                        {dayEvents.length > 3 && (
-                          <span className="text-[9px] font-bold text-gray-500 pl-1">
-                            +{dayEvents.length - 3} mais
+                    {/* Mini Indicadores de Eventos */}
+                    <div className="mt-1 space-y-0.5 overflow-hidden">
+                      {/* Vista Desktop: Pílulas Compactas */}
+                      <div className="hidden sm:block space-y-0.5">
+                        {dayEvents.slice(0, 2).map(ev => (
+                          <div
+                            key={ev.id}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedEvent(ev)
+                            }}
+                            className={`text-[9px] px-1 py-0.2 rounded font-bold truncate flex items-center gap-0.5 shadow-2xs hover:opacity-85 ${
+                              ev.type === 'match' 
+                                ? 'bg-blue-100 text-blue-900 border border-blue-200' 
+                                : ev.type === 'practice' 
+                                ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' 
+                                : 'bg-purple-100 text-purple-900 border border-purple-200'
+                            }`}
+                            title={`${ev.title}`}
+                          >
+                            <span>{ev.type === 'match' ? '⚽' : ev.type === 'practice' ? '🏃' : '🍻'}</span>
+                            <span className="truncate">{ev.type === 'match' && ev.opponent ? (ev.opponent.initials || ev.opponent.name) : ev.title}</span>
+                          </div>
+                        ))}
+                        {dayEvents.length > 2 && (
+                          <span className="text-[8px] font-bold text-gray-500 pl-0.5">
+                            +{dayEvents.length - 2} mais
                           </span>
                         )}
                       </div>
 
-                      {/* Vista Mobile: Pontos / Ícones compactos */}
-                      <div className="sm:hidden flex flex-wrap gap-1 items-center justify-center pt-1">
+                      {/* Vista Mobile: Pontos compactos */}
+                      <div className="sm:hidden flex flex-wrap gap-1 items-center justify-center">
                         {dayEvents.map(ev => (
                           <span 
                             key={ev.id} 
-                            className={`w-2 h-2 rounded-full ${
+                            className={`w-1.5 h-1.5 rounded-full ${
                               ev.type === 'match' ? 'bg-blue-600' : ev.type === 'practice' ? 'bg-emerald-600' : 'bg-purple-600'
                             }`} 
                             title={ev.title}
@@ -940,143 +935,145 @@ const CalendarPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Secção de Eventos do Dia Selecionado */}
-          {selectedDate && (
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-150 space-y-4">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <CalendarDaysIcon size={20} className="text-csc-gold" />
-                  <h3 className="text-base font-black text-gray-900 capitalize">
-                    Eventos de {selectedDate.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                  </h3>
+          {/* Coluna Direita: Secção de Eventos do Dia Selecionado */}
+          <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-6">
+            {selectedDate && (
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-150 space-y-3.5">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <CalendarDaysIcon size={18} className="text-csc-gold" />
+                    <h3 className="text-sm font-black text-gray-900 capitalize">
+                      {selectedDate.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' })}
+                    </h3>
+                  </div>
+                  <span className="text-[11px] font-bold px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full">
+                    {selectedDayEvents.length} {selectedDayEvents.length === 1 ? 'evento' : 'eventos'}
+                  </span>
                 </div>
-                <span className="text-xs font-bold px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full">
-                  {selectedDayEvents.length} {selectedDayEvents.length === 1 ? 'evento' : 'eventos'}
-                </span>
-              </div>
 
-              {selectedDayEvents.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-xs">
-                  <p className="font-semibold text-gray-500">Nenhum evento agendado para este dia.</p>
-                  <p className="mt-1">Clica em qualquer dia com marcações no calendário para ver os detalhes e convocatórias.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {selectedDayEvents.map(event => {
-                    const callups = eventCallups[event.id] || []
-                    const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
-                    const confirmedCount = callups.filter(c => c.status === 'confirmed').length
+                {selectedDayEvents.length === 0 ? (
+                  <div className="text-center py-6 text-gray-400 text-xs">
+                    <p className="font-semibold text-gray-500">Sem eventos neste dia.</p>
+                    <p className="mt-1 text-[11px]">Clica num dia com marcações no calendário para ver os detalhes.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                    {selectedDayEvents.map(event => {
+                      const callups = eventCallups[event.id] || []
+                      const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
+                      const confirmedCount = callups.filter(c => c.status === 'confirmed').length
 
-                    return (
-                      <div
-                        key={event.id}
-                        onClick={() => setSelectedEvent(event)}
-                        className="bg-gray-50 rounded-xl border border-gray-200 p-4 hover:border-csc-gold hover:bg-amber-50/10 transition-all cursor-pointer flex flex-col justify-between shadow-2xs"
-                      >
-                        <div>
-                          <div className="flex justify-between items-start mb-2">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                              event.type === 'match' ? 'bg-blue-100 text-blue-800' : event.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
-                            }`}>
-                              {event.type === 'match' ? 'Jogo' : event.type === 'practice' ? 'Treino' : 'Convívio'}
-                            </span>
-                            {callups.length > 0 && (
-                              <span className="text-xs font-semibold text-gray-500 flex items-center gap-1 bg-white px-2 py-0.5 rounded-full border border-gray-200">
-                                <Users size={12} className="text-csc-dark" />
-                                <span><strong>{confirmedCount}</strong>/{callups.length} conf.</span>
+                      return (
+                        <div
+                          key={event.id}
+                          onClick={() => setSelectedEvent(event)}
+                          className="bg-gray-50 rounded-xl border border-gray-200 p-3.5 hover:border-csc-gold hover:bg-amber-50/10 transition-all cursor-pointer flex flex-col justify-between shadow-2xs"
+                        >
+                          <div>
+                            <div className="flex justify-between items-start mb-2">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                                event.type === 'match' ? 'bg-blue-100 text-blue-800' : event.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
+                              }`}>
+                                {event.type === 'match' ? 'Jogo' : event.type === 'practice' ? 'Treino' : 'Convívio'}
                               </span>
-                            )}
-                          </div>
-
-                          {event.type === 'match' && event.opponent ? (
-                            <div className="flex items-center gap-3 mb-2 bg-white p-2 rounded-lg border border-gray-200">
-                              <div className="flex flex-col items-center gap-1 w-10">
-                                {clubSettings?.logo_url ? (
-                                  <img src={clubSettings.logo_url} alt="Nós" className="w-8 h-8 object-contain" />
-                                ) : (
-                                  <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-xs font-bold">{clubSettings?.initials || 'CSC'}</div>
-                                )}
-                                <span className="text-[9px] font-bold text-gray-700">{clubSettings?.initials || 'CSC'}</span>
-                              </div>
-                              <span className="text-gray-400 font-black text-xs">VS</span>
-                              <div className="flex flex-col items-center gap-1 w-10">
-                                {event.opponent.logo_url ? (
-                                  <img src={event.opponent.logo_url} alt="Adv" className="w-8 h-8 object-contain" />
-                                ) : (
-                                  <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-xs font-bold">{event.opponent.initials || 'ADV'}</div>
-                                )}
-                                <span className="text-[9px] font-bold text-gray-700 line-clamp-1">{event.opponent.initials || event.opponent.name}</span>
-                              </div>
-                            </div>
-                          ) : null}
-
-                          <h4 className="text-sm font-bold text-gray-900">{event.title}</h4>
-                        </div>
-
-                        <div className="mt-3 pt-2.5 border-t border-gray-200 space-y-2">
-                          <div className="flex items-center justify-between text-xs text-gray-600">
-                            <div className="flex items-center space-x-1">
-                              <Clock size={13} className="text-gray-400" />
-                              <span>{new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                            <div className="flex items-center space-x-1 max-w-[55%]">
-                              <MapPin size={13} className="text-gray-400 shrink-0" />
-                              <span className="truncate">{event.location}</span>
-                              {event.location && (
-                                <a
-                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="p-0.5 text-red-500 hover:text-red-700 rounded transition-colors shrink-0"
-                                  title="Abrir no Google Maps"
-                                >
-                                  <ExternalLink size={11} />
-                                </a>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Ação rápida para o jogador se for convocado */}
-                          {myCallup && (
-                            <div 
-                              onClick={(e) => e.stopPropagation()} 
-                              className="pt-1.5 border-t border-gray-200 flex items-center justify-between"
-                            >
-                              <span className="text-[10px] font-semibold text-gray-600">Presença:</span>
-                              {myCallup.status === 'called' ? (
-                                <div className="flex gap-1">
-                                  <button
-                                    onClick={() => handleCallupResponse(event.id, 'confirmed')}
-                                    className="bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold px-2 py-0.5 rounded transition-colors shadow-xs"
-                                  >
-                                    Confirmar
-                                  </button>
-                                  <button
-                                    onClick={() => handleCallupResponse(event.id, 'declined')}
-                                    className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-2 py-0.5 rounded transition-colors shadow-xs"
-                                  >
-                                    Recusar
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded flex items-center gap-1 ${
-                                  myCallup.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {myCallup.status === 'confirmed' ? <CheckCircle2 size={11}/> : <XCircle size={11}/>}
-                                  {myCallup.status === 'confirmed' ? 'Confirmado' : 'Recusado'}
+                              {callups.length > 0 && (
+                                <span className="text-[11px] font-semibold text-gray-500 flex items-center gap-1 bg-white px-2 py-0.5 rounded-full border border-gray-200">
+                                  <Users size={11} className="text-csc-dark" />
+                                  <span><strong>{confirmedCount}</strong>/{callups.length} conf.</span>
                                 </span>
                               )}
                             </div>
-                          )}
+
+                            {event.type === 'match' && event.opponent ? (
+                              <div className="flex items-center gap-2 mb-2 bg-white p-2 rounded-lg border border-gray-200">
+                                <div className="flex flex-col items-center gap-0.5 w-10">
+                                  {clubSettings?.logo_url ? (
+                                    <img src={clubSettings.logo_url} alt="Nós" className="w-6 h-6 object-contain" />
+                                  ) : (
+                                    <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center text-[10px] font-bold">{clubSettings?.initials || 'CSC'}</div>
+                                  )}
+                                  <span className="text-[8px] font-bold text-gray-700">{clubSettings?.initials || 'CSC'}</span>
+                                </div>
+                                <span className="text-gray-400 font-black text-xs">VS</span>
+                                <div className="flex flex-col items-center gap-0.5 w-10">
+                                  {event.opponent.logo_url ? (
+                                    <img src={event.opponent.logo_url} alt="Adv" className="w-6 h-6 object-contain" />
+                                  ) : (
+                                    <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center text-[10px] font-bold">{event.opponent.initials || 'ADV'}</div>
+                                  )}
+                                  <span className="text-[8px] font-bold text-gray-700 line-clamp-1">{event.opponent.initials || event.opponent.name}</span>
+                                </div>
+                              </div>
+                            ) : null}
+
+                            <h4 className="text-xs font-bold text-gray-900">{event.title}</h4>
+                          </div>
+
+                          <div className="mt-2.5 pt-2 border-t border-gray-200 space-y-1.5">
+                            <div className="flex items-center justify-between text-xs text-gray-600">
+                              <div className="flex items-center space-x-1">
+                                <Clock size={12} className="text-gray-400" />
+                                <span>{new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              <div className="flex items-center space-x-1 max-w-[55%]">
+                                <MapPin size={12} className="text-gray-400 shrink-0" />
+                                <span className="truncate">{event.location}</span>
+                                {event.location && (
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="p-0.5 text-red-500 hover:text-red-700 rounded transition-colors shrink-0"
+                                    title="Abrir no Google Maps"
+                                  >
+                                    <ExternalLink size={11} />
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Ação rápida para o jogador se for convocado */}
+                            {myCallup && (
+                              <div 
+                                onClick={(e) => e.stopPropagation()} 
+                                className="pt-1.5 border-t border-gray-200 flex items-center justify-between"
+                              >
+                                <span className="text-[10px] font-semibold text-gray-600">Presença:</span>
+                                {myCallup.status === 'called' ? (
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => handleCallupResponse(event.id, 'confirmed')}
+                                      className="bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold px-2 py-0.5 rounded transition-colors shadow-xs"
+                                    >
+                                      Confirmar
+                                    </button>
+                                    <button
+                                      onClick={() => handleCallupResponse(event.id, 'declined')}
+                                      className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-2 py-0.5 rounded transition-colors shadow-xs"
+                                    >
+                                      Recusar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded flex items-center gap-1 ${
+                                    myCallup.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {myCallup.status === 'confirmed' ? <CheckCircle2 size={11}/> : <XCircle size={11}/>}
+                                    {myCallup.status === 'confirmed' ? 'Confirmado' : 'Recusado'}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         /* Vista de Lista Completa */
