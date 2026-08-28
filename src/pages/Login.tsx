@@ -50,7 +50,7 @@ const Login: React.FC = () => {
       const { error: googleError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: window.location.origin + window.location.pathname,
         },
       })
       if (googleError) throw googleError
