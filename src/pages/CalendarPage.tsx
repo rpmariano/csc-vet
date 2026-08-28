@@ -71,7 +71,7 @@ const CalendarPage: React.FC = () => {
         supabase
           .from('profiles')
           .select('*')
-          .eq('status', 'active')
+          .neq('status', 'inactive')
           .order('name', { ascending: true })
       ])
 
@@ -125,8 +125,23 @@ const CalendarPage: React.FC = () => {
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
 
+  const isPlayerEligible = (player: Profile, eventType: string) => {
+    if (player.status === 'inactive') return false
+    if (eventType === 'gathering') return true
+    return player.status === 'active'
+  }
+
+  // Ao mudar o tipo de evento, desmarca automaticamente jogadores inelegíveis (ex: lesionados em jogos/treinos)
+  useEffect(() => {
+    setSelectedPlayerIds(prev => prev.filter(id => {
+      const p = allPlayers.find(pl => pl.id === id)
+      return p ? isPlayerEligible(p, type) : false
+    }))
+  }, [type, allPlayers])
+
   const handleSelectAllPlayers = () => {
-    setSelectedPlayerIds(allPlayers.map(p => p.id))
+    const eligible = allPlayers.filter(p => isPlayerEligible(p, type))
+    setSelectedPlayerIds(eligible.map(p => p.id))
   }
 
   const handleClearPlayers = () => {
@@ -139,13 +154,23 @@ const CalendarPage: React.FC = () => {
     
     if (lastEventWithCallups && eventCallups[lastEventWithCallups.id]) {
       const lastPlayerIds = eventCallups[lastEventWithCallups.id].map(c => c.player_id)
-      setSelectedPlayerIds(lastPlayerIds)
+      const validLastIds = lastPlayerIds.filter(id => {
+        const p = allPlayers.find(pl => pl.id === id)
+        return p ? isPlayerEligible(p, type) : false
+      })
+      setSelectedPlayerIds(validLastIds)
     } else {
       alert('Ainda não existem convocatórias anteriores para repetir.')
     }
   }
 
   const togglePlayerSelection = (playerId: string) => {
+    const p = allPlayers.find(pl => pl.id === playerId)
+    if (p && !isPlayerEligible(p, type)) {
+      alert('Este jogador está lesionado e não pode ser convocado para jogos ou treinos (apenas convívios).')
+      return
+    }
+
     setSelectedPlayerIds(prev => 
       prev.includes(playerId) ? prev.filter(id => id !== playerId) : [...prev, playerId]
     )
@@ -541,23 +566,32 @@ const CalendarPage: React.FC = () => {
                   {managingCallupsInModal && (
                     <div className="mb-5 p-4 bg-yellow-50 border border-yellow-200 rounded-xl space-y-3">
                       <p className="text-xs font-bold text-yellow-800 uppercase">Adicionar atletas à convocatória</p>
-                      {uncalledPlayers.length === 0 ? (
-                        <p className="text-xs text-gray-600">Todos os atletas ativos já foram convocados.</p>
-                      ) : (
-                        <div className="max-h-40 overflow-y-auto space-y-1.5 divide-y divide-yellow-100">
-                          {uncalledPlayers.map(p => (
-                            <div key={p.id} className="flex justify-between items-center pt-1.5">
-                              <span className="text-xs font-bold text-gray-800">{p.name}</span>
-                              <button
-                                onClick={() => handleAddPlayerToCallup(selectedEvent.id, p.id)}
-                                className="bg-csc-dark text-white text-[10px] font-bold px-2 py-1 rounded hover:bg-csc-dark/80"
-                              >
-                                + Convocar
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {(() => {
+                        const eligibleUncalled = uncalledPlayers.filter(p => isPlayerEligible(p, selectedEvent.type))
+                        if (eligibleUncalled.length === 0) {
+                          return <p className="text-xs text-gray-600">Todos os atletas elegíveis já foram convocados.</p>
+                        }
+                        return (
+                          <div className="max-h-40 overflow-y-auto space-y-1.5 divide-y divide-yellow-100">
+                            {eligibleUncalled.map(p => (
+                              <div key={p.id} className="flex justify-between items-center pt-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-bold text-gray-800">{p.name}</span>
+                                  {p.status === 'injured' && (
+                                    <span className="text-[9px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-bold">Lesionado</span>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => handleAddPlayerToCallup(selectedEvent.id, p.id)}
+                                  className="bg-csc-dark text-white text-[10px] font-bold px-2 py-1 rounded hover:bg-csc-dark/80"
+                                >
+                                  + Convocar
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })()}
                     </div>
                   )}
 
@@ -822,21 +856,36 @@ const CalendarPage: React.FC = () => {
                     .filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase()))
                     .map(p => {
                       const isSelected = selectedPlayerIds.includes(p.id)
+                      const isEligible = isPlayerEligible(p, type)
+                      const isInjured = p.status === 'injured'
+
                       return (
                         <div
                           key={p.id}
                           onClick={() => togglePlayerSelection(p.id)}
-                          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer text-xs border transition-colors ${
-                            isSelected ? 'bg-csc-dark/5 border-csc-dark font-bold text-csc-dark' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                          className={`flex items-center justify-between p-2 rounded-md text-xs border transition-colors ${
+                            !isEligible 
+                              ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
+                              : isSelected 
+                                ? 'bg-csc-dark/5 border-csc-dark font-bold text-csc-dark cursor-pointer' 
+                                : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 cursor-pointer'
                           }`}
                         >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {}} // controlado pelo onClick pai
-                            className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 focus:ring-0 pointer-events-none"
-                          />
-                          <span className="truncate">{p.name}</span>
+                          <div className="flex items-center gap-2 truncate">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              disabled={!isEligible}
+                              onChange={() => {}} // controlado pelo onClick pai
+                              className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 pointer-events-none"
+                            />
+                            <span className="truncate">{p.name}</span>
+                          </div>
+                          {isInjured && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
+                              {type === 'gathering' ? 'Lesionado (Disponível)' : 'Lesionado'}
+                            </span>
+                          )}
                         </div>
                       )
                     })}

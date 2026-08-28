@@ -75,7 +75,7 @@ const EventsPage: React.FC = () => {
         supabase.from('fields').select('id, name'),
         supabase.from('opponents').select('id, name, home_field_id'),
         supabase.from('tournaments').select('id, name, season'),
-        supabase.from('profiles').select('*').eq('status', 'active').order('name', { ascending: true }),
+        supabase.from('profiles').select('*').neq('status', 'inactive').order('name', { ascending: true }),
         supabase.from('callups').select('id, event_id, player_id, status, player:profiles(id, name, photo_url)')
       ])
 
@@ -85,7 +85,8 @@ const EventsPage: React.FC = () => {
       if (tRes.data) setTournaments(tRes.data)
       if (profRes.data) {
         setAllPlayers(profRes.data as Profile[])
-        setSelectedPlayerIds(profRes.data.map((p: any) => p.id))
+        const initialEligible = (profRes.data as Profile[]).filter(p => p.status === 'active')
+        setSelectedPlayerIds(initialEligible.map(p => p.id))
       }
 
       if (callRes.data) {
@@ -108,6 +109,20 @@ const EventsPage: React.FC = () => {
     fetchData()
   }, [])
 
+  const isPlayerEligible = (player: Profile, eventType: string) => {
+    if (player.status === 'inactive') return false
+    if (eventType === 'gathering') return true
+    return player.status === 'active'
+  }
+
+  // Ao mudar o tipo de evento, desmarca automaticamente jogadores inelegíveis (ex: lesionados em jogos/treinos)
+  useEffect(() => {
+    setSelectedPlayerIds(prev => prev.filter(id => {
+      const p = allPlayers.find(pl => pl.id === id)
+      return p ? isPlayerEligible(p, type) : false
+    }))
+  }, [type, allPlayers])
+
   // Auto-fill field based on opponent and home/away
   useEffect(() => {
     if (type === 'match' && opponentId) {
@@ -118,7 +133,10 @@ const EventsPage: React.FC = () => {
     }
   }, [opponentId, homeAway, type, opponents])
 
-  const handleSelectAll = () => setSelectedPlayerIds(allPlayers.map(p => p.id))
+  const handleSelectAll = () => {
+    const eligible = allPlayers.filter(p => isPlayerEligible(p, type))
+    setSelectedPlayerIds(eligible.map(p => p.id))
+  }
   const handleClearAll = () => setSelectedPlayerIds([])
   const handleRepeatLastCallup = () => {
     const sortedEvents = [...events].sort((a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime())
@@ -126,12 +144,21 @@ const EventsPage: React.FC = () => {
     
     if (lastEventWithCallups && eventCallups[lastEventWithCallups.id]) {
       const lastPlayerIds = eventCallups[lastEventWithCallups.id].map(c => c.player_id)
-      setSelectedPlayerIds(lastPlayerIds)
+      const validLastIds = lastPlayerIds.filter(id => {
+        const p = allPlayers.find(pl => pl.id === id)
+        return p ? isPlayerEligible(p, type) : false
+      })
+      setSelectedPlayerIds(validLastIds)
     } else {
       alert('Ainda não existem convocatórias anteriores para repetir.')
     }
   }
   const togglePlayer = (id: string) => {
+    const p = allPlayers.find(pl => pl.id === id)
+    if (p && !isPlayerEligible(p, type)) {
+      alert('Este jogador está lesionado e não pode ser convocado para jogos ou treinos (apenas convívios).')
+      return
+    }
     setSelectedPlayerIds(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id])
   }
 
@@ -449,21 +476,36 @@ const EventsPage: React.FC = () => {
                   .filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase()))
                   .map(p => {
                     const isSel = selectedPlayerIds.includes(p.id)
+                    const isEligible = isPlayerEligible(p, type)
+                    const isInjured = p.status === 'injured'
+
                     return (
                       <div
                         key={p.id}
                         onClick={() => togglePlayer(p.id)}
-                        className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-xs transition-colors ${
-                          isSel ? 'bg-csc-dark/5 font-bold text-csc-dark' : 'text-gray-600 hover:bg-gray-50'
+                        className={`flex items-center justify-between p-1.5 rounded text-xs transition-colors ${
+                          !isEligible 
+                            ? 'bg-red-50/60 border border-red-200 text-red-700 opacity-60 cursor-not-allowed'
+                            : isSel 
+                              ? 'bg-csc-dark/5 font-bold text-csc-dark cursor-pointer' 
+                              : 'text-gray-600 hover:bg-gray-50 cursor-pointer'
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSel}
-                          onChange={() => {}}
-                          className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 pointer-events-none"
-                        />
-                        <span className="truncate">{p.name}</span>
+                        <div className="flex items-center gap-2 truncate">
+                          <input
+                            type="checkbox"
+                            checked={isSel}
+                            disabled={!isEligible}
+                            onChange={() => {}}
+                            className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 pointer-events-none"
+                          />
+                          <span className="truncate">{p.name}</span>
+                        </div>
+                        {isInjured && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
+                            {type === 'gathering' ? 'Lesionado (Pode ir)' : 'Lesionado'}
+                          </span>
+                        )}
                       </div>
                     )
                   })}
@@ -621,21 +663,28 @@ const EventsPage: React.FC = () => {
                       <UserPlus size={14} />
                       <span>Convidar mais atletas:</span>
                     </p>
-                    {uncalledPlayers.length === 0 ? (
-                      <p className="text-xs text-gray-500">Todos os atletas ativos já foram convocados.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {uncalledPlayers.map(p => (
-                          <button
-                            key={p.id}
-                            onClick={() => handleAddPlayerToCallup(activeCallupModalEvent.id, p.id)}
-                            className="bg-white border border-gray-300 hover:border-csc-dark text-xs px-2.5 py-1 rounded-lg font-semibold text-gray-700 flex items-center gap-1 shadow-sm"
-                          >
-                            <span>+ {p.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    {(() => {
+                      const eligibleUncalled = uncalledPlayers.filter(p => isPlayerEligible(p, activeCallupModalEvent.type))
+                      if (eligibleUncalled.length === 0) {
+                        return <p className="text-xs text-gray-500">Todos os atletas elegíveis já foram convocados.</p>
+                      }
+                      return (
+                        <div className="flex flex-wrap gap-2">
+                          {eligibleUncalled.map(p => (
+                            <button
+                              key={p.id}
+                              onClick={() => handleAddPlayerToCallup(activeCallupModalEvent.id, p.id)}
+                              className="bg-white border border-gray-300 hover:border-csc-dark text-xs px-2.5 py-1 rounded-lg font-semibold text-gray-700 flex items-center gap-1 shadow-sm"
+                            >
+                              <span>+ {p.name}</span>
+                              {p.status === 'injured' && (
+                                <span className="text-[9px] bg-red-100 text-red-800 px-1 rounded">Lesionado</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   {/* Listas */}
