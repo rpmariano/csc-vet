@@ -43,16 +43,7 @@ const Layout: React.FC = () => {
     <div className="min-h-screen bg-gray-150 flex flex-col md:flex-row">
       {/* Mobile Header */}
       <div className="bg-white text-csc-dark flex items-center justify-between p-3 md:hidden border-b-4 border-csc-gold shadow-sm">
-        <div className="flex items-center gap-2">
-          {clubSettings?.logo_url ? (
-            <img src={clubSettings.logo_url} alt="Logo" className="h-12 object-contain" />
-          ) : (
-            <div className="flex items-center gap-2 px-2">
-              <Shield size={24} className="text-csc-gold" />
-              <span className="text-xl font-black italic tracking-tighter text-csc-dark">{clubSettings?.initials || 'CSC'}</span>
-            </div>
-          )}
-        </div>
+        <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-12 object-contain" />
         <div className="flex items-center gap-3">
           <Link to="/settings" className="text-csc-dark hover:text-csc-light transition-colors" title="Definições">
             <Settings size={20} />
@@ -65,15 +56,8 @@ const Layout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation */}
       <aside className="bg-csc-dark text-white w-64 flex-shrink-0 flex-col justify-between hidden md:flex border-r-2 border-csc-light/20">
-        <div className="bg-white p-6 border-b-4 border-csc-gold flex justify-center items-center">
-          {clubSettings?.logo_url ? (
-            <img src={clubSettings.logo_url} alt="Logo" className="h-16 w-full object-contain" />
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              <Shield size={32} className="text-csc-gold" />
-              <span className="text-3xl font-black italic tracking-tighter text-csc-dark">{clubSettings?.initials || 'CSC'}</span>
-            </div>
-          )}
+        <div className="bg-white p-6 border-b-4 border-csc-gold">
+          <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-16 w-full object-contain" />
         </div>
         
         <div className="p-6 pt-6 flex-1">
