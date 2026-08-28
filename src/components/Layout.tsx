@@ -37,13 +37,13 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-150 flex flex-col md:flex-row">
       {/* Mobile Header */}
-      <div className="bg-csc-dark text-white flex items-center justify-between p-3 md:hidden border-b-2 border-csc-light/20">
+      <div className="bg-white text-csc-dark flex items-center justify-between p-3 md:hidden border-b-4 border-csc-gold shadow-sm">
         <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-12 object-contain" />
         <div className="flex items-center gap-3">
-          <Link to="/settings" className="text-gray-300 hover:text-white transition-colors" title="Definições">
+          <Link to="/settings" className="text-csc-dark hover:text-csc-light transition-colors" title="Definições">
             <Settings size={20} />
           </Link>
-          <span className="text-xs bg-csc-light px-2 py-0.5 rounded capitalize font-bold">
+          <span className="text-xs bg-csc-dark text-white px-2 py-0.5 rounded capitalize font-bold">
             {profile?.role === 'admin' ? 'Admin' : profile?.role === 'coach' ? 'Treinador' : 'Jogador'}
           </span>
         </div>
@@ -51,11 +51,11 @@ const Layout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation */}
       <aside className="bg-csc-dark text-white w-64 flex-shrink-0 flex-col justify-between hidden md:flex border-r-2 border-csc-light/20">
-        <div className="p-6">
-          <div className="border-b border-csc-light/30 pb-4 mb-6">
-            <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-16 w-full object-contain" />
-          </div>
-          
+        <div className="bg-white p-6 border-b-4 border-csc-gold">
+          <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-16 w-full object-contain" />
+        </div>
+        
+        <div className="p-6 pt-6 flex-1">
           {profile && (
             <div className="flex items-center space-x-3 mb-6 bg-black/20 p-3 rounded-xl border border-csc-light/30">
               {profile.photo_url ? (

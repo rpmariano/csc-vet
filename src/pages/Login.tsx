@@ -66,7 +66,7 @@ const Login: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-150 px-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 border border-gray-100">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold text-blue-900">Veteranos F.C.</h2>
+          <h2 className="text-3xl font-extrabold text-csc-dark">Veteranos F.C.</h2>
           <p className="text-sm text-gray-500 mt-2">
             {isSignUp ? 'Crie a sua conta de jogador' : 'Faça login para aceder à sua área'}
           </p>
@@ -99,7 +99,7 @@ const Login: React.FC = () => {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark focus:border-transparent outline-none transition-all"
                 placeholder="Ex: João Silva"
               />
             </div>
@@ -112,7 +112,7 @@ const Login: React.FC = () => {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark focus:border-transparent outline-none transition-all"
               placeholder="seuemail@exemplo.com"
             />
           </div>
@@ -124,7 +124,7 @@ const Login: React.FC = () => {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark focus:border-transparent outline-none transition-all"
               placeholder="••••••••"
             />
           </div>
@@ -132,7 +132,7 @@ const Login: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-900 text-white py-2.5 rounded-lg font-bold hover:bg-blue-800 transition-colors shadow-md disabled:opacity-50"
+            className="w-full bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 transition-colors shadow-md disabled:opacity-50"
           >
             {loading ? 'A processar...' : isSignUp ? 'Registar' : 'Entrar'}
           </button>
@@ -181,7 +181,7 @@ const Login: React.FC = () => {
               setError(null)
               setMessage(null)
             }}
-            className="text-sm text-blue-900 hover:underline font-semibold"
+            className="text-sm text-csc-dark hover:underline font-semibold"
           >
             {isSignUp ? 'Já tem conta? Faça Login' : 'Não tem conta? Registe-se aqui'}
           </button>

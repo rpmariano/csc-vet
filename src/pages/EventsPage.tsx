@@ -126,7 +126,7 @@ const EventsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-blue-900">Gestão de Eventos</h1>
+        <h1 className="text-3xl font-extrabold text-csc-dark">Gestão de Eventos</h1>
         <p className="text-gray-550 mt-1">Crie e remova jogos, treinos ou convívios da equipa.</p>
       </div>
 
@@ -141,7 +141,7 @@ const EventsPage: React.FC = () => {
         {/* Form para Criar Evento */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 h-fit">
           <h3 className="text-lg font-bold text-gray-805 mb-4 flex items-center gap-2 border-b pb-3">
-            <Plus size={20} className="text-blue-900" />
+            <Plus size={20} className="text-csc-dark" />
             <span>Criar Evento</span>
           </h3>
 
@@ -153,7 +153,7 @@ const EventsPage: React.FC = () => {
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                 placeholder="Ex: Pescadores CC vs CSC"
               />
             </div>
@@ -163,7 +163,7 @@ const EventsPage: React.FC = () => {
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as any)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900 bg-white"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark bg-white"
               >
                 <option value="practice">Treino</option>
                 <option value="match">Jogo</option>
@@ -172,14 +172,14 @@ const EventsPage: React.FC = () => {
             </div>
 
             {type === 'match' && (
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg space-y-3">
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     id="isFriendly"
                     checked={isFriendly}
                     onChange={(e) => setIsFriendly(e.target.checked)}
-                    className="h-4 w-4 text-blue-900 focus:ring-blue-900 border-gray-300 rounded"
+                    className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded"
                   />
                   <label htmlFor="isFriendly" className="ml-2 text-sm font-medium text-gray-700">
                     Jogo Amigável
@@ -205,7 +205,7 @@ const EventsPage: React.FC = () => {
                 required
                 value={dateTime}
                 onChange={(e) => setDateTime(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
               />
             </div>
 
@@ -216,7 +216,7 @@ const EventsPage: React.FC = () => {
                 required
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                 placeholder="Ex: Costa da Caparica"
               />
             </div>
@@ -227,14 +227,14 @@ const EventsPage: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                 placeholder="Obs: Balneário 4 às 21h..."
               />
             </div>
 
             <button
               type="submit"
-              className="w-full bg-blue-900 text-white py-2.5 rounded-lg font-bold hover:bg-blue-800 transition-colors shadow"
+              className="w-full bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 transition-colors shadow"
             >
               Criar Evento
             </button>
@@ -248,7 +248,7 @@ const EventsPage: React.FC = () => {
 
             {loading ? (
               <div className="flex justify-center py-6">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-900"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-csc-dark"></div>
               </div>
             ) : events.length === 0 ? (
               <p className="text-gray-550 text-sm">Não há eventos registados.</p>
@@ -258,7 +258,7 @@ const EventsPage: React.FC = () => {
                   <div key={event.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100 flex justify-between items-start">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${event.type === 'match' ? 'bg-blue-100 text-blue-800' : event.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${event.type === 'match' ? 'bg-csc-light/20 text-csc-dark' : event.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
                           {event.type === 'match' ? 'Jogo' : event.type === 'practice' ? 'Treino' : 'Convívio'}
                         </span>
                         {event.is_friendly && (

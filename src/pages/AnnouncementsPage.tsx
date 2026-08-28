@@ -98,7 +98,7 @@ const AnnouncementsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-blue-900">Comunicados</h1>
+        <h1 className="text-3xl font-extrabold text-csc-dark">Comunicados</h1>
         <p className="text-gray-500 mt-1">Crie e publique mensagens de aviso na homepage do plantel.</p>
       </div>
 
@@ -106,7 +106,7 @@ const AnnouncementsPage: React.FC = () => {
         {/* Formulário de Criação */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 h-fit">
           <h3 className="text-lg font-bold text-gray-800 border-b border-gray-100 pb-3 mb-4 flex items-center space-x-2">
-            <Send size={18} className="text-blue-900" />
+            <Send size={18} className="text-csc-dark" />
             <span>Publicar Comunicado</span>
           </h3>
 
@@ -118,7 +118,7 @@ const AnnouncementsPage: React.FC = () => {
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                 placeholder="Ex: Ponto de Encontro Alterado"
               />
             </div>
@@ -130,14 +130,14 @@ const AnnouncementsPage: React.FC = () => {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                 placeholder="Escreva aqui a mensagem para todo o plantel..."
               />
             </div>
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center space-x-2 bg-blue-900 text-white py-2.5 rounded-lg font-bold hover:bg-blue-800 transition-colors shadow"
+              className="w-full flex items-center justify-center space-x-2 bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 transition-colors shadow"
             >
               <Plus size={18} />
               <span>Publicar</span>
@@ -152,7 +152,7 @@ const AnnouncementsPage: React.FC = () => {
 
             {loading ? (
               <div className="flex justify-center py-6">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-900"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-csc-dark"></div>
               </div>
             ) : announcements.length === 0 ? (
               <p className="text-gray-500 text-sm">Ainda não foram publicados comunicados.</p>

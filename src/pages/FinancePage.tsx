@@ -122,7 +122,7 @@ const FinancePage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-900"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
       </div>
     )
   }
@@ -130,7 +130,7 @@ const FinancePage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-blue-900">Gestão Financeira</h1>
+        <h1 className="text-3xl font-extrabold text-csc-dark">Gestão Financeira</h1>
         <p className="text-gray-550 mt-1">Monitore o balanço e registe o pagamento de quotas dos atletas.</p>
       </div>
 
@@ -139,9 +139,9 @@ const FinancePage: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-500">Saldo Disponível</p>
-            <p className="text-2xl font-black text-blue-900 mt-1">{netBalance.toFixed(2)}€</p>
+            <p className="text-2xl font-black text-csc-dark mt-1">{netBalance.toFixed(2)}€</p>
           </div>
-          <div className="w-12 h-12 bg-blue-50 text-blue-900 rounded-full flex items-center justify-center">
+          <div className="w-12 h-12 bg-gray-50 text-csc-dark rounded-full flex items-center justify-center">
             <Landmark size={24} />
           </div>
         </div>
@@ -172,7 +172,7 @@ const FinancePage: React.FC = () => {
         <div className="space-y-6 h-fit">
           <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6">
             <h3 className="text-lg font-bold text-gray-805 mb-4 flex items-center space-x-2">
-              <DollarSign size={20} className="text-blue-900" />
+              <DollarSign size={20} className="text-csc-dark" />
               <span>Registar Movimento</span>
             </h3>
             
@@ -184,7 +184,7 @@ const FinancePage: React.FC = () => {
                   required
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                   placeholder="Ex: Pagamento Árbitro"
                 />
               </div>
@@ -197,7 +197,7 @@ const FinancePage: React.FC = () => {
                   required
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                   placeholder="0.00"
                 />
               </div>
@@ -207,7 +207,7 @@ const FinancePage: React.FC = () => {
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900 bg-white"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark bg-white"
                 >
                   <option value="income">Receita (Entrada)</option>
                   <option value="expense">Despesa (Saída)</option>
@@ -216,7 +216,7 @@ const FinancePage: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full flex items-center justify-center space-x-2 bg-blue-900 text-white py-2 rounded-lg font-bold hover:bg-blue-800 transition-colors shadow"
+                className="w-full flex items-center justify-center space-x-2 bg-csc-dark text-white py-2 rounded-lg font-bold hover:bg-csc-dark/80 transition-colors shadow"
               >
                 <Plus size={18} />
                 <span>Registar</span>

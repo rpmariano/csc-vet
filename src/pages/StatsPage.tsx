@@ -78,7 +78,7 @@ const StatsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-900"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
       </div>
     )
   }
@@ -90,7 +90,7 @@ const StatsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-blue-900">Estatísticas da Época</h1>
+        <h1 className="text-3xl font-extrabold text-csc-dark">Estatísticas da Época</h1>
         <p className="text-gray-550 mt-1">Classificações individuais e registo de disciplina.</p>
       </div>
 

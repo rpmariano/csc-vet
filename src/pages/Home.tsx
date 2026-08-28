@@ -163,7 +163,7 @@ const Home: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-900"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
       </div>
     )
   }
@@ -174,7 +174,7 @@ const Home: React.FC = () => {
       {/* 1. SECÇÃO: Comunicações */}
       <div className="bg-white rounded-2xl border-2 border-gray-800 p-5 shadow-sm">
         <h2 className="text-xl font-black text-gray-900 mb-3 flex items-center gap-2">
-          <Bell size={20} className="text-blue-900" />
+          <Bell size={20} className="text-csc-dark" />
           Comunicações
         </h2>
         <div className="space-y-3">
@@ -192,7 +192,7 @@ const Home: React.FC = () => {
         <div className="bg-white rounded-2xl border-2 border-gray-800 p-5 shadow-sm">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-xl font-black text-gray-900">Próximo jogo</h2>
-            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full uppercase">
+            <span className="text-xs font-bold text-csc-dark bg-gray-50 px-2.5 py-0.5 rounded-full uppercase">
               {nextMatch.is_friendly ? 'Amigável' : nextMatch.tournament_name || 'Competição'}
             </span>
           </div>
@@ -285,7 +285,7 @@ const Home: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2 text-xs text-blue-900">
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-start gap-2 text-xs text-csc-dark">
             <Info size={16} className="shrink-0 mt-0.5" />
             <div>
               <strong>Obs:</strong> {nextPractice.description}

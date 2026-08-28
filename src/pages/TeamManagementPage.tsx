@@ -71,13 +71,13 @@ const TeamManagementPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold text-blue-900">Gestão de Equipa</h1>
+        <h1 className="text-3xl font-extrabold text-csc-dark">Gestão de Equipa</h1>
         <p className="text-gray-550 mt-1">Gira as fichas dos jogadores, perfis de acesso e contactos rápidos.</p>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-900"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -88,7 +88,7 @@ const TeamManagementPage: React.FC = () => {
                 <div>
                   <div className="flex justify-between items-start">
                     <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center font-bold text-blue-800 text-lg">
+                      <div className="w-12 h-12 bg-csc-light/20 rounded-full flex items-center justify-center font-bold text-csc-dark text-lg">
                         {person.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -102,7 +102,7 @@ const TeamManagementPage: React.FC = () => {
                     {!isEditing && (
                       <button
                         onClick={() => startEdit(person)}
-                        className="text-blue-900 hover:bg-blue-50 p-1.5 rounded-lg transition-colors"
+                        className="text-csc-dark hover:bg-gray-50 p-1.5 rounded-lg transition-colors"
                       >
                         <Edit2 size={16} />
                       </button>
@@ -122,7 +122,7 @@ const TeamManagementPage: React.FC = () => {
                     )}
                     <div className="flex items-center space-x-2">
                       <Shield size={16} className="text-gray-400" />
-                      <span className="capitalize font-semibold text-blue-900">
+                      <span className="capitalize font-semibold text-csc-dark">
                         {person.role === 'admin' ? 'Administrador' : person.role === 'coach' ? 'Treinador' : 'Jogador'}
                       </span>
                     </div>

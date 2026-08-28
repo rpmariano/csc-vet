@@ -132,14 +132,14 @@ const CalendarPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-extrabold text-blue-900">Calendário de Eventos</h1>
+          <h1 className="text-3xl font-extrabold text-csc-dark">Calendário de Eventos</h1>
           <p className="text-gray-500 mt-1">Consulte os treinos, jogos e convívios agendados.</p>
         </div>
 
         {isCoachOrAdmin && (
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center space-x-2 bg-blue-900 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-800 transition-colors shadow"
+            className="flex items-center space-x-2 bg-csc-dark text-white px-4 py-2 rounded-lg font-bold hover:bg-csc-dark/80 transition-colors shadow"
           >
             <Plus size={18} />
             <span>Criar Evento</span>
@@ -149,7 +149,7 @@ const CalendarPage: React.FC = () => {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-900"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -163,7 +163,7 @@ const CalendarPage: React.FC = () => {
                 <div className="flex justify-between items-start">
                   <span className={`
                     text-xs font-semibold px-2.5 py-0.5 rounded uppercase tracking-wider
-                    ${event.type === 'match' ? 'bg-blue-100 text-blue-800' : event.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}
+                    ${event.type === 'match' ? 'bg-csc-light/20 text-csc-dark' : event.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}
                   `}>
                     {event.type === 'match' ? 'Jogo' : event.type === 'practice' ? 'Treino' : 'Convívio'}
                   </span>
@@ -206,14 +206,14 @@ const CalendarPage: React.FC = () => {
             </button>
             <span className={`
               text-xs font-semibold px-2.5 py-0.5 rounded uppercase tracking-wider
-              ${selectedEvent.type === 'match' ? 'bg-blue-100 text-blue-800' : selectedEvent.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}
+              ${selectedEvent.type === 'match' ? 'bg-csc-light/20 text-csc-dark' : selectedEvent.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}
             `}>
               {selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}
             </span>
             <h2 className="text-2xl font-bold text-gray-805 mt-3">{selectedEvent.title}</h2>
             
             {selectedEvent.tournament_name && (
-              <div className="mt-2 flex items-center space-x-1 text-xs text-blue-900 bg-blue-50 px-2 py-1 rounded inline-flex">
+              <div className="mt-2 flex items-center space-x-1 text-xs text-csc-dark bg-gray-50 px-2 py-1 rounded inline-flex">
                 <Award size={14} />
                 <span>{selectedEvent.tournament_name} {selectedEvent.is_friendly ? '(Amigável)' : ''}</span>
               </div>
@@ -223,7 +223,7 @@ const CalendarPage: React.FC = () => {
 
             <div className="mt-6 space-y-3 bg-gray-55 p-4 rounded-lg">
               <div className="flex items-center text-sm text-gray-700 space-x-3">
-                <Clock size={18} className="text-blue-900" />
+                <Clock size={18} className="text-csc-dark" />
                 <div>
                   <p className="font-semibold">Data e Hora</p>
                   <p className="text-xs text-gray-500">
@@ -232,7 +232,7 @@ const CalendarPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center text-sm text-gray-700 space-x-3">
-                <MapPin size={18} className="text-blue-900" />
+                <MapPin size={18} className="text-csc-dark" />
                 <div>
                   <p className="font-semibold">Localização</p>
                   <p className="text-xs text-gray-500">{selectedEvent.location}</p>
@@ -253,7 +253,7 @@ const CalendarPage: React.FC = () => {
             >
               <X size={20} />
             </button>
-            <h2 className="text-xl font-bold text-blue-900 mb-6">Criar Novo Evento</h2>
+            <h2 className="text-xl font-bold text-csc-dark mb-6">Criar Novo Evento</h2>
             
             <form onSubmit={handleAddEvent} className="space-y-4">
               <div>
@@ -263,7 +263,7 @@ const CalendarPage: React.FC = () => {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                   placeholder="Ex: Treino de Quinta"
                 />
               </div>
@@ -273,7 +273,7 @@ const CalendarPage: React.FC = () => {
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                 >
                   <option value="practice">Treino</option>
                   <option value="match">Jogo</option>
@@ -282,14 +282,14 @@ const CalendarPage: React.FC = () => {
               </div>
 
               {type === 'match' && (
-                <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg space-y-3">
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
                   <div className="flex items-center">
                     <input
                       type="checkbox"
                       id="isFriendly"
                       checked={isFriendly}
                       onChange={(e) => setIsFriendly(e.target.checked)}
-                      className="h-4 w-4 text-blue-900 focus:ring-blue-900 border-gray-300 rounded"
+                      className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded"
                     />
                     <label htmlFor="isFriendly" className="ml-2 text-sm font-medium text-gray-700">
                       Jogo Amigável
@@ -315,7 +315,7 @@ const CalendarPage: React.FC = () => {
                   required
                   value={dateTime}
                   onChange={(e) => setDateTime(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                 />
               </div>
 
@@ -326,7 +326,7 @@ const CalendarPage: React.FC = () => {
                   required
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                   placeholder="Ex: Campo Sintético"
                 />
               </div>
@@ -337,14 +337,14 @@ const CalendarPage: React.FC = () => {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                   placeholder="Instruções adicionais..."
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-blue-900 text-white py-2.5 rounded-lg font-bold hover:bg-blue-800 transition-colors shadow"
+                className="w-full bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 transition-colors shadow"
               >
                 Guardar Evento
               </button>

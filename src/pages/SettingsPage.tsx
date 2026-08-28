@@ -40,7 +40,7 @@ const SettingsPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-3xl font-extrabold text-blue-900">Definições da Conta</h1>
+        <h1 className="text-3xl font-extrabold text-csc-dark">Definições da Conta</h1>
         <p className="text-gray-550 mt-1">Atualize as suas informações pessoais e de contacto.</p>
       </div>
 
@@ -53,7 +53,7 @@ const SettingsPage: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-150 overflow-hidden">
         <form onSubmit={handleSave} className="p-6 space-y-5">
           <div className="flex items-center space-x-2 text-gray-805 font-bold mb-4 border-b border-gray-100 pb-3">
-            <UserIcon size={18} className="text-blue-900" />
+            <UserIcon size={18} className="text-csc-dark" />
             <span>Perfil</span>
           </div>
 
@@ -64,7 +64,7 @@ const SettingsPage: React.FC = () => {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
             />
           </div>
 
@@ -84,7 +84,7 @@ const SettingsPage: React.FC = () => {
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-900"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
                 placeholder="9xxxxxxxx"
               />
             </div>
@@ -93,7 +93,7 @@ const SettingsPage: React.FC = () => {
           <div className="flex justify-end pt-4">
             <button
               type="submit"
-              className="flex items-center space-x-2 bg-blue-900 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-blue-800 transition-colors shadow"
+              className="flex items-center space-x-2 bg-csc-dark text-white px-5 py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 transition-colors shadow"
             >
               <Save size={18} />
               <span>Guardar Alterações</span>
@@ -105,7 +105,7 @@ const SettingsPage: React.FC = () => {
       {/* App Preferences */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 space-y-4">
         <div className="flex items-center space-x-2 text-gray-805 font-bold mb-4 border-b border-gray-100 pb-3">
-          <Bell size={18} className="text-blue-900" />
+          <Bell size={18} className="text-csc-dark" />
           <span>Notificações PWA</span>
         </div>
         <div className="flex items-center justify-between">
@@ -113,7 +113,7 @@ const SettingsPage: React.FC = () => {
             <p className="font-semibold text-gray-805 text-sm">Notificações Push</p>
             <p className="text-xs text-gray-500">Receba alertas de novas convocatórias e recados do treinador.</p>
           </div>
-          <button className="bg-blue-900 text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-800 transition-colors">
+          <button className="bg-csc-dark text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:bg-csc-dark/80 transition-colors">
             Ativar no PWA
           </button>
         </div>
