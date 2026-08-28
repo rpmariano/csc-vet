@@ -72,6 +72,8 @@ const CalendarPage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [typeFilter, setTypeFilter] = useState<'all' | 'match' | 'practice' | 'gathering'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'past' | 'my_confirmed' | 'my_declined' | 'my_pending' | 'my_called'>('all')
 
   // Callups state
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
@@ -544,8 +546,49 @@ const CalendarPage: React.FC = () => {
 
   // Filtered events
   const filteredEvents = events.filter(e => {
-    if (typeFilter === 'all') return true
-    return e.type === typeFilter
+    // 1. Type Filter
+    if (typeFilter !== 'all' && e.type !== typeFilter) {
+      return false
+    }
+
+    // 2. Search Query Filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim()
+      const titleMatch = e.title?.toLowerCase().includes(q)
+      const locMatch = e.location?.toLowerCase().includes(q)
+      const descMatch = e.description?.toLowerCase().includes(q)
+      const tourMatch = e.tournament_name?.toLowerCase().includes(q)
+      const oppMatch = e.opponent?.name?.toLowerCase().includes(q) || e.opponent?.initials?.toLowerCase().includes(q)
+      if (!titleMatch && !locMatch && !descMatch && !tourMatch && !oppMatch) {
+        return false
+      }
+    }
+
+    // 3. Status Filter
+    if (statusFilter !== 'all') {
+      const eventDate = new Date(e.date_time)
+      const now = new Date()
+
+      if (statusFilter === 'upcoming') {
+        if (eventDate < now) return false
+      } else if (statusFilter === 'past') {
+        if (eventDate >= now) return false
+      } else if (statusFilter === 'my_confirmed') {
+        const myCallup = profile ? (eventCallups[e.id] || []).find(c => c.player_id === profile.id) : null
+        if (!myCallup || myCallup.status !== 'confirmed') return false
+      } else if (statusFilter === 'my_declined') {
+        const myCallup = profile ? (eventCallups[e.id] || []).find(c => c.player_id === profile.id) : null
+        if (!myCallup || myCallup.status !== 'declined') return false
+      } else if (statusFilter === 'my_pending') {
+        const myCallup = profile ? (eventCallups[e.id] || []).find(c => c.player_id === profile.id) : null
+        if (!myCallup || myCallup.status !== 'called') return false
+      } else if (statusFilter === 'my_called') {
+        const myCallup = profile ? (eventCallups[e.id] || []).find(c => c.player_id === profile.id) : null
+        if (!myCallup) return false
+      }
+    }
+
+    return true
   })
 
   // Get events for a specific date
@@ -633,13 +676,14 @@ const CalendarPage: React.FC = () => {
       </div>
 
       {/* Barra de Navegação & Filtros de Calendário */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-150 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-150 space-y-3.5">
+        {/* Linha 1: Alternador de Visualização + Barra de Pesquisa + Filtro de Status */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Alternador de Visualização: Calendário vs Lista */}
-          <div className="flex items-center bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
+          <div className="flex items-center bg-gray-100 p-1 rounded-xl w-full md:w-auto shrink-0">
             <button
               onClick={() => setViewMode('calendar')}
-              className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                 viewMode === 'calendar' ? 'bg-csc-dark text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -648,7 +692,7 @@ const CalendarPage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                 viewMode === 'list' ? 'bg-csc-dark text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -657,8 +701,53 @@ const CalendarPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Filtros de Tipo */}
+          {/* Pesquisa e Filtro de Status */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 md:max-w-xl">
+            {/* Input Pesquisa */}
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3 top-2.5 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Pesquisar por título, adversário, local..."
+                className="w-full pl-9 pr-8 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-csc-dark focus:border-transparent transition-all"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2 text-xs text-gray-400 hover:text-gray-600 p-0.5"
+                  title="Limpar pesquisa"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Select Status */}
+            <div className="relative shrink-0 sm:w-48">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-csc-dark font-medium text-gray-700 cursor-pointer"
+              >
+                <option value="all">⚡ Todos os Estados</option>
+                <option value="upcoming">⏳ Próximos / Futuros</option>
+                <option value="past">🏁 Realizados / Passados</option>
+                <option value="my_confirmed">🟢 Confirmados por mim</option>
+                <option value="my_pending">🟡 Pendentes da minha resposta</option>
+                <option value="my_declined">🔴 Recusados por mim</option>
+                <option value="my_called">📋 Fui convocado</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Linha 2: Filtros de Tipo de Evento & Reset de Filtros */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            <span className="text-[11px] font-bold text-gray-400 mr-1 hidden sm:inline">Tipo:</span>
             <button
               onClick={() => setTypeFilter('all')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
@@ -692,6 +781,21 @@ const CalendarPage: React.FC = () => {
               🍻 Convívios
             </button>
           </div>
+
+          {/* Botão Limpar Filtros se algum filtro estiver ativo */}
+          {(searchQuery || typeFilter !== 'all' || statusFilter !== 'all') && (
+            <button
+              onClick={() => {
+                setSearchQuery('')
+                setTypeFilter('all')
+                setStatusFilter('all')
+              }}
+              className="text-xs font-bold text-red-600 hover:text-red-800 hover:underline flex items-center gap-1 px-2 py-1 bg-red-50 rounded-lg transition-colors"
+            >
+              <X size={13} />
+              <span>Limpar Filtros</span>
+            </button>
+          )}
         </div>
 
         {/* Controlos de Mês (quando em modo Calendário) */}
