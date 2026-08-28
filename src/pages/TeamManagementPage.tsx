@@ -826,6 +826,13 @@ const TeamManagementPage: React.FC = () => {
                         {person.name}
                       </h3>
 
+                      {(person.shirt_name || person.nickname) && (
+                        <span className="text-[11px] font-black text-amber-950 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
+                          <span>👕</span>
+                          <span className="uppercase">{person.shirt_name || person.nickname}</span>
+                        </span>
+                      )}
+
                       {/* Role Badges */}
                       {roles.map((r) => (
                         <span
@@ -996,9 +1003,18 @@ const TeamManagementPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Name */}
+                  {/* Name + Nome na Camisola */}
                   <div className="w-full">
-                    <h3 className="font-black text-gray-900 text-base leading-tight truncate group-hover:text-csc-dark transition-colors">
+                    {(person.shirt_name || person.nickname) && (
+                      <div className="mb-1">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-950 bg-amber-100/90 border border-amber-300 px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">
+                          <span>👕</span>
+                          <span>{person.shirt_name || person.nickname}</span>
+                        </span>
+                      </div>
+                    )}
+
+                    <h3 className="font-black text-gray-900 text-sm sm:text-base leading-tight truncate group-hover:text-csc-dark transition-colors" title={person.name}>
                       {person.name}
                     </h3>
 

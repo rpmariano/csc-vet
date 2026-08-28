@@ -209,7 +209,7 @@ const Home: React.FC = () => {
             </span>
             {profile?.jersey_number && (
               <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-white/10 text-white border border-white/20">
-                Camisola #{profile.jersey_number}
+                Camisola #{profile.jersey_number} {profile?.shirt_name ? `(${profile.shirt_name})` : ''}
               </span>
             )}
           </div>
