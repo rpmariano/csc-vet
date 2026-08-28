@@ -29,6 +29,7 @@ import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
+import { TrainingIcon } from './EventsPage'
 
 interface Event {
   id: string
@@ -923,7 +924,7 @@ const CalendarPage: React.FC = () => {
                             }`}
                             title={`${ev.title}`}
                           >
-                            <span>{ev.type === 'match' ? '⚽' : ev.type === 'practice' ? '🏃' : '🍻'}</span>
+                            <span className="flex items-center">{ev.type === 'match' ? '⚽' : ev.type === 'practice' ? <TrainingIcon size={11} className="text-emerald-800" /> : '🎉'}</span>
                             <span className="truncate">{ev.type === 'match' && ev.opponent ? (ev.opponent.initials || ev.opponent.name) : ev.title}</span>
                           </div>
                         ))}

@@ -19,12 +19,39 @@ import {
   Calendar,
   Sparkles,
   PartyPopper,
-  Trophy,
-  Dumbbell
+  Trophy
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
+
+export const TrainingIcon: React.FC<{ size?: number; className?: string }> = ({ size = 20, className = '' }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    {/* Pino de Treino / Cone */}
+    <path d="M2 21h9" />
+    <path d="M4.2 21L7.2 6.5a1 1 0 0 1 1.9 0l2.3 10.5" />
+    <path d="M5.5 15.5h4.6" />
+    <path d="M6.5 11h2.7" />
+    {/* Bola de Futebol */}
+    <circle cx="17" cy="14.5" r="5" />
+    <path d="M17 12.5l1.2 1-.4 1.4h-1.6l-.4-1.4z" fill="currentColor" fillOpacity="0.4" />
+    <path d="M17 9.5v3" />
+    <path d="M21.5 13.5l-3.3.5" />
+    <path d="M19.8 18.5l-2-1.6" />
+    <path d="M14.2 18.5l2-1.6" />
+    <path d="M12.5 13.5l3.3.5" />
+  </svg>
+)
 
 interface Event {
   id: string
@@ -498,7 +525,7 @@ const EventsPage: React.FC = () => {
           <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-150">
             <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
               <Plus size={20} className="text-csc-dark" />
-              <span>Novo Evento / Convívio</span>
+              <span>Novo Evento / Atividade</span>
             </h3>
             <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
               CSC Organizer
@@ -514,8 +541,8 @@ const EventsPage: React.FC = () => {
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'gathering', label: 'Evento / Convívio', icon: PartyPopper, color: 'text-purple-700 bg-purple-50 border-purple-300' },
-                  { id: 'practice', label: 'Treino', icon: Dumbbell, color: 'text-emerald-700 bg-emerald-50 border-emerald-300' },
+                  { id: 'gathering', label: 'Convívio', icon: PartyPopper, color: 'text-purple-700 bg-purple-50 border-purple-300' },
+                  { id: 'practice', label: 'Treino', icon: TrainingIcon, color: 'text-emerald-700 bg-emerald-50 border-emerald-300' },
                   { id: 'match', label: 'Jogo Oficial', icon: Trophy, color: 'text-amber-800 bg-amber-50 border-amber-300' },
                 ].map(t => {
                   const Icon = t.icon
@@ -995,12 +1022,18 @@ const EventsPage: React.FC = () => {
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                            <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 ${
                               event.type === 'match' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
                               event.type === 'practice' ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' :
                               'bg-purple-100 text-purple-900 border border-purple-300'
                             }`}>
-                              {event.type === 'match' ? '🏆 Jogo' : event.type === 'practice' ? '⚽ Treino' : '🎉 Convívio'}
+                              {event.type === 'match' ? (
+                                <><span>🏆</span><span>Jogo</span></>
+                              ) : event.type === 'practice' ? (
+                                <><TrainingIcon size={12} className="text-emerald-800" /><span>Treino</span></>
+                              ) : (
+                                <><span>🎉</span><span>Convívio</span></>
+                              )}
                             </span>
 
                             {event.is_friendly && (
