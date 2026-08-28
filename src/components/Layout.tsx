@@ -22,17 +22,21 @@ import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
 
 const Layout: React.FC = () => {
-  const { profile, actualRole, isSimulatingRole, setSimulatedRole, signOut } = useAuth()
+  const { profile, actualRole, isSimulatingRole, setSimulatedRole, assignedRoles, signOut } = useAuth()
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
 
   const isAdmin = profile?.role === 'admin'
   const isCoach = profile?.role === 'coach'
-  const isActualAdmin = actualRole === 'admin'
+  const canSwitchRoles = (assignedRoles?.length ?? 1) > 1
 
-  const handleSelectRole = (role: UserRole | null) => {
-    setSimulatedRole(role)
+  const handleSelectRole = (role: UserRole) => {
+    if (role === actualRole) {
+      setSimulatedRole(null)
+    } else {
+      setSimulatedRole(role)
+    }
     setIsRoleModalOpen(false)
   }
 
@@ -44,21 +48,23 @@ const Layout: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <Eye size={14} className="text-csc-dark" />
             <span>
-              Modo de Simulação: A visualizar como <strong className="uppercase underline">{profile?.role === 'coach' ? 'Treinador' : 'Jogador'}</strong>
+              A visualizar perfil: <strong className="uppercase underline">{profile?.role === 'coach' ? 'Treinador' : profile?.role === 'admin' ? 'Administrador' : 'Jogador'}</strong>
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsRoleModalOpen(true)}
-              className="bg-csc-dark text-white text-[10px] px-2 py-0.5 rounded font-bold hover:bg-black transition-colors"
-            >
-              Mudar Perfil
-            </button>
+            {canSwitchRoles && (
+              <button
+                onClick={() => setIsRoleModalOpen(true)}
+                className="bg-csc-dark text-white text-[10px] px-2 py-0.5 rounded font-bold hover:bg-black transition-colors"
+              >
+                Alternar Perfil
+              </button>
+            )}
             <button
               onClick={() => setSimulatedRole(null)}
               className="bg-white text-csc-dark text-[10px] px-2 py-0.5 rounded font-bold hover:bg-gray-100 transition-colors shadow-xs"
             >
-              Voltar a Admin
+              Voltar ao Principal
             </button>
           </div>
         </div>
@@ -71,17 +77,17 @@ const Layout: React.FC = () => {
         </Link>
         
         <div className="flex items-center gap-2">
-          {/* Pílula de Cargo (Clicável para Administradores) */}
+          {/* Pílula de Cargo (Clicável se tiver múltiplos perfis) */}
           <button
             type="button"
-            onClick={() => isActualAdmin && setIsRoleModalOpen(true)}
+            onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
             className={`text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full font-black text-white flex items-center gap-1 transition-all ${
               isAdmin ? 'bg-csc-gold text-csc-dark shadow-xs' : isCoach ? 'bg-blue-600' : 'bg-csc-dark'
-            } ${isActualAdmin ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
-            title={isActualAdmin ? "Clique para alternar entre perfis de visualização" : undefined}
+            } ${canSwitchRoles ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
+            title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
           >
             <span>{isAdmin ? 'Admin' : isCoach ? 'Treinador' : 'Jogador'}</span>
-            {isActualAdmin && <ChevronDown size={12} className="opacity-70" />}
+            {canSwitchRoles && <ChevronDown size={12} className="opacity-70" />}
           </button>
 
           {profile?.photo_url ? (
@@ -134,14 +140,14 @@ const Layout: React.FC = () => {
                     <p className="font-bold text-sm truncate text-white">{profile.name}</p>
                     <button
                       type="button"
-                      onClick={() => isActualAdmin && setIsRoleModalOpen(true)}
+                      onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
                       className={`text-[10px] px-2 py-0.5 rounded font-black flex items-center gap-1 mt-0.5 ${
                         isAdmin ? 'bg-csc-gold text-csc-dark' : isCoach ? 'bg-blue-500 text-white' : 'bg-csc-light text-white'
-                      } ${isActualAdmin ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
-                      title={isActualAdmin ? "Clique para alternar perfil" : undefined}
+                      } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
+                      title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
                     >
                       <span>{isAdmin ? 'Administrador' : isCoach ? 'Treinador' : 'Jogador'}</span>
-                      {isActualAdmin && <ChevronDown size={11} />}
+                      {canSwitchRoles && <ChevronDown size={11} />}
                     </button>
                   </div>
                 </div>
@@ -284,14 +290,14 @@ const Layout: React.FC = () => {
                 <p className="font-semibold truncate text-sm">{profile.name}</p>
                 <button
                   type="button"
-                  onClick={() => isActualAdmin && setIsRoleModalOpen(true)}
+                  onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
                   className={`text-[10px] px-2 py-0.5 rounded font-black flex items-center gap-1 mt-0.5 ${
                     isAdmin ? 'bg-csc-gold text-csc-dark' : isCoach ? 'bg-blue-500 text-white' : 'bg-csc-light text-white'
-                  } ${isActualAdmin ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
-                  title={isActualAdmin ? "Clique para alternar perfil de visualização" : undefined}
+                  } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
+                  title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
                 >
                   <span>{isAdmin ? 'Administrador' : isCoach ? 'Treinador' : 'Jogador'}</span>
-                  {isActualAdmin && <ChevronDown size={11} />}
+                  {canSwitchRoles && <ChevronDown size={11} />}
                 </button>
               </div>
             </div>
@@ -547,98 +553,104 @@ const Layout: React.FC = () => {
                 <Sparkles size={22} className="text-csc-dark" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-gray-900">Alternar Modo de Visualização</h3>
-                <p className="text-xs text-gray-500 font-medium">Experimenta a app na perspetiva de qualquer perfil</p>
+                <h3 className="text-lg font-black text-gray-900">Alternar Perfil de Acesso</h3>
+                <p className="text-xs text-gray-500 font-medium">Selecione o perfil com o qual deseja utilizar a aplicação</p>
               </div>
             </div>
 
             <div className="mt-5 space-y-2.5">
               {/* 1. Administrador */}
-              <button
-                type="button"
-                onClick={() => handleSelectRole(null)}
-                className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                  actualRole === 'admin' && !isSimulatingRole
-                    ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50 shadow-sm'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-csc-gold text-csc-dark font-black flex items-center justify-center text-lg shadow-xs shrink-0">
-                    👑
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-gray-900">Administrador</p>
-                      {actualRole === 'admin' && !isSimulatingRole && (
-                        <span className="text-[10px] bg-csc-gold text-csc-dark font-black px-1.5 py-0.5 rounded">
-                          Ativo
-                        </span>
-                      )}
+              {assignedRoles?.includes('admin') && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectRole('admin')}
+                  className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                    profile?.role === 'admin'
+                      ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50 shadow-sm'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-csc-gold text-csc-dark font-black flex items-center justify-center text-lg shadow-xs shrink-0">
+                      🛡️
                     </div>
-                    <p className="text-xs text-gray-500">Acesso total (Backoffice, Finanças, Convocatórias e Plantel)</p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-gray-900">Administrador / Direção</p>
+                        {profile?.role === 'admin' && (
+                          <span className="text-[10px] bg-csc-gold text-csc-dark font-black px-1.5 py-0.5 rounded">
+                            Ativo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">Acesso total, finanças e administração app</p>
+                    </div>
                   </div>
-                </div>
-                {actualRole === 'admin' && !isSimulatingRole && <Check size={18} className="text-csc-dark shrink-0 ml-2" />}
-              </button>
+                  {profile?.role === 'admin' && <Check size={18} className="text-csc-dark shrink-0 ml-2" />}
+                </button>
+              )}
 
               {/* 2. Treinador */}
-              <button
-                type="button"
-                onClick={() => handleSelectRole('coach')}
-                className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                  profile?.role === 'coach' && isSimulatingRole
-                    ? 'border-blue-500 bg-blue-50/70 ring-2 ring-blue-400/50 shadow-sm'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center text-lg shadow-xs shrink-0">
-                    📋
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-gray-900">Treinador</p>
-                      {profile?.role === 'coach' && isSimulatingRole && (
-                        <span className="text-[10px] bg-blue-600 text-white font-black px-1.5 py-0.5 rounded">
-                          A simular
-                        </span>
-                      )}
+              {assignedRoles?.includes('coach') && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectRole('coach')}
+                  className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                    profile?.role === 'coach'
+                      ? 'border-blue-500 bg-blue-50/70 ring-2 ring-blue-400/50 shadow-sm'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center text-lg shadow-xs shrink-0">
+                      📋
                     </div>
-                    <p className="text-xs text-gray-500">Gestão desportiva, criação de eventos, convocatórias e plantel</p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-gray-900">Treinador</p>
+                        {profile?.role === 'coach' && (
+                          <span className="text-[10px] bg-blue-600 text-white font-black px-1.5 py-0.5 rounded">
+                            Ativo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">Equipa técnica, criação de treinos e jogos</p>
+                    </div>
                   </div>
-                </div>
-                {profile?.role === 'coach' && isSimulatingRole && <Check size={18} className="text-blue-600 shrink-0 ml-2" />}
-              </button>
+                  {profile?.role === 'coach' && <Check size={18} className="text-blue-600 shrink-0 ml-2" />}
+                </button>
+              )}
 
               {/* 3. Jogador */}
-              <button
-                type="button"
-                onClick={() => handleSelectRole('player')}
-                className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                  profile?.role === 'player' && isSimulatingRole
-                    ? 'border-csc-dark bg-csc-dark/10 ring-2 ring-csc-dark/30 shadow-sm'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-csc-dark text-white font-black flex items-center justify-center text-lg shadow-xs shrink-0">
-                    ⚽
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-gray-900">Jogador (Atleta)</p>
-                      {profile?.role === 'player' && isSimulatingRole && (
-                        <span className="text-[10px] bg-csc-dark text-white font-black px-1.5 py-0.5 rounded">
-                          A simular
-                        </span>
-                      )}
+              {assignedRoles?.includes('player') && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectRole('player')}
+                  className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                    profile?.role === 'player'
+                      ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-400/50 shadow-sm'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white font-black flex items-center justify-center text-lg shadow-xs shrink-0">
+                      ⚽
                     </div>
-                    <p className="text-xs text-gray-500">Agenda, confirmação de presenças, estatísticas e colegas</p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-gray-900">Jogador (Atleta)</p>
+                        {profile?.role === 'player' && (
+                          <span className="text-[10px] bg-emerald-700 text-white font-black px-1.5 py-0.5 rounded">
+                            Ativo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">Atleta nas convocatórias e estatísticas</p>
+                    </div>
                   </div>
-                </div>
-                {profile?.role === 'player' && isSimulatingRole && <Check size={18} className="text-csc-dark shrink-0 ml-2" />}
-              </button>
+                  {profile?.role === 'player' && <Check size={18} className="text-emerald-700 shrink-0 ml-2" />}
+                </button>
+              )}
             </div>
 
             <div className="mt-5 pt-3 border-t border-gray-100 flex justify-end">

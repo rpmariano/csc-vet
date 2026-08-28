@@ -21,7 +21,7 @@ import {
   Check
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, extractRolesFromProfile, encodeRolesToNotes, cleanNotesFromRolesTag } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 
@@ -156,10 +156,7 @@ const TeamManagementPage: React.FC = () => {
     setFormPhone(p.phone || '')
     
     // Iniciar papéis atribuídos
-    const roles: UserRole[] = []
-    if (p.role === 'admin') roles.push('admin')
-    if (p.role === 'coach' || p.position?.includes('Treinador')) roles.push('coach')
-    if (p.role === 'player' || roles.length === 0) roles.push('player')
+    const roles = extractRolesFromProfile(p)
     setFormRoles(roles)
 
     setFormStatus(p.status || 'active')
@@ -171,7 +168,7 @@ const TeamManagementPage: React.FC = () => {
     setFormMemberNumber(p.member_number || '')
     setFormEmergencyName(p.emergency_contact_name || '')
     setFormEmergencyPhone(p.emergency_contact_phone || '')
-    setFormMedicalNotes(p.medical_notes || '')
+    setFormMedicalNotes(cleanNotesFromRolesTag(p.medical_notes) || '')
     setPhotoUrl(p.photo_url || null)
     setIdDocUrl(p.id_document_url || null)
     setInsuranceDocUrl(p.insurance_doc_url || null)
@@ -244,6 +241,7 @@ const TeamManagementPage: React.FC = () => {
       : 'player'
 
     const positionStr = formPositions.length > 0 ? formPositions.join(', ') : 'Médio Centro'
+    const medicalNotesEncoded = encodeRolesToNotes(formMedicalNotes, formRoles)
 
     const payload = {
       name: formName,
@@ -260,7 +258,7 @@ const TeamManagementPage: React.FC = () => {
       member_number: formMemberNumber || null,
       emergency_contact_name: formEmergencyName || null,
       emergency_contact_phone: formEmergencyPhone || null,
-      medical_notes: formMedicalNotes || null,
+      medical_notes: medicalNotesEncoded,
       photo_url: photoUrl || null,
       id_document_url: idDocUrl || null,
       insurance_doc_url: insuranceDocUrl || null,
@@ -607,19 +605,20 @@ const TeamManagementPage: React.FC = () => {
                       
                       {/* Role Badges */}
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {person.role === 'admin' && (
-                          <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-csc-gold text-csc-dark border border-amber-300">
-                            🛡️ Admin
+                        {extractRolesFromProfile(person).map((r) => (
+                          <span
+                            key={r}
+                            className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${
+                              r === 'admin'
+                                ? 'bg-csc-gold text-csc-dark border-amber-300'
+                                : r === 'coach'
+                                ? 'bg-blue-500 text-white border-blue-600'
+                                : 'bg-emerald-700 text-white border-emerald-800'
+                            }`}
+                          >
+                            {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
                           </span>
-                        )}
-                        {(person.role === 'coach' || person.position?.includes('Treinador')) && (
-                          <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-blue-500 text-white">
-                            📋 Treinador
-                          </span>
-                        )}
-                        <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-700 text-white">
-                          ⚽ Jogador
-                        </span>
+                        ))}
                       </div>
 
                       <p className="text-xs text-gray-500 mt-1">
@@ -1140,19 +1139,20 @@ const TeamManagementPage: React.FC = () => {
 
                 {/* Role Badges */}
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedProfile.role === 'admin' && (
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-csc-gold text-csc-dark border border-amber-300">
-                      🛡️ Administrador / Direção
+                  {extractRolesFromProfile(selectedProfile).map((r) => (
+                    <span
+                      key={r}
+                      className={`text-[10px] font-black px-2 py-0.5 rounded border ${
+                        r === 'admin'
+                          ? 'bg-csc-gold text-csc-dark border-amber-300'
+                          : r === 'coach'
+                          ? 'bg-blue-500 text-white border-blue-600'
+                          : 'bg-emerald-700 text-white border-emerald-800'
+                      }`}
+                    >
+                      {r === 'admin' ? '🛡️ Administrador / Direção' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
                     </span>
-                  )}
-                  {(selectedProfile.role === 'coach' || selectedProfile.position?.includes('Treinador')) && (
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-500 text-white">
-                      📋 Treinador
-                    </span>
-                  )}
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-700 text-white">
-                    ⚽ Jogador
-                  </span>
+                  ))}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
@@ -1240,10 +1240,10 @@ const TeamManagementPage: React.FC = () => {
                     {selectedProfile.emergency_contact_phone ? ` (${selectedProfile.emergency_contact_phone})` : ''}
                   </span>
                 </div>
-                {selectedProfile.medical_notes && (
+                {cleanNotesFromRolesTag(selectedProfile.medical_notes) && (
                   <div className="pt-2 border-t border-red-200/60">
                     <span className="text-gray-600 font-semibold block mb-0.5">Notas Médicas:</span>
-                    <p className="text-gray-800 font-medium">{selectedProfile.medical_notes}</p>
+                    <p className="text-gray-800 font-medium">{cleanNotesFromRolesTag(selectedProfile.medical_notes)}</p>
                   </div>
                 )}
               </div>

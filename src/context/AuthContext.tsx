@@ -13,6 +13,7 @@ export interface Profile {
   phone?: string | null
   photo_url?: string | null
   role: UserRole
+  roles?: UserRole[]
   status: ProfileStatus
   jersey_number?: number | null
   birth_date?: string | null
@@ -29,9 +30,42 @@ export interface Profile {
   created_at?: string
 }
 
+export const encodeRolesToNotes = (notes: string | null | undefined, roles: UserRole[]): string | null => {
+  const clean = (notes || '').replace(/<!--roles:[^>]+-->/g, '').trim()
+  const tag = `<!--roles:${roles.join(',')}-->`
+  return clean ? `${clean} ${tag}` : tag
+}
+
+export const cleanNotesFromRolesTag = (notes: string | null | undefined): string | null => {
+  if (!notes) return null
+  const cleaned = notes.replace(/<!--roles:[^>]+-->/g, '').trim()
+  return cleaned || null
+}
+
+export const extractRolesFromProfile = (profile: Profile | null | undefined): UserRole[] => {
+  if (!profile) return ['player']
+  
+  // 1. Check if encoded in medical_notes or position
+  const source = `${profile.medical_notes || ''} ${profile.position || ''}`
+  const match = source.match(/<!--roles:([^>]+)-->/)
+  if (match && match[1]) {
+    const parsed = match[1]
+      .split(',')
+      .map(r => r.trim() as UserRole)
+      .filter(r => ['player', 'coach', 'admin'].includes(r))
+    if (parsed.length > 0) return parsed
+  }
+
+  // 2. Fallback to base role
+  if (profile.role === 'admin') return ['admin', 'coach', 'player']
+  if (profile.role === 'coach') return ['coach', 'player']
+  return ['player']
+}
+
 interface AuthContextType {
   user: User | null
   profile: Profile | null
+  assignedRoles: UserRole[]
   actualRole: UserRole | null
   isSimulatingRole: boolean
   setSimulatedRole: (role: UserRole | null) => void
@@ -150,10 +184,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const setSimulatedRole = (role: UserRole | null) => {
-    if (actualProfile?.role !== 'admin') return
+  const assignedRoles = extractRolesFromProfile(actualProfile)
 
-    if (role && role !== 'admin') {
+  const setSimulatedRole = (role: UserRole | null) => {
+    if (!actualProfile) return
+    if (role && !assignedRoles.includes(role)) return
+
+    if (role && role !== actualProfile.role) {
       localStorage.setItem('csc_simulated_role', role)
       setSimulatedRoleState(role)
     } else {
@@ -173,12 +210,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const actualRole = actualProfile?.role ?? null
-  const isSimulatingRole = actualRole === 'admin' && simulatedRole !== null && simulatedRole !== 'admin'
+  const isSimulatingRole = Boolean(simulatedRole && simulatedRole !== actualRole && assignedRoles.includes(simulatedRole))
 
   const effectiveProfile: Profile | null = actualProfile
     ? {
         ...actualProfile,
-        role: isSimulatingRole && simulatedRole ? simulatedRole : actualProfile.role
+        role: isSimulatingRole && simulatedRole ? simulatedRole : actualProfile.role,
+        roles: assignedRoles
       }
     : null
 
@@ -186,6 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider value={{ 
       user, 
       profile: effectiveProfile, 
+      assignedRoles,
       actualRole, 
       isSimulatingRole, 
       setSimulatedRole, 

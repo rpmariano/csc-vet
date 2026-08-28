@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 
 const SettingsPage: React.FC = () => {
-  const { profile } = useAuth()
+  const { profile, assignedRoles } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -63,19 +63,20 @@ const SettingsPage: React.FC = () => {
             </div>
             {profile && (
               <div className="flex items-center gap-1">
-                {profile.role === 'admin' && (
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded bg-csc-gold text-csc-dark">
-                    🛡️ Admin
+                {(assignedRoles || [profile.role]).map((r) => (
+                  <span
+                    key={r}
+                    className={`text-[10px] font-black px-2 py-0.5 rounded border ${
+                      r === 'admin'
+                        ? 'bg-csc-gold text-csc-dark border-amber-300'
+                        : r === 'coach'
+                        ? 'bg-blue-500 text-white border-blue-600'
+                        : 'bg-emerald-700 text-white border-emerald-800'
+                    }`}
+                  >
+                    {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
                   </span>
-                )}
-                {(profile.role === 'coach' || profile.position?.includes('Treinador')) && (
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-500 text-white">
-                    📋 Treinador
-                  </span>
-                )}
-                <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-700 text-white">
-                  ⚽ Jogador
-                </span>
+                ))}
               </div>
             )}
           </div>
