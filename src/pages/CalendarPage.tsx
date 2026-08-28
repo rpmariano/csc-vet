@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { MapPin, Clock, Plus, X, Award } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 
 interface Event {
@@ -12,10 +13,16 @@ interface Event {
   description: string
   is_friendly?: boolean
   tournament_name?: string
+  opponent?: {
+    name: string
+    initials: string
+    logo_url: string
+  }
 }
 
 const CalendarPage: React.FC = () => {
   const { profile } = useAuth()
+  const { clubSettings } = useClub()
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -35,7 +42,7 @@ const CalendarPage: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select('*, opponent:opponents(name, initials, logo_url)')
         .order('date_time', { ascending: true })
 
       if (error) throw error
@@ -160,7 +167,7 @@ const CalendarPage: React.FC = () => {
               className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-between"
             >
               <div>
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start mb-3">
                   <span className={`
                     text-xs font-semibold px-2.5 py-0.5 rounded uppercase tracking-wider
                     ${event.type === 'match' ? 'bg-csc-light/20 text-csc-dark' : event.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}
@@ -168,7 +175,28 @@ const CalendarPage: React.FC = () => {
                     {event.type === 'match' ? 'Jogo' : event.type === 'practice' ? 'Treino' : 'Convívio'}
                   </span>
                 </div>
-                <h3 className="text-lg font-bold text-gray-800 mt-3">{event.title}</h3>
+                
+                {event.type === 'match' && event.opponent ? (
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="flex flex-col items-center gap-1 w-12">
+                      {clubSettings?.logo_url ? (
+                        <img src={clubSettings.logo_url} alt="Nós" className="w-10 h-10 object-contain" />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs font-bold">{clubSettings?.initials || 'CSC'}</div>
+                      )}
+                    </div>
+                    <span className="text-gray-400 font-bold text-xs">VS</span>
+                    <div className="flex flex-col items-center gap-1 w-12">
+                      {event.opponent.logo_url ? (
+                        <img src={event.opponent.logo_url} alt="Adv" className="w-10 h-10 object-contain" />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs font-bold">{event.opponent.initials || 'ADV'}</div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+                <h3 className="text-lg font-bold text-gray-800">{event.title}</h3>
                 <p className="text-gray-550 text-xs mt-1 line-clamp-2">{event.description}</p>
               </div>
 

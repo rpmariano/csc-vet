@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Bell, Calendar, DollarSign, MapPin, Clock, Info } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 
 interface Event {
@@ -12,6 +13,11 @@ interface Event {
   description: string
   is_friendly?: boolean
   tournament_name?: string
+  opponent?: {
+    name: string
+    initials: string
+    logo_url: string
+  }
 }
 
 interface Announcement {
@@ -37,6 +43,7 @@ interface Due {
 
 const Home: React.FC = () => {
   const { profile } = useAuth()
+  const { clubSettings } = useClub()
   const [nextMatch, setNextMatch] = useState<Event | null>(null)
   const [nextPractice, setNextPractice] = useState<Event | null>(null)
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
@@ -54,7 +61,7 @@ const Home: React.FC = () => {
         // 1. Fetch next match
         const { data: matches } = await supabase
           .from('events')
-          .select('*')
+          .select('*, opponent:opponents(name, initials, logo_url)')
           .eq('type', 'match')
           .gte('date_time', nowStr)
           .order('date_time', { ascending: true })
@@ -190,14 +197,36 @@ const Home: React.FC = () => {
       {/* 2. SECÇÃO: Próximo Jogo */}
       {nextMatch && (
         <div className="bg-white rounded-2xl border-2 border-gray-800 p-5 shadow-sm">
-          <div className="flex justify-between items-center mb-3">
+          <div className="flex justify-between items-center mb-5">
             <h2 className="text-xl font-black text-gray-900">Próximo jogo</h2>
             <span className="text-xs font-bold text-csc-dark bg-gray-50 px-2.5 py-0.5 rounded-full uppercase">
               {nextMatch.is_friendly ? 'Amigável' : nextMatch.tournament_name || 'Competição'}
             </span>
           </div>
           
-          <h3 className="text-2xl font-extrabold text-gray-800 mb-4">{nextMatch.title}</h3>
+          {nextMatch.opponent ? (
+            <div className="flex items-center justify-center gap-6 mb-6">
+              <div className="flex flex-col items-center gap-2 w-20">
+                {clubSettings?.logo_url ? (
+                  <img src={clubSettings.logo_url} alt="Nós" className="w-16 h-16 object-contain" />
+                ) : (
+                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center text-lg font-bold">{clubSettings?.initials || 'CSC'}</div>
+                )}
+                <span className="text-xs font-bold text-gray-800 text-center">{clubSettings?.initials || 'Nós'}</span>
+              </div>
+              <span className="text-gray-400 font-black text-lg">VS</span>
+              <div className="flex flex-col items-center gap-2 w-20">
+                {nextMatch.opponent.logo_url ? (
+                  <img src={nextMatch.opponent.logo_url} alt="Adv" className="w-16 h-16 object-contain" />
+                ) : (
+                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center text-lg font-bold">{nextMatch.opponent.initials || 'ADV'}</div>
+                )}
+                <span className="text-xs font-bold text-gray-800 text-center line-clamp-1">{nextMatch.opponent.initials || nextMatch.opponent.name}</span>
+              </div>
+            </div>
+          ) : (
+            <h3 className="text-2xl font-extrabold text-gray-800 mb-4">{nextMatch.title}</h3>
+          )}
           
           <div className="space-y-2 text-sm text-gray-700">
             <div className="flex items-center gap-2">

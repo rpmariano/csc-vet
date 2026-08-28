@@ -9,15 +9,12 @@ import {
   LogOut, 
   FileText, 
   Landmark,
-  PlusCircle,
-  Shield
+  PlusCircle
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { useClub } from '../context/ClubContext'
 
 const Layout: React.FC = () => {
   const { profile, signOut } = useAuth()
-  const { clubSettings } = useClub()
   const location = useLocation()
 
   const isRole = (roles: string[]) => {
