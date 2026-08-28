@@ -18,7 +18,10 @@ import {
   Link2,
   UserCheck,
   Sparkles,
-  Check
+  Check,
+  LayoutGrid,
+  List,
+  ChevronRight
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth, extractRolesFromProfile, encodeRolesToNotes, cleanNotesFromRolesTag, formatDisplayName } from '../context/AuthContext'
@@ -45,10 +48,13 @@ const TeamManagementPage: React.FC = () => {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Filters & Search
+  // Filters, Search & View Mode
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | ProfileStatus>('all')
   const [positionFilter, setPositionFilter] = useState('all')
+  const [viewMode, setViewMode] = useState<'list' | 'cards'>(() => {
+    return (localStorage.getItem('csc_team_view_mode') as 'list' | 'cards') || 'list'
+  })
 
   // Modals
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
@@ -484,7 +490,7 @@ const TeamManagementPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center flex-wrap">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -504,11 +510,48 @@ const TeamManagementPage: React.FC = () => {
               <option value="all">Todas as Posições</option>
               {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
             </select>
+
+            {/* Alternador Duplo de Vista (Hipótese 1: Lista vs Hipótese 3: Cartas) */}
+            <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0 ml-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('list')
+                  localStorage.setItem('csc_team_view_mode', 'list')
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-white text-csc-dark shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+                title="Vista em Lista Compacta (Estilo Sofascore)"
+              >
+                <List size={15} />
+                <span className="hidden sm:inline">Lista</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('cards')
+                  localStorage.setItem('csc_team_view_mode', 'cards')
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'cards'
+                    ? 'bg-white text-csc-dark shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+                title="Vista em Cartas de Futebol (Estilo FUT)"
+              >
+                <LayoutGrid size={15} />
+                <span className="hidden sm:inline">Cartas</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Profiles Grid */}
+      {/* Profiles View */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
@@ -519,8 +562,9 @@ const TeamManagementPage: React.FC = () => {
           <p className="font-bold text-gray-700 text-lg">Nenhum atleta encontrado</p>
           <p className="text-xs text-gray-500 mt-1">Ajuste os filtros de pesquisa ou adicione um novo membro.</p>
         </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      ) : viewMode === 'list' ? (
+        /* VISTA 1: LISTA COMPACTA SOFASCORE / TRANSFERMARKT */
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs divide-y divide-gray-100 overflow-hidden">
           {filteredProfiles.map((person) => {
             const age = calculateAge(person.birth_date)
 
@@ -528,78 +572,47 @@ const TeamManagementPage: React.FC = () => {
               <div
                 key={person.id}
                 onClick={() => openDetailModal(person)}
-                className={`bg-white rounded-xl shadow-2xs border transition-all duration-150 hover:shadow-md hover:border-csc-dark/40 cursor-pointer flex flex-col justify-between overflow-hidden group ${
-                  person.status === 'injured' ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-200'
-                }`}
+                className="p-3 sm:p-4 hover:bg-gray-50/80 transition-colors flex items-center justify-between gap-3 cursor-pointer group"
               >
-                <div className="p-2.5 sm:p-3.5 space-y-2 sm:space-y-2.5">
-                  {/* Top Bar: Number, Positions Badge, Status Badge */}
-                  <div className="flex justify-between items-center gap-1">
-                    <div className="flex items-center gap-1 min-w-0">
-                      {person.jersey_number ? (
-                        <span className="w-5 h-5 sm:w-6 sm:h-6 rounded bg-csc-dark text-white flex items-center justify-center font-black text-[10px] sm:text-xs shrink-0 shadow-2xs">
-                          {person.jersey_number}
-                        </span>
-                      ) : (
-                        <span className="w-5 h-5 sm:w-6 sm:h-6 rounded bg-gray-100 text-gray-400 flex items-center justify-center font-bold text-[9px] sm:text-[10px] shrink-0">
-                          -
-                        </span>
-                      )}
-                      <div className="flex flex-wrap gap-1 items-center truncate">
-                        {parsePositions(person.position).slice(0, 1).map((pos, idx) => (
-                          <span 
-                            key={idx}
-                            className="text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.5 rounded border bg-amber-50 text-amber-900 border-amber-200 truncate max-w-[65px] sm:max-w-none"
-                          >
-                            {pos}
-                          </span>
-                        ))}
-                        {parsePositions(person.position).length > 1 && (
-                          <span className="text-[8px] sm:text-[9px] text-gray-400 font-bold">
-                            +{parsePositions(person.position).length - 1}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <span className={`text-[8px] sm:text-[9px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-0.5 sm:gap-1 shrink-0 ${
-                      person.status === 'active' ? 'bg-green-100 text-green-800' :
-                      person.status === 'injured' ? 'bg-red-100 text-red-800 animate-pulse' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      {person.status === 'active' ? <CheckCircle2 size={9}/> :
-                       person.status === 'injured' ? <HeartPulse size={9}/> :
-                       <XCircle size={9}/>}
-                      <span className="hidden xs:inline">{person.status === 'active' ? 'Ativo' : person.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
-                      <span className="xs:hidden">{person.status === 'active' ? 'OK' : person.status === 'injured' ? 'Les.' : 'Inat.'}</span>
+                {/* Left: Number + Photo + Name + Positions + Roles */}
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Jersey Number */}
+                  {person.jersey_number ? (
+                    <span className="w-8 h-8 rounded-lg bg-csc-dark text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                      {person.jersey_number}
                     </span>
-                  </div>
+                  ) : (
+                    <span className="w-8 h-8 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center font-bold text-xs shrink-0">
+                      -
+                    </span>
+                  )}
 
-                  {/* Player Main Info: Photo + Name with embedded Nickname + Role Badges */}
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    {person.photo_url ? (
-                      <img
-                        src={person.photo_url}
-                        alt={person.name}
-                        className="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover border border-csc-dark/20 shadow-2xs shrink-0"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-csc-dark to-csc-light/60 text-white flex items-center justify-center font-black text-xs sm:text-base shadow-2xs shrink-0">
-                        {person.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-extrabold text-gray-900 text-xs sm:text-sm leading-snug truncate group-hover:text-csc-dark transition-colors">
+                  {/* Photo */}
+                  {person.photo_url ? (
+                    <img
+                      src={person.photo_url}
+                      alt={person.name}
+                      className="w-10 h-10 rounded-full object-cover border border-csc-dark/20 shadow-2xs shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-csc-dark to-csc-light/60 text-white flex items-center justify-center font-black text-sm shadow-2xs shrink-0">
+                      {person.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+
+                  {/* Name, Nickname & Positions */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-extrabold text-gray-900 text-sm truncate group-hover:text-csc-dark transition-colors">
                         {formatDisplayName(person.name, person.nickname)}
                       </h3>
-                      
+
                       {/* Role Badges */}
-                      <div className="flex flex-wrap gap-0.5 sm:gap-1 mt-0.5 sm:mt-1">
+                      <div className="flex items-center gap-1">
                         {extractRolesFromProfile(person).map((r) => (
                           <span
                             key={r}
-                            className={`text-[7.5px] sm:text-[8.5px] font-black px-1 sm:px-1.5 py-0.2 rounded border ${
+                            className={`text-[8.5px] font-black px-1.5 py-0.2 rounded border ${
                               r === 'admin'
                                 ? 'bg-csc-gold text-csc-dark border-amber-300'
                                 : r === 'coach'
@@ -607,56 +620,200 @@ const TeamManagementPage: React.FC = () => {
                                 : 'bg-emerald-700 text-white border-emerald-800'
                             }`}
                           >
-                            {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Trein.' : '⚽ Jog.'}
+                            {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
                           </span>
                         ))}
                       </div>
+                    </div>
 
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 flex-wrap">
+                      <span className="font-bold text-amber-900 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 text-[10px]">
+                        {parsePositions(person.position).join(', ')}
+                      </span>
                       {person.member_number && (
-                        <p className="text-[8.5px] sm:text-[9.5px] text-gray-400 font-semibold mt-0.5 truncate">
-                          Sócio nº {person.member_number} {age ? `• ${age}a` : ''}
-                        </p>
+                        <span className="text-[10px] text-gray-400">Sócio nº {person.member_number}</span>
                       )}
+                      {age && <span className="text-[10px] text-gray-400">• {age} anos</span>}
                     </div>
                   </div>
-
-                  {/* Informação de Contacto (Estática, não acionável) */}
-                  {(person.phone || person.email) && (
-                    <div className="pt-1.5 sm:pt-2 border-t border-gray-100 space-y-0.5 sm:space-y-1 text-[10px] sm:text-[11px] text-gray-500">
-                      {person.phone && (
-                        <div className="flex items-center gap-1 sm:gap-1.5 truncate">
-                          <Phone size={10} className="text-gray-400 shrink-0" />
-                          <span className="truncate">{person.phone}</span>
-                        </div>
-                      )}
-                      {person.email && (
-                        <div className="flex items-center gap-1 sm:gap-1.5 truncate">
-                          <Mail size={10} className="text-gray-400 shrink-0" />
-                          <span className="truncate">{person.email}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
 
-                {/* Card Footer */}
-                <div className="bg-gray-50/90 px-2.5 py-1.5 sm:px-3 sm:py-2 border-t border-gray-100 flex items-center justify-between text-xs">
-                  <span className="text-[10px] sm:text-[11px] font-bold text-gray-400 group-hover:text-csc-dark transition-colors">
-                    Ficha →
+                {/* Right: Status Badge & Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 ${
+                    person.status === 'active' ? 'bg-green-100 text-green-800' :
+                    person.status === 'injured' ? 'bg-red-100 text-red-800 animate-pulse' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {person.status === 'active' ? <CheckCircle2 size={11}/> :
+                     person.status === 'injured' ? <HeartPulse size={11}/> :
+                     <XCircle size={11}/>}
+                    <span className="hidden sm:inline">{person.status === 'active' ? 'Ativo' : person.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
                   </span>
 
                   {isCoachOrAdmin && (
-                    <div className="flex items-center gap-0.5 sm:gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
                           openAssociateModal(person)
                         }}
-                        className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-50 transition-colors"
-                        title="Associar a Utilizador Registado"
+                        className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
+                        title="Associar a Utilizador"
                       >
-                        <Link2 size={13} />
+                        <Link2 size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openEditModal(person)
+                        }}
+                        className="p-1.5 text-gray-500 hover:text-csc-dark rounded-lg hover:bg-gray-100 transition-colors"
+                        title="Editar Ficha"
+                      >
+                        <Edit2 size={15} />
+                      </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteMember(person.id, person.name)
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors"
+                          title="Eliminar Membro"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-csc-dark group-hover:translate-x-0.5 transition-all" />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        /* VISTA 3: CARTAS VERTICAIS ESTILO FUT / TRADING CARDS */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredProfiles.map((person) => {
+            const age = calculateAge(person.birth_date)
+
+            return (
+              <div
+                key={person.id}
+                onClick={() => openDetailModal(person)}
+                className={`bg-white rounded-2xl shadow-sm border-2 transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer flex flex-col justify-between overflow-hidden group relative ${
+                  person.status === 'injured'
+                    ? 'border-red-300 ring-2 ring-red-100'
+                    : 'border-amber-200 hover:border-csc-gold'
+                }`}
+              >
+                {/* Top Card Gradient Background Accent */}
+                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-csc-dark/10 to-transparent pointer-events-none" />
+
+                <div className="p-4 relative z-10 flex flex-col items-center text-center space-y-3">
+                  {/* Top Bar: Number left, Status right */}
+                  <div className="w-full flex justify-between items-center">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xl font-black text-csc-dark tracking-tighter">
+                        {person.jersey_number ? `#${person.jersey_number}` : '-'}
+                      </span>
+                    </div>
+
+                    <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 ${
+                      person.status === 'active' ? 'bg-green-100 text-green-800' :
+                      person.status === 'injured' ? 'bg-red-100 text-red-800 animate-pulse' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      {person.status === 'active' ? <CheckCircle2 size={10}/> :
+                       person.status === 'injured' ? <HeartPulse size={10}/> :
+                       <XCircle size={10}/>}
+                      {person.status === 'active' ? 'Ativo' :
+                       person.status === 'injured' ? 'Lesionado' : 'Inativo'}
+                    </span>
+                  </div>
+
+                  {/* Centered Large Photo */}
+                  <div className="relative my-1">
+                    {person.photo_url ? (
+                      <img
+                        src={person.photo_url}
+                        alt={person.name}
+                        className="w-20 h-20 rounded-2xl object-cover border-2 border-csc-gold shadow-md group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-csc-dark to-csc-light text-white flex items-center justify-center font-black text-2xl shadow-md border-2 border-csc-gold group-hover:scale-105 transition-transform">
+                        {person.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Name with embedded nickname */}
+                  <div className="w-full">
+                    <h3 className="font-black text-gray-900 text-base leading-tight truncate group-hover:text-csc-dark transition-colors">
+                      {formatDisplayName(person.name, person.nickname)}
+                    </h3>
+
+                    {/* Positions Ribbon */}
+                    <div className="flex flex-wrap justify-center gap-1 mt-1.5">
+                      {parsePositions(person.position).map((pos, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-extrabold px-2 py-0.5 rounded-md shadow-2xs"
+                        >
+                          {pos}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Role Badges */}
+                    <div className="flex flex-wrap justify-center gap-1 mt-2">
+                      {extractRolesFromProfile(person).map((r) => (
+                        <span
+                          key={r}
+                          className={`text-[9px] font-black px-2 py-0.5 rounded border ${
+                            r === 'admin'
+                              ? 'bg-csc-gold text-csc-dark border-amber-300'
+                              : r === 'coach'
+                              ? 'bg-blue-500 text-white border-blue-600'
+                              : 'bg-emerald-700 text-white border-emerald-800'
+                          }`}
+                        >
+                          {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Member & Age Info */}
+                    <p className="text-[10px] text-gray-400 font-semibold mt-1">
+                      {person.member_number ? `Sócio nº ${person.member_number}` : ''} {age ? `• ${age} anos` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Card Footer */}
+                <div className="bg-gray-50 px-3.5 py-2.5 border-t border-gray-150 flex items-center justify-between text-xs">
+                  <span className="text-xs font-black text-csc-dark group-hover:underline flex items-center gap-1">
+                    Ver Ficha Completa
+                  </span>
+
+                  {isCoachOrAdmin && (
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openAssociateModal(person)
+                        }}
+                        className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
+                        title="Associar a Utilizador"
+                      >
+                        <Link2 size={14} />
                       </button>
 
                       <button
@@ -665,10 +822,10 @@ const TeamManagementPage: React.FC = () => {
                           e.stopPropagation()
                           openEditModal(person)
                         }}
-                        className="p-1 text-gray-500 hover:text-csc-dark rounded hover:bg-white transition-colors"
+                        className="p-1.5 text-gray-500 hover:text-csc-dark rounded-lg hover:bg-white transition-colors"
                         title="Editar Ficha"
                       >
-                        <Edit2 size={13} />
+                        <Edit2 size={14} />
                       </button>
 
                       {isAdmin && (
@@ -678,10 +835,10 @@ const TeamManagementPage: React.FC = () => {
                             e.stopPropagation()
                             handleDeleteMember(person.id, person.name)
                           }}
-                          className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-white transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-white transition-colors"
                           title="Eliminar Membro"
                         >
-                          <Trash2 size={13} />
+                          <Trash2 size={14} />
                         </button>
                       )}
                     </div>
