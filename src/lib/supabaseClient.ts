@@ -7,4 +7,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase URL ou chave anónima não definidas. Por favor, configure o seu ficheiro .env')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Inicialização segura para evitar crachar o JS bundle caso as chaves estejam em falta temporariamente na compilação
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key'
+)
