@@ -315,3 +315,39 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+--------------------------------------------------------------------------------
+-- TABELA DE CONFIGURAÇÕES DO CLUBE (Club Settings)
+--------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.club_settings (
+    id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1), -- Single row table
+    name TEXT NOT NULL DEFAULT 'Nome do Clube',
+    initials TEXT NOT NULL DEFAULT 'SIGLA',
+    logo_url TEXT,
+    primary_color TEXT DEFAULT '#1c1c1c',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- Habilitar RLS em club_settings
+ALTER TABLE public.club_settings ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para CLUB_SETTINGS
+CREATE POLICY "Configurações do clube são legíveis por todos" 
+ON public.club_settings FOR SELECT 
+TO authenticated 
+USING (true);
+
+CREATE POLICY "Apenas admins atualizam as configurações do clube" 
+ON public.club_settings FOR UPDATE 
+TO authenticated 
+USING (public.get_user_role() = 'admin');
+
+CREATE POLICY "Apenas admins inserem as configurações do clube" 
+ON public.club_settings FOR INSERT 
+TO authenticated 
+WITH CHECK (public.get_user_role() = 'admin');
+
+-- Inserir o registo inicial, caso não exista
+INSERT INTO public.club_settings (id, name, initials) 
+VALUES (1, 'Cascais Sport Clube', 'CSC') 
+ON CONFLICT (id) DO NOTHING;

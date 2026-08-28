@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ClubProvider } from './context/ClubContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
@@ -19,40 +20,43 @@ import AdminDashboard from './pages/AdminDashboard'
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <Router basename={import.meta.env.BASE_URL}>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
+      <ClubProvider>
+        <Router basename={import.meta.env.BASE_URL}>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
 
-          {/* Protected Routes (Everyone logged in) */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/stats" element={<StatsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+            {/* Protected Routes (Everyone logged in) */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/stats" element={<StatsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
 
-              {/* Coach and Admin Only */}
-              <Route element={<ProtectedRoute allowedRoles={['coach', 'admin']} />}>
-                <Route path="/announcements" element={<AnnouncementsPage />} />
-                <Route path="/events" element={<EventsPage />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-              </Route>
+                {/* Coach and Admin Only */}
+                <Route element={<ProtectedRoute allowedRoles={['coach', 'admin']} />}>
+                  <Route path="/announcements" element={<AnnouncementsPage />} />
+                  <Route path="/events" element={<EventsPage />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
+                </Route>
 
-              {/* Admin Only */}
-              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route path="/team-management" element={<TeamManagementPage />} />
-                <Route path="/finance" element={<FinancePage />} />
+                {/* Admin Only */}
+                <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                  <Route path="/team-management" element={<TeamManagementPage />} />
+                  <Route path="/finance" element={<FinancePage />} />
+                </Route>
               </Route>
             </Route>
-          </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </ClubProvider>
     </AuthProvider>
   )
 }
+
 
 export default App

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Shield, MapPin, Trophy, Trash2 } from 'lucide-react'
+import { Shield, MapPin, Trophy, Trash2, Building2, Upload, Save } from 'lucide-react'
+import { useClub } from '../context/ClubContext'
 
 // Interfaces
 interface Field {
@@ -24,11 +25,18 @@ interface Tournament {
   status: 'agendado' | 'ativo' | 'terminado'
 }
 
-type TabType = 'fields' | 'opponents' | 'tournaments'
+type TabType = 'club' | 'fields' | 'opponents' | 'tournaments'
+
 
 const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('fields')
+  const { clubSettings, refreshSettings } = useClub()
+  const [activeTab, setActiveTab] = useState<TabType>('club')
   
+  // Club states
+  const [clubName, setClubName] = useState('')
+  const [clubInitials, setClubInitials] = useState('')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
   // Data states
   const [fields, setFields] = useState<Field[]>([])
   const [opponents, setOpponents] = useState<Opponent[]>([])
@@ -66,6 +74,62 @@ const AdminDashboard: React.FC = () => {
     if (resTours.data) setTournaments(resTours.data)
     
     setLoading(false)
+  }
+
+  useEffect(() => {
+    if (clubSettings) {
+      setClubName(clubSettings.name)
+      setClubInitials(clubSettings.initials)
+    }
+  }, [clubSettings])
+
+  // --- CLUB ---
+  const handleUpdateClub = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clubName || !clubInitials) return
+    const { error } = await supabase.from('club_settings').update({ name: clubName, initials: clubInitials }).eq('id', 1)
+    if (!error) {
+      alert('Definições do clube atualizadas!')
+      refreshSettings()
+    } else {
+      alert('Erro ao atualizar: ' + error.message)
+    }
+  }
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploadingLogo(true)
+      if (!e.target.files || e.target.files.length === 0) return
+      
+      const file = e.target.files[0]
+      const fileExt = file.name.split('.').pop()
+      const fileName = `logo_${Math.random()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('club_assets')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('club_assets')
+        .getPublicUrl(filePath)
+
+      const { error: updateError } = await supabase
+        .from('club_settings')
+        .update({ logo_url: publicUrl })
+        .eq('id', 1)
+
+      if (updateError) throw updateError
+
+      alert('Símbolo atualizado com sucesso!')
+      refreshSettings()
+    } catch (error: any) {
+      alert('Erro ao fazer upload do símbolo (verifica se o bucket "club_assets" existe e é público): ' + error.message)
+    } finally {
+      setUploadingLogo(false)
+    }
   }
 
   // --- FIELDS ---
@@ -131,7 +195,13 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-white rounded-xl shadow-sm border border-gray-150 p-1">
+      <div className="flex flex-wrap bg-white rounded-xl shadow-sm border border-gray-150 p-1 gap-1">
+        <button 
+          onClick={() => setActiveTab('club')}
+          className={`flex-1 min-w-[100px] py-2 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors ${activeTab === 'club' ? 'bg-csc-dark text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+        >
+          <Building2 size={16} /> Clube
+        </button>
         <button 
           onClick={() => setActiveTab('fields')}
           className={`flex-1 py-2 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors ${activeTab === 'fields' ? 'bg-csc-dark text-white' : 'text-gray-600 hover:bg-gray-50'}`}
@@ -162,6 +232,23 @@ const AdminDashboard: React.FC = () => {
           <div className="md:col-span-1">
             <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 sticky top-6">
               
+              {activeTab === 'club' && (
+                <form onSubmit={handleUpdateClub} className="space-y-4">
+                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center gap-2"><Building2 size={20}/> Detalhes do Clube</h3>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Nome do Clube *</label>
+                    <input type="text" required value={clubName} onChange={e => setClubName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: Cascais Sport Clube" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Siglas *</label>
+                    <input type="text" required value={clubInitials} onChange={e => setClubInitials(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: CSC" />
+                  </div>
+                  <button type="submit" className="w-full flex items-center justify-center gap-2 bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow">
+                    <Save size={18} /> Guardar
+                  </button>
+                </form>
+              )}
+
               {activeTab === 'fields' && (
                 <form onSubmit={handleCreateField} className="space-y-4">
                   <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center gap-2"><MapPin size={20}/> Criar Campo</h3>
@@ -235,6 +322,49 @@ const AdminDashboard: React.FC = () => {
           <div className="md:col-span-2">
             <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6">
               
+              {activeTab === 'club' && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2">Símbolo do Clube</h3>
+                  <div className="flex flex-col md:flex-row items-center gap-8">
+                    <div className="w-40 h-40 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
+                      {clubSettings?.logo_url ? (
+                        <img src={clubSettings.logo_url} alt="Símbolo" className="w-full h-full object-contain p-2" />
+                      ) : (
+                        <Shield size={48} className="text-gray-300" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-4 text-center md:text-left">
+                      <div>
+                        <p className="font-bold text-gray-805">Atualizar Símbolo</p>
+                        <p className="text-sm text-gray-500">Faça o upload do logótipo ou emblema do clube (Recomendado: PNG com fundo transparente).</p>
+                      </div>
+                      <div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleUploadLogo}
+                          disabled={uploadingLogo}
+                          className="hidden"
+                          id="logo-upload"
+                        />
+                        <label 
+                          htmlFor="logo-upload"
+                          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold cursor-pointer transition-colors shadow-sm
+                            ${uploadingLogo ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}
+                          `}
+                        >
+                          {uploadingLogo ? (
+                            <><div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-gray-400"></div> A enviar...</>
+                          ) : (
+                            <><Upload size={18} /> Selecionar Imagem</>
+                          )}
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'fields' && (
                 <div className="space-y-3">
                   <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2">Campos Registados ({fields.length})</h3>
