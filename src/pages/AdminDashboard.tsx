@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Shield, MapPin, Trophy, Trash2, Building2, Upload, Save } from 'lucide-react'
+import { Shield, MapPin, Trophy, Trash2, Building2, Upload, Save, Edit2, X, ExternalLink } from 'lucide-react'
 import { useClub } from '../context/ClubContext'
 
 // Interfaces
@@ -29,7 +29,6 @@ interface Tournament {
 
 type TabType = 'club' | 'fields' | 'opponents' | 'tournaments'
 
-
 const AdminDashboard: React.FC = () => {
   const { clubSettings, refreshSettings } = useClub()
   const [activeTab, setActiveTab] = useState<TabType>('club')
@@ -45,19 +44,24 @@ const AdminDashboard: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Form states
+  // Field Edit/Create states
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
   const [fieldName, setFieldName] = useState('')
   const [fieldAddress, setFieldAddress] = useState('')
 
+  // Opponent Edit/Create states
+  const [editingOppId, setEditingOppId] = useState<string | null>(null)
   const [oppName, setOppName] = useState('')
   const [oppInitials, setOppInitials] = useState('')
   const [oppLogo, setOppLogo] = useState<File | null>(null)
   const [oppContact, setOppContact] = useState('')
   const [oppPhone, setOppPhone] = useState('')
   const [oppField, setOppField] = useState('')
-
+  const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null)
   const [uploadingOppLogo, setUploadingOppLogo] = useState(false)
 
+  // Tournament Edit/Create states
+  const [editingTourId, setEditingTourId] = useState<string | null>(null)
   const [tourName, setTourName] = useState('')
   const [tourSeason, setTourSeason] = useState('')
   const [tourStatus, setTourStatus] = useState<'agendado' | 'ativo' | 'terminado'>('agendado')
@@ -88,6 +92,11 @@ const AdminDashboard: React.FC = () => {
       setClubInitials(clubSettings.initials)
     }
   }, [clubSettings])
+
+  // --- GOOGLE MAPS HELPER ---
+  const getGoogleMapsUrl = (query: string) => {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+  }
 
   // --- CLUB ---
   const handleUpdateClub = async (e: React.FormEvent) => {
@@ -132,35 +141,93 @@ const AdminDashboard: React.FC = () => {
       alert('Símbolo atualizado com sucesso!')
       refreshSettings()
     } catch (error: any) {
-      alert('Erro ao fazer upload do símbolo (verifica se o bucket "club_assets" existe e é público): ' + error.message)
+      alert('Erro ao fazer upload do símbolo: ' + error.message)
     } finally {
       setUploadingLogo(false)
     }
   }
 
   // --- FIELDS ---
-  const handleCreateField = async (e: React.FormEvent) => {
+  const handleStartEditField = (f: Field) => {
+    setEditingFieldId(f.id)
+    setFieldName(f.name)
+    setFieldAddress(f.address || '')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCancelEditField = () => {
+    setEditingFieldId(null)
+    setFieldName('')
+    setFieldAddress('')
+  }
+
+  const handleSaveField = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!fieldName) return
-    const { error } = await supabase.from('fields').insert([{ name: fieldName, address: fieldAddress }])
-    if (!error) {
-      setFieldName(''); setFieldAddress(''); fetchData()
+
+    if (editingFieldId) {
+      // Update
+      const { error } = await supabase
+        .from('fields')
+        .update({ name: fieldName, address: fieldAddress })
+        .eq('id', editingFieldId)
+
+      if (error) {
+        alert('Erro ao atualizar campo: ' + error.message)
+      } else {
+        handleCancelEditField()
+        fetchData()
+      }
+    } else {
+      // Insert
+      const { error } = await supabase.from('fields').insert([{ name: fieldName, address: fieldAddress }])
+      if (error) {
+        alert('Erro ao criar campo: ' + error.message)
+      } else {
+        setFieldName('')
+        setFieldAddress('')
+        fetchData()
+      }
     }
   }
 
   const handleDeleteField = async (id: string) => {
     if (!confirm('Eliminar este campo?')) return
     await supabase.from('fields').delete().eq('id', id)
+    if (editingFieldId === id) handleCancelEditField()
     fetchData()
   }
 
   // --- OPPONENTS ---
-  const handleCreateOpponent = async (e: React.FormEvent) => {
+  const handleStartEditOpponent = (o: Opponent) => {
+    setEditingOppId(o.id)
+    setOppName(o.name)
+    setOppInitials(o.initials || '')
+    setOppContact(o.contact_name || '')
+    setOppPhone(o.contact_phone || '')
+    setOppField(o.home_field_id || '')
+    setExistingLogoUrl(o.logo_url || null)
+    setOppLogo(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCancelEditOpponent = () => {
+    setEditingOppId(null)
+    setOppName('')
+    setOppInitials('')
+    setOppContact('')
+    setOppPhone('')
+    setOppField('')
+    setExistingLogoUrl(null)
+    setOppLogo(null)
+  }
+
+  const handleSaveOpponent = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!oppName) return
 
     setUploadingOppLogo(true)
-    let publicLogoUrl: string | null = null
+    let publicLogoUrl: string | null = existingLogoUrl
 
     try {
       if (oppLogo) {
@@ -185,18 +252,21 @@ const AdminDashboard: React.FC = () => {
         contact_phone: oppPhone,
         home_field_id: oppField || null
       }
-      const { error } = await supabase.from('opponents').insert([payload])
-      if (error) throw error
 
-      setOppName('')
-      setOppInitials('')
-      setOppLogo(null)
-      setOppContact('')
-      setOppPhone('')
-      setOppField('')
+      if (editingOppId) {
+        // Update
+        const { error } = await supabase.from('opponents').update(payload).eq('id', editingOppId)
+        if (error) throw error
+      } else {
+        // Insert
+        const { error } = await supabase.from('opponents').insert([payload])
+        if (error) throw error
+      }
+
+      handleCancelEditOpponent()
       fetchData()
     } catch (err: any) {
-      alert('Erro ao criar adversário: ' + err.message)
+      alert('Erro ao guardar adversário: ' + err.message)
     } finally {
       setUploadingOppLogo(false)
     }
@@ -205,23 +275,53 @@ const AdminDashboard: React.FC = () => {
   const handleDeleteOpponent = async (id: string) => {
     if (!confirm('Eliminar este adversário?')) return
     await supabase.from('opponents').delete().eq('id', id)
+    if (editingOppId === id) handleCancelEditOpponent()
     fetchData()
   }
 
   // --- TOURNAMENTS ---
-  const handleCreateTournament = async (e: React.FormEvent) => {
+  const handleStartEditTournament = (t: Tournament) => {
+    setEditingTourId(t.id)
+    setTourName(t.name)
+    setTourSeason(t.season || '')
+    setTourStatus(t.status)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleCancelEditTournament = () => {
+    setEditingTourId(null)
+    setTourName('')
+    setTourSeason('')
+    setTourStatus('agendado')
+  }
+
+  const handleSaveTournament = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!tourName) return
+
     const payload = { name: tourName, season: tourSeason, status: tourStatus }
-    const { error } = await supabase.from('tournaments').insert([payload])
-    if (!error) {
-      setTourName(''); setTourSeason(''); setTourStatus('agendado'); fetchData()
+
+    if (editingTourId) {
+      const { error } = await supabase.from('tournaments').update(payload).eq('id', editingTourId)
+      if (!error) {
+        handleCancelEditTournament()
+        fetchData()
+      }
+    } else {
+      const { error } = await supabase.from('tournaments').insert([payload])
+      if (!error) {
+        setTourName('')
+        setTourSeason('')
+        setTourStatus('agendado')
+        fetchData()
+      }
     }
   }
 
   const handleDeleteTournament = async (id: string) => {
     if (!confirm('Eliminar este torneio?')) return
     await supabase.from('tournaments').delete().eq('id', id)
+    if (editingTourId === id) handleCancelEditTournament()
     fetchData()
   }
 
@@ -288,78 +388,149 @@ const AdminDashboard: React.FC = () => {
               )}
 
               {activeTab === 'fields' && (
-                <form onSubmit={handleCreateField} className="space-y-4">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center gap-2"><MapPin size={20}/> Criar Campo</h3>
+                <form onSubmit={handleSaveField} className="space-y-4">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h3 className="text-lg font-bold text-gray-805 flex items-center gap-2">
+                      <MapPin size={20}/> {editingFieldId ? 'Editar Campo' : 'Criar Campo'}
+                    </h3>
+                    {editingFieldId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditField}
+                        className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 font-bold"
+                      >
+                        <X size={14} /> Cancelar
+                      </button>
+                    )}
+                  </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Nome do Campo *</label>
-                    <input type="text" required value={fieldName} onChange={e => setFieldName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: Estádio Pina Manique" />
+                    <input type="text" required value={fieldName} onChange={e => setFieldName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: Estádio Pina Manique" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Morada</label>
-                    <input type="text" value={fieldAddress} onChange={e => setFieldAddress(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: Lisboa" />
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Morada / Localização</label>
+                    <input type="text" value={fieldAddress} onChange={e => setFieldAddress(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: R. Dom Francisco Manuel de Melo, Lisboa" />
+                    <p className="text-[11px] text-gray-500 mt-1">Usada para abrir diretamente no Google Maps.</p>
                   </div>
-                  <button type="submit" className="w-full bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow">Adicionar Campo</button>
+                  <div className="flex gap-2">
+                    <button type="submit" className="flex-1 bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow text-sm">
+                      {editingFieldId ? 'Atualizar Campo' : 'Adicionar Campo'}
+                    </button>
+                    {editingFieldId && (
+                      <button type="button" onClick={handleCancelEditField} className="px-4 py-2.5 border border-gray-300 rounded-lg font-bold text-gray-600 hover:bg-gray-100 text-sm">
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
                 </form>
               )}
 
               {activeTab === 'opponents' && (
-                <form onSubmit={handleCreateOpponent} className="space-y-4">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center gap-2"><Shield size={20}/> Criar Adversário</h3>
+                <form onSubmit={handleSaveOpponent} className="space-y-4">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h3 className="text-lg font-bold text-gray-805 flex items-center gap-2">
+                      <Shield size={20}/> {editingOppId ? 'Editar Adversário' : 'Criar Adversário'}
+                    </h3>
+                    {editingOppId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditOpponent}
+                        className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 font-bold"
+                      >
+                        <X size={14} /> Cancelar
+                      </button>
+                    )}
+                  </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Nome da Equipa *</label>
-                    <input type="text" required value={oppName} onChange={e => setOppName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: Pescadores CC" />
+                    <input type="text" required value={oppName} onChange={e => setOppName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: Pescadores CC" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Siglas</label>
-                    <input type="text" value={oppInitials} onChange={e => setOppInitials(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: PCC" />
+                    <input type="text" value={oppInitials} onChange={e => setOppInitials(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: PCC" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Símbolo (Logótipo)</label>
+                    {existingLogoUrl && !oppLogo && (
+                      <div className="flex items-center gap-2 mb-2 p-2 bg-gray-50 border rounded-lg">
+                        <img src={existingLogoUrl} alt="Logo Atual" className="w-8 h-8 object-contain" />
+                        <span className="text-xs text-gray-600 truncate flex-1">Símbolo atual guardado</span>
+                      </div>
+                    )}
                     <input type="file" accept="image/*" onChange={e => setOppLogo(e.target.files ? e.target.files[0] : null)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Campo Habitual</label>
-                    <select value={oppField} onChange={e => setOppField(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white">
+                    <select value={oppField} onChange={e => setOppField(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm">
                       <option value="">Nenhum</option>
                       {fields.map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
+                        <option key={f.id} value={f.id}>{f.name} {f.address ? `(${f.address})` : ''}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Pessoa de Contacto</label>
-                    <input type="text" value={oppContact} onChange={e => setOppContact(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: Sr. João" />
+                    <input type="text" value={oppContact} onChange={e => setOppContact(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: Sr. João" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Telefone</label>
-                    <input type="text" value={oppPhone} onChange={e => setOppPhone(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: 910 000 000" />
+                    <input type="text" value={oppPhone} onChange={e => setOppPhone(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: 910 000 000" />
                   </div>
-                  <button type="submit" disabled={uploadingOppLogo} className="w-full bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow disabled:opacity-50">
-                    {uploadingOppLogo ? 'A enviar...' : 'Adicionar Adversário'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={uploadingOppLogo} className="flex-1 bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow text-sm disabled:opacity-50">
+                      {uploadingOppLogo ? 'A enviar...' : editingOppId ? 'Atualizar Adversário' : 'Adicionar Adversário'}
+                    </button>
+                    {editingOppId && (
+                      <button type="button" onClick={handleCancelEditOpponent} className="px-4 py-2.5 border border-gray-300 rounded-lg font-bold text-gray-600 hover:bg-gray-100 text-sm">
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
                 </form>
               )}
 
               {activeTab === 'tournaments' && (
-                <form onSubmit={handleCreateTournament} className="space-y-4">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center gap-2"><Trophy size={20}/> Criar Torneio</h3>
+                <form onSubmit={handleSaveTournament} className="space-y-4">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h3 className="text-lg font-bold text-gray-805 flex items-center gap-2">
+                      <Trophy size={20}/> {editingTourId ? 'Editar Torneio' : 'Criar Torneio'}
+                    </h3>
+                    {editingTourId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditTournament}
+                        className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 font-bold"
+                      >
+                        <X size={14} /> Cancelar
+                      </button>
+                    )}
+                  </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Nome da Competição *</label>
-                    <input type="text" required value={tourName} onChange={e => setTourName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: Liga de Veteranos" />
+                    <input type="text" required value={tourName} onChange={e => setTourName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: Liga de Veteranos" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Época</label>
-                    <input type="text" value={tourSeason} onChange={e => setTourSeason(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: 2025/2026" />
+                    <input type="text" value={tourSeason} onChange={e => setTourSeason(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: 2025/2026" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Estado</label>
-                    <select value={tourStatus} onChange={e => setTourStatus(e.target.value as any)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white">
+                    <select value={tourStatus} onChange={e => setTourStatus(e.target.value as any)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm">
                       <option value="agendado">Agendado</option>
                       <option value="ativo">Ativo</option>
                       <option value="terminado">Terminado</option>
                     </select>
                   </div>
-                  <button type="submit" className="w-full bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow">Adicionar Torneio</button>
+                  <div className="flex gap-2">
+                    <button type="submit" className="flex-1 bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow text-sm">
+                      {editingTourId ? 'Atualizar Torneio' : 'Adicionar Torneio'}
+                    </button>
+                    {editingTourId && (
+                      <button type="button" onClick={handleCancelEditTournament} className="px-4 py-2.5 border border-gray-300 rounded-lg font-bold text-gray-600 hover:bg-gray-100 text-sm">
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
                 </form>
               )}
 
@@ -415,61 +586,188 @@ const AdminDashboard: React.FC = () => {
 
               {activeTab === 'fields' && (
                 <div className="space-y-3">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2">Campos Registados ({fields.length})</h3>
-                  {fields.length === 0 ? <p className="text-gray-500 text-sm">Nenhum campo encontrado.</p> : fields.map(f => (
-                    <div key={f.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div>
-                        <p className="font-bold text-sm text-csc-dark">{f.name}</p>
-                        {f.address && <p className="text-xs text-gray-500">{f.address}</p>}
-                      </div>
-                      <button onClick={() => handleDeleteField(f.id)} className="text-red-400 hover:text-red-600 p-2"><Trash2 size={16} /></button>
-                    </div>
-                  ))}
+                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center justify-between">
+                    <span>Campos Registados ({fields.length})</span>
+                  </h3>
+                  {fields.length === 0 ? (
+                    <p className="text-gray-500 text-sm">Nenhum campo encontrado.</p>
+                  ) : (
+                    fields.map(f => {
+                      const mapsQuery = f.address ? `${f.name}, ${f.address}` : f.name
+                      const mapsUrl = getGoogleMapsUrl(mapsQuery)
+
+                      return (
+                        <div key={f.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-gray-50 rounded-xl border transition-all gap-2 ${editingFieldId === f.id ? 'border-csc-dark bg-csc-dark/5 ring-1 ring-csc-dark' : 'border-gray-200'}`}>
+                          <div className="space-y-1">
+                            <p className="font-bold text-sm text-csc-dark flex items-center gap-1.5">
+                              <span>{f.name}</span>
+                            </p>
+                            {f.address ? (
+                              <p className="text-xs text-gray-600 flex items-center gap-1">
+                                <span className="font-medium">{f.address}</span>
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-gray-400 italic">Sem morada definida</p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 self-end sm:self-center">
+                            {/* Botão Google Maps */}
+                            <a
+                              href={mapsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1.5 bg-white border border-gray-300 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
+                              title="Abrir no Google Maps"
+                            >
+                              <MapPin size={14} className="text-red-500 shrink-0" />
+                              <span>Maps</span>
+                              <ExternalLink size={11} className="opacity-60" />
+                            </a>
+
+                            {/* Botão Editar */}
+                            <button
+                              onClick={() => handleStartEditField(f)}
+                              className="p-1.5 bg-white border border-gray-300 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-lg transition-colors shadow-xs"
+                              title="Editar Campo"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+
+                            {/* Botão Eliminar */}
+                            <button
+                              onClick={() => handleDeleteField(f.id)}
+                              className="p-1.5 bg-white border border-gray-300 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-lg transition-colors shadow-xs"
+                              title="Eliminar Campo"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
               )}
 
               {activeTab === 'opponents' && (
                 <div className="space-y-3">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2">Adversários Registados ({opponents.length})</h3>
-                  {opponents.length === 0 ? <p className="text-gray-500 text-sm">Nenhum adversário encontrado.</p> : opponents.map(o => (
-                    <div key={o.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        {o.logo_url ? (
-                          <img src={o.logo_url} alt={o.initials || o.name} className="w-10 h-10 object-contain bg-white rounded-md border p-0.5" />
-                        ) : (
-                          <div className="w-10 h-10 bg-gray-200 border border-gray-300 rounded-md flex items-center justify-center font-bold text-gray-500 text-[10px]">
-                            {o.initials || o.name.substring(0, 3).toUpperCase()}
+                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center justify-between">
+                    <span>Adversários Registados ({opponents.length})</span>
+                  </h3>
+                  {opponents.length === 0 ? (
+                    <p className="text-gray-500 text-sm">Nenhum adversário encontrado.</p>
+                  ) : (
+                    opponents.map(o => {
+                      const homeField = fields.find(f => f.id === o.home_field_id)
+                      const mapsQuery = homeField ? (homeField.address ? `${homeField.name}, ${homeField.address}` : homeField.name) : o.name
+                      const mapsUrl = getGoogleMapsUrl(mapsQuery)
+
+                      return (
+                        <div key={o.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-gray-50 rounded-xl border transition-all gap-3 ${editingOppId === o.id ? 'border-csc-dark bg-csc-dark/5 ring-1 ring-csc-dark' : 'border-gray-200'}`}>
+                          <div className="flex items-center gap-3">
+                            {o.logo_url ? (
+                              <img src={o.logo_url} alt={o.initials || o.name} className="w-12 h-12 object-contain bg-white rounded-lg border p-1 shadow-xs shrink-0" />
+                            ) : (
+                              <div className="w-12 h-12 bg-gray-200 border border-gray-300 rounded-lg flex items-center justify-center font-bold text-gray-600 text-xs shrink-0">
+                                {o.initials || o.name.substring(0, 3).toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-bold text-sm text-csc-dark">
+                                {o.name} {o.initials && <span className="text-gray-500 font-normal ml-1">({o.initials})</span>}
+                              </p>
+                              
+                              {homeField && (
+                                <p className="text-xs text-gray-600 flex items-center gap-1 mt-0.5">
+                                  <span className="font-semibold">Campo:</span> {homeField.name}
+                                </p>
+                              )}
+
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-500">
+                                {o.contact_name && <span>👤 {o.contact_name}</span>}
+                                {o.contact_phone && <span>📞 {o.contact_phone}</span>}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                        <div>
-                          <p className="font-bold text-sm text-csc-dark">{o.name} {o.initials && <span className="text-gray-500 font-normal ml-1">({o.initials})</span>}</p>
-                          <div className="flex gap-4 mt-1 text-xs text-gray-500">
-                            {o.contact_name && <span>👤 {o.contact_name}</span>}
-                            {o.contact_phone && <span>📞 {o.contact_phone}</span>}
+
+                          <div className="flex items-center gap-1.5 self-end sm:self-center">
+                            {/* Botão Google Maps se tiver campo habitual */}
+                            {homeField && (
+                              <a
+                                href={mapsUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1.5 bg-white border border-gray-300 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
+                                title={`Abrir campo ${homeField.name} no Google Maps`}
+                              >
+                                <MapPin size={14} className="text-red-500 shrink-0" />
+                                <span className="hidden sm:inline">Campo</span>
+                                <ExternalLink size={11} className="opacity-60" />
+                              </a>
+                            )}
+
+                            {/* Botão Editar */}
+                            <button
+                              onClick={() => handleStartEditOpponent(o)}
+                              className="p-1.5 bg-white border border-gray-300 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-lg transition-colors shadow-xs"
+                              title="Editar Adversário"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+
+                            {/* Botão Eliminar */}
+                            <button
+                              onClick={() => handleDeleteOpponent(o.id)}
+                              className="p-1.5 bg-white border border-gray-300 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-lg transition-colors shadow-xs"
+                              title="Eliminar Adversário"
+                            >
+                              <Trash2 size={15} />
+                            </button>
                           </div>
                         </div>
-                      </div>
-                      <button onClick={() => handleDeleteOpponent(o.id)} className="text-red-400 hover:text-red-600 p-2"><Trash2 size={16} /></button>
-                    </div>
-                  ))}
+                      )
+                    })
+                  )}
                 </div>
               )}
 
               {activeTab === 'tournaments' && (
                 <div className="space-y-3">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2">Torneios Registados ({tournaments.length})</h3>
-                  {tournaments.length === 0 ? <p className="text-gray-500 text-sm">Nenhum torneio encontrado.</p> : tournaments.map(t => (
-                    <div key={t.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div>
-                        <p className="font-bold text-sm text-csc-dark">{t.name} <span className="text-xs font-normal text-gray-500 ml-1">({t.season})</span></p>
-                        <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded uppercase 
-                          ${t.status === 'ativo' ? 'bg-csc-light/20 text-csc-dark' : t.status === 'terminado' ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-700'}`}>
-                          {t.status}
-                        </span>
+                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center justify-between">
+                    <span>Torneios Registados ({tournaments.length})</span>
+                  </h3>
+                  {tournaments.length === 0 ? (
+                    <p className="text-gray-500 text-sm">Nenhum torneio encontrado.</p>
+                  ) : (
+                    tournaments.map(t => (
+                      <div key={t.id} className={`flex justify-between items-center p-3.5 bg-gray-50 rounded-xl border transition-all ${editingTourId === t.id ? 'border-csc-dark bg-csc-dark/5 ring-1 ring-csc-dark' : 'border-gray-200'}`}>
+                        <div>
+                          <p className="font-bold text-sm text-csc-dark">{t.name} <span className="text-xs font-normal text-gray-500 ml-1">({t.season})</span></p>
+                          <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded uppercase 
+                            ${t.status === 'ativo' ? 'bg-csc-light/20 text-csc-dark' : t.status === 'terminado' ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-700'}`}>
+                            {t.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleStartEditTournament(t)}
+                            className="p-1.5 bg-white border border-gray-300 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-lg transition-colors shadow-xs"
+                            title="Editar Torneio"
+                          >
+                            <Edit2 size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTournament(t.id)}
+                            className="p-1.5 bg-white border border-gray-300 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-lg transition-colors shadow-xs"
+                            title="Eliminar Torneio"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
-                      <button onClick={() => handleDeleteTournament(t.id)} className="text-red-400 hover:text-red-600 p-2"><Trash2 size={16} /></button>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               )}
 

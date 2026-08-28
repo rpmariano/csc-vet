@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Bell, Calendar, DollarSign, MapPin, Clock, Info, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import { Bell, Calendar, DollarSign, MapPin, Clock, Info, CheckCircle2, XCircle, AlertCircle, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -253,9 +253,24 @@ const Home: React.FC = () => {
           )}
           
           <div className="space-y-2 text-sm text-gray-700">
-            <div className="flex items-center gap-2">
-              <MapPin size={16} className="text-gray-400" />
-              <span><strong>Local:</strong> {nextMatch.location}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-gray-400 shrink-0" />
+                <span><strong>Local:</strong> {nextMatch.location}</span>
+              </div>
+              {nextMatch.location && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextMatch.location)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold flex items-center gap-1 transition-colors"
+                  title="Abrir no Google Maps"
+                >
+                  <MapPin size={12} className="text-red-500" />
+                  <span>Maps</span>
+                  <ExternalLink size={10} className="opacity-60" />
+                </a>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Calendar size={16} className="text-gray-400" />
@@ -333,9 +348,24 @@ const Home: React.FC = () => {
           <h2 className="text-xl font-black text-gray-900 mb-3">Próximo treino</h2>
           
           <div className="space-y-2 text-sm text-gray-700 mb-4">
-            <div className="flex items-center gap-2">
-              <MapPin size={16} className="text-gray-400" />
-              <span><strong>Local:</strong> {nextPractice.location}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-gray-400 shrink-0" />
+                <span><strong>Local:</strong> {nextPractice.location}</span>
+              </div>
+              {nextPractice.location && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextPractice.location)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-bold flex items-center gap-1 transition-colors"
+                  title="Abrir no Google Maps"
+                >
+                  <MapPin size={12} className="text-red-500" />
+                  <span>Maps</span>
+                  <ExternalLink size={10} className="opacity-60" />
+                </a>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Calendar size={16} className="text-gray-400" />

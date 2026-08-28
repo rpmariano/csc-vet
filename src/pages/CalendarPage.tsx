@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { MapPin, Clock, Plus, X, Award, Users, CheckCircle2, XCircle, HelpCircle, UserPlus, Trash2, Search, RotateCcw, AlertTriangle } from 'lucide-react'
+import { MapPin, Clock, Plus, X, Award, Users, CheckCircle2, XCircle, HelpCircle, UserPlus, Trash2, Search, RotateCcw, AlertTriangle, ExternalLink } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
@@ -417,9 +417,21 @@ const CalendarPage: React.FC = () => {
                         })}
                       </span>
                     </div>
-                    <div className="flex items-center space-x-1.5 max-w-[50%] truncate">
+                    <div className="flex items-center space-x-1.5 max-w-[55%]">
                       <MapPin size={13} className="text-gray-400 shrink-0" />
                       <span className="truncate">{event.location}</span>
+                      {event.location && (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
+                          title="Abrir no Google Maps"
+                        >
+                          <ExternalLink size={12} />
+                        </a>
+                      )}
                     </div>
                   </div>
 
@@ -508,12 +520,27 @@ const CalendarPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center text-sm text-gray-700 space-x-2.5">
-                <MapPin size={18} className="text-csc-dark shrink-0" />
-                <div>
-                  <p className="text-xs font-semibold text-gray-500">Local</p>
-                  <p className="font-bold text-sm text-gray-850">{selectedEvent.location}</p>
+              <div className="flex items-center justify-between text-sm text-gray-700">
+                <div className="flex items-center space-x-2.5">
+                  <MapPin size={18} className="text-csc-dark shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500">Local</p>
+                    <p className="font-bold text-sm text-gray-850">{selectedEvent.location}</p>
+                  </div>
                 </div>
+                {selectedEvent.location && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedEvent.location)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1.5 bg-white border border-gray-300 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs transition-colors shrink-0 ml-2"
+                    title="Abrir no Google Maps"
+                  >
+                    <MapPin size={14} className="text-red-500 shrink-0" />
+                    <span>Maps</span>
+                    <ExternalLink size={11} className="opacity-60" />
+                  </a>
+                )}
               </div>
             </div>
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Plus, Trash2, MapPin, Clock, Check, Shield, Users, CheckCircle2, XCircle, HelpCircle, X, UserPlus, Search, RotateCcw, AlertTriangle } from 'lucide-react'
+import { Plus, Trash2, MapPin, Clock, Check, Shield, Users, CheckCircle2, XCircle, HelpCircle, X, UserPlus, Search, RotateCcw, AlertTriangle, ExternalLink } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
@@ -20,7 +20,7 @@ interface Event {
   max_players?: number | null
 }
 
-interface Field { id: string; name: string }
+interface Field { id: string; name: string; address?: string }
 interface Opponent { id: string; name: string; home_field_id: string | null }
 interface Tournament { id: string; name: string; season: string }
 
@@ -622,10 +622,29 @@ const EventsPage: React.FC = () => {
                               {event.meeting_time && <span className="text-csc-dark font-bold ml-1">(Conc: {event.meeting_time.substring(0, 5)})</span>}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <MapPin size={14} className="text-gray-400" />
-                            <span>{event.field_id ? getFieldName(event.field_id) : (event.location || 'Sem local')}</span>
-                          </div>
+                          {(() => {
+                            const fieldObj = fields.find(f => f.id === event.field_id)
+                            const locationName = event.field_id ? getFieldName(event.field_id) : (event.location || 'Sem local')
+                            const mapsQuery = fieldObj ? (fieldObj.address ? `${fieldObj.name}, ${fieldObj.address}` : fieldObj.name) : (event.location || '')
+
+                            return (
+                              <div className="flex items-center gap-1">
+                                <MapPin size={14} className="text-gray-400" />
+                                <span>{locationName}</span>
+                                {mapsQuery && (
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-0.5 text-red-500 hover:text-red-700 rounded transition-colors"
+                                    title="Abrir no Google Maps"
+                                  >
+                                    <ExternalLink size={11} />
+                                  </a>
+                                )}
+                              </div>
+                            )
+                          })()}
                           {event.opponent_id && (
                             <div className="flex items-center gap-1">
                               <Shield size={14} className="text-gray-400" />
