@@ -2329,7 +2329,78 @@ const CalendarPage: React.FC = () => {
               <X size={22} />
             </button>
 
-            {/* Topo Premium da Persiana (Apenas Símbolo, Pílula de Tipo, Data/Hora e Ações Admin/Treinador) */}
+            {/* 1. Badge Laranja Superior de Navegação EXCLUSIVO para Convocatórias Pendentes do Alerta (PRIMEIRO BADGE) */}
+            {myPendingEvents.length > 1 && myPendingEvents.some(pe => pe.id === selectedEvent.id) && (() => {
+              const curIdx = myPendingEvents.findIndex(pe => pe.id === selectedEvent.id)
+              const activeIndex = curIdx !== -1 ? curIdx : 0
+
+              const nextEvent = (e?: React.MouseEvent) => {
+                e?.stopPropagation()
+                const nextIdx = (activeIndex + 1) % myPendingEvents.length
+                setSelectedEvent(myPendingEvents[nextIdx])
+                if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
+              }
+
+              const prevEvent = (e?: React.MouseEvent) => {
+                e?.stopPropagation()
+                const prevIdx = (activeIndex - 1 + myPendingEvents.length) % myPendingEvents.length
+                setSelectedEvent(myPendingEvents[prevIdx])
+                if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
+              }
+
+              return (
+                <div className="rounded-2xl p-2.5 sm:p-3 shadow-xs border flex items-center justify-between gap-2 transition-all bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-csc-dark border-amber-600/50">
+                  <button
+                    type="button"
+                    onClick={prevEvent}
+                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-black/10 hover:bg-black/20 text-csc-dark"
+                    title="Convocatória Anterior (ou desliza para a direita 👉)"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+
+                  <div className="flex flex-col items-center justify-center text-center min-w-0 flex-1 select-none">
+                    <span className="text-xs font-black tracking-wide flex items-center gap-1.5 text-amber-950">
+                      <span>🔔 Convocatória Pendente</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-black/15 text-csc-dark">
+                        {activeIndex + 1}/{myPendingEvents.length}
+                      </span>
+                    </span>
+
+                    {/* Traços centrados */}
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      {myPendingEvents.map((item, idx) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedEvent(item)
+                            if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
+                          }}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            idx === activeIndex
+                              ? 'bg-csc-dark w-5'
+                              : 'bg-black/25 hover:bg-black/40 w-2'
+                          }`}
+                          title={item.title}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={nextEvent}
+                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-black/10 hover:bg-black/20 text-csc-dark"
+                    title="Próxima Convocatória (ou desliza para a esquerda 👈)"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              )
+            })()}
+
+            {/* 2. Topo Premium da Persiana (Apenas Símbolo, Pílula de Tipo, Data/Hora e Ações Admin/Treinador) */}
             <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold relative overflow-hidden">
               <div className="flex items-center justify-between gap-3 pr-8 sm:pr-10">
                 {/* Símbolo + Pílula do Tipo + Data e Hora */}
@@ -2406,76 +2477,6 @@ const CalendarPage: React.FC = () => {
               
               {/* COLUNA ESQUERDA (5 Colunas): Detalhes do Evento, Matchup VS e Presença Pessoal */}
               <div className="lg:col-span-5 space-y-5">
-                {/* Carrossel Superior de Navegação EXCLUSIVO para Convocatórias Pendentes do Alerta */}
-                {myPendingEvents.length > 1 && myPendingEvents.some(pe => pe.id === selectedEvent.id) && (() => {
-                  const curIdx = myPendingEvents.findIndex(pe => pe.id === selectedEvent.id)
-                  const activeIndex = curIdx !== -1 ? curIdx : 0
-
-                  const nextEvent = (e?: React.MouseEvent) => {
-                    e?.stopPropagation()
-                    const nextIdx = (activeIndex + 1) % myPendingEvents.length
-                    setSelectedEvent(myPendingEvents[nextIdx])
-                    if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
-                  }
-
-                  const prevEvent = (e?: React.MouseEvent) => {
-                    e?.stopPropagation()
-                    const prevIdx = (activeIndex - 1 + myPendingEvents.length) % myPendingEvents.length
-                    setSelectedEvent(myPendingEvents[prevIdx])
-                    if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
-                  }
-
-                  return (
-                    <div className="rounded-2xl p-2.5 sm:p-3 shadow-xs border flex items-center justify-between gap-2 transition-all bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-csc-dark border-amber-600/50">
-                      <button
-                        type="button"
-                        onClick={prevEvent}
-                        className="w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-black/10 hover:bg-black/20 text-csc-dark"
-                        title="Convocatória Anterior (ou desliza para a direita 👉)"
-                      >
-                        <ChevronLeft size={18} />
-                      </button>
-
-                      <div className="flex flex-col items-center justify-center text-center min-w-0 flex-1 select-none">
-                        <span className="text-xs font-black tracking-wide flex items-center gap-1.5 text-amber-950">
-                          <span>🔔 Convocatória Pendente</span>
-                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-black/15 text-csc-dark">
-                            {activeIndex + 1}/{myPendingEvents.length}
-                          </span>
-                        </span>
-
-                        {/* Traços centrados */}
-                        <div className="flex items-center gap-1.5 mt-1.5">
-                          {myPendingEvents.map((item, idx) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedEvent(item)
-                                if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
-                              }}
-                              className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                                idx === activeIndex
-                                  ? 'bg-csc-dark w-5'
-                                  : 'bg-black/25 hover:bg-black/40 w-2'
-                              }`}
-                              title={item.title}
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={nextEvent}
-                        className="w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-black/10 hover:bg-black/20 text-csc-dark"
-                        title="Próxima Convocatória (ou desliza para a esquerda 👈)"
-                      >
-                        <ChevronRight size={18} />
-                      </button>
-                    </div>
-                  )
-                })()}
 
                 {/* Matchup Box no Modal (quando Jogo com adversário) */}
                 {selectedEvent.type === 'match' && selectedEvent.opponent && (() => {
@@ -2635,14 +2636,7 @@ const CalendarPage: React.FC = () => {
                   return (
                     <div className="p-4 bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl border border-gray-300 space-y-3 shadow-2xs">
                       <div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-black uppercase tracking-wider text-gray-600">A tua convocatória para este evento</p>
-                          {myPendingEvents.length > 1 && (
-                            <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
-                              {myPendingEvents.findIndex(pe => pe.id === selectedEvent.id) >= 0 ? `${myPendingEvents.findIndex(pe => pe.id === selectedEvent.id) + 1} de ${myPendingEvents.length} pendentes` : `${myPendingEvents.length} pendentes`}
-                            </span>
-                          )}
-                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-600">A tua convocatória para este evento</p>
                         <p className="text-sm font-black text-gray-900 mt-0.5">
                           Estado: <span className={
                             myCallup.status === 'confirmed' ? 'text-emerald-700' :
@@ -2685,34 +2679,6 @@ const CalendarPage: React.FC = () => {
                           </button>
                         </div>
                       )}
-
-                      {/* Indicador de Carrossel Centralizado se houver múltiplas convocatórias pendentes */}
-                      {myPendingEvents.length > 1 && (() => {
-                        const curIdx = myPendingEvents.findIndex(pe => pe.id === selectedEvent.id)
-                        const isCurrentInPending = curIdx !== -1
-                        const activePendingIndex = isCurrentInPending ? curIdx : 0
-
-                        return (
-                          <div className="pt-2 border-t border-gray-100 flex items-center justify-center gap-2">
-                            <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
-                              {myPendingEvents.map((pe, idx) => (
-                                <button
-                                  key={pe.id}
-                                  type="button"
-                                  onClick={() => setSelectedEvent(pe)}
-                                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                                    idx === activePendingIndex ? 'bg-csc-dark w-5' : 'bg-gray-400 hover:bg-gray-600 w-2'
-                                  }`}
-                                  title={pe.title}
-                                />
-                              ))}
-                              <span className="text-[10.5px] font-black text-gray-700 ml-1 pl-1.5 border-l border-gray-300 leading-none">
-                                {activePendingIndex + 1}/{myPendingEvents.length}
-                              </span>
-                            </div>
-                          </div>
-                        )
-                      })()}
                     </div>
                   )
                 })()}
