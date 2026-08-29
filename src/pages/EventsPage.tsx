@@ -28,6 +28,15 @@ import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 
+export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
+  if (!player) return 'Atleta'
+  const shirt = player.shirt_name?.trim()
+  if (shirt) return shirt
+  const nick = player.nickname?.trim()
+  if (nick) return nick
+  return player.name || 'Atleta'
+}
+
 const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
   const emailMap = new Map<string, Profile>()
 
@@ -48,13 +57,20 @@ const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
       emailMap.set(emailKey, {
         ...(existing || {}),
         ...remotePlayer,
+        shirt_name: remotePlayer.shirt_name || existing?.shirt_name || null,
+        jersey_number: remotePlayer.jersey_number ?? existing?.jersey_number ?? null,
       })
     } else {
       emailMap.set(remotePlayer.id, remotePlayer)
     }
   })
 
-  return Array.from(emailMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  return Array.from(emailMap.values()).sort((a, b) => {
+    if (a.jersey_number && b.jersey_number) return a.jersey_number - b.jersey_number
+    if (a.jersey_number) return -1
+    if (b.jersey_number) return 1
+    return getPlayerDisplayName(a).localeCompare(getPlayerDisplayName(b))
+  })
 }
 
 const ensurePlayerIdsForSupabase = async (pIds: string[], playerList: Profile[]): Promise<string[]> => {
@@ -158,14 +174,7 @@ interface CallupWithPlayer {
   event_id: string
   player_id: string
   status: 'called' | 'confirmed' | 'declined'
-  player: {
-    id: string
-    name: string
-    photo_url: string | null
-    jersey_number?: number | null
-    role?: string
-    medical_notes?: string | null
-  }
+  player: Profile
 }
 
 const EventsPage: React.FC = () => {
@@ -1664,7 +1673,7 @@ const EventsPage: React.FC = () => {
 
                               <div className="min-w-0 flex-1">
                                 <p className="text-xs font-black text-gray-900 truncate">
-                                  {c.player?.name || 'Membro'}
+                                  {c.player?.jersey_number ? `#${c.player.jersey_number} ` : ''}{getPlayerDisplayName(c.player)}
                                 </p>
                                 <div className="flex items-center gap-1 mt-0.5">
                                   {roles.map(r => (
@@ -2011,7 +2020,7 @@ const EventsPage: React.FC = () => {
                               <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
                                 {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
                               </div>
-                              <span className="truncate">{p.name}</span>
+                              <span className="truncate">{getPlayerDisplayName(p)}</span>
                             </div>
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isCalled ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}`}>
                               {isCalled ? '✓ Convocado' : '+ Convocar'}

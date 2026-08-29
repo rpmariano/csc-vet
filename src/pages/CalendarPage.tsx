@@ -36,6 +36,15 @@ import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 
+export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
+  if (!player) return 'Atleta'
+  const shirt = player.shirt_name?.trim()
+  if (shirt) return shirt
+  const nick = player.nickname?.trim()
+  if (nick) return nick
+  return player.name || 'Atleta'
+}
+
 const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
   const emailMap = new Map<string, Profile>()
 
@@ -56,13 +65,20 @@ const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
       emailMap.set(emailKey, {
         ...(existing || {}),
         ...remotePlayer,
+        shirt_name: remotePlayer.shirt_name || existing?.shirt_name || null,
+        jersey_number: remotePlayer.jersey_number ?? existing?.jersey_number ?? null,
       })
     } else {
       emailMap.set(remotePlayer.id, remotePlayer)
     }
   })
 
-  return Array.from(emailMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  return Array.from(emailMap.values()).sort((a, b) => {
+    if (a.jersey_number && b.jersey_number) return a.jersey_number - b.jersey_number
+    if (a.jersey_number) return -1
+    if (b.jersey_number) return 1
+    return getPlayerDisplayName(a).localeCompare(getPlayerDisplayName(b))
+  })
 }
 
 const ensurePlayerIdsForSupabase = async (pIds: string[], playerList: Profile[]): Promise<string[]> => {
@@ -149,11 +165,7 @@ interface CallupWithPlayer {
   event_id: string
   player_id: string
   status: 'called' | 'confirmed' | 'declined'
-  player: {
-    id: string
-    name: string
-    photo_url: string | null
-  }
+  player: Profile
 }
 
 interface Field {
@@ -290,7 +302,7 @@ const CalendarPage: React.FC = () => {
           .order('date_time', { ascending: true }),
         supabase
           .from('callups')
-          .select('id, event_id, player_id, status, player:profiles(id, name, photo_url)'),
+          .select('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, position, status)'),
         supabase
           .from('profiles')
           .select('*')
@@ -335,18 +347,24 @@ const CalendarPage: React.FC = () => {
         ])
       }
 
+      let mergedPlayers: Profile[] = []
+      if (profilesRes.data) {
+        mergedPlayers = mergeProfilesWithSeedData((profilesRes.data as Profile[]) || [])
+        setAllPlayers(mergedPlayers)
+      }
+
       if (callupsRes.data) {
+        const playerMap = new Map<string, Profile>(mergedPlayers.map(p => [p.id, p]))
         const map: Record<string, CallupWithPlayer[]> = {}
         callupsRes.data.forEach((c: any) => {
           if (!map[c.event_id]) map[c.event_id] = []
-          map[c.event_id].push(c as CallupWithPlayer)
+          const fullP = playerMap.get(c.player_id) || c.player
+          map[c.event_id].push({
+            ...c,
+            player: fullP
+          } as CallupWithPlayer)
         })
         setEventCallups(map)
-      }
-
-      if (profilesRes.data) {
-        const merged = mergeProfilesWithSeedData((profilesRes.data as Profile[]) || [])
-        setAllPlayers(merged)
       }
     } catch (err) {
       console.error(err)
@@ -668,11 +686,7 @@ const CalendarPage: React.FC = () => {
             event_id: eventId,
             player_id: profile.id,
             status,
-            player: {
-              id: profile.id,
-              name: profile.name,
-              photo_url: profile.photo_url || null
-            }
+            player: profile
           })
         }
         return { ...prev, [eventId]: list }
@@ -1755,7 +1769,11 @@ const CalendarPage: React.FC = () => {
                 const filteredCallups = callups.filter(c => {
                   if (modalCallupStatusFilter !== 'all' && c.status !== modalCallupStatusFilter) return false
                   if (!playerSearchTerm) return true
-                  const nameMatch = c.player?.name?.toLowerCase().includes(playerSearchTerm.toLowerCase())
+                  const q = playerSearchTerm.toLowerCase()
+                  const nameMatch = c.player?.name?.toLowerCase().includes(q) ||
+                    c.player?.shirt_name?.toLowerCase().includes(q) ||
+                    c.player?.nickname?.toLowerCase().includes(q) ||
+                    (c.player?.jersey_number && c.player.jersey_number.toString().includes(q))
                   return nameMatch
                 })
 
@@ -1851,7 +1869,7 @@ const CalendarPage: React.FC = () => {
                                     onClick={() => handleAddPlayerToCallup(selectedEvent.id, p.id)}
                                     className="bg-gray-50 hover:bg-csc-dark hover:text-white border border-gray-300 text-xs px-2.5 py-1 rounded-xl font-bold text-gray-800 flex items-center gap-1 transition-all shadow-2xs cursor-pointer active:scale-95"
                                   >
-                                    <span>+ {p.name}</span>
+                                    <span>+ {getPlayerDisplayName(p)}</span>
                                     {p.jersey_number && <span className="text-amber-700 font-black">#{p.jersey_number}</span>}
                                   </button>
                                 ))}
@@ -2005,7 +2023,7 @@ const CalendarPage: React.FC = () => {
                                       <HelpCircle size={15} className="text-amber-700 shrink-0" />
                                     )}
                                     <span className={`font-black text-xs leading-snug break-words ${isDeclined ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                                      {c.player?.name || 'Membro'}
+                                      {c.player?.jersey_number ? `#${c.player.jersey_number} ` : ''}{getPlayerDisplayName(c.player)}
                                     </span>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-1 mt-1 pl-5">
@@ -2451,11 +2469,19 @@ const CalendarPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[380px] overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-xl">
                   {allPlayers
-                    .filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase()))
+                    .filter(p => {
+                      if (!playerSearchTerm) return true
+                      const q = playerSearchTerm.toLowerCase()
+                      return p.name.toLowerCase().includes(q) ||
+                        p.shirt_name?.toLowerCase().includes(q) ||
+                        p.nickname?.toLowerCase().includes(q) ||
+                        (p.jersey_number && p.jersey_number.toString().includes(q))
+                    })
                     .map(p => {
                       const isSelected = selectedPlayerIds.includes(p.id)
                       const isEligible = isPlayerEligible(p, type)
                       const isInjured = p.status === 'injured'
+                      const roles = extractRolesFromProfile(p)
 
                       return (
                         <div
@@ -2465,8 +2491,8 @@ const CalendarPage: React.FC = () => {
                             !isEligible 
                               ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
                               : isSelected 
-                                ? 'bg-csc-dark/5 border-csc-dark font-bold text-csc-dark cursor-pointer' 
-                                : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 cursor-pointer'
+                                ? 'bg-amber-50/80 font-black text-gray-900 border-amber-300 shadow-2xs cursor-pointer' 
+                                : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer'
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -2475,9 +2501,30 @@ const CalendarPage: React.FC = () => {
                               checked={isSelected}
                               disabled={!isEligible}
                               onChange={() => {}} // controlado pelo onClick pai
-                              className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 pointer-events-none shrink-0"
+                              className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none shrink-0"
                             />
-                            <span className="truncate">{p.name}</span>
+
+                            <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
+                              {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-bold leading-tight">{getPlayerDisplayName(p)}</p>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                {roles.map(r => (
+                                  <span
+                                    key={r}
+                                    className={`text-[8.5px] font-black px-1 rounded ${
+                                      r === 'admin' ? 'bg-amber-100 text-amber-900' :
+                                      r === 'coach' ? 'bg-blue-100 text-blue-900' :
+                                      'bg-emerald-100 text-emerald-900'
+                                    }`}
+                                  >
+                                    {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                           {isInjured && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
@@ -2487,7 +2534,14 @@ const CalendarPage: React.FC = () => {
                         </div>
                       )
                     })}
-                  {allPlayers.filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase())).length === 0 && (
+                  {allPlayers.filter(p => {
+                    if (!playerSearchTerm) return true
+                    const q = playerSearchTerm.toLowerCase()
+                    return p.name.toLowerCase().includes(q) ||
+                      p.shirt_name?.toLowerCase().includes(q) ||
+                      p.nickname?.toLowerCase().includes(q) ||
+                      (p.jersey_number && p.jersey_number.toString().includes(q))
+                  }).length === 0 && (
                     <div className="col-span-2 text-center py-6 text-xs text-gray-500">
                       Nenhum jogador encontrado com "{playerSearchTerm}".
                     </div>
@@ -2496,19 +2550,20 @@ const CalendarPage: React.FC = () => {
               </div>
 
               {/* FOOTER */}
-              <div className="col-span-full pt-4 border-t border-gray-200 flex items-center justify-between gap-3">
+              <div className="col-span-full pt-5 border-t border-gray-200 flex items-center justify-end gap-3 mt-2">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-5 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
+                  className="px-5 py-2.5 border border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-100 rounded-xl text-xs sm:text-sm font-bold text-gray-700 transition-colors cursor-pointer shadow-2xs"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-dark text-white rounded-xl text-xs font-bold hover:bg-black transition-all shadow-md cursor-pointer active:scale-95"
+                  className="px-6 py-2.5 bg-csc-dark hover:bg-black text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95"
                 >
-                  Criar Evento
+                  <Plus size={16} className="text-csc-gold" />
+                  <span>Criar Evento</span>
                 </button>
               </div>
             </form>
@@ -2846,10 +2901,14 @@ const CalendarPage: React.FC = () => {
                     }
                   }
 
-                  const filteredMembers = allPlayers.filter(p =>
-                    p.name.toLowerCase().includes(editPlayerSearchTerm.toLowerCase()) ||
-                    (p.jersey_number && p.jersey_number.toString().includes(editPlayerSearchTerm))
-                  )
+                  const filteredMembers = allPlayers.filter(p => {
+                    if (!editPlayerSearchTerm) return true
+                    const q = editPlayerSearchTerm.toLowerCase()
+                    return p.name.toLowerCase().includes(q) ||
+                      p.shirt_name?.toLowerCase().includes(q) ||
+                      p.nickname?.toLowerCase().includes(q) ||
+                      (p.jersey_number && p.jersey_number.toString().includes(q))
+                  })
 
                   return (
                     <div className="space-y-3">
@@ -2910,7 +2969,7 @@ const CalendarPage: React.FC = () => {
                           type="text"
                           value={editPlayerSearchTerm}
                           onChange={(e) => setEditPlayerSearchTerm(e.target.value)}
-                          placeholder="Pesquisar por nome ou nº camisola..."
+                          placeholder="Pesquisar por nome na camisola ou nº..."
                           className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark font-medium"
                         />
                       </div>
@@ -2930,7 +2989,7 @@ const CalendarPage: React.FC = () => {
                                 !isEligible 
                                   ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
                                   : isCalled 
-                                    ? 'bg-amber-50/80 font-black text-gray-900 border-amber-200' 
+                                    ? 'bg-amber-50/80 font-black text-gray-900 border-amber-300 shadow-2xs' 
                                     : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
                               }`}
                             >
@@ -2948,7 +3007,7 @@ const CalendarPage: React.FC = () => {
                                 </div>
 
                                 <div className="min-w-0 flex-1">
-                                  <p className="truncate text-xs font-bold leading-tight">{p.name}</p>
+                                  <p className="truncate text-xs font-bold leading-tight">{getPlayerDisplayName(p)}</p>
                                   <div className="flex items-center gap-1 mt-0.5">
                                     {roles.map(r => (
                                       <span
@@ -2981,20 +3040,20 @@ const CalendarPage: React.FC = () => {
               </div>
 
               {/* FOOTER */}
-              <div className="col-span-full pt-4 border-t border-gray-200 flex items-center justify-between gap-3">
+              <div className="col-span-full pt-5 border-t border-gray-200 flex items-center justify-end gap-3 mt-2">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-5 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
+                  className="px-5 py-2.5 border border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-100 rounded-xl text-xs sm:text-sm font-bold text-gray-700 transition-colors cursor-pointer shadow-2xs"
                 >
                   Cancelar
                 </button>
 
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-dark text-white rounded-xl text-xs font-bold hover:bg-black transition-all flex items-center gap-1.5 shadow-md cursor-pointer active:scale-95"
+                  className="px-6 py-2.5 bg-csc-dark hover:bg-black text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95"
                 >
-                  <Save size={15} className="text-csc-gold" />
+                  <Save size={16} className="text-csc-gold" />
                   <span>Guardar Alterações</span>
                 </button>
               </div>
