@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Shield, MapPin, Trophy, Trash2, Building2, Upload, Save, Edit2, X, ExternalLink } from 'lucide-react'
+import { 
+  Shield, 
+  MapPin, 
+  Trophy, 
+  Trash2, 
+  Building2, 
+  Upload, 
+  Save, 
+  Edit2, 
+  X, 
+  ExternalLink,
+  Plus,
+  Search,
+  Phone,
+  User,
+  AlertTriangle
+} from 'lucide-react'
 import { useClub } from '../context/ClubContext'
 import { toast } from '../context/ToastContext'
 
@@ -46,12 +62,21 @@ const AdminDashboard: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Field Edit/Create states
+  // Search & Filter states
+  const [fieldSearch, setFieldSearch] = useState('')
+  const [oppSearch, setOppSearch] = useState('')
+  const [tourSearch, setTourSearch] = useState('')
+  const [tourStatusFilter, setTourStatusFilter] = useState<'all' | 'agendado' | 'ativo' | 'terminado'>('all')
+
+  // Field Modal & Edit states
+  const [isFieldModalOpen, setIsFieldModalOpen] = useState(false)
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
   const [fieldName, setFieldName] = useState('')
   const [fieldAddress, setFieldAddress] = useState('')
+  const [initialFieldState, setInitialFieldState] = useState({ name: '', address: '' })
 
-  // Opponent Edit/Create states
+  // Opponent Modal & Edit states
+  const [isOppModalOpen, setIsOppModalOpen] = useState(false)
   const [editingOppId, setEditingOppId] = useState<string | null>(null)
   const [oppName, setOppName] = useState('')
   const [oppInitials, setOppInitials] = useState('')
@@ -61,12 +86,30 @@ const AdminDashboard: React.FC = () => {
   const [oppField, setOppField] = useState('')
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null)
   const [uploadingOppLogo, setUploadingOppLogo] = useState(false)
+  const [initialOppState, setInitialOppState] = useState({
+    name: '',
+    initials: '',
+    contact: '',
+    phone: '',
+    field: ''
+  })
 
-  // Tournament Edit/Create states
+  // Tournament Modal & Edit states
+  const [isTourModalOpen, setIsTourModalOpen] = useState(false)
   const [editingTourId, setEditingTourId] = useState<string | null>(null)
   const [tourName, setTourName] = useState('')
   const [tourSeason, setTourSeason] = useState('')
   const [tourStatus, setTourStatus] = useState<'agendado' | 'ativo' | 'terminado'>('agendado')
+  const [initialTourState, setInitialTourState] = useState({
+    name: '',
+    season: '',
+    status: 'agendado' as 'agendado' | 'ativo' | 'terminado'
+  })
+
+  // Unsaved changes confirmation modal
+  const [unsavedModalOpen, setUnsavedModalOpen] = useState(false)
+  const [pendingCloseAction, setPendingCloseAction] = useState<(() => void) | null>(null)
+  const [pendingSaveAction, setPendingSaveAction] = useState<(() => Promise<void>) | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -104,7 +147,10 @@ const AdminDashboard: React.FC = () => {
   // --- CLUB ---
   const handleUpdateClub = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!clubName || !clubInitials) return
+    if (!clubName || !clubInitials) {
+      toast.warning('O nome e as siglas do clube são obrigatórios.')
+      return
+    }
     localStorage.setItem('csc_club_home_field_id', clubHomeField)
     try {
       const { error } = await supabase
@@ -120,7 +166,6 @@ const AdminDashboard: React.FC = () => {
         toast.success('Definições do clube atualizadas com sucesso!')
         refreshSettings()
       } else {
-        // Fallback se a coluna home_field_id ainda nao existir no supabase
         await supabase.from('club_settings').update({ name: clubName, initials: clubInitials }).eq('id', 1)
         toast.success('Definições do clube atualizadas!')
         refreshSettings()
@@ -167,61 +212,119 @@ const AdminDashboard: React.FC = () => {
     }
   }
 
-  // --- FIELDS ---
+  // --- FIELDS MODAL & LOGIC ---
+  const isFieldDirty = () => {
+    return fieldName !== initialFieldState.name || fieldAddress !== initialFieldState.address
+  }
+
+  const handleOpenCreateField = () => {
+    setEditingFieldId(null)
+    setFieldName('')
+    setFieldAddress('')
+    setInitialFieldState({ name: '', address: '' })
+    setIsFieldModalOpen(true)
+  }
+
   const handleStartEditField = (f: Field) => {
     setEditingFieldId(f.id)
     setFieldName(f.name)
     setFieldAddress(f.address || '')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setInitialFieldState({ name: f.name, address: f.address || '' })
+    setIsFieldModalOpen(true)
   }
 
-  const handleCancelEditField = () => {
-    setEditingFieldId(null)
-    setFieldName('')
-    setFieldAddress('')
+  const handleRequestCloseFieldModal = () => {
+    if (isFieldDirty()) {
+      setPendingCloseAction(() => () => {
+        setIsFieldModalOpen(false)
+      })
+      setPendingSaveAction(() => async () => {
+        await executeSaveField()
+      })
+      setUnsavedModalOpen(true)
+    } else {
+      setIsFieldModalOpen(false)
+    }
   }
 
-  const handleSaveField = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!fieldName) return
+  const executeSaveField = async () => {
+    if (!fieldName.trim()) {
+      toast.warning('O nome do campo é obrigatório.')
+      return
+    }
 
     if (editingFieldId) {
-      // Update
       const { error } = await supabase
         .from('fields')
-        .update({ name: fieldName, address: fieldAddress })
+        .update({ name: fieldName.trim(), address: fieldAddress.trim() })
         .eq('id', editingFieldId)
 
       if (error) {
         toast.error('Erro ao atualizar campo: ' + error.message)
       } else {
         toast.success('Campo atualizado com sucesso!')
-        handleCancelEditField()
+        setIsFieldModalOpen(false)
         fetchData()
       }
     } else {
-      // Insert
-      const { error } = await supabase.from('fields').insert([{ name: fieldName, address: fieldAddress }])
+      const { error } = await supabase.from('fields').insert([{ name: fieldName.trim(), address: fieldAddress.trim() }])
       if (error) {
         toast.error('Erro ao criar campo: ' + error.message)
       } else {
         toast.success('Campo criado com sucesso!')
-        setFieldName('')
-        setFieldAddress('')
+        setIsFieldModalOpen(false)
         fetchData()
       }
     }
   }
 
-  const handleDeleteField = async (id: string) => {
-    if (!confirm('Eliminar este campo?')) return
-    await supabase.from('fields').delete().eq('id', id)
-    if (editingFieldId === id) handleCancelEditField()
-    toast.success('Campo eliminado!')
-    fetchData()
+  const handleSaveFieldForm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await executeSaveField()
   }
 
-  // --- OPPONENTS ---
+  const handleDeleteField = async (id: string, name: string) => {
+    if (!confirm(`Tens a certeza que desejas eliminar o campo "${name}"?`)) return
+    const { error } = await supabase.from('fields').delete().eq('id', id)
+    if (error) {
+      toast.error('Erro ao eliminar campo: ' + error.message)
+    } else {
+      toast.success('Campo eliminado!')
+      fetchData()
+    }
+  }
+
+  // --- OPPONENTS MODAL & LOGIC ---
+  const isOppDirty = () => {
+    return (
+      oppName !== initialOppState.name ||
+      oppInitials !== initialOppState.initials ||
+      oppContact !== initialOppState.contact ||
+      oppPhone !== initialOppState.phone ||
+      oppField !== initialOppState.field ||
+      oppLogo !== null
+    )
+  }
+
+  const handleOpenCreateOpponent = () => {
+    setEditingOppId(null)
+    setOppName('')
+    setOppInitials('')
+    setOppContact('')
+    setOppPhone('')
+    setOppField('')
+    setExistingLogoUrl(null)
+    setOppLogo(null)
+    setInitialOppState({
+      name: '',
+      initials: '',
+      contact: '',
+      phone: '',
+      field: ''
+    })
+    setIsOppModalOpen(true)
+  }
+
   const handleStartEditOpponent = (o: Opponent) => {
     setEditingOppId(o.id)
     setOppName(o.name)
@@ -231,23 +334,35 @@ const AdminDashboard: React.FC = () => {
     setOppField(o.home_field_id || '')
     setExistingLogoUrl(o.logo_url || null)
     setOppLogo(null)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setInitialOppState({
+      name: o.name,
+      initials: o.initials || '',
+      contact: o.contact_name || '',
+      phone: o.contact_phone || '',
+      field: o.home_field_id || ''
+    })
+    setIsOppModalOpen(true)
   }
 
-  const handleCancelEditOpponent = () => {
-    setEditingOppId(null)
-    setOppName('')
-    setOppInitials('')
-    setOppContact('')
-    setOppPhone('')
-    setOppField('')
-    setExistingLogoUrl(null)
-    setOppLogo(null)
+  const handleRequestCloseOppModal = () => {
+    if (isOppDirty()) {
+      setPendingCloseAction(() => () => {
+        setIsOppModalOpen(false)
+      })
+      setPendingSaveAction(() => async () => {
+        await executeSaveOpponent()
+      })
+      setUnsavedModalOpen(true)
+    } else {
+      setIsOppModalOpen(false)
+    }
   }
 
-  const handleSaveOpponent = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!oppName) return
+  const executeSaveOpponent = async () => {
+    if (!oppName.trim()) {
+      toast.warning('O nome da equipa adversária é obrigatório.')
+      return
+    }
 
     setUploadingOppLogo(true)
     let publicLogoUrl: string | null = existingLogoUrl
@@ -268,27 +383,25 @@ const AdminDashboard: React.FC = () => {
       }
 
       const payload = {
-        name: oppName,
-        initials: oppInitials || null,
+        name: oppName.trim(),
+        initials: oppInitials.trim() || null,
         logo_url: publicLogoUrl,
-        contact_name: oppContact,
-        contact_phone: oppPhone,
+        contact_name: oppContact.trim(),
+        contact_phone: oppPhone.trim(),
         home_field_id: oppField || null
       }
 
       if (editingOppId) {
-        // Update
         const { error } = await supabase.from('opponents').update(payload).eq('id', editingOppId)
         if (error) throw error
         toast.success('Adversário atualizado com sucesso!')
       } else {
-        // Insert
         const { error } = await supabase.from('opponents').insert([payload])
         if (error) throw error
         toast.success('Adversário criado com sucesso!')
       }
 
-      handleCancelEditOpponent()
+      setIsOppModalOpen(false)
       fetchData()
     } catch (err: any) {
       toast.error('Erro ao guardar adversário: ' + err.message)
@@ -297,531 +410,1055 @@ const AdminDashboard: React.FC = () => {
     }
   }
 
-  const handleDeleteOpponent = async (id: string) => {
-    if (!confirm('Eliminar este adversário?')) return
-    await supabase.from('opponents').delete().eq('id', id)
-    if (editingOppId === id) handleCancelEditOpponent()
-    toast.success('Adversário eliminado!')
-    fetchData()
+  const handleSaveOpponentForm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await executeSaveOpponent()
   }
 
-  // --- TOURNAMENTS ---
+  const handleDeleteOpponent = async (id: string, name: string) => {
+    if (!confirm(`Tens a certeza que desejas eliminar o adversário "${name}"?`)) return
+    const { error } = await supabase.from('opponents').delete().eq('id', id)
+    if (error) {
+      toast.error('Erro ao eliminar adversário: ' + error.message)
+    } else {
+      toast.success('Adversário eliminado!')
+      fetchData()
+    }
+  }
+
+  // --- TOURNAMENTS MODAL & LOGIC ---
+  const isTourDirty = () => {
+    return (
+      tourName !== initialTourState.name ||
+      tourSeason !== initialTourState.season ||
+      tourStatus !== initialTourState.status
+    )
+  }
+
+  const handleOpenCreateTournament = () => {
+    setEditingTourId(null)
+    setTourName('')
+    setTourSeason('')
+    setTourStatus('agendado')
+    setInitialTourState({ name: '', season: '', status: 'agendado' })
+    setIsTourModalOpen(true)
+  }
+
   const handleStartEditTournament = (t: Tournament) => {
     setEditingTourId(t.id)
     setTourName(t.name)
     setTourSeason(t.season || '')
     setTourStatus(t.status)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setInitialTourState({ name: t.name, season: t.season || '', status: t.status })
+    setIsTourModalOpen(true)
   }
 
-  const handleCancelEditTournament = () => {
-    setEditingTourId(null)
-    setTourName('')
-    setTourSeason('')
-    setTourStatus('agendado')
+  const handleRequestCloseTourModal = () => {
+    if (isTourDirty()) {
+      setPendingCloseAction(() => () => {
+        setIsTourModalOpen(false)
+      })
+      setPendingSaveAction(() => async () => {
+        await executeSaveTournament()
+      })
+      setUnsavedModalOpen(true)
+    } else {
+      setIsTourModalOpen(false)
+    }
   }
 
-  const handleSaveTournament = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!tourName) return
+  const executeSaveTournament = async () => {
+    if (!tourName.trim()) {
+      toast.warning('O nome da competição é obrigatório.')
+      return
+    }
 
-    const payload = { name: tourName, season: tourSeason, status: tourStatus }
+    const payload = { name: tourName.trim(), season: tourSeason.trim(), status: tourStatus }
 
     if (editingTourId) {
       const { error } = await supabase.from('tournaments').update(payload).eq('id', editingTourId)
-      if (!error) {
-        handleCancelEditTournament()
+      if (error) {
+        toast.error('Erro ao atualizar torneio: ' + error.message)
+      } else {
+        toast.success('Torneio atualizado com sucesso!')
+        setIsTourModalOpen(false)
         fetchData()
       }
     } else {
       const { error } = await supabase.from('tournaments').insert([payload])
-      if (!error) {
-        setTourName('')
-        setTourSeason('')
-        setTourStatus('agendado')
+      if (error) {
+        toast.error('Erro ao criar torneio: ' + error.message)
+      } else {
+        toast.success('Torneio criado com sucesso!')
+        setIsTourModalOpen(false)
         fetchData()
       }
     }
   }
 
-  const handleDeleteTournament = async (id: string) => {
-    if (!confirm('Eliminar este torneio?')) return
-    await supabase.from('tournaments').delete().eq('id', id)
-    if (editingTourId === id) handleCancelEditTournament()
-    fetchData()
+  const handleSaveTournamentForm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await executeSaveTournament()
   }
 
+  const handleDeleteTournament = async (id: string, name: string) => {
+    if (!confirm(`Tens a certeza que desejas eliminar o torneio "${name}"?`)) return
+    const { error } = await supabase.from('tournaments').delete().eq('id', id)
+    if (error) {
+      toast.error('Erro ao eliminar torneio: ' + error.message)
+    } else {
+      toast.success('Torneio eliminado!')
+      fetchData()
+    }
+  }
+
+  // --- FILTERS ---
+  const filteredFields = fields.filter(f => {
+    const q = fieldSearch.toLowerCase().trim()
+    if (!q) return true
+    return (
+      f.name.toLowerCase().includes(q) ||
+      (f.address && f.address.toLowerCase().includes(q))
+    )
+  })
+
+  const filteredOpponents = opponents.filter(o => {
+    const q = oppSearch.toLowerCase().trim()
+    if (!q) return true
+    const homeField = fields.find(f => f.id === o.home_field_id)
+    return (
+      o.name.toLowerCase().includes(q) ||
+      (o.initials && o.initials.toLowerCase().includes(q)) ||
+      (o.contact_name && o.contact_name.toLowerCase().includes(q)) ||
+      (o.contact_phone && o.contact_phone.includes(q)) ||
+      (homeField && homeField.name.toLowerCase().includes(q))
+    )
+  })
+
+  const filteredTournaments = tournaments.filter(t => {
+    const q = tourSearch.toLowerCase().trim()
+    const matchesQuery = !q || t.name.toLowerCase().includes(q) || (t.season && t.season.toLowerCase().includes(q))
+    const matchesStatus = tourStatusFilter === 'all' || t.status === tourStatusFilter
+    return matchesQuery && matchesStatus
+  })
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold text-csc-dark">Backoffice</h1>
-        <p className="text-gray-550 mt-1">Faça a gestão centralizada das configurações da equipa.</p>
+        <h1 className="text-2xl sm:text-3xl font-black text-csc-dark">Backoffice & Definições</h1>
+        <p className="text-gray-500 text-sm mt-1">Gestão centralizada do clube, campos, adversários e competições.</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap bg-white rounded-xl shadow-sm border border-gray-150 p-1 gap-1">
+      <div className="flex bg-white rounded-2xl shadow-xs border border-gray-200 p-1.5 gap-1 overflow-x-auto">
         <button 
           onClick={() => setActiveTab('club')}
-          className={`flex-1 min-w-[100px] py-2 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors ${activeTab === 'club' ? 'bg-csc-dark text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+          className={`flex-1 min-w-[110px] py-2.5 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'club' ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100/70 hover:text-gray-900'
+          }`}
         >
-          <Building2 size={16} /> Clube
+          <Building2 size={16} className={activeTab === 'club' ? 'text-csc-gold' : ''} />
+          <span>Clube</span>
         </button>
         <button 
           onClick={() => setActiveTab('fields')}
-          className={`flex-1 py-2 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors ${activeTab === 'fields' ? 'bg-csc-dark text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+          className={`flex-1 min-w-[110px] py-2.5 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'fields' ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100/70 hover:text-gray-900'
+          }`}
         >
-          <MapPin size={16} /> Campos
+          <MapPin size={16} className={activeTab === 'fields' ? 'text-csc-gold' : ''} />
+          <span>Campos ({fields.length})</span>
         </button>
         <button 
           onClick={() => setActiveTab('opponents')}
-          className={`flex-1 py-2 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors ${activeTab === 'opponents' ? 'bg-csc-dark text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+          className={`flex-1 min-w-[120px] py-2.5 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'opponents' ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100/70 hover:text-gray-900'
+          }`}
         >
-          <Shield size={16} /> Adversários
+          <Shield size={16} className={activeTab === 'opponents' ? 'text-csc-gold' : ''} />
+          <span>Adversários ({opponents.length})</span>
         </button>
         <button 
           onClick={() => setActiveTab('tournaments')}
-          className={`flex-1 py-2 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors ${activeTab === 'tournaments' ? 'bg-csc-dark text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+          className={`flex-1 min-w-[110px] py-2.5 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'tournaments' ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100/70 hover:text-gray-900'
+          }`}
         >
-          <Trophy size={16} /> Torneios
+          <Trophy size={16} className={activeTab === 'tournaments' ? 'text-csc-gold' : ''} />
+          <span>Torneios ({tournaments.length})</span>
         </button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-10">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-csc-dark"></div>
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-200">
+          <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-csc-dark mb-3"></div>
+          <p className="text-xs font-bold text-gray-500">A carregar dados...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Form Column */}
-          <div className="md:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 sticky top-6">
-              
-              {activeTab === 'club' && (
-                <form onSubmit={handleUpdateClub} className="space-y-4">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center gap-2"><Building2 size={20}/> Detalhes do Clube</h3>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Nome do Clube *</label>
-                    <input type="text" required value={clubName} onChange={e => setClubName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: Cascais Sport Clube" />
+        <div>
+          {/* ========================================================================= */}
+          {/* TAB 1: CLUBE */}
+          {/* ========================================================================= */}
+          {activeTab === 'club' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Detalhes do Clube */}
+              <div className="md:col-span-2 bg-white rounded-3xl shadow-sm border border-gray-200 p-6 sm:p-7">
+                <form onSubmit={handleUpdateClub} className="space-y-5">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <h3 className="text-base sm:text-lg font-black text-csc-dark flex items-center gap-2">
+                      <Building2 size={20} className="text-csc-gold" />
+                      <span>Identificação do Clube</span>
+                    </h3>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Siglas *</label>
-                    <input type="text" required value={clubInitials} onChange={e => setClubInitials(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: CSC" />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">Nome Oficial *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={clubName} 
+                        onChange={e => setClubName(e.target.value)} 
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-csc-dark outline-none font-bold text-sm bg-white" 
+                        placeholder="Ex: Grupo Dramático e Sportivo de Cascais" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">Sigla / Abreviatura *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={clubInitials} 
+                        onChange={e => setClubInitials(e.target.value)} 
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-csc-dark outline-none font-bold text-sm bg-white" 
+                        placeholder="Ex: CSC" 
+                      />
+                    </div>
                   </div>
+
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-sm font-bold text-gray-700">Campo Habitual (Casa do Cascais)</label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-black text-gray-700 uppercase tracking-wider">Campo Habitual (Casa)</label>
                       <button
                         type="button"
-                        onClick={() => setActiveTab('fields')}
-                        className="text-xs text-csc-dark font-bold hover:underline"
+                        onClick={() => {
+                          setActiveTab('fields')
+                          handleOpenCreateField()
+                        }}
+                        className="text-xs text-csc-dark font-black hover:underline flex items-center gap-1 cursor-pointer"
                       >
-                        + Gerir Campos
+                        <Plus size={13} /> Novo Campo
                       </button>
                     </div>
                     <select
                       value={clubHomeField}
                       onChange={e => setClubHomeField(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm font-bold text-gray-800"
                     >
-                      <option value="">-- Nenhum campo definido --</option>
+                      <option value="">-- Selecionar campo de casa --</option>
                       {fields.map(f => (
                         <option key={f.id} value={f.id}>
                           🏟️ {f.name} {f.address ? `(${f.address})` : ''}
                         </option>
                       ))}
                     </select>
-                    <p className="text-[11px] text-gray-500 mt-1">Este campo será sugerido automaticamente como campo de casa em jogos e treinos.</p>
+                    <p className="text-[11px] text-gray-500 mt-1.5 font-medium">Este campo é atribuído por omissão em novos jogos em casa e treinos.</p>
                   </div>
-                  <button type="submit" className="w-full flex items-center justify-center gap-2 bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow">
-                    <Save size={18} /> Guardar Ficha do Clube
-                  </button>
-                </form>
-              )}
 
-              {activeTab === 'fields' && (
-                <form onSubmit={handleSaveField} className="space-y-4">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <h3 className="text-lg font-bold text-gray-805 flex items-center gap-2">
-                      <MapPin size={20}/> {editingFieldId ? 'Editar Campo' : 'Criar Campo'}
-                    </h3>
-                    {editingFieldId && (
-                      <button
-                        type="button"
-                        onClick={handleCancelEditField}
-                        className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 font-bold"
-                      >
-                        <X size={14} /> Cancelar
-                      </button>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Nome do Campo *</label>
-                    <input type="text" required value={fieldName} onChange={e => setFieldName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: Estádio Pina Manique" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Morada / Localização</label>
-                    <input type="text" value={fieldAddress} onChange={e => setFieldAddress(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: R. Dom Francisco Manuel de Melo, Lisboa" />
-                    <p className="text-[11px] text-gray-500 mt-1">Usada para abrir diretamente no Google Maps.</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="submit" className="flex-1 bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow text-sm">
-                      {editingFieldId ? 'Atualizar Campo' : 'Adicionar Campo'}
+                  <div className="pt-2">
+                    <button 
+                      type="submit" 
+                      className="w-full sm:w-auto px-6 py-3 bg-csc-dark text-white rounded-xl font-black text-sm hover:bg-csc-dark/90 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                    >
+                      <Save size={17} className="text-csc-gold" />
+                      <span>Guardar Dados do Clube</span>
                     </button>
-                    {editingFieldId && (
-                      <button type="button" onClick={handleCancelEditField} className="px-4 py-2.5 border border-gray-300 rounded-lg font-bold text-gray-600 hover:bg-gray-100 text-sm">
-                        Cancelar
-                      </button>
-                    )}
                   </div>
                 </form>
-              )}
+              </div>
 
-              {activeTab === 'opponents' && (
-                <form onSubmit={handleSaveOpponent} className="space-y-4">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <h3 className="text-lg font-bold text-gray-805 flex items-center gap-2">
-                      <Shield size={20}/> {editingOppId ? 'Editar Adversário' : 'Criar Adversário'}
-                    </h3>
-                    {editingOppId && (
-                      <button
-                        type="button"
-                        onClick={handleCancelEditOpponent}
-                        className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 font-bold"
-                      >
-                        <X size={14} /> Cancelar
-                      </button>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Nome da Equipa *</label>
-                    <input type="text" required value={oppName} onChange={e => setOppName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: Pescadores CC" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Siglas</label>
-                    <input type="text" value={oppInitials} onChange={e => setOppInitials(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: PCC" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Símbolo (Logótipo)</label>
-                    {existingLogoUrl && !oppLogo && (
-                      <div className="flex items-center gap-2 mb-2 p-2 bg-gray-50 border rounded-lg">
-                        <img src={existingLogoUrl} alt="Logo Atual" className="w-8 h-8 object-contain" />
-                        <span className="text-xs text-gray-600 truncate flex-1">Símbolo atual guardado</span>
-                      </div>
-                    )}
-                    <input type="file" accept="image/*" onChange={e => setOppLogo(e.target.files ? e.target.files[0] : null)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Campo Habitual</label>
-                    <select value={oppField} onChange={e => setOppField(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm">
-                      <option value="">Nenhum</option>
-                      {fields.map(f => (
-                        <option key={f.id} value={f.id}>{f.name} {f.address ? `(${f.address})` : ''}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Pessoa de Contacto</label>
-                    <input type="text" value={oppContact} onChange={e => setOppContact(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: Sr. João" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Telefone</label>
-                    <input type="text" value={oppPhone} onChange={e => setOppPhone(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: 910 000 000" />
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="submit" disabled={uploadingOppLogo} className="flex-1 bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow text-sm disabled:opacity-50">
-                      {uploadingOppLogo ? 'A enviar...' : editingOppId ? 'Atualizar Adversário' : 'Adicionar Adversário'}
-                    </button>
-                    {editingOppId && (
-                      <button type="button" onClick={handleCancelEditOpponent} className="px-4 py-2.5 border border-gray-300 rounded-lg font-bold text-gray-600 hover:bg-gray-100 text-sm">
-                        Cancelar
-                      </button>
-                    )}
-                  </div>
-                </form>
-              )}
-
-              {activeTab === 'tournaments' && (
-                <form onSubmit={handleSaveTournament} className="space-y-4">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <h3 className="text-lg font-bold text-gray-805 flex items-center gap-2">
-                      <Trophy size={20}/> {editingTourId ? 'Editar Torneio' : 'Criar Torneio'}
-                    </h3>
-                    {editingTourId && (
-                      <button
-                        type="button"
-                        onClick={handleCancelEditTournament}
-                        className="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 font-bold"
-                      >
-                        <X size={14} /> Cancelar
-                      </button>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Nome da Competição *</label>
-                    <input type="text" required value={tourName} onChange={e => setTourName(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: Liga de Veteranos" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Época</label>
-                    <input type="text" value={tourSeason} onChange={e => setTourSeason(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm" placeholder="Ex: 2025/2026" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Estado</label>
-                    <select value={tourStatus} onChange={e => setTourStatus(e.target.value as any)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm">
-                      <option value="agendado">Agendado</option>
-                      <option value="ativo">Ativo</option>
-                      <option value="terminado">Terminado</option>
-                    </select>
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="submit" className="flex-1 bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow text-sm">
-                      {editingTourId ? 'Atualizar Torneio' : 'Adicionar Torneio'}
-                    </button>
-                    {editingTourId && (
-                      <button type="button" onClick={handleCancelEditTournament} className="px-4 py-2.5 border border-gray-300 rounded-lg font-bold text-gray-600 hover:bg-gray-100 text-sm">
-                        Cancelar
-                      </button>
-                    )}
-                  </div>
-                </form>
-              )}
-
-            </div>
-          </div>
-
-          {/* List Column */}
-          <div className="md:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6">
-              
-              {activeTab === 'club' && (
-                <div className="space-y-6">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2">Símbolo do Clube</h3>
-                  <div className="flex flex-col md:flex-row items-center gap-8">
-                    <div className="w-40 h-40 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
+              {/* Símbolo do Clube */}
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-base font-black text-csc-dark border-b border-gray-100 pb-3 flex items-center gap-2">
+                    <Shield size={18} className="text-csc-gold" />
+                    <span>Emblema do Clube</span>
+                  </h3>
+                  <div className="my-6 flex justify-center">
+                    <div className="w-36 h-36 bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center overflow-hidden p-3 shadow-inner">
                       {clubSettings?.logo_url ? (
-                        <img src={clubSettings.logo_url} alt="Símbolo" className="w-full h-full object-contain p-2" />
+                        <img src={clubSettings.logo_url} alt="Símbolo CSC" className="w-full h-full object-contain" />
                       ) : (
                         <Shield size={48} className="text-gray-300" />
                       )}
                     </div>
-                    <div className="flex-1 space-y-4 text-center md:text-left">
-                      <div>
-                        <p className="font-bold text-gray-805">Atualizar Símbolo</p>
-                        <p className="text-sm text-gray-500">Faça o upload do logótipo ou emblema do clube (Recomendado: PNG com fundo transparente).</p>
-                      </div>
-                      <div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleUploadLogo}
-                          disabled={uploadingLogo}
-                          className="hidden"
-                          id="logo-upload"
-                        />
-                        <label 
-                          htmlFor="logo-upload"
-                          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold cursor-pointer transition-colors shadow-sm
-                            ${uploadingLogo ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}
-                          `}
-                        >
-                          {uploadingLogo ? (
-                            <><div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-gray-400"></div> A enviar...</>
-                          ) : (
-                            <><Upload size={18} /> Selecionar Imagem</>
-                          )}
-                        </label>
-                      </div>
-                    </div>
                   </div>
+                  <p className="text-xs text-gray-500 text-center font-medium leading-relaxed">
+                    Carregue o logótipo oficial do clube (formato PNG com transparência recomendado).
+                  </p>
                 </div>
-              )}
 
-              {activeTab === 'fields' && (
-                <div className="space-y-3">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center justify-between">
-                    <span>Campos Registados ({fields.length})</span>
-                  </h3>
-                  {fields.length === 0 ? (
-                    <p className="text-gray-500 text-sm">Nenhum campo encontrado.</p>
-                  ) : (
-                    fields.map(f => {
+                <div className="mt-6 pt-4 border-t border-gray-100">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUploadLogo}
+                    disabled={uploadingLogo}
+                    className="hidden"
+                    id="club-logo-upload"
+                  />
+                  <label 
+                    htmlFor="club-logo-upload"
+                    className={`w-full py-2.5 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer transition-all border shadow-xs ${
+                      uploadingLogo 
+                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                        : 'bg-white border-gray-300 text-gray-800 hover:bg-gray-50 active:scale-98'
+                    }`}
+                  >
+                    {uploadingLogo ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-csc-dark"></div>
+                        <span>A carregar imagem...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={15} className="text-csc-dark" />
+                        <span>Carregar Novo Símbolo</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 2: CAMPOS (VISTA DE LISTAGEM ISOLADA) */}
+          {/* ========================================================================= */}
+          {activeTab === 'fields' && (
+            <div className="space-y-4">
+              {/* Barra de Filtros e Criação */}
+              <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="relative flex-1">
+                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={fieldSearch}
+                    onChange={e => setFieldSearch(e.target.value)}
+                    placeholder="Pesquisar por nome ou morada do campo..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all"
+                  />
+                  {fieldSearch && (
+                    <button 
+                      onClick={() => setFieldSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenCreateField}
+                  className="px-4 py-2.5 bg-csc-dark text-white rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-csc-dark/90 transition-all shadow-xs shrink-0 cursor-pointer active:scale-98"
+                >
+                  <Plus size={16} className="text-csc-gold" />
+                  <span>Novo Campo</span>
+                </button>
+              </div>
+
+              {/* Lista de Campos */}
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100 text-xs font-bold text-gray-500">
+                  <span>A apresentar {filteredFields.length} de {fields.length} campos registados</span>
+                </div>
+
+                {filteredFields.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    <MapPin size={40} className="mx-auto mb-2 opacity-30" />
+                    <p className="font-bold text-sm text-gray-600">Nenhum campo encontrado</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Tente outro termo na pesquisa ou crie um novo campo.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {filteredFields.map(f => {
                       const mapsQuery = f.address ? `${f.name}, ${f.address}` : f.name
                       const mapsUrl = getGoogleMapsUrl(mapsQuery)
+                      const isDefaultClubField = clubSettings?.home_field_id === f.id
 
                       return (
-                        <div key={f.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-gray-50 rounded-xl border transition-all gap-2 ${editingFieldId === f.id ? 'border-csc-dark bg-csc-dark/5 ring-1 ring-csc-dark' : 'border-gray-200'}`}>
+                        <div 
+                          key={f.id} 
+                          className="flex flex-col justify-between p-4 bg-gray-50 hover:bg-gray-100/60 rounded-2xl border border-gray-200 transition-all gap-3"
+                        >
                           <div className="space-y-1">
-                            <p className="font-bold text-sm text-csc-dark flex items-center gap-1.5">
-                              <span>{f.name}</span>
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">🏟️</span>
+                              <h4 className="font-black text-sm text-csc-dark">{f.name}</h4>
+                              {isDefaultClubField && (
+                                <span className="bg-csc-dark text-csc-gold text-[10px] font-black px-2 py-0.5 rounded-full border border-csc-gold/30">
+                                  Casa do CSC
+                                </span>
+                              )}
+                            </div>
                             {f.address ? (
-                              <p className="text-xs text-gray-600 flex items-center gap-1">
-                                <span className="font-medium">{f.address}</span>
-                              </p>
+                              <p className="text-xs text-gray-600 font-medium pl-6 leading-relaxed">{f.address}</p>
                             ) : (
-                              <p className="text-[11px] text-gray-400 italic">Sem morada definida</p>
+                              <p className="text-xs text-gray-400 italic pl-6">Sem morada definida</p>
                             )}
                           </div>
 
-                          <div className="flex items-center gap-1.5 self-end sm:self-center">
-                            {/* Botão Google Maps */}
+                          <div className="flex items-center justify-between pt-2 border-t border-gray-200/60 mt-1">
                             <a
                               href={mapsUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-2.5 py-1.5 bg-white border border-gray-300 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
-                              title="Abrir no Google Maps"
+                              className="px-2.5 py-1.5 bg-white border border-gray-200 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
                             >
-                              <MapPin size={14} className="text-red-500 shrink-0" />
-                              <span>Maps</span>
-                              <ExternalLink size={11} className="opacity-60" />
+                              <MapPin size={13} className="text-red-500 shrink-0" />
+                              <span>Google Maps</span>
+                              <ExternalLink size={10} className="opacity-50" />
                             </a>
 
-                            {/* Botão Editar */}
-                            <button
-                              onClick={() => handleStartEditField(f)}
-                              className="p-1.5 bg-white border border-gray-300 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-lg transition-colors shadow-xs"
-                              title="Editar Campo"
-                            >
-                              <Edit2 size={15} />
-                            </button>
-
-                            {/* Botão Eliminar */}
-                            <button
-                              onClick={() => handleDeleteField(f.id)}
-                              className="p-1.5 bg-white border border-gray-300 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-lg transition-colors shadow-xs"
-                              title="Eliminar Campo"
-                            >
-                              <Trash2 size={15} />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleStartEditField(f)}
+                                className="p-2 bg-white border border-gray-200 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                                title="Editar Campo"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteField(f.id, f.name)}
+                                className="p-2 bg-white border border-gray-200 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                                title="Eliminar Campo"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )
-                    })
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 3: ADVERSÁRIOS (VISTA DE LISTAGEM ISOLADA) */}
+          {/* ========================================================================= */}
+          {activeTab === 'opponents' && (
+            <div className="space-y-4">
+              {/* Barra de Filtros e Criação */}
+              <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="relative flex-1">
+                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={oppSearch}
+                    onChange={e => setOppSearch(e.target.value)}
+                    placeholder="Pesquisar por equipa, sigla, contacto ou campo..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all"
+                  />
+                  {oppSearch && (
+                    <button 
+                      onClick={() => setOppSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={15} />
+                    </button>
                   )}
                 </div>
-              )}
 
-              {activeTab === 'opponents' && (
-                <div className="space-y-3">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center justify-between">
-                    <span>Adversários Registados ({opponents.length})</span>
-                  </h3>
-                  {opponents.length === 0 ? (
-                    <p className="text-gray-500 text-sm">Nenhum adversário encontrado.</p>
-                  ) : (
-                    opponents.map(o => {
+                <button
+                  type="button"
+                  onClick={handleOpenCreateOpponent}
+                  className="px-4 py-2.5 bg-csc-dark text-white rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-csc-dark/90 transition-all shadow-xs shrink-0 cursor-pointer active:scale-98"
+                >
+                  <Plus size={16} className="text-csc-gold" />
+                  <span>Novo Adversário</span>
+                </button>
+              </div>
+
+              {/* Lista de Adversários */}
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100 text-xs font-bold text-gray-500">
+                  <span>A apresentar {filteredOpponents.length} de {opponents.length} equipas registadas</span>
+                </div>
+
+                {filteredOpponents.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    <Shield size={40} className="mx-auto mb-2 opacity-30" />
+                    <p className="font-bold text-sm text-gray-600">Nenhum adversário encontrado</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Tente outro filtro ou crie um novo adversário.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {filteredOpponents.map(o => {
                       const homeField = fields.find(f => f.id === o.home_field_id)
                       const mapsQuery = homeField ? (homeField.address ? `${homeField.name}, ${homeField.address}` : homeField.name) : o.name
                       const mapsUrl = getGoogleMapsUrl(mapsQuery)
 
                       return (
-                        <div key={o.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-gray-50 rounded-xl border transition-all gap-3 ${editingOppId === o.id ? 'border-csc-dark bg-csc-dark/5 ring-1 ring-csc-dark' : 'border-gray-200'}`}>
-                          <div className="flex items-center gap-3">
+                        <div 
+                          key={o.id} 
+                          className="flex flex-col justify-between p-4 bg-gray-50 hover:bg-gray-100/60 rounded-2xl border border-gray-200 transition-all gap-3"
+                        >
+                          <div className="flex items-start gap-3.5">
                             {o.logo_url ? (
-                              <img src={o.logo_url} alt={o.initials || o.name} className="w-12 h-12 object-contain bg-white rounded-lg border p-1 shadow-xs shrink-0" />
+                              <img 
+                                src={o.logo_url} 
+                                alt={o.name} 
+                                className="w-13 h-13 object-contain bg-white rounded-xl border border-gray-200 p-1.5 shadow-2xs shrink-0" 
+                              />
                             ) : (
-                              <div className="w-12 h-12 bg-gray-200 border border-gray-300 rounded-lg flex items-center justify-center font-bold text-gray-600 text-xs shrink-0">
+                              <div className="w-13 h-13 bg-gray-200 border border-gray-300 rounded-xl flex items-center justify-center font-black text-gray-600 text-sm shrink-0">
                                 {o.initials || o.name.substring(0, 3).toUpperCase()}
                               </div>
                             )}
-                            <div>
-                              <p className="font-bold text-sm text-csc-dark">
-                                {o.name} {o.initials && <span className="text-gray-500 font-normal ml-1">({o.initials})</span>}
-                              </p>
-                              
+
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-black text-sm text-csc-dark truncate">
+                                {o.name} {o.initials && <span className="text-gray-500 font-semibold text-xs ml-1">({o.initials})</span>}
+                              </h4>
+
                               {homeField && (
-                                <p className="text-xs text-gray-600 flex items-center gap-1 mt-0.5">
-                                  <span className="font-semibold">Campo:</span> {homeField.name}
+                                <p className="text-xs text-gray-600 font-medium flex items-center gap-1 mt-1 truncate">
+                                  <span className="text-gray-400">🏟️ Campo:</span>
+                                  <span className="truncate">{homeField.name}</span>
                                 </p>
                               )}
 
-                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-500">
-                                {o.contact_name && <span>👤 {o.contact_name}</span>}
-                                {o.contact_phone && <span>📞 {o.contact_phone}</span>}
-                              </div>
+                              {(o.contact_name || o.contact_phone) && (
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-600 font-medium">
+                                  {o.contact_name && (
+                                    <span className="flex items-center gap-1">
+                                      <User size={12} className="text-gray-400" />
+                                      <span>{o.contact_name}</span>
+                                    </span>
+                                  )}
+                                  {o.contact_phone && (
+                                    <a 
+                                      href={`tel:${o.contact_phone}`}
+                                      className="flex items-center gap-1 text-csc-dark font-bold hover:underline"
+                                    >
+                                      <Phone size={12} className="text-csc-gold" />
+                                      <span>{o.contact_phone}</span>
+                                    </a>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1.5 self-end sm:self-center">
-                            {/* Botão Google Maps se tiver campo habitual */}
-                            {homeField && (
+                          <div className="flex items-center justify-between pt-2.5 border-t border-gray-200/60 mt-1">
+                            {homeField ? (
                               <a
                                 href={mapsUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-2.5 py-1.5 bg-white border border-gray-300 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
-                                title={`Abrir campo ${homeField.name} no Google Maps`}
+                                className="px-2.5 py-1.5 bg-white border border-gray-200 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
                               >
-                                <MapPin size={14} className="text-red-500 shrink-0" />
-                                <span className="hidden sm:inline">Campo</span>
-                                <ExternalLink size={11} className="opacity-60" />
+                                <MapPin size={13} className="text-red-500 shrink-0" />
+                                <span>Ver Campo</span>
+                                <ExternalLink size={10} className="opacity-50" />
                               </a>
+                            ) : (
+                              <span className="text-[11px] text-gray-400 italic">Sem campo associado</span>
                             )}
 
-                            {/* Botão Editar */}
-                            <button
-                              onClick={() => handleStartEditOpponent(o)}
-                              className="p-1.5 bg-white border border-gray-300 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-lg transition-colors shadow-xs"
-                              title="Editar Adversário"
-                            >
-                              <Edit2 size={15} />
-                            </button>
-
-                            {/* Botão Eliminar */}
-                            <button
-                              onClick={() => handleDeleteOpponent(o.id)}
-                              className="p-1.5 bg-white border border-gray-300 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-lg transition-colors shadow-xs"
-                              title="Eliminar Adversário"
-                            >
-                              <Trash2 size={15} />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleStartEditOpponent(o)}
+                                className="p-2 bg-white border border-gray-200 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                                title="Editar Adversário"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteOpponent(o.id, o.name)}
+                                className="p-2 bg-white border border-gray-200 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                                title="Eliminar Adversário"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )
-                    })
-                  )}
-                </div>
-              )}
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
-              {activeTab === 'tournaments' && (
-                <div className="space-y-3">
-                  <h3 className="text-lg font-bold text-gray-805 mb-4 border-b pb-2 flex items-center justify-between">
-                    <span>Torneios Registados ({tournaments.length})</span>
-                  </h3>
-                  {tournaments.length === 0 ? (
-                    <p className="text-gray-500 text-sm">Nenhum torneio encontrado.</p>
-                  ) : (
-                    tournaments.map(t => (
-                      <div key={t.id} className={`flex justify-between items-center p-3.5 bg-gray-50 rounded-xl border transition-all ${editingTourId === t.id ? 'border-csc-dark bg-csc-dark/5 ring-1 ring-csc-dark' : 'border-gray-200'}`}>
-                        <div>
-                          <p className="font-bold text-sm text-csc-dark">{t.name} <span className="text-xs font-normal text-gray-500 ml-1">({t.season})</span></p>
-                          <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded uppercase 
-                            ${t.status === 'ativo' ? 'bg-csc-light/20 text-csc-dark' : t.status === 'terminado' ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-700'}`}>
-                            {t.status}
-                          </span>
+          {/* ========================================================================= */}
+          {/* TAB 4: TORNEIOS (VISTA DE LISTAGEM ISOLADA) */}
+          {/* ========================================================================= */}
+          {activeTab === 'tournaments' && (
+            <div className="space-y-4">
+              {/* Barra de Filtros e Criação */}
+              <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row items-center gap-2.5 flex-1">
+                  <div className="relative w-full sm:flex-1">
+                    <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={tourSearch}
+                      onChange={e => setTourSearch(e.target.value)}
+                      placeholder="Pesquisar por nome ou época da competição..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all"
+                    />
+                    {tourSearch && (
+                      <button 
+                        onClick={() => setTourSearch('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
+                    {(['all', 'ativo', 'agendado', 'terminado'] as const).map(st => (
+                      <button
+                        key={st}
+                        onClick={() => setTourStatusFilter(st)}
+                        className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black capitalize transition-all cursor-pointer ${
+                          tourStatusFilter === st 
+                            ? 'bg-white text-csc-dark shadow-xs' 
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        {st === 'all' ? 'Todos' : st}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenCreateTournament}
+                  className="px-4 py-2.5 bg-csc-dark text-white rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-csc-dark/90 transition-all shadow-xs shrink-0 cursor-pointer active:scale-98"
+                >
+                  <Plus size={16} className="text-csc-gold" />
+                  <span>Novo Torneio</span>
+                </button>
+              </div>
+
+              {/* Lista de Torneios */}
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100 text-xs font-bold text-gray-500">
+                  <span>A apresentar {filteredTournaments.length} de {tournaments.length} torneios registados</span>
+                </div>
+
+                {filteredTournaments.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    <Trophy size={40} className="mx-auto mb-2 opacity-30" />
+                    <p className="font-bold text-sm text-gray-600">Nenhum torneio encontrado</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Tente alterar os filtros ou adicione uma nova competição.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {filteredTournaments.map(t => (
+                      <div 
+                        key={t.id} 
+                        className="flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100/60 rounded-2xl border border-gray-200 transition-all"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🏆</span>
+                            <div>
+                              <h4 className="font-black text-sm text-csc-dark">{t.name}</h4>
+                              {t.season && (
+                                <p className="text-xs text-gray-500 font-semibold">Época: {t.season}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <span className={`inline-block text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                              t.status === 'ativo' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                              t.status === 'terminado' ? 'bg-gray-200 text-gray-700' :
+                              'bg-amber-100 text-amber-800 border border-amber-300'
+                            }`}>
+                              {t.status}
+                            </span>
+                          </div>
                         </div>
+
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => handleStartEditTournament(t)}
-                            className="p-1.5 bg-white border border-gray-300 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-lg transition-colors shadow-xs"
+                            className="p-2 bg-white border border-gray-200 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                             title="Editar Torneio"
                           >
-                            <Edit2 size={15} />
+                            <Edit2 size={14} />
                           </button>
                           <button
-                            onClick={() => handleDeleteTournament(t.id)}
-                            className="p-1.5 bg-white border border-gray-300 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-lg transition-colors shadow-xs"
+                            onClick={() => handleDeleteTournament(t.id, t.name)}
+                            className="p-2 bg-white border border-gray-200 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                             title="Eliminar Torneio"
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
+      {/* ========================================================================= */}
+      {/* MODAL 1: CRIAR / EDITAR CAMPO */}
+      {/* ========================================================================= */}
+      {isFieldModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-gray-200 overflow-hidden animate-scale-in">
+            <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white">
+              <div className="flex items-center gap-2.5">
+                <MapPin size={22} className="text-csc-gold" />
+                <h3 className="font-black text-lg">
+                  {editingFieldId ? 'Editar Campo' : 'Criar Novo Campo'}
+                </h3>
+              </div>
+              <button
+                onClick={handleRequestCloseFieldModal}
+                className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveFieldForm} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  Nome do Campo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={fieldName}
+                  onChange={e => setFieldName(e.target.value)}
+                  placeholder="Ex: Estádio Municipal Dramático de Cascais"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  Morada / Localização
+                </label>
+                <input
+                  type="text"
+                  value={fieldAddress}
+                  onChange={e => setFieldAddress(e.target.value)}
+                  placeholder="Ex: R. da Torre, 2750-760 Cascais"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                />
+                <p className="text-[11px] text-gray-500 mt-1 font-medium">Usada para integração e navegação direta no Google Maps.</p>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={handleRequestCloseFieldModal}
+                  className="px-5 py-2.5 border border-gray-300 rounded-xl font-bold text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-csc-dark text-white rounded-xl font-black text-sm hover:bg-csc-dark/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
+                >
+                  <Save size={16} className="text-csc-gold" />
+                  <span>{editingFieldId ? 'Atualizar Campo' : 'Guardar Campo'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 2: CRIAR / EDITAR ADVERSÁRIO */}
+      {/* ========================================================================= */}
+      {isOppModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-gray-200 overflow-hidden animate-scale-in my-8">
+            <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white">
+              <div className="flex items-center gap-2.5">
+                <Shield size={22} className="text-csc-gold" />
+                <h3 className="font-black text-lg">
+                  {editingOppId ? 'Editar Adversário' : 'Criar Novo Adversário'}
+                </h3>
+              </div>
+              <button
+                onClick={handleRequestCloseOppModal}
+                className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveOpponentForm} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                    Nome da Equipa *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={oppName}
+                    onChange={e => setOppName(e.target.value)}
+                    placeholder="Ex: Grupo Desportivo Pescadores"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                    Siglas
+                  </label>
+                  <input
+                    type="text"
+                    value={oppInitials}
+                    onChange={e => setOppInitials(e.target.value)}
+                    placeholder="Ex: GDPCC"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  Símbolo (Logótipo)
+                </label>
+                {existingLogoUrl && !oppLogo && (
+                  <div className="flex items-center gap-3 mb-2 p-2 bg-gray-50 border border-gray-200 rounded-xl">
+                    <img src={existingLogoUrl} alt="Logo Atual" className="w-10 h-10 object-contain p-1 bg-white rounded-lg border" />
+                    <span className="text-xs text-gray-600 font-medium truncate flex-1">Símbolo atualmente guardado</span>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => setOppLogo(e.target.files ? e.target.files[0] : null)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl text-xs bg-gray-50 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-dark file:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  Campo Habitual
+                </label>
+                <select
+                  value={oppField}
+                  onChange={e => setOppField(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                >
+                  <option value="">-- Nenhum campo habitual associado --</option>
+                  {fields.map(f => (
+                    <option key={f.id} value={f.id}>
+                      🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                    Pessoa de Contacto
+                  </label>
+                  <input
+                    type="text"
+                    value={oppContact}
+                    onChange={e => setOppContact(e.target.value)}
+                    placeholder="Ex: Sr. Carlos Diretor"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                    Telefone
+                  </label>
+                  <input
+                    type="text"
+                    value={oppPhone}
+                    onChange={e => setOppPhone(e.target.value)}
+                    placeholder="Ex: 910 000 000"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={handleRequestCloseOppModal}
+                  className="px-5 py-2.5 border border-gray-300 rounded-xl font-bold text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadingOppLogo}
+                  className="px-6 py-2.5 bg-csc-dark text-white rounded-xl font-black text-sm hover:bg-csc-dark/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98"
+                >
+                  {uploadingOppLogo ? (
+                    <span>A enviar dados...</span>
+                  ) : (
+                    <>
+                      <Save size={16} className="text-csc-gold" />
+                      <span>{editingOppId ? 'Atualizar Adversário' : 'Guardar Adversário'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 3: CRIAR / EDITAR TORNEIO */}
+      {/* ========================================================================= */}
+      {isTourModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-gray-200 overflow-hidden animate-scale-in">
+            <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white">
+              <div className="flex items-center gap-2.5">
+                <Trophy size={22} className="text-csc-gold" />
+                <h3 className="font-black text-lg">
+                  {editingTourId ? 'Editar Torneio' : 'Criar Novo Torneio'}
+                </h3>
+              </div>
+              <button
+                onClick={handleRequestCloseTourModal}
+                className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTournamentForm} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  Nome da Competição *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={tourName}
+                  onChange={e => setTourName(e.target.value)}
+                  placeholder="Ex: Liga Veteranos AF Lisboa"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                    Época Desportiva
+                  </label>
+                  <input
+                    type="text"
+                    value={tourSeason}
+                    onChange={e => setTourSeason(e.target.value)}
+                    placeholder="Ex: 2025/2026"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                    Estado do Torneio
+                  </label>
+                  <select
+                    value={tourStatus}
+                    onChange={e => setTourStatus(e.target.value as any)}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  >
+                    <option value="agendado">Agendado</option>
+                    <option value="ativo">Ativo (Em Curso)</option>
+                    <option value="terminado">Terminado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={handleRequestCloseTourModal}
+                  className="px-5 py-2.5 border border-gray-300 rounded-xl font-bold text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-csc-dark text-white rounded-xl font-black text-sm hover:bg-csc-dark/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
+                >
+                  <Save size={16} className="text-csc-gold" />
+                  <span>{editingTourId ? 'Atualizar Torneio' : 'Guardar Torneio'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL GLOBAL: CONFIRMAÇÃO DE ALTERAÇÕES NÃO GRAVADAS */}
+      {/* ========================================================================= */}
+      {unsavedModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-sm w-full p-6 text-center space-y-4 animate-scale-in">
+            <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 mx-auto">
+              <AlertTriangle size={28} />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-gray-900">Alterações Não Gravadas</h3>
+              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                Tem alterações por guardar. O que pretende fazer?
+              </p>
+            </div>
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  setUnsavedModalOpen(false)
+                  if (pendingSaveAction) await pendingSaveAction()
+                }}
+                className="w-full py-2.5 px-4 bg-csc-dark text-white font-black text-xs rounded-xl hover:bg-csc-dark/90 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Save size={15} className="text-csc-gold" />
+                <span>Gravar e Sair</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUnsavedModalOpen(false)
+                  if (pendingCloseAction) pendingCloseAction()
+                }}
+                className="w-full py-2.5 px-4 bg-red-50 border border-red-200 text-red-700 font-black text-xs rounded-xl hover:bg-red-100 transition-all cursor-pointer"
+              >
+                Sair sem Gravar
+              </button>
+              <button
+                type="button"
+                onClick={() => setUnsavedModalOpen(false)}
+                className="w-full py-2 px-4 text-gray-500 font-bold text-xs hover:text-gray-800 transition-colors cursor-pointer"
+              >
+                Continuar a Editar
+              </button>
             </div>
           </div>
         </div>
