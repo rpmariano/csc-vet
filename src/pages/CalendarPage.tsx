@@ -1363,6 +1363,36 @@ const CalendarPage: React.FC = () => {
       }
     }
 
+    // Helper para obter a convocatória do utilizador atual para qualquer evento
+    const getMyCallupForEvent = (eventId: string): CallupWithPlayer | null => {
+      if (!profile) return null
+      const callups = eventCallups[eventId] || []
+      const pId = profile.id
+      const pEmail = profile.email ? profile.email.toLowerCase().trim() : ''
+      const pName = profile.name ? profile.name.toLowerCase().trim() : ''
+
+      const found = callups.find(c => 
+        c.player_id === pId ||
+        c.player?.id === pId ||
+        (pEmail && c.player?.email && c.player.email.toLowerCase().trim() === pEmail) ||
+        (pName && c.player?.name && c.player.name.toLowerCase().trim() === pName)
+      )
+      if (found) return found
+
+      // Fallback para treinos/convívios se elegível
+      const ev = events.find(item => item.id === eventId)
+      if (ev && (ev.type === 'practice' || ev.type === 'gathering') && isPlayerEligible(profile, ev.type)) {
+        return {
+          id: `auto-${eventId}-${profile.id}`,
+          event_id: eventId,
+          player_id: profile.id,
+          status: 'called',
+          player: profile
+        }
+      }
+      return null
+    }
+
     // 3. Status Filter
     if (statusFilter !== 'all') {
       const eventDate = new Date(e.date_time)
@@ -1373,16 +1403,16 @@ const CalendarPage: React.FC = () => {
       } else if (statusFilter === 'past') {
         if (eventDate >= now) return false
       } else if (statusFilter === 'my_confirmed') {
-        const myCallup = profile ? (eventCallups[e.id] || []).find(c => c.player_id === profile.id) : null
+        const myCallup = getMyCallupForEvent(e.id)
         if (!myCallup || myCallup.status !== 'confirmed') return false
       } else if (statusFilter === 'my_declined') {
-        const myCallup = profile ? (eventCallups[e.id] || []).find(c => c.player_id === profile.id) : null
+        const myCallup = getMyCallupForEvent(e.id)
         if (!myCallup || myCallup.status !== 'declined') return false
       } else if (statusFilter === 'my_pending') {
-        const myCallup = profile ? (eventCallups[e.id] || []).find(c => c.player_id === profile.id) : null
+        const myCallup = getMyCallupForEvent(e.id)
         if (!myCallup || myCallup.status !== 'called') return false
       } else if (statusFilter === 'my_called') {
-        const myCallup = profile ? (eventCallups[e.id] || []).find(c => c.player_id === profile.id) : null
+        const myCallup = getMyCallupForEvent(e.id)
         if (!myCallup) return false
       }
     }
@@ -1390,10 +1420,38 @@ const CalendarPage: React.FC = () => {
     return true
   })
 
+  // Helper centralizado fora do filter para obter a convocatória do utilizador atual
+  const getMyCallupForEvent = (eventId: string): CallupWithPlayer | null => {
+    if (!profile) return null
+    const callups = eventCallups[eventId] || []
+    const pId = profile.id
+    const pEmail = profile.email ? profile.email.toLowerCase().trim() : ''
+    const pName = profile.name ? profile.name.toLowerCase().trim() : ''
+
+    const found = callups.find(c => 
+      c.player_id === pId ||
+      c.player?.id === pId ||
+      (pEmail && c.player?.email && c.player.email.toLowerCase().trim() === pEmail) ||
+      (pName && c.player?.name && c.player.name.toLowerCase().trim() === pName)
+    )
+    if (found) return found
+
+    const ev = events.find(item => item.id === eventId)
+    if (ev && (ev.type === 'practice' || ev.type === 'gathering') && isPlayerEligible(profile, ev.type)) {
+      return {
+        id: `auto-${eventId}-${profile.id}`,
+        event_id: eventId,
+        player_id: profile.id,
+        status: 'called',
+        player: profile
+      }
+    }
+    return null
+  }
+
   // Lista de todos os eventos com convocatória pendente de resposta para o atleta atual
   const isCallupPendingForUser = (ev: Event) => {
-    const callups = eventCallups[ev.id] || []
-    const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
+    const myCallup = getMyCallupForEvent(ev.id)
     if (!myCallup || myCallup.status !== 'called') return false
 
     const eventTime = new Date(ev.date_time).getTime()
@@ -1402,8 +1460,8 @@ const CalendarPage: React.FC = () => {
 
     // Para treinos: apenas solicitar resposta a partir de 6 dias antes
     if (ev.type === 'practice') {
-      const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
-      return diffDays <= 6
+      const sixDaysMs = 6 * 24 * 60 * 60 * 1000
+      return (eventTime - now) <= sixDaysMs
     }
     return true
   }
@@ -1746,12 +1804,10 @@ const CalendarPage: React.FC = () => {
         const pe = myPendingEvents[activeIndex] || myPendingEvents[0]
         if (!pe) return null
 
-        const peCallups = eventCallups[pe.id] || []
-        const peCall = profile ? peCallups.find(c => c.player_id === profile.id) : null
+        const peCall = getMyCallupForEvent(pe.id)
         const isPePractice = pe.type === 'practice'
         const peTime = new Date(pe.date_time).getTime()
-        const peDiff = Math.ceil((peTime - Date.now()) / (1000 * 60 * 60 * 24))
-        const isPeRsvpOpen = !isPePractice || peDiff <= 6
+        const isPeRsvpOpen = !isPePractice || ((peTime - Date.now()) <= 6 * 24 * 60 * 60 * 1000)
         const peEmoji = pe.type === 'match' ? '⚽' : pe.type === 'practice' ? '🏃' : '🎉'
         const locStr = getEventLocation(pe) || 'Local a definir'
         const dateStr = new Date(pe.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })
@@ -2517,10 +2573,7 @@ const CalendarPage: React.FC = () => {
 
                 {/* Painel do Atleta Atual (RSVP Pessoal) */}
                 {(() => {
-                  const callups = eventCallups[selectedEvent.id] || []
-                  let myCallup = profile 
-                    ? callups.find(c => c.player_id === profile.id || c.player?.id === profile.id || (c.player?.email && profile.email && c.player.email.toLowerCase().trim() === profile.email.toLowerCase().trim())) 
-                    : null
+                  let myCallup = getMyCallupForEvent(selectedEvent.id)
                   
                   // Se o atleta for elegível para este evento mas ainda não houver registo pré-carregado no mapa de convocatórias:
                   if (!myCallup && profile && (selectedEvent.type === 'practice' || selectedEvent.type === 'gathering' || isPlayerEligible(profile, selectedEvent.type) || profile.role === 'player')) {
@@ -2537,9 +2590,8 @@ const CalendarPage: React.FC = () => {
 
                   const eventTime = new Date(selectedEvent.date_time).getTime()
                   const now = new Date().getTime()
-                  const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
                   const isPractice = selectedEvent.type === 'practice'
-                  const isRsvpOpen = !isPractice || diffDays <= 6
+                  const isRsvpOpen = !isPractice || ((eventTime - now) <= 6 * 24 * 60 * 60 * 1000)
 
                   return (
                     <div className="p-4 bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl border border-gray-300 space-y-3 shadow-2xs">
