@@ -4,7 +4,6 @@ import {
   Home, 
   Calendar, 
   BarChart3, 
-  Settings, 
   Users, 
   LogOut, 
   FileText, 
@@ -126,35 +125,8 @@ const Layout: React.FC = () => {
                 </button>
               </div>
 
-              {/* CABEÇALHO DO UTILIZADOR PARA TREINADOR / ADMIN */}
-              {profile && (isAdmin || isCoach) && (
-                <div className="mt-4 p-3 bg-black/30 rounded-xl border border-csc-light/30 flex items-center space-x-3">
-                  {profile.photo_url ? (
-                    <img src={profile.photo_url} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-csc-gold" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-csc-light text-white flex items-center justify-center font-bold text-sm">
-                      {profile.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="overflow-hidden flex-1">
-                    <p className="font-bold text-sm truncate text-white">{profile.name}</p>
-                    <button
-                      type="button"
-                      onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-                      className={`text-[10px] px-2 py-0.5 rounded font-black flex items-center gap-1 mt-0.5 ${
-                        isAdmin ? 'bg-csc-gold text-csc-dark' : 'bg-blue-500 text-white'
-                      } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
-                      title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
-                    >
-                      <span>{isAdmin ? '🛡️ Admin' : '📋 Treinador'}</span>
-                      {canSwitchRoles && <ChevronDown size={11} />}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* 1. CARD DO PERFIL DO ATLETA (APENAS PARA PERFIL JOGADOR NO TOPO DO MENU EXPANDIDO) */}
-              {profile && isPlayer && (
+              {/* 1. CARD DO PERFIL DO UTILIZADOR (PARA OS 3 PERFIS: JOGADOR, TREINADOR, ADMIN) */}
+              {profile && (
                 <div className="mt-4 p-4 bg-gradient-to-br from-black/60 to-black/30 rounded-2xl border-2 border-csc-gold/40 shadow-md">
                   <div className="flex items-center space-x-3">
                     {profile.photo_url ? (
@@ -167,7 +139,7 @@ const Layout: React.FC = () => {
                     <div className="overflow-hidden flex-1">
                       <div className="flex items-center gap-1.5">
                         <p className="font-extrabold text-sm truncate text-white">{profile.name}</p>
-                        {profile.jersey_number && (
+                        {isPlayer && profile.jersey_number && (
                           <span className="bg-csc-gold text-csc-dark font-black text-[10px] px-1.5 py-0.2 rounded">
                             #{profile.jersey_number}
                           </span>
@@ -177,28 +149,30 @@ const Layout: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-                          className={`text-[9.5px] px-2 py-0.5 rounded font-black flex items-center gap-1 bg-csc-light text-white ${
-                            canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''
-                          }`}
+                          className={`text-[9.5px] px-2 py-0.5 rounded font-black flex items-center gap-1 ${
+                            isAdmin ? 'bg-csc-gold text-csc-dark' : isCoach ? 'bg-blue-500 text-white' : 'bg-csc-light text-white'
+                          } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
                           title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
                         >
-                          <span>⚽ Jogador</span>
+                          <span>{isAdmin ? '🛡️ Admin' : isCoach ? '📋 Treinador' : '⚽ Jogador'}</span>
                           {canSwitchRoles && <ChevronDown size={10} />}
                         </button>
 
-                        {/* Estado Clínico */}
-                        <button
-                          type="button"
-                          onClick={() => toggleClinicalStatus()}
-                          className={`text-[9.5px] px-2 py-0.5 rounded-full font-black flex items-center gap-1 border cursor-pointer ${
-                            profile.status === 'injured'
-                              ? 'bg-red-900/60 text-red-300 border-red-500'
-                              : 'bg-emerald-900/60 text-emerald-300 border-emerald-500'
-                          }`}
-                        >
-                          <span>{profile.status === 'injured' ? '🔴' : '🟢'}</span>
-                          <span>{profile.status === 'injured' ? 'Lesionado' : 'Apto'}</span>
-                        </button>
+                        {/* Estado Clínico (Apenas Jogador) */}
+                        {isPlayer && (
+                          <button
+                            type="button"
+                            onClick={() => toggleClinicalStatus()}
+                            className={`text-[9.5px] px-2 py-0.5 rounded-full font-black flex items-center gap-1 border cursor-pointer ${
+                              profile.status === 'injured'
+                                ? 'bg-red-900/60 text-red-300 border-red-500'
+                                : 'bg-emerald-900/60 text-emerald-300 border-emerald-500'
+                            }`}
+                          >
+                            <span>{profile.status === 'injured' ? '🔴' : '🟢'}</span>
+                            <span>{profile.status === 'injured' ? 'Lesionado' : 'Apto'}</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -206,10 +180,10 @@ const Layout: React.FC = () => {
                   <Link
                     to="/settings"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="mt-3 w-full py-1.5 px-3 bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center justify-between border border-white/10 cursor-pointer"
+                    className="mt-3 w-full py-2 px-3.5 bg-csc-gold hover:bg-yellow-400 text-csc-dark rounded-xl text-xs font-black transition-all flex items-center justify-between shadow-sm cursor-pointer active:scale-95"
                   >
                     <span>Editar Ficha / Perfil</span>
-                    <ArrowRight size={13} className="text-csc-gold" />
+                    <ArrowRight size={14} className="text-csc-dark" />
                   </Link>
                 </div>
               )}
@@ -319,24 +293,7 @@ const Layout: React.FC = () => {
                   </div>
                 )}
 
-                {/* 3. Conta & Definições */}
-                <div>
-                  <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-2">
-                    Conta
-                  </p>
-                  <div className="space-y-1">
-                    <Link
-                      to="/settings"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                        location.pathname === '/settings' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
-                      }`}
-                    >
-                      <Settings size={16} className="text-gray-300" />
-                      <span>Definições do Perfil</span>
-                    </Link>
-                  </div>
-                </div>
+
               </div>
             </div>
 
@@ -394,15 +351,13 @@ const Layout: React.FC = () => {
                   </div>
                 </div>
 
-                {isPlayer && (
-                  <Link
-                    to="/settings"
-                    className="mt-2.5 w-full py-1 px-2.5 bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white rounded-lg text-[11px] font-bold transition-all flex items-center justify-between border border-white/10"
-                  >
-                    <span>Ver / Editar Perfil</span>
-                    <ArrowRight size={12} className="text-csc-gold" />
-                  </Link>
-                )}
+                <Link
+                  to="/settings"
+                  className="mt-2.5 w-full py-1.5 px-3 bg-csc-gold hover:bg-yellow-400 text-csc-dark rounded-xl text-[11px] font-black transition-all flex items-center justify-between shadow-xs cursor-pointer active:scale-95"
+                >
+                  <span>Editar Ficha / Perfil</span>
+                  <ArrowRight size={12} className="text-csc-dark" />
+                </Link>
               </div>
 
               {/* Card Quotas Sidebar (Apenas para Jogador) */}
@@ -546,23 +501,7 @@ const Layout: React.FC = () => {
               </div>
             )}
 
-            {/* 4. CONTA & DEFINIÇÕES */}
-            <div>
-              <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-3">
-                Conta
-              </p>
-              <div className="space-y-1">
-                <Link
-                  to="/settings"
-                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                    location.pathname === '/settings' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <Settings size={17} className={location.pathname === '/settings' ? 'text-csc-dark' : 'text-gray-300'} />
-                  <span>Definições do Perfil</span>
-                </Link>
-              </div>
-            </div>
+
           </nav>
         </div>
 
