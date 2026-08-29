@@ -2329,79 +2329,81 @@ const CalendarPage: React.FC = () => {
               <X size={22} />
             </button>
 
-            {/* 1. Badge Laranja Superior de Navegação EXCLUSIVO para Convocatórias Pendentes do Alerta (PRIMEIRO BADGE) */}
-            {myPendingEvents.length > 1 && myPendingEvents.some(pe => pe.id === selectedEvent.id) && (() => {
-              const curIdx = myPendingEvents.findIndex(pe => pe.id === selectedEvent.id)
-              const activeIndex = curIdx !== -1 ? curIdx : 0
+            {/* Topo Premium Unificado da Persiana (Layout Verde Oficial CSC com Carrossel Integrado) */}
+            <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold relative overflow-hidden space-y-2.5">
+              
+              {/* Barra Integrada de Convocatórias Pendentes (Apenas se existirem múltiplos eventos pendentes) */}
+              {myPendingEvents.length > 1 && myPendingEvents.some(pe => pe.id === selectedEvent.id) && (() => {
+                const curIdx = myPendingEvents.findIndex(pe => pe.id === selectedEvent.id)
+                const activeIndex = curIdx !== -1 ? curIdx : 0
 
-              const nextEvent = (e?: React.MouseEvent) => {
-                e?.stopPropagation()
-                const nextIdx = (activeIndex + 1) % myPendingEvents.length
-                setSelectedEvent(myPendingEvents[nextIdx])
-                if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
-              }
+                const nextEvent = (e?: React.MouseEvent) => {
+                  e?.stopPropagation()
+                  const nextIdx = (activeIndex + 1) % myPendingEvents.length
+                  setSelectedEvent(myPendingEvents[nextIdx])
+                  if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
+                }
 
-              const prevEvent = (e?: React.MouseEvent) => {
-                e?.stopPropagation()
-                const prevIdx = (activeIndex - 1 + myPendingEvents.length) % myPendingEvents.length
-                setSelectedEvent(myPendingEvents[prevIdx])
-                if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
-              }
+                const prevEvent = (e?: React.MouseEvent) => {
+                  e?.stopPropagation()
+                  const prevIdx = (activeIndex - 1 + myPendingEvents.length) % myPendingEvents.length
+                  setSelectedEvent(myPendingEvents[prevIdx])
+                  if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
+                }
 
-              return (
-                <div className="rounded-2xl p-2.5 sm:p-3 shadow-xs border flex items-center justify-between gap-2 transition-all bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-csc-dark border-amber-600/50">
-                  <button
-                    type="button"
-                    onClick={prevEvent}
-                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-black/10 hover:bg-black/20 text-csc-dark"
-                    title="Convocatória Anterior (ou desliza para a direita 👉)"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
+                return (
+                  <div className="bg-black/25 border border-csc-gold/30 rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={prevEvent}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-white/10 hover:bg-white/20 text-white"
+                      title="Convocatória Anterior (ou desliza para a direita 👉)"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
 
-                  <div className="flex flex-col items-center justify-center text-center min-w-0 flex-1 select-none">
-                    <span className="text-xs font-black tracking-wide flex items-center gap-1.5 text-amber-950">
-                      <span>🔔 Convocatória Pendente</span>
-                      <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-black/15 text-csc-dark">
-                        {activeIndex + 1}/{myPendingEvents.length}
+                    <div className="flex items-center gap-2 select-none min-w-0">
+                      <span className="text-xs font-black text-amber-300 flex items-center gap-1">
+                        <span>🔔 Convocatória Pendente</span>
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-white/15 text-white">
+                          {activeIndex + 1}/{myPendingEvents.length}
+                        </span>
                       </span>
-                    </span>
 
-                    {/* Traços centrados */}
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      {myPendingEvents.map((item, idx) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedEvent(item)
-                            if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
-                          }}
-                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                            idx === activeIndex
-                              ? 'bg-csc-dark w-5'
-                              : 'bg-black/25 hover:bg-black/40 w-2'
-                          }`}
-                          title={item.title}
-                        />
-                      ))}
+                      {/* Traços centrados */}
+                      <div className="flex items-center gap-1">
+                        {myPendingEvents.map((item, idx) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedEvent(item)
+                              if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
+                            }}
+                            className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                              idx === activeIndex
+                                ? 'bg-csc-gold w-4'
+                                : 'bg-white/30 hover:bg-white/50 w-1.5'
+                            }`}
+                            title={item.title}
+                          />
+                        ))}
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={nextEvent}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-white/10 hover:bg-white/20 text-white"
+                      title="Próxima Convocatória (ou desliza para a esquerda 👈)"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
                   </div>
+                )
+              })()}
 
-                  <button
-                    type="button"
-                    onClick={nextEvent}
-                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-black/10 hover:bg-black/20 text-csc-dark"
-                    title="Próxima Convocatória (ou desliza para a esquerda 👈)"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-              )
-            })()}
-
-            {/* 2. Topo Premium da Persiana (Apenas Símbolo, Pílula de Tipo, Data/Hora e Ações Admin/Treinador) */}
-            <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold relative overflow-hidden">
+              {/* Linha Principal: Símbolo + Pílula do Tipo + Data e Hora + Ações Admin/Treinador */}
               <div className="flex items-center justify-between gap-3 pr-8 sm:pr-10">
                 {/* Símbolo + Pílula do Tipo + Data e Hora */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
