@@ -432,12 +432,47 @@ const EventsPage: React.FC = () => {
         setSelectedPlayerIds(initialEligible.map(p => p.id))
       }
 
-      if (callRes.data) {
+      if (callRes.data && evRes.data && profRes.data) {
+        const eventsList = evRes.data as Event[]
+        const practiceEventIds = new Set(eventsList.filter(e => e.type === 'practice').map(e => e.id))
+        const merged = mergeProfilesWithSeedData((profRes.data as Profile[]) || [])
+        const playerMap = new Map<string, Profile>(merged.map(p => [p.id, p]))
+
         const map: Record<string, CallupWithPlayer[]> = {}
         callRes.data.forEach((c: any) => {
+          const fullP = playerMap.get(c.player_id) || c.player
+
+          if (practiceEventIds.has(c.event_id)) {
+            if (fullP?.status === 'injured' || fullP?.status === 'inactive') {
+              return
+            }
+          }
+
           if (!map[c.event_id]) map[c.event_id] = []
-          map[c.event_id].push(c as CallupWithPlayer)
+          map[c.event_id].push({
+            ...c,
+            player: fullP
+          } as CallupWithPlayer)
         })
+
+        // Para treinos: garantir que todos os atletas aptos ('active') estão convocados
+        const activePlayers = merged.filter(p => p.status === 'active' || (!p.status && p.role === 'player'))
+        practiceEventIds.forEach(pId => {
+          if (!map[pId]) map[pId] = []
+          const calledIds = new Set(map[pId].map(c => c.player_id))
+          activePlayers.forEach(ap => {
+            if (!calledIds.has(ap.id)) {
+              map[pId].push({
+                id: `auto-${pId}-${ap.id}`,
+                event_id: pId,
+                player_id: ap.id,
+                status: 'called',
+                player: ap
+              })
+            }
+          })
+        })
+
         setEventCallups(map)
       }
       

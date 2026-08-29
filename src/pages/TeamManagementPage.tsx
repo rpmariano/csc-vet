@@ -337,7 +337,54 @@ const TeamManagementPage: React.FC = () => {
       medical_exam_doc_url: medicalExamDocUrl || null,
     }
 
+    const syncPlayerPracticeCallups = async (targetPlayerId: string, status: ProfileStatus) => {
+      try {
+        const nowIso = new Date().toISOString()
+        const { data: upcomingPractices } = await supabase
+          .from('events')
+          .select('id')
+          .eq('type', 'practice')
+          .gte('date_time', nowIso)
+
+        if (!upcomingPractices || upcomingPractices.length === 0) return
+
+        const practiceIds = upcomingPractices.map(p => p.id)
+
+        if (status === 'active') {
+          // Jogador passou a apto: adicionar a todos os treinos futuros onde ainda não esteja convocado
+          const { data: existingCallups } = await supabase
+            .from('callups')
+            .select('event_id')
+            .eq('player_id', targetPlayerId)
+            .in('event_id', practiceIds)
+
+          const alreadyCalledEventIds = new Set((existingCallups || []).map(c => c.event_id))
+          const toCallEventIds = practiceIds.filter(id => !alreadyCalledEventIds.has(id))
+
+          if (toCallEventIds.length > 0) {
+            const insertPayload = toCallEventIds.map(eventId => ({
+              event_id: eventId,
+              player_id: targetPlayerId,
+              status: 'called'
+            }))
+            await supabase.from('callups').insert(insertPayload)
+          }
+        } else {
+          // Jogador passou a lesionado ('injured') ou inativo ('inactive'): retirar de todos os treinos futuros
+          await supabase
+            .from('callups')
+            .delete()
+            .eq('player_id', targetPlayerId)
+            .in('event_id', practiceIds)
+        }
+      } catch (syncErr) {
+        console.error('Erro ao sincronizar convocatórias de treino:', syncErr)
+      }
+    }
+
     try {
+      let savedPlayerId: string | null = null
+
       if (isEditing && formId && !formId.startsWith('seed-')) {
         const { error } = await supabase
           .from('profiles')
@@ -345,6 +392,7 @@ const TeamManagementPage: React.FC = () => {
           .eq('id', formId)
 
         if (error) throw error
+        savedPlayerId = formId
         alert('Ficha de membro atualizada!')
       } else {
         // Verificar se já existe perfil na BD com este email
@@ -360,6 +408,7 @@ const TeamManagementPage: React.FC = () => {
             .update(payload)
             .eq('id', existing.id)
           if (error) throw error
+          savedPlayerId = existing.id
           alert('Ficha de membro atualizada na base de dados!')
         } else {
           const newId = crypto.randomUUID()
@@ -370,8 +419,13 @@ const TeamManagementPage: React.FC = () => {
               id: newId
             }])
           if (error) throw error
+          savedPlayerId = newId
           alert('Novo membro gravado com sucesso na base de dados!')
         }
+      }
+
+      if (savedPlayerId) {
+        await syncPlayerPracticeCallups(savedPlayerId, formStatus)
       }
 
       setIsFormModalOpen(false)

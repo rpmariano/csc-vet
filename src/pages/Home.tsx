@@ -57,6 +57,7 @@ interface Announcement {
 interface Callup {
   id: string
   event_id: string
+  player_id?: string
   status: 'called' | 'confirmed' | 'declined'
   event: Event
 }
@@ -191,8 +192,27 @@ const Home: React.FC = () => {
           .select('*, event:events(*)')
           .eq('player_id', profile.id)
 
-        if (calls && calls.length > 0) {
-          setMyCallups(calls as unknown as Callup[])
+        const rawCalls = (calls || []) as unknown as Callup[]
+
+        if (profile.status === 'injured' || profile.status === 'inactive') {
+          // Atleta lesionado ou inativo: não tem convocatórias para treinos
+          setMyCallups(rawCalls.filter(c => c.event?.type !== 'practice'))
+        } else {
+          // Atleta apto: garantir convocatórias para todos os treinos futuros
+          const userCalls = [...rawCalls]
+          const existingPracticeEventIds = new Set(userCalls.filter(c => c.event?.type === 'practice').map(c => c.event_id))
+          resolvedPractices.forEach(p => {
+            if (!existingPracticeEventIds.has(p.id)) {
+              userCalls.push({
+                id: `auto-${p.id}-${profile.id}`,
+                event_id: p.id,
+                player_id: profile.id,
+                status: 'called',
+                event: p
+              })
+            }
+          })
+          setMyCallups(userCalls)
         }
 
         // 5. Fetch dues

@@ -435,18 +435,48 @@ const CalendarPage: React.FC = () => {
         const emailMap = new Map<string, Profile>(mergedPlayers.filter(p => p.email).map(p => [p.email!.toLowerCase().trim(), p]))
         const nameMap = new Map<string, Profile>(mergedPlayers.map(p => [p.name.toLowerCase().trim(), p]))
 
+        const eventsList = (evRes.data as Event[]) || []
+        const practiceEventIds = new Set(eventsList.filter(e => e.type === 'practice').map(e => e.id))
+
         const map: Record<string, CallupWithPlayer[]> = {}
         callupsRes.data.forEach((c: any) => {
-          if (!map[c.event_id]) map[c.event_id] = []
           const fullP = playerMap.get(c.player_id) ||
             (c.player?.email ? emailMap.get(c.player.email.toLowerCase().trim()) : null) ||
             (c.player?.name ? nameMap.get(c.player.name.toLowerCase().trim()) : null) ||
             c.player
+
+          // Para treinos: atletas lesionados ou inativos não entram na convocatória
+          if (practiceEventIds.has(c.event_id)) {
+            if (fullP?.status === 'injured' || fullP?.status === 'inactive') {
+              return
+            }
+          }
+
+          if (!map[c.event_id]) map[c.event_id] = []
           map[c.event_id].push({
             ...c,
             player: fullP
           } as CallupWithPlayer)
         })
+
+        // Para treinos: garantir que todos os atletas aptos ('active') estão convocados
+        const activePlayers = mergedPlayers.filter(p => p.status === 'active' || (!p.status && p.role === 'player'))
+        practiceEventIds.forEach(pId => {
+          if (!map[pId]) map[pId] = []
+          const calledIds = new Set(map[pId].map(c => c.player_id))
+          activePlayers.forEach(ap => {
+            if (!calledIds.has(ap.id)) {
+              map[pId].push({
+                id: `auto-${pId}-${ap.id}`,
+                event_id: pId,
+                player_id: ap.id,
+                status: 'called',
+                player: ap
+              })
+            }
+          })
+        })
+
         setEventCallups(map)
       }
     } catch (err) {
