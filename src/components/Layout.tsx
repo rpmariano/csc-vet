@@ -31,6 +31,7 @@ const Layout: React.FC = () => {
 
   const isAdmin = profile?.role === 'admin'
   const isCoach = profile?.role === 'coach'
+  const isPlayer = !isAdmin && !isCoach
   const canSwitchRoles = (assignedRoles?.length ?? 1) > 1
 
   const handleSelectRole = (role: UserRole) => {
@@ -147,8 +148,35 @@ const Layout: React.FC = () => {
                 </button>
               </div>
 
-              {/* 1. CARD DO PERFIL DO ATLETA (NO TOPO DO MENU EXPANDIDO) */}
-              {profile && (
+              {/* CABEÇALHO DO UTILIZADOR PARA TREINADOR / ADMIN */}
+              {profile && (isAdmin || isCoach) && (
+                <div className="mt-4 p-3 bg-black/30 rounded-xl border border-csc-light/30 flex items-center space-x-3">
+                  {profile.photo_url ? (
+                    <img src={profile.photo_url} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-csc-gold" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-csc-light text-white flex items-center justify-center font-bold text-sm">
+                      {profile.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="overflow-hidden flex-1">
+                    <p className="font-bold text-sm truncate text-white">{profile.name}</p>
+                    <button
+                      type="button"
+                      onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
+                      className={`text-[10px] px-2 py-0.5 rounded font-black flex items-center gap-1 mt-0.5 ${
+                        isAdmin ? 'bg-csc-gold text-csc-dark' : 'bg-blue-500 text-white'
+                      } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
+                      title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
+                    >
+                      <span>{isAdmin ? '🛡️ Admin' : '📋 Treinador'}</span>
+                      {canSwitchRoles && <ChevronDown size={11} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 1. CARD DO PERFIL DO ATLETA (APENAS PARA PERFIL JOGADOR NO TOPO DO MENU EXPANDIDO) */}
+              {profile && isPlayer && (
                 <div className="mt-4 p-4 bg-gradient-to-br from-black/60 to-black/30 rounded-2xl border-2 border-csc-gold/40 shadow-md">
                   <div className="flex items-center space-x-3">
                     {profile.photo_url ? (
@@ -171,12 +199,12 @@ const Layout: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-                          className={`text-[9.5px] px-2 py-0.5 rounded font-black flex items-center gap-1 ${
-                            isAdmin ? 'bg-csc-gold text-csc-dark' : isCoach ? 'bg-blue-500 text-white' : 'bg-csc-light text-white'
-                          } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
+                          className={`text-[9.5px] px-2 py-0.5 rounded font-black flex items-center gap-1 bg-csc-light text-white ${
+                            canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''
+                          }`}
                           title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
                         >
-                          <span>{isAdmin ? '🛡️ Admin' : isCoach ? '📋 Treinador' : '⚽ Jogador'}</span>
+                          <span>⚽ Jogador</span>
                           {canSwitchRoles && <ChevronDown size={10} />}
                         </button>
 
@@ -208,8 +236,8 @@ const Layout: React.FC = () => {
                 </div>
               )}
 
-              {/* 2. CARD DAS QUOTAS (NO TOPO DO MENU EXPANDIDO) */}
-              {profile && (
+              {/* 2. CARD DAS QUOTAS (APENAS PARA PERFIL JOGADOR NO TOPO DO MENU EXPANDIDO) */}
+              {profile && isPlayer && (
                 <div className="mt-3 p-3.5 bg-black/40 rounded-2xl border border-csc-light/30 shadow-xs">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
@@ -224,11 +252,11 @@ const Layout: React.FC = () => {
                     {profile.iban ? 'Débito direto ativo na conta do clube.' : 'Consulte os dados bancários para regularização.'}
                   </p>
                   <Link
-                    to={isAdmin ? "/finance" : "/settings"}
+                    to="/settings"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="mt-2.5 w-full py-1.5 px-3 bg-emerald-700/40 hover:bg-emerald-700/60 text-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center justify-between border border-emerald-500/30 cursor-pointer"
                   >
-                    <span>{isAdmin ? 'Gerir Quotas do Clube' : 'Consultar IBAN & Quotas'}</span>
+                    <span>Consultar IBAN & Quotas</span>
                     <ArrowRight size={13} className="text-emerald-300" />
                   </Link>
                 </div>
@@ -381,32 +409,36 @@ const Layout: React.FC = () => {
                         } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
                         title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
                       >
-                        <span>{isAdmin ? 'Admin' : isCoach ? 'Treinador' : 'Jogador'}</span>
+                        <span>{isAdmin ? '🛡️ Admin' : isCoach ? '📋 Treinador' : '⚽ Jogador'}</span>
                         {canSwitchRoles && <ChevronDown size={10} />}
                       </button>
                     </div>
                   </div>
                 </div>
 
-                <Link
-                  to="/settings"
-                  className="mt-2.5 w-full py-1 px-2.5 bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white rounded-lg text-[11px] font-bold transition-all flex items-center justify-between border border-white/10"
-                >
-                  <span>Ver / Editar Perfil</span>
-                  <ArrowRight size={12} className="text-csc-gold" />
-                </Link>
+                {isPlayer && (
+                  <Link
+                    to="/settings"
+                    className="mt-2.5 w-full py-1 px-2.5 bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white rounded-lg text-[11px] font-bold transition-all flex items-center justify-between border border-white/10"
+                  >
+                    <span>Ver / Editar Perfil</span>
+                    <ArrowRight size={12} className="text-csc-gold" />
+                  </Link>
+                )}
               </div>
 
-              {/* Card Quotas Sidebar */}
-              <div className="bg-black/20 p-2.5 rounded-xl border border-csc-light/20 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Landmark size={13} className="text-emerald-400" />
-                  <span className="text-[11px] font-bold text-gray-200">Quotas</span>
+              {/* Card Quotas Sidebar (Apenas para Jogador) */}
+              {isPlayer && (
+                <div className="bg-black/20 p-2.5 rounded-xl border border-csc-light/20 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Landmark size={13} className="text-emerald-400" />
+                    <span className="text-[11px] font-bold text-gray-200">Quotas</span>
+                  </div>
+                  <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Regularizadas 🟢
+                  </span>
                 </div>
-                <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Regularizadas 🟢
-                </span>
-              </div>
+              )}
             </div>
           )}
 
