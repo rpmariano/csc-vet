@@ -563,7 +563,13 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                     </span>
                                   )}
                                 </p>
-                                {p.position && <span className="text-[10px] font-semibold text-gray-400">{p.position}</span>}
+                                {p.position && (
+                                  <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                    {p.position.split(',').map((pos: string, idx: number) => (
+                                      <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{pos.trim()}</span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -615,7 +621,13 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                 <p className="text-xs sm:text-sm font-black text-gray-900 truncate">
                                   {displayName}
                                 </p>
-                                {p.position && <span className="text-[10px] font-semibold text-gray-400">{p.position}</span>}
+                                {p.position && (
+                                  <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                    {p.position.split(',').map((pos: string, idx: number) => (
+                                      <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{pos.trim()}</span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -671,7 +683,13 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-black text-gray-900 truncate">{displayName}</p>
-                            {p.position && <p className="text-[10px] text-gray-500 font-semibold truncate">{p.position}</p>}
+                            {p.position && (
+                              <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                {p.position.split(',').map((pos: string, idx: number) => (
+                                  <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{pos.trim()}</span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
 
