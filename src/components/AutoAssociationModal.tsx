@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import type { Profile } from '../context/AuthContext'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { supabase } from '../lib/supabaseClient'
+import { toast } from '../context/ToastContext'
 
 export const AutoAssociationModal: React.FC = () => {
   const { user, profile } = useAuth()
@@ -118,11 +119,13 @@ export const AutoAssociationModal: React.FC = () => {
         }
       }
 
-      alert(`Conta associada com sucesso à ficha de ${selectedTarget.name}!`)
+      toast.success(`Conta associada com sucesso à ficha de ${selectedTarget.name}!`)
       setIsOpen(false)
-      window.location.reload()
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
     } catch (err: any) {
-      alert('Erro ao associar perfil: ' + (err.message || 'Verifique a ligação'))
+      toast.error('Erro ao associar perfil: ' + (err.message || 'Verifique a ligação'))
     } finally {
       setLoading(false)
     }

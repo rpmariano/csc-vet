@@ -7,13 +7,13 @@ import {
   EyeOff, 
   Search, 
   X, 
-  Check, 
   Clock, 
   Calendar,
   Megaphone
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
+import { toast } from '../context/ToastContext'
 
 interface Announcement {
   id: string
@@ -46,12 +46,10 @@ const AnnouncementsPage: React.FC = () => {
   const [deletingAnn, setDeletingAnn] = useState<Announcement | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Feedback Toast
-  const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null)
-
   const showToast = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setFeedbackMsg({ text, type })
-    setTimeout(() => setFeedbackMsg(null), 3500)
+    if (type === 'success') toast.success(text)
+    else if (type === 'error') toast.error(text)
+    else toast.info(text)
   }
 
   const fetchAnnouncements = async () => {
@@ -156,10 +154,10 @@ const AnnouncementsPage: React.FC = () => {
       setTitle('')
       setContent('')
       setIsActiveOnCreate(true)
-      showToast('Comunicado publicado com sucesso!')
+      toast.success('Comunicado publicado com sucesso!')
       fetchAnnouncements()
     } catch (err: any) {
-      alert('Erro ao publicar comunicado: ' + (err.message || 'Erro'))
+      toast.error('Erro ao publicar comunicado: ' + (err.message || 'Erro'))
     } finally {
       setIsPublishing(false)
     }
@@ -182,9 +180,10 @@ const AnnouncementsPage: React.FC = () => {
         throw error
       }
 
-      showToast(nextStatus ? 'Comunicado ativado (visível na homepage)' : 'Comunicado desativado (oculto da homepage)', 'info')
+      toast.info(nextStatus ? 'Comunicado ativado (visível na homepage)' : 'Comunicado desativado (oculto da homepage)')
     } catch (err: any) {
       console.error('Erro ao alternar estado do comunicado:', err)
+      toast.error('Erro ao alterar estado do comunicado.')
     }
   }
 
@@ -229,9 +228,9 @@ const AnnouncementsPage: React.FC = () => {
       } : a))
 
       setEditingAnn(null)
-      showToast('Alterações guardadas com sucesso!')
+      toast.success('Alterações guardadas com sucesso!')
     } catch (err: any) {
-      alert('Erro ao guardar alterações: ' + (err.message || 'Erro'))
+      toast.error('Erro ao guardar alterações: ' + (err.message || 'Erro'))
     } finally {
       setIsSavingEdit(false)
     }
@@ -283,20 +282,6 @@ const AnnouncementsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Toast Notification */}
-      {feedbackMsg && (
-        <div className="fixed top-5 right-5 z-50 animate-fade-in">
-          <div className={`px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 text-xs font-black ${
-            feedbackMsg.type === 'success' ? 'bg-emerald-900 text-white border-emerald-700' :
-            feedbackMsg.type === 'info' ? 'bg-csc-dark text-white border-csc-gold/50' :
-            'bg-red-900 text-white border-red-700'
-          }`}>
-            <Check size={16} className="text-csc-gold" />
-            <span>{feedbackMsg.text}</span>
-          </div>
-        </div>
-      )}
-
       {/* Cabeçalho da Página */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200/80 pb-4">
         <div>

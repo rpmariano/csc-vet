@@ -38,6 +38,7 @@ import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
+import { toast } from '../context/ToastContext'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -953,15 +954,16 @@ const CalendarPage: React.FC = () => {
         return p ? isPlayerEligible(p, type) : false
       })
       setSelectedPlayerIds(validLastIds)
+      toast.success('Convocatória anterior repetida com sucesso!')
     } else {
-      alert('Ainda não existem convocatórias anteriores para repetir.')
+      toast.info('Ainda não existem convocatórias anteriores para repetir.')
     }
   }
 
   const togglePlayerSelection = (playerId: string) => {
     const p = allPlayers.find(pl => pl.id === playerId)
     if (p && !isPlayerEligible(p, type)) {
-      alert('Este jogador está lesionado e não pode ser convocado para jogos ou treinos (apenas convívios).')
+      toast.warning('Este jogador está lesionado e não pode ser convocado para jogos ou treinos (apenas convívios).')
       return
     }
 
@@ -998,7 +1000,7 @@ const CalendarPage: React.FC = () => {
       if (isRecurring && recurrenceEndDate && recurrenceWeekdays.length > 0) {
         const dates = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
         if (dates.length === 0) {
-          alert('Nenhuma data encontrada para os dias da semana e intervalo escolhidos.')
+          toast.warning('Nenhuma data encontrada para os dias da semana e intervalo escolhidos.')
           return
         }
 
@@ -1047,7 +1049,7 @@ const CalendarPage: React.FC = () => {
           }
         }
 
-        alert(`✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`)
+        toast.success(`✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`)
       } else {
         const newEvent = {
           title: computedTitle,
@@ -1087,7 +1089,7 @@ const CalendarPage: React.FC = () => {
           }))
           await supabase.from('callups').insert(callupsToInsert)
         }
-        alert('✨ Evento criado com sucesso!')
+        toast.success('✨ Evento criado com sucesso!')
       }
 
       setIsAddModalOpen(false)
@@ -1107,7 +1109,7 @@ const CalendarPage: React.FC = () => {
       setSelectedPlayerIds([])
       fetchEventsAndData()
     } catch (err: any) {
-      alert('Erro ao criar evento: ' + (err.message || 'Erro'))
+      toast.error('Erro ao criar evento: ' + (err.message || 'Erro'))
     }
   }
 
@@ -1198,12 +1200,12 @@ const CalendarPage: React.FC = () => {
       setIsEditModalOpen(false)
       await fetchEventsAndData()
 
-      alert(resendCallups 
+      toast.success(resendCallups 
         ? '✨ Evento atualizado e pedidos de confirmação reenviados aos atletas!' 
         : '✨ Evento atualizado com sucesso!'
       )
     } catch (err: any) {
-      alert('Erro ao atualizar evento: ' + (err.message || 'Erro'))
+      toast.error('Erro ao atualizar evento: ' + (err.message || 'Erro'))
     } finally {
       setIsSavingEditLoading(false)
     }
@@ -1217,9 +1219,9 @@ const CalendarPage: React.FC = () => {
       setSelectedEvent(null)
       setIsEditModalOpen(false)
       fetchEventsAndData()
-      alert('Evento eliminado!')
+      toast.success('Evento eliminado com sucesso!')
     } catch (err: any) {
-      alert('Erro ao eliminar evento: ' + (err.message || 'Erro'))
+      toast.error('Erro ao eliminar evento: ' + (err.message || 'Erro'))
     }
   }
 
@@ -1261,9 +1263,10 @@ const CalendarPage: React.FC = () => {
         }
         return { ...prev, [eventId]: curList }
       })
+      toast.success(status === 'confirmed' ? '✓ Presença confirmada!' : '✕ Presença recusada.')
     } catch (err: any) {
       console.error('Erro ao atualizar resposta:', err)
-      alert('Erro ao atualizar resposta: ' + (err.message || 'Erro'))
+      toast.error('Erro ao atualizar resposta: ' + (err.message || 'Erro'))
     }
   }
 
@@ -1280,8 +1283,9 @@ const CalendarPage: React.FC = () => {
         ...prev,
         [eventId]: (prev[eventId] || []).map(c => c.id === callupId ? { ...c, status: newStatus } : c)
       }))
+      toast.success('Estado de presença atualizado!')
     } catch (err: any) {
-      alert('Erro ao atualizar RSVP: ' + err.message)
+      toast.error('Erro ao atualizar RSVP: ' + err.message)
     }
   }
 
@@ -1295,8 +1299,9 @@ const CalendarPage: React.FC = () => {
         ...prev,
         [eventId]: (prev[eventId] || []).filter(c => c.id !== callupId)
       }))
+      toast.info('Jogador removido da convocatória.')
     } catch (err: any) {
-      alert('Erro ao remover jogador: ' + err.message)
+      toast.error('Erro ao remover jogador: ' + err.message)
     }
   }
 
@@ -3708,9 +3713,10 @@ const CalendarPage: React.FC = () => {
                         const { error } = await supabase.from('callups').insert(payload)
                         if (error) throw error
                         await fetchEventsAndData()
+                        toast.success('Todos os membros foram convocados com sucesso!')
                       }
                     } catch (err: any) {
-                      alert('Erro ao convocar todos: ' + err.message)
+                      toast.error('Erro ao convocar todos: ' + err.message)
                     } finally {
                       setIsEditBatchCalling(false)
                     }
@@ -3731,9 +3737,10 @@ const CalendarPage: React.FC = () => {
                         const { error } = await supabase.from('callups').insert(payload)
                         if (error) throw error
                         await fetchEventsAndData()
+                        toast.success('Jogadores convocados com sucesso!')
                       }
                     } catch (err: any) {
-                      alert('Erro ao convocar jogadores: ' + err.message)
+                      toast.error('Erro ao convocar jogadores: ' + err.message)
                     } finally {
                       setIsEditBatchCalling(false)
                     }
@@ -3754,9 +3761,10 @@ const CalendarPage: React.FC = () => {
                         const { error } = await supabase.from('callups').insert(payload)
                         if (error) throw error
                         await fetchEventsAndData()
+                        toast.success('Staff/Treinadores convocados com sucesso!')
                       }
                     } catch (err: any) {
-                      alert('Erro ao convocar staff: ' + err.message)
+                      toast.error('Erro ao convocar staff: ' + err.message)
                     } finally {
                       setIsEditBatchCalling(false)
                     }
@@ -3771,8 +3779,9 @@ const CalendarPage: React.FC = () => {
                       const { error } = await supabase.from('callups').delete().in('id', callupIds)
                       if (error) throw error
                       await fetchEventsAndData()
+                      toast.info('Todos os convocados foram removidos.')
                     } catch (err: any) {
-                      alert('Erro ao remover todos: ' + err.message)
+                      toast.error('Erro ao remover todos: ' + err.message)
                     } finally {
                       setIsEditBatchCalling(false)
                     }

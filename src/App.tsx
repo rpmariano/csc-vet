@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ClubProvider } from './context/ClubContext'
+import { ToastProvider } from './context/ToastContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
@@ -21,7 +22,8 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <ClubProvider>
-        <Router basename={import.meta.env.BASE_URL}>
+        <ToastProvider>
+          <Router basename={import.meta.env.BASE_URL}>
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
@@ -53,6 +55,7 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
+        </ToastProvider>
       </ClubProvider>
     </AuthProvider>
   )

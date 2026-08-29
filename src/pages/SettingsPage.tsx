@@ -15,6 +15,7 @@ import {
 import { useAuth, encodeRolesToNotes, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
+import { toast } from '../context/ToastContext'
 
 const SettingsPage: React.FC = () => {
   const { profile, assignedRoles, toggleClinicalStatus, refreshProfile } = useAuth()
@@ -125,9 +126,9 @@ const SettingsPage: React.FC = () => {
       if (field === 'insurance') setInsuranceDocUrl(publicUrl)
       if (field === 'medical') setMedicalExamDocUrl(publicUrl)
 
-      alert('Ficheiro carregado com sucesso!')
+      toast.success('Ficheiro carregado com sucesso!')
     } catch (err: any) {
-      alert('Erro ao carregar ficheiro: ' + err.message)
+      toast.error('Erro ao carregar ficheiro: ' + err.message)
     } finally {
       setUploadingDoc(null)
     }
@@ -141,6 +142,7 @@ const SettingsPage: React.FC = () => {
 
     if (!formName.trim()) {
       setSaveError('O Nome Completo é obrigatório.')
+      toast.warning('O Nome Completo é obrigatório.')
       return
     }
 
@@ -186,9 +188,12 @@ const SettingsPage: React.FC = () => {
 
       await refreshProfile()
       setSaveSuccess(true)
+      toast.success('Alterações guardadas com sucesso!')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err: any) {
-      setSaveError('Erro ao guardar alterações: ' + (err.message || 'Verifique os dados'))
+      const errTxt = 'Erro ao guardar alterações: ' + (err.message || 'Verifique os dados')
+      setSaveError(errTxt)
+      toast.error(errTxt)
     } finally {
       setIsSaving(false)
     }

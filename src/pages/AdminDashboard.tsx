@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Shield, MapPin, Trophy, Trash2, Building2, Upload, Save, Edit2, X, ExternalLink } from 'lucide-react'
 import { useClub } from '../context/ClubContext'
+import { toast } from '../context/ToastContext'
 
 // Interfaces
 interface Field {
@@ -116,16 +117,16 @@ const AdminDashboard: React.FC = () => {
         .eq('id', 1)
 
       if (!error) {
-        alert('Definições do clube atualizadas com sucesso!')
+        toast.success('Definições do clube atualizadas com sucesso!')
         refreshSettings()
       } else {
         // Fallback se a coluna home_field_id ainda nao existir no supabase
         await supabase.from('club_settings').update({ name: clubName, initials: clubInitials }).eq('id', 1)
-        alert('Definições do clube atualizadas!')
+        toast.success('Definições do clube atualizadas!')
         refreshSettings()
       }
     } catch {
-      alert('Definições do clube atualizadas!')
+      toast.success('Definições do clube atualizadas!')
       refreshSettings()
     }
   }
@@ -157,10 +158,10 @@ const AdminDashboard: React.FC = () => {
 
       if (updateError) throw updateError
 
-      alert('Símbolo atualizado com sucesso!')
+      toast.success('Símbolo atualizado com sucesso!')
       refreshSettings()
     } catch (error: any) {
-      alert('Erro ao fazer upload do símbolo: ' + error.message)
+      toast.error('Erro ao fazer upload do símbolo: ' + error.message)
     } finally {
       setUploadingLogo(false)
     }
@@ -192,8 +193,9 @@ const AdminDashboard: React.FC = () => {
         .eq('id', editingFieldId)
 
       if (error) {
-        alert('Erro ao atualizar campo: ' + error.message)
+        toast.error('Erro ao atualizar campo: ' + error.message)
       } else {
+        toast.success('Campo atualizado com sucesso!')
         handleCancelEditField()
         fetchData()
       }
@@ -201,8 +203,9 @@ const AdminDashboard: React.FC = () => {
       // Insert
       const { error } = await supabase.from('fields').insert([{ name: fieldName, address: fieldAddress }])
       if (error) {
-        alert('Erro ao criar campo: ' + error.message)
+        toast.error('Erro ao criar campo: ' + error.message)
       } else {
+        toast.success('Campo criado com sucesso!')
         setFieldName('')
         setFieldAddress('')
         fetchData()
@@ -214,6 +217,7 @@ const AdminDashboard: React.FC = () => {
     if (!confirm('Eliminar este campo?')) return
     await supabase.from('fields').delete().eq('id', id)
     if (editingFieldId === id) handleCancelEditField()
+    toast.success('Campo eliminado!')
     fetchData()
   }
 
@@ -276,16 +280,18 @@ const AdminDashboard: React.FC = () => {
         // Update
         const { error } = await supabase.from('opponents').update(payload).eq('id', editingOppId)
         if (error) throw error
+        toast.success('Adversário atualizado com sucesso!')
       } else {
         // Insert
         const { error } = await supabase.from('opponents').insert([payload])
         if (error) throw error
+        toast.success('Adversário criado com sucesso!')
       }
 
       handleCancelEditOpponent()
       fetchData()
     } catch (err: any) {
-      alert('Erro ao guardar adversário: ' + err.message)
+      toast.error('Erro ao guardar adversário: ' + err.message)
     } finally {
       setUploadingOppLogo(false)
     }
@@ -295,6 +301,7 @@ const AdminDashboard: React.FC = () => {
     if (!confirm('Eliminar este adversário?')) return
     await supabase.from('opponents').delete().eq('id', id)
     if (editingOppId === id) handleCancelEditOpponent()
+    toast.success('Adversário eliminado!')
     fetchData()
   }
 

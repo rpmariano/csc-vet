@@ -29,6 +29,7 @@ import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../components/SoccerPitchSelector'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
+import { toast } from '../context/ToastContext'
 
 const POSITIONS = [
   'Guarda-redes',
@@ -293,9 +294,9 @@ const TeamManagementPage: React.FC = () => {
       if (field === 'insurance') setInsuranceDocUrl(publicUrl)
       if (field === 'medical') setMedicalExamDocUrl(publicUrl)
 
-      alert('Ficheiro carregado com sucesso!')
+      toast.success('Ficheiro carregado com sucesso!')
     } catch (err: any) {
-      alert('Erro ao carregar ficheiro: ' + err.message)
+      toast.error('Erro ao carregar ficheiro: ' + err.message)
     } finally {
       setUploadingDoc(null)
     }
@@ -381,15 +382,16 @@ const TeamManagementPage: React.FC = () => {
       if (currentUserProfile && currentUserProfile.id === player.id) {
         await refreshProfile()
       }
+      toast.success(newStatus === 'injured' ? 'Atleta marcado como lesionado ⚠️' : 'Atleta marcado como apto ✓')
     } catch (err: any) {
-      alert('Erro ao atualizar estado físico: ' + (err.message || 'Erro desconhecido'))
+      toast.error('Erro ao atualizar estado físico: ' + (err.message || 'Erro desconhecido'))
     }
   }
 
   const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formName || !formEmail) {
-      alert('Nome e Email são obrigatórios.')
+      toast.warning('Nome e Email são obrigatórios.')
       return
     }
 
@@ -447,7 +449,7 @@ const TeamManagementPage: React.FC = () => {
 
         if (error) throw error
         savedPlayerId = formId
-        alert('Ficha de membro atualizada!')
+        toast.success('Ficha de membro atualizada com sucesso!')
       } else {
         // Verificar se já existe perfil na BD com este email
         const { data: existing } = await supabase
@@ -463,7 +465,7 @@ const TeamManagementPage: React.FC = () => {
             .eq('id', existing.id)
           if (error) throw error
           savedPlayerId = existing.id
-          alert('Ficha de membro atualizada na base de dados!')
+          toast.success('Ficha de membro atualizada na base de dados!')
         } else {
           const newId = crypto.randomUUID()
           const { error } = await supabase
@@ -474,7 +476,7 @@ const TeamManagementPage: React.FC = () => {
             }])
           if (error) throw error
           savedPlayerId = newId
-          alert('Novo membro gravado com sucesso na base de dados!')
+          toast.success('Novo membro gravado com sucesso!')
         }
       }
 
@@ -485,7 +487,7 @@ const TeamManagementPage: React.FC = () => {
       setIsFormModalOpen(false)
       fetchProfiles()
     } catch (err: any) {
-      alert('Erro ao gravar membro: ' + (err.message || 'Verifique a base de dados'))
+      toast.error('Erro ao gravar membro: ' + (err.message || 'Verifique a base de dados'))
     }
   }
 
@@ -500,8 +502,9 @@ const TeamManagementPage: React.FC = () => {
         setProfiles(prev => prev.filter(p => p.id !== id))
       }
       if (selectedProfile?.id === id) setIsDetailModalOpen(false)
+      toast.success('Membro eliminado com sucesso!')
     } catch (err: any) {
-      alert('Erro ao eliminar membro: ' + err.message)
+      toast.error('Erro ao eliminar membro: ' + err.message)
     }
   }
 
@@ -519,7 +522,7 @@ const TeamManagementPage: React.FC = () => {
 
   const handleConfirmAssociate = async (sourcePlayer: Profile, targetUser: Profile) => {
     if (sourcePlayer.id === targetUser.id) {
-      alert('Este jogador já está associado a esta conta.')
+      toast.warning('Este jogador já está associado a esta conta.')
       return
     }
 
@@ -571,7 +574,7 @@ const TeamManagementPage: React.FC = () => {
       // 4. Eliminar o registo placeholder original se for um perfil separado
       await supabase.from('profiles').delete().eq('id', sourcePlayerId)
 
-      alert(`Jogador "${sourcePlayer.name}" associado com sucesso à conta "${targetUser.email}"!`)
+      toast.success(`Jogador "${sourcePlayer.name}" associado com sucesso à conta "${targetUser.email}"!`)
       setAssociatingPlayer(null)
       setSelectedUserToAssociate(null)
       if (selectedProfile?.id === sourcePlayerId) {
@@ -579,7 +582,7 @@ const TeamManagementPage: React.FC = () => {
       }
       fetchProfiles()
     } catch (err: any) {
-      alert('Erro ao associar utilizador: ' + (err.message || 'Verifique a base de dados'))
+      toast.error('Erro ao associar utilizador: ' + (err.message || 'Verifique a base de dados'))
     } finally {
       setAssociatingLoading(false)
     }
