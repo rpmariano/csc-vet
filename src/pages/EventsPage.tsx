@@ -2358,10 +2358,14 @@ const EventsPage: React.FC = () => {
                   </p>
                 </div>
               ) : editingEvent && (() => {
-                const currentCallups = eventCallups[editingEvent.id] || []
-                const calledPlayerIds = currentCallups.map(c => c.player_id)
+                const rawCurrentCallups = eventCallups[editingEvent.id] || []
                 const eligibleMembers = allPlayers.filter(p => isPlayerEligible(p, editingEvent.type))
-                const editUncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id) && isPlayerEligible(p, editingEvent.type))
+                const currentCallups = rawCurrentCallups.filter(c => {
+                  const p = allPlayers.find(pl => pl.id === c.player_id) || c.player
+                  return p ? isPlayerEligible(p, editingEvent.type) : false
+                })
+                const calledPlayerIds = currentCallups.map(c => c.player_id)
+                const editUncalledPlayers = eligibleMembers.filter(p => !calledPlayerIds.includes(p.id))
 
                 const handleEditAddAll = async () => {
                   if (editUncalledPlayers.length === 0 || isBatchCalling) return
@@ -2442,7 +2446,7 @@ const EventsPage: React.FC = () => {
                         <span>Convocatória ({calledPlayerIds.length} convocados)</span>
                       </span>
                       <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2 py-0.5 rounded-full">
-                        {eligibleMembers.length} Elegíveis {allPlayers.length !== eligibleMembers.length ? `(${allPlayers.length} Total)` : ''}
+                        {eligibleMembers.length} Membros
                       </span>
                     </div>
 

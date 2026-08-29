@@ -2750,7 +2750,11 @@ const CalendarPage: React.FC = () => {
 
               {/* COLUNA DIREITA (7 Colunas): Convocatória Completa, Filtros Interativos e Gestão */}
               {(() => {
-                const callups = eventCallups[selectedEvent.id] || []
+                const rawCallups = eventCallups[selectedEvent.id] || []
+                const callups = rawCallups.filter(c => {
+                  const p = allPlayers.find(pl => pl.id === c.player_id) || c.player
+                  return p ? isPlayerEligible(p, selectedEvent.type) : true
+                })
                 const confirmedList = callups.filter(c => c.status === 'confirmed')
                 const declinedList = callups.filter(c => c.status === 'declined')
                 const pendingList = callups.filter(c => c.status === 'called')
@@ -3815,10 +3819,14 @@ const CalendarPage: React.FC = () => {
               {/* COLUNA DIREITA: GESTÃO DA CONVOCATÓRIA (6 Colunas) */}
               <div className="lg:col-span-6 bg-gray-50/80 p-5 rounded-2xl border border-gray-200 space-y-3.5">
                 {selectedEvent && (() => {
-                  const currentCallups = eventCallups[selectedEvent.id] || []
-                  const calledPlayerIds = currentCallups.map(c => c.player_id)
+                  const rawCurrentCallups = eventCallups[selectedEvent.id] || []
                   const eligibleMembers = allPlayers.filter(p => isPlayerEligible(p, editType))
-                  const editUncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id) && isPlayerEligible(p, editType))
+                  const currentCallups = rawCurrentCallups.filter(c => {
+                    const p = allPlayers.find(pl => pl.id === c.player_id) || c.player
+                    return p ? isPlayerEligible(p, editType) : false
+                  })
+                  const calledPlayerIds = currentCallups.map(c => c.player_id)
+                  const editUncalledPlayers = eligibleMembers.filter(p => !calledPlayerIds.includes(p.id))
 
                   const handleEditAddAll = async () => {
                     if (editUncalledPlayers.length === 0 || isEditBatchCalling) return
@@ -4009,7 +4017,7 @@ const CalendarPage: React.FC = () => {
                           <span>Convocatória ({calledPlayerIds.length} convocados)</span>
                         </span>
                         <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2.5 py-0.5 rounded-full">
-                          {eligibleMembers.length} Elegíveis {allPlayers.length !== eligibleMembers.length ? `(${allPlayers.length} Total)` : ''}
+                          {eligibleMembers.length} Membros
                         </span>
                       </div>
 
