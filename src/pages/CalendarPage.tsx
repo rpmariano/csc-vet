@@ -1009,7 +1009,7 @@ const CalendarPage: React.FC = () => {
     // Bloco equipa Cascais
     const cscBlock = (isRight: boolean) => (
       <div className={`flex-1 flex flex-col ${isRight ? 'items-end text-right' : 'items-start text-left'} min-w-0 justify-center`}>
-        {/* Top: Símbolo + Sigla */}
+        {/* Símbolo + Sigla */}
         <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {clubSettings?.logo_url ? (
             <img src={clubSettings.logo_url} alt="CSC" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
@@ -1022,17 +1022,13 @@ const CalendarPage: React.FC = () => {
             {cscSigla}
           </span>
         </div>
-        {/* Bottom: Nome completo da equipa */}
-        <span className="text-[11px] font-semibold text-gray-500 truncate mt-1 max-w-full block">
-          {clubSettings?.name || 'CSC Cascais'}
-        </span>
       </div>
     )
 
     // Bloco equipa Adversário
     const opponentBlock = (isRight: boolean) => (
       <div className={`flex-1 flex flex-col ${isRight ? 'items-end text-right' : 'items-start text-left'} min-w-0 justify-center`}>
-        {/* Top: Símbolo + Sigla */}
+        {/* Símbolo + Sigla */}
         <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {event.opponent?.logo_url ? (
             <img src={event.opponent.logo_url} alt={event.opponent.name} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
@@ -1045,10 +1041,6 @@ const CalendarPage: React.FC = () => {
             {oppSigla}
           </span>
         </div>
-        {/* Bottom: Nome completo da equipa */}
-        <span className="text-[11px] font-semibold text-gray-500 truncate mt-1 max-w-full block">
-          {event.opponent?.name || 'Adversário'}
-        </span>
       </div>
     )
 
