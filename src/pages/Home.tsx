@@ -320,26 +320,36 @@ const Home: React.FC = () => {
       </div>
 
       {/* ALERTA DE CONVOCATÓRIAS PENDENTES */}
-      {pendingCallupsCount > 0 && (
-        <div className="bg-amber-500 text-csc-dark rounded-2xl p-4 shadow-sm flex items-center justify-between border-2 border-amber-600 animate-pulse">
-          <div className="flex items-center gap-3">
-            <AlertCircle size={24} className="shrink-0 text-csc-dark" />
-            <div>
-              <p className="font-black text-sm">
-                Tens {pendingCallupsCount} {pendingCallupsCount === 1 ? 'convocatória pendente' : 'convocatórias pendentes'}!
-              </p>
-              <p className="text-xs font-medium text-amber-950">Confirma a tua disponibilidade para os próximos eventos.</p>
-            </div>
-          </div>
-          <Link
-            to="/calendar"
-            className="bg-csc-dark text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm shrink-0 hover:bg-black transition-colors flex items-center gap-1"
+      {pendingCallupsCount > 0 && (() => {
+        const firstPending = myCallups.find(c => c.status === 'called')
+        const targetEventId = firstPending?.event_id || (firstPending?.event as any)?.id
+        const targetUrl = targetEventId ? `/calendar?event=${targetEventId}` : '/calendar'
+
+        return (
+          <div 
+            onClick={() => navigate(targetUrl)}
+            className="bg-amber-500 hover:bg-amber-400 text-csc-dark rounded-2xl p-4 shadow-sm flex items-center justify-between border-2 border-amber-600 cursor-pointer transition-all hover:shadow-md animate-pulse"
           >
-            <span>Responder</span>
-            <ChevronRight size={14} />
-          </Link>
-        </div>
-      )}
+            <div className="flex items-center gap-3">
+              <AlertCircle size={24} className="shrink-0 text-csc-dark" />
+              <div>
+                <p className="font-black text-sm">
+                  Tens {pendingCallupsCount} {pendingCallupsCount === 1 ? 'convocatória pendente' : 'convocatórias pendentes'}!
+                </p>
+                <p className="text-xs font-medium text-amber-950">Clica para ver os detalhes e responder à convocatória.</p>
+              </div>
+            </div>
+            <Link
+              to={targetUrl}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-csc-dark text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm shrink-0 hover:bg-black transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span>Responder</span>
+              <ChevronRight size={14} />
+            </Link>
+          </div>
+        )
+      })()}
 
       {/* 2. GRELHA PRINCIPAL DO DASHBOARD (2 Colunas em Desktop, 1 Coluna em Mobile) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -465,15 +465,43 @@ const CalendarPage: React.FC = () => {
   // Auto-selecionar evento se passado por URL (?event=<id>)
   useEffect(() => {
     const eventIdParam = searchParams.get('event')
-    if (eventIdParam && events.length > 0) {
+    if (!eventIdParam) return
+
+    if (events.length > 0) {
       const target = events.find(e => e.id === eventIdParam)
       if (target) {
         setSelectedEvent(target)
         const d = new Date(target.date_time)
         setSelectedDate(d)
         setCurrentDate(d)
+        return
       }
     }
+
+    // Se ainda não estiver na lista carregada, buscar diretamente
+    const fetchTargetEvent = async () => {
+      try {
+        const { data } = await supabase
+          .from('events')
+          .select(`
+            *,
+            field:fields(*),
+            tournament:tournaments(*)
+          `)
+          .eq('id', eventIdParam)
+          .single()
+
+        if (data) {
+          setSelectedEvent(data as Event)
+          const d = new Date(data.date_time)
+          setSelectedDate(d)
+          setCurrentDate(d)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar evento do link:', err)
+      }
+    }
+    fetchTargetEvent()
   }, [searchParams, events])
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
