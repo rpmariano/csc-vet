@@ -207,6 +207,7 @@ const CalendarPage: React.FC = () => {
   const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(false)
   const [currentPendingIndex, setCurrentPendingIndex] = useState(0)
   const [pendingTouchStartX, setPendingTouchStartX] = useState<number | null>(null)
+  const [modalTouchStartX, setModalTouchStartX] = useState<number | null>(null)
 
   // Form states
   const [title, setTitle] = useState('')
@@ -1773,69 +1774,131 @@ const CalendarPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Detalhes Evento & Convocatória (Versão Web Expandida) */}
+      {/* Modal Detalhes Evento & Convocatória (Estilo Bottom Sheet / Persiana no Mobile) */}
       {selectedEvent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-6xl xl:max-w-7xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 z-50 overflow-y-auto animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedEvent(null)
+              setPlayerSearchTerm('')
+              setModalCallupStatusFilter('all')
+            }
+          }}
+        >
+          <div 
+            onTouchStart={(e) => setModalTouchStartX(e.targetTouches[0].clientX)}
+            onTouchEnd={(e) => {
+              if (modalTouchStartX === null) return
+              const diff = modalTouchStartX - e.changedTouches[0].clientX
+              if (Math.abs(diff) > 45 && myPendingEvents.length > 1) {
+                const curIdx = myPendingEvents.findIndex(pe => pe.id === selectedEvent.id)
+                if (curIdx !== -1) {
+                  if (diff > 0) {
+                    const next = myPendingEvents[(curIdx + 1) % myPendingEvents.length]
+                    setSelectedEvent(next)
+                  } else {
+                    const prev = myPendingEvents[(curIdx - 1 + myPendingEvents.length) % myPendingEvents.length]
+                    setSelectedEvent(prev)
+                  }
+                }
+              }
+              setModalTouchStartX(null)
+            }}
+            className="bg-white rounded-t-3xl sm:rounded-3xl max-w-6xl xl:max-w-7xl w-full p-5 sm:p-8 relative max-h-[92vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 animate-slide-up sm:animate-none space-y-4"
+          >
+            {/* Persiana Top Handle no Mobile */}
+            <div 
+              className="sm:hidden flex items-center justify-center pt-1 pb-2 cursor-pointer touch-none"
+              onClick={() => {
+                setSelectedEvent(null)
+                setPlayerSearchTerm('')
+                setModalCallupStatusFilter('all')
+              }}
+            >
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full hover:bg-gray-400 transition-colors" />
+            </div>
+
+            {/* Botão Fechar */}
             <button
               onClick={() => {
                 setSelectedEvent(null)
                 setPlayerSearchTerm('')
                 setModalCallupStatusFilter('all')
               }}
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10 cursor-pointer"
+              className="absolute top-3.5 right-4 sm:top-5 sm:right-5 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10 cursor-pointer"
               title="Fechar"
             >
-              <X size={24} />
+              <X size={22} />
             </button>
 
             {/* Grelha Responsiva Versão Web (2 Colunas Amplas no Desktop) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
               
               {/* COLUNA ESQUERDA (5 Colunas): Detalhes do Evento, Matchup VS e Presença Pessoal */}
               <div className="lg:col-span-5 space-y-5">
-                {/* Seletor Rápido de Convocatórias Pendentes */}
-                {myPendingEvents.length > 1 && (
-                  <div className="p-3 bg-amber-50 rounded-2xl border-2 border-amber-300 space-y-2 mb-1 shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-                        <span className="animate-pulse">🔔</span>
-                        <span>Tens {myPendingEvents.length} convocatórias pendentes:</span>
-                      </span>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full">
-                        Alternar Evento
-                      </span>
-                    </div>
+                {/* Carrossel Superior de Convocatórias Pendentes */}
+                {myPendingEvents.length > 1 && (() => {
+                  const curIdx = myPendingEvents.findIndex(pe => pe.id === selectedEvent.id)
+                  const isCurrentInPending = curIdx !== -1
+                  const activePendingIndex = isCurrentInPending ? curIdx : 0
 
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                      {myPendingEvents.map((pe) => {
-                        const isCurrent = pe.id === selectedEvent.id
-                        const pTypeEmoji = pe.type === 'match' ? '⚽' : pe.type === 'practice' ? '🏃' : '🎉'
-                        const pDateStr = new Date(pe.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })
+                  const nextPending = () => {
+                    const nextIdx = (activePendingIndex + 1) % myPendingEvents.length
+                    setSelectedEvent(myPendingEvents[nextIdx])
+                  }
 
-                        return (
-                          <button
-                            key={pe.id}
-                            type="button"
-                            onClick={() => setSelectedEvent(pe)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 flex items-center gap-1.5 border cursor-pointer ${
-                              isCurrent
-                                ? 'bg-csc-dark text-white border-csc-dark shadow-sm scale-102 ring-2 ring-amber-400'
-                                : 'bg-white text-gray-700 border-amber-200 hover:bg-amber-100/60'
-                            }`}
-                          >
-                            <span>{pTypeEmoji}</span>
-                            <span className="truncate max-w-[140px]">{pe.title}</span>
-                            <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-bold ${isCurrent ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                              {pDateStr}
-                            </span>
-                            {isCurrent && <span className="text-csc-gold text-[10px]">●</span>}
-                          </button>
-                        )
-                      })}
+                  const prevPending = () => {
+                    const prevIdx = (activePendingIndex - 1 + myPendingEvents.length) % myPendingEvents.length
+                    setSelectedEvent(myPendingEvents[prevIdx])
+                  }
+
+                  return (
+                    <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 rounded-2xl p-3 text-csc-dark shadow-xs border border-amber-600/50 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={prevPending}
+                        className="w-8 h-8 rounded-xl bg-black/10 hover:bg-black/20 text-csc-dark flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0"
+                        title="Evento Anterior"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+
+                      <div className="flex flex-col items-center justify-center text-center min-w-0 flex-1">
+                        <span className="text-xs font-black tracking-wide text-amber-950 flex items-center gap-1.5">
+                          <span>🔔 Convocatória Pendente</span>
+                          <span className="bg-black/15 px-2 py-0.5 rounded-full text-[10.5px] font-black">
+                            {activePendingIndex + 1}/{myPendingEvents.length}
+                          </span>
+                        </span>
+
+                        {/* Traços centrados */}
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          {myPendingEvents.map((pe, idx) => (
+                            <button
+                              key={pe.id}
+                              type="button"
+                              onClick={() => setSelectedEvent(pe)}
+                              className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                                idx === activePendingIndex ? 'bg-csc-dark w-5' : 'bg-black/25 hover:bg-black/40 w-2'
+                              }`}
+                              title={pe.title}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={nextPending}
+                        className="w-8 h-8 rounded-xl bg-black/10 hover:bg-black/20 text-csc-dark flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0"
+                        title="Próximo Evento"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
 
                 {/* Header do Evento (Tipo + Badges + Botões de Ação) */}
                 <div className="flex items-center justify-between gap-2 pr-10">
@@ -2020,7 +2083,6 @@ const CalendarPage: React.FC = () => {
                   const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
                   const isPractice = selectedEvent.type === 'practice'
                   const isRsvpOpen = !isPractice || diffDays <= 6
-                  const otherPendingEvents = myPendingEvents.filter(pe => pe.id !== selectedEvent.id)
 
                   return (
                     <div className="p-4 bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl border border-gray-300 space-y-3 shadow-2xs">
@@ -2076,76 +2138,33 @@ const CalendarPage: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Lista de Outras Convocatórias Pendentes Integradas */}
-                      {otherPendingEvents.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-[10.5px] font-black uppercase text-amber-950 tracking-wider flex items-center gap-1">
-                              <span>🔔 Outras Convocatórias a Aguardar Resposta ({otherPendingEvents.length})</span>
-                            </p>
+                      {/* Indicador de Carrossel Centralizado se houver múltiplas convocatórias pendentes */}
+                      {myPendingEvents.length > 1 && (() => {
+                        const curIdx = myPendingEvents.findIndex(pe => pe.id === selectedEvent.id)
+                        const isCurrentInPending = curIdx !== -1
+                        const activePendingIndex = isCurrentInPending ? curIdx : 0
+
+                        return (
+                          <div className="pt-2 border-t border-gray-100 flex items-center justify-center gap-2">
+                            <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
+                              {myPendingEvents.map((pe, idx) => (
+                                <button
+                                  key={pe.id}
+                                  type="button"
+                                  onClick={() => setSelectedEvent(pe)}
+                                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                                    idx === activePendingIndex ? 'bg-csc-dark w-5' : 'bg-gray-400 hover:bg-gray-600 w-2'
+                                  }`}
+                                  title={pe.title}
+                                />
+                              ))}
+                              <span className="text-[10.5px] font-black text-gray-700 ml-1 pl-1.5 border-l border-gray-300 leading-none">
+                                {activePendingIndex + 1}/{myPendingEvents.length}
+                              </span>
+                            </div>
                           </div>
-
-                          <div className="space-y-2">
-                            {otherPendingEvents.map(otherEv => {
-                              const otherCallups = eventCallups[otherEv.id] || []
-                              const otherCall = profile ? otherCallups.find(c => c.player_id === profile.id) : null
-                              const isOtherPractice = otherEv.type === 'practice'
-                              const otherTime = new Date(otherEv.date_time).getTime()
-                              const otherDiff = Math.ceil((otherTime - now) / (1000 * 60 * 60 * 24))
-                              const isOtherRsvpOpen = !isOtherPractice || otherDiff <= 6
-                              const typeEmoji = otherEv.type === 'match' ? '⚽' : otherEv.type === 'practice' ? '🏃' : '🎉'
-
-                              return (
-                                <div 
-                                  key={otherEv.id}
-                                  className="p-3 bg-white rounded-xl border border-amber-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-                                >
-                                  <div 
-                                    onClick={() => setSelectedEvent(otherEv)}
-                                    className="cursor-pointer hover:opacity-80 flex-1 min-w-0"
-                                    title="Clique para ver os detalhes deste evento"
-                                  >
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-xs">{typeEmoji}</span>
-                                      <p className="text-xs font-black text-gray-900 truncate">{otherEv.title}</p>
-                                    </div>
-                                    <p className="text-[10.5px] text-gray-500 font-medium">
-                                      {new Date(otherEv.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })} às {new Date(otherEv.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                  </div>
-
-                                  {isOtherRsvpOpen ? (
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                      <button
-                                        type="button"
-                                        disabled={otherCall?.status === 'confirmed'}
-                                        onClick={() => handleCallupResponse(otherEv.id, 'confirmed')}
-                                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
-                                      >
-                                        <CheckCircle2 size={13} />
-                                        <span>Confirmar</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={otherCall?.status === 'declined'}
-                                        onClick={() => handleCallupResponse(otherEv.id, 'declined')}
-                                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
-                                      >
-                                        <XCircle size={13} />
-                                        <span>Recusar</span>
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                                      Abre 6 dias antes
-                                    </span>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
+                        )
+                      })()}
                     </div>
                   )
                 })()}
