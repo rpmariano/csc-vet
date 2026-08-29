@@ -23,7 +23,7 @@ import type { UserRole } from '../context/AuthContext'
 import { AutoAssociationModal } from './AutoAssociationModal'
 
 const Layout: React.FC = () => {
-  const { profile, actualRole, isSimulatingRole, setSimulatedRole, assignedRoles, signOut } = useAuth()
+  const { profile, actualRole, isSimulatingRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
@@ -72,17 +72,34 @@ const Layout: React.FC = () => {
       )}
 
       {/* Mobile Header (Limpo e elegante) */}
-      <header className={`bg-white text-csc-dark flex items-center justify-between px-4 py-2.5 md:hidden border-b-4 border-csc-gold shadow-sm sticky ${isSimulatingRole ? 'top-8' : 'top-0'} z-30`}>
+      <header className={`bg-white text-csc-dark flex items-center justify-between px-3.5 py-2.5 md:hidden border-b-4 border-csc-gold shadow-sm sticky ${isSimulatingRole ? 'top-8' : 'top-0'} z-30`}>
         <Link to="/" className="flex items-center gap-2">
-          <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-10 object-contain" />
+          <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-9 object-contain" />
         </Link>
         
         <div className="flex items-center gap-2">
+          {/* Toggle Clínico no Canto Superior: Disponível / Lesionado */}
+          {profile && (
+            <button
+              type="button"
+              onClick={() => toggleClinicalStatus()}
+              className={`text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 transition-all border shadow-2xs cursor-pointer active:scale-95 ${
+                profile.status === 'injured'
+                  ? 'bg-red-50 text-red-700 border-red-300 animate-pulse ring-1 ring-red-300'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-200'
+              }`}
+              title="Clique para alternar entre Disponível e Lesionado"
+            >
+              <span>{profile.status === 'injured' ? '🔴' : '🟢'}</span>
+              <span>{profile.status === 'injured' ? 'Lesionado' : 'Disponível'}</span>
+            </button>
+          )}
+
           {/* Pílula de Cargo (Clicável se tiver múltiplos perfis) */}
           <button
             type="button"
             onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-            className={`text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full font-black text-white flex items-center gap-1 transition-all ${
+            className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-black text-white flex items-center gap-1 transition-all ${
               isAdmin ? 'bg-csc-gold text-csc-dark shadow-xs' : isCoach ? 'bg-blue-600' : 'bg-csc-dark'
             } ${canSwitchRoles ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
             title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
@@ -91,13 +108,15 @@ const Layout: React.FC = () => {
             {canSwitchRoles && <ChevronDown size={12} className="opacity-70" />}
           </button>
 
-          {profile?.photo_url ? (
-            <img src={profile.photo_url} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-csc-gold" />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-csc-dark text-white text-xs flex items-center justify-center font-bold">
-              {profile?.name?.charAt(0).toUpperCase() || 'U'}
-            </div>
-          )}
+          <Link to="/settings" title="Ver Perfil">
+            {profile?.photo_url ? (
+              <img src={profile.photo_url} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-csc-gold" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-csc-dark text-white text-xs flex items-center justify-center font-bold">
+                {profile?.name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+            )}
+          </Link>
         </div>
       </header>
 
@@ -462,9 +481,67 @@ const Layout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-lg md:max-w-7xl mx-auto w-full pb-24 md:pb-8">
-        <Outlet />
-      </main>
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Desktop Top Header Bar (Disponível/Lesionado Toggle, Cargo e Perfil) */}
+        <header className="hidden md:flex items-center justify-between px-8 py-3 bg-white border-b border-gray-200 shadow-2xs sticky top-0 z-30">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-extrabold text-gray-400 uppercase tracking-wider">Painel Oficial</span>
+            <span className="text-gray-300">•</span>
+            <span className="text-xs font-black text-csc-dark">Veteranos GDS Cascais</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Toggle Clínico no Canto Superior: Disponível / Lesionado */}
+            {profile && (
+              <button
+                type="button"
+                onClick={() => toggleClinicalStatus()}
+                className={`text-xs font-black px-3.5 py-1.5 rounded-full flex items-center gap-2 transition-all border shadow-xs cursor-pointer active:scale-95 ${
+                  profile.status === 'injured'
+                    ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
+                    : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-100'
+                }`}
+                title="Clique para alternar o seu estado entre Disponível e Lesionado"
+              >
+                <span className="text-sm">{profile.status === 'injured' ? '🔴' : '🟢'}</span>
+                <span>{profile.status === 'injured' ? 'Lesionado (Dep. Médico)' : 'Disponível / Apto'}</span>
+              </button>
+            )}
+
+            {/* Pílula de Cargo */}
+            <button
+              type="button"
+              onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
+              className={`text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-full font-black text-white flex items-center gap-1.5 transition-all ${
+                isAdmin ? 'bg-csc-gold text-csc-dark shadow-xs' : isCoach ? 'bg-blue-600' : 'bg-csc-dark'
+              } ${canSwitchRoles ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
+            >
+              <span>{isAdmin ? '🛡️ Admin' : isCoach ? '📋 Treinador' : '⚽ Jogador'}</span>
+              {canSwitchRoles && <ChevronDown size={13} className="opacity-70" />}
+            </button>
+
+            {/* Link para Perfil / Settings */}
+            <Link
+              to="/settings"
+              className="flex items-center gap-2 p-1 pl-2 pr-3 rounded-full hover:bg-gray-100 border border-gray-200 transition-colors"
+              title="Editar o Meu Perfil"
+            >
+              {profile?.photo_url ? (
+                <img src={profile.photo_url} alt="Profile" className="w-7 h-7 rounded-full object-cover border border-csc-gold" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-csc-dark text-white text-xs flex items-center justify-center font-bold">
+                  {profile?.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
+              <span className="text-xs font-bold text-gray-800 max-w-[140px] truncate">{profile?.name || 'Perfil'}</span>
+            </Link>
+          </div>
+        </header>
+
+        <main className="flex-1 p-4 md:p-8 max-w-lg md:max-w-7xl mx-auto w-full pb-24 md:pb-8">
+          <Outlet />
+        </main>
+      </div>
 
       {/* Mobile Bottom Navigation: "Sacos" dos Jogadores/Treinadores + Menu dos Traços (☰) no Rodapé */}
       <div className="fixed bottom-0 left-0 right-0 bg-csc-dark border-t-2 border-csc-light/20 px-1 py-1.5 flex justify-around items-center md:hidden z-40 shadow-2xl">

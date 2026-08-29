@@ -83,6 +83,8 @@ interface AuthContextType {
   actualRole: UserRole | null
   isSimulatingRole: boolean
   setSimulatedRole: (role: UserRole | null) => void
+  toggleClinicalStatus: (overrideStatus?: 'active' | 'injured') => Promise<ProfileStatus | undefined>
+  refreshProfile: () => Promise<void>
   loading: boolean
   signOut: () => Promise<void>
 }
@@ -213,6 +215,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
+  const toggleClinicalStatus = async (overrideStatus?: 'active' | 'injured') => {
+    if (!actualProfile) return
+    const currentStatus = actualProfile.status
+    const newStatus: ProfileStatus = overrideStatus || (currentStatus === 'injured' ? 'active' : 'injured')
+
+    try {
+      // 1. Atualizar perfil no Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: newStatus })
+        .eq('id', actualProfile.id)
+
+      if (error) throw error
+
+      // 2. Sincronizar convocatórias de treinos futuros
+      const nowIso = new Date().toISOString()
+      const { data: upcomingPractices } = await supabase
+        .from('events')
+        .select('id')
+        .eq('type', 'practice')
+        .gte('date_time', nowIso)
+
+      if (upcomingPractices && upcomingPractices.length > 0) {
+        const practiceIds = upcomingPractices.map(p => p.id)
+        if (newStatus === 'active') {
+          const { data: existingCallups } = await supabase
+            .from('callups')
+            .select('event_id')
+            .eq('player_id', actualProfile.id)
+            .in('event_id', practiceIds)
+
+          const alreadyCalledEventIds = new Set((existingCallups || []).map(c => c.event_id))
+          const toCallEventIds = practiceIds.filter(id => !alreadyCalledEventIds.has(id))
+
+          if (toCallEventIds.length > 0) {
+            const insertPayload = toCallEventIds.map(eventId => ({
+              event_id: eventId,
+              player_id: actualProfile.id,
+              status: 'called'
+            }))
+            await supabase.from('callups').insert(insertPayload)
+          }
+        } else if (newStatus === 'injured') {
+          await supabase
+            .from('callups')
+            .delete()
+            .eq('player_id', actualProfile.id)
+            .in('event_id', practiceIds)
+        }
+      }
+
+      // 3. Atualizar estado local
+      setActualProfile(prev => prev ? { ...prev, status: newStatus } : null)
+      return newStatus
+    } catch (err) {
+      console.error('Erro ao alternar estado clínico:', err)
+      throw err
+    }
+  }
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id, user.email, user.phone)
+    }
+  }
+
   const signOut = async () => {
     setLoading(true)
     localStorage.removeItem('csc_simulated_role')
@@ -241,7 +309,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       assignedRoles,
       actualRole, 
       isSimulatingRole, 
-      setSimulatedRole, 
+      setSimulatedRole,
+      toggleClinicalStatus,
+      refreshProfile,
       loading, 
       signOut 
     }}>

@@ -1148,13 +1148,45 @@ const TeamManagementPage: React.FC = () => {
             >
               <X size={22} />
             </button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-150 pb-4 mb-5">
+              <div>
+                <h2 className="text-2xl font-black text-csc-dark mb-0.5">
+                  {isEditing ? 'Editar Ficha do Membro' : 'Criar Ficha de Novo Membro'}
+                </h2>
+                <p className="text-xs text-gray-500">
+                  Preencha os dados cadastrais, fiscais, morada, equipamento, contactos e anexe a documentação legal.
+                </p>
+              </div>
 
-            <h2 className="text-2xl font-black text-csc-dark mb-1">
-              {isEditing ? 'Editar Ficha do Membro' : 'Criar Ficha de Novo Membro'}
-            </h2>
-            <p className="text-xs text-gray-500 mb-6">
-              Preencha os dados cadastrais, fiscais, morada, equipamento, contactos e anexe a documentação legal.
-            </p>
+              {/* Estado da Atividade (Ativo / Inativo) no Cabeçalho */}
+              <div className="flex items-center gap-2 bg-gray-100/90 p-1.5 rounded-2xl border border-gray-200 self-start sm:self-auto shrink-0">
+                <span className="text-xs font-bold text-gray-700 pl-1.5">Atividade:</span>
+                <div className="flex rounded-xl p-0.5 bg-white border border-gray-200 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setFormStatus('active')}
+                    className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      formStatus === 'active' || formStatus === 'injured'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    🟢 Ativo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormStatus('inactive')}
+                    className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      formStatus === 'inactive'
+                        ? 'bg-gray-700 text-white shadow-xs'
+                        : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    ⚪ Inativo
+                  </button>
+                </div>
+              </div>
+            </div>
 
             <form onSubmit={handleSaveMember} className="space-y-6">
               
@@ -1413,8 +1445,8 @@ const TeamManagementPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 4.3 Camisola, Tamanho de Equipamento & Estado */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200">
+                {/* 4.3 Camisola & Tamanho de Equipamento */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">Nº da Camisola</label>
                     <input
@@ -1440,19 +1472,6 @@ const TeamManagementPage: React.FC = () => {
                       <option value="L">L</option>
                       <option value="XL">XL</option>
                       <option value="XXL">XXL</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Estado de Atividade</label>
-                    <select
-                      value={formStatus}
-                      onChange={(e) => setFormStatus(e.target.value as ProfileStatus)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-semibold"
-                    >
-                      <option value="active">🟢 Ativo / Disponível</option>
-                      <option value="injured">🔴 Lesionado (Dep. Médico)</option>
-                      <option value="inactive">⚪ Inativo / Indisponível</option>
                     </select>
                   </div>
                 </div>

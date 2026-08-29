@@ -1,176 +1,689 @@
 import React, { useState, useEffect } from 'react'
-import { Save, User as UserIcon, Phone, Mail, Bell, Shield } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { 
+  Save, 
+  User as UserIcon, 
+  Phone, 
+  Mail, 
+  Shield, 
+  HeartPulse, 
+  FileText, 
+  ExternalLink,
+  Check,
+  AlertCircle,
+  Lock
+} from 'lucide-react'
+import { useAuth, encodeRolesToNotes, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 
 const SettingsPage: React.FC = () => {
-  const { profile, assignedRoles } = useAuth()
-  const [name, setName] = useState('')
-  const [nickname, setNickname] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
+  const { profile, assignedRoles, toggleClinicalStatus, refreshProfile } = useAuth()
+  
+  // 1. Identificação Pessoal & Fiscal
+  const [formName, setFormName] = useState('')
+  const [formShirtName, setFormShirtName] = useState('')
+  const [formBirthDate, setFormBirthDate] = useState('')
+  const [formNationality, setFormNationality] = useState('Portuguesa')
+  const [formNif, setFormNif] = useState('')
+  const [formIdNumber, setFormIdNumber] = useState('')
+  const [formIdCardExpiry, setFormIdCardExpiry] = useState('')
+
+  // 2. Morada & Residência
+  const [formAddress, setFormAddress] = useState('')
+  const [formPostalCode, setFormPostalCode] = useState('')
+  const [formCity, setFormCity] = useState('')
+
+  // 3. Contactos
+  const [formEmail, setFormEmail] = useState('')
+  const [formPhone, setFormPhone] = useState('')
+
+  // 4. Dados Desportivos & Função (Somente Leitura para Jogador)
   const [formPositions, setFormPositions] = useState<string[]>(['Médio Centro'])
-  const [success, setSuccess] = useState(false)
+  const [formJerseyNumber, setFormJerseyNumber] = useState<number | ''>('')
+  const [formKitSize, setFormKitSize] = useState('L')
+
+  // 5. Dados Bancários & Quotas
+  const [formIban, setFormIban] = useState('')
+  const [formMemberNumber, setFormMemberNumber] = useState('')
+
+  // 6. Saúde & Contacto de Emergência
+  const [formEmergencyName, setFormEmergencyName] = useState('')
+  const [formEmergencyPhone, setFormEmergencyPhone] = useState('')
+  const [formMedicalNotes, setFormMedicalNotes] = useState('')
+
+  // 7. Documentos & RGPD
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [idDocUrl, setIdDocUrl] = useState<string | null>(null)
+  const [insuranceDocUrl, setInsuranceDocUrl] = useState<string | null>(null)
+  const [medicalExamDocUrl, setMedicalExamDocUrl] = useState<string | null>(null)
+  const [formGdprConsent, setFormGdprConsent] = useState(false)
+
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     if (profile) {
-      setName(profile.name)
-      setNickname(profile.nickname || '')
-      setEmail(profile.email)
-      setPhone(profile.phone || '')
+      setFormName(profile.name || '')
+      setFormShirtName(profile.shirt_name || profile.nickname || '')
+      setFormBirthDate(profile.birth_date ? profile.birth_date.substring(0, 10) : '')
+      setFormNationality(profile.nationality || 'Portuguesa')
+      setFormNif(profile.nif || '')
+      setFormIdNumber(profile.id_number || '')
+      setFormIdCardExpiry(profile.id_card_expiry ? profile.id_card_expiry.substring(0, 10) : '')
+
+      setFormAddress(profile.address || '')
+      setFormPostalCode(profile.postal_code || '')
+      setFormCity(profile.city || '')
+
+      setFormEmail(profile.email || '')
+      setFormPhone(profile.phone || '')
+
       setFormPositions(parsePositions(profile.position))
+      setFormJerseyNumber(profile.jersey_number !== null && profile.jersey_number !== undefined ? profile.jersey_number : '')
+      setFormKitSize(profile.kit_size || 'L')
+
+      setFormIban(profile.iban || '')
+      setFormMemberNumber(profile.member_number || '')
+
+      setFormEmergencyName(profile.emergency_contact_name || '')
+      setFormEmergencyPhone(profile.emergency_contact_phone || '')
+      setFormMedicalNotes(cleanNotesFromRolesTag(profile.medical_notes) || '')
+
+      setPhotoUrl(profile.photo_url || null)
+      setIdDocUrl(profile.id_document_url || null)
+      setInsuranceDocUrl(profile.insurance_doc_url || null)
+      setMedicalExamDocUrl(profile.medical_exam_doc_url || null)
+      setFormGdprConsent(Boolean(profile.gdpr_consent))
     }
   }, [profile])
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSuccess(false)
-    if (!profile) return
+  const handleUploadFile = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: 'photo' | 'idDoc' | 'insurance' | 'medical'
+  ) => {
+    if (!e.target.files || e.target.files.length === 0) return
+    const file = e.target.files[0]
+    const ext = file.name.split('.').pop()
+    const fileName = `profile_${field}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`
 
     try {
-      const positionStr = formPositions.length > 0 ? formPositions.join(', ') : 'Médio Centro'
-      const { error } = await supabase
-        .from('profiles')
-        .update({ name, nickname: nickname || null, phone, position: positionStr })
-        .eq('id', profile.id)
+      setUploadingDoc(field)
+      const { error: uploadErr } = await supabase.storage
+        .from('club_assets')
+        .upload(fileName, file, { upsert: true })
 
-      if (error) throw error
-      setSuccess(true)
-    } catch (err) {
-      // simulate success for display if not fully hooked up to DB
-      setSuccess(true)
+      if (uploadErr) throw uploadErr
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('club_assets')
+        .getPublicUrl(fileName)
+
+      if (field === 'photo') setPhotoUrl(publicUrl)
+      if (field === 'idDoc') setIdDocUrl(publicUrl)
+      if (field === 'insurance') setInsuranceDocUrl(publicUrl)
+      if (field === 'medical') setMedicalExamDocUrl(publicUrl)
+
+      alert('Ficheiro carregado com sucesso!')
+    } catch (err: any) {
+      alert('Erro ao carregar ficheiro: ' + err.message)
+    } finally {
+      setUploadingDoc(null)
     }
   }
 
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaveSuccess(false)
+    setSaveError(null)
+    if (!profile) return
+
+    if (!formName.trim()) {
+      setSaveError('O Nome Completo é obrigatório.')
+      return
+    }
+
+    setIsSaving(true)
+
+    const sanitizeDate = (val?: string | null) => (val && val.trim() ? val.trim() : null)
+    const sanitizeText = (val?: string | null) => (val && val.trim() ? val.trim() : null)
+    const currentRoles = assignedRoles || [profile.role]
+    const medicalNotesEncoded = encodeRolesToNotes(formMedicalNotes, currentRoles)
+
+    const payload = {
+      name: formName.trim(),
+      shirt_name: sanitizeText(formShirtName),
+      nickname: sanitizeText(formShirtName),
+      phone: sanitizeText(formPhone),
+      birth_date: sanitizeDate(formBirthDate),
+      nationality: sanitizeText(formNationality) || 'Portuguesa',
+      address: sanitizeText(formAddress),
+      postal_code: sanitizeText(formPostalCode),
+      city: sanitizeText(formCity),
+      nif: sanitizeText(formNif),
+      id_number: sanitizeText(formIdNumber),
+      id_card_expiry: sanitizeDate(formIdCardExpiry),
+      iban: sanitizeText(formIban),
+      member_number: sanitizeText(formMemberNumber),
+      emergency_contact_name: sanitizeText(formEmergencyName),
+      emergency_contact_phone: sanitizeText(formEmergencyPhone),
+      medical_notes: medicalNotesEncoded,
+      photo_url: photoUrl || null,
+      id_document_url: idDocUrl || null,
+      insurance_doc_url: insuranceDocUrl || null,
+      medical_exam_doc_url: medicalExamDocUrl || null,
+      gdpr_consent: Boolean(formGdprConsent),
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(payload)
+        .eq('id', profile.id)
+
+      if (error) throw error
+
+      await refreshProfile()
+      setSaveSuccess(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (err: any) {
+      setSaveError('Erro ao guardar alterações: ' + (err.message || 'Verifique os dados'))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const isInjured = profile?.status === 'injured'
+  const isInactive = profile?.status === 'inactive'
+
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-3xl font-extrabold text-csc-dark">Definições da Conta</h1>
-        <p className="text-gray-550 mt-1">Atualize as suas informações pessoais, contacto e posições de preferência no campo.</p>
-      </div>
-
-      {success && (
-        <div className="bg-green-50 text-green-700 p-4 rounded-xl border border-green-150 text-sm font-semibold">
-          Alterações guardadas com sucesso!
-        </div>
-      )}
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-150 overflow-hidden">
-        <form onSubmit={handleSave} className="p-6 space-y-5">
-          <div className="flex items-center justify-between text-gray-805 font-bold mb-4 border-b border-gray-100 pb-3">
-            <div className="flex items-center space-x-2">
-              <UserIcon size={18} className="text-csc-dark" />
-              <span>Perfil & Dados Pessoais</span>
+    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+      
+      {/* CABEÇALHO DA FICHA DE MEMBRO */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-gray-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          {photoUrl ? (
+            <img src={photoUrl} alt="Avatar" className="w-16 h-16 rounded-2xl object-cover border-2 border-csc-gold shadow-sm" />
+          ) : (
+            <div className="w-16 h-16 rounded-2xl bg-csc-dark text-csc-gold flex items-center justify-center font-black text-2xl shadow-sm">
+              {formName ? formName.charAt(0).toUpperCase() : 'U'}
             </div>
-            {profile && (
-              <div className="flex items-center gap-1">
-                {(assignedRoles || [profile.role]).map((r) => (
-                  <span
-                    key={r}
-                    className={`text-[10px] font-black px-2 py-0.5 rounded border ${
-                      r === 'admin'
-                        ? 'bg-csc-gold text-csc-dark border-amber-300'
-                        : r === 'coach'
-                        ? 'bg-blue-500 text-white border-blue-600'
-                        : 'bg-emerald-700 text-white border-emerald-800'
-                    }`}
-                  >
-                    {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Nome Completo</label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Alcunha / Nome Desportivo</label>
-              <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
-                placeholder="Ex: CR7 / O Mágico"
-              />
-            </div>
-          </div>
-
+          )}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Endereço de Email (Apenas leitura)</label>
-            <div className="flex items-center bg-gray-50 border border-gray-250 rounded-lg px-4 py-2 text-gray-500">
-              <Mail size={16} className="mr-2" />
-              <span>{email}</span>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black text-csc-dark leading-tight">
+                {formName || 'O Meu Perfil'}
+              </h1>
+              {formJerseyNumber && (
+                <span className="bg-csc-dark text-csc-gold font-black text-xs px-2 py-0.5 rounded-lg shadow-2xs">
+                  #{formJerseyNumber}
+                </span>
+              )}
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Número de Contacto (Telemóvel)</label>
-            <div className="relative">
-              <Phone size={16} className="absolute left-3 top-3 text-gray-400" />
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
-                placeholder="9xxxxxxxx"
-              />
-            </div>
-          </div>
-
-          {/* Posicionamento no Campo */}
-          <div className="pt-4 border-t border-gray-100 space-y-3">
-            <div className="flex items-center space-x-2 text-gray-805 font-bold">
-              <Shield size={18} className="text-csc-dark" />
-              <span>Posições no Campo</span>
-            </div>
-            <p className="text-xs text-gray-500">
-              Selecione as posições que tem preferência ou aptidão em desempenhar no relvado:
+            <p className="text-xs text-gray-500 mt-0.5">
+              Ficha cadastral de atleta • Grupo Dramático e Sportivo de Cascais
             </p>
-            <SoccerPitchSelector
-              selectedPositions={formPositions}
-              onChange={setFormPositions}
-            />
           </div>
-
-          <div className="flex justify-end pt-4">
-            <button
-              type="submit"
-              className="flex items-center space-x-2 bg-csc-dark text-white px-5 py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 transition-colors shadow"
-            >
-              <Save size={18} />
-              <span>Guardar Alterações</span>
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* App Preferences */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 space-y-4">
-        <div className="flex items-center space-x-2 text-gray-805 font-bold mb-4 border-b border-gray-100 pb-3">
-          <Bell size={18} className="text-csc-dark" />
-          <span>Notificações PWA</span>
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-semibold text-gray-805 text-sm">Notificações Push</p>
-            <p className="text-xs text-gray-500">Receba alertas de novas convocatórias e recados do treinador.</p>
+
+        {/* ESTADO DE ATIVIDADE & TOGGLE CLÍNICO */}
+        <div className="flex items-center flex-wrap gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+          {/* Badge de Atividade (Apenas Leitura para o Jogador) */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200" title="O estado de filiação/atividade é gerido pela direção do clube">
+            <span className="text-[11px] font-bold text-gray-500">Atividade:</span>
+            <span className={`text-xs font-black px-2 py-0.5 rounded-md ${
+              isInactive ? 'bg-gray-300 text-gray-800' : 'bg-emerald-100 text-emerald-800'
+            }`}>
+              {isInactive ? '⚪ Inativo' : '🟢 Ativo'}
+            </span>
           </div>
-          <button className="bg-csc-dark text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:bg-csc-dark/80 transition-colors">
-            Ativar no PWA
+
+          {/* Toggle Clínico: Disponível / Lesionado */}
+          <button
+            type="button"
+            onClick={() => toggleClinicalStatus()}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-xs cursor-pointer border active:scale-95 ${
+              isInjured
+                ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-150'
+            }`}
+            title="Clique para alternar o seu estado físico entre Disponível e Lesionado"
+          >
+            <span>{isInjured ? '🔴' : '🟢'}</span>
+            <span>{isInjured ? 'Lesionado (Dep. Médico)' : 'Disponível / Apto'}</span>
           </button>
         </div>
       </div>
+
+      {saveSuccess && (
+        <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl border-2 border-emerald-300 text-xs font-bold flex items-center gap-2 shadow-xs animate-fade-in">
+          <Check size={18} className="text-emerald-600 shrink-0" />
+          <span>Ficha de membro atualizada com sucesso na base de dados!</span>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="bg-red-50 text-red-800 p-4 rounded-2xl border-2 border-red-300 text-xs font-bold flex items-center gap-2 shadow-xs">
+          <AlertCircle size={18} className="text-red-600 shrink-0" />
+          <span>{saveError}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSave} className="space-y-6">
+        
+        {/* 1. DADOS PESSOAIS & IDENTIFICAÇÃO FISCAL */}
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
+            <UserIcon size={16} className="text-csc-dark" />
+            <span>1. Identificação Pessoal & Fiscal</span>
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Nome Completo *</label>
+              <input
+                type="text"
+                required
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                placeholder="Ex: André Gomes Marques do Couto"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Nome na Camisola / Alcunha</label>
+              <input
+                type="text"
+                value={formShirtName}
+                onChange={(e) => setFormShirtName(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                placeholder="Ex: A. COUTO"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Data de Nascimento</label>
+              <input
+                type="date"
+                value={formBirthDate}
+                onChange={(e) => setFormBirthDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Nacionalidade</label>
+              <input
+                type="text"
+                value={formNationality}
+                onChange={(e) => setFormNationality(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                placeholder="Portuguesa"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Nº de Contribuinte (NIF)</label>
+              <input
+                type="text"
+                value={formNif}
+                onChange={(e) => setFormNif(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                placeholder="228649129"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Nº Cartão de Cidadão / Passaporte</label>
+              <input
+                type="text"
+                value={formIdNumber}
+                onChange={(e) => setFormIdNumber(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                placeholder="11960727"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Validade do Cartão de Cidadão</label>
+              <input
+                type="date"
+                value={formIdCardExpiry}
+                onChange={(e) => setFormIdCardExpiry(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 2. MORADA & RESIDÊNCIA */}
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
+            <FileText size={16} className="text-csc-dark" />
+            <span>2. Morada & Residência</span>
+          </h3>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1">Morada (Rua, Nº e Andar)</label>
+            <input
+              type="text"
+              value={formAddress}
+              onChange={(e) => setFormAddress(e.target.value)}
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+              placeholder="Rua Serra da Arrábida, LT 1263, 3 Esq."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Código Postal</label>
+              <input
+                type="text"
+                value={formPostalCode}
+                onChange={(e) => setFormPostalCode(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                placeholder="2975-164"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Localidade</label>
+              <input
+                type="text"
+                value={formCity}
+                onChange={(e) => setFormCity(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                placeholder="Cascais / Alcabideche"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 3. CONTACTOS */}
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Phone size={16} className="text-csc-dark" />
+            <span>3. Contactos</span>
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Email de Acesso (Apenas Leitura)</label>
+              <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-gray-500 font-medium font-mono">
+                <Mail size={15} className="mr-2 text-gray-400" />
+                <span>{formEmail}</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Telemóvel</label>
+              <input
+                type="tel"
+                value={formPhone}
+                onChange={(e) => setFormPhone(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                placeholder="912 345 678"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 4. DADOS DESPORTIVOS, EQUIPAMENTO & FUNÇÃO (SÓ DE VISUALIZAÇÃO COM AVISO DO TREINADOR) */}
+        <div className="bg-amber-50/40 p-5 sm:p-6 rounded-3xl border-2 border-amber-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-amber-200/80 pb-3">
+            <h3 className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
+              <Shield size={16} className="text-amber-700" />
+              <span>4. Dados Desportivos, Equipamento & Função</span>
+            </h3>
+            <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+              <Lock size={12} />
+              <span>Só de Visualização</span>
+            </span>
+          </div>
+
+          {/* Banner explicativo obrigatório */}
+          <div className="p-3.5 bg-amber-100/90 border border-amber-300 rounded-2xl flex items-start gap-2.5 text-xs text-amber-950 font-medium">
+            <AlertCircle size={17} className="text-amber-800 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-extrabold text-amber-900">Nota da Equipa Técnica:</p>
+              <p className="mt-0.5">
+                Os dados desta secção (posições no campo, funções no clube, número de camisola e tamanho de equipamento) são atribuídos e geridos exclusivamente pelo <strong>treinador / equipa técnica</strong>.
+              </p>
+            </div>
+          </div>
+
+          {/* Visualização de Posições no Campo */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-gray-700">
+              Posições Táticas Atribuídas:
+            </label>
+            <div className="pointer-events-none opacity-95">
+              <SoccerPitchSelector
+                selectedPositions={formPositions}
+                onChange={() => {}}
+              />
+            </div>
+          </div>
+
+          {/* Funções e Atribuições */}
+          <div className="pt-3 border-t border-amber-200/60 space-y-2">
+            <label className="block text-xs font-bold text-gray-700">
+              Funções Atribuídas no Clube:
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {(assignedRoles || ['player']).map(r => (
+                <span
+                  key={r}
+                  className={`px-3 py-1.5 rounded-xl font-black text-xs border flex items-center gap-1.5 shadow-2xs ${
+                    r === 'admin'
+                      ? 'bg-amber-100 text-amber-900 border-amber-300'
+                      : r === 'coach'
+                      ? 'bg-blue-100 text-blue-900 border-blue-300'
+                      : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                  }`}
+                >
+                  <span>{r === 'admin' ? '🛡️ Administrador / Direção' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Camisola e Equipamento (Read-only) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-3 border-t border-amber-200/60">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Nº da Camisola (Dorsal)</label>
+              <div className="px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-extrabold text-gray-800">
+                {formJerseyNumber ? `#${formJerseyNumber}` : 'Não atribuído'}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Tamanho de Equipamento</label>
+              <div className="px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-extrabold text-gray-800">
+                {formKitSize || 'L'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. DADOS BANCÁRIOS & QUOTAS */}
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
+            <Shield size={16} className="text-csc-dark" />
+            <span>5. Dados Bancários & Quotas</span>
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">IBAN (Débito Direto / Quotas)</label>
+              <input
+                type="text"
+                value={formIban}
+                onChange={(e) => setFormIban(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                placeholder="PT50 0000 0000 0000 0000 0"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Nº de Sócio do Clube</label>
+              <input
+                type="text"
+                value={formMemberNumber}
+                onChange={(e) => setFormMemberNumber(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                placeholder="Ex: 1420"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 6. SAÚDE & CONTACTO DE EMERGÊNCIA */}
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
+            <HeartPulse size={16} className="text-red-600" />
+            <span>6. Saúde & Contacto de Emergência</span>
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Contacto de Emergência (Nome / Relação)</label>
+              <input
+                type="text"
+                value={formEmergencyName}
+                onChange={(e) => setFormEmergencyName(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                placeholder="Ex: Maria (Esposa)"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Telefone de Emergência</label>
+              <input
+                type="tel"
+                value={formEmergencyPhone}
+                onChange={(e) => setFormEmergencyPhone(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                placeholder="960 000 000"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1">Notas Médicas / Alergias / Grupo Sanguíneo</label>
+            <textarea
+              value={formMedicalNotes}
+              onChange={(e) => setFormMedicalNotes(e.target.value)}
+              rows={2}
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+              placeholder="Ex: Alergia a anti-inflamatórios, Tipo O+, histórico de lesão no joelho direito..."
+            />
+          </div>
+        </div>
+
+        {/* 7. UPLOAD DE DOCUMENTOS & RGPD */}
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
+            <FileText size={16} className="text-csc-dark" />
+            <span>7. Documentos & Proteção de Dados (RGPD)</span>
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Foto de Perfil */}
+            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
+              <label className="block text-xs font-bold text-gray-800">Fotografia de Perfil</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleUploadFile(e, 'photo')}
+                disabled={uploadingDoc === 'photo'}
+                className="text-xs w-full"
+              />
+              {photoUrl && (
+                <div className="flex items-center gap-2 pt-1">
+                  <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover border border-csc-gold" />
+                  <span className="text-[11px] text-green-700 font-bold">✓ Foto anexada</span>
+                </div>
+              )}
+            </div>
+
+            {/* Documento de Identificação */}
+            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
+              <label className="block text-xs font-bold text-gray-800">Doc. Identificação (CC / Passaporte)</label>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => handleUploadFile(e, 'idDoc')}
+                disabled={uploadingDoc === 'idDoc'}
+                className="text-xs w-full"
+              />
+              {idDocUrl && (
+                <a href={idDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-blue-700 font-bold hover:underline flex items-center gap-1">
+                  <ExternalLink size={11} /> Ver Documento CC anexado
+                </a>
+              )}
+            </div>
+
+            {/* Seguro Desportivo */}
+            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
+              <label className="block text-xs font-bold text-gray-800">Apólice de Seguro Desportivo</label>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => handleUploadFile(e, 'insurance')}
+                disabled={uploadingDoc === 'insurance'}
+                className="text-xs w-full"
+              />
+              {insuranceDocUrl && (
+                <a href={insuranceDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-purple-700 font-bold hover:underline flex items-center gap-1">
+                  <ExternalLink size={11} /> Ver Seguro anexado
+                </a>
+              )}
+            </div>
+
+            {/* Atestado Médico */}
+            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
+              <label className="block text-xs font-bold text-gray-800">Atestado / Exame Médico Desportivo</label>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => handleUploadFile(e, 'medical')}
+                disabled={uploadingDoc === 'medical'}
+                className="text-xs w-full"
+              />
+              {medicalExamDocUrl && (
+                <a href={medicalExamDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-emerald-700 font-bold hover:underline flex items-center gap-1">
+                  <ExternalLink size={11} /> Ver Atestado anexado
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Consentimento RGPD */}
+          <div className="p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-2xl">
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formGdprConsent}
+                onChange={(e) => setFormGdprConsent(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded text-csc-dark border-gray-300 cursor-pointer"
+              />
+              <span className="text-xs text-gray-700 leading-relaxed font-medium">
+                Declaro que autorizo o <strong>Grupo Dramático e Sportivo de Cascais</strong> a tratar os meus dados pessoais, contactos, médicos e de imagem para efeitos desportivos, seguros e gestão associativa ao abrigo do RGPD.
+              </span>
+            </label>
+          </div>
+        </div>
+
+        {/* BOTÃO SUBMIT */}
+        <div className="flex justify-end pt-2">
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-csc-dark hover:bg-black text-white px-8 py-3 rounded-2xl font-black text-sm transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
+          >
+            <Save size={18} className="text-csc-gold" />
+            <span>{isSaving ? 'A guardar alterações...' : '💾 Guardar o Meu Perfil'}</span>
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
