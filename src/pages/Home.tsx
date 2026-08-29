@@ -359,8 +359,8 @@ const Home: React.FC = () => {
                   <h4 className="text-sm font-black text-gray-900 truncate mt-0.5">
                     {ev?.type === 'match'
                       ? ev.home_away === 'away'
-                        ? `${ev.opponent?.name || 'Adversário'} Vs ${clubSettings?.name || 'GDS Cascais'}`
-                        : `${clubSettings?.name || 'GDS Cascais'} Vs ${ev.opponent?.name || 'Adversário'}`
+                        ? `${formatOpponentSigla(ev.opponent)} Vs ${formatClubSigla(clubSettings?.initials)}`
+                        : `${formatClubSigla(clubSettings?.initials)} Vs ${formatOpponentSigla(ev.opponent)}`
                       : ev?.title}
                   </h4>
                   <p className="text-xs text-gray-600 truncate flex items-center gap-1 mt-0.5">
