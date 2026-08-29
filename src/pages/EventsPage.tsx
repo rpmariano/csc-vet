@@ -1153,7 +1153,7 @@ const EventsPage: React.FC = () => {
 
       {/* ABA 1: FORMULÁRIO DE CRIAÇÃO (FOCADO, SEM EVENTOS POR BAIXO) */}
       {viewModeTab === 'create' && (
-        <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-sm border border-gray-200 p-5 sm:p-7">
+        <div className="w-full bg-white rounded-3xl shadow-sm border border-gray-200 p-5 sm:p-7">
           <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-150">
             <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
               <Plus size={20} className="text-csc-dark" />
@@ -1634,7 +1634,7 @@ const EventsPage: React.FC = () => {
         })
 
         return (
-          <div className="max-w-5xl mx-auto space-y-4">
+          <div className="w-full space-y-4">
             {/* Barra de Filtros e Pesquisa de Eventos */}
             <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-4 space-y-3">
               <div className="flex flex-col sm:flex-row items-center gap-3">
