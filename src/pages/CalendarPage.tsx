@@ -122,10 +122,16 @@ interface Event {
   location: string
   description: string
   is_friendly?: boolean | null
-  tournament_name?: string | null
+  tournament_id?: string | null
+  tournament?: {
+    id: string
+    name: string
+    season?: string | null
+  } | null
   max_players?: number | null
   home_away?: 'home' | 'away' | 'neutral' | null
   related_gathering_id?: string | null
+  opponent_id?: string | null
   opponent?: {
     name: string
     initials: string
@@ -151,11 +157,18 @@ interface Field {
   address?: string | null
 }
 
+interface Tournament {
+  id: string
+  name: string
+  season?: string | null
+}
+
 const CalendarPage: React.FC = () => {
   const { profile } = useAuth()
   const { clubSettings } = useClub()
   const [events, setEvents] = useState<Event[]>([])
   const [fields, setFields] = useState<Field[]>([])
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -185,7 +198,7 @@ const CalendarPage: React.FC = () => {
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [isFriendly, setIsFriendly] = useState(false)
-  const [tournamentName, setTournamentName] = useState('')
+  const [tournamentId, setTournamentId] = useState('')
   const [maxPlayers, setMaxPlayers] = useState<number | ''>('')
   const [relatedGatheringId, setRelatedGatheringId] = useState('')
 
@@ -204,7 +217,7 @@ const CalendarPage: React.FC = () => {
   const [editLocation, setEditLocation] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editMaxPlayers, setEditMaxPlayers] = useState<number | ''>('')
-  const [editTournamentName, setEditTournamentName] = useState('')
+  const [editTournamentId, setEditTournamentId] = useState('')
   const [editIsFriendly, setEditIsFriendly] = useState(false)
   const [editRelatedGatheringId, setEditRelatedGatheringId] = useState('')
 
@@ -252,10 +265,10 @@ const CalendarPage: React.FC = () => {
   const fetchEventsAndData = async () => {
     setLoading(true)
     try {
-      const [evRes, callupsRes, profilesRes, fieldsRes] = await Promise.all([
+      const [evRes, callupsRes, profilesRes, fieldsRes, tourRes] = await Promise.all([
         supabase
           .from('events')
-          .select('*, opponent:opponents(name, initials, logo_url)')
+          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season)')
           .order('date_time', { ascending: true }),
         supabase
           .from('callups')
@@ -267,11 +280,18 @@ const CalendarPage: React.FC = () => {
           .order('name', { ascending: true }),
         supabase
           .from('fields')
-          .select('id, name, address')
+          .select('id, name, address'),
+        supabase
+          .from('tournaments')
+          .select('id, name, season')
       ])
 
       if (fieldsRes.data) {
         setFields(fieldsRes.data as Field[])
+      }
+
+      if (tourRes.data) {
+        setTournaments(tourRes.data as Tournament[])
       }
 
       if (evRes.data && evRes.data.length > 0) {
@@ -386,8 +406,9 @@ const CalendarPage: React.FC = () => {
     try {
       let createdEventsList: Event[] = []
 
+      const selTour = tournaments.find(t => t.id === tournamentId)
       const computedTitle = type === 'match'
-        ? (isFriendly ? 'Jogo Amigável' : (tournamentName ? `Jogo ${tournamentName}` : 'Jogo'))
+        ? (isFriendly ? 'Jogo Amigável' : (selTour ? `Jogo ${selTour.name}` : 'Jogo'))
         : type === 'practice'
         ? 'Treino'
         : (title.trim() || 'Convívio')
@@ -408,7 +429,7 @@ const CalendarPage: React.FC = () => {
           description,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : undefined,
-          tournament_name: (type === 'match' && !isFriendly) ? tournamentName : undefined,
+          tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
           created_by: profile?.id
         }))
 
@@ -450,7 +471,7 @@ const CalendarPage: React.FC = () => {
           description,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : undefined,
-          tournament_name: (type === 'match' && !isFriendly) ? tournamentName : undefined,
+          tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
           related_gathering_id: relatedGatheringId || null,
           created_by: profile?.id
         }
@@ -491,7 +512,7 @@ const CalendarPage: React.FC = () => {
       setLocation('')
       setDescription('')
       setMaxPlayers('')
-      setTournamentName('')
+      setTournamentId('')
       setIsFriendly(true)
       setIsRecurring(false)
       setRecurrenceEndDate('')
@@ -517,7 +538,7 @@ const CalendarPage: React.FC = () => {
     setEditLocation(ev.location || '')
     setEditDescription(ev.description || '')
     setEditMaxPlayers(ev.max_players ?? '')
-    setEditTournamentName(ev.tournament_name || '')
+    setEditTournamentId(ev.tournament_id || (ev.tournament?.id || ''))
     setEditIsFriendly(Boolean(ev.is_friendly))
     // Look up existing related event (bidirectional)
     const linked = events.find(e => e.id !== ev.id && (e.id === ev.related_gathering_id || e.related_gathering_id === ev.id))
@@ -529,8 +550,9 @@ const CalendarPage: React.FC = () => {
     e.preventDefault()
     if (!selectedEvent) return
     try {
+      const selEditTour = tournaments.find(t => t.id === editTournamentId)
       const computedTitle = editType === 'match'
-        ? (editIsFriendly ? 'Jogo Amigável' : (editTournamentName ? `Jogo ${editTournamentName}` : 'Jogo'))
+        ? (editIsFriendly ? 'Jogo Amigável' : (selEditTour ? `Jogo ${selEditTour.name}` : 'Jogo'))
         : editType === 'practice'
         ? 'Treino'
         : (editTitle.trim() || 'Convívio')
@@ -544,7 +566,7 @@ const CalendarPage: React.FC = () => {
         location: editLocation || null,
         description: editDescription,
         max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
-        tournament_name: (editType === 'match' && !editIsFriendly) ? editTournamentName : null,
+        tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
         is_friendly: editType === 'match' ? editIsFriendly : false,
         related_gathering_id: editRelatedGatheringId || null
       }
@@ -753,7 +775,7 @@ const CalendarPage: React.FC = () => {
       const titleMatch = e.title?.toLowerCase().includes(q)
       const locMatch = e.location?.toLowerCase().includes(q)
       const descMatch = e.description?.toLowerCase().includes(q)
-      const tourMatch = e.tournament_name?.toLowerCase().includes(q)
+      const tourMatch = e.tournament?.name?.toLowerCase().includes(q)
       const oppMatch = e.opponent?.name?.toLowerCase().includes(q) || e.opponent?.initials?.toLowerCase().includes(q)
       if (!titleMatch && !locMatch && !descMatch && !tourMatch && !oppMatch) {
         return false
@@ -945,9 +967,9 @@ const CalendarPage: React.FC = () => {
               </span>
             )}
 
-            {isMatch && event.tournament_name && !event.is_friendly && (
+            {isMatch && event.tournament?.name && !event.is_friendly && (
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-100 text-blue-900 border border-blue-200 truncate max-w-[130px]">
-                🏆 {event.tournament_name}
+                🏆 {event.tournament.name}
               </span>
             )}
           </div>
@@ -1506,10 +1528,10 @@ const CalendarPage: React.FC = () => {
                       </span>
                     )}
 
-                    {selectedEvent.tournament_name && !selectedEvent.is_friendly && (
+                    {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
                       <span className="flex items-center space-x-1 text-xs text-blue-900 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-xl font-extrabold truncate max-w-[150px]">
                         <Award size={13} />
-                        <span className="truncate">{selectedEvent.tournament_name}</span>
+                        <span className="truncate">{selectedEvent.tournament.name}</span>
                       </span>
                     )}
                   </div>
@@ -2054,7 +2076,7 @@ const CalendarPage: React.FC = () => {
                       checked={isFriendly}
                       onChange={(e) => {
                         setIsFriendly(e.target.checked)
-                        if (e.target.checked) setTournamentName('')
+                        if (e.target.checked) setTournamentId('')
                       }}
                       className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
                     />
@@ -2064,14 +2086,19 @@ const CalendarPage: React.FC = () => {
                   </div>
                   {!isFriendly && (
                     <div className="animate-fade-in">
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Nome do Torneio / Liga</label>
-                      <input
-                        type="text"
-                        value={tournamentName}
-                        onChange={(e) => setTournamentName(e.target.value)}
-                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
-                        placeholder="Ex: Liga de Veteranos"
-                      />
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Torneio / Competição</label>
+                      <select
+                        value={tournamentId}
+                        onChange={(e) => setTournamentId(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                      >
+                        <option value="">-- Selecionar Torneio --</option>
+                        {tournaments.map(t => (
+                          <option key={t.id} value={t.id}>
+                            🏆 {t.name} {t.season ? `(${t.season})` : ''}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )}
                 </div>
@@ -2518,7 +2545,7 @@ const CalendarPage: React.FC = () => {
                       checked={editIsFriendly}
                       onChange={(e) => {
                         setEditIsFriendly(e.target.checked)
-                        if (e.target.checked) setEditTournamentName('')
+                        if (e.target.checked) setEditTournamentId('')
                       }}
                       className="h-3.5 w-3.5 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
                     />
@@ -2528,14 +2555,19 @@ const CalendarPage: React.FC = () => {
                   </div>
                   {!editIsFriendly && (
                     <div className="animate-fade-in">
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">Nome do Torneio / Liga</label>
-                      <input
-                        type="text"
-                        value={editTournamentName}
-                        onChange={(e) => setEditTournamentName(e.target.value)}
-                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white"
-                        placeholder="Ex: Liga de Veteranos"
-                      />
+                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">Torneio / Competição</label>
+                      <select
+                        value={editTournamentId}
+                        onChange={(e) => setEditTournamentId(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white font-medium"
+                      >
+                        <option value="">-- Selecionar Torneio --</option>
+                        {tournaments.map(t => (
+                          <option key={t.id} value={t.id}>
+                            🏆 {t.name} {t.season ? `(${t.season})` : ''}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )}
                 </div>
