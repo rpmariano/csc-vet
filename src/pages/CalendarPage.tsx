@@ -9,7 +9,6 @@ import {
   CheckCircle2, 
   XCircle, 
   HelpCircle, 
-  UserPlus, 
   Trash2, 
   Search, 
   RotateCcw, 
@@ -202,7 +201,6 @@ const CalendarPage: React.FC = () => {
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
-  const [managingCallupsInModal, setManagingCallupsInModal] = useState(false)
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [modalCallupStatusFilter, setModalCallupStatusFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
 
@@ -355,10 +353,16 @@ const CalendarPage: React.FC = () => {
 
       if (callupsRes.data) {
         const playerMap = new Map<string, Profile>(mergedPlayers.map(p => [p.id, p]))
+        const emailMap = new Map<string, Profile>(mergedPlayers.filter(p => p.email).map(p => [p.email!.toLowerCase().trim(), p]))
+        const nameMap = new Map<string, Profile>(mergedPlayers.map(p => [p.name.toLowerCase().trim(), p]))
+
         const map: Record<string, CallupWithPlayer[]> = {}
         callupsRes.data.forEach((c: any) => {
           if (!map[c.event_id]) map[c.event_id] = []
-          const fullP = playerMap.get(c.player_id) || c.player
+          const fullP = playerMap.get(c.player_id) ||
+            (c.player?.email ? emailMap.get(c.player.email.toLowerCase().trim()) : null) ||
+            (c.player?.name ? nameMap.get(c.player.name.toLowerCase().trim()) : null) ||
+            c.player
           map[c.event_id].push({
             ...c,
             player: fullP
@@ -693,37 +697,6 @@ const CalendarPage: React.FC = () => {
       })
     } catch (err: any) {
       alert('Erro ao atualizar resposta: ' + err.message)
-    }
-  }
-
-  // Treinador adiciona jogador a um evento existente no modal
-  const handleAddPlayerToCallup = async (eventId: string, playerId: string) => {
-    if (selectedEvent?.max_players) {
-      const currentCallupsCount = eventCallups[eventId]?.length || 0
-      if (currentCallupsCount >= selectedEvent.max_players) {
-        if (!confirm(`⚠️ Aviso: Este evento tem um limite máximo de ${selectedEvent.max_players} jogadores (já tem ${currentCallupsCount} convocados).\n\nDeseja adicionar mais um atleta mesmo assim?`)) {
-          return
-        }
-      }
-    }
-
-    try {
-      const { data, error } = await supabase.from('callups').insert([{
-        event_id: eventId,
-        player_id: playerId,
-        status: 'called'
-      }]).select('id, event_id, player_id, status, player:profiles(id, name, photo_url)').single()
-
-      if (error) throw error
-
-      if (data) {
-        setEventCallups(prev => ({
-          ...prev,
-          [eventId]: [...(prev[eventId] || []), data as unknown as CallupWithPlayer]
-        }))
-      }
-    } catch (err: any) {
-      alert('Erro ao adicionar jogador: ' + err.message)
     }
   }
 
@@ -1526,7 +1499,6 @@ const CalendarPage: React.FC = () => {
             <button
               onClick={() => {
                 setSelectedEvent(null)
-                setManagingCallupsInModal(false)
                 setPlayerSearchTerm('')
                 setModalCallupStatusFilter('all')
               }}
@@ -1762,8 +1734,6 @@ const CalendarPage: React.FC = () => {
                 const confirmedList = callups.filter(c => c.status === 'confirmed')
                 const declinedList = callups.filter(c => c.status === 'declined')
                 const pendingList = callups.filter(c => c.status === 'called')
-                const calledPlayerIds = callups.map(c => c.player_id)
-                const uncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
 
                 // Lista de atletas filtrada por status e termo de pesquisa
                 const filteredCallups = callups.filter(c => {
@@ -1786,99 +1756,9 @@ const CalendarPage: React.FC = () => {
                           <Users size={18} className="text-csc-dark" />
                           <span>Convocatória ({callups.length}{selectedEvent.max_players ? ` / ${selectedEvent.max_players} máx` : ''})</span>
                         </h3>
-                        <p className="text-[11px] text-gray-500 mt-0.5">Consulta e gere o quórum de atletas para este evento.</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">Consulta o quórum e confirmações de atletas para este evento.</p>
                       </div>
-
-                      {isCoachOrAdmin && (
-                        <button
-                          onClick={() => setManagingCallupsInModal(!managingCallupsInModal)}
-                          className="px-3 py-1.5 bg-csc-dark hover:bg-black text-white text-xs font-black rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
-                        >
-                          <UserPlus size={14} className="text-csc-gold" />
-                          <span>{managingCallupsInModal ? 'Fechar Adição' : '+ Convocar Atletas'}</span>
-                        </button>
-                      )}
                     </div>
-
-                    {/* Gestão do Treinador para Adicionar Atletas */}
-                    {managingCallupsInModal && (
-                      <div className="p-3.5 bg-amber-50/80 border-2 border-amber-200 rounded-2xl space-y-2.5 animate-fade-in">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-                            <Sparkles size={14} className="text-amber-700" />
-                            <span>Adicionar Membros ao Evento ({uncalledPlayers.length} disponíveis)</span>
-                          </p>
-                        </div>
-                        {(() => {
-                          const eligibleUncalled = uncalledPlayers.filter(p => isPlayerEligible(p, selectedEvent.type))
-                          if (eligibleUncalled.length === 0) {
-                            return <p className="text-xs text-gray-600">Todos os atletas já se encontram convocados.</p>
-                          }
-                          return (
-                            <div className="space-y-2">
-                              {/* Botões Rápidos de Lote */}
-                              <div className="flex flex-wrap gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    if (eligibleUncalled.length === 0) return
-                                    const validIds = await ensurePlayerIdsForSupabase(eligibleUncalled.map(p => p.id), allPlayers)
-                                    if (validIds.length > 0) {
-                                      const rows = validIds.map(pId => ({
-                                        event_id: selectedEvent.id,
-                                        player_id: pId,
-                                        status: 'called'
-                                      }))
-                                      await supabase.from('callups').insert(rows)
-                                      await fetchEventsAndData()
-                                    }
-                                  }}
-                                  className="px-2.5 py-1 bg-csc-dark hover:bg-black text-white text-[11px] font-black rounded-lg transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95"
-                                >
-                                  <Sparkles size={11} className="text-csc-gold" />
-                                  <span>✨ Convocar Todos ({eligibleUncalled.length})</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    const athletes = eligibleUncalled.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role))
-                                    if (athletes.length === 0) return
-                                    const validIds = await ensurePlayerIdsForSupabase(athletes.map(p => p.id), allPlayers)
-                                    if (validIds.length > 0) {
-                                      const rows = validIds.map(pId => ({
-                                        event_id: selectedEvent.id,
-                                        player_id: pId,
-                                        status: 'called'
-                                      }))
-                                      await supabase.from('callups').insert(rows)
-                                      await fetchEventsAndData()
-                                    }
-                                  }}
-                                  className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 text-[11px] font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                                >
-                                  <span>⚽ Só Jogadores</span>
-                                </button>
-                              </div>
-
-                              <div className="max-h-36 overflow-y-auto flex flex-wrap gap-1.5 p-1 bg-white rounded-xl border border-amber-200">
-                                {eligibleUncalled.map(p => (
-                                  <button
-                                    key={p.id}
-                                    type="button"
-                                    onClick={() => handleAddPlayerToCallup(selectedEvent.id, p.id)}
-                                    className="bg-gray-50 hover:bg-csc-dark hover:text-white border border-gray-300 text-xs px-2.5 py-1 rounded-xl font-bold text-gray-800 flex items-center gap-1 transition-all shadow-2xs cursor-pointer active:scale-95"
-                                  >
-                                    <span>+ {getPlayerDisplayName(p)}</span>
-                                    {p.jersey_number && <span className="text-amber-700 font-black">#{p.jersey_number}</span>}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )
-                        })()}
-                      </div>
-                    )}
 
                     {/* Resumo de Quórum como Botões de Filtro Acionáveis */}
                     <div className="space-y-2">
