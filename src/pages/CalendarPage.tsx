@@ -824,6 +824,53 @@ const CalendarPage: React.FC = () => {
 
     const isMatch = event.type === 'match'
     const isPractice = event.type === 'practice'
+    const isAway = event.home_away === 'away'
+
+    // Bloco equipa Cascais
+    const cscBlock = (isRight: boolean) => (
+      <div className={`flex-1 flex flex-col ${isRight ? 'items-end text-right' : 'items-start text-left'} min-w-0`}>
+        {/* Top: Símbolo + Sigla */}
+        <div className={`flex items-center gap-1.5 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
+          {clubSettings?.logo_url ? (
+            <img src={clubSettings.logo_url} alt="CSC" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+          ) : (
+            <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+              {clubSettings?.initials || 'CSC'}
+            </div>
+          )}
+          <span className="font-black text-sm text-gray-900 uppercase tracking-tight">
+            {clubSettings?.initials || 'CSC'}
+          </span>
+        </div>
+        {/* Bottom: Nome completo da equipa */}
+        <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
+          {clubSettings?.name || 'CSC Cascais'}
+        </span>
+      </div>
+    )
+
+    // Bloco equipa Adversário
+    const opponentBlock = (isRight: boolean) => (
+      <div className={`flex-1 flex flex-col ${isRight ? 'items-end text-right' : 'items-start text-left'} min-w-0`}>
+        {/* Top: Símbolo + Sigla */}
+        <div className={`flex items-center gap-1.5 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
+          {event.opponent?.logo_url ? (
+            <img src={event.opponent.logo_url} alt={event.opponent.name} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+          ) : (
+            <div className="w-8 h-8 bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+              {event.opponent?.initials || 'ADV'}
+            </div>
+          )}
+          <span className="font-black text-sm text-gray-900 uppercase tracking-tight truncate max-w-[90px]">
+            {event.opponent?.initials || event.opponent?.name?.substring(0, 5) || 'ADV'}
+          </span>
+        </div>
+        {/* Bottom: Nome completo da equipa */}
+        <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
+          {event.opponent?.name || 'Adversário'}
+        </span>
+      </div>
+    )
 
     return (
       <div
@@ -882,85 +929,60 @@ const CalendarPage: React.FC = () => {
           <div className="space-y-2.5">
             {/* Matchup Box (when event is a match with opponent) */}
             {isMatch && event.opponent && (
-              <div className="bg-gradient-to-b from-gray-50 to-white p-3 rounded-xl border border-gray-200/90 shadow-2xs space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  {/* CSC */}
-                  <div className="flex-1 flex items-center gap-2 min-w-0">
-                    {clubSettings?.logo_url ? (
-                      <img src={clubSettings.logo_url} alt="CSC" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
-                    ) : (
-                      <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
-                        {clubSettings?.initials || 'CSC'}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <span className="font-black text-xs text-gray-900 block truncate">{clubSettings?.name || 'CSC Cascais'}</span>
-                      <span className="text-[9px] font-extrabold text-csc-gold bg-csc-dark px-1.5 py-0.2 rounded inline-block">MANDANTE</span>
-                    </div>
-                  </div>
+              <div className="bg-gradient-to-b from-gray-50 to-white p-3.5 rounded-xl border border-gray-200/90 shadow-2xs space-y-2.5">
+                <div className="flex items-center justify-between gap-2.5">
+                  {/* Left Team (if away -> Opponent, else -> Cascais) */}
+                  {isAway ? opponentBlock(false) : cscBlock(false)}
 
                   {/* VS Badge */}
                   <div className="shrink-0 flex flex-col items-center">
-                    <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                    <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
                       VS
                     </span>
                   </div>
 
-                  {/* Opponent */}
-                  <div className="flex-1 flex items-center justify-end gap-2 min-w-0 text-right">
-                    <div className="min-w-0">
-                      <span className="font-black text-xs text-gray-900 block truncate">{event.opponent.name}</span>
-                      <span className="text-[9px] font-bold text-gray-500 block truncate">{event.opponent.initials || 'Adversário'}</span>
-                    </div>
-                    {event.opponent.logo_url ? (
-                      <img src={event.opponent.logo_url} alt="Adv" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
-                    ) : (
-                      <div className="w-8 h-8 bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
-                        {event.opponent.initials || 'ADV'}
-                      </div>
-                    )}
-                  </div>
+                  {/* Right Team (if away -> Cascais, else -> Opponent) */}
+                  {isAway ? cscBlock(true) : opponentBlock(true)}
                 </div>
 
                 {/* Condition Pill */}
-                <div className="pt-1.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
                   <span className="font-bold">
-                    Condição: <strong className="text-gray-900">{event.home_away === 'away' ? '✈️ Fora de Casa' : event.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}</strong>
+                    Condição: <strong className="text-gray-900">{isAway ? '✈️ Fora de Casa' : event.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}</strong>
                   </span>
                 </div>
               </div>
             )}
 
-            {/* Title */}
-            <div>
-              <h4 className="text-base font-black text-gray-900 leading-snug">
-                {event.title}
-              </h4>
-              {event.description && (
-                <p className="text-xs text-gray-600 mt-1 line-clamp-2 bg-gray-50 p-2 rounded-xl border border-gray-100">
-                  {event.description}
-                </p>
-              )}
-            </div>
+            {/* Title (apenas exibido para convívios) */}
+            {event.type === 'gathering' && (
+              <div>
+                <h4 className="text-base font-black text-gray-900 leading-snug">
+                  {event.title}
+                </h4>
+              </div>
+            )}
 
-            {/* Time, Meeting Time & Location Badges */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            {/* Concentração Acima da Hora */}
+            {event.meeting_time && (
+              <div className="flex items-center">
+                <div className="inline-flex items-center gap-1 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-xl shadow-2xs">
+                  <span>⏱️ Conc: {event.meeting_time.substring(0, 5)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Horas e Localização / Endereço à frente */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
               {/* Hora */}
-              <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-xl">
+              <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-xl shrink-0">
                 <Clock size={13} className="text-csc-dark" />
                 <span>{new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
 
-              {/* Concentração */}
-              {event.meeting_time && (
-                <div className="inline-flex items-center gap-1 text-[11px] font-black text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-xl shadow-2xs">
-                  <span>⏱️ Conc: {event.meeting_time.substring(0, 5)}</span>
-                </div>
-              )}
-
               {/* Localização & Maps */}
               {event.location && (
-                <div className="inline-flex items-center gap-1 text-xs text-gray-700 bg-gray-100 px-2.5 py-1 rounded-xl max-w-full truncate">
+                <div className="inline-flex items-center gap-1 text-xs text-gray-700 bg-gray-100 px-2.5 py-1 rounded-xl max-w-full truncate min-w-0">
                   <MapPin size={13} className="text-red-600 shrink-0" />
                   <span className="truncate">{event.location}</span>
                   <a
@@ -1006,50 +1028,59 @@ const CalendarPage: React.FC = () => {
             )}
           </div>
 
-          {/* Ação rápida de Presença (RSVP) */}
-          {myCallup && (
-            <div 
-              onClick={(e) => e.stopPropagation()} 
-              className="pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2"
-            >
-              <span className="text-xs font-bold text-gray-700">Presença:</span>
-              {myCallup.status === 'called' ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleCallupResponse(event.id, 'confirmed')}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1"
-                  >
-                    <CheckCircle2 size={13} />
-                    <span>Confirmar</span>
-                  </button>
-                  <button
-                    onClick={() => handleCallupResponse(event.id, 'declined')}
-                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1"
-                  >
-                    <XCircle size={13} />
-                    <span>Recusar</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-2xs ${
-                    myCallup.status === 'confirmed' 
-                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
-                      : 'bg-red-100 text-red-900 border border-rose-300'
-                  }`}>
-                    {myCallup.status === 'confirmed' ? <CheckCircle2 size={14} className="text-emerald-700" /> : <XCircle size={14} className="text-red-700" />}
-                    <span>{myCallup.status === 'confirmed' ? 'Confirmado' : 'Recusado'}</span>
-                  </span>
-                  <button
-                    onClick={() => handleCallupResponse(event.id, myCallup.status === 'confirmed' ? 'declined' : 'confirmed')}
-                    className="text-[11px] font-bold text-gray-500 hover:text-gray-800 underline cursor-pointer"
-                  >
-                    Alterar
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="space-y-3">
+            {/* Observações / Descrição (diretamente acima da confirmação) */}
+            {event.description && (
+              <div className="text-xs text-gray-700 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
+                <p className="line-clamp-2 leading-relaxed">{event.description}</p>
+              </div>
+            )}
+
+            {/* Ação rápida de Presença (RSVP) */}
+            {myCallup && (
+              <div 
+                onClick={(e) => e.stopPropagation()} 
+                className="pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2"
+              >
+                <span className="text-xs font-bold text-gray-700">Presença:</span>
+                {myCallup.status === 'called' ? (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleCallupResponse(event.id, 'confirmed')}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1"
+                    >
+                      <CheckCircle2 size={13} />
+                      <span>Confirmar</span>
+                    </button>
+                    <button
+                      onClick={() => handleCallupResponse(event.id, 'declined')}
+                      className="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1"
+                    >
+                      <XCircle size={13} />
+                      <span>Recusar</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-2xs ${
+                      myCallup.status === 'confirmed' 
+                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
+                        : 'bg-red-100 text-red-900 border border-rose-300'
+                    }`}>
+                      {myCallup.status === 'confirmed' ? <CheckCircle2 size={14} className="text-emerald-700" /> : <XCircle size={14} className="text-red-700" />}
+                      <span>{myCallup.status === 'confirmed' ? 'Confirmado' : 'Recusado'}</span>
+                    </span>
+                    <button
+                      onClick={() => handleCallupResponse(event.id, myCallup.status === 'confirmed' ? 'declined' : 'confirmed')}
+                      className="text-[11px] font-bold text-gray-500 hover:text-gray-800 underline cursor-pointer"
+                    >
+                      Alterar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -1460,13 +1491,83 @@ const CalendarPage: React.FC = () => {
               )}
             </div>
 
-            <h2 className="text-2xl font-extrabold text-gray-900 mt-1">{selectedEvent.title}</h2>
-            {selectedEvent.description && (
-              <p className="text-gray-600 text-sm mt-2 leading-relaxed">{selectedEvent.description}</p>
+            {/* Matchup Box in Modal (when event is a match with opponent) */}
+            {selectedEvent.type === 'match' && selectedEvent.opponent && (() => {
+              const isAway = selectedEvent.home_away === 'away'
+              return (
+                <div className="mt-3 bg-gradient-to-b from-gray-50 to-white p-3.5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    {/* Left Team */}
+                    <div className={`flex-1 flex flex-col ${isAway ? 'items-start text-left' : 'items-start text-left'} min-w-0`}>
+                      <div className="flex items-center gap-1.5">
+                        {(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) ? (
+                          <img src={(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) || ''} alt="Team" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+                        ) : (
+                          <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+                            {isAway ? (selectedEvent.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
+                          </div>
+                        )}
+                        <span className="font-black text-sm text-gray-900 uppercase">
+                          {isAway ? (selectedEvent.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
+                        {isAway ? selectedEvent.opponent?.name : (clubSettings?.name || 'CSC Cascais')}
+                      </span>
+                    </div>
+
+                    {/* VS Badge */}
+                    <div className="shrink-0 flex flex-col items-center">
+                      <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                        VS
+                      </span>
+                    </div>
+
+                    {/* Right Team */}
+                    <div className="flex-1 flex flex-col items-end text-right min-w-0">
+                      <div className="flex items-center gap-1.5 flex-row-reverse">
+                        {(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) ? (
+                          <img src={(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) || ''} alt="Team" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+                        ) : (
+                          <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+                            {isAway ? (clubSettings?.initials || 'CSC') : (selectedEvent.opponent?.initials || 'ADV')}
+                          </div>
+                        )}
+                        <span className="font-black text-sm text-gray-900 uppercase">
+                          {isAway ? (clubSettings?.initials || 'CSC') : (selectedEvent.opponent?.initials || 'ADV')}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
+                        {isAway ? (clubSettings?.name || 'CSC Cascais') : selectedEvent.opponent?.name}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
+                    <span className="font-bold">
+                      Condição: <strong className="text-gray-900">{isAway ? '✈️ Fora de Casa' : selectedEvent.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}</strong>
+                    </span>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Title (apenas exibido para convívios) */}
+            {selectedEvent.type === 'gathering' && (
+              <h2 className="text-2xl font-extrabold text-gray-900 mt-2">{selectedEvent.title}</h2>
             )}
 
-            {/* Info Box */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 bg-gray-50 p-3.5 rounded-xl border border-gray-200">
+            {/* Concentração Acima da Hora */}
+            {selectedEvent.meeting_time && (
+              <div className="mt-3 flex items-center">
+                <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl shadow-2xs">
+                  <span>⏱️ Concentração: {selectedEvent.meeting_time.substring(0, 5)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Info Box (Data, Hora e Local) */}
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50 p-3.5 rounded-xl border border-gray-200">
               <div className="flex items-center text-sm text-gray-700 space-x-2.5">
                 <Clock size={18} className="text-csc-dark shrink-0" />
                 <div>
@@ -1477,11 +1578,11 @@ const CalendarPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center justify-between text-sm text-gray-700">
-                <div className="flex items-center space-x-2.5">
+                <div className="flex items-center space-x-2.5 min-w-0">
                   <MapPin size={18} className="text-csc-dark shrink-0" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-semibold text-gray-500">Local</p>
-                    <p className="font-bold text-sm text-gray-850">{selectedEvent.location}</p>
+                    <p className="font-bold text-sm text-gray-850 truncate">{selectedEvent.location}</p>
                   </div>
                 </div>
                 {selectedEvent.location && (
@@ -1499,6 +1600,14 @@ const CalendarPage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Observações / Descrição */}
+            {selectedEvent.description && (
+              <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-700">
+                <p className="font-bold text-gray-900 mb-0.5">Observações:</p>
+                <p className="leading-relaxed">{selectedEvent.description}</p>
+              </div>
+            )}
 
             {/* Evento Associado / Linkado (Bidirecional) */}
             {(() => {
