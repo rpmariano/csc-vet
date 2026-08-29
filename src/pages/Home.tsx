@@ -374,28 +374,10 @@ const Home: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {/* Indicador de Carrossel sem setas */}
-            {announcements.length > 1 && (
-              <div className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full border border-white/20">
-                {announcements.map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setCurrentAnnouncementIndex(idx)}
-                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                      idx === currentAnnouncementIndex ? 'bg-csc-gold w-3.5' : 'bg-white/40 w-1.5'
-                    }`}
-                    title={`Aviso ${idx + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-            <Link to="/announcements" className="text-[10.5px] font-bold text-gray-300 hover:text-white flex items-center gap-0.5 ml-1">
-              <span>Ver todos</span>
-              <ChevronRight size={12} />
-            </Link>
-          </div>
+          <Link to="/announcements" className="text-[10.5px] font-bold text-gray-300 hover:text-white flex items-center gap-0.5">
+            <span>Ver todos</span>
+            <ChevronRight size={12} />
+          </Link>
         </div>
 
         {/* Conteúdo do Comunicado Atual */}
@@ -411,6 +393,31 @@ const Home: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">{currentAnnouncement.content}</p>
+
+            {/* Traços do Carrossel e Contador Centralizados na Parte Inferior */}
+            {announcements.length > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
+                  {announcements.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setCurrentAnnouncementIndex(idx)
+                      }}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        idx === currentAnnouncementIndex ? 'bg-gray-900 w-5' : 'bg-gray-300 hover:bg-gray-400 w-2'
+                      }`}
+                      title={`Aviso ${idx + 1}`}
+                    />
+                  ))}
+                  <span className="text-[10px] font-black text-gray-700 ml-1 pl-1.5 border-l border-gray-300 leading-none">
+                    {currentAnnouncementIndex + 1}/{announcements.length}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="p-4 text-xs text-gray-400 text-center">
@@ -574,31 +581,13 @@ const Home: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Controles de Navegação (Sem Setas) */}
-                <div className="flex items-center gap-1.5">
-                  {upcomingMatches.length > 1 && (
-                    <div className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full border border-white/20">
-                      {upcomingMatches.map((_, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setCurrentMatchIndex(idx)}
-                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                            idx === currentMatchIndex ? 'bg-amber-300 w-3.5' : 'bg-white/40 w-1.5'
-                          }`}
-                          title={`Jogo ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  <span 
-                    onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
-                    className="text-[10.5px] font-bold text-blue-200 hover:text-white cursor-pointer flex items-center gap-0.5 ml-1"
-                  >
-                    <span>Agenda</span>
-                    <ChevronRight size={12} />
-                  </span>
-                </div>
+                <span 
+                  onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
+                  className="text-[10.5px] font-bold text-blue-200 hover:text-white cursor-pointer flex items-center gap-0.5"
+                >
+                  <span>Agenda</span>
+                  <ChevronRight size={12} />
+                </span>
               </div>
 
               {/* Conteúdo do Jogo */}
@@ -741,6 +730,30 @@ const Home: React.FC = () => {
                     </div>
                   )
                 })()}
+                {/* Traços do Carrossel e Contador Centralizados na Parte Inferior */}
+                {upcomingMatches.length > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                      {upcomingMatches.map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setCurrentMatchIndex(idx)
+                          }}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            idx === currentMatchIndex ? 'bg-blue-700 w-5' : 'bg-blue-300 hover:bg-blue-400 w-2'
+                          }`}
+                          title={`Jogo ${idx + 1}`}
+                        />
+                      ))}
+                      <span className="text-[10px] font-black text-blue-900 ml-1 pl-1.5 border-l border-blue-300 leading-none">
+                        {currentMatchIndex + 1}/{upcomingMatches.length}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -764,31 +777,13 @@ const Home: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Controles de Navegação (Sem Setas) */}
-                <div className="flex items-center gap-1.5">
-                  {upcomingPractices.length > 1 && (
-                    <div className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full border border-white/20">
-                      {upcomingPractices.map((_, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setCurrentPracticeIndex(idx)}
-                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                            idx === currentPracticeIndex ? 'bg-emerald-300 w-3.5' : 'bg-white/40 w-1.5'
-                          }`}
-                          title={`Treino ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  <span 
-                    onClick={() => navigate(`/calendar?event=${currentPractice.id}`)}
-                    className="text-[10.5px] font-bold text-emerald-200 hover:text-white cursor-pointer flex items-center gap-0.5 ml-1"
-                  >
-                    <span>Agenda</span>
-                    <ChevronRight size={12} />
-                  </span>
-                </div>
+                <span 
+                  onClick={() => navigate(`/calendar?event=${currentPractice.id}`)}
+                  className="text-[10.5px] font-bold text-emerald-200 hover:text-white cursor-pointer flex items-center gap-0.5"
+                >
+                  <span>Agenda</span>
+                  <ChevronRight size={12} />
+                </span>
               </div>
 
               {/* Conteúdo do Treino */}
@@ -881,6 +876,31 @@ const Home: React.FC = () => {
                     </div>
                   )
                 })()}
+
+                {/* Traços do Carrossel e Contador Centralizados na Parte Inferior */}
+                {upcomingPractices.length > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                      {upcomingPractices.map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setCurrentPracticeIndex(idx)
+                          }}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            idx === currentPracticeIndex ? 'bg-emerald-700 w-5' : 'bg-emerald-300 hover:bg-emerald-400 w-2'
+                          }`}
+                          title={`Treino ${idx + 1}`}
+                        />
+                      ))}
+                      <span className="text-[10px] font-black text-emerald-900 ml-1 pl-1.5 border-l border-emerald-300 leading-none">
+                        {currentPracticeIndex + 1}/{upcomingPractices.length}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
