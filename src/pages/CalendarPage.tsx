@@ -118,6 +118,7 @@ interface Event {
   type: 'practice' | 'match' | 'gathering'
   date_time: string
   meeting_time?: string | null
+  field_id?: string | null
   location: string
   description: string
   is_friendly?: boolean | null
@@ -144,10 +145,17 @@ interface CallupWithPlayer {
   }
 }
 
+interface Field {
+  id: string
+  name: string
+  address?: string | null
+}
+
 const CalendarPage: React.FC = () => {
   const { profile } = useAuth()
   const { clubSettings } = useClub()
   const [events, setEvents] = useState<Event[]>([])
+  const [fields, setFields] = useState<Field[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -173,6 +181,7 @@ const CalendarPage: React.FC = () => {
   const [type, setType] = useState<'practice' | 'match' | 'gathering'>('practice')
   const [dateTime, setDateTime] = useState('')
   const [meetingTime, setMeetingTime] = useState('')
+  const [fieldId, setFieldId] = useState('')
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [isFriendly, setIsFriendly] = useState(false)
@@ -191,6 +200,7 @@ const CalendarPage: React.FC = () => {
   const [editType, setEditType] = useState<'practice' | 'match' | 'gathering'>('practice')
   const [editDateTime, setEditDateTime] = useState('')
   const [editMeetingTime, setEditMeetingTime] = useState('')
+  const [editFieldId, setEditFieldId] = useState('')
   const [editLocation, setEditLocation] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editMaxPlayers, setEditMaxPlayers] = useState<number | ''>('')
@@ -242,7 +252,7 @@ const CalendarPage: React.FC = () => {
   const fetchEventsAndData = async () => {
     setLoading(true)
     try {
-      const [evRes, callupsRes, profilesRes] = await Promise.all([
+      const [evRes, callupsRes, profilesRes, fieldsRes] = await Promise.all([
         supabase
           .from('events')
           .select('*, opponent:opponents(name, initials, logo_url)')
@@ -254,8 +264,15 @@ const CalendarPage: React.FC = () => {
           .from('profiles')
           .select('*')
           .neq('status', 'inactive')
-          .order('name', { ascending: true })
+          .order('name', { ascending: true }),
+        supabase
+          .from('fields')
+          .select('id, name, address')
       ])
+
+      if (fieldsRes.data) {
+        setFields(fieldsRes.data as Field[])
+      }
 
       if (evRes.data && evRes.data.length > 0) {
         setEvents(evRes.data as Event[])
@@ -386,7 +403,8 @@ const CalendarPage: React.FC = () => {
           title: computedTitle,
           type,
           date_time: d.toISOString(),
-          location,
+          field_id: fieldId || null,
+          location: location || null,
           description,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : undefined,
@@ -427,7 +445,8 @@ const CalendarPage: React.FC = () => {
           type,
           date_time: new Date(dateTime).toISOString(),
           meeting_time: meetingTime ? `${meetingTime}:00` : null,
-          location,
+          field_id: fieldId || null,
+          location: location || null,
           description,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : undefined,
@@ -468,6 +487,8 @@ const CalendarPage: React.FC = () => {
       setIsAddModalOpen(false)
       // Reset form
       setTitle('')
+      setFieldId('')
+      setLocation('')
       setDescription('')
       setMaxPlayers('')
       setTournamentName('')
@@ -492,6 +513,7 @@ const CalendarPage: React.FC = () => {
     const localIso = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
     setEditDateTime(localIso)
     setEditMeetingTime(ev.meeting_time ? ev.meeting_time.substring(0, 5) : '')
+    setEditFieldId(ev.field_id || '')
     setEditLocation(ev.location || '')
     setEditDescription(ev.description || '')
     setEditMaxPlayers(ev.max_players ?? '')
@@ -518,7 +540,8 @@ const CalendarPage: React.FC = () => {
         type: editType,
         date_time: new Date(editDateTime).toISOString(),
         meeting_time: editMeetingTime ? `${editMeetingTime}:00` : null,
-        location: editLocation,
+        field_id: editFieldId || null,
+        location: editLocation || null,
         description: editDescription,
         max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
         tournament_name: (editType === 'match' && !editIsFriendly) ? editTournamentName : null,
@@ -2059,7 +2082,7 @@ const CalendarPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
                   <input
@@ -2067,11 +2090,11 @@ const CalendarPage: React.FC = () => {
                     required
                     value={dateTime}
                     onChange={(e) => setDateTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Concentração</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Concentração (opcional)</label>
                   <input
                     type="time"
                     value={meetingTime}
@@ -2080,18 +2103,104 @@ const CalendarPage: React.FC = () => {
                     placeholder="Ex: 19:30"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Localização *</label>
-                  <input
-                    type="text"
-                    required
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
-                    placeholder="Ex: Campo Sintético"
-                  />
-                </div>
               </div>
+
+              {/* Para Jogos e Treinos: Escolher Campo do Clube */}
+              {(type === 'match' || type === 'practice') && (
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
+                  <label className="block font-bold text-gray-800 flex items-center justify-between">
+                    <span>🏟️ Campo / Instalação do Jogo/Treino *</span>
+                    {location && (
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                        ✓ {location}
+                      </span>
+                    )}
+                  </label>
+                  <select
+                    value={fieldId}
+                    onChange={(e) => {
+                      setFieldId(e.target.value)
+                      const sel = fields.find(f => f.id === e.target.value)
+                      if (sel) {
+                        setLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                  >
+                    <option value="">-- Escolher Campo do Clube --</option>
+                    {fields.map(f => (
+                      <option key={f.id} value={f.id}>
+                        🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {!fieldId && (
+                    <input
+                      type="text"
+                      required={!fieldId}
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                      placeholder="Ou digite o nome do campo / estádio adversário..."
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Para Convívios: Escolher Campo/Sede ou Escrever Morada à mão */}
+              {type === 'gathering' && (
+                <div className="p-3.5 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2.5 text-xs">
+                  <label className="block font-bold text-purple-950 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={13} className="text-purple-700" />
+                      <span>Localização do Convívio (Instalação ou Morada à Mão) *</span>
+                    </span>
+                    {location && (
+                      <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                        ✓ Definido
+                      </span>
+                    )}
+                  </label>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                      Instalação do Clube (Opcional):
+                    </label>
+                    <select
+                      value={fieldId}
+                      onChange={(e) => {
+                        setFieldId(e.target.value)
+                        const sel = fields.find(f => f.id === e.target.value)
+                        if (sel) {
+                          setLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white font-medium"
+                    >
+                      <option value="">-- Escolher Instalação/Sede do Clube ou escrever abaixo --</option>
+                      {fields.map(f => (
+                        <option key={f.id} value={f.id}>
+                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                      Morada / Restaurante / Local (escrito à mão):
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white"
+                      placeholder="Ex: Restaurante O Pescador, Av. Marginal, Cascais..."
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Associar a outro Evento (Bidirecional) */}
               <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
@@ -2437,7 +2546,7 @@ const CalendarPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
                   <input
@@ -2445,12 +2554,12 @@ const CalendarPage: React.FC = () => {
                     required
                     value={editDateTime}
                     onChange={(e) => setEditDateTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Concentração</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Concentração (opcional)</label>
                   <input
                     type="time"
                     value={editMeetingTime}
@@ -2459,18 +2568,104 @@ const CalendarPage: React.FC = () => {
                     placeholder="Ex: 19:30"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Localização *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editLocation}
-                    onChange={(e) => setEditLocation(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                  />
-                </div>
               </div>
+
+              {/* Para Jogos e Treinos: Escolher Campo do Clube */}
+              {(editType === 'match' || editType === 'practice') && (
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
+                  <label className="block font-bold text-gray-800 flex items-center justify-between">
+                    <span>🏟️ Campo / Instalação do Jogo/Treino *</span>
+                    {editLocation && (
+                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                        ✓ {editLocation}
+                      </span>
+                    )}
+                  </label>
+                  <select
+                    value={editFieldId}
+                    onChange={(e) => {
+                      setEditFieldId(e.target.value)
+                      const sel = fields.find(f => f.id === e.target.value)
+                      if (sel) {
+                        setEditLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                  >
+                    <option value="">-- Escolher Campo do Clube --</option>
+                    {fields.map(f => (
+                      <option key={f.id} value={f.id}>
+                        🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {!editFieldId && (
+                    <input
+                      type="text"
+                      required={!editFieldId}
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                      placeholder="Ou digite o nome do campo / estádio adversário..."
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Para Convívios: Escolher Campo/Sede ou Escrever Morada à mão */}
+              {editType === 'gathering' && (
+                <div className="p-3.5 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2.5 text-xs">
+                  <label className="block font-bold text-purple-950 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={13} className="text-purple-700" />
+                      <span>Localização do Convívio (Instalação ou Morada à Mão) *</span>
+                    </span>
+                    {editLocation && (
+                      <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                        ✓ Definido
+                      </span>
+                    )}
+                  </label>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                      Instalação do Clube (Opcional):
+                    </label>
+                    <select
+                      value={editFieldId}
+                      onChange={(e) => {
+                        setEditFieldId(e.target.value)
+                        const sel = fields.find(f => f.id === e.target.value)
+                        if (sel) {
+                          setEditLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white font-medium"
+                    >
+                      <option value="">-- Escolher Instalação/Sede do Clube ou escrever abaixo --</option>
+                      {fields.map(f => (
+                        <option key={f.id} value={f.id}>
+                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                      Morada / Restaurante / Local (escrito à mão):
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white"
+                      placeholder="Ex: Restaurante O Pescador, Av. Marginal, Cascais..."
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Associar a outro Evento (Bidirecional) */}
               <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">

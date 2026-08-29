@@ -921,27 +921,30 @@ const EventsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 4. Local com funcionalidade Google Maps */}
+            {/* 4. Localização / Campo */}
             <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2.5">
               <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <MapPin size={14} className="text-red-600" />
-                  <span>Localização do Evento</span>
+                  <span>{type === 'gathering' ? 'Localização / Morada do Convívio' : 'Campo / Instalação do Jogo/Treino'}</span>
                 </span>
                 {currentLocationStr && (
-                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
-                    ✓ Local definido
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[180px]">
+                    ✓ {currentLocationStr}
                   </span>
                 )}
               </label>
 
               <div>
+                <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                  {type === 'gathering' ? 'Instalação do Clube (Opcional):' : 'Escolher Campo do Clube:'}
+                </label>
                 <select
                   value={fieldId}
                   onChange={(e) => setFieldId(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark bg-white text-xs font-medium"
                 >
-                  <option value="">-- Escolher Campo/Instalação do Clube --</option>
+                  <option value="">{type === 'gathering' ? '-- Escolher Instalação/Sede ou escrever abaixo --' : '-- Escolher Campo/Instalação do Clube --'}</option>
                   {fields.map(f => (
                     <option key={f.id} value={f.id}>
                       🏟️ {f.name} {f.address ? `(${f.address})` : ''}
@@ -950,14 +953,18 @@ const EventsPage: React.FC = () => {
                 </select>
               </div>
 
-              {!fieldId && (
+              {(type === 'gathering' || !fieldId) && (
                 <div>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                    {type === 'gathering' ? 'Morada / Restaurante / Local (escrito à mão):' : 'Ou introduza o campo / estádio manualmente:'}
+                  </label>
                   <input
                     type="text"
+                    required={type === 'gathering' && !fieldId}
                     value={locationText}
                     onChange={(e) => setLocationText(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
-                    placeholder="Ou digite o nome do restaurante, morada ou sede..."
+                    placeholder={type === 'gathering' ? "Ex: Restaurante O Pescador, Av. Marginal, Cascais..." : "Ex: Campo Municipal de Sintra..."}
                   />
                 </div>
               )}
@@ -1789,16 +1796,24 @@ const EventsPage: React.FC = () => {
               </div>
 
               {/* Local */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">📍 Local</label>
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-700">
+                  📍 {editType === 'gathering' ? 'Instalação / Localização do Convívio' : 'Campo / Instalação do Jogo/Treino'}
+                </label>
                 <select value={editFieldId} onChange={e => setEditFieldId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-medium bg-white">
-                  <option value="">-- Escolher Campo/Instalação --</option>
+                  <option value="">{editType === 'gathering' ? '-- Escolher Instalação/Sede ou introduzir morada abaixo --' : '-- Escolher Campo/Instalação do Clube --'}</option>
                   {fields.map(f => (
                     <option key={f.id} value={f.id}>🏟️ {f.name} {f.address ? `(${f.address})` : ''}</option>
                   ))}
                 </select>
-                {!editFieldId && (
-                  <input type="text" value={editLocationText} onChange={e => setEditLocationText(e.target.value)} className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" placeholder="Ou digite o local manualmente..." />
+                {(editType === 'gathering' || !editFieldId) && (
+                  <input 
+                    type="text" 
+                    value={editLocationText} 
+                    onChange={e => setEditLocationText(e.target.value)} 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" 
+                    placeholder={editType === 'gathering' ? "Morada / Restaurante / Local (escrito à mão)..." : "Ou digite o campo / estádio manualmente..."} 
+                  />
                 )}
               </div>
 
