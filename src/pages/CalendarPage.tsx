@@ -207,7 +207,72 @@ const CalendarPage: React.FC = () => {
   const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(false)
   const [currentPendingIndex, setCurrentPendingIndex] = useState(0)
   const [pendingTouchStartX, setPendingTouchStartX] = useState<number | null>(null)
-  const [modalTouchStartX, setModalTouchStartX] = useState<number | null>(null)
+  
+  // Fluid Bottom Sheet Drag & Physics State
+  const [sheetTranslateY, setSheetTranslateY] = useState(0)
+  const [isDraggingSheet, setIsDraggingSheet] = useState(false)
+  const sheetDragStartRef = React.useRef<{ startY: number; startTranslateY: number; isTopHandle: boolean } | null>(null)
+  const modalScrollRef = React.useRef<HTMLDivElement>(null)
+
+  // Bloqueio rigoroso de scroll de fundo quando o modal esta aberto
+  useEffect(() => {
+    if (selectedEvent) {
+      const prevOverflow = document.body.style.overflow
+      const prevTouchAction = document.body.style.touchAction
+      document.body.style.overflow = 'hidden'
+      document.body.style.touchAction = 'none'
+      setSheetTranslateY(0)
+      setIsDraggingSheet(false)
+      return () => {
+        document.body.style.overflow = prevOverflow
+        document.body.style.touchAction = prevTouchAction
+      }
+    }
+  }, [selectedEvent])
+
+  const handleSheetTouchStart = (e: React.TouchEvent, isTopHandle: boolean = false) => {
+    const touch = e.touches[0]
+    const scrollTop = modalScrollRef.current ? modalScrollRef.current.scrollTop : 0
+    if (isTopHandle || scrollTop <= 0) {
+      sheetDragStartRef.current = {
+        startY: touch.clientY,
+        startTranslateY: sheetTranslateY,
+        isTopHandle
+      }
+      setIsDraggingSheet(true)
+    }
+  }
+
+  const handleSheetTouchMove = (e: React.TouchEvent) => {
+    if (!sheetDragStartRef.current) return
+    const touch = e.touches[0]
+    const deltaY = touch.clientY - sheetDragStartRef.current.startY
+
+    if (deltaY > 0) {
+      e.stopPropagation()
+      setSheetTranslateY(deltaY)
+    } else if (sheetTranslateY > 0) {
+      e.stopPropagation()
+      setSheetTranslateY(Math.max(0, sheetDragStartRef.current.startTranslateY + deltaY))
+    }
+  }
+
+  const handleSheetTouchEnd = () => {
+    if (!sheetDragStartRef.current) return
+    setIsDraggingSheet(false)
+    if (sheetTranslateY > 110) {
+      setSheetTranslateY(window.innerHeight || 800)
+      setTimeout(() => {
+        setSelectedEvent(null)
+        setSheetTranslateY(0)
+        setPlayerSearchTerm('')
+        setModalCallupStatusFilter('all')
+      }, 220)
+    } else {
+      setSheetTranslateY(0)
+    }
+    sheetDragStartRef.current = null
+  }
 
   // Form states
   const [title, setTitle] = useState('')
@@ -1774,55 +1839,52 @@ const CalendarPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Detalhes Evento & Convocatória (Estilo Bottom Sheet / Persiana no Mobile) */}
+      {/* Modal Detalhes Evento & Convocatória (Estilo Bottom Sheet / Persiana com Física Fluida) */}
       {selectedEvent && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 z-50 overflow-y-auto animate-fade-in"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 z-50 overflow-hidden select-none animate-fade-in"
+          style={{ touchAction: 'none' }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setSelectedEvent(null)
+              setSheetTranslateY(0)
               setPlayerSearchTerm('')
               setModalCallupStatusFilter('all')
             }
           }}
         >
           <div 
-            onTouchStart={(e) => setModalTouchStartX(e.targetTouches[0].clientX)}
-            onTouchEnd={(e) => {
-              if (modalTouchStartX === null) return
-              const diff = modalTouchStartX - e.changedTouches[0].clientX
-              if (Math.abs(diff) > 45 && myPendingEvents.length > 1) {
-                const curIdx = myPendingEvents.findIndex(pe => pe.id === selectedEvent.id)
-                if (curIdx !== -1) {
-                  if (diff > 0) {
-                    const next = myPendingEvents[(curIdx + 1) % myPendingEvents.length]
-                    setSelectedEvent(next)
-                  } else {
-                    const prev = myPendingEvents[(curIdx - 1 + myPendingEvents.length) % myPendingEvents.length]
-                    setSelectedEvent(prev)
-                  }
-                }
-              }
-              setModalTouchStartX(null)
+            ref={modalScrollRef}
+            onTouchStart={(e) => handleSheetTouchStart(e, false)}
+            onTouchMove={handleSheetTouchMove}
+            onTouchEnd={handleSheetTouchEnd}
+            style={{
+              transform: `translateY(${sheetTranslateY}px)`,
+              transition: isDraggingSheet ? 'none' : 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)'
             }}
-            className="bg-white rounded-t-3xl sm:rounded-3xl max-w-6xl xl:max-w-7xl w-full p-5 sm:p-8 relative max-h-[92vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 animate-slide-up sm:animate-none space-y-4"
+            className="bg-white rounded-t-3xl sm:rounded-3xl max-w-6xl xl:max-w-7xl w-full p-4 sm:p-8 relative max-h-[90vh] sm:max-h-[88vh] overflow-y-auto shadow-2xl border border-gray-100 space-y-4 overscroll-contain"
           >
-            {/* Persiana Top Handle no Mobile */}
+            {/* Persiana Top Drag Handle no Mobile (Zona de Toque Ampla e Fluida) */}
             <div 
-              className="sm:hidden flex items-center justify-center pt-1 pb-2 cursor-pointer touch-none"
+              className="sm:hidden flex items-center justify-center pt-1 pb-3 cursor-grab active:cursor-grabbing touch-none select-none"
+              onTouchStart={(e) => handleSheetTouchStart(e, true)}
+              onTouchMove={handleSheetTouchMove}
+              onTouchEnd={handleSheetTouchEnd}
               onClick={() => {
                 setSelectedEvent(null)
+                setSheetTranslateY(0)
                 setPlayerSearchTerm('')
                 setModalCallupStatusFilter('all')
               }}
             >
-              <div className="w-12 h-1.5 bg-gray-300 rounded-full hover:bg-gray-400 transition-colors" />
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full hover:bg-gray-400 active:bg-gray-500 transition-colors" />
             </div>
 
             {/* Botão Fechar */}
             <button
               onClick={() => {
                 setSelectedEvent(null)
+                setSheetTranslateY(0)
                 setPlayerSearchTerm('')
                 setModalCallupStatusFilter('all')
               }}
