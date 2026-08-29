@@ -20,7 +20,10 @@ import {
   Sparkles,
   PartyPopper,
   Trophy,
-  Edit
+  Edit,
+  Save,
+  Send,
+  RefreshCw
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
@@ -243,6 +246,7 @@ const EventsPage: React.FC = () => {
   const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
   const [isBatchCalling, setIsBatchCalling] = useState(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
 
@@ -321,8 +325,13 @@ const EventsPage: React.FC = () => {
     setEditPlayerSearchTerm('')
   }
 
-  const handleSaveEdit = async (e: React.FormEvent) => {
+  const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!editingEvent) return
+    setIsResendPromptOpen(true)
+  }
+
+  const handleConfirmSaveEdit = async (resendCallups: boolean) => {
     if (!editingEvent) return
     setIsSavingEdit(true)
     try {
@@ -357,8 +366,20 @@ const EventsPage: React.FC = () => {
 
       if (error) throw error
 
+      // Se o utilizador escolheu reenviar confirmações:
+      if (resendCallups) {
+        await supabase
+          .from('callups')
+          .update({ status: 'called' })
+          .eq('event_id', editingEvent.id)
+      }
+
+      setIsResendPromptOpen(false)
       setEditingEvent(null)
-      setSuccessMessage('✨ Evento atualizado com sucesso!')
+      setSuccessMessage(resendCallups 
+        ? '✨ Evento atualizado e pedidos de confirmação reenviados aos atletas!' 
+        : '✨ Evento atualizado com sucesso!'
+      )
       await fetchData()
     } catch (err: any) {
       console.error(err)
@@ -2140,6 +2161,74 @@ const EventsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CONFIRMAÇÃO DE REENVIO DE CONVOCATÓRIAS APÓS EDIÇÃO */}
+      {isResendPromptOpen && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-60 animate-fade-in select-none">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-scale-in">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <RefreshCw size={24} className={isSavingEdit ? 'animate-spin' : ''} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-gray-900 leading-tight">
+                  Reenviar Pedidos de Presença?
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Edição de dados do evento
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-4 text-xs text-amber-950 space-y-2">
+              <p className="font-bold text-gray-900">
+                Foram alterados os detalhes deste evento. Desejas reenviar o pedido de confirmação a todos os atletas convocados?
+              </p>
+              <ul className="space-y-1.5 text-gray-700 text-[11.5px]">
+                <li className="flex items-start gap-1.5">
+                  <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                  <span><strong className="text-emerald-950">Reenviar Pedidos:</strong> Repõe todas as presenças como <em>Pendente</em> para que os atletas respondam novamente.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-gray-500 font-bold shrink-0">✓</span>
+                  <span><strong className="text-gray-900">Manter Respostas:</strong> Guarda as alterações do evento mantendo as confirmações já registadas.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-2.5 pt-1">
+              <button
+                type="button"
+                disabled={isSavingEdit}
+                onClick={() => handleConfirmSaveEdit(true)}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-xs sm:text-sm rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
+              >
+                <Send size={16} />
+                <span>{isSavingEdit ? 'A processar...' : 'Sim, Reenviar Pedidos aos Atletas'}</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isSavingEdit}
+                onClick={() => handleConfirmSaveEdit(false)}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-800 font-bold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 border border-gray-200 disabled:opacity-50"
+              >
+                <Save size={16} />
+                <span>Não, Apenas Gravar (Manter Respostas)</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isSavingEdit}
+                onClick={() => setIsResendPromptOpen(false)}
+                className="w-full py-2 text-gray-500 hover:text-gray-800 font-semibold text-xs transition-colors cursor-pointer text-center"
+              >
+                Voltar ao formulário de edição
+              </button>
+            </div>
           </div>
         </div>
       )}
