@@ -356,7 +356,13 @@ const Home: React.FC = () => {
                       {ev?.date_time && new Date(ev.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
                     </span>
                   </div>
-                  <h4 className="text-sm font-black text-gray-900 truncate mt-0.5">{ev?.title}</h4>
+                  <h4 className="text-sm font-black text-gray-900 truncate mt-0.5">
+                    {ev?.type === 'match'
+                      ? ev.home_away === 'away'
+                        ? `${ev.opponent?.name || 'Adversário'} Vs ${clubSettings?.name || 'GDS Cascais'}`
+                        : `${clubSettings?.name || 'GDS Cascais'} Vs ${ev.opponent?.name || 'Adversário'}`
+                      : ev?.title}
+                  </h4>
                   <p className="text-xs text-gray-600 truncate flex items-center gap-1 mt-0.5">
                     <MapPin size={12} className="text-red-500 shrink-0" />
                     <span className="truncate">{getEventLocation(ev) || 'Local a definir'}</span>
