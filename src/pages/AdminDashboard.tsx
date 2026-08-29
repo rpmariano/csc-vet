@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useClub } from '../context/ClubContext'
 import { toast } from '../context/ToastContext'
+import { ConfirmModal } from '../components/ConfirmModal'
 
 // Interfaces
 interface Field {
@@ -104,6 +105,21 @@ const AdminDashboard: React.FC = () => {
     name: '',
     season: '',
     status: 'agendado' as 'agendado' | 'ativo' | 'terminado'
+  })
+
+  // Generic confirmation modal state
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean
+    title: string
+    description?: string
+    confirmText?: string
+    cancelText?: string
+    variant?: 'danger' | 'warning' | 'info' | 'success'
+    onConfirm: () => void | Promise<void>
+  }>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {}
   })
 
   // Unsaved changes confirmation modal
@@ -283,15 +299,25 @@ const AdminDashboard: React.FC = () => {
     await executeSaveField()
   }
 
-  const handleDeleteField = async (id: string, name: string) => {
-    if (!confirm(`Tens a certeza que desejas eliminar o campo "${name}"?`)) return
-    const { error } = await supabase.from('fields').delete().eq('id', id)
-    if (error) {
-      toast.error('Erro ao eliminar campo: ' + error.message)
-    } else {
-      toast.success('Campo eliminado!')
-      fetchData()
-    }
+  const handleDeleteField = (id: string, name: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Eliminar Campo',
+      description: `Tens a certeza que desejas eliminar o campo "${name}"?`,
+      confirmText: 'Sim, Eliminar Campo',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+        const { error } = await supabase.from('fields').delete().eq('id', id)
+        if (error) {
+          toast.error('Erro ao eliminar campo: ' + error.message)
+        } else {
+          toast.success('Campo eliminado!')
+          fetchData()
+        }
+      }
+    })
   }
 
   // --- OPPONENTS MODAL & LOGIC ---
@@ -415,15 +441,25 @@ const AdminDashboard: React.FC = () => {
     await executeSaveOpponent()
   }
 
-  const handleDeleteOpponent = async (id: string, name: string) => {
-    if (!confirm(`Tens a certeza que desejas eliminar o adversário "${name}"?`)) return
-    const { error } = await supabase.from('opponents').delete().eq('id', id)
-    if (error) {
-      toast.error('Erro ao eliminar adversário: ' + error.message)
-    } else {
-      toast.success('Adversário eliminado!')
-      fetchData()
-    }
+  const handleDeleteOpponent = (id: string, name: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Eliminar Adversário',
+      description: `Tens a certeza que desejas eliminar o adversário "${name}"?`,
+      confirmText: 'Sim, Eliminar Adversário',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+        const { error } = await supabase.from('opponents').delete().eq('id', id)
+        if (error) {
+          toast.error('Erro ao eliminar adversário: ' + error.message)
+        } else {
+          toast.success('Adversário eliminado!')
+          fetchData()
+        }
+      }
+    })
   }
 
   // --- TOURNAMENTS MODAL & LOGIC ---
@@ -501,15 +537,25 @@ const AdminDashboard: React.FC = () => {
     await executeSaveTournament()
   }
 
-  const handleDeleteTournament = async (id: string, name: string) => {
-    if (!confirm(`Tens a certeza que desejas eliminar o torneio "${name}"?`)) return
-    const { error } = await supabase.from('tournaments').delete().eq('id', id)
-    if (error) {
-      toast.error('Erro ao eliminar torneio: ' + error.message)
-    } else {
-      toast.success('Torneio eliminado!')
-      fetchData()
-    }
+  const handleDeleteTournament = (id: string, name: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Eliminar Torneio',
+      description: `Tens a certeza que desejas eliminar o torneio "${name}"?`,
+      confirmText: 'Sim, Eliminar Torneio',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+        const { error } = await supabase.from('tournaments').delete().eq('id', id)
+        if (error) {
+          toast.error('Erro ao eliminar torneio: ' + error.message)
+        } else {
+          toast.success('Torneio eliminado!')
+          fetchData()
+        }
+      }
+    })
   }
 
   // --- FILTERS ---
@@ -1463,6 +1509,18 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Genérico de Confirmação (Estilo Unificado e Elegante) */}
+      <ConfirmModal
+        isOpen={confirmModalConfig.isOpen}
+        title={confirmModalConfig.title}
+        description={confirmModalConfig.description}
+        confirmText={confirmModalConfig.confirmText}
+        cancelText={confirmModalConfig.cancelText}
+        variant={confirmModalConfig.variant}
+        onConfirm={confirmModalConfig.onConfirm}
+        onCancel={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   )
 }

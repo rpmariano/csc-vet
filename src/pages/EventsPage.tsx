@@ -31,6 +31,7 @@ import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
+import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
@@ -205,6 +206,21 @@ const EventsPage: React.FC = () => {
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [rsvpTabFilter, setRsvpTabFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
+
+  // Generic Confirmation Modal State
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean
+    title: string
+    description?: string
+    confirmText?: string
+    cancelText?: string
+    variant?: 'danger' | 'warning' | 'info' | 'success'
+    onConfirm: () => void | Promise<void>
+  }>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {}
+  })
   
   const [loading, setLoading] = useState(true)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -757,9 +773,19 @@ const EventsPage: React.FC = () => {
 
     const willSelect = !selectedPlayerIds.includes(id)
     if (willSelect && maxPlayers !== '' && selectedPlayerIds.length >= Number(maxPlayers)) {
-      if (!confirm(`⚠️ Aviso de Limite: A convocatória já atingiu o limite definido de ${maxPlayers} membros (${selectedPlayerIds.length} selecionados).\n\nDeseja convocar este elemento mesmo assim?`)) {
-        return
-      }
+      setConfirmModalConfig({
+        isOpen: true,
+        title: 'Limite de Convocatória Atingido',
+        description: `A convocatória já atingiu o limite definido de ${maxPlayers} membros (${selectedPlayerIds.length} selecionados). Desejas convocar este elemento mesmo assim?`,
+        confirmText: 'Sim, Convocar Membro',
+        cancelText: 'Cancelar',
+        variant: 'warning',
+        onConfirm: () => {
+          setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+          setSelectedPlayerIds(prev => [...prev, id])
+        }
+      })
+      return
     }
 
     setSelectedPlayerIds(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id])
@@ -919,13 +945,25 @@ const EventsPage: React.FC = () => {
     }
   }
 
-  const handleDeleteEvent = async (id: string) => {
-    if(!confirm("Tem a certeza que deseja eliminar este evento?")) return
-    const { error } = await supabase.from('events').delete().eq('id', id)
-    if (!error) {
-      setEvents(prev => prev.filter(e => e.id !== id))
-      toast.success('Evento eliminado com sucesso!')
-    }
+  const handleDeleteEvent = (id: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Eliminar Evento',
+      description: 'Tens a certeza que desejas eliminar este evento? Todos os registos e convocatórias associados serão permanentemente apagados.',
+      confirmText: 'Sim, Eliminar Evento',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+        const { error } = await supabase.from('events').delete().eq('id', id)
+        if (!error) {
+          setEvents(prev => prev.filter(e => e.id !== id))
+          toast.success('Evento eliminado com sucesso!')
+        } else {
+          toast.error('Erro ao eliminar evento: ' + error.message)
+        }
+      }
+    })
   }
 
   const handleUpdateCallupStatus = async (callupId: string, eventId: string, newStatus: 'confirmed' | 'declined' | 'called') => {
@@ -2299,21 +2337,31 @@ const EventsPage: React.FC = () => {
                   }
                 }
 
-                const handleEditRemoveAll = async () => {
+                const handleEditRemoveAll = () => {
                   if (currentCallups.length === 0 || isBatchCalling) return
-                  if (!confirm('Tem a certeza que deseja remover todos os convocados deste evento?')) return
-                  setIsBatchCalling(true)
-                  try {
-                    const callupIds = currentCallups.map(c => c.id)
-                    const { error } = await supabase.from('callups').delete().in('id', callupIds)
-                    if (error) throw error
-                    await fetchData()
-                    toast.info('Todos os convocados foram removidos.')
-                  } catch (err: any) {
-                    toast.error('Erro ao remover todos: ' + err.message)
-                  } finally {
-                    setIsBatchCalling(false)
-                  }
+                  setConfirmModalConfig({
+                    isOpen: true,
+                    title: 'Limpar Todos os Convocados',
+                    description: 'Tens a certeza que desejas remover todos os membros e atletas convocados para este evento?',
+                    confirmText: 'Sim, Limpar Convocatória',
+                    cancelText: 'Cancelar',
+                    variant: 'danger',
+                    onConfirm: async () => {
+                      setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+                      setIsBatchCalling(true)
+                      try {
+                        const callupIds = currentCallups.map(c => c.id)
+                        const { error } = await supabase.from('callups').delete().in('id', callupIds)
+                        if (error) throw error
+                        await fetchData()
+                        toast.info('Todos os convocados foram removidos.')
+                      } catch (err: any) {
+                        toast.error('Erro ao remover todos: ' + err.message)
+                      } finally {
+                        setIsBatchCalling(false)
+                      }
+                    }
+                  })
                 }
 
                 const filteredMembers = allPlayers.filter(p => 
@@ -2727,6 +2775,18 @@ const EventsPage: React.FC = () => {
           setUnsavedModalTarget(null)
         }}
         onCancel={() => setUnsavedModalTarget(null)}
+      />
+
+      {/* Modal Genérico de Confirmação (Estilo Unificado e Elegante) */}
+      <ConfirmModal
+        isOpen={confirmModalConfig.isOpen}
+        title={confirmModalConfig.title}
+        description={confirmModalConfig.description}
+        confirmText={confirmModalConfig.confirmText}
+        cancelText={confirmModalConfig.cancelText}
+        variant={confirmModalConfig.variant}
+        onConfirm={confirmModalConfig.onConfirm}
+        onCancel={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
       />
 
     </div>

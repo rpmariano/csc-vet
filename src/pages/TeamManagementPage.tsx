@@ -29,6 +29,7 @@ import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../components/SoccerPitchSelector'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
+import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
 
 const POSITIONS = [
@@ -97,6 +98,21 @@ const TeamManagementPage: React.FC = () => {
   const [medicalExamDocUrl, setMedicalExamDocUrl] = useState<string | null>(null)
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
   const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false)
+
+  // Generic Confirmation Modal State
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean
+    title: string
+    description?: string
+    confirmText?: string
+    cancelText?: string
+    variant?: 'danger' | 'warning' | 'info' | 'success'
+    onConfirm: () => void | Promise<void>
+  }>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {}
+  })
 
   const isFormDirty = () => {
     return Boolean(
@@ -491,21 +507,31 @@ const TeamManagementPage: React.FC = () => {
     }
   }
 
-  const handleDeleteMember = async (id: string, name: string) => {
-    if (!confirm(`Tem a certeza que deseja eliminar o membro "${name}"?`)) return
-    try {
-      if (id.startsWith('seed-')) {
-        setProfiles(prev => prev.filter(p => p.id !== id))
-      } else {
-        const { error } = await supabase.from('profiles').delete().eq('id', id)
-        if (error) throw error
-        setProfiles(prev => prev.filter(p => p.id !== id))
+  const handleDeleteMember = (id: string, name: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Eliminar Membro',
+      description: `Tens a certeza que desejas eliminar o membro "${name}"? Todas as fichas e dados associados serão removidos.`,
+      confirmText: 'Sim, Eliminar Membro',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+        try {
+          if (id.startsWith('seed-')) {
+            setProfiles(prev => prev.filter(p => p.id !== id))
+          } else {
+            const { error } = await supabase.from('profiles').delete().eq('id', id)
+            if (error) throw error
+            setProfiles(prev => prev.filter(p => p.id !== id))
+          }
+          if (selectedProfile?.id === id) setIsDetailModalOpen(false)
+          toast.success('Membro eliminado com sucesso!')
+        } catch (err: any) {
+          toast.error('Erro ao eliminar membro: ' + err.message)
+        }
       }
-      if (selectedProfile?.id === id) setIsDetailModalOpen(false)
-      toast.success('Membro eliminado com sucesso!')
-    } catch (err: any) {
-      toast.error('Erro ao eliminar membro: ' + err.message)
-    }
+    })
   }
 
   // --- USER ACCOUNT ASSOCIATION STATES & LOGIC ---
@@ -520,23 +546,28 @@ const TeamManagementPage: React.FC = () => {
     setSelectedUserToAssociate(null)
   }
 
-  const handleConfirmAssociate = async (sourcePlayer: Profile, targetUser: Profile) => {
+  const handleConfirmAssociate = (sourcePlayer: Profile, targetUser: Profile) => {
     if (sourcePlayer.id === targetUser.id) {
       toast.warning('Este jogador já está associado a esta conta.')
       return
     }
 
-    if (!confirm(`Tem a certeza que deseja associar a conta de "${targetUser.email}" (${targetUser.name}) à ficha do jogador "${sourcePlayer.name}"?`)) {
-      return
-    }
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Associar Conta de Utilizador',
+      description: `Tens a certeza que desejas associar a conta "${targetUser.email}" (${targetUser.name}) à ficha do jogador "${sourcePlayer.name}"?`,
+      confirmText: 'Sim, Associar Conta',
+      cancelText: 'Cancelar',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+        setAssociatingLoading(true)
+        try {
+          const targetUserId = targetUser.id
+          const sourcePlayerId = sourcePlayer.id
 
-    setAssociatingLoading(true)
-    try {
-      const targetUserId = targetUser.id
-      const sourcePlayerId = sourcePlayer.id
-
-      // 1. Atualizar referências de convocatórias e quotas para a conta destino
-      await Promise.allSettled([
+          // 1. Atualizar referências de convocatórias e quotas para a conta destino
+          await Promise.allSettled([
         supabase.from('callups').update({ player_id: targetUserId }).eq('player_id', sourcePlayerId),
         supabase.from('dues').update({ player_id: targetUserId }).eq('player_id', sourcePlayerId)
       ])
@@ -581,11 +612,13 @@ const TeamManagementPage: React.FC = () => {
         setIsDetailModalOpen(false)
       }
       fetchProfiles()
-    } catch (err: any) {
-      toast.error('Erro ao associar utilizador: ' + (err.message || 'Verifique a base de dados'))
-    } finally {
-      setAssociatingLoading(false)
-    }
+        } catch (err: any) {
+          toast.error('Erro ao associar utilizador: ' + (err.message || 'Verifique a base de dados'))
+        } finally {
+          setAssociatingLoading(false)
+        }
+      }
+    })
   }
 
   // Procura de sugestões inteligentes de associação
@@ -2381,6 +2414,18 @@ const TeamManagementPage: React.FC = () => {
           resetForm()
         }}
         onCancel={() => setIsUnsavedModalOpen(false)}
+      />
+
+      {/* Modal Genérico de Confirmação (Estilo Unificado e Elegante) */}
+      <ConfirmModal
+        isOpen={confirmModalConfig.isOpen}
+        title={confirmModalConfig.title}
+        description={confirmModalConfig.description}
+        confirmText={confirmModalConfig.confirmText}
+        cancelText={confirmModalConfig.cancelText}
+        variant={confirmModalConfig.variant}
+        onConfirm={confirmModalConfig.onConfirm}
+        onCancel={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   )
