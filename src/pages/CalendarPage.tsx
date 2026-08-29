@@ -226,6 +226,7 @@ interface Event {
   location: string
   description: string
   is_friendly?: boolean | null
+  is_active?: boolean
   tournament_id?: string | null
   tournament?: {
     id: string

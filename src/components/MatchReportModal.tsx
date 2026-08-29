@@ -361,8 +361,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               <div className="grid grid-cols-11 items-center gap-3 text-center">
                 
                 {/* Equipa 1 */}
-                <div className="col-span-4 flex flex-col items-center">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white p-1.5 shadow-sm border border-gray-200 flex items-center justify-center mb-1.5">
+                <div className="col-span-4 flex flex-col items-center gap-1">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white p-1.5 shadow-md border border-white/30 flex items-center justify-center">
                     {isAway ? (
                       event?.opponent?.logo_url ? (
                         <img src={event.opponent.logo_url} alt={leftSigla} className="w-full h-full object-contain" />
@@ -370,7 +370,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         <span className="font-black text-csc-dark text-sm">{leftSigla}</span>
                       )
                     ) : (
-                      <span className="font-black text-csc-dark text-sm">CSC</span>
+                      <img src="/csc-vet/cascais-emblem.png" alt="CSC" className="w-full h-full object-contain" />
                     )}
                   </div>
                   <span className="text-base sm:text-lg font-black uppercase text-white tracking-wide">{leftSigla}</span>
@@ -378,7 +378,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 </div>
 
                 {/* Placar Central */}
-                <div className="col-span-3 flex flex-col items-center justify-center">
+                <div className="col-span-3 flex flex-col items-center justify-center gap-1">
                   {isEditing ? (
                     <div className="flex items-center gap-2">
                       <input
@@ -410,14 +410,14 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                       </span>
                     </div>
                   )}
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-200 mt-2">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-200">
                     {homeScore !== null ? 'Resultado Final' : 'Sem Resultado'}
                   </span>
                 </div>
 
                 {/* Equipa 2 */}
-                <div className="col-span-4 flex flex-col items-center">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white p-1.5 shadow-sm border border-gray-200 flex items-center justify-center mb-1.5">
+                <div className="col-span-4 flex flex-col items-center gap-1">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white p-1.5 shadow-md border border-white/30 flex items-center justify-center">
                     {!isAway ? (
                       event?.opponent?.logo_url ? (
                         <img src={event.opponent.logo_url} alt={rightSigla} className="w-full h-full object-contain" />
@@ -425,7 +425,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         <span className="font-black text-csc-dark text-sm">{rightSigla}</span>
                       )
                     ) : (
-                      <span className="font-black text-csc-dark text-sm">CSC</span>
+                      <img src="/csc-vet/cascais-emblem.png" alt="CSC" className="w-full h-full object-contain" />
                     )}
                   </div>
                   <span className="text-base sm:text-lg font-black uppercase text-white tracking-wide">{rightSigla}</span>
@@ -453,7 +453,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                   </select>
                 ) : (
                   <p className="text-base font-black text-csc-dark flex items-center gap-1.5">
-                    <span>⚡ {tacticalFormation || '1-4-3-3'}</span>
+                    <span>⚡ {(tacticalFormation || '4-3-3').replace(/^1-/, '')}</span>
                   </p>
                 )}
               </div>
@@ -499,24 +499,25 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                   <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
                     <div className="bg-emerald-800 text-white px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center justify-between">
                       <span>⭐ Titulares ({starters.length})</span>
-                      <span className="text-[10px] bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-700">{tacticalFormation}</span>
+                      <span className="text-[10px] bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-700">{(tacticalFormation || '4-3-3').replace(/^1-/, '')}</span>
                     </div>
                     {starters.length === 0 ? (
                       <p className="p-4 text-xs text-gray-500 font-semibold italic text-center">Nenhum titular registado.</p>
                     ) : (
                       <div className="divide-y divide-gray-100">
-                        {starters.map(p => (
+                        {starters.map(p => {
+                          const displayName = p.shirt_name || p.name
+                          return (
                           <div key={p.player_id} className="p-3 sm:px-4 flex items-center justify-between gap-2 hover:bg-gray-50 transition-colors">
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-black flex items-center justify-center shrink-0">
+                              <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-black flex items-center justify-center shrink-0">
                                 {p.jersey_number || '-'}
                               </span>
                               <div className="min-w-0">
                                 <p className="text-xs sm:text-sm font-black text-gray-900 truncate flex items-center gap-1.5">
-                                  <span>{p.name}</span>
-                                  {p.shirt_name && <span className="text-[10px] text-gray-500 font-bold">({p.shirt_name})</span>}
+                                  <span>{displayName}</span>
                                   {p.is_mvp && (
-                                    <span className="text-[10px] font-black bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded border border-amber-300 flex items-center gap-0.5">
+                                    <span className="text-[10px] font-black bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300 flex items-center gap-0.5">
                                       <Award size={10} className="text-amber-600" /> MVP
                                     </span>
                                   )}
@@ -549,7 +550,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                               )}
                             </div>
                           </div>
-                        ))}
+                        )})}
                       </div>
                     )}
                   </div>
@@ -561,16 +562,19 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         <span>🔄 Suplentes Utilizados ({subs.length})</span>
                       </div>
                       <div className="divide-y divide-gray-100">
-                        {subs.map(p => (
+                        {subs.map(p => {
+                          const displayName = p.shirt_name || p.name
+                          return (
                           <div key={p.player_id} className="p-3 sm:px-4 flex items-center justify-between gap-2 hover:bg-gray-50 transition-colors">
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-900 border border-blue-300 text-xs font-black flex items-center justify-center shrink-0">
+                              <span className="w-7 h-7 rounded-full bg-blue-100 text-blue-900 border border-blue-300 text-xs font-black flex items-center justify-center shrink-0">
                                 {p.jersey_number || '-'}
                               </span>
                               <div className="min-w-0">
                                 <p className="text-xs sm:text-sm font-black text-gray-900 truncate">
-                                  {p.name}
+                                  {displayName}
                                 </p>
+                                {p.position && <span className="text-[10px] font-semibold text-gray-400">{p.position}</span>}
                               </div>
                             </div>
 
@@ -592,7 +596,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                               )}
                             </div>
                           </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
                   )}
@@ -608,7 +613,9 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                   </div>
 
                   <div className="divide-y divide-gray-100 max-h-[45vh] overflow-y-auto">
-                    {playerStats.map(p => (
+                    {playerStats.map(p => {
+                      const displayName = p.shirt_name || p.name
+                      return (
                       <div key={p.player_id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/80 transition-colors">
                         
                         {/* Identificação e Seletor de Titularidade */}
@@ -617,7 +624,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                             {p.jersey_number || '-'}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-black text-gray-900 truncate">{p.name}</p>
+                            <p className="text-xs font-black text-gray-900 truncate">{displayName}</p>
                             {p.position && <p className="text-[10px] text-gray-500 font-semibold truncate">{p.position}</p>}
                           </div>
                         </div>
@@ -725,7 +732,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         </div>
 
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}

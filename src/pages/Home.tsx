@@ -26,6 +26,7 @@ interface Event {
   description: string
   home_away?: 'home' | 'away' | 'neutral'
   is_friendly?: boolean
+  is_active?: boolean
   tournament_id?: string | null
   tournament?: {
     name: string
@@ -170,9 +171,10 @@ const Home: React.FC = () => {
             resolvedMatches = allM as Event[]
           }
         }
-        setUpcomingMatches(resolvedMatches)
+        // Filtrar apenas jogos ativos (publicados)
+        setUpcomingMatches(resolvedMatches.filter(m => m.is_active !== false))
 
-        // 2. Fetch upcoming practices
+        // 2. Fetch upcoming practices (apenas ativos)
         const { data: practices } = await supabase
           .from('events')
           .select('*, field:fields(id, name, address)')
@@ -181,7 +183,7 @@ const Home: React.FC = () => {
           .order('date_time', { ascending: true })
           .limit(3)
         if (practices) {
-          setUpcomingPractices(practices as Event[])
+          setUpcomingPractices((practices as Event[]).filter(p => p.is_active !== false))
         } else {
           setUpcomingPractices([])
         }
@@ -199,18 +201,19 @@ const Home: React.FC = () => {
           setAnnouncements([])
         }
 
-        // 4. Fetch callups
+        // 4. Fetch callups (apenas para eventos ativos)
         const { data: calls } = await supabase
           .from('callups')
           .select('*, event:events(*, field:fields(id, name, address), opponent:opponents(name, initials, logo_url))')
           .eq('player_id', profile.id)
 
         const rawCalls = (calls || []) as unknown as Callup[]
+        const activeCalls = rawCalls.filter(c => !c.event || c.event.is_active !== false)
 
         if (profile.status === 'injured' || profile.status === 'inactive') {
-          setMyCallups(rawCalls.filter(c => c.event?.type !== 'practice'))
+          setMyCallups(activeCalls.filter(c => c.event?.type !== 'practice'))
         } else {
-          setMyCallups(rawCalls)
+          setMyCallups(activeCalls)
         }
       } catch (err) {
         console.error(err)

@@ -23,7 +23,8 @@ import {
   Edit,
   Save,
   Send,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -216,6 +217,7 @@ interface Event {
   location?: string // fallback
   description: string
   is_friendly?: boolean
+  is_active?: boolean
   tournament_id?: string | null
   opponent_id?: string | null
   home_away?: 'home' | 'away' | 'neutral' | null
@@ -339,12 +341,16 @@ const EventsPage: React.FC = () => {
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
   const [unsavedModalTarget, setUnsavedModalTarget] = useState<'edit' | 'quickField' | 'quickOpp' | null>(null)
-  const [viewModeTab, setViewModeTab] = useState<'create' | 'list'>('create')
+  // Ativação e Publicação de Convocatórias
+  const [isActiveOnCreate, setIsActiveOnCreate] = useState(true)
+  const [editIsActive, setEditIsActive] = useState(true)
 
   // Estados para Filtros da Lista de Eventos Agendados
   const [eventListSearch, setEventListSearch] = useState('')
   const [eventListTypeFilter, setEventListTypeFilter] = useState<'all' | 'match' | 'practice' | 'gathering'>('all')
   const [eventListTimeFilter, setEventListTimeFilter] = useState<'upcoming' | 'past' | 'all'>('upcoming')
+  const [eventListStatusFilter, setEventListStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [viewModeTab, setViewModeTab] = useState<'create' | 'list'>('list')
 
   const handleAttemptCloseEditModal = () => {
     setUnsavedModalTarget('edit')
@@ -509,6 +515,7 @@ const EventsPage: React.FC = () => {
     setEditLocationText(ev.location || '')
     setEditDescription(ev.description || '')
     setEditIsFriendly(ev.is_friendly ?? false)
+    setEditIsActive(ev.is_active !== false)
     setEditTournamentId(ev.tournament_id || '')
     setEditOpponentId(ev.opponent_id || '')
     setEditHomeAway(ev.home_away || 'home')
@@ -544,17 +551,33 @@ const EventsPage: React.FC = () => {
         description: editDescription.trim() || null,
         max_players: null,
         is_friendly: editType === 'match' ? editIsFriendly : false,
+        is_active: editIsActive,
         tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
         opponent_id: editType === 'match' ? (editOpponentId || null) : null,
         home_away: editType === 'match' ? editHomeAway : null,
       }
 
-      const { error } = await supabase
-        .from('events')
-        .update(payload)
-        .eq('id', editingEvent.id)
+      try {
+        const { error } = await supabase
+          .from('events')
+          .update(payload)
+          .eq('id', editingEvent.id)
 
-      if (error) throw error
+        if (error) {
+          if (error.message?.includes('is_active')) {
+            const { is_active, ...withoutActive } = payload
+            const { error: fbErr } = await supabase
+              .from('events')
+              .update(withoutActive)
+              .eq('id', editingEvent.id)
+            if (fbErr) throw fbErr
+          } else {
+            throw error
+          }
+        }
+      } catch (err: any) {
+        if (!err.message?.includes('is_active')) throw err
+      }
 
       // Se o utilizador escolheu reenviar confirmações:
       if (resendCallups) {
@@ -578,6 +601,71 @@ const EventsPage: React.FC = () => {
     } finally {
       setIsSavingEdit(false)
     }
+  }
+
+  // Ativar evento inativo e disparar convocatória
+  const handleActivateEvent = async (ev: Event) => {
+    const callups = eventCallups[ev.id] || []
+    
+    // Se o evento não tiver convocatórias gravadas e não for treino automático:
+    if (callups.length === 0 && ev.type !== 'practice') {
+      toast.warning('Ainda não foram escolhidos jogadores para este evento. Por favor selecione os atletas a convocar na convocatória.')
+      openEditModal(ev)
+      return
+    }
+
+    const countToNotify = ev.type === 'practice'
+      ? (callups.length > 0 ? callups.length : allPlayers.filter(p => isPlayerEligible(p, 'practice')).length)
+      : callups.length
+
+    setConfirmModalConfig({
+      isOpen: true,
+      title: '📢 Ativar Evento e Enviar Convocatória',
+      description: `Desejas ativar este evento e disparar a convocatória para os ${countToNotify} membros selecionados? O evento ficará imediatamente visível para todos os atletas na agenda e página principal.`,
+      confirmText: 'Sim, Ativar e Enviar Convocatória',
+      cancelText: 'Cancelar',
+      variant: 'success',
+      onConfirm: async () => {
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+        try {
+          try {
+            const { error } = await supabase
+              .from('events')
+              .update({ is_active: true })
+              .eq('id', ev.id)
+            if (error && !error.message?.includes('is_active')) {
+              throw error
+            }
+          } catch (dbErr) {
+            console.warn('Erro ao atualizar is_active no supabase:', dbErr)
+          }
+
+          // Se for treino e ainda não tiver callups na BD, insere-as agora
+          if (ev.type === 'practice' && callups.length === 0) {
+            const practiceEligible = allPlayers.filter(p => isPlayerEligible(p, 'practice')).map(p => p.id)
+            const validIds = await ensurePlayerIdsForSupabase(practiceEligible, allPlayers)
+            const rows = validIds.map(pId => ({
+              event_id: ev.id,
+              player_id: pId,
+              status: 'called' as const
+            }))
+            if (rows.length > 0) {
+              await supabase.from('callups').insert(rows)
+            }
+          }
+
+          setEvents(prev => prev.map(item => item.id === ev.id ? { ...item, is_active: true } : item))
+          if (activeCallupModalEvent && activeCallupModalEvent.id === ev.id) {
+            setActiveCallupModalEvent(prev => prev ? { ...prev, is_active: true } : null)
+          }
+          await fetchData()
+          toast.success(`🎉 Evento ativado com sucesso! Convocatória enviada a ${countToNotify} membros.`)
+        } catch (err: any) {
+          console.error(err)
+          toast.error('Erro ao ativar evento: ' + (err.message || 'Erro'))
+        }
+      }
+    })
   }
 
   // Pre-select weekday when eventDate changes
@@ -640,7 +728,7 @@ const EventsPage: React.FC = () => {
       if (profRes.data) {
         const merged = mergeProfilesWithSeedData((profRes.data as Profile[]) || [])
         setAllPlayers(merged)
-        const initialEligible = merged.filter(p => p.status !== 'inactive')
+        const initialEligible = merged.filter(p => isPlayerEligible(p, type))
         setSelectedPlayerIds(initialEligible.map(p => p.id))
       }
 
@@ -897,19 +985,43 @@ const EventsPage: React.FC = () => {
           description: description.trim() || null,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : false,
+          is_active: isActiveOnCreate,
           tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
           opponent_id: type === 'match' ? (opponentId || null) : null,
           home_away: type === 'match' ? homeAway : null,
           created_by: profile?.id
         }))
 
-        const { data: createdBatch, error } = await supabase
-          .from('events')
-          .insert(eventsToInsert)
-          .select()
+        let createdBatchResult: any = null
+        try {
+          const { data: createdBatch, error } = await supabase
+            .from('events')
+            .insert(eventsToInsert)
+            .select()
+          if (error) {
+            if (error.message?.includes('is_active')) {
+              const withoutActive = eventsToInsert.map(({ is_active, ...rest }) => rest)
+              const { data: fbData, error: fbErr } = await supabase.from('events').insert(withoutActive).select()
+              if (fbErr) throw fbErr
+              createdBatchResult = (fbData || []).map((e: any) => ({ ...e, is_active: isActiveOnCreate }))
+            } else {
+              throw error
+            }
+          } else {
+            createdBatchResult = createdBatch
+          }
+        } catch (dbErr: any) {
+          if (dbErr.message?.includes('is_active')) {
+            const withoutActive = eventsToInsert.map(({ is_active, ...rest }) => rest)
+            const { data: fbData, error: fbErr } = await supabase.from('events').insert(withoutActive).select()
+            if (fbErr) throw fbErr
+            createdBatchResult = (fbData || []).map((e: any) => ({ ...e, is_active: isActiveOnCreate }))
+          } else {
+            throw dbErr
+          }
+        }
 
-        if (error) throw error
-        if (createdBatch) createdEventsList = createdBatch as Event[]
+        if (createdBatchResult) createdEventsList = createdBatchResult as Event[]
 
         const playerIdsToCall = type === 'practice'
           ? allPlayers.filter(p => isPlayerEligible(p, 'practice')).map(p => p.id)
@@ -932,7 +1044,9 @@ const EventsPage: React.FC = () => {
           }
         }
 
-        const successText = `✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
+        const successText = isActiveOnCreate
+          ? `✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
+          : `📝 ${createdEventsList.length} eventos guardados como Rascunho (Inativos) até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
         setSuccessMessage(successText)
         toast.success(successText)
       } else {
@@ -946,19 +1060,45 @@ const EventsPage: React.FC = () => {
           description: description.trim() || null,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : false,
+          is_active: isActiveOnCreate,
           tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
           opponent_id: type === 'match' ? (opponentId || null) : null,
           home_away: type === 'match' ? homeAway : null,
           created_by: profile?.id
         }
 
-        const { data: createdEvent, error } = await supabase
-          .from('events')
-          .insert([newEvent])
-          .select()
-          .single()
+        let createdEventResult: any = null
+        try {
+          const { data: createdEvent, error } = await supabase
+            .from('events')
+            .insert([newEvent])
+            .select()
+            .single()
 
-        if (error) throw error
+          if (error) {
+            if (error.message?.includes('is_active')) {
+              const { is_active, ...withoutActive } = newEvent
+              const { data: fbData, error: fbErr } = await supabase.from('events').insert([withoutActive]).select().single()
+              if (fbErr) throw fbErr
+              createdEventResult = { ...fbData, is_active: isActiveOnCreate }
+            } else {
+              throw error
+            }
+          } else {
+            createdEventResult = createdEvent
+          }
+        } catch (dbErr: any) {
+          if (dbErr.message?.includes('is_active')) {
+            const { is_active, ...withoutActive } = newEvent
+            const { data: fbData, error: fbErr } = await supabase.from('events').insert([withoutActive]).select().single()
+            if (fbErr) throw fbErr
+            createdEventResult = { ...fbData, is_active: isActiveOnCreate }
+          } else {
+            throw dbErr
+          }
+        }
+
+        const createdEvent = createdEventResult as Event
 
         const playerIdsToCall = type === 'practice'
           ? allPlayers.filter(p => isPlayerEligible(p, 'practice')).map(p => p.id)
@@ -976,7 +1116,9 @@ const EventsPage: React.FC = () => {
           }
         }
 
-        const successText = '🎉 Evento criado e convocatória enviada aos membros!'
+        const successText = isActiveOnCreate
+          ? '🎉 Evento criado e convocatória enviada aos membros!'
+          : '📝 Evento guardado como Rascunho (Inativo). A convocatória foi guardada e será enviada quando ativares o evento.'
         setSuccessMessage(successText)
         toast.success(successText)
       }
@@ -989,6 +1131,7 @@ const EventsPage: React.FC = () => {
       setTournamentId('')
       setOpponentId('')
       setIsFriendly(false)
+      setIsActiveOnCreate(true)
       setHomeAway('home')
       setMaxPlayers('')
       setIsRecurring(false)
@@ -1020,7 +1163,7 @@ const EventsPage: React.FC = () => {
     })
   }
 
-  const handleUpdateCallupStatus = async (callupId: string, eventId: string, newStatus: 'confirmed' | 'declined' | 'called') => {
+  const handleUpdateCallupStatus = async (callupId: string, eventId: string, newStatus: 'called' | 'confirmed' | 'declined') => {
     try {
       const { error } = await supabase
         .from('callups')
@@ -1033,47 +1176,47 @@ const EventsPage: React.FC = () => {
         ...prev,
         [eventId]: (prev[eventId] || []).map(c => c.id === callupId ? { ...c, status: newStatus } : c)
       }))
-      toast.success('Estado de presença atualizado!')
+      toast.success(`Estado atualizado para: ${newStatus === 'confirmed' ? 'Confirmado' : newStatus === 'declined' ? 'Recusado' : 'Convocado'}`)
     } catch (err: any) {
-      toast.error('Erro ao atualizar RSVP: ' + err.message)
+      toast.error('Erro ao atualizar: ' + err.message)
     }
   }
 
   const handleAddPlayerToCallup = async (eventId: string, playerId: string) => {
     try {
-      const ev = events.find(e => e.id === eventId) || editingEvent
+      const ev = events.find(e => e.id === eventId)
       const p = allPlayers.find(pl => pl.id === playerId)
       if (ev && p && !isPlayerEligible(p, ev.type)) {
-        toast.warning('Este atleta está lesionado e não pode ser convocado para jogos ou treinos (apenas convívios).')
+        toast.warning('Este membro não está apto/elegível para este tipo de evento.')
         return
       }
 
-      const [validPlayerId] = await ensurePlayerIdsForSupabase([playerId], allPlayers)
-      if (!validPlayerId) {
-        toast.error('Não foi possível processar o atleta.')
-        return
-      }
+      const validIds = await ensurePlayerIdsForSupabase([playerId], allPlayers)
+      const targetId = validIds[0] || playerId
 
       const { data, error } = await supabase.from('callups').upsert([{
         event_id: eventId,
-        player_id: validPlayerId,
+        player_id: targetId,
         status: 'called'
-      }], {
-        onConflict: 'event_id, player_id',
-        ignoreDuplicates: true
-      }).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)').maybeSingle()
+      }], { onConflict: 'event_id, player_id' }).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)').single()
 
       if (error) throw error
 
-      if (data) {
-        setEventCallups(prev => ({
-          ...prev,
-          [eventId]: [...(prev[eventId] || []).filter(c => c.player_id !== validPlayerId), data as unknown as CallupWithPlayer]
-        }))
-        toast.success('Atleta adicionado à convocatória!')
+      const createdObj = (data as any) || {
+        id: `callup-${Date.now()}`,
+        event_id: eventId,
+        player_id: targetId,
+        status: 'called',
+        player: p
       }
+
+      setEventCallups(prev => ({
+        ...prev,
+        [eventId]: [...(prev[eventId] || []).filter(c => c.player_id !== targetId), createdObj]
+      }))
+      toast.success('Atleta adicionado à convocatória!')
     } catch (err: any) {
-      toast.error('Erro ao convocar: ' + err.message)
+      toast.error('Erro ao adicionar atleta: ' + err.message)
     }
   }
 
@@ -1106,11 +1249,11 @@ const EventsPage: React.FC = () => {
 
   const currentLocationStr = getActiveLocationString()
 
-  const totalCount = allPlayers.length
-  const playersCount = allPlayers.filter(p => extractRolesFromProfile(p).includes('player')).length
+  const totalCount = allPlayers.filter(p => isPlayerEligible(p, type)).length
+  const playersCount = allPlayers.filter(p => extractRolesFromProfile(p).includes('player') && isPlayerEligible(p, type)).length
   const staffCount = allPlayers.filter(p => {
     const roles = extractRolesFromProfile(p)
-    return roles.includes('coach') || roles.includes('admin')
+    return (roles.includes('coach') || roles.includes('admin')) && isPlayerEligible(p, type)
   }).length
 
   return (
@@ -1588,12 +1731,51 @@ const EventsPage: React.FC = () => {
               </div>
             )}
 
+            {/* 8. Opção de Ativação / Envio de Convocatória */}
+            <div className="p-4 bg-gradient-to-r from-gray-50 to-amber-50/40 rounded-2xl border-2 border-gray-200 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-900 flex items-center gap-1.5 cursor-pointer">
+                    <Send size={15} className={isActiveOnCreate ? 'text-emerald-600' : 'text-amber-600'} />
+                    <span>Ativar Evento e Enviar Convocatória</span>
+                  </label>
+                  <p className="text-[11px] text-gray-600 mt-0.5">
+                    {isActiveOnCreate 
+                      ? '✓ O evento fica imediatamente visível na agenda e a convocatória é enviada aos membros.' 
+                      : '⏸️ O evento fica guardado em modo Rascunho (Inativo). A convocatória só será disparada quando o ativares.'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={isActiveOnCreate}
+                    onChange={(e) => setIsActiveOnCreate(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+            </div>
+
             <button
               type="submit"
-              className="w-full py-3.5 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-2xl font-black transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 text-sm"
+              className={`w-full py-3.5 text-white rounded-2xl font-black transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 text-sm ${
+                isActiveOnCreate 
+                  ? 'bg-csc-dark hover:bg-csc-dark/85' 
+                  : 'bg-amber-700 hover:bg-amber-800'
+              }`}
             >
-              <Check size={18} className="text-csc-gold" />
-              <span>Publicar Evento e Convocar</span>
+              {isActiveOnCreate ? (
+                <>
+                  <Check size={18} className="text-csc-gold" />
+                  <span>Publicar Evento e Enviar Convocatória</span>
+                </>
+              ) : (
+                <>
+                  <Clock size={18} className="text-amber-200" />
+                  <span>Guardar Evento como Rascunho (Inativo)</span>
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -1602,6 +1784,14 @@ const EventsPage: React.FC = () => {
       {/* ABA 2: LISTA DE EVENTOS REGISTADOS & RSVP */}
       {viewModeTab === 'list' && (() => {
         const filteredScheduledEvents = events.filter((event) => {
+          // Se for atleta (não coach/admin), só vê eventos ativos
+          if (event.is_active === false && !isCoachOrAdmin) {
+            return false
+          }
+
+          if (eventListStatusFilter === 'active' && event.is_active === false) return false
+          if (eventListStatusFilter === 'inactive' && event.is_active !== false) return false
+
           const q = eventListSearch.toLowerCase().trim()
           const oppName = event.opponent_id ? getOpponentName(event.opponent_id).toLowerCase() : ''
           const locationStr = (event.field_id ? getFieldName(event.field_id) : (event.location || '')).toLowerCase()
@@ -1658,6 +1848,30 @@ const EventsPage: React.FC = () => {
                     </button>
                   )}
                 </div>
+
+                {/* Filtro de Estado (Ativos / Rascunhos) para Treinadores/Admins */}
+                {isCoachOrAdmin && (
+                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto shrink-0">
+                    {[
+                      { id: 'all', label: 'Todos' },
+                      { id: 'active', label: '🟢 Ativos' },
+                      { id: 'inactive', label: '⏸️ Rascunhos' }
+                    ].map(sf => (
+                      <button
+                        key={sf.id}
+                        type="button"
+                        onClick={() => setEventListStatusFilter(sf.id as any)}
+                        className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                          eventListStatusFilter === sf.id
+                            ? 'bg-white text-csc-dark shadow-xs'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        {sf.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Filtro Temporal (Próximos / Anteriores / Todos) */}
                 <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto shrink-0">
@@ -1743,13 +1957,24 @@ const EventsPage: React.FC = () => {
                   return (
                     <div 
                       key={event.id} 
-                      className="p-4 bg-gray-50 hover:bg-amber-50/30 rounded-2xl border-2 border-gray-200 hover:border-amber-300 transition-all shadow-2xs space-y-3"
+                      className={`p-4 rounded-2xl border-2 transition-all shadow-2xs space-y-3 ${
+                        event.is_active === false 
+                          ? 'bg-amber-50/40 border-amber-300/80 hover:border-amber-400' 
+                          : 'bg-gray-50 hover:bg-amber-50/30 border-gray-200 hover:border-amber-300'
+                      }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1 min-w-0 flex-1">
-                          <h4 className="font-black text-gray-900 text-base leading-tight">
-                            {event.type === 'match' && event.opponent_id ? `CSC vs ${getOpponentName(event.opponent_id)} • ${event.title}` : event.title}
-                          </h4>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-black text-gray-900 text-base leading-tight">
+                              {event.type === 'match' && event.opponent_id ? `CSC vs ${getOpponentName(event.opponent_id)} • ${event.title}` : event.title}
+                            </h4>
+                            {event.is_active === false && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                                <span>⏸️ Rascunho / Inativo</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {isCoachOrAdmin && (
@@ -1828,17 +2053,30 @@ const EventsPage: React.FC = () => {
                           )}
                         </div>
 
-                        <button
-                          onClick={() => {
-                            setActiveCallupModalEvent(event)
-                            setRsvpTabFilter('all')
-                            setPlayerSearchTerm('')
-                          }}
-                          className="w-full sm:w-auto px-4 py-2 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
-                        >
-                          <Users size={14} className="text-csc-gold" />
-                          <span>Ver Detalhes & RSVP ({callups.length})</span>
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                          {isCoachOrAdmin && event.is_active === false && (
+                            <button
+                              type="button"
+                              onClick={() => handleActivateEvent(event)}
+                              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                              title="Ativar evento e enviar convocatória aos membros"
+                            >
+                              <Send size={13} className="text-emerald-100" />
+                              <span>Ativar e Convocar</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setActiveCallupModalEvent(event)
+                              setRsvpTabFilter('all')
+                              setPlayerSearchTerm('')
+                            }}
+                            className="w-full sm:w-auto px-4 py-2 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
+                          >
+                            <Users size={14} className="text-csc-gold" />
+                            <span>Ver Detalhes & RSVP ({callups.length})</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )
@@ -1940,6 +2178,26 @@ const EventsPage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Se o evento estiver inativo, alerta proeminente */}
+            {activeCallupModalEvent.is_active === false && (
+              <div className="mb-4 p-3.5 bg-amber-50 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+                  <AlertTriangle size={18} className="text-amber-600 shrink-0" />
+                  <span>Este evento está em modo <strong>Rascunho (Inativo)</strong>. A convocatória não foi enviada e não está visível para os atletas.</span>
+                </div>
+                {isCoachOrAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleActivateEvent(activeCallupModalEvent)}
+                    className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 shrink-0"
+                  >
+                    <Send size={13} className="text-emerald-100" />
+                    <span>Ativar e Enviar Convocatória</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {(() => {
               const callups = eventCallups[activeCallupModalEvent.id] || []
@@ -2568,6 +2826,28 @@ const EventsPage: React.FC = () => {
                   </div>
                 )
               })()}
+
+              {/* Estado do Evento (Ativo vs Rascunho) */}
+              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between">
+                <div>
+                  <label className="text-xs font-bold text-gray-900 flex items-center gap-1.5 cursor-pointer">
+                    <Send size={14} className={editIsActive ? 'text-emerald-600' : 'text-amber-600'} />
+                    <span>Estado: {editIsActive ? 'Ativo (Publicado)' : 'Rascunho (Inativo)'}</span>
+                  </label>
+                  <p className="text-[10.5px] text-gray-500 mt-0.5">
+                    {editIsActive ? 'Visível a todos os atletas na agenda' : 'Oculto aos atletas até ser ativado'}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editIsActive}
+                    onChange={(e) => setEditIsActive(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
 
               {/* Descrição */}
               <div>
