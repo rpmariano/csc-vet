@@ -119,6 +119,11 @@ interface Event {
   date_time: string
   meeting_time?: string | null
   field_id?: string | null
+  field?: {
+    id: string
+    name: string
+    address?: string | null
+  } | null
   location: string
   description: string
   is_friendly?: boolean | null
@@ -220,6 +225,8 @@ const CalendarPage: React.FC = () => {
   const [editTournamentId, setEditTournamentId] = useState('')
   const [editIsFriendly, setEditIsFriendly] = useState(false)
   const [editRelatedGatheringId, setEditRelatedGatheringId] = useState('')
+  const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
+  const [isEditBatchCalling, setIsEditBatchCalling] = useState(false)
 
   // Pre-select weekday when dateTime changes
   useEffect(() => {
@@ -262,13 +269,26 @@ const CalendarPage: React.FC = () => {
     return result
   }
 
+  const getEventLocation = (ev: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null | undefined) => {
+    if (!ev) return ''
+    if (ev.location && ev.location.trim()) return ev.location.trim()
+    if (ev.field?.name) {
+      return ev.field.address ? `${ev.field.name} (${ev.field.address})` : ev.field.name
+    }
+    if (ev.field_id) {
+      const f = fields.find(item => item.id === ev.field_id)
+      if (f) return f.address ? `${f.name} (${f.address})` : f.name
+    }
+    return ''
+  }
+
   const fetchEventsAndData = async () => {
     setLoading(true)
     try {
       const [evRes, callupsRes, profilesRes, fieldsRes, tourRes] = await Promise.all([
         supabase
           .from('events')
-          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season)')
+          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
         supabase
           .from('callups')
@@ -413,6 +433,12 @@ const CalendarPage: React.FC = () => {
         ? 'Treino'
         : (title.trim() || 'Convívio')
 
+      let finalLocation = location.trim()
+      if (!finalLocation && fieldId) {
+        const f = fields.find(item => item.id === fieldId)
+        if (f) finalLocation = f.address ? `${f.name} (${f.address})` : f.name
+      }
+
       if (isRecurring && recurrenceEndDate && recurrenceWeekdays.length > 0) {
         const dates = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
         if (dates.length === 0) {
@@ -425,7 +451,7 @@ const CalendarPage: React.FC = () => {
           type,
           date_time: d.toISOString(),
           field_id: fieldId || null,
-          location: location || null,
+          location: finalLocation || null,
           description,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : undefined,
@@ -467,7 +493,7 @@ const CalendarPage: React.FC = () => {
           date_time: new Date(dateTime).toISOString(),
           meeting_time: meetingTime ? `${meetingTime}:00` : null,
           field_id: fieldId || null,
-          location: location || null,
+          location: finalLocation || null,
           description,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : undefined,
@@ -535,7 +561,8 @@ const CalendarPage: React.FC = () => {
     setEditDateTime(localIso)
     setEditMeetingTime(ev.meeting_time ? ev.meeting_time.substring(0, 5) : '')
     setEditFieldId(ev.field_id || '')
-    setEditLocation(ev.location || '')
+    const resolvedLoc = ev.location || (ev.field ? (ev.field.address ? `${ev.field.name} (${ev.field.address})` : ev.field.name) : (fields.find(f => f.id === ev.field_id)?.name || ''))
+    setEditLocation(resolvedLoc)
     setEditDescription(ev.description || '')
     setEditMaxPlayers(ev.max_players ?? '')
     setEditTournamentId(ev.tournament_id || (ev.tournament?.id || ''))
@@ -543,6 +570,7 @@ const CalendarPage: React.FC = () => {
     // Look up existing related event (bidirectional)
     const linked = events.find(e => e.id !== ev.id && (e.id === ev.related_gathering_id || e.related_gathering_id === ev.id))
     setEditRelatedGatheringId(linked ? linked.id : (ev.related_gathering_id || ''))
+    setEditPlayerSearchTerm('')
     setIsEditModalOpen(true)
   }
 
@@ -557,13 +585,19 @@ const CalendarPage: React.FC = () => {
         ? 'Treino'
         : (editTitle.trim() || 'Convívio')
 
+      let finalEditLocation = editLocation.trim()
+      if (!finalEditLocation && editFieldId) {
+        const f = fields.find(item => item.id === editFieldId)
+        if (f) finalEditLocation = f.address ? `${f.name} (${f.address})` : f.name
+      }
+
       const payload: any = {
         title: computedTitle,
         type: editType,
         date_time: new Date(editDateTime).toISOString(),
         meeting_time: editMeetingTime ? `${editMeetingTime}:00` : null,
         field_id: editFieldId || null,
-        location: editLocation || null,
+        location: finalEditLocation || null,
         description: editDescription,
         max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
         tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
@@ -595,10 +629,15 @@ const CalendarPage: React.FC = () => {
         }
       }
 
-      setSelectedEvent(prev => prev ? { ...prev, ...payload } : null)
+      const fieldObj = fields.find(f => f.id === editFieldId)
+      setSelectedEvent(prev => prev ? {
+        ...prev,
+        ...payload,
+        field: fieldObj || null,
+        tournament: selEditTour || null
+      } : null)
       setIsEditModalOpen(false)
       fetchEventsAndData()
-      alert('Evento atualizado com sucesso!')
     } catch (err: any) {
       alert('Erro ao atualizar evento: ' + (err.message || 'Erro'))
     }
@@ -1030,31 +1069,36 @@ const CalendarPage: React.FC = () => {
             )}
 
             {/* Horas e Localização / Endereço à frente */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-              {/* Hora */}
-              <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-xl shrink-0">
-                <Clock size={13} className="text-csc-dark" />
-                <span>{new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
+            {(() => {
+              const locStr = getEventLocation(event)
+              return (
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  {/* Hora */}
+                  <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-xl shrink-0">
+                    <Clock size={13} className="text-csc-dark" />
+                    <span>{new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
 
-              {/* Localização & Maps */}
-              {event.location && (
-                <div className="inline-flex items-center gap-1 text-xs text-gray-700 bg-gray-100 px-2.5 py-1 rounded-xl max-w-full truncate min-w-0">
-                  <MapPin size={13} className="text-red-600 shrink-0" />
-                  <span className="truncate">{event.location}</span>
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="ml-1 p-0.5 text-blue-600 hover:text-blue-800 shrink-0"
-                    title="Ver no Google Maps"
-                  >
-                    <ExternalLink size={12} />
-                  </a>
+                  {/* Localização & Maps */}
+                  {locStr && (
+                    <div className="inline-flex items-center gap-1 text-xs text-gray-700 bg-gray-100 px-2.5 py-1 rounded-xl max-w-full truncate min-w-0">
+                      <MapPin size={13} className="text-red-600 shrink-0" />
+                      <span className="truncate">{locStr}</span>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locStr)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="ml-1 p-0.5 text-blue-600 hover:text-blue-800 shrink-0"
+                        title="Ver no Google Maps"
+                      >
+                        <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              )
+            })()}
 
             {/* Linked / Associated Event (Bidirecional) */}
             {linkedEvent && (
@@ -1646,28 +1690,33 @@ const CalendarPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-gray-700 pt-2 border-t border-gray-200/60">
-                    <div className="flex items-center space-x-2.5 min-w-0">
-                      <MapPin size={16} className="text-red-600 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold text-gray-500 uppercase">Localização</p>
-                        <p className="font-extrabold text-xs text-gray-850 truncate">{selectedEvent.location || 'Sem local definido'}</p>
+                  {(() => {
+                    const locStr = getEventLocation(selectedEvent)
+                    return (
+                      <div className="flex items-center justify-between text-gray-700 pt-2 border-t border-gray-200/60">
+                        <div className="flex items-center space-x-2.5 min-w-0">
+                          <MapPin size={16} className="text-red-600 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase">Localização</p>
+                            <p className="font-extrabold text-xs text-gray-850 truncate">{locStr || 'Sem local definido'}</p>
+                          </div>
+                        </div>
+                        {locStr && (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locStr)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 bg-white border border-gray-300 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-xl text-[11px] font-bold flex items-center gap-1 shadow-2xs transition-colors shrink-0 ml-2"
+                            title="Abrir no Google Maps"
+                          >
+                            <MapPin size={12} className="text-red-500 shrink-0" />
+                            <span>Maps</span>
+                            <ExternalLink size={10} className="opacity-60" />
+                          </a>
+                        )}
                       </div>
-                    </div>
-                    {selectedEvent.location && (
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedEvent.location)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1 bg-white border border-gray-300 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-xl text-[11px] font-bold flex items-center gap-1 shadow-2xs transition-colors shrink-0 ml-2"
-                        title="Abrir no Google Maps"
-                      >
-                        <MapPin size={12} className="text-red-500 shrink-0" />
-                        <span>Maps</span>
-                        <ExternalLink size={10} className="opacity-60" />
-                      </a>
-                    )}
-                  </div>
+                    )
+                  })()}
                 </div>
 
                 {/* Evento Associado / Linkado (Bidirecional) */}
@@ -1805,18 +1854,65 @@ const CalendarPage: React.FC = () => {
                             return <p className="text-xs text-gray-600">Todos os atletas já se encontram convocados.</p>
                           }
                           return (
-                            <div className="max-h-36 overflow-y-auto flex flex-wrap gap-1.5 p-1 bg-white rounded-xl border border-amber-200">
-                              {eligibleUncalled.map(p => (
+                            <div className="space-y-2">
+                              {/* Botões Rápidos de Lote */}
+                              <div className="flex flex-wrap gap-1.5">
                                 <button
-                                  key={p.id}
                                   type="button"
-                                  onClick={() => handleAddPlayerToCallup(selectedEvent.id, p.id)}
-                                  className="bg-gray-50 hover:bg-csc-dark hover:text-white border border-gray-300 text-xs px-2.5 py-1 rounded-xl font-bold text-gray-800 flex items-center gap-1 transition-all shadow-2xs cursor-pointer active:scale-95"
+                                  onClick={async () => {
+                                    if (eligibleUncalled.length === 0) return
+                                    const validIds = await ensurePlayerIdsForSupabase(eligibleUncalled.map(p => p.id), allPlayers)
+                                    if (validIds.length > 0) {
+                                      const rows = validIds.map(pId => ({
+                                        event_id: selectedEvent.id,
+                                        player_id: pId,
+                                        status: 'called'
+                                      }))
+                                      await supabase.from('callups').insert(rows)
+                                      await fetchEventsAndData()
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-csc-dark hover:bg-black text-white text-[11px] font-black rounded-lg transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95"
                                 >
-                                  <span>+ {p.name}</span>
-                                  {p.jersey_number && <span className="text-amber-700 font-black">#{p.jersey_number}</span>}
+                                  <Sparkles size={11} className="text-csc-gold" />
+                                  <span>✨ Convocar Todos ({eligibleUncalled.length})</span>
                                 </button>
-                              ))}
+
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const athletes = eligibleUncalled.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role))
+                                    if (athletes.length === 0) return
+                                    const validIds = await ensurePlayerIdsForSupabase(athletes.map(p => p.id), allPlayers)
+                                    if (validIds.length > 0) {
+                                      const rows = validIds.map(pId => ({
+                                        event_id: selectedEvent.id,
+                                        player_id: pId,
+                                        status: 'called'
+                                      }))
+                                      await supabase.from('callups').insert(rows)
+                                      await fetchEventsAndData()
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 text-[11px] font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                                >
+                                  <span>⚽ Só Jogadores</span>
+                                </button>
+                              </div>
+
+                              <div className="max-h-36 overflow-y-auto flex flex-wrap gap-1.5 p-1 bg-white rounded-xl border border-amber-200">
+                                {eligibleUncalled.map(p => (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() => handleAddPlayerToCallup(selectedEvent.id, p.id)}
+                                    className="bg-gray-50 hover:bg-csc-dark hover:text-white border border-gray-300 text-xs px-2.5 py-1 rounded-xl font-bold text-gray-800 flex items-center gap-1 transition-all shadow-2xs cursor-pointer active:scale-95"
+                                  >
+                                    <span>+ {p.name}</span>
+                                    {p.jersey_number && <span className="text-amber-700 font-black">#{p.jersey_number}</span>}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           )
                         })()}
@@ -2684,7 +2780,7 @@ const CalendarPage: React.FC = () => {
                     </label>
                     <input
                       type="text"
-                      required
+                      required={!editFieldId}
                       value={editLocation}
                       onChange={(e) => setEditLocation(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white"
@@ -2725,6 +2821,247 @@ const CalendarPage: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
                 />
               </div>
+
+              {/* Gestão de Convocatórias no Modal de Edição */}
+              {selectedEvent && (() => {
+                const currentCallups = eventCallups[selectedEvent.id] || []
+                const calledPlayerIds = currentCallups.map(c => c.player_id)
+                const editUncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
+
+                const handleEditAddAll = async () => {
+                  if (editUncalledPlayers.length === 0 || isEditBatchCalling) return
+                  setIsEditBatchCalling(true)
+                  try {
+                    const validIds = await ensurePlayerIdsForSupabase(editUncalledPlayers.map(p => p.id), allPlayers)
+                    if (validIds.length > 0) {
+                      const payload = validIds.map(pId => ({
+                        event_id: selectedEvent.id,
+                        player_id: pId,
+                        status: 'called'
+                      }))
+                      const { error } = await supabase.from('callups').insert(payload)
+                      if (error) throw error
+                      await fetchEventsAndData()
+                    }
+                  } catch (err: any) {
+                    alert('Erro ao convocar todos: ' + err.message)
+                  } finally {
+                    setIsEditBatchCalling(false)
+                  }
+                }
+
+                const handleEditAddOnlyPlayers = async () => {
+                  const uncalledAthletes = editUncalledPlayers.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role))
+                  if (uncalledAthletes.length === 0 || isEditBatchCalling) return
+                  setIsEditBatchCalling(true)
+                  try {
+                    const validIds = await ensurePlayerIdsForSupabase(uncalledAthletes.map(p => p.id), allPlayers)
+                    if (validIds.length > 0) {
+                      const payload = validIds.map(pId => ({
+                        event_id: selectedEvent.id,
+                        player_id: pId,
+                        status: 'called'
+                      }))
+                      const { error } = await supabase.from('callups').insert(payload)
+                      if (error) throw error
+                      await fetchEventsAndData()
+                    }
+                  } catch (err: any) {
+                    alert('Erro ao convocar jogadores: ' + err.message)
+                  } finally {
+                    setIsEditBatchCalling(false)
+                  }
+                }
+
+                const handleEditAddStaff = async () => {
+                  const uncalledStaff = editUncalledPlayers.filter(p => ['coach', 'admin'].includes(p.role))
+                  if (uncalledStaff.length === 0 || isEditBatchCalling) return
+                  setIsEditBatchCalling(true)
+                  try {
+                    const validIds = await ensurePlayerIdsForSupabase(uncalledStaff.map(p => p.id), allPlayers)
+                    if (validIds.length > 0) {
+                      const payload = validIds.map(pId => ({
+                        event_id: selectedEvent.id,
+                        player_id: pId,
+                        status: 'called'
+                      }))
+                      const { error } = await supabase.from('callups').insert(payload)
+                      if (error) throw error
+                      await fetchEventsAndData()
+                    }
+                  } catch (err: any) {
+                    alert('Erro ao convocar staff: ' + err.message)
+                  } finally {
+                    setIsEditBatchCalling(false)
+                  }
+                }
+
+                const handleEditRemoveAll = async () => {
+                  if (currentCallups.length === 0 || isEditBatchCalling) return
+                  if (!confirm('Tem a certeza que deseja remover todos os convocados deste evento?')) return
+                  setIsEditBatchCalling(true)
+                  try {
+                    const callupIds = currentCallups.map(c => c.id)
+                    const { error } = await supabase.from('callups').delete().in('id', callupIds)
+                    if (error) throw error
+                    await fetchEventsAndData()
+                  } catch (err: any) {
+                    alert('Erro ao remover todos: ' + err.message)
+                  } finally {
+                    setIsEditBatchCalling(false)
+                  }
+                }
+
+                const handleToggleCallup = async (player: Profile) => {
+                  const existing = currentCallups.find(c => c.player_id === player.id)
+                  if (existing) {
+                    const { error } = await supabase.from('callups').delete().eq('id', existing.id)
+                    if (!error) await fetchEventsAndData()
+                  } else {
+                    const validIds = await ensurePlayerIdsForSupabase([player.id], allPlayers)
+                    if (validIds.length > 0) {
+                      const { error } = await supabase.from('callups').insert([{
+                        event_id: selectedEvent.id,
+                        player_id: validIds[0],
+                        status: 'called'
+                      }])
+                      if (!error) await fetchEventsAndData()
+                    }
+                  }
+                }
+
+                const filteredMembers = allPlayers.filter(p =>
+                  p.name.toLowerCase().includes(editPlayerSearchTerm.toLowerCase()) ||
+                  (p.jersey_number && p.jersey_number.toString().includes(editPlayerSearchTerm))
+                )
+
+                return (
+                  <div className="p-4 bg-gray-50 border-2 border-amber-200 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-gray-900 flex items-center gap-1.5">
+                        <Users size={15} className="text-csc-dark" />
+                        <span>Convocatória ({calledPlayerIds.length} convocados)</span>
+                      </span>
+                      <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2 py-0.5 rounded-full">
+                        {allPlayers.length} Membros
+                      </span>
+                    </div>
+
+                    {/* Botões Rápidos de Convocação */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleEditAddAll}
+                        disabled={editUncalledPlayers.length === 0 || isEditBatchCalling}
+                        className="px-2 py-1.5 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 disabled:opacity-40"
+                      >
+                        <Sparkles size={11} className="text-csc-gold" />
+                        <span>✨ Todos ({editUncalledPlayers.length})</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleEditAddOnlyPlayers}
+                        disabled={editUncalledPlayers.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
+                        className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
+                      >
+                        <span>⚽ Jogadores</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleEditAddStaff}
+                        disabled={editUncalledPlayers.filter(p => ['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
+                        className="px-2 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
+                      >
+                        <span>📋 Staff</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleEditRemoveAll}
+                        disabled={currentCallups.length === 0 || isEditBatchCalling}
+                        className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-900 border border-red-200 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
+                      >
+                        <span>✕ Limpar</span>
+                      </button>
+                    </div>
+
+                    {/* Barra de Pesquisa de Membros */}
+                    <div className="relative">
+                      <Search size={13} className="absolute left-3 top-2.5 text-gray-400" />
+                      <input
+                        type="text"
+                        value={editPlayerSearchTerm}
+                        onChange={(e) => setEditPlayerSearchTerm(e.target.value)}
+                        placeholder="Pesquisar por nome ou nº camisola..."
+                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark font-medium"
+                      />
+                    </div>
+
+                    {/* Lista Selecionável Um a Um */}
+                    <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
+                      {filteredMembers.map(p => {
+                        const isCalled = calledPlayerIds.includes(p.id)
+                        const isEligible = isPlayerEligible(p, editType)
+                        const roles = extractRolesFromProfile(p)
+
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => isEligible && handleToggleCallup(p)}
+                            className={`flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer pt-2 ${
+                              !isEligible 
+                                ? 'bg-red-50/60 text-red-700 opacity-60 cursor-not-allowed'
+                                : isCalled 
+                                  ? 'bg-amber-50/80 font-black text-gray-900 border border-amber-200' 
+                                  : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={isCalled}
+                                disabled={!isEligible}
+                                onChange={() => {}}
+                                className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none"
+                              />
+
+                              <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
+                                {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-xs font-bold leading-tight">{p.name}</p>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  {roles.map(r => (
+                                    <span
+                                      key={r}
+                                      className={`text-[8.5px] font-black px-1 rounded ${
+                                        r === 'admin' ? 'bg-amber-100 text-amber-900' :
+                                        r === 'coach' ? 'bg-blue-100 text-blue-900' :
+                                        'bg-emerald-100 text-emerald-900'
+                                      }`}
+                                    >
+                                      {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {p.status === 'injured' && (
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
+                                {editType === 'gathering' ? 'Lesionado (Pode ir)' : 'Lesionado'}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
 
               <div className="pt-3 border-t border-gray-200 flex items-center justify-between gap-2">
                 <button
