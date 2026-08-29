@@ -1626,7 +1626,7 @@ const AdminDashboard: React.FC = () => {
                         const isSelected = tourPlayers.includes(p.id)
 
                         // If not selected, too young (but valid exception), and we already reached the max exceptions limit, block selection
-                        if (!isSelected && isExceptionButValid && currentExceptionsCount >= tourRules.exceptions_count) {
+                        if (!isSelected && isExceptionButValid && currentExceptionsCount >= (tourRules.exceptions_count || 0)) {
                           isInvalid = true
                         }
 
@@ -1663,8 +1663,8 @@ const AdminDashboard: React.FC = () => {
                                       toast.warning(`Limite de plantel (${tourRules.max_squad_size}) atingido!`)
                                       return
                                     }
-                                    if (isExceptionButValid && currentExceptionsCount >= tourRules.exceptions_count) {
-                                      toast.warning(`Limite de exceções de idade (${tourRules.exceptions_count}) atingido!`)
+                                    if (isExceptionButValid && currentExceptionsCount >= (tourRules.exceptions_count || 0)) {
+                                      toast.warning(`Limite de exceções de idade (${tourRules.exceptions_count || 0}) atingido!`)
                                       return
                                     }
                                     setTourPlayers(prev => [...prev, p.id])
