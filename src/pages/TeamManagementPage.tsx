@@ -44,7 +44,7 @@ const POSITIONS = [
 ]
 
 const TeamManagementPage: React.FC = () => {
-  const { profile: currentUserProfile } = useAuth()
+  const { profile: currentUserProfile, refreshProfile } = useAuth()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -287,6 +287,81 @@ const TeamManagementPage: React.FC = () => {
     }
   }
 
+  const syncPlayerPracticeCallups = async (targetPlayerId: string, status: ProfileStatus) => {
+    try {
+      const nowIso = new Date().toISOString()
+      const { data: upcomingPractices } = await supabase
+        .from('events')
+        .select('id')
+        .eq('type', 'practice')
+        .gte('date_time', nowIso)
+
+      if (!upcomingPractices || upcomingPractices.length === 0) return
+
+      const practiceIds = upcomingPractices.map(p => p.id)
+
+      if (status === 'active') {
+        // Jogador passou a apto: adicionar a todos os treinos futuros onde ainda não esteja convocado
+        const { data: existingCallups } = await supabase
+          .from('callups')
+          .select('event_id')
+          .eq('player_id', targetPlayerId)
+          .in('event_id', practiceIds)
+
+        const alreadyCalledEventIds = new Set((existingCallups || []).map(c => c.event_id))
+        const toCallEventIds = practiceIds.filter(id => !alreadyCalledEventIds.has(id))
+
+        if (toCallEventIds.length > 0) {
+          const insertPayload = toCallEventIds.map(eventId => ({
+            event_id: eventId,
+            player_id: targetPlayerId,
+            status: 'called'
+          }))
+          await supabase.from('callups').insert(insertPayload)
+        }
+      } else {
+        // Jogador passou a lesionado ('injured') ou inativo ('inactive'): retirar de todos os treinos futuros
+        await supabase
+          .from('callups')
+          .delete()
+          .eq('player_id', targetPlayerId)
+          .in('event_id', practiceIds)
+      }
+    } catch (syncErr) {
+      console.error('Erro ao sincronizar convocatórias de treino:', syncErr)
+    }
+  }
+
+  const handleTogglePlayerClinicalStatus = async (player: Profile, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    const newStatus: ProfileStatus = player.status === 'injured' ? 'active' : 'injured'
+
+    try {
+      // 1. Atualizar na BD
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: newStatus })
+        .eq('id', player.id)
+
+      if (error) throw error
+
+      // 2. Sincronizar treinos
+      await syncPlayerPracticeCallups(player.id, newStatus)
+
+      // 3. Atualizar estados locais
+      setProfiles(prev => prev.map(p => p.id === player.id ? { ...p, status: newStatus } : p))
+      if (selectedProfile && selectedProfile.id === player.id) {
+        setSelectedProfile(prev => prev ? { ...prev, status: newStatus } : null)
+      }
+
+      if (currentUserProfile && currentUserProfile.id === player.id) {
+        await refreshProfile()
+      }
+    } catch (err: any) {
+      alert('Erro ao atualizar estado físico: ' + (err.message || 'Erro desconhecido'))
+    }
+  }
+
   const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formName || !formEmail) {
@@ -335,51 +410,6 @@ const TeamManagementPage: React.FC = () => {
       id_document_url: idDocUrl || null,
       insurance_doc_url: insuranceDocUrl || null,
       medical_exam_doc_url: medicalExamDocUrl || null,
-    }
-
-    const syncPlayerPracticeCallups = async (targetPlayerId: string, status: ProfileStatus) => {
-      try {
-        const nowIso = new Date().toISOString()
-        const { data: upcomingPractices } = await supabase
-          .from('events')
-          .select('id')
-          .eq('type', 'practice')
-          .gte('date_time', nowIso)
-
-        if (!upcomingPractices || upcomingPractices.length === 0) return
-
-        const practiceIds = upcomingPractices.map(p => p.id)
-
-        if (status === 'active') {
-          // Jogador passou a apto: adicionar a todos os treinos futuros onde ainda não esteja convocado
-          const { data: existingCallups } = await supabase
-            .from('callups')
-            .select('event_id')
-            .eq('player_id', targetPlayerId)
-            .in('event_id', practiceIds)
-
-          const alreadyCalledEventIds = new Set((existingCallups || []).map(c => c.event_id))
-          const toCallEventIds = practiceIds.filter(id => !alreadyCalledEventIds.has(id))
-
-          if (toCallEventIds.length > 0) {
-            const insertPayload = toCallEventIds.map(eventId => ({
-              event_id: eventId,
-              player_id: targetPlayerId,
-              status: 'called'
-            }))
-            await supabase.from('callups').insert(insertPayload)
-          }
-        } else {
-          // Jogador passou a lesionado ('injured') ou inativo ('inactive'): retirar de todos os treinos futuros
-          await supabase
-            .from('callups')
-            .delete()
-            .eq('player_id', targetPlayerId)
-            .in('event_id', practiceIds)
-        }
-      } catch (syncErr) {
-        console.error('Erro ao sincronizar convocatórias de treino:', syncErr)
-      }
     }
 
     try {
@@ -922,17 +952,22 @@ const TeamManagementPage: React.FC = () => {
 
                 {/* Right / Bottom Action Bar */}
                 <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
-                  {/* Status Indicator */}
-                  <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-2xs ${
-                    person.status === 'active' ? 'bg-green-100 text-green-800 border border-green-200' :
-                    person.status === 'injured' ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse' :
-                    'bg-gray-100 text-gray-600 border border-gray-200'
-                  }`}>
+                  {/* Status Indicator Interativo */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleTogglePlayerClinicalStatus(person, e)}
+                    className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-2xs cursor-pointer hover:opacity-90 active:scale-95 transition-all ${
+                      person.status === 'active' ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200' :
+                      person.status === 'injured' ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse hover:bg-red-200' :
+                      'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                    }`}
+                    title="Clique para alternar o estado de aptidão física (Apto / Lesionado)"
+                  >
                     {person.status === 'active' ? <CheckCircle2 size={11}/> :
                      person.status === 'injured' ? <HeartPulse size={11}/> :
                      <XCircle size={11}/>}
-                    <span>{person.status === 'active' ? 'Ativo' : person.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
-                  </span>
+                    <span>{person.status === 'active' ? 'Apto' : person.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
+                  </button>
 
                   {/* Actions for Coach / Admin */}
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -1013,17 +1048,22 @@ const TeamManagementPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 ${
-                      person.status === 'active' ? 'bg-green-100 text-green-800' :
-                      person.status === 'injured' ? 'bg-red-100 text-red-800 animate-pulse' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
+                    <button
+                      type="button"
+                      onClick={(e) => handleTogglePlayerClinicalStatus(person, e)}
+                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 cursor-pointer hover:opacity-90 active:scale-95 transition-all ${
+                        person.status === 'active' ? 'bg-green-100 text-green-800 hover:bg-green-200' :
+                        person.status === 'injured' ? 'bg-red-100 text-red-800 animate-pulse hover:bg-red-200' :
+                        'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                      title="Clique para alternar o estado de aptidão física (Apto / Lesionado)"
+                    >
                       {person.status === 'active' ? <CheckCircle2 size={10}/> :
                        person.status === 'injured' ? <HeartPulse size={10}/> :
                        <XCircle size={10}/>}
-                      {person.status === 'active' ? 'Ativo' :
-                       person.status === 'injured' ? 'Lesionado' : 'Inativo'}
-                    </span>
+                      <span>{person.status === 'active' ? 'Apto' :
+                       person.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
+                    </button>
                   </div>
 
                   {/* Centered Large Photo */}
@@ -1158,20 +1198,31 @@ const TeamManagementPage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Estado da Atividade (Ativo / Inativo) no Cabeçalho */}
+              {/* Estado de Aptidão & Atividade no Cabeçalho */}
               <div className="flex items-center gap-2 bg-gray-100/90 p-1.5 rounded-2xl border border-gray-200 self-start sm:self-auto shrink-0">
-                <span className="text-xs font-bold text-gray-700 pl-1.5">Atividade:</span>
+                <span className="text-xs font-bold text-gray-700 pl-1.5">Estado:</span>
                 <div className="flex rounded-xl p-0.5 bg-white border border-gray-200 gap-1">
                   <button
                     type="button"
                     onClick={() => setFormStatus('active')}
                     className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                      formStatus === 'active' || formStatus === 'injured'
+                      formStatus === 'active'
                         ? 'bg-emerald-600 text-white shadow-xs'
                         : 'text-gray-500 hover:text-gray-900'
                     }`}
                   >
-                    🟢 Ativo
+                    🟢 Apto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormStatus('injured')}
+                    className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      formStatus === 'injured'
+                        ? 'bg-red-600 text-white shadow-xs animate-pulse'
+                        : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    🔴 Lesionado
                   </button>
                   <button
                     type="button"
@@ -1687,6 +1738,23 @@ const TeamManagementPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                {/* Toggle Clínico Interativo para todos os perfis */}
+                <button
+                  type="button"
+                  onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border shadow-xs cursor-pointer active:scale-95 ${
+                    selectedProfile.status === 'injured'
+                      ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
+                      : selectedProfile.status === 'inactive'
+                      ? 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-150'
+                  }`}
+                  title="Clique para alternar o estado de aptidão física (Apto / Lesionado)"
+                >
+                  <span>{selectedProfile.status === 'injured' ? '🔴' : selectedProfile.status === 'inactive' ? '⚪' : '🟢'}</span>
+                  <span>{selectedProfile.status === 'injured' ? 'Lesionado' : selectedProfile.status === 'inactive' ? 'Inativo' : 'Apto'}</span>
+                </button>
+
                 {isCoachOrAdmin && (
                   <button
                     onClick={() => {
@@ -1749,18 +1817,23 @@ const TeamManagementPage: React.FC = () => {
                     </p>
                   )}
 
-                  {/* Status */}
+                  {/* Status clicável no cartão */}
                   <div className="mt-2">
-                    <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-2xs ${
-                      selectedProfile.status === 'active' ? 'bg-green-100 text-green-800 border border-green-200' :
-                      selectedProfile.status === 'injured' ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse' :
-                      'bg-gray-100 text-gray-600 border border-gray-200'
-                    }`}>
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
+                      className={`text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-2xs cursor-pointer hover:opacity-90 active:scale-95 transition-all ${
+                        selectedProfile.status === 'active' ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200' :
+                        selectedProfile.status === 'injured' ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse hover:bg-red-200' :
+                        'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                      }`}
+                      title="Clique para alternar o estado de aptidão física"
+                    >
                       {selectedProfile.status === 'active' ? <CheckCircle2 size={12}/> :
                        selectedProfile.status === 'injured' ? <HeartPulse size={12}/> :
                        <XCircle size={12}/>}
                       <span>{selectedProfile.status === 'active' ? 'Apto' : selectedProfile.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
-                    </span>
+                    </button>
                   </div>
 
                   {/* Role Badges */}
