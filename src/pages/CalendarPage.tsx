@@ -296,8 +296,7 @@ const CalendarPage: React.FC = () => {
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [modalCallupStatusFilter, setModalCallupStatusFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
   const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 640 : true)
-  const [currentPendingIndex, setCurrentPendingIndex] = useState(0)
-  const [pendingTouchStartX, setPendingTouchStartX] = useState<number | null>(null)
+
 
   // Generic Confirmation Modal State
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
@@ -1888,8 +1887,6 @@ const CalendarPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-        )
-      })()}
 
       {/* Barra de Navegação & Filtros de Calendário */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-150 space-y-3.5">
