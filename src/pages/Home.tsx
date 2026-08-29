@@ -21,6 +21,7 @@ interface Event {
   date_time: string
   meeting_time?: string | null
   location: string
+  field_id?: string | null
   description: string
   home_away?: 'home' | 'away' | 'neutral'
   is_friendly?: boolean
@@ -75,7 +76,21 @@ const Home: React.FC = () => {
   // Pending Callups Carousel State
   const [currentPendingCallupIndex, setCurrentPendingCallupIndex] = useState(0)
   const [myCallups, setMyCallups] = useState<Callup[]>([])
+  const [fields, setFields] = useState<{ id: string; name: string; address?: string | null }[]>([])
   const [loading, setLoading] = useState(true)
+
+  const getEventLocation = (ev?: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null) => {
+    if (!ev) return ''
+    if (ev.location && ev.location.trim()) return ev.location.trim()
+    if (ev.field?.name) {
+      return ev.field.address ? `${ev.field.name} (${ev.field.address})` : ev.field.name
+    }
+    if (ev.field_id) {
+      const f = fields.find(item => item.id === ev.field_id)
+      if (f) return f.address ? `${f.name} (${f.address})` : f.name
+    }
+    return ''
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,6 +98,14 @@ const Home: React.FC = () => {
       setLoading(true)
       try {
         const nowStr = new Date().toISOString()
+
+        // 0. Fetch fields
+        const { data: fieldsData } = await supabase
+          .from('fields')
+          .select('id, name, address')
+        if (fieldsData) {
+          setFields(fieldsData)
+        }
 
         // 1. Fetch upcoming matches
         const { data: matches } = await supabase
@@ -177,7 +200,7 @@ const Home: React.FC = () => {
         // 4. Fetch callups
         const { data: calls } = await supabase
           .from('callups')
-          .select('*, event:events(*)')
+          .select('*, event:events(*, field:fields(id, name, address), opponent:opponents(name, initials, logo_url))')
           .eq('player_id', profile.id)
 
         const rawCalls = (calls || []) as unknown as Callup[]
@@ -422,7 +445,7 @@ const Home: React.FC = () => {
         const isPractice = ev.type === 'practice'
         const isRsvpOpen = !isPractice || diffDays <= 6
         const evEmoji = ev.type === 'match' ? '⚽' : ev.type === 'practice' ? '🏃' : '🎉'
-        const locStr = ev.location || ev.field?.name || 'Local a definir'
+        const locStr = getEventLocation(ev) || 'Local a definir'
         const dateStr = new Date(ev.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })
 
         return (
@@ -671,7 +694,7 @@ const Home: React.FC = () => {
                     <MapPin size={15} className="text-red-600 shrink-0 mt-0.5 self-start" />
                     <div>
                       <span className="font-extrabold text-gray-900">Local: </span>
-                      <span className="font-medium text-gray-800">{currentMatch.location || currentMatch.field?.name || 'Local a definir'}</span>
+                      <span className="font-medium text-gray-800">{getEventLocation(currentMatch) || 'Local a definir'}</span>
                     </div>
                   </div>
                 </div>
@@ -793,7 +816,7 @@ const Home: React.FC = () => {
                     <MapPin size={15} className="text-red-600 shrink-0 mt-0.5 self-start" />
                     <div>
                       <span className="font-extrabold text-gray-900">Local: </span>
-                      <span className="font-medium text-gray-800">{currentPractice.location || currentPractice.field?.name || 'Campo Cascais'}</span>
+                      <span className="font-medium text-gray-800">{getEventLocation(currentPractice) || 'Campo Cascais'}</span>
                     </div>
                   </div>
                 </div>
