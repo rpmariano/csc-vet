@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS public.tournaments (
     name TEXT NOT NULL,
     season TEXT,
     status tournament_status NOT NULL DEFAULT 'agendado',
+    rules JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 ALTER TABLE public.tournaments ENABLE ROW LEVEL SECURITY;

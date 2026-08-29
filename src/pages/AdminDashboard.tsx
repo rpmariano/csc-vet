@@ -38,11 +38,46 @@ interface Opponent {
   home_field_id: string | null
 }
 
+export interface TournamentRules {
+  min_age: number;
+  exceptions_allowed: boolean;
+  exceptions_count: number;
+  exceptions_min_age: number;
+  max_squad_size: number;
+  max_match_players: number;
+  min_match_players: number;
+  match_duration_mins: number;
+  half_duration_mins: number;
+  rolling_subs: boolean;
+  yellow_cards_to_suspension: number;
+  walkover_score: string;
+  max_walkovers_allowed: number;
+  delay_tolerance_mins: number;
+}
+
+export const DEFAULT_TOURNAMENT_RULES: TournamentRules = {
+  min_age: 35,
+  exceptions_allowed: true,
+  exceptions_count: 3,
+  exceptions_min_age: 30,
+  max_squad_size: 40,
+  max_match_players: 18,
+  min_match_players: 8,
+  match_duration_mins: 70,
+  half_duration_mins: 35,
+  rolling_subs: true,
+  yellow_cards_to_suspension: 3,
+  walkover_score: '5-0',
+  max_walkovers_allowed: 3,
+  delay_tolerance_mins: 20
+}
+
 interface Tournament {
   id: string
   name: string
   season: string
   status: 'agendado' | 'ativo' | 'terminado'
+  rules?: TournamentRules
 }
 
 type TabType = 'club' | 'fields' | 'opponents' | 'tournaments'
@@ -101,10 +136,12 @@ const AdminDashboard: React.FC = () => {
   const [tourName, setTourName] = useState('')
   const [tourSeason, setTourSeason] = useState('')
   const [tourStatus, setTourStatus] = useState<'agendado' | 'ativo' | 'terminado'>('agendado')
+  const [tourRules, setTourRules] = useState<TournamentRules>(DEFAULT_TOURNAMENT_RULES)
   const [initialTourState, setInitialTourState] = useState({
     name: '',
     season: '',
-    status: 'agendado' as 'agendado' | 'ativo' | 'terminado'
+    status: 'agendado' as 'agendado' | 'ativo' | 'terminado',
+    rules: DEFAULT_TOURNAMENT_RULES
   })
 
   // Generic confirmation modal state
@@ -467,7 +504,8 @@ const AdminDashboard: React.FC = () => {
     return (
       tourName !== initialTourState.name ||
       tourSeason !== initialTourState.season ||
-      tourStatus !== initialTourState.status
+      tourStatus !== initialTourState.status ||
+      JSON.stringify(tourRules) !== JSON.stringify(initialTourState.rules)
     )
   }
 
@@ -476,7 +514,8 @@ const AdminDashboard: React.FC = () => {
     setTourName('')
     setTourSeason('')
     setTourStatus('agendado')
-    setInitialTourState({ name: '', season: '', status: 'agendado' })
+    setTourRules(DEFAULT_TOURNAMENT_RULES)
+    setInitialTourState({ name: '', season: '', status: 'agendado', rules: DEFAULT_TOURNAMENT_RULES })
     setIsTourModalOpen(true)
   }
 
@@ -485,7 +524,9 @@ const AdminDashboard: React.FC = () => {
     setTourName(t.name)
     setTourSeason(t.season || '')
     setTourStatus(t.status)
-    setInitialTourState({ name: t.name, season: t.season || '', status: t.status })
+    const currentRules = t.rules || DEFAULT_TOURNAMENT_RULES
+    setTourRules(currentRules)
+    setInitialTourState({ name: t.name, season: t.season || '', status: t.status, rules: currentRules })
     setIsTourModalOpen(true)
   }
 
@@ -509,7 +550,7 @@ const AdminDashboard: React.FC = () => {
       return
     }
 
-    const payload = { name: tourName.trim(), season: tourSeason.trim(), status: tourStatus }
+    const payload = { name: tourName.trim(), season: tourSeason.trim(), status: tourStatus, rules: tourRules }
 
     if (editingTourId) {
       const { error } = await supabase.from('tournaments').update(payload).eq('id', editingTourId)
@@ -1435,7 +1476,67 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-gray-100 flex gap-2 justify-end">
+              <details className="mt-4 border border-gray-200 rounded-xl bg-gray-50 overflow-hidden group">
+                <summary className="px-4 py-3 text-sm font-bold text-gray-700 cursor-pointer flex justify-between items-center hover:bg-gray-100 transition-colors">
+                  <span>⚙️ Configuração de Regras (Opcional)</span>
+                  <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="p-4 border-t border-gray-200 bg-white grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto">
+                  
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px]">Idades & Inscrições</h4>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Idade Mínima</label>
+                    <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Máx. Exceções de Idade</label>
+                    <input type="number" min="0" value={tourRules.exceptions_count} onChange={e => setTourRules({...tourRules, exceptions_count: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" disabled={!tourRules.exceptions_allowed} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Idade Mín. da Exceção</label>
+                    <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" disabled={!tourRules.exceptions_allowed} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Permitir Exceções</label>
+                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({...tourRules, exceptions_allowed: e.target.value === 'true'})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm">
+                      <option value="true">Sim</option>
+                      <option value="false">Não</option>
+                    </select>
+                  </div>
+
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Máx. Inscritos (Plantel)</label>
+                    <input type="number" min="0" value={tourRules.max_squad_size} onChange={e => setTourRules({...tourRules, max_squad_size: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Máx. Convocados / Jogo</label>
+                    <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({...tourRules, max_match_players: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                  </div>
+
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo & Subs</h4>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Duração Total (mins)</label>
+                    <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({...tourRules, match_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Duração 1ª Parte (mins)</label>
+                    <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({...tourRules, half_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                  </div>
+                  
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Amarelos para Suspensão</label>
+                    <input type="number" min="0" value={tourRules.yellow_cards_to_suspension} onChange={e => setTourRules({...tourRules, yellow_cards_to_suspension: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Resultado p/ Falta Comp.</label>
+                    <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({...tourRules, walkover_score: e.target.value})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" placeholder="Ex: 5-0" />
+                  </div>
+                </div>
+              </details>
+
+              <div className="pt-4 flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={handleRequestCloseTourModal}
