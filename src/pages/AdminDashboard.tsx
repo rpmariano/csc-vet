@@ -182,7 +182,7 @@ const AdminDashboard: React.FC = () => {
       supabase.from('fields').select('*').order('name'),
       supabase.from('opponents').select('*').order('name'),
       supabase.from('tournaments').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, name, jersey_number, birth_date, photo_url').order('name')
+      supabase.from('profiles').select('id, name, shirt_name, jersey_number, birth_date, photo_url, position').order('name')
     ])
 
     if (resFields.data) setFields(resFields.data)
@@ -1629,26 +1629,27 @@ const AdminDashboard: React.FC = () => {
                         if (!isSelected && isExceptionButValid && currentExceptionsCount >= (tourRules.exceptions_count || 0)) {
                           isInvalid = true
                         }
+                        const playerPositions = p.position ? p.position.split(',').map((pos: string) => pos.trim()).filter(Boolean) : []
 
                         return (
                           <label key={p.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'} ${isInvalid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'} transition-colors`}>
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden shrink-0">
-                                {p.photo_url ? (
-                                  <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500">{p.jersey_number || '-'}</div>
-                                )}
+                              <div className="w-9 h-9 bg-green-700 rounded-full overflow-hidden shrink-0 flex items-center justify-center">
+                                <span className="text-sm font-black text-amber-400">{p.jersey_number || '-'}</span>
                               </div>
                               <div>
-                                <p className="text-xs font-black text-gray-900">{p.name}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-[10px] text-gray-500 font-bold">Camisola #{p.jersey_number || 'N/A'}</span>
+                                <p className="text-xs font-black text-gray-900">{p.shirt_name || p.name}</p>
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                   {age !== null && (
-                                    <span className={`text-[10px] font-bold px-1.5 rounded-md ${isTooYoung ? (isExceptionButValid ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') : 'bg-green-100 text-green-700'}`}>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isTooYoung ? (isExceptionButValid ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') : 'bg-green-100 text-green-700'}`}>
                                       {age} anos
                                     </span>
                                   )}
+                                  {playerPositions.map((pos: string, idx: number) => (
+                                    <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                                      {pos}
+                                    </span>
+                                  ))}
                                 </div>
                               </div>
                             </div>
