@@ -369,6 +369,12 @@ const CalendarPage: React.FC = () => {
     try {
       let createdEventsList: Event[] = []
 
+      const computedTitle = type === 'match'
+        ? (isFriendly ? 'Jogo Amigável' : (tournamentName ? `Jogo ${tournamentName}` : 'Jogo'))
+        : type === 'practice'
+        ? 'Treino'
+        : (title.trim() || 'Convívio')
+
       if (isRecurring && recurrenceEndDate && recurrenceWeekdays.length > 0) {
         const dates = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
         if (dates.length === 0) {
@@ -377,14 +383,14 @@ const CalendarPage: React.FC = () => {
         }
 
         const eventsToInsert = dates.map(d => ({
-          title,
+          title: computedTitle,
           type,
           date_time: d.toISOString(),
           location,
           description,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : undefined,
-          tournament_name: type === 'match' ? tournamentName : undefined,
+          tournament_name: (type === 'match' && !isFriendly) ? tournamentName : undefined,
           created_by: profile?.id
         }))
 
@@ -417,7 +423,7 @@ const CalendarPage: React.FC = () => {
         alert(`✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`)
       } else {
         const newEvent = {
-          title,
+          title: computedTitle,
           type,
           date_time: new Date(dateTime).toISOString(),
           meeting_time: meetingTime ? `${meetingTime}:00` : null,
@@ -425,7 +431,7 @@ const CalendarPage: React.FC = () => {
           description,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : undefined,
-          tournament_name: type === 'match' ? tournamentName : undefined,
+          tournament_name: (type === 'match' && !isFriendly) ? tournamentName : undefined,
           related_gathering_id: relatedGatheringId || null,
           created_by: profile?.id
         }
@@ -449,44 +455,40 @@ const CalendarPage: React.FC = () => {
         // Se houver jogadores selecionados, criar convocatórias
         if (createdEvent && selectedPlayerIds.length > 0) {
           const validIds = await ensurePlayerIdsForSupabase(selectedPlayerIds, allPlayers)
-          const callupRows = validIds.map(playerId => ({
+          const callupsToInsert = validIds.map(pId => ({
             event_id: createdEvent.id,
-            player_id: playerId,
+            player_id: pId,
             status: 'called'
           }))
-          if (callupRows.length > 0) {
-            await supabase.from('callups').insert(callupRows)
-          }
+          await supabase.from('callups').insert(callupsToInsert)
         }
-        alert('Evento criado com sucesso!')
+        alert('✨ Evento criado com sucesso!')
       }
 
-      fetchEventsAndData()
       setIsAddModalOpen(false)
       // Reset form
       setTitle('')
-      setLocation('')
       setDescription('')
-      setDateTime('')
-      setMeetingTime('')
-      setTournamentName('')
-      setIsFriendly(false)
       setMaxPlayers('')
-      setRelatedGatheringId('')
+      setTournamentName('')
+      setIsFriendly(true)
       setIsRecurring(false)
       setRecurrenceEndDate('')
+      setRecurrenceWeekdays([])
       setSelectedPlayerIds([])
+      setRelatedGatheringId('')
+      fetchEventsAndData()
     } catch (err: any) {
-      alert('Erro ao guardar o evento: ' + (err.message || 'Verifique a base de dados'))
+      alert('Erro ao criar evento: ' + (err.message || 'Erro'))
     }
   }
 
   // --- EDIT EVENT SPECIFIC HANDLERS ---
   const handleStartEditEvent = (ev: Event) => {
-    setEditTitle(ev.title)
+    setEditTitle(ev.title || '')
     setEditType(ev.type)
     const d = new Date(ev.date_time)
-    const pad = (n: number) => String(n).padStart(2, '0')
+    const pad = (n: number) => n.toString().padStart(2, '0')
     const localIso = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
     setEditDateTime(localIso)
     setEditMeetingTime(ev.meeting_time ? ev.meeting_time.substring(0, 5) : '')
@@ -505,15 +507,21 @@ const CalendarPage: React.FC = () => {
     e.preventDefault()
     if (!selectedEvent) return
     try {
+      const computedTitle = editType === 'match'
+        ? (editIsFriendly ? 'Jogo Amigável' : (editTournamentName ? `Jogo ${editTournamentName}` : 'Jogo'))
+        : editType === 'practice'
+        ? 'Treino'
+        : (editTitle.trim() || 'Convívio')
+
       const payload: any = {
-        title: editTitle,
+        title: computedTitle,
         type: editType,
         date_time: new Date(editDateTime).toISOString(),
         meeting_time: editMeetingTime ? `${editMeetingTime}:00` : null,
         location: editLocation,
         description: editDescription,
         max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
-        tournament_name: editType === 'match' ? editTournamentName : null,
+        tournament_name: (editType === 'match' && !editIsFriendly) ? editTournamentName : null,
         is_friendly: editType === 'match' ? editIsFriendly : false,
         related_gathering_id: editRelatedGatheringId || null
       }
@@ -827,24 +835,27 @@ const CalendarPage: React.FC = () => {
     const isPractice = event.type === 'practice'
     const isAway = event.home_away === 'away'
 
+    const cscSigla = clubSettings?.initials || 'CSC'
+    const oppSigla = event.opponent?.initials || event.opponent?.name?.substring(0, 6) || 'ADV'
+
     // Bloco equipa Cascais
     const cscBlock = (isRight: boolean) => (
-      <div className={`flex-1 flex flex-col ${isRight ? 'items-end text-right' : 'items-start text-left'} min-w-0`}>
+      <div className={`flex-1 flex flex-col ${isRight ? 'items-end text-right' : 'items-start text-left'} min-w-0 justify-center`}>
         {/* Top: Símbolo + Sigla */}
-        <div className={`flex items-center gap-1.5 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {clubSettings?.logo_url ? (
-            <img src={clubSettings.logo_url} alt="CSC" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+            <img src={clubSettings.logo_url} alt="CSC" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
           ) : (
             <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
-              {clubSettings?.initials || 'CSC'}
+              CSC
             </div>
           )}
-          <span className="font-black text-sm text-gray-900 uppercase tracking-tight">
-            {clubSettings?.initials || 'CSC'}
+          <span className="font-black text-sm text-gray-900 uppercase tracking-tight whitespace-nowrap">
+            {cscSigla}
           </span>
         </div>
         {/* Bottom: Nome completo da equipa */}
-        <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
+        <span className="text-[11px] font-semibold text-gray-500 truncate mt-1 max-w-full block">
           {clubSettings?.name || 'CSC Cascais'}
         </span>
       </div>
@@ -852,22 +863,22 @@ const CalendarPage: React.FC = () => {
 
     // Bloco equipa Adversário
     const opponentBlock = (isRight: boolean) => (
-      <div className={`flex-1 flex flex-col ${isRight ? 'items-end text-right' : 'items-start text-left'} min-w-0`}>
+      <div className={`flex-1 flex flex-col ${isRight ? 'items-end text-right' : 'items-start text-left'} min-w-0 justify-center`}>
         {/* Top: Símbolo + Sigla */}
-        <div className={`flex items-center gap-1.5 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {event.opponent?.logo_url ? (
-            <img src={event.opponent.logo_url} alt={event.opponent.name} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+            <img src={event.opponent.logo_url} alt={event.opponent.name} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
           ) : (
             <div className="w-8 h-8 bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
-              {event.opponent?.initials || 'ADV'}
+              ADV
             </div>
           )}
-          <span className="font-black text-sm text-gray-900 uppercase tracking-tight truncate max-w-[90px]">
-            {event.opponent?.initials || event.opponent?.name?.substring(0, 5) || 'ADV'}
+          <span className="font-black text-sm text-gray-900 uppercase tracking-tight whitespace-nowrap">
+            {oppSigla}
           </span>
         </div>
         {/* Bottom: Nome completo da equipa */}
-        <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
+        <span className="text-[11px] font-semibold text-gray-500 truncate mt-1 max-w-full block">
           {event.opponent?.name || 'Adversário'}
         </span>
       </div>
@@ -1033,7 +1044,7 @@ const CalendarPage: React.FC = () => {
             {/* Observações / Descrição (diretamente acima da confirmação) */}
             {event.description && (
               <div className="text-xs text-gray-700 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                <p className="line-clamp-2 leading-relaxed">{event.description}</p>
+                <p className="whitespace-pre-line leading-relaxed">{event.description}</p>
               </div>
             )}
 
@@ -1415,7 +1426,7 @@ const CalendarPage: React.FC = () => {
                     <p className="mt-1 text-[11px]">Clica num dia com marcações no calendário para ver os detalhes.</p>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                  <div className="space-y-3">
                     {selectedDayEvents.map(event => renderEventCard(event))}
                   </div>
                 )}
@@ -1989,17 +2000,19 @@ const CalendarPage: React.FC = () => {
             <h2 className="text-2xl font-extrabold text-csc-dark mb-6">Criar Novo Evento</h2>
             
             <form onSubmit={handleAddEvent} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Título do Evento *</label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
-                  placeholder={type === 'match' ? "Ex: Taça da Linha - Jornada 1" : "Ex: Treino de Quinta"}
-                />
-              </div>
+              {type === 'gathering' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Título do Convívio *</label>
+                  <input
+                    type="text"
+                    required={type === 'gathering'}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
+                    placeholder="Ex: Jantar de Natal / Reentré"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Tipo de Evento</label>
@@ -2021,23 +2034,28 @@ const CalendarPage: React.FC = () => {
                       type="checkbox"
                       id="isFriendly"
                       checked={isFriendly}
-                      onChange={(e) => setIsFriendly(e.target.checked)}
-                      className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded"
+                      onChange={(e) => {
+                        setIsFriendly(e.target.checked)
+                        if (e.target.checked) setTournamentName('')
+                      }}
+                      className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
                     />
-                    <label htmlFor="isFriendly" className="ml-2 text-sm font-semibold text-gray-700">
+                    <label htmlFor="isFriendly" className="ml-2 text-sm font-semibold text-gray-700 cursor-pointer">
                       Jogo Amigável
                     </label>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Nome do Torneio / Liga</label>
-                    <input
-                      type="text"
-                      value={tournamentName}
-                      onChange={(e) => setTournamentName(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
-                      placeholder="Ex: Liga de Veteranos"
-                    />
-                  </div>
+                  {!isFriendly && (
+                    <div className="animate-fade-in">
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Nome do Torneio / Liga</label>
+                      <input
+                        type="text"
+                        value={tournamentName}
+                        onChange={(e) => setTournamentName(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
+                        placeholder="Ex: Liga de Veteranos"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2360,16 +2378,19 @@ const CalendarPage: React.FC = () => {
             </p>
 
             <form onSubmit={handleSaveEditedEvent} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Título do Evento *</label>
-                <input
-                  type="text"
-                  required
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                />
-              </div>
+              {editType === 'gathering' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Título do Convívio *</label>
+                  <input
+                    type="text"
+                    required={editType === 'gathering'}
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                    placeholder="Ex: Jantar de Natal / Reentré"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
@@ -2391,23 +2412,28 @@ const CalendarPage: React.FC = () => {
                       type="checkbox"
                       id="editIsFriendly"
                       checked={editIsFriendly}
-                      onChange={(e) => setEditIsFriendly(e.target.checked)}
-                      className="h-3.5 w-3.5 text-csc-dark focus:ring-csc-dark border-gray-300 rounded"
+                      onChange={(e) => {
+                        setEditIsFriendly(e.target.checked)
+                        if (e.target.checked) setEditTournamentName('')
+                      }}
+                      className="h-3.5 w-3.5 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
                     />
-                    <label htmlFor="editIsFriendly" className="ml-2 font-semibold text-gray-700">
+                    <label htmlFor="editIsFriendly" className="ml-2 font-semibold text-gray-700 cursor-pointer">
                       Jogo Amigável
                     </label>
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">Nome do Torneio / Liga</label>
-                    <input
-                      type="text"
-                      value={editTournamentName}
-                      onChange={(e) => setEditTournamentName(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white"
-                      placeholder="Ex: Liga de Veteranos"
-                    />
-                  </div>
+                  {!editIsFriendly && (
+                    <div className="animate-fade-in">
+                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">Nome do Torneio / Liga</label>
+                      <input
+                        type="text"
+                        value={editTournamentName}
+                        onChange={(e) => setEditTournamentName(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white"
+                        placeholder="Ex: Liga de Veteranos"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

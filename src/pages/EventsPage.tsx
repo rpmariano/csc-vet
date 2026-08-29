@@ -273,9 +273,17 @@ const EventsPage: React.FC = () => {
     if (!editingEvent) return
     setIsSavingEdit(true)
     try {
+      const editOppObj = opponents.find(o => o.id === editOpponentId)
+      const editTourObj = tournaments.find(t => t.id === editTournamentId)
+      const computedEditTitle = editType === 'match'
+        ? (editOppObj ? `Jogo vs ${editOppObj.name}` : (editIsFriendly ? 'Jogo Amigável' : (editTourObj ? `Jogo ${editTourObj.name}` : 'Jogo')))
+        : editType === 'practice'
+        ? 'Treino'
+        : (editTitle.trim() || 'Convívio')
+
       const fullIsoDateTime = new Date(`${editEventDate}T${editEventTime}:00`).toISOString()
       const payload: any = {
-        title: editTitle.trim(),
+        title: computedEditTitle,
         type: editType,
         date_time: fullIsoDateTime,
         meeting_time: editMeetingTime ? `${editMeetingTime}:00` : null,
@@ -511,6 +519,14 @@ const EventsPage: React.FC = () => {
     const fullIsoDateTime = new Date(`${eventDate}T${eventTime}:00`).toISOString()
 
     try {
+      const oppObj = opponents.find(o => o.id === opponentId)
+      const tourObj = tournaments.find(t => t.id === tournamentId)
+      const computedTitle = type === 'match'
+        ? (oppObj ? `Jogo vs ${oppObj.name}` : (isFriendly ? 'Jogo Amigável' : (tourObj ? `Jogo ${tourObj.name}` : 'Jogo')))
+        : type === 'practice'
+        ? 'Treino'
+        : (title.trim() || 'Convívio')
+
       let createdEventsList: Event[] = []
 
       if (isRecurring && recurrenceEndDate && recurrenceWeekdays.length > 0) {
@@ -521,7 +537,7 @@ const EventsPage: React.FC = () => {
         }
 
         const eventsToInsert = dates.map(d => ({
-          title: title.trim(),
+          title: computedTitle,
           type,
           date_time: d.toISOString(),
           meeting_time: meetingTime ? `${meetingTime}:00` : null,
@@ -564,7 +580,7 @@ const EventsPage: React.FC = () => {
         setSuccessMessage(`✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`)
       } else {
         const newEvent = {
-          title: title.trim(),
+          title: computedTitle,
           type,
           date_time: fullIsoDateTime,
           meeting_time: meetingTime ? `${meetingTime}:00` : null,
@@ -786,26 +802,22 @@ const EventsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. Título do Evento */}
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                Título do Evento *
-              </label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white font-medium"
-                placeholder={
-                  type === 'gathering'
-                    ? "Ex: Jantar de Natal do Clube / Reunião Geral"
-                    : type === 'match'
-                    ? "Ex: Taça da Linha - Jornada 1"
-                    : "Ex: Treino Tático Semanal"
-                }
-              />
-            </div>
+            {/* 2. Título do Evento (Apenas para Convívios) */}
+            {type === 'gathering' && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Título do Convívio *
+                </label>
+                <input
+                  type="text"
+                  required={type === 'gathering'}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white font-medium"
+                  placeholder="Ex: Jantar de Natal / Reentré"
+                />
+              </div>
+            )}
 
             {/* Específico de Jogo */}
             {type === 'match' && (
@@ -815,10 +827,13 @@ const EventsPage: React.FC = () => {
                     type="checkbox"
                     id="isFriendly"
                     checked={isFriendly}
-                    onChange={(e) => setIsFriendly(e.target.checked)}
-                    className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded"
+                    onChange={(e) => {
+                      setIsFriendly(e.target.checked)
+                      if (e.target.checked) setTournamentId('')
+                    }}
+                    className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
                   />
-                  <label htmlFor="isFriendly" className="ml-2 text-xs font-bold text-gray-800">
+                  <label htmlFor="isFriendly" className="ml-2 text-xs font-bold text-gray-800 cursor-pointer">
                     Jogo Amigável / Treino Conjunto
                   </label>
                 </div>
@@ -1747,11 +1762,13 @@ const EventsPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Título */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Título</label>
-                <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" />
-              </div>
+              {/* Título (Apenas para Convívios) */}
+              {editType === 'gathering' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Título do Convívio *</label>
+                  <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} required={editType === 'gathering'} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" placeholder="Ex: Jantar de Natal / Reentré" />
+                </div>
+              )}
 
               {/* Data e Hora */}
               <div className="grid grid-cols-2 gap-3">
@@ -1789,8 +1806,16 @@ const EventsPage: React.FC = () => {
               {editType === 'match' && (
                 <div className="space-y-3 border-t border-gray-200 pt-3">
                   <div className="flex items-center gap-3">
-                    <label className="text-xs font-bold text-gray-700">Amigável?</label>
-                    <input type="checkbox" checked={editIsFriendly} onChange={e => setEditIsFriendly(e.target.checked)} className="w-4 h-4 rounded" />
+                    <label className="text-xs font-bold text-gray-700 cursor-pointer">Amigável?</label>
+                    <input 
+                      type="checkbox" 
+                      checked={editIsFriendly} 
+                      onChange={e => {
+                        setEditIsFriendly(e.target.checked)
+                        if (e.target.checked) setEditTournamentId('')
+                      }} 
+                      className="w-4 h-4 rounded cursor-pointer" 
+                    />
                   </div>
 
                   {!editIsFriendly && (
