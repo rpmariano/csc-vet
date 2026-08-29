@@ -281,7 +281,13 @@ const Home: React.FC = () => {
     return true
   }
 
-  const pendingCallups = myCallups.filter(isCallupPendingResponse)
+  const pendingCallups = myCallups
+    .filter(isCallupPendingResponse)
+    .sort((a, b) => {
+      const timeA = a.event?.date_time ? new Date(a.event.date_time).getTime() : Infinity
+      const timeB = b.event?.date_time ? new Date(b.event.date_time).getTime() : Infinity
+      return timeA - timeB
+    })
   const pendingCallupsCount = pendingCallups.length
 
   const currentMatch = upcomingMatches[currentMatchIndex]
