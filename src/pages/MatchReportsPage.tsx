@@ -66,6 +66,8 @@ export const MatchReportsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<FilterType>('all')
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('')
+  const [selectedYear, setSelectedYear] = useState<string>('all')
+  const [selectedMonth, setSelectedMonth] = useState<string>('all')
 
   // Modal de Ficha de Jogo
   const [selectedEventForReport, setSelectedEventForReport] = useState<MatchEvent | null>(null)
@@ -116,34 +118,74 @@ export const MatchReportsPage: React.FC = () => {
     fetchMatches()
   }, [profile?.role])
 
-  // Filtragem dos jogos
-  const filteredMatches = useMemo(() => {
-    return matches.filter(m => {
-      const q = searchTerm.toLowerCase().trim()
-      if (q) {
-        const oppName = m.opponent?.name?.toLowerCase() || ''
-        const titleStr = (m.title || '').toLowerCase()
-        const locationStr = (m.field?.name || m.location || '').toLowerCase()
-        const tourName = m.tournament?.name?.toLowerCase() || ''
-        if (!oppName.includes(q) && !titleStr.includes(q) && !locationStr.includes(q) && !tourName.includes(q)) {
-          return false
-        }
+  // Anos disponíveis a partir dos jogos registados
+  const availableYears = useMemo(() => {
+    const yearsSet = new Set<string>()
+    matches.forEach(m => {
+      if (m.date_time) {
+        const y = new Date(m.date_time).getFullYear().toString()
+        yearsSet.add(y)
       }
-
-      if (filterType === 'official') {
-        return m.is_friendly !== true
-      }
-      if (filterType === 'friendly') {
-        return m.is_friendly === true
-      }
-      if (filterType === 'tournament') {
-        if (!selectedTournamentId) return true
-        return m.tournament_id === selectedTournamentId
-      }
-
-      return true
     })
-  }, [matches, searchTerm, filterType, selectedTournamentId])
+    const currentYear = new Date().getFullYear().toString()
+    yearsSet.add(currentYear)
+    return Array.from(yearsSet).sort((a, b) => Number(b) - Number(a))
+  }, [matches])
+
+  const MONTHS = [
+    { value: 'all', label: 'Todos os Meses' },
+    { value: '1', label: 'Janeiro' },
+    { value: '2', label: 'Fevereiro' },
+    { value: '3', label: 'Março' },
+    { value: '4', label: 'Abril' },
+    { value: '5', label: 'Maio' },
+    { value: '6', label: 'Junho' },
+    { value: '7', label: 'Julho' },
+    { value: '8', label: 'Agosto' },
+    { value: '9', label: 'Setembro' },
+    { value: '10', label: 'Outubro' },
+    { value: '11', label: 'Novembro' },
+    { value: '12', label: 'Dezembro' }
+  ]
+
+  // Filtragem e Ordenação dos jogos (do mais recente para o mais antigo)
+  const filteredMatches = useMemo(() => {
+    return matches
+      .filter(m => {
+        const q = searchTerm.toLowerCase().trim()
+        if (q) {
+          const oppName = m.opponent?.name?.toLowerCase() || ''
+          const titleStr = (m.title || '').toLowerCase()
+          const locationStr = (m.field?.name || m.location || '').toLowerCase()
+          const tourName = m.tournament?.name?.toLowerCase() || ''
+          if (!oppName.includes(q) && !titleStr.includes(q) && !locationStr.includes(q) && !tourName.includes(q)) {
+            return false
+          }
+        }
+
+        // Filtro de Tipo
+        if (filterType === 'official' && m.is_friendly === true) return false
+        if (filterType === 'friendly' && m.is_friendly !== true) return false
+        if (filterType === 'tournament') {
+          if (selectedTournamentId && m.tournament_id !== selectedTournamentId) return false
+        }
+
+        // Filtro de Ano
+        if (selectedYear !== 'all') {
+          const matchYear = new Date(m.date_time).getFullYear().toString()
+          if (matchYear !== selectedYear) return false
+        }
+
+        // Filtro de Mês
+        if (selectedMonth !== 'all') {
+          const matchMonth = (new Date(m.date_time).getMonth() + 1).toString()
+          if (matchMonth !== selectedMonth) return false
+        }
+
+        return true
+      })
+      .sort((a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime())
+  }, [matches, searchTerm, filterType, selectedTournamentId, selectedYear, selectedMonth])
 
   const handleOpenReport = (ev: MatchEvent) => {
     setSelectedEventForReport(ev)
@@ -195,28 +237,75 @@ export const MatchReportsPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Linha 2: Dropdown de Torneio (condicional) */}
-        {filterType === 'tournament' && (
-          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-            <Filter size={14} className="text-csc-gold shrink-0" />
-            <label className="text-xs font-bold text-gray-600 shrink-0">Selecionar torneio:</label>
+        {/* Linha 2: Filtro por Ano, Mês e Torneio */}
+        <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-gray-100">
+          {/* Seletor de Ano */}
+          <div className="flex items-center gap-1.5 min-w-[120px]">
+            <Calendar size={14} className="text-csc-gold shrink-0" />
             <select
-              value={selectedTournamentId}
-              onChange={(e) => setSelectedTournamentId(e.target.value)}
-              className="flex-1 py-2 px-3 rounded-xl text-xs font-black outline-none cursor-pointer border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark focus:border-csc-dark"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="w-full py-1.5 px-2.5 rounded-xl text-xs font-black outline-none cursor-pointer border border-gray-300 bg-gray-50 hover:bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark focus:border-csc-dark transition-all"
             >
-              {tournaments.length === 0 ? (
-                <option value="">Sem torneios registados</option>
-              ) : (
-                tournaments.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}{t.season ? ` (${t.season})` : ''}
-                  </option>
-                ))
-              )}
+              <option value="all">Todos os Anos</option>
+              {availableYears.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
             </select>
           </div>
-        )}
+
+          {/* Seletor de Mês */}
+          <div className="flex items-center gap-1.5 min-w-[140px]">
+            <span className="text-xs">🗓️</span>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full py-1.5 px-2.5 rounded-xl text-xs font-black outline-none cursor-pointer border border-gray-300 bg-gray-50 hover:bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark focus:border-csc-dark transition-all"
+            >
+              {MONTHS.map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Seletor de Torneio (quando Por Torneio está ativo) */}
+          {filterType === 'tournament' && (
+            <div className="flex items-center gap-1.5 flex-1 min-w-[180px]">
+              <Filter size={14} className="text-csc-gold shrink-0" />
+              <select
+                value={selectedTournamentId}
+                onChange={(e) => setSelectedTournamentId(e.target.value)}
+                className="w-full py-1.5 px-2.5 rounded-xl text-xs font-black outline-none cursor-pointer border border-gray-300 bg-gray-50 hover:bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark focus:border-csc-dark transition-all"
+              >
+                {tournaments.length === 0 ? (
+                  <option value="">Sem torneios registados</option>
+                ) : (
+                  tournaments.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}{t.season ? ` (${t.season})` : ''}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          )}
+
+          {/* Botão Limpar Filtros se algum estiver ativo */}
+          {(selectedYear !== 'all' || selectedMonth !== 'all' || filterType !== 'all' || searchTerm) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedYear('all')
+                setSelectedMonth('all')
+                setFilterType('all')
+                setSearchTerm('')
+              }}
+              className="text-[11px] font-bold text-gray-500 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded-lg transition-colors cursor-pointer ml-auto"
+            >
+              ✕ Limpar filtros
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Lista de Jogos Ocorridos */}
