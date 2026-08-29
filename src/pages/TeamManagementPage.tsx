@@ -26,7 +26,7 @@ import {
 import { supabase } from '../lib/supabaseClient'
 import { useAuth, extractRolesFromProfile, encodeRolesToNotes, cleanNotesFromRolesTag } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
-import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
+import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../components/SoccerPitchSelector'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 
 const POSITIONS = [
@@ -520,7 +520,12 @@ const TeamManagementPage: React.FC = () => {
       (p.jersey_number && p.jersey_number.toString().includes(searchTerm))
 
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter
-    const matchesPosition = positionFilter === 'all' || p.position === positionFilter
+    const matchesPosition = positionFilter === 'all' || (() => {
+      if (!p.position) return false
+      const playerPosList = parsePositions(p.position).map(pos => normalizePositionName(pos).toLowerCase())
+      const targetPos = normalizePositionName(positionFilter).toLowerCase()
+      return playerPosList.includes(targetPos) || p.position.toLowerCase().includes(positionFilter.toLowerCase())
+    })()
 
     return matchesSearch && matchesStatus && matchesPosition
   })
