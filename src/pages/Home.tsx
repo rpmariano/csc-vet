@@ -279,6 +279,75 @@ const Home: React.FC = () => {
   const currentMatch = upcomingMatches[currentMatchIndex]
   const currentPractice = upcomingPractices[currentPracticeIndex]
 
+  const renderAnnouncementsCard = () => (
+    <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs">
+      <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <Bell size={18} className="text-csc-dark" />
+          <h2 className="text-sm sm:text-base font-black text-gray-900">Comunicados & Avisos</h2>
+        </div>
+        <Link to="/announcements" className="text-xs font-bold text-csc-gold hover:underline flex items-center gap-1">
+          <span>Ver todos</span>
+          <ChevronRight size={14} />
+        </Link>
+      </div>
+
+      <div className="space-y-2">
+        {announcements.slice(0, 3).map(ann => (
+          <div key={ann.id} className="p-3 bg-gray-50 rounded-xl border border-gray-150 hover:bg-gray-100/70 transition-colors">
+            <div className="flex items-center justify-between mb-1">
+              <p className="font-bold text-xs sm:text-sm text-gray-900">{ann.title}</p>
+              <span className="text-[10px] font-semibold text-gray-400">
+                {new Date(ann.published_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{ann.content}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  const renderDuesCard = () => (
+    <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-2.5">
+      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <DollarSign size={18} className={pendingDues.length > 0 ? "text-amber-500" : "text-emerald-600"} />
+          <h3 className="text-sm sm:text-base font-black text-gray-900">Quotas & Mensalidades</h3>
+        </div>
+        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+          pendingDues.length > 0 ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+        }`}>
+          {pendingDues.length > 0 ? `${pendingDues.length} Pendente` : '✓ Em Dia'}
+        </span>
+      </div>
+
+      {pendingDues.length > 0 ? (
+        <div className="bg-red-50/70 border border-red-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="space-y-0.5">
+            <p className="text-xs text-gray-700 font-semibold">
+              Mês de referência: <strong className="text-gray-900">{pendingDues[0].month_year}</strong>
+            </p>
+            <p className="text-[11px] text-gray-500">
+              Regulariza a tua quota junto do tesoureiro.
+            </p>
+          </div>
+          <p className="text-lg sm:text-xl font-black text-red-700 shrink-0">
+            {pendingDues[0].amount} €
+          </p>
+        </div>
+      ) : (
+        <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 flex items-center justify-between text-xs text-emerald-900">
+          <span className="font-bold flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            <span>Quotas regularizadas!</span>
+          </span>
+          <span className="font-extrabold text-emerald-700 shrink-0">0.00 €</span>
+        </div>
+      )}
+    </div>
+  )
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -321,6 +390,12 @@ const Home: React.FC = () => {
           </div>
         )
       })()}
+
+      {/* 2. EM MOBILE: COMUNICADOS E QUOTAS NO TOPO (DEBAIXO DO ALERTA) */}
+      <div className="block lg:hidden space-y-5">
+        {renderAnnouncementsCard()}
+        {renderDuesCard()}
+      </div>
 
       {/* GRELHA PRINCIPAL DO DASHBOARD */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
@@ -655,71 +730,10 @@ const Home: React.FC = () => {
 
         {/* COLUNA DIREITA / SIDEBAR EM DESKTOP (Comunicações, Quotas, Perfil e Atalhos) */}
         <div className="space-y-5">
-          {/* CARD 1: COMUNICAÇÕES & AVISOS */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs">
-            <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <Bell size={18} className="text-csc-dark" />
-                <h2 className="text-sm sm:text-base font-black text-gray-900">Comunicados & Avisos</h2>
-              </div>
-              <Link to="/announcements" className="text-xs font-bold text-csc-gold hover:underline flex items-center gap-1">
-                <span>Ver todos</span>
-                <ChevronRight size={14} />
-              </Link>
-            </div>
-
-            <div className="space-y-2">
-              {announcements.slice(0, 3).map(ann => (
-                <div key={ann.id} className="p-3 bg-gray-50 rounded-xl border border-gray-150 hover:bg-gray-100/70 transition-colors">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-bold text-xs sm:text-sm text-gray-900">{ann.title}</p>
-                    <span className="text-[10px] font-semibold text-gray-400">
-                      {new Date(ann.published_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{ann.content}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* CARD 2: ESTADO DE QUOTAS */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-2.5">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <DollarSign size={18} className={pendingDues.length > 0 ? "text-amber-500" : "text-emerald-600"} />
-                <h3 className="text-sm sm:text-base font-black text-gray-900">Quotas & Mensalidades</h3>
-              </div>
-              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-                pendingDues.length > 0 ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-              }`}>
-                {pendingDues.length > 0 ? `${pendingDues.length} Pendente` : '✓ Em Dia'}
-              </span>
-            </div>
-
-            {pendingDues.length > 0 ? (
-              <div className="bg-red-50/70 border border-red-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="space-y-0.5">
-                  <p className="text-xs text-gray-700 font-semibold">
-                    Mês de referência: <strong className="text-gray-900">{pendingDues[0].month_year}</strong>
-                  </p>
-                  <p className="text-[11px] text-gray-500">
-                    Regulariza a tua quota junto do tesoureiro.
-                  </p>
-                </div>
-                <p className="text-lg sm:text-xl font-black text-red-700 shrink-0">
-                  {pendingDues[0].amount} €
-                </p>
-              </div>
-            ) : (
-              <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 flex items-center justify-between text-xs text-emerald-900">
-                <span className="font-bold flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                  <span>Quotas regularizadas!</span>
-                </span>
-                <span className="font-extrabold text-emerald-700 shrink-0">0.00 €</span>
-              </div>
-            )}
+          {/* APENAS DESKTOP: COMUNICAÇÕES E QUOTAS NO TOPO DA SIDEBAR */}
+          <div className="hidden lg:block space-y-5">
+            {renderAnnouncementsCard()}
+            {renderDuesCard()}
           </div>
 
           {/* CARD 3: PERFIL DO ATLETA */}
