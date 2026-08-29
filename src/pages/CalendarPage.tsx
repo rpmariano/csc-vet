@@ -727,14 +727,23 @@ const CalendarPage: React.FC = () => {
   const fetchEventsAndData = async () => {
     setLoading(true)
     try {
-      const [evRes, callupsRes, profilesRes, fieldsRes, tourRes, oppsRes] = await Promise.all([
+      const myCallupsPromise = profile?.id
+        ? supabase
+            .from('callups')
+            .select('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, position, status)')
+            .eq('player_id', profile.id)
+        : Promise.resolve({ data: [] } as any)
+
+      const [evRes, callupsRes, myCallupsRes, profilesRes, fieldsRes, tourRes, oppsRes] = await Promise.all([
         supabase
           .from('events')
           .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
         supabase
           .from('callups')
-          .select('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, position, status)'),
+          .select('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, position, status)')
+          .limit(5000),
+        myCallupsPromise,
         supabase
           .from('profiles')
           .select('*')
@@ -793,7 +802,22 @@ const CalendarPage: React.FC = () => {
         setAllPlayers(mergedPlayers)
       }
 
-      if (callupsRes.data) {
+      const allRawCallups = [
+        ...((callupsRes.data || []) as any[]),
+        ...(((myCallupsRes as any)?.data || []) as any[])
+      ]
+
+      // Deduplicar convocatórias por ID
+      const seenCallupIds = new Set<string>()
+      const uniqueCallups: any[] = []
+      allRawCallups.forEach(c => {
+        if (c && c.id && !seenCallupIds.has(c.id)) {
+          seenCallupIds.add(c.id)
+          uniqueCallups.push(c)
+        }
+      })
+
+      if (uniqueCallups.length >= 0) {
         const playerMap = new Map<string, Profile>(mergedPlayers.map(p => [p.id, p]))
         const emailMap = new Map<string, Profile>(mergedPlayers.filter(p => p.email).map(p => [p.email!.toLowerCase().trim(), p]))
         const nameMap = new Map<string, Profile>(mergedPlayers.map(p => [p.name.toLowerCase().trim(), p]))
@@ -802,7 +826,7 @@ const CalendarPage: React.FC = () => {
         const practiceEventIds = new Set(eventsList.filter(e => e.type === 'practice').map(e => e.id))
 
         const map: Record<string, CallupWithPlayer[]> = {}
-        callupsRes.data.forEach((c: any) => {
+        uniqueCallups.forEach((c: any) => {
           const fullP = playerMap.get(c.player_id) ||
             (c.player?.email ? emailMap.get(c.player.email.toLowerCase().trim()) : null) ||
             (c.player?.name ? nameMap.get(c.player.name.toLowerCase().trim()) : null) ||
@@ -853,7 +877,7 @@ const CalendarPage: React.FC = () => {
 
   useEffect(() => {
     fetchEventsAndData()
-  }, [])
+  }, [profile?.id])
 
   // Auto-selecionar evento se passado por URL (?event=<id>)
   useEffect(() => {
