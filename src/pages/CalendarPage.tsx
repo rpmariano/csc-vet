@@ -963,6 +963,28 @@ const CalendarPage: React.FC = () => {
     return true
   })
 
+  // Lista de todos os eventos com convocatória pendente de resposta para o atleta atual
+  const isCallupPendingForUser = (ev: Event) => {
+    const callups = eventCallups[ev.id] || []
+    const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
+    if (!myCallup || myCallup.status !== 'called') return false
+
+    const eventTime = new Date(ev.date_time).getTime()
+    const now = new Date().getTime()
+    if (eventTime < now) return false // Evento no passado não é pendente
+
+    // Para treinos: apenas solicitar resposta a partir de 6 dias antes
+    if (ev.type === 'practice') {
+      const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
+      return diffDays <= 6
+    }
+    return true
+  }
+
+  const myPendingEvents = events
+    .filter(isCallupPendingForUser)
+    .sort((a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime())
+
   // Get events for a specific date
   const getEventsForDate = (d: Date) => {
     const key = formatDateKey(d)
@@ -1281,6 +1303,87 @@ const CalendarPage: React.FC = () => {
             <Plus size={18} className="text-csc-gold" />
             <span>Criar Jogo / Treino</span>
           </button>
+        </div>
+      )}
+
+      {/* Banner Superior com Todas as Convocatórias Pendentes */}
+      {myPendingEvents.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-csc-dark rounded-2xl p-3.5 sm:p-4 shadow-sm border-2 border-amber-600 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🔔</span>
+              <div>
+                <h3 className="text-xs sm:text-sm font-black">
+                  Tens {myPendingEvents.length} {myPendingEvents.length === 1 ? 'convocatória pendente' : 'convocatórias pendentes'}!
+                </h3>
+                <p className="text-[11px] font-semibold text-amber-950">Responde diretamente abaixo ou clica para ver os detalhes:</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {myPendingEvents.map(pe => {
+              const peCallups = eventCallups[pe.id] || []
+              const peCall = profile ? peCallups.find(c => c.player_id === profile.id) : null
+              const isPePractice = pe.type === 'practice'
+              const peTime = new Date(pe.date_time).getTime()
+              const peDiff = Math.ceil((peTime - Date.now()) / (1000 * 60 * 60 * 24))
+              const isPeRsvpOpen = !isPePractice || peDiff <= 6
+              const peEmoji = pe.type === 'match' ? '⚽' : pe.type === 'practice' ? '🏃' : '🎉'
+
+              return (
+                <div 
+                  key={pe.id}
+                  className="bg-white/95 backdrop-blur-xs p-3 rounded-xl border border-amber-300 shadow-xs flex flex-col justify-between space-y-2"
+                >
+                  <div 
+                    onClick={() => setSelectedEvent(pe)}
+                    className="cursor-pointer hover:opacity-80"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-gray-900 truncate flex items-center gap-1">
+                        <span>{peEmoji}</span>
+                        <span>{pe.title}</span>
+                      </span>
+                      <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.2 rounded">
+                        {new Date(pe.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-600 mt-0.5 truncate">
+                      📍 {getEventLocation(pe) || 'Local a definir'}
+                    </p>
+                  </div>
+
+                  {isPeRsvpOpen ? (
+                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-gray-100">
+                      <button
+                        type="button"
+                        disabled={peCall?.status === 'confirmed'}
+                        onClick={() => handleCallupResponse(pe.id, 'confirmed')}
+                        className="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                      >
+                        <CheckCircle2 size={13} />
+                        <span>Confirmar</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={peCall?.status === 'declined'}
+                        onClick={() => handleCallupResponse(pe.id, 'declined')}
+                        className="flex-1 py-1.5 bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                      >
+                        <XCircle size={13} />
+                        <span>Recusar</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-center font-bold text-amber-800 bg-amber-50 py-1 rounded-lg border border-amber-200">
+                      Abre 6 dias antes do treino
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -1634,6 +1737,49 @@ const CalendarPage: React.FC = () => {
               
               {/* COLUNA ESQUERDA (5 Colunas): Detalhes do Evento, Matchup VS e Presença Pessoal */}
               <div className="lg:col-span-5 space-y-5">
+                {/* Seletor Rápido de Convocatórias Pendentes */}
+                {myPendingEvents.length > 1 && (
+                  <div className="p-3 bg-amber-50 rounded-2xl border-2 border-amber-300 space-y-2 mb-1 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                        <span className="animate-pulse">🔔</span>
+                        <span>Tens {myPendingEvents.length} convocatórias pendentes:</span>
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-full">
+                        Alternar Evento
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                      {myPendingEvents.map((pe) => {
+                        const isCurrent = pe.id === selectedEvent.id
+                        const pTypeEmoji = pe.type === 'match' ? '⚽' : pe.type === 'practice' ? '🏃' : '🎉'
+                        const pDateStr = new Date(pe.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })
+
+                        return (
+                          <button
+                            key={pe.id}
+                            type="button"
+                            onClick={() => setSelectedEvent(pe)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0 flex items-center gap-1.5 border cursor-pointer ${
+                              isCurrent
+                                ? 'bg-csc-dark text-white border-csc-dark shadow-sm scale-102 ring-2 ring-amber-400'
+                                : 'bg-white text-gray-700 border-amber-200 hover:bg-amber-100/60'
+                            }`}
+                          >
+                            <span>{pTypeEmoji}</span>
+                            <span className="truncate max-w-[140px]">{pe.title}</span>
+                            <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-bold ${isCurrent ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                              {pDateStr}
+                            </span>
+                            {isCurrent && <span className="text-csc-gold text-[10px]">●</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Header do Evento (Tipo + Badges + Botões de Ação) */}
                 <div className="flex items-center justify-between gap-2 pr-10">
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -1817,11 +1963,19 @@ const CalendarPage: React.FC = () => {
                   const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
                   const isPractice = selectedEvent.type === 'practice'
                   const isRsvpOpen = !isPractice || diffDays <= 6
+                  const otherPendingEvents = myPendingEvents.filter(pe => pe.id !== selectedEvent.id)
 
                   return (
-                    <div className="p-4 bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl border border-gray-300 space-y-2.5 shadow-2xs">
+                    <div className="p-4 bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl border border-gray-300 space-y-3 shadow-2xs">
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-600">A tua convocatória</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-gray-600">A tua convocatória para este evento</p>
+                          {myPendingEvents.length > 1 && (
+                            <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                              {myPendingEvents.findIndex(pe => pe.id === selectedEvent.id) >= 0 ? `${myPendingEvents.findIndex(pe => pe.id === selectedEvent.id) + 1} de ${myPendingEvents.length} pendentes` : `${myPendingEvents.length} pendentes`}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm font-black text-gray-900 mt-0.5">
                           Estado: <span className={
                             myCallup.status === 'confirmed' ? 'text-emerald-700' :
@@ -1862,6 +2016,77 @@ const CalendarPage: React.FC = () => {
                           >
                             <XCircle size={15} /> Recusar
                           </button>
+                        </div>
+                      )}
+
+                      {/* Lista de Outras Convocatórias Pendentes Integradas */}
+                      {otherPendingEvents.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10.5px] font-black uppercase text-amber-950 tracking-wider flex items-center gap-1">
+                              <span>🔔 Outras Convocatórias a Aguardar Resposta ({otherPendingEvents.length})</span>
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            {otherPendingEvents.map(otherEv => {
+                              const otherCallups = eventCallups[otherEv.id] || []
+                              const otherCall = profile ? otherCallups.find(c => c.player_id === profile.id) : null
+                              const isOtherPractice = otherEv.type === 'practice'
+                              const otherTime = new Date(otherEv.date_time).getTime()
+                              const otherDiff = Math.ceil((otherTime - now) / (1000 * 60 * 60 * 24))
+                              const isOtherRsvpOpen = !isOtherPractice || otherDiff <= 6
+                              const typeEmoji = otherEv.type === 'match' ? '⚽' : otherEv.type === 'practice' ? '🏃' : '🎉'
+
+                              return (
+                                <div 
+                                  key={otherEv.id}
+                                  className="p-3 bg-white rounded-xl border border-amber-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                                >
+                                  <div 
+                                    onClick={() => setSelectedEvent(otherEv)}
+                                    className="cursor-pointer hover:opacity-80 flex-1 min-w-0"
+                                    title="Clique para ver os detalhes deste evento"
+                                  >
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs">{typeEmoji}</span>
+                                      <p className="text-xs font-black text-gray-900 truncate">{otherEv.title}</p>
+                                    </div>
+                                    <p className="text-[10.5px] text-gray-500 font-medium">
+                                      {new Date(otherEv.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })} às {new Date(otherEv.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                  </div>
+
+                                  {isOtherRsvpOpen ? (
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <button
+                                        type="button"
+                                        disabled={otherCall?.status === 'confirmed'}
+                                        onClick={() => handleCallupResponse(otherEv.id, 'confirmed')}
+                                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                                      >
+                                        <CheckCircle2 size={13} />
+                                        <span>Confirmar</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={otherCall?.status === 'declined'}
+                                        onClick={() => handleCallupResponse(otherEv.id, 'declined')}
+                                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                                      >
+                                        <XCircle size={13} />
+                                        <span>Recusar</span>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                                      Abre 6 dias antes
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
