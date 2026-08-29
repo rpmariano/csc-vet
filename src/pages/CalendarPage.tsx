@@ -26,7 +26,8 @@ import {
   CalendarRange,
   Link2,
   PartyPopper,
-  Trophy
+  Trophy,
+  Sparkles
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -1437,559 +1438,540 @@ const CalendarPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Detalhes Evento & Convocatória */}
+      {/* Modal Detalhes Evento & Convocatória (Versão Web Expandida) */}
       {selectedEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-5xl w-full p-5 sm:p-7 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
             <button
               onClick={() => {
                 setSelectedEvent(null)
                 setManagingCallupsInModal(false)
+                setPlayerSearchTerm('')
+                setModalCallupStatusFilter('all')
               }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10"
+              title="Fechar"
             >
               <X size={22} />
             </button>
 
-            <div className="flex items-center justify-between gap-2 mb-2 pr-8">
-              <div className="flex items-center gap-2">
-                <span className={`
-                  text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider
-                  ${selectedEvent.type === 'match' ? 'bg-csc-light/20 text-csc-dark' : selectedEvent.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}
-                `}>
-                  {selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}
-                </span>
-
-                {selectedEvent.tournament_name && (
-                  <span className="flex items-center space-x-1 text-xs text-csc-dark bg-gray-100 px-2 py-0.5 rounded font-medium">
-                    <Award size={13} />
-                    <span>{selectedEvent.tournament_name} {selectedEvent.is_friendly ? '(Amigável)' : ''}</span>
-                  </span>
-                )}
-              </div>
-
-              {isCoachOrAdmin && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleStartEditEvent(selectedEvent)}
-                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-2xs"
-                    title="Editar dados deste dia específico"
-                  >
-                    <Edit size={13} />
-                    <span>Editar</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
-                    className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Eliminar este evento da agenda"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Matchup Box in Modal (when event is a match with opponent) */}
-            {selectedEvent.type === 'match' && selectedEvent.opponent && (() => {
-              const isAway = selectedEvent.home_away === 'away'
-              return (
-                <div className="mt-3 bg-gradient-to-b from-gray-50 to-white p-3.5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-2.5">
-                  <div className="flex items-center justify-between gap-3">
-                    {/* Left Team */}
-                    <div className={`flex-1 flex flex-col ${isAway ? 'items-start text-left' : 'items-start text-left'} min-w-0`}>
-                      <div className="flex items-center gap-1.5">
-                        {(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) ? (
-                          <img src={(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) || ''} alt="Team" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
-                        ) : (
-                          <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
-                            {isAway ? (selectedEvent.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
-                          </div>
-                        )}
-                        <span className="font-black text-sm text-gray-900 uppercase">
-                          {isAway ? (selectedEvent.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
-                        </span>
-                      </div>
-                      <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
-                        {isAway ? selectedEvent.opponent?.name : (clubSettings?.name || 'CSC Cascais')}
-                      </span>
-                    </div>
-
-                    {/* VS Badge */}
-                    <div className="shrink-0 flex flex-col items-center">
-                      <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
-                        VS
-                      </span>
-                    </div>
-
-                    {/* Right Team */}
-                    <div className="flex-1 flex flex-col items-end text-right min-w-0">
-                      <div className="flex items-center gap-1.5 flex-row-reverse">
-                        {(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) ? (
-                          <img src={(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) || ''} alt="Team" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
-                        ) : (
-                          <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
-                            {isAway ? (clubSettings?.initials || 'CSC') : (selectedEvent.opponent?.initials || 'ADV')}
-                          </div>
-                        )}
-                        <span className="font-black text-sm text-gray-900 uppercase">
-                          {isAway ? (clubSettings?.initials || 'CSC') : (selectedEvent.opponent?.initials || 'ADV')}
-                        </span>
-                      </div>
-                      <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
-                        {isAway ? (clubSettings?.name || 'CSC Cascais') : selectedEvent.opponent?.name}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
-                    <span className="font-bold">
-                      Condição: <strong className="text-gray-900">{isAway ? '✈️ Fora de Casa' : selectedEvent.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}</strong>
+            {/* Grelha Responsiva Versão Web (2 Colunas no Desktop) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* COLUNA ESQUERDA (5 Colunas): Detalhes do Evento, Matchup VS e Presença Pessoal */}
+              <div className="lg:col-span-5 space-y-4">
+                {/* Header do Evento (Tipo + Badges + Botões de Ação) */}
+                <div className="flex items-center justify-between gap-2 pr-10">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`
+                      text-xs font-black px-2.5 py-1 rounded-xl uppercase tracking-wider flex items-center gap-1 shadow-2xs
+                      ${selectedEvent.type === 'match' ? 'bg-blue-600 text-white' : selectedEvent.type === 'practice' ? 'bg-emerald-700 text-white' : 'bg-purple-700 text-white'}
+                    `}>
+                      {selectedEvent.type === 'match' ? <Trophy size={13} /> : selectedEvent.type === 'practice' ? <TrainingIcon size={13} className="text-white" /> : <PartyPopper size={13} />}
+                      <span>{selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}</span>
                     </span>
-                  </div>
-                </div>
-              )
-            })()}
 
-            {/* Title (apenas exibido para convívios) */}
-            {selectedEvent.type === 'gathering' && (
-              <h2 className="text-2xl font-extrabold text-gray-900 mt-2">{selectedEvent.title}</h2>
-            )}
-
-            {/* Concentração Acima da Hora */}
-            {selectedEvent.meeting_time && (
-              <div className="mt-3 flex items-center">
-                <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl shadow-2xs">
-                  <span>⏱️ Concentração: {selectedEvent.meeting_time.substring(0, 5)}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Info Box (Data, Hora e Local) */}
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-              <div className="flex items-center text-sm text-gray-700 space-x-2.5">
-                <Clock size={18} className="text-csc-dark shrink-0" />
-                <div>
-                  <p className="text-xs font-semibold text-gray-500">Data e Hora</p>
-                  <p className="font-bold text-sm text-gray-850">
-                    {new Date(selectedEvent.date_time).toLocaleString('pt-PT', { dateStyle: 'full', timeStyle: 'short' })}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-sm text-gray-700">
-                <div className="flex items-center space-x-2.5 min-w-0">
-                  <MapPin size={18} className="text-csc-dark shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-gray-500">Local</p>
-                    <p className="font-bold text-sm text-gray-850 truncate">{selectedEvent.location}</p>
-                  </div>
-                </div>
-                {selectedEvent.location && (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedEvent.location)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2.5 py-1.5 bg-white border border-gray-300 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs transition-colors shrink-0 ml-2"
-                    title="Abrir no Google Maps"
-                  >
-                    <MapPin size={14} className="text-red-500 shrink-0" />
-                    <span>Maps</span>
-                    <ExternalLink size={11} className="opacity-60" />
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {/* Observações / Descrição */}
-            {selectedEvent.description && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-700">
-                <p className="font-bold text-gray-900 mb-0.5">Observações:</p>
-                <p className="leading-relaxed">{selectedEvent.description}</p>
-              </div>
-            )}
-
-            {/* Evento Associado / Linkado (Bidirecional) */}
-            {(() => {
-              const linked = events.find(e => e.id !== selectedEvent.id && (e.id === selectedEvent.related_gathering_id || e.related_gathering_id === selectedEvent.id))
-              if (!linked) return null
-              return (
-                <div 
-                  onClick={() => setSelectedEvent(linked)}
-                  className="mt-3 p-3 rounded-xl bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-200 text-indigo-950 flex items-center justify-between gap-3 shadow-2xs hover:border-indigo-400 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">
-                      {linked.type === 'gathering' ? '🎉' : linked.type === 'match' ? '⚽' : '🏃'}
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 block">
-                        {linked.type === 'gathering' ? 'Convívio Associado' : linked.type === 'match' ? 'Jogo Associado' : 'Treino Associado'}
+                    {selectedEvent.is_friendly && selectedEvent.type === 'match' && (
+                      <span className="text-[11px] font-black px-2 py-0.5 rounded-xl bg-amber-100 text-amber-900 border border-amber-300">
+                        Amigável
                       </span>
-                      <span className="text-sm font-black text-gray-900 truncate block group-hover:text-indigo-900">
-                        {linked.title}
+                    )}
+
+                    {selectedEvent.tournament_name && !selectedEvent.is_friendly && (
+                      <span className="flex items-center space-x-1 text-xs text-blue-900 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-xl font-extrabold truncate max-w-[150px]">
+                        <Award size={13} />
+                        <span className="truncate">{selectedEvent.tournament_name}</span>
                       </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-white text-indigo-700 border border-indigo-200 shrink-0 shadow-2xs">
-                    {new Date(linked.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} ↗
-                  </span>
-                </div>
-              )
-            })()}
-
-            {/* SECÇÃO CONVOCATÓRIA */}
-            {(() => {
-              const callups = eventCallups[selectedEvent.id] || []
-              const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
-              const confirmedList = callups.filter(c => c.status === 'confirmed')
-              const declinedList = callups.filter(c => c.status === 'declined')
-              const pendingList = callups.filter(c => c.status === 'called')
-              const calledPlayerIds = callups.map(c => c.player_id)
-              const uncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
-
-              return (
-                <div className="mt-6 pt-5 border-t border-gray-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
-                        <Users size={20} className="text-csc-dark" />
-                        <span>
-                          Convocatória ({callups.length}{selectedEvent.max_players ? ` / ${selectedEvent.max_players} máx` : ''})
-                        </span>
-                      </h3>
-                      {selectedEvent.max_players && callups.length > selectedEvent.max_players && (
-                        <span className="text-[10px] bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded">
-                          Excede limite (+{callups.length - selectedEvent.max_players})
-                        </span>
-                      )}
-                    </div>
-
-                    {isCoachOrAdmin && (
-                      <button
-                        onClick={() => setManagingCallupsInModal(!managingCallupsInModal)}
-                        className="text-xs font-bold text-csc-dark hover:underline flex items-center gap-1"
-                      >
-                        <UserPlus size={14} />
-                        {managingCallupsInModal ? 'Fechar Gestão' : 'Gerir Convocados'}
-                      </button>
                     )}
                   </div>
 
-                  {/* Painel do Atleta Atual */}
-                  {myCallup && (
-                    <div className="mb-5 p-4 bg-gray-100 rounded-xl border border-gray-300 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  {isCoachOrAdmin && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditEvent(selectedEvent)}
+                        className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+                        title="Editar dados deste evento"
+                      >
+                        <Edit size={13} />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer active:scale-95"
+                        title="Eliminar este evento"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Matchup Box no Modal (quando Jogo com adversário) */}
+                {selectedEvent.type === 'match' && selectedEvent.opponent && (() => {
+                  const isAway = selectedEvent.home_away === 'away'
+                  return (
+                    <div className="bg-gradient-to-b from-gray-50 to-white p-4 rounded-2xl border border-gray-200/90 shadow-2xs space-y-2.5">
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Left Team (Adversário se fora, Cascais se casa/neutro) */}
+                        <div className={`flex-1 flex flex-col ${isAway ? 'items-start text-left' : 'items-start text-left'} min-w-0`}>
+                          <div className="flex items-center gap-1.5">
+                            {(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) ? (
+                              <img src={(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) || ''} alt="Team" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+                            ) : (
+                              <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+                                {isAway ? (selectedEvent.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
+                              </div>
+                            )}
+                            <span className="font-black text-sm text-gray-900 uppercase">
+                              {isAway ? (selectedEvent.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
+                            {isAway ? selectedEvent.opponent?.name : (clubSettings?.name || 'CSC Cascais')}
+                          </span>
+                        </div>
+
+                        {/* VS Badge */}
+                        <div className="shrink-0 flex flex-col items-center">
+                          <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                            VS
+                          </span>
+                        </div>
+
+                        {/* Right Team (Cascais se fora, Adversário se casa/neutro) */}
+                        <div className="flex-1 flex flex-col items-end text-right min-w-0">
+                          <div className="flex items-center gap-1.5 flex-row-reverse">
+                            {(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) ? (
+                              <img src={(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) || ''} alt="Team" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+                            ) : (
+                              <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+                                {isAway ? (clubSettings?.initials || 'CSC') : (selectedEvent.opponent?.initials || 'ADV')}
+                              </div>
+                            )}
+                            <span className="font-black text-sm text-gray-900 uppercase">
+                              {isAway ? (clubSettings?.initials || 'CSC') : (selectedEvent.opponent?.initials || 'ADV')}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
+                            {isAway ? (clubSettings?.name || 'CSC Cascais') : selectedEvent.opponent?.name}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
+                        <span className="font-bold">
+                          Condição: <strong className="text-gray-900">{isAway ? '✈️ Fora de Casa' : selectedEvent.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}</strong>
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Title (apenas exibido para convívios) */}
+                {selectedEvent.type === 'gathering' && (
+                  <h2 className="text-2xl font-black text-gray-900 leading-tight">{selectedEvent.title}</h2>
+                )}
+
+                {/* Concentração Acima da Hora */}
+                {selectedEvent.meeting_time && (
+                  <div className="flex items-center">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl shadow-2xs">
+                      <span>⏱️ Concentração: {selectedEvent.meeting_time.substring(0, 5)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Info Box (Data, Hora e Local) */}
+                <div className="space-y-2 bg-gray-50 p-3.5 rounded-2xl border border-gray-200 text-xs">
+                  <div className="flex items-center text-gray-700 space-x-2.5">
+                    <Clock size={16} className="text-csc-dark shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase">Data e Horário</p>
+                      <p className="font-extrabold text-xs text-gray-850">
+                        {new Date(selectedEvent.date_time).toLocaleString('pt-PT', { dateStyle: 'full', timeStyle: 'short' })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-gray-700 pt-2 border-t border-gray-200/60">
+                    <div className="flex items-center space-x-2.5 min-w-0">
+                      <MapPin size={16} className="text-red-600 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase">Localização</p>
+                        <p className="font-extrabold text-xs text-gray-850 truncate">{selectedEvent.location || 'Sem local definido'}</p>
+                      </div>
+                    </div>
+                    {selectedEvent.location && (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedEvent.location)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1 bg-white border border-gray-300 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-xl text-[11px] font-bold flex items-center gap-1 shadow-2xs transition-colors shrink-0 ml-2"
+                        title="Abrir no Google Maps"
+                      >
+                        <MapPin size={12} className="text-red-500 shrink-0" />
+                        <span>Maps</span>
+                        <ExternalLink size={10} className="opacity-60" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Evento Associado / Linkado (Bidirecional) */}
+                {(() => {
+                  const linked = events.find(e => e.id !== selectedEvent.id && (e.id === selectedEvent.related_gathering_id || e.related_gathering_id === selectedEvent.id))
+                  if (!linked) return null
+                  return (
+                    <div 
+                      onClick={() => setSelectedEvent(linked)}
+                      className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 text-indigo-950 flex items-center justify-between gap-3 shadow-2xs hover:border-indigo-400 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">
+                          {linked.type === 'gathering' ? '🎉' : linked.type === 'match' ? '⚽' : '🏃'}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 block">
+                            {linked.type === 'gathering' ? 'Convívio Associado' : linked.type === 'match' ? 'Jogo Associado' : 'Treino Associado'}
+                          </span>
+                          <span className="text-sm font-black text-gray-900 truncate block group-hover:text-indigo-900">
+                            {linked.title}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-white text-indigo-700 border border-indigo-200 shrink-0 shadow-2xs">
+                        {new Date(linked.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} ↗
+                      </span>
+                    </div>
+                  )
+                })()}
+
+                {/* Observações / Descrição (diretamente acima da confirmação) */}
+                {selectedEvent.description && (
+                  <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-700 space-y-1">
+                    <p className="font-black text-gray-900">Observações & Informações:</p>
+                    <p className="leading-relaxed">{selectedEvent.description}</p>
+                  </div>
+                )}
+
+                {/* Painel do Atleta Atual (RSVP Pessoal) */}
+                {(() => {
+                  const callups = eventCallups[selectedEvent.id] || []
+                  const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
+                  if (!myCallup) return null
+
+                  return (
+                    <div className="p-4 bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl border border-gray-300 space-y-2.5 shadow-2xs">
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-wider text-gray-600">A tua convocatória</p>
-                        <p className="text-sm font-extrabold text-gray-850">
-                          Estado atual: <span className={
-                            myCallup.status === 'confirmed' ? 'text-green-700' :
+                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-600">A tua convocatória</p>
+                        <p className="text-sm font-black text-gray-900 mt-0.5">
+                          Estado: <span className={
+                            myCallup.status === 'confirmed' ? 'text-emerald-700' :
                             myCallup.status === 'declined' ? 'text-red-700' : 'text-amber-700'
                           }>
-                            {myCallup.status === 'confirmed' ? 'Confirmaste presença' :
-                             myCallup.status === 'declined' ? 'Recusaste presença' : 'Ainda não respondeste'}
+                            {myCallup.status === 'confirmed' ? '✓ Confirmaste presença' :
+                             myCallup.status === 'declined' ? '✕ Recusaste presença' : '⏳ Aguarda a tua resposta'}
                           </span>
                         </p>
                       </div>
-                      <div className="flex gap-2 w-full sm:w-auto">
+                      <div className="flex gap-2">
                         <button
                           onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                          className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1.5 ${
-                            myCallup.status === 'confirmed' ? 'bg-green-700 text-white shadow' : 'bg-white border border-green-600 text-green-700 hover:bg-green-50'
+                          className={`flex-1 px-4 py-2 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 ${
+                            myCallup.status === 'confirmed' ? 'bg-emerald-700 text-white' : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50'
                           }`}
                         >
-                          <CheckCircle2 size={16} /> Confirmar
+                          <CheckCircle2 size={15} /> Confirmar
                         </button>
                         <button
                           onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                          className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1.5 ${
-                            myCallup.status === 'declined' ? 'bg-red-700 text-white shadow' : 'bg-white border border-red-600 text-red-700 hover:bg-red-50'
+                          className={`flex-1 px-4 py-2 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 ${
+                            myCallup.status === 'declined' ? 'bg-red-700 text-white' : 'bg-white border border-red-600 text-red-700 hover:bg-red-50'
                           }`}
                         >
-                          <XCircle size={16} /> Recusar
+                          <XCircle size={15} /> Recusar
                         </button>
                       </div>
                     </div>
-                  )}
+                  )
+                })()}
+              </div>
 
-                  {/* Gestão do Treinador para Adicionar Atletas */}
-                  {managingCallupsInModal && (
-                    <div className="mb-5 p-4 bg-yellow-50 border border-yellow-200 rounded-xl space-y-3">
-                      <p className="text-xs font-bold text-yellow-800 uppercase">Adicionar atletas à convocatória</p>
-                      {(() => {
-                        const eligibleUncalled = uncalledPlayers.filter(p => isPlayerEligible(p, selectedEvent.type))
-                        if (eligibleUncalled.length === 0) {
-                          return <p className="text-xs text-gray-600">Todos os atletas elegíveis já foram convocados.</p>
-                        }
-                        return (
-                          <div className="max-h-40 overflow-y-auto space-y-1.5 divide-y divide-yellow-100">
-                            {eligibleUncalled.map(p => (
-                              <div key={p.id} className="flex justify-between items-center pt-1.5">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-bold text-gray-800">{p.name}</span>
-                                  {p.status === 'injured' && (
-                                    <span className="text-[9px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-bold">Lesionado</span>
-                                  )}
-                                </div>
+              {/* COLUNA DIREITA (7 Colunas): Convocatória Completa, Filtros Interativos e Gestão */}
+              {(() => {
+                const callups = eventCallups[selectedEvent.id] || []
+                const confirmedList = callups.filter(c => c.status === 'confirmed')
+                const declinedList = callups.filter(c => c.status === 'declined')
+                const pendingList = callups.filter(c => c.status === 'called')
+                const calledPlayerIds = callups.map(c => c.player_id)
+                const uncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
+
+                // Lista de atletas filtrada por status e termo de pesquisa
+                const filteredCallups = callups.filter(c => {
+                  if (modalCallupStatusFilter !== 'all' && c.status !== modalCallupStatusFilter) return false
+                  if (!playerSearchTerm) return true
+                  const nameMatch = c.player?.name?.toLowerCase().includes(playerSearchTerm.toLowerCase())
+                  return nameMatch
+                })
+
+                return (
+                  <div className="lg:col-span-7 bg-gray-50/70 p-4 sm:p-5 rounded-3xl border border-gray-200 space-y-4">
+                    {/* Topo da Convocatória */}
+                    <div className="flex items-center justify-between border-b border-gray-200/80 pb-3">
+                      <div>
+                        <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+                          <Users size={18} className="text-csc-dark" />
+                          <span>Convocatória ({callups.length}{selectedEvent.max_players ? ` / ${selectedEvent.max_players} máx` : ''})</span>
+                        </h3>
+                        <p className="text-[11px] text-gray-500 mt-0.5">Consulta e gere o quórum de atletas para este evento.</p>
+                      </div>
+
+                      {isCoachOrAdmin && (
+                        <button
+                          onClick={() => setManagingCallupsInModal(!managingCallupsInModal)}
+                          className="px-3 py-1.5 bg-csc-dark hover:bg-black text-white text-xs font-black rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+                        >
+                          <UserPlus size={14} className="text-csc-gold" />
+                          <span>{managingCallupsInModal ? 'Fechar Adição' : '+ Convocar Atletas'}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Gestão do Treinador para Adicionar Atletas */}
+                    {managingCallupsInModal && (
+                      <div className="p-3.5 bg-amber-50/80 border-2 border-amber-200 rounded-2xl space-y-2.5 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                            <Sparkles size={14} className="text-amber-700" />
+                            <span>Adicionar Membros ao Evento ({uncalledPlayers.length} disponíveis)</span>
+                          </p>
+                        </div>
+                        {(() => {
+                          const eligibleUncalled = uncalledPlayers.filter(p => isPlayerEligible(p, selectedEvent.type))
+                          if (eligibleUncalled.length === 0) {
+                            return <p className="text-xs text-gray-600">Todos os atletas já se encontram convocados.</p>
+                          }
+                          return (
+                            <div className="max-h-36 overflow-y-auto flex flex-wrap gap-1.5 p-1 bg-white rounded-xl border border-amber-200">
+                              {eligibleUncalled.map(p => (
                                 <button
+                                  key={p.id}
+                                  type="button"
                                   onClick={() => handleAddPlayerToCallup(selectedEvent.id, p.id)}
-                                  className="bg-csc-dark text-white text-[10px] font-bold px-2 py-1 rounded hover:bg-csc-dark/80"
+                                  className="bg-gray-50 hover:bg-csc-dark hover:text-white border border-gray-300 text-xs px-2.5 py-1 rounded-xl font-bold text-gray-800 flex items-center gap-1 transition-all shadow-2xs cursor-pointer active:scale-95"
                                 >
-                                  + Convocar
+                                  <span>+ {p.name}</span>
+                                  {p.jersey_number && <span className="text-amber-700 font-black">#{p.jersey_number}</span>}
                                 </button>
-                              </div>
-                            ))}
-                          </div>
-                        )
-                      })()}
-                    </div>
-                  )}
+                              ))}
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    )}
 
-                  {/* Resumo de Quórum como Botões de Filtro Acionáveis */}
-                  <div className="space-y-2 mb-4">
-                    <div className="grid grid-cols-3 gap-2">
-                      {/* Confirmados */}
-                      <button
-                        type="button"
-                        onClick={() => setModalCallupStatusFilter(prev => prev === 'confirmed' ? 'all' : 'confirmed')}
-                        className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer select-none active:scale-95 flex flex-col items-center justify-center ${
-                          modalCallupStatusFilter === 'confirmed'
-                            ? 'bg-emerald-100 border-emerald-500 shadow-md ring-2 ring-emerald-500/40'
-                            : 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/60 hover:border-emerald-300'
-                        }`}
-                        title="Filtrar por Confirmados"
-                      >
-                        <p className="text-2xl font-black text-emerald-800">{confirmedList.length}</p>
-                        <p className="text-[11px] font-bold text-emerald-900 flex items-center justify-center gap-1 mt-0.5">
-                          <CheckCircle2 size={12} /> Confirmados
-                        </p>
-                        {modalCallupStatusFilter === 'confirmed' && (
-                          <span className="text-[9px] font-black uppercase text-emerald-900 bg-emerald-200/90 px-1.5 py-0.2 rounded-full mt-1">
-                            Filtro Ativo
-                          </span>
-                        )}
-                      </button>
-
-                      {/* Pendentes */}
-                      <button
-                        type="button"
-                        onClick={() => setModalCallupStatusFilter(prev => prev === 'called' ? 'all' : 'called')}
-                        className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer select-none active:scale-95 flex flex-col items-center justify-center ${
-                          modalCallupStatusFilter === 'called'
-                            ? 'bg-amber-100 border-amber-500 shadow-md ring-2 ring-amber-500/40'
-                            : 'bg-amber-50/70 border-amber-200 hover:bg-amber-100/60 hover:border-amber-300'
-                        }`}
-                        title="Filtrar por Pendentes"
-                      >
-                        <p className="text-2xl font-black text-amber-800">{pendingList.length}</p>
-                        <p className="text-[11px] font-bold text-amber-900 flex items-center justify-center gap-1 mt-0.5">
-                          <HelpCircle size={12} /> Pendentes
-                        </p>
-                        {modalCallupStatusFilter === 'called' && (
-                          <span className="text-[9px] font-black uppercase text-amber-900 bg-amber-200/90 px-1.5 py-0.2 rounded-full mt-1">
-                            Filtro Ativo
-                          </span>
-                        )}
-                      </button>
-
-                      {/* Recusados */}
-                      <button
-                        type="button"
-                        onClick={() => setModalCallupStatusFilter(prev => prev === 'declined' ? 'all' : 'declined')}
-                        className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer select-none active:scale-95 flex flex-col items-center justify-center ${
-                          modalCallupStatusFilter === 'declined'
-                            ? 'bg-red-100 border-red-500 shadow-md ring-2 ring-red-500/40'
-                            : 'bg-red-50/70 border-red-200 hover:bg-red-100/60 hover:border-red-300'
-                        }`}
-                        title="Filtrar por Recusados"
-                      >
-                        <p className="text-2xl font-black text-red-800">{declinedList.length}</p>
-                        <p className="text-[11px] font-bold text-red-900 flex items-center justify-center gap-1 mt-0.5">
-                          <XCircle size={12} /> Recusados
-                        </p>
-                        {modalCallupStatusFilter === 'declined' && (
-                          <span className="text-[9px] font-black uppercase text-red-900 bg-red-200/90 px-1.5 py-0.2 rounded-full mt-1">
-                            Filtro Ativo
-                          </span>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Barra de Filtro Ativo */}
-                    {modalCallupStatusFilter !== 'all' && (
-                      <div className="flex items-center justify-between bg-gray-100 px-3 py-1.5 rounded-xl text-xs">
-                        <span className="font-bold text-gray-700">
-                          A filtrar: <strong className="text-csc-dark">
-                            {modalCallupStatusFilter === 'confirmed' ? '✓ Apenas Confirmados' : modalCallupStatusFilter === 'called' ? '⏳ Apenas Pendentes' : '✕ Apenas Recusados'}
-                          </strong>
-                        </span>
+                    {/* Resumo de Quórum como Botões de Filtro Acionáveis */}
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                        {/* Confirmados */}
                         <button
                           type="button"
-                          onClick={() => setModalCallupStatusFilter('all')}
-                          className="text-csc-dark font-black hover:underline text-[11px] flex items-center gap-1 cursor-pointer"
+                          onClick={() => setModalCallupStatusFilter(prev => prev === 'confirmed' ? 'all' : 'confirmed')}
+                          className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer select-none active:scale-95 flex flex-col items-center justify-center ${
+                            modalCallupStatusFilter === 'confirmed'
+                              ? 'bg-emerald-100 border-emerald-500 shadow-md ring-2 ring-emerald-500/40'
+                              : 'bg-white border-emerald-200 hover:bg-emerald-50'
+                          }`}
+                          title="Filtrar por Confirmados"
                         >
-                          <X size={12} /> Mostrar Todos
+                          <p className="text-2xl font-black text-emerald-800">{confirmedList.length}</p>
+                          <p className="text-[11px] font-bold text-emerald-900 flex items-center justify-center gap-1 mt-0.5">
+                            <CheckCircle2 size={12} /> Confirmados
+                          </p>
+                          {modalCallupStatusFilter === 'confirmed' && (
+                            <span className="text-[9px] font-black uppercase text-emerald-900 bg-emerald-200/90 px-1.5 py-0.2 rounded-full mt-1">
+                              Filtro Ativo
+                            </span>
+                          )}
                         </button>
+
+                        {/* Pendentes */}
+                        <button
+                          type="button"
+                          onClick={() => setModalCallupStatusFilter(prev => prev === 'called' ? 'all' : 'called')}
+                          className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer select-none active:scale-95 flex flex-col items-center justify-center ${
+                            modalCallupStatusFilter === 'called'
+                              ? 'bg-amber-100 border-amber-500 shadow-md ring-2 ring-amber-500/40'
+                              : 'bg-white border-amber-200 hover:bg-amber-50'
+                          }`}
+                          title="Filtrar por Pendentes"
+                        >
+                          <p className="text-2xl font-black text-amber-800">{pendingList.length}</p>
+                          <p className="text-[11px] font-bold text-amber-900 flex items-center justify-center gap-1 mt-0.5">
+                            <HelpCircle size={12} /> Pendentes
+                          </p>
+                          {modalCallupStatusFilter === 'called' && (
+                            <span className="text-[9px] font-black uppercase text-amber-900 bg-amber-200/90 px-1.5 py-0.2 rounded-full mt-1">
+                              Filtro Ativo
+                            </span>
+                          )}
+                        </button>
+
+                        {/* Recusados */}
+                        <button
+                          type="button"
+                          onClick={() => setModalCallupStatusFilter(prev => prev === 'declined' ? 'all' : 'declined')}
+                          className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer select-none active:scale-95 flex flex-col items-center justify-center ${
+                            modalCallupStatusFilter === 'declined'
+                              ? 'bg-red-100 border-red-500 shadow-md ring-2 ring-red-500/40'
+                              : 'bg-white border-red-200 hover:bg-red-50'
+                          }`}
+                          title="Filtrar por Recusados"
+                        >
+                          <p className="text-2xl font-black text-red-800">{declinedList.length}</p>
+                          <p className="text-[11px] font-bold text-red-900 flex items-center justify-center gap-1 mt-0.5">
+                            <XCircle size={12} /> Recusados
+                          </p>
+                          {modalCallupStatusFilter === 'declined' && (
+                            <span className="text-[9px] font-black uppercase text-red-900 bg-red-200/90 px-1.5 py-0.2 rounded-full mt-1">
+                              Filtro Ativo
+                            </span>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Barra de Pesquisa e Reset de Filtro */}
+                      <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                        <div className="relative flex-1 w-full">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="text"
+                            value={playerSearchTerm}
+                            onChange={(e) => setPlayerSearchTerm(e.target.value)}
+                            placeholder="Pesquisar convocado por nome..."
+                            className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark"
+                          />
+                        </div>
+
+                        {modalCallupStatusFilter !== 'all' && (
+                          <button
+                            type="button"
+                            onClick={() => setModalCallupStatusFilter('all')}
+                            className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs rounded-xl flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                          >
+                            <X size={12} /> Limpar Filtro
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Lista de Convocados Filtrada */}
+                    {callups.length === 0 ? (
+                      <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-gray-300">
+                        <Users size={32} className="mx-auto text-gray-400 mb-1" />
+                        <p className="text-xs font-bold text-gray-600">Nenhum jogador convocado ainda.</p>
+                      </div>
+                    ) : filteredCallups.length === 0 ? (
+                      <div className="text-center py-8 bg-white rounded-2xl border border-gray-200 text-gray-600 space-y-2">
+                        <p className="text-xs font-bold">Nenhum atleta encontrado para os critérios selecionados.</p>
+                        <button
+                          onClick={() => {
+                            setModalCallupStatusFilter('all')
+                            setPlayerSearchTerm('')
+                          }}
+                          className="text-xs font-black text-csc-dark underline cursor-pointer"
+                        >
+                          Ver todos os {callups.length} convocados
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="max-h-[460px] overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {filteredCallups.map(c => {
+                            const roles = extractRolesFromProfile(c.player as any)
+                            const isConfirmed = c.status === 'confirmed'
+                            const isDeclined = c.status === 'declined'
+
+                            return (
+                              <div
+                                key={c.id}
+                                className={`p-2.5 rounded-2xl border flex items-center justify-between text-xs transition-all shadow-2xs ${
+                                  isConfirmed 
+                                    ? 'bg-emerald-50/90 border-emerald-200' 
+                                    : isDeclined 
+                                    ? 'bg-red-50/90 border-red-200' 
+                                    : 'bg-white border-gray-200'
+                                }`}
+                              >
+                                <div className="min-w-0 flex-1 mr-2">
+                                  <div className="flex items-center gap-1.5">
+                                    {isConfirmed ? (
+                                      <CheckCircle2 size={13} className="text-emerald-700 shrink-0" />
+                                    ) : isDeclined ? (
+                                      <XCircle size={13} className="text-red-700 shrink-0" />
+                                    ) : (
+                                      <HelpCircle size={13} className="text-amber-700 shrink-0" />
+                                    )}
+                                    <span className={`font-black truncate ${isDeclined ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                                      {c.player?.name || 'Membro'}
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-1 mt-1 pl-4">
+                                    {roles.map(r => (
+                                      <span key={r} className="text-[8px] font-black px-1.5 py-0.2 rounded bg-gray-200/80 text-gray-800">
+                                        {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
+                                      </span>
+                                    ))}
+                                    <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded ${
+                                      isConfirmed ? 'bg-emerald-200 text-emerald-900' : isDeclined ? 'bg-red-200 text-red-900' : 'bg-amber-100 text-amber-900'
+                                    }`}>
+                                      {isConfirmed ? 'Confirmado' : isDeclined ? 'Recusado' : 'Pendente'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {isCoachOrAdmin && (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {!isConfirmed && (
+                                      <button 
+                                        onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'confirmed')} 
+                                        className="p-1 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer" 
+                                        title="Confirmar Presença"
+                                      >
+                                        <CheckCircle2 size={14} />
+                                      </button>
+                                    )}
+                                    {!isDeclined && (
+                                      <button 
+                                        onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'declined')} 
+                                        className="p-1 text-red-600 hover:bg-red-100 rounded-lg transition-colors cursor-pointer" 
+                                        title="Recusar Presença"
+                                      >
+                                        <XCircle size={14} />
+                                      </button>
+                                    )}
+                                    <button 
+                                      onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} 
+                                      className="p-1 text-gray-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer" 
+                                      title="Remover da Convocatória"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
+                )
+              })()}
 
-                  {/* Lista de Convocados Filtrada */}
-                  {callups.length === 0 ? (
-                    <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                      <Users size={32} className="mx-auto text-gray-400 mb-1" />
-                      <p className="text-xs font-bold text-gray-600">Nenhum jogador convocado ainda.</p>
-                    </div>
-                  ) : (modalCallupStatusFilter === 'confirmed' && confirmedList.length === 0) ? (
-                    <div className="text-center py-6 bg-emerald-50/50 rounded-xl border border-emerald-200 text-emerald-800">
-                      <CheckCircle2 size={24} className="mx-auto text-emerald-600 mb-1" />
-                      <p className="text-xs font-bold">Nenhum atleta confirmou presença ainda.</p>
-                      <button onClick={() => setModalCallupStatusFilter('all')} className="mt-2 text-xs font-black underline cursor-pointer">
-                        Ver todos os convocados
-                      </button>
-                    </div>
-                  ) : (modalCallupStatusFilter === 'called' && pendingList.length === 0) ? (
-                    <div className="text-center py-6 bg-amber-50/50 rounded-xl border border-amber-200 text-amber-800">
-                      <HelpCircle size={24} className="mx-auto text-amber-600 mb-1" />
-                      <p className="text-xs font-bold">Não existem respostas pendentes.</p>
-                      <button onClick={() => setModalCallupStatusFilter('all')} className="mt-2 text-xs font-black underline cursor-pointer">
-                        Ver todos os convocados
-                      </button>
-                    </div>
-                  ) : (modalCallupStatusFilter === 'declined' && declinedList.length === 0) ? (
-                    <div className="text-center py-6 bg-red-50/50 rounded-xl border border-red-200 text-red-800">
-                      <XCircle size={24} className="mx-auto text-red-600 mb-1" />
-                      <p className="text-xs font-bold">Nenhum atleta recusou a convocatória.</p>
-                      <button onClick={() => setModalCallupStatusFilter('all')} className="mt-2 text-xs font-black underline cursor-pointer">
-                        Ver todos os convocados
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4 max-h-60 overflow-y-auto pr-1">
-                      
-                      {/* Confirmados */}
-                      {(modalCallupStatusFilter === 'all' || modalCallupStatusFilter === 'confirmed') && confirmedList.length > 0 && (
-                        <div>
-                          <p className="text-[11px] font-bold text-green-800 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                            <CheckCircle2 size={13} /> Confirmados ({confirmedList.length})
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            {confirmedList.map(c => {
-                              const roles = extractRolesFromProfile(c.player as any)
-                              return (
-                                <div key={c.id} className="flex items-center justify-between p-2 bg-green-50/70 rounded-xl border border-green-200 text-xs">
-                                  <div className="min-w-0 flex-1 mr-2">
-                                    <span className="font-bold text-gray-800 truncate block">{c.player?.name || 'Membro'}</span>
-                                    <div className="flex gap-1 mt-0.5">
-                                      {roles.map(r => (
-                                        <span key={r} className="text-[8px] font-black px-1 rounded bg-green-200/80 text-green-900">
-                                          {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  {isCoachOrAdmin && (
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      <button onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'declined')} className="p-1 text-red-600 hover:bg-red-100 rounded" title="Marcar como Recusado">
-                                        <XCircle size={13} />
-                                      </button>
-                                      <button onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} className="p-1 text-gray-400 hover:text-red-600 rounded" title="Remover da convocatória">
-                                        <Trash2 size={12} />
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Pendentes */}
-                      {(modalCallupStatusFilter === 'all' || modalCallupStatusFilter === 'called') && pendingList.length > 0 && (
-                        <div>
-                          <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                            <HelpCircle size={13} /> Aguardam Resposta ({pendingList.length})
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            {pendingList.map(c => {
-                              const roles = extractRolesFromProfile(c.player as any)
-                              return (
-                                <div key={c.id} className="flex items-center justify-between p-2 bg-amber-50/70 rounded-xl border border-amber-200 text-xs">
-                                  <div className="min-w-0 flex-1 mr-2">
-                                    <span className="font-semibold text-gray-800 truncate block">{c.player?.name || 'Membro'}</span>
-                                    <div className="flex gap-1 mt-0.5">
-                                      {roles.map(r => (
-                                        <span key={r} className="text-[8px] font-black px-1 rounded bg-amber-200/80 text-amber-900">
-                                          {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  {isCoachOrAdmin && (
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      <button onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'confirmed')} className="p-1 text-green-700 hover:bg-green-100 rounded" title="Marcar como Confirmado">
-                                        <CheckCircle2 size={13} />
-                                      </button>
-                                      <button onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'declined')} className="p-1 text-red-600 hover:bg-red-100 rounded" title="Marcar como Recusado">
-                                        <XCircle size={13} />
-                                      </button>
-                                      <button onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} className="p-1 text-gray-400 hover:text-red-600 rounded" title="Remover da convocatória">
-                                        <Trash2 size={12} />
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Recusados */}
-                      {(modalCallupStatusFilter === 'all' || modalCallupStatusFilter === 'declined') && declinedList.length > 0 && (
-                        <div>
-                          <p className="text-[11px] font-bold text-red-800 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                            <XCircle size={13} /> Recusados / Indisponíveis ({declinedList.length})
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            {declinedList.map(c => {
-                              const roles = extractRolesFromProfile(c.player as any)
-                              return (
-                                <div key={c.id} className="flex items-center justify-between p-2 bg-red-50/70 rounded-xl border border-red-200 text-xs">
-                                  <div className="min-w-0 flex-1 mr-2">
-                                    <span className="font-semibold text-gray-500 line-through truncate block">{c.player?.name || 'Membro'}</span>
-                                    <div className="flex gap-1 mt-0.5">
-                                      {roles.map(r => (
-                                        <span key={r} className="text-[8px] font-black px-1 rounded bg-red-200/80 text-red-900">
-                                          {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  {isCoachOrAdmin && (
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      <button onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'confirmed')} className="p-1 text-green-700 hover:bg-green-100 rounded" title="Marcar como Confirmado">
-                                        <CheckCircle2 size={13} />
-                                      </button>
-                                      <button onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} className="p-1 text-gray-400 hover:text-red-600 rounded" title="Remover da convocatória">
-                                        <Trash2 size={12} />
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
-
+            </div>
           </div>
         </div>
       )}
