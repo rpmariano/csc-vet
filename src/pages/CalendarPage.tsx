@@ -315,14 +315,11 @@ const CalendarPage: React.FC = () => {
   useEffect(() => {
     if (selectedEvent) {
       const prevOverflow = document.body.style.overflow
-      const prevTouchAction = document.body.style.touchAction
       document.body.style.overflow = 'hidden'
-      document.body.style.touchAction = 'none'
       setSheetTranslateY(0)
       setIsDraggingSheet(false)
       return () => {
         document.body.style.overflow = prevOverflow
-        document.body.style.touchAction = prevTouchAction
       }
     }
   }, [selectedEvent])
@@ -2011,9 +2008,18 @@ const CalendarPage: React.FC = () => {
               )}
             </div>
 
-            {/* Traços do Carrossel e Contador Centralizados na Parte Inferior */}
+            {/* Carrossel de Convocatórias Pendentes: Setas e Indicadores (Otimizado para Rato e Desktop) */}
             {myPendingEvents.length > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-0.5">
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-600/40">
+                <button
+                  type="button"
+                  onClick={prevSlide}
+                  className="w-8 h-8 rounded-xl bg-black/15 hover:bg-black/25 text-csc-dark flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs shrink-0"
+                  title="Convocatória Anterior"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+
                 <div className="flex items-center gap-1.5 bg-black/10 px-3 py-1 rounded-full border border-black/10">
                   {myPendingEvents.map((_, idx) => (
                     <button
@@ -2032,6 +2038,15 @@ const CalendarPage: React.FC = () => {
                     {activeIndex + 1}/{myPendingEvents.length}
                   </span>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={nextSlide}
+                  className="w-8 h-8 rounded-xl bg-black/15 hover:bg-black/25 text-csc-dark flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs shrink-0"
+                  title="Próxima Convocatória"
+                >
+                  <ChevronRight size={18} />
+                </button>
               </div>
             )}
           </div>
@@ -2357,7 +2372,6 @@ const CalendarPage: React.FC = () => {
       {selectedEvent && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 z-50 overflow-hidden select-none animate-fade-in"
-          style={{ touchAction: 'none' }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setSelectedEvent(null)
@@ -2373,7 +2387,7 @@ const CalendarPage: React.FC = () => {
             onTouchMove={handleSheetTouchMove}
             onTouchEnd={handleSheetTouchEnd}
             style={{
-              transform: `translateY(${sheetTranslateY}px)`,
+              transform: typeof window !== 'undefined' && window.innerWidth < 640 ? `translateY(${sheetTranslateY}px)` : undefined,
               transition: isDraggingSheet ? 'none' : 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)'
             }}
             className="bg-white rounded-t-3xl sm:rounded-3xl max-w-6xl xl:max-w-7xl w-full p-4 sm:p-8 relative max-h-[90vh] sm:max-h-[88vh] overflow-y-auto shadow-2xl border border-gray-100 space-y-4 overscroll-contain"

@@ -5,6 +5,7 @@ import {
   CheckCircle2, 
   XCircle, 
   ChevronRight, 
+  ChevronLeft,
   Trophy
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -356,9 +357,18 @@ const Home: React.FC = () => {
           </div>
         )}
 
-        {/* Traços do Carrossel e Contador Centralizados na Parte Inferior (Estilo Alerta) */}
+        {/* Carrossel de Comunicados: Setas e Indicadores (Otimizado para Rato e Desktop) */}
         {announcements.length > 1 && (
-          <div className="flex items-center justify-center gap-2 pt-0.5">
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-emerald-700/50">
+            <button
+              type="button"
+              onClick={prevAnnouncementSlide}
+              className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-white/15 shadow-2xs shrink-0"
+              title="Comunicado Anterior"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
             <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1 rounded-full border border-white/15">
               {announcements.map((_, idx) => (
                 <button
@@ -377,6 +387,15 @@ const Home: React.FC = () => {
                 {currentAnnouncementIndex + 1}/{announcements.length}
               </span>
             </div>
+
+            <button
+              type="button"
+              onClick={nextAnnouncementSlide}
+              className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-white/15 shadow-2xs shrink-0"
+              title="Próximo Comunicado"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         )}
       </div>
@@ -479,9 +498,18 @@ const Home: React.FC = () => {
               )}
             </div>
 
-            {/* Traços do Carrossel e Contador Centralizados na Parte Inferior */}
+            {/* Carrossel de Convocatórias Pendentes: Setas e Indicadores (Otimizado para Rato e Desktop) */}
             {pendingCallupsCount > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-0.5">
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-600/40">
+                <button
+                  type="button"
+                  onClick={prevPendingSlide}
+                  className="w-8 h-8 rounded-xl bg-black/15 hover:bg-black/25 text-csc-dark flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs shrink-0"
+                  title="Convocatória Anterior"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+
                 <div className="flex items-center gap-1.5 bg-black/10 px-3 py-1 rounded-full border border-black/10">
                   {pendingCallups.map((_, idx) => (
                     <button
@@ -500,6 +528,15 @@ const Home: React.FC = () => {
                     {activeIndex + 1}/{pendingCallupsCount}
                   </span>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={nextPendingSlide}
+                  className="w-8 h-8 rounded-xl bg-black/15 hover:bg-black/25 text-csc-dark flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs shrink-0"
+                  title="Próxima Convocatória"
+                >
+                  <ChevronRight size={18} />
+                </button>
               </div>
             )}
           </div>
@@ -687,9 +724,22 @@ const Home: React.FC = () => {
                     </div>
                   )
                 })()}
-                {/* Traços do Carrossel e Contador Centralizados na Parte Inferior */}
+                {/* Carrossel de Jogos: Setas e Indicadores (Otimizado para Rato e Desktop) */}
                 {upcomingMatches.length > 1 && (
-                  <div className="flex items-center justify-center gap-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        prevMatchSlide()
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
+                      title="Jogo Anterior"
+                    >
+                      <ChevronLeft size={16} />
+                      <span className="hidden sm:inline text-[11px] font-extrabold">Anterior</span>
+                    </button>
+
                     <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
                       {upcomingMatches.map((_, idx) => (
                         <button
@@ -709,6 +759,19 @@ const Home: React.FC = () => {
                         {currentMatchIndex + 1}/{upcomingMatches.length}
                       </span>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        nextMatchSlide()
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
+                      title="Próximo Jogo"
+                    >
+                      <span className="hidden sm:inline text-[11px] font-extrabold">Próximo</span>
+                      <ChevronRight size={16} />
+                    </button>
                   </div>
                 )}
               </div>
