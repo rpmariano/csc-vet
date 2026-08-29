@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { LeagueManager } from '../components/LeagueManager'
 import { 
   Shield, 
   MapPin, 
@@ -39,9 +40,10 @@ interface Opponent {
 }
 
 export interface TournamentRules {
-  min_age: number;
-  exceptions_allowed: boolean;
-  exceptions_count: number;
+  format?: 'single_league' | 'two_phases'
+  min_age?: number
+  exceptions_allowed?: boolean
+  exceptions_count?: number;
   exceptions_min_age: number;
   max_squad_size: number;
   max_match_players: number;
@@ -56,6 +58,7 @@ export interface TournamentRules {
 }
 
 export const DEFAULT_TOURNAMENT_RULES: TournamentRules = {
+  format: 'single_league',
   min_age: 35,
   exceptions_allowed: true,
   exceptions_count: 3,
@@ -133,6 +136,7 @@ const AdminDashboard: React.FC = () => {
 
   // Tournament Modal & Edit states
   const [isTourModalOpen, setIsTourModalOpen] = useState(false)
+  const [leagueManagerTournamentId, setLeagueManagerTournamentId] = useState<string | null>(null)
   const [editingTourId, setEditingTourId] = useState<string | null>(null)
   const [tourName, setTourName] = useState('')
   const [tourSeason, setTourSeason] = useState('')
@@ -1205,9 +1209,16 @@ const AdminDashboard: React.FC = () => {
 
                         <div className="flex items-center gap-1.5">
                           <button
+                            onClick={() => setLeagueManagerTournamentId(t.id)}
+                            className="p-2 bg-white border border-gray-200 hover:border-blue-500 text-blue-600 hover:bg-blue-50 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                            title="Gerir Liga (Grupos e Calendário)"
+                          >
+                            <Shield size={14} />
+                          </button>
+                          <button
                             onClick={() => handleStartEditTournament(t)}
                             className="p-2 bg-white border border-gray-200 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
-                            title="Editar Torneio"
+                            title="Editar Regras e Detalhes"
                           >
                             <Edit2 size={14} />
                           </button>
@@ -1442,6 +1453,13 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
+      {leagueManagerTournamentId && (
+        <LeagueManager 
+          tournamentId={leagueManagerTournamentId}
+          onClose={() => setLeagueManagerTournamentId(null)}
+        />
+      )}
+
       {/* MODAL 3: CRIAR / EDITAR TORNEIO */}
       {/* ========================================================================= */}
       {isTourModalOpen && (
@@ -1513,7 +1531,20 @@ const AdminDashboard: React.FC = () => {
                 </summary>
                 <div className="p-4 border-t border-gray-200 bg-white grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto">
                   
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px]">Idades & Inscrições</h4>
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px]">Formato da Competição</h4>
+                  <div className="col-span-1 sm:col-span-2">
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Modelo de Liga</label>
+                    <select 
+                      value={tourRules.format || 'single_league'} 
+                      onChange={e => setTourRules({...tourRules, format: e.target.value as any})} 
+                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-bold bg-white"
+                    >
+                      <option value="single_league">Liga Única (1 Fase)</option>
+                      <option value="two_phases">2 Fases (Grupos + Fase Final)</option>
+                    </select>
+                  </div>
+
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Idade Mínima</label>
                     <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
@@ -1579,7 +1610,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="p-3 overflow-y-auto space-y-2 flex-1">
                     {profiles.map(p => {
                       const age = p.birth_date ? Math.floor((new Date().getTime() - new Date(p.birth_date).getTime()) / 3.15576e+10) : null
-                      const isTooYoung = age !== null && age < tourRules.min_age
+                      const isTooYoung = age !== null && age < (tourRules.min_age || 0)
                       const isExceptionButValid = isTooYoung && tourRules.exceptions_allowed && age >= tourRules.exceptions_min_age
                       const isInvalid = isTooYoung && !isExceptionButValid
                       const isSelected = tourPlayers.includes(p.id)

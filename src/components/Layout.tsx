@@ -16,7 +16,8 @@ import {
   Sparkles,
   ArrowRight,
   Check,
-  ClipboardList
+  ClipboardList,
+  Trophy
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
@@ -290,6 +291,17 @@ const Layout: React.FC = () => {
                       <span>Estatísticas</span>
                     </Link>
 
+                    <Link
+                      to="/standings"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
+                        location.pathname === '/standings' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
+                      }`}
+                    >
+                      <Trophy size={16} className="text-yellow-400" />
+                      <span>Classificações</span>
+                    </Link>
+
                     {(isAdmin || isCoach) && (
                       <Link
                         to="/announcements"
@@ -434,6 +446,17 @@ const Layout: React.FC = () => {
                   <BarChart3 size={17} className={location.pathname === '/stats' ? 'text-csc-dark' : 'text-purple-400'} />
                   <span>Estatísticas</span>
                 </Link>
+
+                <Link
+                  to="/standings"
+                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                    location.pathname === '/standings' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Trophy size={17} className={location.pathname === '/standings' ? 'text-csc-dark' : 'text-yellow-400'} />
+                  <span>Classificações</span>
+                </Link>
+
 
                 {(isAdmin || isCoach) && (
                   <>

@@ -101,6 +101,45 @@ CREATE TABLE IF NOT EXISTS public.tournament_suspensions (
 );
 ALTER TABLE public.tournament_suspensions ENABLE ROW LEVEL SECURITY;
 
+-- Tabela de Grupos de Torneios (Fases e Grupos)
+CREATE TABLE IF NOT EXISTS public.tournament_groups (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id UUID REFERENCES public.tournaments(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    phase INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE public.tournament_groups ENABLE ROW LEVEL SECURITY;
+
+-- Tabela de Equipas nos Grupos de Torneios
+CREATE TABLE IF NOT EXISTS public.tournament_teams (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id UUID REFERENCES public.tournaments(id) ON DELETE CASCADE,
+    group_id UUID REFERENCES public.tournament_groups(id) ON DELETE CASCADE,
+    opponent_id UUID REFERENCES public.opponents(id) ON DELETE CASCADE,
+    points_carryover INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(tournament_id, group_id, opponent_id)
+);
+ALTER TABLE public.tournament_teams ENABLE ROW LEVEL SECURITY;
+
+-- Tabela de Jogos do Torneio (Liga Completa)
+CREATE TABLE IF NOT EXISTS public.tournament_matches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id UUID REFERENCES public.tournaments(id) ON DELETE CASCADE,
+    group_id UUID REFERENCES public.tournament_groups(id) ON DELETE CASCADE,
+    matchday INTEGER NOT NULL,
+    home_team_id UUID REFERENCES public.tournament_teams(id) ON DELETE CASCADE,
+    away_team_id UUID REFERENCES public.tournament_teams(id) ON DELETE CASCADE,
+    home_score INTEGER,
+    away_score INTEGER,
+    status TEXT DEFAULT 'scheduled',
+    match_date TIMESTAMP WITH TIME ZONE,
+    csc_event_id UUID REFERENCES public.events(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE public.tournament_matches ENABLE ROW LEVEL SECURITY;
+
 -- 3. Tabela de Eventos
 CREATE TABLE IF NOT EXISTS public.events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -300,6 +339,18 @@ CREATE POLICY "Treinadores e admins gerem suspensões"
 ON public.tournament_suspensions FOR ALL 
 TO authenticated 
 USING (public.get_user_role() IN ('coach', 'admin'));
+
+-- Políticas para TOURNAMENT_GROUPS
+CREATE POLICY "Grupos legíveis por todos" ON public.tournament_groups FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Treinadores e admins gerem grupos" ON public.tournament_groups FOR ALL TO authenticated USING (public.get_user_role() IN ('coach', 'admin'));
+
+-- Políticas para TOURNAMENT_TEAMS
+CREATE POLICY "Equipas de torneio legíveis por todos" ON public.tournament_teams FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Treinadores e admins gerem equipas de torneio" ON public.tournament_teams FOR ALL TO authenticated USING (public.get_user_role() IN ('coach', 'admin'));
+
+-- Políticas para TOURNAMENT_MATCHES
+CREATE POLICY "Jogos de torneio legíveis por todos" ON public.tournament_matches FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Treinadores e admins gerem jogos de torneio" ON public.tournament_matches FOR ALL TO authenticated USING (public.get_user_role() IN ('coach', 'admin'));
 
 -- 5. Políticas para STATS
 CREATE POLICY "Estatísticas legíveis por todos" 

@@ -18,6 +18,7 @@ import SettingsPage from './pages/SettingsPage'
 import EventsPage from './pages/EventsPage'
 import AdminDashboard from './pages/AdminDashboard'
 import MatchReportsPage from './pages/MatchReportsPage'
+import { StandingsPage } from './pages/StandingsPage'
 
 const App: React.FC = () => {
   return (
@@ -36,6 +37,7 @@ const App: React.FC = () => {
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/match-reports" element={<MatchReportsPage />} />
                 <Route path="/stats" element={<StatsPage />} />
+                <Route path="/standings" element={<StandingsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
 
                 {/* Coach and Admin Only */}
