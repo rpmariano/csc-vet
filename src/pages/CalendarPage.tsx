@@ -4,7 +4,6 @@ import {
   Clock, 
   Plus, 
   X, 
-  Award, 
   Users, 
   CheckCircle2, 
   XCircle, 
@@ -2344,6 +2343,83 @@ const CalendarPage: React.FC = () => {
               <X size={22} />
             </button>
 
+            {/* Topo Premium da Persiana (Layout Inspirado na Identidade Oficial CSC) */}
+            <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold relative overflow-hidden">
+              <div className="flex items-center justify-between gap-3 pr-8 sm:pr-10">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Símbolo Oficial do CSC */}
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white p-1 shadow-md shrink-0 border border-csc-gold flex items-center justify-center">
+                    <img 
+                      src="/csc-vet/cascais-emblem.png" 
+                      alt="CSC" 
+                      className="w-full h-full object-contain" 
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wider ${
+                        selectedEvent.type === 'match' ? 'bg-blue-500 text-white' : selectedEvent.type === 'practice' ? 'bg-emerald-600 text-white' : 'bg-purple-600 text-white'
+                      }`}>
+                        {selectedEvent.type === 'match' ? '⚽ Jogo' : selectedEvent.type === 'practice' ? '🏃 Treino' : '🎉 Convívio'}
+                      </span>
+                      {selectedEvent.is_friendly && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-400 text-csc-dark">
+                          Amigável
+                        </span>
+                      )}
+                      {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-900/80 text-blue-200 border border-blue-400/30 truncate max-w-[140px]">
+                          🏆 {selectedEvent.tournament.name}
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-sm sm:text-base font-black text-white leading-tight truncate">
+                      {selectedEvent.type === 'match' && selectedEvent.opponent ? (
+                        `${formatClubSigla(clubSettings?.initials)} vs ${formatOpponentSigla(selectedEvent.opponent)} • ${selectedEvent.title}`
+                      ) : (
+                        selectedEvent.title
+                      )}
+                    </h3>
+
+                    <p className="text-[11px] font-bold text-csc-gold flex items-center gap-1.5 truncate">
+                      <Clock size={12} />
+                      <span>
+                        {new Date(selectedEvent.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })}, {new Date(selectedEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      {selectedEvent.meeting_time && (
+                        <span className="bg-amber-400 text-csc-dark font-black text-[9.5px] px-1.5 py-0.2 rounded">
+                          Conc: {selectedEvent.meeting_time.substring(0, 5)}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {isCoachOrAdmin && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditEvent(selectedEvent)}
+                      className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                      title="Editar evento"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
+                      className="p-2 bg-red-600/30 hover:bg-red-600/50 text-red-200 border border-red-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95"
+                      title="Eliminar evento"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Grelha Responsiva Versão Web (2 Colunas Amplas no Desktop) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
               
@@ -2419,54 +2495,6 @@ const CalendarPage: React.FC = () => {
                     </div>
                   )
                 })()}
-
-                {/* Header do Evento (Tipo + Badges + Botões de Ação) */}
-                <div className="flex items-center justify-between gap-2 pr-10">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`
-                      text-xs font-black px-2.5 py-1 rounded-xl uppercase tracking-wider flex items-center gap-1 shadow-2xs
-                      ${selectedEvent.type === 'match' ? 'bg-blue-600 text-white' : selectedEvent.type === 'practice' ? 'bg-emerald-700 text-white' : 'bg-purple-700 text-white'}
-                    `}>
-                      {selectedEvent.type === 'match' ? <Trophy size={13} /> : selectedEvent.type === 'practice' ? <TrainingIcon size={13} className="text-white" /> : <PartyPopper size={13} />}
-                      <span>{selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}</span>
-                    </span>
-
-                    {selectedEvent.is_friendly && selectedEvent.type === 'match' && (
-                      <span className="text-[11px] font-black px-2.5 py-0.5 rounded-xl bg-amber-100 text-amber-900 border border-amber-300">
-                        Amigável
-                      </span>
-                    )}
-
-                    {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
-                      <span className="flex items-center space-x-1 text-xs text-blue-900 bg-blue-100 border border-blue-200 px-2.5 py-0.5 rounded-xl font-extrabold truncate max-w-[200px]">
-                        <Award size={13} />
-                        <span className="truncate">{selectedEvent.tournament.name}</span>
-                      </span>
-                    )}
-                  </div>
-
-                  {isCoachOrAdmin && (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleStartEditEvent(selectedEvent)}
-                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
-                        title="Editar dados deste evento"
-                      >
-                        <Edit size={13} />
-                        <span>Editar</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer active:scale-95"
-                        title="Eliminar este evento"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  )}
-                </div>
 
                 {/* Matchup Box no Modal (quando Jogo com adversário) */}
                 {selectedEvent.type === 'match' && selectedEvent.opponent && (() => {
