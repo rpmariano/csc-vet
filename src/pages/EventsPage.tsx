@@ -1113,16 +1113,7 @@ const EventsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-csc-dark flex items-center gap-2.5">
-          <Calendar size={32} />
-          <span>Gestão & Criação de Eventos</span>
-        </h1>
-        <p className="text-gray-550 mt-1 text-sm">
-          Crie eventos, convívios, reuniões, treinos e jogos com localização Google Maps e monitorização em tempo real do RSVP dos membros.
-        </p>
-      </div>
+      {/* Page Header removido a pedido do utilizador */}
 
       {successMessage && (
         <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl border-2 border-emerald-300 text-sm font-bold flex items-center gap-2.5 shadow-sm">
@@ -1669,8 +1660,8 @@ const EventsPage: React.FC = () => {
                 {/* Filtro Temporal (Próximos / Anteriores / Todos) */}
                 <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto shrink-0">
                   {[
-                    { id: 'upcoming', label: 'Próximos' },
-                    { id: 'past', label: 'Anteriores' },
+                    { id: 'upcoming', label: 'Por realizar' },
+                    { id: 'past', label: 'Realizados' },
                     { id: 'all', label: 'Todos' }
                   ].map(tf => (
                     <button

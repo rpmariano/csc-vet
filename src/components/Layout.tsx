@@ -255,7 +255,7 @@ const Layout: React.FC = () => {
                         }`}
                       >
                         <PlusCircle size={16} className="text-blue-400" />
-                        <span>Criar Eventos & Jogos</span>
+                        <span>Gestão de Eventos</span>
                       </Link>
                     </div>
                   </div>
@@ -423,7 +423,7 @@ const Layout: React.FC = () => {
                     }`}
                   >
                     <PlusCircle size={17} className={location.pathname === '/events' ? 'text-csc-dark' : 'text-amber-400'} />
-                    <span>Criar Evento</span>
+                    <span>Gestão de Eventos</span>
                   </Link>
                 ) : (
                   <Link
@@ -615,7 +615,7 @@ const Layout: React.FC = () => {
             `}
           >
             <PlusCircle size={19} />
-            <span className="text-[9px] font-bold mt-0.5">Criar</span>
+            <span className="text-[9px] font-bold mt-0.5">Gestão</span>
           </Link>
         ) : (
           <Link 
