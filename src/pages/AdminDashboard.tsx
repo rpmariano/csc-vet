@@ -96,6 +96,7 @@ const AdminDashboard: React.FC = () => {
   const [fields, setFields] = useState<Field[]>([])
   const [opponents, setOpponents] = useState<Opponent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
+  const [profiles, setProfiles] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   // Search & Filter states
@@ -137,11 +138,13 @@ const AdminDashboard: React.FC = () => {
   const [tourSeason, setTourSeason] = useState('')
   const [tourStatus, setTourStatus] = useState<'agendado' | 'ativo' | 'terminado'>('agendado')
   const [tourRules, setTourRules] = useState<TournamentRules>(DEFAULT_TOURNAMENT_RULES)
+  const [tourPlayers, setTourPlayers] = useState<string[]>([])
   const [initialTourState, setInitialTourState] = useState({
     name: '',
     season: '',
     status: 'agendado' as 'agendado' | 'ativo' | 'terminado',
-    rules: DEFAULT_TOURNAMENT_RULES
+    rules: DEFAULT_TOURNAMENT_RULES,
+    players: [] as string[]
   })
 
   // Generic confirmation modal state
@@ -171,16 +174,18 @@ const AdminDashboard: React.FC = () => {
   const fetchData = async () => {
     setLoading(true)
     
-    const [resFields, resOpps, resTours] = await Promise.all([
+    const [resFields, resOpps, resTours, resProfiles] = await Promise.all([
       supabase.from('fields').select('*').order('name'),
       supabase.from('opponents').select('*').order('name'),
-      supabase.from('tournaments').select('*').order('created_at', { ascending: false })
+      supabase.from('tournaments').select('*').order('created_at', { ascending: false }),
+      supabase.from('profiles').select('id, name, jersey_number, birth_date, photo_url').order('name')
     ])
 
     if (resFields.data) setFields(resFields.data)
     if (resOpps.data) setOpponents(resOpps.data)
     if (resTours.data) setTournaments(resTours.data)
-    
+    if (resProfiles.data) setProfiles(resProfiles.data)
+
     setLoading(false)
   }
 
@@ -501,11 +506,13 @@ const AdminDashboard: React.FC = () => {
 
   // --- TOURNAMENTS MODAL & LOGIC ---
   const isTourDirty = () => {
+    const playersChanged = JSON.stringify([...tourPlayers].sort()) !== JSON.stringify([...initialTourState.players].sort())
     return (
       tourName !== initialTourState.name ||
       tourSeason !== initialTourState.season ||
       tourStatus !== initialTourState.status ||
-      JSON.stringify(tourRules) !== JSON.stringify(initialTourState.rules)
+      JSON.stringify(tourRules) !== JSON.stringify(initialTourState.rules) ||
+      playersChanged
     )
   }
 
@@ -515,19 +522,30 @@ const AdminDashboard: React.FC = () => {
     setTourSeason('')
     setTourStatus('agendado')
     setTourRules(DEFAULT_TOURNAMENT_RULES)
-    setInitialTourState({ name: '', season: '', status: 'agendado', rules: DEFAULT_TOURNAMENT_RULES })
+    setTourPlayers([])
+    setInitialTourState({ name: '', season: '', status: 'agendado', rules: DEFAULT_TOURNAMENT_RULES, players: [] })
     setIsTourModalOpen(true)
   }
 
-  const handleStartEditTournament = (t: Tournament) => {
+  const handleStartEditTournament = async (t: Tournament) => {
     setEditingTourId(t.id)
     setTourName(t.name)
     setTourSeason(t.season || '')
     setTourStatus(t.status)
     const currentRules = t.rules || DEFAULT_TOURNAMENT_RULES
     setTourRules(currentRules)
-    setInitialTourState({ name: t.name, season: t.season || '', status: t.status, rules: currentRules })
+
+    setTourPlayers([])
+    setInitialTourState({ name: t.name, season: t.season || '', status: t.status, rules: currentRules, players: [] })
     setIsTourModalOpen(true)
+
+    // Fetch players
+    const { data: tpData } = await supabase.from('tournament_players').select('player_id').eq('tournament_id', t.id)
+    if (tpData) {
+      const pIds = tpData.map(row => row.player_id)
+      setTourPlayers(pIds)
+      setInitialTourState(prev => ({ ...prev, players: pIds }))
+    }
   }
 
   const handleRequestCloseTourModal = () => {
@@ -556,16 +574,28 @@ const AdminDashboard: React.FC = () => {
       const { error } = await supabase.from('tournaments').update(payload).eq('id', editingTourId)
       if (error) {
         toast.error('Erro ao atualizar torneio: ' + error.message)
-      } else {
-        toast.success('Torneio atualizado com sucesso!')
-        setIsTourModalOpen(false)
-        fetchData()
+        return
       }
+      
+      // Update players: remove all and reinsert (simple approach) or diff
+      await supabase.from('tournament_players').delete().eq('tournament_id', editingTourId)
+      if (tourPlayers.length > 0) {
+        const inserts = tourPlayers.map(pid => ({ tournament_id: editingTourId, player_id: pid }))
+        await supabase.from('tournament_players').insert(inserts)
+      }
+
+      toast.success('Torneio atualizado com sucesso!')
+      setIsTourModalOpen(false)
+      fetchData()
     } else {
-      const { error } = await supabase.from('tournaments').insert([payload])
+      const { data, error } = await supabase.from('tournaments').insert([payload]).select().single()
       if (error) {
         toast.error('Erro ao criar torneio: ' + error.message)
       } else {
+        if (data && tourPlayers.length > 0) {
+          const inserts = tourPlayers.map(pid => ({ tournament_id: data.id, player_id: pid }))
+          await supabase.from('tournament_players').insert(inserts)
+        }
         toast.success('Torneio criado com sucesso!')
         setIsTourModalOpen(false)
         fetchData()
@@ -1535,6 +1565,76 @@ const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
               </details>
+
+              {editingTourId ? (
+                <div className="mt-4 border border-gray-200 rounded-xl bg-gray-50 overflow-hidden flex flex-col max-h-[350px]">
+                  <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex justify-between items-center">
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-800">Plantel Inscrito</h4>
+                      <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mt-0.5">
+                        {tourPlayers.length} / {tourRules.max_squad_size} Inscritos
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-3 overflow-y-auto space-y-2 flex-1">
+                    {profiles.map(p => {
+                      const age = p.birth_date ? Math.floor((new Date().getTime() - new Date(p.birth_date).getTime()) / 3.15576e+10) : null
+                      const isTooYoung = age !== null && age < tourRules.min_age
+                      const isExceptionButValid = isTooYoung && tourRules.exceptions_allowed && age >= tourRules.exceptions_min_age
+                      const isInvalid = isTooYoung && !isExceptionButValid
+                      const isSelected = tourPlayers.includes(p.id)
+
+                      return (
+                        <label key={p.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'} ${isInvalid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'} transition-colors`}>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden shrink-0">
+                              {p.photo_url ? (
+                                <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500">{p.jersey_number || '-'}</div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-gray-900">{p.name}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-gray-500 font-bold">Camisola #{p.jersey_number || 'N/A'}</span>
+                                {age !== null && (
+                                  <span className={`text-[10px] font-bold px-1.5 rounded-md ${isTooYoung ? (isExceptionButValid ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') : 'bg-green-100 text-green-700'}`}>
+                                    {age} anos
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              disabled={isInvalid}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  if (tourPlayers.length >= tourRules.max_squad_size) {
+                                    toast.warning(`Limite de plantel (${tourRules.max_squad_size}) atingido!`)
+                                    return
+                                  }
+                                  setTourPlayers(prev => [...prev, p.id])
+                                } else {
+                                  setTourPlayers(prev => prev.filter(id => id !== p.id))
+                                }
+                              }}
+                              className="w-4 h-4 text-csc-dark border-gray-300 rounded focus:ring-csc-dark"
+                            />
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 p-4 border border-blue-200 bg-blue-50 rounded-xl text-center">
+                  <p className="text-xs font-bold text-blue-700">Guarda o torneio primeiro para poderes inscrever o plantel da tua equipa.</p>
+                </div>
+              )}
 
               <div className="pt-4 flex gap-2 justify-end">
                 <button

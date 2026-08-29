@@ -81,6 +81,15 @@ CREATE TABLE IF NOT EXISTS public.tournaments (
 );
 ALTER TABLE public.tournaments ENABLE ROW LEVEL SECURITY;
 
+-- Tabela de Jogadores Inscritos no Torneio (Plantel do Torneio)
+CREATE TABLE IF NOT EXISTS public.tournament_players (
+    tournament_id UUID REFERENCES public.tournaments(id) ON DELETE CASCADE,
+    player_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    PRIMARY KEY (tournament_id, player_id)
+);
+ALTER TABLE public.tournament_players ENABLE ROW LEVEL SECURITY;
+
 -- 3. Tabela de Eventos
 CREATE TABLE IF NOT EXISTS public.events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -318,6 +327,9 @@ CREATE POLICY "Apenas treinadores e admins gerem adversários" ON public.opponen
 
 CREATE POLICY "Torneios legíveis por todos" ON public.tournaments FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Apenas treinadores e admins gerem torneios" ON public.tournaments FOR ALL TO authenticated USING (public.get_user_role() IN ('coach', 'admin'));
+
+CREATE POLICY "Plantel de torneios legível por todos" ON public.tournament_players FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Apenas treinadores e admins gerem plantel de torneios" ON public.tournament_players FOR ALL TO authenticated USING (public.get_user_role() IN ('coach', 'admin'));
 
 
 --------------------------------------------------------------------------------
