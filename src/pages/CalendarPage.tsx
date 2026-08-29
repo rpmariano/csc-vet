@@ -23,7 +23,10 @@ import {
   Repeat,
   Edit,
   Save,
-  CalendarRange
+  CalendarRange,
+  Link2,
+  PartyPopper,
+  Trophy
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -113,11 +116,14 @@ interface Event {
   title: string
   type: 'practice' | 'match' | 'gathering'
   date_time: string
+  meeting_time?: string | null
   location: string
   description: string
   is_friendly?: boolean | null
   tournament_name?: string | null
   max_players?: number | null
+  home_away?: 'home' | 'away' | 'neutral' | null
+  related_gathering_id?: string | null
   opponent?: {
     name: string
     initials: string
@@ -164,11 +170,13 @@ const CalendarPage: React.FC = () => {
   const [title, setTitle] = useState('')
   const [type, setType] = useState<'practice' | 'match' | 'gathering'>('practice')
   const [dateTime, setDateTime] = useState('')
+  const [meetingTime, setMeetingTime] = useState('')
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [isFriendly, setIsFriendly] = useState(false)
   const [tournamentName, setTournamentName] = useState('')
-  const [maxPlayers, setMaxPlayers] = useState<number | ''>(16)
+  const [maxPlayers, setMaxPlayers] = useState<number | ''>('')
+  const [relatedGatheringId, setRelatedGatheringId] = useState('')
 
   // Recurrence states
   const [isRecurring, setIsRecurring] = useState(false)
@@ -180,11 +188,13 @@ const CalendarPage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('')
   const [editType, setEditType] = useState<'practice' | 'match' | 'gathering'>('practice')
   const [editDateTime, setEditDateTime] = useState('')
+  const [editMeetingTime, setEditMeetingTime] = useState('')
   const [editLocation, setEditLocation] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  const [editMaxPlayers, setEditMaxPlayers] = useState<number | ''>(16)
+  const [editMaxPlayers, setEditMaxPlayers] = useState<number | ''>('')
   const [editTournamentName, setEditTournamentName] = useState('')
   const [editIsFriendly, setEditIsFriendly] = useState(false)
+  const [editRelatedGatheringId, setEditRelatedGatheringId] = useState('')
 
   // Pre-select weekday when dateTime changes
   useEffect(() => {
@@ -408,11 +418,13 @@ const CalendarPage: React.FC = () => {
           title,
           type,
           date_time: new Date(dateTime).toISOString(),
+          meeting_time: meetingTime ? `${meetingTime}:00` : null,
           location,
           description,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : undefined,
           tournament_name: type === 'match' ? tournamentName : undefined,
+          related_gathering_id: relatedGatheringId || null,
           created_by: profile?.id
         }
 
@@ -423,6 +435,14 @@ const CalendarPage: React.FC = () => {
           .single()
 
         if (error) throw error
+
+        // Se tiver evento associado, atualizar o outro evento bidirecionalmente
+        if (createdEvent && relatedGatheringId) {
+          await supabase
+            .from('events')
+            .update({ related_gathering_id: createdEvent.id })
+            .eq('id', relatedGatheringId)
+        }
 
         // Se houver jogadores selecionados, criar convocatórias
         if (createdEvent && selectedPlayerIds.length > 0) {
@@ -446,9 +466,11 @@ const CalendarPage: React.FC = () => {
       setLocation('')
       setDescription('')
       setDateTime('')
+      setMeetingTime('')
       setTournamentName('')
       setIsFriendly(false)
-      setMaxPlayers(16)
+      setMaxPlayers('')
+      setRelatedGatheringId('')
       setIsRecurring(false)
       setRecurrenceEndDate('')
       setSelectedPlayerIds([])
@@ -465,11 +487,15 @@ const CalendarPage: React.FC = () => {
     const pad = (n: number) => String(n).padStart(2, '0')
     const localIso = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
     setEditDateTime(localIso)
+    setEditMeetingTime(ev.meeting_time ? ev.meeting_time.substring(0, 5) : '')
     setEditLocation(ev.location || '')
     setEditDescription(ev.description || '')
-    setEditMaxPlayers(ev.max_players ?? 16)
+    setEditMaxPlayers(ev.max_players ?? '')
     setEditTournamentName(ev.tournament_name || '')
     setEditIsFriendly(Boolean(ev.is_friendly))
+    // Look up existing related event (bidirectional)
+    const linked = events.find(e => e.id !== ev.id && (e.id === ev.related_gathering_id || e.related_gathering_id === ev.id))
+    setEditRelatedGatheringId(linked ? linked.id : (ev.related_gathering_id || ''))
     setIsEditModalOpen(true)
   }
 
@@ -477,15 +503,17 @@ const CalendarPage: React.FC = () => {
     e.preventDefault()
     if (!selectedEvent) return
     try {
-      const payload = {
+      const payload: any = {
         title: editTitle,
         type: editType,
         date_time: new Date(editDateTime).toISOString(),
+        meeting_time: editMeetingTime ? `${editMeetingTime}:00` : null,
         location: editLocation,
         description: editDescription,
         max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
         tournament_name: editType === 'match' ? editTournamentName : null,
-        is_friendly: editType === 'match' ? editIsFriendly : false
+        is_friendly: editType === 'match' ? editIsFriendly : false,
+        related_gathering_id: editRelatedGatheringId || null
       }
 
       const { error } = await supabase
@@ -494,6 +522,23 @@ const CalendarPage: React.FC = () => {
         .eq('id', selectedEvent.id)
 
       if (error) throw error
+
+      // Atualização Bidirecional no Supabase
+      if (editRelatedGatheringId) {
+        await supabase
+          .from('events')
+          .update({ related_gathering_id: selectedEvent.id })
+          .eq('id', editRelatedGatheringId)
+      } else {
+        // Se removeu a associação, limpa o evento anteriormente associado
+        const prevLinked = events.find(e => e.id !== selectedEvent.id && (e.id === selectedEvent.related_gathering_id || e.related_gathering_id === selectedEvent.id))
+        if (prevLinked) {
+          await supabase
+            .from('events')
+            .update({ related_gathering_id: null })
+            .eq('id', prevLinked.id)
+        }
+      }
 
       setSelectedEvent(prev => prev ? { ...prev, ...payload } : null)
       setIsEditModalOpen(false)
@@ -648,6 +693,14 @@ const CalendarPage: React.FC = () => {
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
   }
 
+  const handleMonthChange = (newMonth: number) => {
+    setCurrentDate(prev => new Date(prev.getFullYear(), newMonth, 1))
+  }
+
+  const handleYearChange = (newYear: number) => {
+    setCurrentDate(prev => new Date(newYear, prev.getMonth(), 1))
+  }
+
   const handleToday = () => {
     const today = new Date()
     setCurrentDate(today)
@@ -761,6 +814,245 @@ const CalendarPage: React.FC = () => {
   }
 
   const selectedDayEvents = selectedDate ? getEventsForDate(selectedDate) : []
+
+  const renderEventCard = (event: Event) => {
+    const callups = eventCallups[event.id] || []
+    const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
+    const confirmedCount = callups.filter(c => c.status === 'confirmed').length
+    const linkedEvent = events.find(e => e.id !== event.id && (e.id === event.related_gathering_id || e.related_gathering_id === event.id))
+
+    const isMatch = event.type === 'match'
+    const isPractice = event.type === 'practice'
+
+    return (
+      <div
+        key={event.id}
+        onClick={() => setSelectedEvent(event)}
+        className={`rounded-2xl border transition-all cursor-pointer bg-white overflow-hidden shadow-xs hover:shadow-md hover:border-csc-gold flex flex-col justify-between ${
+          isMatch 
+            ? 'border-blue-200/80 hover:bg-blue-50/5' 
+            : isPractice 
+            ? 'border-emerald-200/80 hover:bg-emerald-50/5' 
+            : 'border-purple-200/80 hover:bg-purple-50/5'
+        }`}
+      >
+        {/* Top Accent Line / Header */}
+        <div className={`px-4 py-2.5 flex items-center justify-between border-b ${
+          isMatch 
+            ? 'bg-gradient-to-r from-blue-50 via-indigo-50 to-white border-blue-100' 
+            : isPractice 
+            ? 'bg-gradient-to-r from-emerald-50 via-teal-50 to-white border-emerald-100' 
+            : 'bg-gradient-to-r from-purple-50 via-fuchsia-50 to-white border-purple-100'
+        }`}>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs ${
+              isMatch 
+                ? 'bg-blue-600 text-white' 
+                : isPractice 
+                ? 'bg-emerald-700 text-white' 
+                : 'bg-purple-700 text-white'
+            }`}>
+              {isMatch ? <Trophy size={12} /> : isPractice ? <TrainingIcon size={12} className="text-white" /> : <PartyPopper size={12} />}
+              <span>{isMatch ? 'Jogo' : isPractice ? 'Treino' : 'Convívio'}</span>
+            </span>
+
+            {isMatch && event.is_friendly && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300">
+                Amigável
+              </span>
+            )}
+
+            {isMatch && event.tournament_name && !event.is_friendly && (
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-100 text-blue-900 border border-blue-200 truncate max-w-[130px]">
+                🏆 {event.tournament_name}
+              </span>
+            )}
+          </div>
+
+          {callups.length > 0 && (
+            <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1 bg-white px-2.5 py-0.5 rounded-full border border-gray-200 shadow-2xs">
+              <Users size={12} className="text-csc-dark" />
+              <span><strong className="text-csc-dark">{confirmedCount}</strong>/{callups.length} conf.</span>
+            </span>
+          )}
+        </div>
+
+        <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+          <div className="space-y-2.5">
+            {/* Matchup Box (when event is a match with opponent) */}
+            {isMatch && event.opponent && (
+              <div className="bg-gradient-to-b from-gray-50 to-white p-3 rounded-xl border border-gray-200/90 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  {/* CSC */}
+                  <div className="flex-1 flex items-center gap-2 min-w-0">
+                    {clubSettings?.logo_url ? (
+                      <img src={clubSettings.logo_url} alt="CSC" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+                    ) : (
+                      <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+                        {clubSettings?.initials || 'CSC'}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <span className="font-black text-xs text-gray-900 block truncate">{clubSettings?.name || 'CSC Cascais'}</span>
+                      <span className="text-[9px] font-extrabold text-csc-gold bg-csc-dark px-1.5 py-0.2 rounded inline-block">MANDANTE</span>
+                    </div>
+                  </div>
+
+                  {/* VS Badge */}
+                  <div className="shrink-0 flex flex-col items-center">
+                    <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                      VS
+                    </span>
+                  </div>
+
+                  {/* Opponent */}
+                  <div className="flex-1 flex items-center justify-end gap-2 min-w-0 text-right">
+                    <div className="min-w-0">
+                      <span className="font-black text-xs text-gray-900 block truncate">{event.opponent.name}</span>
+                      <span className="text-[9px] font-bold text-gray-500 block truncate">{event.opponent.initials || 'Adversário'}</span>
+                    </div>
+                    {event.opponent.logo_url ? (
+                      <img src={event.opponent.logo_url} alt="Adv" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+                    ) : (
+                      <div className="w-8 h-8 bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+                        {event.opponent.initials || 'ADV'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Condition Pill */}
+                <div className="pt-1.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
+                  <span className="font-bold">
+                    Condição: <strong className="text-gray-900">{event.home_away === 'away' ? '✈️ Fora de Casa' : event.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}</strong>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Title */}
+            <div>
+              <h4 className="text-base font-black text-gray-900 leading-snug">
+                {event.title}
+              </h4>
+              {event.description && (
+                <p className="text-xs text-gray-600 mt-1 line-clamp-2 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                  {event.description}
+                </p>
+              )}
+            </div>
+
+            {/* Time, Meeting Time & Location Badges */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              {/* Hora */}
+              <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-xl">
+                <Clock size={13} className="text-csc-dark" />
+                <span>{new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+
+              {/* Concentração */}
+              {event.meeting_time && (
+                <div className="inline-flex items-center gap-1 text-[11px] font-black text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-xl shadow-2xs">
+                  <span>⏱️ Conc: {event.meeting_time.substring(0, 5)}</span>
+                </div>
+              )}
+
+              {/* Localização & Maps */}
+              {event.location && (
+                <div className="inline-flex items-center gap-1 text-xs text-gray-700 bg-gray-100 px-2.5 py-1 rounded-xl max-w-full truncate">
+                  <MapPin size={13} className="text-red-600 shrink-0" />
+                  <span className="truncate">{event.location}</span>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="ml-1 p-0.5 text-blue-600 hover:text-blue-800 shrink-0"
+                    title="Ver no Google Maps"
+                  >
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Linked / Associated Event (Bidirecional) */}
+            {linkedEvent && (
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedEvent(linkedEvent)
+                }}
+                className="p-2.5 rounded-xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 text-indigo-950 flex items-center justify-between gap-2 shadow-2xs hover:border-indigo-400 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold text-xs shadow-2xs">
+                    {linkedEvent.type === 'gathering' ? '🎉' : linkedEvent.type === 'match' ? '⚽' : '🏃'}
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-indigo-700 block">
+                      {linkedEvent.type === 'gathering' ? 'Convívio Associado' : linkedEvent.type === 'match' ? 'Jogo Associado' : 'Treino Associado'}
+                    </span>
+                    <span className="text-xs font-black text-gray-900 truncate block group-hover:text-indigo-900">
+                      {linkedEvent.title}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-white text-indigo-700 border border-indigo-200 shrink-0 shadow-2xs">
+                  {new Date(linkedEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} ↗
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Ação rápida de Presença (RSVP) */}
+          {myCallup && (
+            <div 
+              onClick={(e) => e.stopPropagation()} 
+              className="pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2"
+            >
+              <span className="text-xs font-bold text-gray-700">Presença:</span>
+              {myCallup.status === 'called' ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleCallupResponse(event.id, 'confirmed')}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1"
+                  >
+                    <CheckCircle2 size={13} />
+                    <span>Confirmar</span>
+                  </button>
+                  <button
+                    onClick={() => handleCallupResponse(event.id, 'declined')}
+                    className="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1"
+                  >
+                    <XCircle size={13} />
+                    <span>Recusar</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-2xs ${
+                    myCallup.status === 'confirmed' 
+                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
+                      : 'bg-red-100 text-red-900 border border-rose-300'
+                  }`}>
+                    {myCallup.status === 'confirmed' ? <CheckCircle2 size={14} className="text-emerald-700" /> : <XCircle size={14} className="text-red-700" />}
+                    <span>{myCallup.status === 'confirmed' ? 'Confirmado' : 'Recusado'}</span>
+                  </span>
+                  <button
+                    onClick={() => handleCallupResponse(event.id, myCallup.status === 'confirmed' ? 'declined' : 'confirmed')}
+                    className="text-[11px] font-bold text-gray-500 hover:text-gray-800 underline cursor-pointer"
+                  >
+                    Alterar
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -907,40 +1199,6 @@ const CalendarPage: React.FC = () => {
             </button>
           )}
         </div>
-
-        {/* Controlos de Mês (quando em modo Calendário) */}
-        {viewMode === 'calendar' && (
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-gray-900 capitalize">
-                {monthNames[month]} <span className="text-csc-gold">{year}</span>
-              </h2>
-              <button
-                onClick={handleToday}
-                className="text-[11px] font-bold px-2.5 py-0.5 bg-gray-100 hover:bg-gray-200 text-csc-dark rounded-md transition-colors shadow-2xs"
-              >
-                Hoje
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handlePrevMonth}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-csc-dark transition-colors"
-                title="Mês Anterior"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                onClick={handleNextMonth}
-                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-csc-dark transition-colors"
-                title="Próximo Mês"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {loading ? (
@@ -951,6 +1209,63 @@ const CalendarPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Coluna Esquerda: Grelha do Calendário Mensal Compacta */}
           <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-150 overflow-hidden">
+            {/* Cabeçalho do Calendário com Seleção Rápida de Mês e Ano */}
+            <div className="p-3 sm:p-4 bg-gradient-to-r from-csc-dark via-gray-900 to-csc-dark text-white rounded-t-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm border-b border-white/10">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Dropdown Mês */}
+                <select
+                  value={currentDate.getMonth()}
+                  onChange={(e) => handleMonthChange(Number(e.target.value))}
+                  className="bg-white/15 hover:bg-white/25 text-white font-black text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-white/20 outline-none focus:ring-2 focus:ring-csc-gold cursor-pointer transition-all appearance-none pr-7 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[right_8px_center] bg-no-repeat"
+                >
+                  {monthNames.map((mName, idx) => (
+                    <option key={mName} value={idx} className="bg-gray-900 text-white font-bold">
+                      {mName}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Dropdown Ano */}
+                <select
+                  value={currentDate.getFullYear()}
+                  onChange={(e) => handleYearChange(Number(e.target.value))}
+                  className="bg-white/15 hover:bg-white/25 text-csc-gold font-black text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-white/20 outline-none focus:ring-2 focus:ring-csc-gold cursor-pointer transition-all appearance-none pr-7 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23F59E0B%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[right_8px_center] bg-no-repeat"
+                >
+                  {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => (
+                    <option key={y} value={y} className="bg-gray-900 text-csc-gold font-bold">
+                      {y}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Botão Hoje */}
+                <button
+                  onClick={handleToday}
+                  className="text-xs font-bold px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-dark rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer font-black"
+                >
+                  Hoje
+                </button>
+              </div>
+
+              {/* Setas Anterior / Próximo */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handlePrevMonth}
+                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer active:scale-90"
+                  title="Mês Anterior"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={handleNextMonth}
+                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer active:scale-90"
+                  title="Próximo Mês"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+
             {/* Cabeçalho dos Dias da Semana */}
             <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200 text-center py-2">
               {weekDayNames.map((w, idx) => (
@@ -1067,118 +1382,8 @@ const CalendarPage: React.FC = () => {
                     <p className="mt-1 text-[11px]">Clica num dia com marcações no calendário para ver os detalhes.</p>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                    {selectedDayEvents.map(event => {
-                      const callups = eventCallups[event.id] || []
-                      const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
-                      const confirmedCount = callups.filter(c => c.status === 'confirmed').length
-
-                      return (
-                        <div
-                          key={event.id}
-                          onClick={() => setSelectedEvent(event)}
-                          className="bg-gray-50 rounded-xl border border-gray-200 p-3.5 hover:border-csc-gold hover:bg-amber-50/10 transition-all cursor-pointer flex flex-col justify-between shadow-2xs"
-                        >
-                          <div>
-                            <div className="flex justify-between items-start mb-2">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                                event.type === 'match' ? 'bg-blue-100 text-blue-800' : event.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
-                              }`}>
-                                {event.type === 'match' ? 'Jogo' : event.type === 'practice' ? 'Treino' : 'Convívio'}
-                              </span>
-                              {callups.length > 0 && (
-                                <span className="text-[11px] font-semibold text-gray-500 flex items-center gap-1 bg-white px-2 py-0.5 rounded-full border border-gray-200">
-                                  <Users size={11} className="text-csc-dark" />
-                                  <span><strong>{confirmedCount}</strong>/{callups.length} conf.</span>
-                                </span>
-                              )}
-                            </div>
-
-                            {event.type === 'match' && event.opponent ? (
-                              <div className="flex items-center gap-2 mb-2 bg-white p-2 rounded-lg border border-gray-200">
-                                <div className="flex flex-col items-center gap-0.5 w-10">
-                                  {clubSettings?.logo_url ? (
-                                    <img src={clubSettings.logo_url} alt="Nós" className="w-6 h-6 object-contain" />
-                                  ) : (
-                                    <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center text-[10px] font-bold">{clubSettings?.initials || 'CSC'}</div>
-                                  )}
-                                  <span className="text-[8px] font-bold text-gray-700">{clubSettings?.initials || 'CSC'}</span>
-                                </div>
-                                <span className="text-gray-400 font-black text-xs">VS</span>
-                                <div className="flex flex-col items-center gap-0.5 w-10">
-                                  {event.opponent.logo_url ? (
-                                    <img src={event.opponent.logo_url} alt="Adv" className="w-6 h-6 object-contain" />
-                                  ) : (
-                                    <div className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center text-[10px] font-bold">{event.opponent.initials || 'ADV'}</div>
-                                  )}
-                                  <span className="text-[8px] font-bold text-gray-700 line-clamp-1">{event.opponent.initials || event.opponent.name}</span>
-                                </div>
-                              </div>
-                            ) : null}
-
-                            <h4 className="text-xs font-bold text-gray-900">{event.title}</h4>
-                          </div>
-
-                          <div className="mt-2.5 pt-2 border-t border-gray-200 space-y-1.5">
-                            <div className="flex items-center justify-between text-xs text-gray-600">
-                              <div className="flex items-center space-x-1">
-                                <Clock size={12} className="text-gray-400" />
-                                <span>{new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-                              </div>
-                              <div className="flex items-center space-x-1 max-w-[55%]">
-                                <MapPin size={12} className="text-gray-400 shrink-0" />
-                                <span className="truncate">{event.location}</span>
-                                {event.location && (
-                                  <a
-                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="p-0.5 text-red-500 hover:text-red-700 rounded transition-colors shrink-0"
-                                    title="Abrir no Google Maps"
-                                  >
-                                    <ExternalLink size={11} />
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Ação rápida para o jogador se for convocado */}
-                            {myCallup && (
-                              <div 
-                                onClick={(e) => e.stopPropagation()} 
-                                className="pt-1.5 border-t border-gray-200 flex items-center justify-between"
-                              >
-                                <span className="text-[10px] font-semibold text-gray-600">Presença:</span>
-                                {myCallup.status === 'called' ? (
-                                  <div className="flex gap-1">
-                                    <button
-                                      onClick={() => handleCallupResponse(event.id, 'confirmed')}
-                                      className="bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold px-2 py-0.5 rounded transition-colors shadow-xs"
-                                    >
-                                      Confirmar
-                                    </button>
-                                    <button
-                                      onClick={() => handleCallupResponse(event.id, 'declined')}
-                                      className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-2 py-0.5 rounded transition-colors shadow-xs"
-                                    >
-                                      Recusar
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded flex items-center gap-1 ${
-                                    myCallup.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {myCallup.status === 'confirmed' ? <CheckCircle2 size={11}/> : <XCircle size={11}/>}
-                                    {myCallup.status === 'confirmed' ? 'Confirmado' : 'Recusado'}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                    {selectedDayEvents.map(event => renderEventCard(event))}
                   </div>
                 )}
               </div>
@@ -1188,127 +1393,15 @@ const CalendarPage: React.FC = () => {
       ) : (
         /* Vista de Lista Completa */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredEvents.map((event) => {
-            const callups = eventCallups[event.id] || []
-            const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
-            const confirmedCount = callups.filter(c => c.status === 'confirmed').length
-
-            return (
-              <div
-                key={event.id}
-                onClick={() => setSelectedEvent(event)}
-                className="bg-white rounded-xl shadow-sm border border-gray-150 p-5 hover:shadow-md transition-shadow cursor-pointer flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex justify-between items-start mb-3">
-                    <span className={`
-                      text-[11px] font-bold px-2.5 py-0.5 rounded uppercase tracking-wider
-                      ${event.type === 'match' ? 'bg-csc-light/20 text-csc-dark' : event.type === 'practice' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}
-                    `}>
-                      {event.type === 'match' ? 'Jogo' : event.type === 'practice' ? 'Treino' : 'Convívio'}
-                    </span>
-
-                    {callups.length > 0 && (
-                      <span className="text-xs font-semibold text-gray-500 flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-200">
-                        <Users size={12} className="text-csc-dark" />
-                        <span><strong>{confirmedCount}</strong>/{callups.length} conf.</span>
-                      </span>
-                    )}
-                  </div>
-                  
-                  {event.type === 'match' && event.opponent ? (
-                    <div className="flex items-center gap-4 mb-3 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                      <div className="flex flex-col items-center gap-1 w-12">
-                        {clubSettings?.logo_url ? (
-                          <img src={clubSettings.logo_url} alt="Nós" className="w-10 h-10 object-contain" />
-                        ) : (
-                          <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs font-bold">{clubSettings?.initials || 'CSC'}</div>
-                        )}
-                        <span className="text-[10px] font-bold text-gray-700">{clubSettings?.initials || 'CSC'}</span>
-                      </div>
-                      <span className="text-gray-400 font-black text-xs">VS</span>
-                      <div className="flex flex-col items-center gap-1 w-12">
-                        {event.opponent.logo_url ? (
-                          <img src={event.opponent.logo_url} alt="Adv" className="w-10 h-10 object-contain" />
-                        ) : (
-                          <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs font-bold">{event.opponent.initials || 'ADV'}</div>
-                        )}
-                        <span className="text-[10px] font-bold text-gray-700 line-clamp-1">{event.opponent.initials || event.opponent.name}</span>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <h3 className="text-lg font-bold text-gray-850">{event.title}</h3>
-                  {event.description && <p className="text-gray-500 text-xs mt-1 line-clamp-2">{event.description}</p>}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-gray-100 space-y-3">
-                  <div className="flex items-center justify-between text-xs text-gray-600">
-                    <div className="flex items-center space-x-1.5">
-                      <Clock size={13} className="text-gray-400" />
-                      <span>
-                        {new Date(event.date_time).toLocaleDateString('pt-PT', {
-                          day: '2-digit',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-1.5 max-w-[55%]">
-                      <MapPin size={13} className="text-gray-400 shrink-0" />
-                      <span className="truncate">{event.location}</span>
-                      {event.location && (
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors shrink-0"
-                          title="Abrir no Google Maps"
-                        >
-                          <ExternalLink size={12} />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Ação rápida para o jogador se for convocado */}
-                  {myCallup && (
-                    <div 
-                      onClick={(e) => e.stopPropagation()} 
-                      className="pt-2 border-t border-gray-100 flex items-center justify-between"
-                    >
-                      <span className="text-[11px] font-semibold text-gray-600">A tua presença:</span>
-                      {myCallup.status === 'called' ? (
-                        <div className="flex gap-1.5">
-                          <button
-                            onClick={() => handleCallupResponse(event.id, 'confirmed')}
-                            className="bg-green-600 hover:bg-green-700 text-white text-[11px] font-bold px-2.5 py-1 rounded transition-colors shadow-sm"
-                          >
-                            Confirmar
-                          </button>
-                          <button
-                            onClick={() => handleCallupResponse(event.id, 'declined')}
-                            className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-2.5 py-1 rounded transition-colors shadow-sm"
-                          >
-                            Recusar
-                          </button>
-                        </div>
-                      ) : (
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                          myCallup.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {myCallup.status === 'confirmed' ? <CheckCircle2 size={12}/> : <XCircle size={12}/>}
-                          {myCallup.status === 'confirmed' ? 'Confirmado' : 'Recusado'}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          {filteredEvents.length === 0 ? (
+            <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-gray-200 p-8">
+              <CalendarRange size={36} className="mx-auto text-gray-300 mb-2" />
+              <p className="text-sm font-bold text-gray-600">Nenhum evento encontrado.</p>
+              <p className="text-xs text-gray-400 mt-1">Ajuste os filtros ou crie um novo evento.</p>
+            </div>
+          ) : (
+            filteredEvents.map((event) => renderEventCard(event))
+          )}
         </div>
       )}
 
@@ -1405,6 +1498,35 @@ const CalendarPage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Evento Associado / Linkado (Bidirecional) */}
+            {(() => {
+              const linked = events.find(e => e.id !== selectedEvent.id && (e.id === selectedEvent.related_gathering_id || e.related_gathering_id === selectedEvent.id))
+              if (!linked) return null
+              return (
+                <div 
+                  onClick={() => setSelectedEvent(linked)}
+                  className="mt-3 p-3 rounded-xl bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-200 text-indigo-950 flex items-center justify-between gap-3 shadow-2xs hover:border-indigo-400 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">
+                      {linked.type === 'gathering' ? '🎉' : linked.type === 'match' ? '⚽' : '🏃'}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 block">
+                        {linked.type === 'gathering' ? 'Convívio Associado' : linked.type === 'match' ? 'Jogo Associado' : 'Treino Associado'}
+                      </span>
+                      <span className="text-sm font-black text-gray-900 truncate block group-hover:text-indigo-900">
+                        {linked.title}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-white text-indigo-700 border border-indigo-200 shrink-0 shadow-2xs">
+                    {new Date(linked.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} ↗
+                  </span>
+                </div>
+              )
+            })()}
 
             {/* SECÇÃO CONVOCATÓRIA */}
             {(() => {
@@ -1730,40 +1852,64 @@ const CalendarPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Data e Hora *</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
                   <input
                     type="datetime-local"
                     required
                     value={dateTime}
                     onChange={(e) => setDateTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Localização *</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Concentração</label>
+                  <input
+                    type="time"
+                    value={meetingTime}
+                    onChange={(e) => setMeetingTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                    placeholder="Ex: 19:30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Localização *</label>
                   <input
                     type="text"
                     required
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
                     placeholder="Ex: Campo Sintético"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Nº Máximo Convocados</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={maxPlayers}
-                    onChange={(e) => setMaxPlayers(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
-                    placeholder="Ex: 16"
-                  />
-                </div>
+              </div>
+
+              {/* Associar a outro Evento (Bidirecional) */}
+              <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
+                <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <Link2 size={14} className="text-indigo-600" />
+                  <span>🔗 Associar a outro Evento (ex: Convívio pós-jogo/treino, Jogo/Treino)</span>
+                </label>
+                <select
+                  value={relatedGatheringId}
+                  onChange={(e) => setRelatedGatheringId(e.target.value)}
+                  className="w-full px-3 py-2 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-600 bg-white text-xs font-medium"
+                >
+                  <option value="">-- Nenhum evento associado --</option>
+                  {events
+                    .filter(e => {
+                      if (!dateTime) return true
+                      const diffDays = Math.abs(new Date(e.date_time).getTime() - new Date(dateTime).getTime()) / (1000 * 3600 * 24)
+                      return diffDays <= 14 // Próximas duas semanas ou mesmo período
+                    })
+                    .map(e => (
+                      <option key={e.id} value={e.id}>
+                        [{e.type === 'gathering' ? 'Convívio' : e.type === 'match' ? 'Jogo' : 'Treino'}] {e.title} • {new Date(e.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} às {new Date(e.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      </option>
+                    ))}
+                </select>
               </div>
 
               <div>
@@ -2036,31 +2182,17 @@ const CalendarPage: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
-                  <select
-                    value={editType}
-                    onChange={(e) => setEditType(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                  >
-                    <option value="practice">Treino</option>
-                    <option value="match">Jogo</option>
-                    <option value="gathering">Convívio</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Nº Máximo Convocados</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={editMaxPlayers}
-                    onChange={(e) => setEditMaxPlayers(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
+                <select
+                  value={editType}
+                  onChange={(e) => setEditType(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                >
+                  <option value="practice">Treino</option>
+                  <option value="match">Jogo</option>
+                  <option value="gathering">Convívio</option>
+                </select>
               </div>
 
               {editType === 'match' && (
@@ -2090,7 +2222,7 @@ const CalendarPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
                   <input
@@ -2098,7 +2230,18 @@ const CalendarPage: React.FC = () => {
                     required
                     value={editDateTime}
                     onChange={(e) => setEditDateTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Concentração</label>
+                  <input
+                    type="time"
+                    value={editMeetingTime}
+                    onChange={(e) => setEditMeetingTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                    placeholder="Ex: 19:30"
                   />
                 </div>
 
@@ -2109,9 +2252,31 @@ const CalendarPage: React.FC = () => {
                     required
                     value={editLocation}
                     onChange={(e) => setEditLocation(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
                   />
                 </div>
+              </div>
+
+              {/* Associar a outro Evento (Bidirecional) */}
+              <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
+                <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <Link2 size={14} className="text-indigo-600" />
+                  <span>🔗 Associar a outro Evento (ex: Convívio pós-jogo/treino, Jogo/Treino)</span>
+                </label>
+                <select
+                  value={editRelatedGatheringId}
+                  onChange={(e) => setEditRelatedGatheringId(e.target.value)}
+                  className="w-full px-3 py-2 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-600 bg-white text-xs font-medium"
+                >
+                  <option value="">-- Nenhum evento associado --</option>
+                  {events
+                    .filter(e => e.id !== (selectedEvent?.id || ''))
+                    .map(e => (
+                      <option key={e.id} value={e.id}>
+                        [{e.type === 'gathering' ? 'Convívio' : e.type === 'match' ? 'Jogo' : 'Treino'}] {e.title} • {new Date(e.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} às {new Date(e.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      </option>
+                    ))}
+                </select>
               </div>
 
               <div>

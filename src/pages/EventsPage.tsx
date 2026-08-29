@@ -20,7 +20,8 @@ import {
   Sparkles,
   PartyPopper,
   Trophy,
-  Edit
+  Edit,
+  Link2
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
@@ -145,6 +146,7 @@ interface Event {
   opponent_id?: string | null
   home_away?: 'home' | 'away' | 'neutral' | null
   max_players?: number | null
+  related_gathering_id?: string | null
 }
 
 interface Field { id: string; name: string; address?: string | null }
@@ -204,6 +206,7 @@ const EventsPage: React.FC = () => {
   const [tournamentId, setTournamentId] = useState('')
   const [opponentId, setOpponentId] = useState('')
   const [homeAway, setHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
+  const [relatedGatheringId, setRelatedGatheringId] = useState('')
 
   // Recurrence states
   const [isRecurring, setIsRecurring] = useState(false)
@@ -224,6 +227,7 @@ const EventsPage: React.FC = () => {
   const [editTournamentId, setEditTournamentId] = useState('')
   const [editOpponentId, setEditOpponentId] = useState('')
   const [editHomeAway, setEditHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
+  const [editRelatedGatheringId, setEditRelatedGatheringId] = useState('')
   const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
   const [isBatchCalling, setIsBatchCalling] = useState(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
@@ -258,6 +262,9 @@ const EventsPage: React.FC = () => {
     setEditTournamentId(ev.tournament_id || '')
     setEditOpponentId(ev.opponent_id || '')
     setEditHomeAway(ev.home_away || 'home')
+    // Look up linked event bidirectionally
+    const linked = events.find(e => e.id !== ev.id && (e.id === ev.related_gathering_id || e.related_gathering_id === ev.id))
+    setEditRelatedGatheringId(linked ? linked.id : (ev.related_gathering_id || ''))
     setEditPlayerSearchTerm('')
   }
 
@@ -280,6 +287,7 @@ const EventsPage: React.FC = () => {
         tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
         opponent_id: editType === 'match' ? (editOpponentId || null) : null,
         home_away: editType === 'match' ? editHomeAway : null,
+        related_gathering_id: editRelatedGatheringId || null,
       }
 
       const { error } = await supabase
@@ -288,6 +296,22 @@ const EventsPage: React.FC = () => {
         .eq('id', editingEvent.id)
 
       if (error) throw error
+
+      // Atualização Bidirecional no Supabase
+      if (editRelatedGatheringId) {
+        await supabase
+          .from('events')
+          .update({ related_gathering_id: editingEvent.id })
+          .eq('id', editRelatedGatheringId)
+      } else {
+        const prevLinked = events.find(e => e.id !== editingEvent.id && (e.id === editingEvent.related_gathering_id || e.related_gathering_id === editingEvent.id))
+        if (prevLinked) {
+          await supabase
+            .from('events')
+            .update({ related_gathering_id: null })
+            .eq('id', prevLinked.id)
+        }
+      }
 
       setEditingEvent(null)
       setSuccessMessage('✨ Evento atualizado com sucesso!')
@@ -552,6 +576,7 @@ const EventsPage: React.FC = () => {
           tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
           opponent_id: type === 'match' ? (opponentId || null) : null,
           home_away: type === 'match' ? homeAway : null,
+          related_gathering_id: relatedGatheringId || null,
           created_by: profile?.id
         }
 
@@ -562,6 +587,14 @@ const EventsPage: React.FC = () => {
           .single()
 
         if (error) throw error
+
+        // Se tiver evento associado, atualizar o outro evento bidirecionalmente
+        if (createdEvent && relatedGatheringId) {
+          await supabase
+            .from('events')
+            .update({ related_gathering_id: createdEvent.id })
+            .eq('id', relatedGatheringId)
+        }
 
         if (createdEvent && selectedPlayerIds.length > 0) {
           const validIds = await ensurePlayerIdsForSupabase(selectedPlayerIds, allPlayers)
@@ -585,6 +618,7 @@ const EventsPage: React.FC = () => {
       setDescription('')
       setTournamentId('')
       setOpponentId('')
+      setRelatedGatheringId('')
       setIsFriendly(false)
       setHomeAway('home')
       setMaxPlayers('')
@@ -1012,6 +1046,26 @@ const EventsPage: React.FC = () => {
               </div>
             )}
 
+            {/* Associar a outro Evento (Bidirecional) */}
+            <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-2xl space-y-1.5">
+              <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                <Link2 size={14} className="text-indigo-600" />
+                <span>🔗 Associar a outro Evento (ex: Convívio pós-jogo/treino, Jogo/Treino)</span>
+              </label>
+              <select
+                value={relatedGatheringId}
+                onChange={(e) => setRelatedGatheringId(e.target.value)}
+                className="w-full px-3 py-2 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-600 bg-white text-xs font-medium"
+              >
+                <option value="">-- Nenhum evento associado --</option>
+                {events.map(e => (
+                  <option key={e.id} value={e.id}>
+                    [{e.type === 'gathering' ? 'Convívio' : e.type === 'match' ? 'Jogo' : 'Treino'}] {e.title} • {new Date(e.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} às {new Date(e.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* 7. Convocatória: Convocação Geral (3 Perfis) ou Escolher 1 a 1 */}
             <div className="p-4 bg-gray-50 border-2 border-amber-200 rounded-2xl space-y-3">
               <div className="flex flex-col gap-1.5">
@@ -1288,6 +1342,38 @@ const EventsPage: React.FC = () => {
                           )}
                         </div>
                       </div>
+
+                      {/* Evento Associado / Linkado (Bidirecional) */}
+                      {(() => {
+                        const linked = events.find(e => e.id !== event.id && (e.id === event.related_gathering_id || e.related_gathering_id === event.id))
+                        if (!linked) return null
+                        return (
+                          <div 
+                            onClick={() => {
+                              setActiveCallupModalEvent(linked)
+                              setRsvpTabFilter('all')
+                            }}
+                            className="p-2.5 rounded-xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 text-indigo-950 flex items-center justify-between gap-2 shadow-2xs hover:border-indigo-400 transition-all cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold text-xs shadow-2xs">
+                                {linked.type === 'gathering' ? '🎉' : linked.type === 'match' ? '⚽' : '🏃'}
+                              </div>
+                              <div className="min-w-0">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-700 block">
+                                  {linked.type === 'gathering' ? 'Convívio Associado' : linked.type === 'match' ? 'Jogo Associado' : 'Treino Associado'}
+                                </span>
+                                <span className="text-xs font-black text-gray-900 truncate block group-hover:text-indigo-900">
+                                  {linked.title}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-white text-indigo-700 border border-indigo-200 shrink-0 shadow-2xs">
+                              {new Date(linked.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} ↗
+                            </span>
+                          </div>
+                        )
+                      })()}
 
                       {/* RSVP Summary Bar & Action Button */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-gray-200">
@@ -1714,6 +1800,28 @@ const EventsPage: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Associar a outro Evento (Bidirecional) */}
+              <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-2xl space-y-1.5">
+                <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <Link2 size={14} className="text-indigo-600" />
+                  <span>🔗 Associar a outro Evento (ex: Convívio pós-jogo/treino, Jogo/Treino)</span>
+                </label>
+                <select
+                  value={editRelatedGatheringId}
+                  onChange={(e) => setEditRelatedGatheringId(e.target.value)}
+                  className="w-full px-3 py-2 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-600 bg-white text-xs font-medium"
+                >
+                  <option value="">-- Nenhum evento associado --</option>
+                  {events
+                    .filter(e => e.id !== (editingEvent?.id || ''))
+                    .map(e => (
+                      <option key={e.id} value={e.id}>
+                        [{e.type === 'gathering' ? 'Convívio' : e.type === 'match' ? 'Jogo' : 'Treino'}] {e.title} • {new Date(e.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} às {new Date(e.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      </option>
+                    ))}
+                </select>
+              </div>
 
               {/* Gestão de Convocatórias */}
               {editingEvent && (() => {
