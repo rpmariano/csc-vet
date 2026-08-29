@@ -724,27 +724,18 @@ const TeamManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-csc-dark flex items-center gap-2.5">
-            <Users size={32} />
-            <span>Gestão do Plantel & Membros</span>
-          </h1>
+      {/* Header com título removido a pedido do utilizador */}
+      {isCoachOrAdmin && (
+        <div className="flex items-center justify-end">
+          <button
+            onClick={openCreateModal}
+            className="flex items-center space-x-2 bg-csc-dark text-white px-4 py-2.5 rounded-xl font-bold hover:bg-csc-dark/80 transition-colors shadow-md shrink-0 text-xs sm:text-sm cursor-pointer active:scale-95"
+          >
+            <Plus size={18} />
+            <span>Adicionar Membro</span>
+          </button>
         </div>
-
-        {isCoachOrAdmin && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={openCreateModal}
-              className="flex items-center space-x-2 bg-csc-dark text-white px-4 py-2.5 rounded-xl font-bold hover:bg-csc-dark/80 transition-colors shadow-md shrink-0 text-xs sm:text-sm cursor-pointer active:scale-95"
-            >
-              <Plus size={18} />
-              <span>Adicionar Membro</span>
-            </button>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Banner de Sugestões Inteligentes de Associação para Treinadores/Admins */}
       {isCoachOrAdmin && associationSuggestions.length > 0 && (
