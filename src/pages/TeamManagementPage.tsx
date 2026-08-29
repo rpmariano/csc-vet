@@ -140,32 +140,46 @@ const TeamManagementPage: React.FC = () => {
   const isAdmin = currentUserProfile?.role === 'admin'
 
   const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
-    const emailMap = new Map<string, Profile>()
+    const playersList: Profile[] = INITIAL_PLAYERS_DATA.map((seedPlayer, idx) => ({
+      ...seedPlayer,
+      id: `seed-${idx}`,
+    } as Profile))
 
-    // 1. Iniciar com todos os 31 atletas do plantel (dados do PDF)
-    INITIAL_PLAYERS_DATA.forEach((seedPlayer, idx) => {
-      const emailKey = (seedPlayer.email || `player-${idx}@csc.pt`).toLowerCase().trim()
-      emailMap.set(emailKey, {
-        ...seedPlayer,
-        id: `seed-${idx}`,
-      } as Profile)
-    })
-
-    // 2. Sobrepor perfis do Supabase (que têm UUIDs reais, fotos carregadas e edições mais recentes)
     remoteProfiles.forEach((remotePlayer) => {
-      if (remotePlayer.email) {
-        const emailKey = remotePlayer.email.toLowerCase().trim()
-        const existing = emailMap.get(emailKey)
-        emailMap.set(emailKey, {
-          ...(existing || {}),
+      let matchedIdx = -1
+
+      // 1. Verificar por ID
+      if (remotePlayer.id && !remotePlayer.id.startsWith('seed-')) {
+        matchedIdx = playersList.findIndex(p => p.id === remotePlayer.id)
+      }
+
+      // 2. Verificar por email
+      if (matchedIdx === -1 && remotePlayer.email) {
+        const remEmail = remotePlayer.email.toLowerCase().trim()
+        matchedIdx = playersList.findIndex(p => p.email && p.email.toLowerCase().trim() === remEmail)
+      }
+
+      // 3. Verificar por nome / alcunha
+      if (matchedIdx === -1 && remotePlayer.name) {
+        const remName = remotePlayer.name.toLowerCase().trim()
+        matchedIdx = playersList.findIndex(p => p.name && (
+          p.name.toLowerCase().trim() === remName ||
+          p.shirt_name?.toLowerCase().trim() === remName ||
+          p.nickname?.toLowerCase().trim() === remName
+        ))
+      }
+
+      if (matchedIdx !== -1) {
+        playersList[matchedIdx] = {
+          ...playersList[matchedIdx],
           ...remotePlayer,
-        })
+        }
       } else {
-        emailMap.set(remotePlayer.id, remotePlayer)
+        playersList.push(remotePlayer)
       }
     })
 
-    return Array.from(emailMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    return playersList.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   }
 
   const fetchProfiles = async () => {
@@ -455,9 +469,24 @@ const TeamManagementPage: React.FC = () => {
     }
 
     try {
+      const cleanEmail = formEmail.trim().toLowerCase()
+      const cleanName = formName.trim()
       let savedPlayerId: string | null = null
 
       if (isEditing && formId && !formId.startsWith('seed-')) {
+        // 1. Verificar se o novo email já pertence a OUTRO atleta na base de dados
+        const { data: conflict } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .eq('email', cleanEmail)
+          .neq('id', formId)
+          .maybeSingle()
+
+        if (conflict) {
+          toast.error(`O email "${cleanEmail}" já está associado a outro membro ("${conflict.name}").`)
+          return
+        }
+
         const { error } = await supabase
           .from('profiles')
           .update(payload)
@@ -467,20 +496,32 @@ const TeamManagementPage: React.FC = () => {
         savedPlayerId = formId
         toast.success('Ficha de membro atualizada com sucesso!')
       } else {
-        // Verificar se já existe perfil na BD com este email
-        const { data: existing } = await supabase
+        // 2. Se for um membro de semente (seed-X) ou novo registo:
+        // Verificar se já existe perfil na BD com este nome ou email
+        const { data: existingByName } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', formEmail)
+          .ilike('name', cleanName)
           .maybeSingle()
 
-        if (existing?.id) {
+        let existingId = existingByName?.id
+
+        if (!existingId) {
+          const { data: existingByEmail } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', cleanEmail)
+            .maybeSingle()
+          existingId = existingByEmail?.id
+        }
+
+        if (existingId) {
           const { error } = await supabase
             .from('profiles')
             .update(payload)
-            .eq('id', existing.id)
+            .eq('id', existingId)
           if (error) throw error
-          savedPlayerId = existing.id
+          savedPlayerId = existingId
           toast.success('Ficha de membro atualizada na base de dados!')
         } else {
           const newId = crypto.randomUUID()
@@ -503,6 +544,7 @@ const TeamManagementPage: React.FC = () => {
       setIsFormModalOpen(false)
       fetchProfiles()
     } catch (err: any) {
+      console.error('Erro ao gravar membro:', err)
       toast.error('Erro ao gravar membro: ' + (err.message || 'Verifique a base de dados'))
     }
   }
