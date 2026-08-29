@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import { 
-  Bell, 
   Calendar, 
   MapPin, 
   CheckCircle2, 
@@ -293,68 +292,75 @@ const Home: React.FC = () => {
       <div 
         onTouchStart={(e) => handleTouchStart(e, 'announcement')}
         onTouchEnd={handleTouchEnd}
-        className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:border-gray-300 transition-all select-none"
+        className="bg-gradient-to-r from-emerald-800 via-teal-900 to-emerald-950 text-white rounded-3xl p-4 sm:p-5 shadow-sm border-2 border-emerald-700/70 space-y-3 select-none"
       >
-        {/* Header do Carrossel de Comunicados */}
-        <div className="bg-gradient-to-r from-gray-800 via-gray-900 to-black px-4 py-2.5 text-white flex items-center justify-between shadow-2xs">
+        {/* Header dos Comunicados no Estilo Alerta */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell size={16} className="text-csc-gold" />
-            <h2 className="text-xs sm:text-sm font-black tracking-wide">
-              Comunicados
-            </h2>
-            <span className="text-[9px] font-black uppercase px-2 py-0.2 rounded-full bg-white/20 text-white border border-white/30">
-              {announcements.length} {announcements.length === 1 ? 'Aviso' : 'Avisos'}
-            </span>
+            <span className="text-xl shrink-0">📢</span>
+            <div>
+              <h3 className="text-xs sm:text-sm font-black text-white">
+                {announcements.length === 1 ? '1 Comunicado Oficial' : `${announcements.length} Comunicados Oficiais`}
+              </h3>
+              <p className="text-[11px] font-semibold text-emerald-200/90">Avisos e notas informativas da equipa:</p>
+            </div>
           </div>
 
-          <Link to="/announcements" className="text-[10.5px] font-bold text-gray-300 hover:text-white flex items-center gap-0.5">
+          <Link 
+            to="/announcements" 
+            className="text-[11px] font-bold text-csc-gold hover:text-white flex items-center gap-0.5 shrink-0 bg-white/10 px-2.5 py-1 rounded-xl border border-white/20 hover:bg-white/20 transition-colors"
+          >
             <span>Ver todos</span>
             <ChevronRight size={12} />
           </Link>
         </div>
 
-        {/* Conteúdo do Comunicado Atual */}
+        {/* Card do Comunicado Atual (Inner card branco com sombra) */}
         {currentAnnouncement ? (
           <div 
             onClick={() => navigate('/announcements')}
-            className="p-4 space-y-2 cursor-pointer hover:bg-gray-50/70 transition-colors"
+            className="bg-white/95 backdrop-blur-xs p-4 rounded-2xl border border-white/40 shadow-xs space-y-2.5 cursor-pointer hover:bg-white transition-all"
           >
-            <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
-              <h3 className="font-black text-sm text-gray-900 line-clamp-1">{currentAnnouncement.title}</h3>
-              <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md shrink-0 ml-2">
+            <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-gray-100">
+              <h4 className="font-black text-sm text-gray-900 truncate flex items-center gap-1.5">
+                <span>📌</span>
+                <span className="truncate">{currentAnnouncement.title}</span>
+              </h4>
+              <span className="text-[10.5px] font-extrabold text-emerald-950 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-lg shrink-0">
                 {new Date(currentAnnouncement.published_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
               </span>
             </div>
-            <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">{currentAnnouncement.content}</p>
-
-            {/* Traços do Carrossel e Contador Centralizados na Parte Inferior */}
-            {announcements.length > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-2 border-t border-gray-100">
-                <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
-                  {announcements.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setCurrentAnnouncementIndex(idx)
-                      }}
-                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                        idx === currentAnnouncementIndex ? 'bg-gray-900 w-5' : 'bg-gray-300 hover:bg-gray-400 w-2'
-                      }`}
-                      title={`Aviso ${idx + 1}`}
-                    />
-                  ))}
-                  <span className="text-[10px] font-black text-gray-700 ml-1 pl-1.5 border-l border-gray-300 leading-none">
-                    {currentAnnouncementIndex + 1}/{announcements.length}
-                  </span>
-                </div>
-              </div>
-            )}
+            <p className="text-xs text-gray-700 leading-relaxed line-clamp-3">
+              {currentAnnouncement.content}
+            </p>
           </div>
         ) : (
-          <div className="p-4 text-xs text-gray-400 text-center">
+          <div className="bg-white/95 p-4 rounded-2xl text-xs text-gray-400 text-center">
             Sem comunicados recentes.
+          </div>
+        )}
+
+        {/* Traços do Carrossel e Contador Centralizados na Parte Inferior (Estilo Alerta) */}
+        {announcements.length > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-0.5">
+            <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1 rounded-full border border-white/15">
+              {announcements.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setCurrentAnnouncementIndex(idx)}
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    idx === currentAnnouncementIndex
+                      ? 'bg-csc-gold w-5'
+                      : 'bg-white/40 hover:bg-white/60 w-2'
+                  }`}
+                  title={`Comunicado ${idx + 1}`}
+                />
+              ))}
+              <span className="text-[11px] font-black text-white ml-1 pl-1.5 border-l border-white/20 leading-none">
+                {currentAnnouncementIndex + 1}/{announcements.length}
+              </span>
+            </div>
           </div>
         )}
       </div>
