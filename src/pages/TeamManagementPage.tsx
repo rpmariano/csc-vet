@@ -140,6 +140,7 @@ const TeamManagementPage: React.FC = () => {
   const isAdmin = currentUserProfile?.role === 'admin'
 
   const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
+    // 1. Iniciar com a lista dos atletas de semente
     const playersList: Profile[] = INITIAL_PLAYERS_DATA.map((seedPlayer, idx) => ({
       ...seedPlayer,
       id: `seed-${idx}`,
@@ -159,20 +160,29 @@ const TeamManagementPage: React.FC = () => {
         matchedIdx = playersList.findIndex(p => p.email && p.email.toLowerCase().trim() === remEmail)
       }
 
-      // 3. Verificar por nome / alcunha
+      // 3. Verificar por nome / alcunha / partes do nome
       if (matchedIdx === -1 && remotePlayer.name) {
         const remName = remotePlayer.name.toLowerCase().trim()
-        matchedIdx = playersList.findIndex(p => p.name && (
-          p.name.toLowerCase().trim() === remName ||
-          p.shirt_name?.toLowerCase().trim() === remName ||
-          p.nickname?.toLowerCase().trim() === remName
-        ))
+        matchedIdx = playersList.findIndex(p => {
+          const pName = (p.name || '').toLowerCase().trim()
+          const pShirt = (p.shirt_name || '').toLowerCase().trim()
+          const pNick = (p.nickname || '').toLowerCase().trim()
+          if (!pName) return false
+          if (pName === remName || pShirt === remName || pNick === remName) return true
+
+          // Correspondência por partes do nome se ambos tiverem mais de 1 palavra
+          const remParts = remName.split(' ').filter(w => w.length > 2)
+          const pParts = pName.split(' ').filter(w => w.length > 2)
+          const common = remParts.filter(w => pParts.includes(w))
+          return common.length >= 2
+        })
       }
 
       if (matchedIdx !== -1) {
         playersList[matchedIdx] = {
           ...playersList[matchedIdx],
           ...remotePlayer,
+          id: remotePlayer.id, // Forçar o UUID real
         }
       } else {
         playersList.push(remotePlayer)
@@ -487,12 +497,16 @@ const TeamManagementPage: React.FC = () => {
           return
         }
 
-        const { error } = await supabase
+        const { data: updatedRows, error } = await supabase
           .from('profiles')
           .update(payload)
           .eq('id', formId)
+          .select()
 
         if (error) throw error
+        if (updatedRows && updatedRows.length === 0) {
+          console.warn('Update matched 0 rows')
+        }
         savedPlayerId = formId
         toast.success('Ficha de membro atualizada com sucesso!')
       } else {
@@ -520,6 +534,7 @@ const TeamManagementPage: React.FC = () => {
             .from('profiles')
             .update(payload)
             .eq('id', existingId)
+            .select()
           if (error) throw error
           savedPlayerId = existingId
           toast.success('Ficha de membro atualizada na base de dados!')
@@ -531,13 +546,25 @@ const TeamManagementPage: React.FC = () => {
               ...payload,
               id: newId
             }])
+            .select()
           if (error) throw error
           savedPlayerId = newId
           toast.success('Novo membro gravado com sucesso!')
         }
       }
 
+      // Atualizar o estado local imediatamente para refletir no ecrã sem depender de race conditions
       if (savedPlayerId) {
+        setProfiles(prev => prev.map(p => {
+          if (p.id === formId || p.id === savedPlayerId || p.name?.toLowerCase().trim() === cleanName.toLowerCase()) {
+            return {
+              ...p,
+              ...payload,
+              id: savedPlayerId!
+            }
+          }
+          return p
+        }))
         await syncPlayerPracticeCallups(savedPlayerId, formStatus)
       }
 
