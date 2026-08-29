@@ -28,30 +28,31 @@ interface PlayerMatchStat {
 }
 
 const TACTICAL_FORMATIONS = [
-  '1-4-3-3',
-  '1-4-4-2',
-  '1-3-5-2',
-  '1-4-2-3-1',
-  '1-3-4-3',
-  '1-4-1-4-1',
-  '1-5-3-2',
-  '1-2-3-1 (Fut 7)',
-  '1-3-2-1 (Fut 7)',
-  '1-3-1-2 (Fut 7)',
-  '1-2-2-2 (Fut 7)',
+  '4-3-3',
+  '4-4-2',
+  '3-5-2',
+  '4-2-3-1',
+  '3-4-3',
+  '4-1-4-1',
+  '5-3-2',
+  '2-3-1 (Fut 7)',
+  '3-2-1 (Fut 7)',
+  '3-1-2 (Fut 7)',
+  '2-2-2 (Fut 7)',
   'Personalizado'
 ]
 
 export const parseMatchReportMetadata = (desc?: string | null) => {
-  if (!desc) return { tacticalFormation: '1-4-3-3', occurrences: '', cleanDescription: '' }
+  if (!desc) return { tacticalFormation: '4-3-3', occurrences: '', cleanDescription: '' }
   
   const reportTagMatch = desc.match(/\[MATCH_REPORT:([\s\S]*?)\]/)
   if (reportTagMatch && reportTagMatch[1]) {
     try {
       const parsed = JSON.parse(reportTagMatch[1])
       const cleanDescription = desc.replace(/\[MATCH_REPORT:[\s\S]*?\]/, '').trim()
+      const rawFormation = parsed.tactical || '4-3-3'
       return {
-        tacticalFormation: parsed.tactical || '1-4-3-3',
+        tacticalFormation: rawFormation.replace(/^1-/, ''),
         occurrences: parsed.occurrences || '',
         cleanDescription
       }
@@ -60,7 +61,7 @@ export const parseMatchReportMetadata = (desc?: string | null) => {
     }
   }
 
-  return { tacticalFormation: '1-4-3-3', occurrences: '', cleanDescription: desc || '' }
+  return { tacticalFormation: '4-3-3', occurrences: '', cleanDescription: desc || '' }
 }
 
 export const buildDescriptionWithMatchReport = (
@@ -94,7 +95,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const [awayScore, setAwayScore] = useState<number | null>(event?.away_score ?? null)
 
   // Tactical & Notes
-  const [tacticalFormation, setTacticalFormation] = useState('1-4-3-3')
+  const [tacticalFormation, setTacticalFormation] = useState('4-3-3')
   const [occurrences, setOccurrences] = useState('')
   const [cleanDescription, setCleanDescription] = useState('')
 

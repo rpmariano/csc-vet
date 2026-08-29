@@ -543,7 +543,7 @@ const EventsPage: React.FC = () => {
 
       const fullIsoDateTime = new Date(`${editEventDate}T${editEventTime}:00`).toISOString()
       const parsedOriginal = parseMatchReportMetadata(editingEvent.description)
-      const finalDescription = (parsedOriginal.tacticalFormation !== '1-4-3-3' || parsedOriginal.occurrences)
+      const finalDescription = (parsedOriginal.tacticalFormation !== '4-3-3' && parsedOriginal.tacticalFormation !== '1-4-3-3' || parsedOriginal.occurrences)
         ? buildDescriptionWithMatchReport(editDescription, parsedOriginal.tacticalFormation, parsedOriginal.occurrences)
         : (editDescription.trim() || null)
 
