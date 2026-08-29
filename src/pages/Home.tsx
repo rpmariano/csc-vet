@@ -45,6 +45,7 @@ interface Announcement {
   title: string
   content: string
   published_at: string
+  is_active?: boolean
 }
 
 interface Callup {
@@ -140,22 +141,23 @@ const Home: React.FC = () => {
         }
         setUpcomingMatches(resolvedMatches)
 
-        // 2. Fetch announcements
+        // 2. Fetch announcements (apenas ativos)
         const { data: anns } = await supabase
           .from('announcements')
           .select('*')
           .order('published_at', { ascending: false })
-          .limit(3)
 
         if (anns && anns.length > 0) {
-          setAnnouncements(anns as Announcement[])
+          const activeAnns = (anns as Announcement[]).filter(a => a.is_active !== false)
+          setAnnouncements(activeAnns)
         } else {
           setAnnouncements([
             {
               id: 'a-demo',
               title: 'Comunicações Importantes',
               content: 'Caros atletas, recordamos que os treinos começam pontualmente. A comparência no balneário deve ser feita 30 minutos antes.',
-              published_at: new Date().toISOString()
+              published_at: new Date().toISOString(),
+              is_active: true
             }
           ])
         }
