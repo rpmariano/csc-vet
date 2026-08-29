@@ -257,7 +257,24 @@ const Home: React.FC = () => {
     }
   }
 
-  const pendingCallupsCount = myCallups.filter(c => c.status === 'called').length
+  const isCallupPendingResponse = (callup: Callup) => {
+    if (callup.status !== 'called') return false
+    const ev = callup.event
+    if (!ev || !ev.date_time) return true
+    const eventTime = new Date(ev.date_time).getTime()
+    const now = new Date().getTime()
+    if (eventTime < now) return false // Evento no passado não é pendente
+
+    // Para treinos: apenas solicitar resposta a partir de 6 dias antes
+    if (ev.type === 'practice') {
+      const sixDaysMs = 6 * 24 * 60 * 60 * 1000
+      return (eventTime - now) <= sixDaysMs
+    }
+    return true
+  }
+
+  const pendingCallups = myCallups.filter(isCallupPendingResponse)
+  const pendingCallupsCount = pendingCallups.length
 
   const currentMatch = upcomingMatches[currentMatchIndex]
   const currentPractice = upcomingPractices[currentPracticeIndex]
@@ -275,7 +292,7 @@ const Home: React.FC = () => {
       
       {/* 1. ALERTA DE CONVOCATÓRIAS PENDENTES (NO TOPO ABSOLUTO) */}
       {pendingCallupsCount > 0 && (() => {
-        const firstPending = myCallups.find(c => c.status === 'called')
+        const firstPending = pendingCallups[0]
         const targetEventId = firstPending?.event_id || (firstPending?.event as any)?.id
         const targetUrl = targetEventId ? `/calendar?event=${targetEventId}` : '/calendar'
 

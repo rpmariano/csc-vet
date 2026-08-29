@@ -2161,126 +2161,46 @@ const CalendarPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Para Jogos e Treinos: Escolher Campo do Clube */}
-                {(type === 'match' || type === 'practice') && (
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <label className="font-bold text-gray-800 flex items-center gap-1.5">
-                        <span>🏟️ Campo / Instalação *</span>
-                        {location && (
-                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[180px]">
-                            ✓ {location}
-                          </span>
-                        )}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setQuickFieldTarget('create')
-                          setIsQuickFieldModalOpen(true)
-                        }}
-                        className="text-[11px] font-bold text-csc-dark hover:text-black bg-white hover:bg-gray-100 border border-gray-300 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                      >
-                        <Plus size={12} className="text-csc-gold" />
-                        <span>Criar Campo</span>
-                      </button>
-                    </div>
-                    <select
-                      value={fieldId}
-                      onChange={(e) => {
+                {/* Campo / Instalação do Evento */}
+                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-gray-800 flex items-center gap-1.5">
+                      <span>🏟️ Campo / Instalação *</span>
+                      {location && (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                          ✓ {location}
+                        </span>
+                      )}
+                    </label>
+                  </div>
+                  <select
+                    required
+                    value={fieldId}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') {
+                        setQuickFieldTarget('create')
+                        setIsQuickFieldModalOpen(true)
+                      } else {
                         setFieldId(e.target.value)
                         const sel = fields.find(f => f.id === e.target.value)
                         if (sel) {
                           setLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                        } else {
+                          setLocation('')
                         }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
-                    >
-                      <option value="">-- Escolher Campo do Clube --</option>
-                      {fields.map(f => (
-                        <option key={f.id} value={f.id}>
-                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                    {!fieldId && (
-                      <input
-                        type="text"
-                        required={!fieldId}
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
-                        placeholder="Ou digite o nome do campo / estádio adversário..."
-                      />
-                    )}
-                  </div>
-                )}
-
-                {/* Para Convívios: Escolher Campo/Sede ou Escrever Morada à mão */}
-                {type === 'gathering' && (
-                  <div className="p-3.5 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2.5 text-xs">
-                    <div className="flex items-center justify-between">
-                      <label className="font-bold text-purple-950 flex items-center gap-1">
-                        <MapPin size={13} className="text-purple-700" />
-                        <span>Localização do Convívio *</span>
-                        {(location || fieldId) && (
-                          <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">
-                            ✓ {location || fields.find(f => f.id === fieldId)?.name}
-                          </span>
-                        )}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setQuickFieldTarget('create')
-                          setIsQuickFieldModalOpen(true)
-                        }}
-                        className="text-[11px] font-bold text-purple-900 hover:text-purple-950 bg-white hover:bg-purple-100 border border-purple-300 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                      >
-                        <Plus size={12} className="text-purple-700" />
-                        <span>Criar Campo</span>
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                        Instalação do Clube (Opcional):
-                      </label>
-                      <select
-                        value={fieldId}
-                        onChange={(e) => {
-                          setFieldId(e.target.value)
-                          const sel = fields.find(f => f.id === e.target.value)
-                          if (sel) {
-                            setLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white font-medium"
-                      >
-                        <option value="">-- Escolher Instalação/Sede do Clube ou escrever abaixo --</option>
-                        {fields.map(f => (
-                          <option key={f.id} value={f.id}>
-                            🏟️ {f.name} {f.address ? `(${f.address})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                        Morada / Restaurante / Local (escrito à mão):
-                      </label>
-                      <input
-                        type="text"
-                        required={!fieldId}
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white"
-                        placeholder="Ex: Restaurante O Pescador, Av. Marginal, Cascais..."
-                      />
-                    </div>
-                  </div>
-                )}
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                  >
+                    <option value="">-- Escolher Campo / Instalação do Clube --</option>
+                    <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
+                    {fields.map(f => (
+                      <option key={f.id} value={f.id}>
+                        🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
@@ -2707,126 +2627,46 @@ const CalendarPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Para Jogos e Treinos: Escolher Campo do Clube */}
-                {(editType === 'match' || editType === 'practice') && (
-                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <label className="font-bold text-gray-800 flex items-center gap-1.5">
-                        <span>🏟️ Campo / Instalação *</span>
-                        {editLocation && (
-                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[180px]">
-                            ✓ {editLocation}
-                          </span>
-                        )}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setQuickFieldTarget('edit')
-                          setIsQuickFieldModalOpen(true)
-                        }}
-                        className="text-[11px] font-bold text-csc-dark hover:text-black bg-white hover:bg-gray-100 border border-gray-300 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                      >
-                        <Plus size={12} className="text-csc-gold" />
-                        <span>Criar Campo</span>
-                      </button>
-                    </div>
-                    <select
-                      value={editFieldId}
-                      onChange={(e) => {
+                {/* Campo / Instalação do Evento */}
+                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-gray-800 flex items-center gap-1.5">
+                      <span>🏟️ Campo / Instalação *</span>
+                      {editLocation && (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                          ✓ {editLocation}
+                        </span>
+                      )}
+                    </label>
+                  </div>
+                  <select
+                    required
+                    value={editFieldId}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') {
+                        setQuickFieldTarget('edit')
+                        setIsQuickFieldModalOpen(true)
+                      } else {
                         setEditFieldId(e.target.value)
                         const sel = fields.find(f => f.id === e.target.value)
                         if (sel) {
                           setEditLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                        } else {
+                          setEditLocation('')
                         }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
-                    >
-                      <option value="">-- Escolher Campo do Clube --</option>
-                      {fields.map(f => (
-                        <option key={f.id} value={f.id}>
-                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                    {!editFieldId && (
-                      <input
-                        type="text"
-                        required={!editFieldId}
-                        value={editLocation}
-                        onChange={(e) => setEditLocation(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
-                        placeholder="Ou digite o nome do campo / estádio adversário..."
-                      />
-                    )}
-                  </div>
-                )}
-
-                {/* Para Convívios: Escolher Campo/Sede ou Escrever Morada à mão */}
-                {editType === 'gathering' && (
-                  <div className="p-3.5 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2.5 text-xs">
-                    <div className="flex items-center justify-between">
-                      <label className="font-bold text-purple-950 flex items-center gap-1">
-                        <MapPin size={13} className="text-purple-700" />
-                        <span>Localização do Convívio *</span>
-                        {(editLocation || editFieldId) && (
-                          <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">
-                            ✓ {editLocation || fields.find(f => f.id === editFieldId)?.name}
-                          </span>
-                        )}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setQuickFieldTarget('edit')
-                          setIsQuickFieldModalOpen(true)
-                        }}
-                        className="text-[11px] font-bold text-purple-900 hover:text-purple-950 bg-white hover:bg-purple-100 border border-purple-300 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                      >
-                        <Plus size={12} className="text-purple-700" />
-                        <span>Criar Campo</span>
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                        Instalação do Clube (Opcional):
-                      </label>
-                      <select
-                        value={editFieldId}
-                        onChange={(e) => {
-                          setEditFieldId(e.target.value)
-                          const sel = fields.find(f => f.id === e.target.value)
-                          if (sel) {
-                            setEditLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white font-medium"
-                      >
-                        <option value="">-- Escolher Instalação/Sede do Clube ou escrever abaixo --</option>
-                        {fields.map(f => (
-                          <option key={f.id} value={f.id}>
-                            🏟️ {f.name} {f.address ? `(${f.address})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                        Morada / Restaurante / Local (escrito à mão):
-                      </label>
-                      <input
-                        type="text"
-                        required={!editFieldId}
-                        value={editLocation}
-                        onChange={(e) => setEditLocation(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white"
-                        placeholder="Ex: Restaurante O Pescador, Av. Marginal, Cascais..."
-                      />
-                    </div>
-                  </div>
-                )}
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                  >
+                    <option value="">-- Escolher Campo / Instalação do Clube --</option>
+                    <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
+                    {fields.map(f => (
+                      <option key={f.id} value={f.id}>
+                        🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
