@@ -1125,7 +1125,7 @@ const EventsPage: React.FC = () => {
 
       await fetchData()
       
-      // Reset form
+      // Reset form e fechar modal
       setTitle('')
       setDescription('')
       setTournamentId('')
@@ -1136,6 +1136,7 @@ const EventsPage: React.FC = () => {
       setMaxPlayers('')
       setIsRecurring(false)
       setRecurrenceEndDate('')
+      setViewModeTab('list') // Fechar modal e voltar à lista
     } catch (err: any) {
       console.error(err)
       toast.error("Erro ao criar evento: " + (err.message || 'Verifique a base de dados'))
@@ -1267,48 +1268,43 @@ const EventsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Seletor de Modo: Criar Novo Evento vs Lista de Eventos Agendados */}
-      <div className="flex bg-gray-100 p-1.5 rounded-2xl max-w-md border border-gray-200 shadow-2xs">
+      {/* Botão para abrir modal de criação (só coaches/admins) */}
+      {isCoachOrAdmin && (
         <button
           type="button"
           onClick={() => setViewModeTab('create')}
-          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            viewModeTab === 'create'
-              ? 'bg-csc-dark text-white shadow-xs'
-              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
-          }`}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-2xl font-black text-sm shadow-md transition-all cursor-pointer active:scale-98 border-2 border-csc-gold/30"
         >
-          <Plus size={16} className={viewModeTab === 'create' ? 'text-csc-gold' : ''} />
-          <span>Criar Novo Evento</span>
+          <Plus size={18} className="text-csc-gold" />
+          <span>Novo Evento</span>
         </button>
+      )}
 
-        <button
-          type="button"
-          onClick={() => setViewModeTab('list')}
-          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            viewModeTab === 'list'
-              ? 'bg-csc-dark text-white shadow-xs'
-              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
-          }`}
-        >
-          <CalendarRange size={16} className={viewModeTab === 'list' ? 'text-csc-gold' : ''} />
-          <span>Eventos Agendados ({events.length})</span>
-        </button>
-      </div>
-
-      {/* ABA 1: FORMULÁRIO DE CRIAÇÃO (FOCADO, SEM EVENTOS POR BAIXO) */}
+      {/* MODAL DE CRIAÇÃO DE EVENTO (OVERLAY) */}
       {viewModeTab === 'create' && (
-        <div className="w-full bg-white rounded-3xl shadow-sm border border-gray-200 p-5 sm:p-7">
-          <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-150">
-            <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
-              <Plus size={20} className="text-csc-dark" />
-              <span>Novo Evento / Atividade</span>
-            </h3>
-            <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-              CSC Organizer
-            </span>
-          </div>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-white w-full sm:rounded-3xl sm:max-w-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto shadow-2xl border-0 sm:border-2 sm:border-csc-gold/60 flex flex-col">
+            {/* Header fixo do modal */}
+            <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-5 sm:px-7 py-4 border-b border-gray-200 rounded-t-3xl">
+              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <Plus size={20} className="text-csc-dark" />
+                <span>Novo Evento / Atividade</span>
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 hidden sm:block">
+                  CSC Organizer
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setViewModeTab('list')}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 flex items-center justify-center cursor-pointer transition-all active:scale-90"
+                >
+                  <X size={18} className="stroke-[2.5]" />
+                </button>
+              </div>
+            </div>
 
+            <div className="px-5 sm:px-7 py-5">
           <form onSubmit={handleCreateEvent} className="space-y-5">
             
             {/* 1. Tipo de Evento */}
@@ -1778,11 +1774,13 @@ const EventsPage: React.FC = () => {
               )}
             </button>
           </form>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ABA 2: LISTA DE EVENTOS REGISTADOS & RSVP */}
-      {viewModeTab === 'list' && (() => {
+      {/* LISTA DE EVENTOS REGISTADOS & RSVP — sempre visível */}
+      {(() => {
         const filteredScheduledEvents = events.filter((event) => {
           // Se for atleta (não coach/admin), só vê eventos ativos
           if (event.is_active === false && !isCoachOrAdmin) {
