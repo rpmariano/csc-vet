@@ -589,12 +589,7 @@ const AdminDashboard: React.FC = () => {
   })
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-csc-dark">Backoffice & Definições</h1>
-        <p className="text-gray-500 text-sm mt-1">Gestão centralizada do clube, campos, adversários e competições.</p>
-      </div>
+    <div className="space-y-4 pb-12">
 
       {/* Tabs */}
       <div className="flex bg-white rounded-2xl shadow-xs border border-gray-200 p-1.5 gap-1 overflow-x-auto">

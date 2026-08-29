@@ -33,7 +33,7 @@ import type { Profile } from '../context/AuthContext'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { MatchReportModal } from '../components/MatchReportModal'
+import { MatchReportModal, parseMatchReportMetadata, buildDescriptionWithMatchReport } from '../components/MatchReportModal'
 import { toast } from '../context/ToastContext'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
@@ -513,7 +513,8 @@ const EventsPage: React.FC = () => {
     setEditMeetingTime(ev.meeting_time ? ev.meeting_time.substring(0, 5) : '')
     setEditFieldId(ev.field_id || '')
     setEditLocationText(ev.location || '')
-    setEditDescription(ev.description || '')
+    const parsedDesc = parseMatchReportMetadata(ev.description)
+    setEditDescription(parsedDesc.cleanDescription)
     setEditIsFriendly(ev.is_friendly ?? false)
     setEditIsActive(ev.is_active !== false)
     setEditTournamentId(ev.tournament_id || '')
@@ -541,6 +542,11 @@ const EventsPage: React.FC = () => {
         : (editTitle.trim() || 'Convívio')
 
       const fullIsoDateTime = new Date(`${editEventDate}T${editEventTime}:00`).toISOString()
+      const parsedOriginal = parseMatchReportMetadata(editingEvent.description)
+      const finalDescription = (parsedOriginal.tacticalFormation !== '1-4-3-3' || parsedOriginal.occurrences)
+        ? buildDescriptionWithMatchReport(editDescription, parsedOriginal.tacticalFormation, parsedOriginal.occurrences)
+        : (editDescription.trim() || null)
+
       const payload: any = {
         title: computedEditTitle,
         type: editType,
@@ -548,7 +554,7 @@ const EventsPage: React.FC = () => {
         meeting_time: editMeetingTime ? `${editMeetingTime}:00` : null,
         field_id: editFieldId || null,
         location: !editFieldId ? (editLocationText.trim() || null) : null,
-        description: editDescription.trim() || null,
+        description: finalDescription,
         max_players: null,
         is_friendly: editType === 'match' ? editIsFriendly : false,
         is_active: editIsActive,

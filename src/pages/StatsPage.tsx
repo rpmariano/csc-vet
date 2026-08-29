@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { Award, Sparkles, Footprints, Flame, Trophy, Filter, Users } from 'lucide-react'
+import { Award, Sparkles, Footprints, Flame, Filter, Users } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
 interface Tournament {
@@ -205,27 +205,7 @@ const StatsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      
-      {/* 1. Header com Título e Seletor de Segmentação */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-csc-dark flex items-center gap-2.5">
-            <Trophy size={28} className="text-csc-gold" />
-            <span>Estatísticas da Época</span>
-          </h1>
-          <p className="text-gray-500 text-xs sm:text-sm font-medium mt-0.5">
-            Rendimento individual, melhores marcadores, assistências e disciplina.
-          </p>
-        </div>
-
-        {/* Badge do Filtro Ativo */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-black px-3 py-1.5 rounded-xl bg-csc-dark text-csc-gold border border-csc-gold/40 shadow-xs">
-            {activeFilterLabel}
-          </span>
-        </div>
-      </div>
+    <div className="space-y-4 pb-12">
 
       {/* 2. Barra de Filtros Redesenhada */}
       <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-200 space-y-3">

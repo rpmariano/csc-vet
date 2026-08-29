@@ -281,28 +281,7 @@ const AnnouncementsPage: React.FC = () => {
   const inactiveCount = announcements.filter(a => a.is_active === false).length
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Cabeçalho da Página */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200/80 pb-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-csc-dark text-csc-gold flex items-center justify-center text-xl shadow-xs">
-              📢
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-csc-dark tracking-tight">Comunicados Oficiais</h1>
-              <p className="text-xs sm:text-sm text-gray-500 font-medium">Gere avisos e notas importantes para publicação no mural da Homepage.</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-black text-emerald-900 shadow-2xs">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>{activeCount} {activeCount === 1 ? 'Ativo na Home' : 'Ativos na Home'}</span>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-4 pb-12">
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Formulário de Criação (Coluna Esquerda - 5 Colunas) */}

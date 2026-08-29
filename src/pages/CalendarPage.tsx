@@ -38,7 +38,7 @@ import { TrainingIcon } from './EventsPage'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { MatchReportModal } from '../components/MatchReportModal'
+import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 
@@ -1825,11 +1825,15 @@ const CalendarPage: React.FC = () => {
 
           <div className="space-y-3">
             {/* Observações / Descrição (diretamente acima da confirmação) */}
-            {event.description && (
-              <div className="text-xs text-gray-700 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                <p className="whitespace-pre-line leading-relaxed">{event.description}</p>
-              </div>
-            )}
+            {(() => {
+              const clean = parseMatchReportMetadata(event.description).cleanDescription
+              if (!clean) return null
+              return (
+                <div className="text-xs text-gray-700 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
+                  <p className="whitespace-pre-line leading-relaxed">{clean}</p>
+                </div>
+              )
+            })()}
 
             {/* Ação rápida de Presença (RSVP) */}
             {myCallup && (() => {
@@ -2536,12 +2540,16 @@ const CalendarPage: React.FC = () => {
                 </div>
 
                 {/* Observações / Descrição (diretamente acima da confirmação) */}
-                {selectedEvent.description && (
-                  <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-700 space-y-1">
-                    <p className="font-black text-gray-900">Observações & Informações:</p>
-                    <p className="leading-relaxed">{selectedEvent.description}</p>
-                  </div>
-                )}
+                {(() => {
+                  const clean = parseMatchReportMetadata(selectedEvent.description).cleanDescription
+                  if (!clean) return null
+                  return (
+                    <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-700 space-y-1">
+                      <p className="font-black text-gray-900">Observações & Informações:</p>
+                      <p className="leading-relaxed">{clean}</p>
+                    </div>
+                  )
+                })()}
 
                 {/* Painel do Atleta Atual (RSVP Pessoal) */}
                 {(() => {

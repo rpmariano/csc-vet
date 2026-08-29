@@ -128,11 +128,7 @@ const FinancePage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-extrabold text-csc-dark">Gestão Financeira</h1>
-        <p className="text-gray-550 mt-1">Monitore o balanço e registe o pagamento de quotas dos atletas.</p>
-      </div>
+    <div className="space-y-4 pb-12">
 
       {/* Cartões de Balanço */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
