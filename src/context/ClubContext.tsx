@@ -8,6 +8,7 @@ export interface ClubSettings {
   initials: string
   logo_url: string | null
   primary_color: string
+  home_field_id?: string | null
 }
 
 interface ClubContextType {
@@ -26,6 +27,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchSettings = async () => {
     try {
       setLoading(true)
+      const cachedHomeField = localStorage.getItem('csc_club_home_field_id')
       const { data, error } = await supabase
         .from('club_settings')
         .select('*')
@@ -37,7 +39,10 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Error fetching club settings:', error.message)
         }
       } else if (data) {
-        setClubSettings(data)
+        setClubSettings({
+          ...data,
+          home_field_id: data.home_field_id || cachedHomeField || null
+        })
       }
     } catch (err) {
       console.error('Unexpected error fetching club settings:', err)
@@ -50,7 +55,15 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       fetchSettings()
     } else {
-      setClubSettings({ id: 1, name: 'Cascais Sport Clube', initials: 'CSC', logo_url: null, primary_color: '#1c1c1c' })
+      const cachedHomeField = localStorage.getItem('csc_club_home_field_id')
+      setClubSettings({
+        id: 1,
+        name: 'Cascais Sport Clube',
+        initials: 'CSC',
+        logo_url: null,
+        primary_color: '#1c1c1c',
+        home_field_id: cachedHomeField || null
+      })
       setLoading(false)
     }
   }, [user])

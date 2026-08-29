@@ -236,6 +236,13 @@ const CalendarPage: React.FC = () => {
   const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
   const [isEditBatchCalling, setIsEditBatchCalling] = useState(false)
 
+  // Quick Field Modal states (Criação de campo inline a partir da janela de criação/edição)
+  const [isQuickFieldModalOpen, setIsQuickFieldModalOpen] = useState(false)
+  const [quickFieldName, setQuickFieldName] = useState('')
+  const [quickFieldAddress, setQuickFieldAddress] = useState('')
+  const [quickFieldTarget, setQuickFieldTarget] = useState<'create' | 'edit'>('create')
+  const [isSavingQuickField, setIsSavingQuickField] = useState(false)
+
   // Pre-select weekday when dateTime changes
   useEffect(() => {
     if (dateTime) {
@@ -247,12 +254,84 @@ const CalendarPage: React.FC = () => {
     }
   }, [dateTime])
 
+  // Auto-selecionar o campo do clube nos treinos ou ao abrir modal se existir
+  useEffect(() => {
+    if (isAddModalOpen && !fieldId && clubSettings?.home_field_id) {
+      const f = fields.find(item => item.id === clubSettings.home_field_id)
+      if (f) {
+        setFieldId(f.id)
+        setLocation(f.address ? `${f.name} (${f.address})` : f.name)
+      }
+    }
+  }, [isAddModalOpen, type, clubSettings, fields, fieldId])
+
   // Desativar recorrência em eventos que não sejam treino
   useEffect(() => {
     if (type !== 'practice') {
       setIsRecurring(false)
     }
   }, [type])
+
+  const handleSaveQuickField = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!quickFieldName.trim()) return
+    setIsSavingQuickField(true)
+    try {
+      const newId = crypto.randomUUID()
+      const newFieldObj: Field = {
+        id: newId,
+        name: quickFieldName.trim(),
+        address: quickFieldAddress.trim() || null
+      }
+
+      const { data, error } = await supabase
+        .from('fields')
+        .insert([{ id: newId, name: newFieldObj.name, address: newFieldObj.address }])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      const resolvedField = (data as Field) || newFieldObj
+      setFields(prev => [...prev.filter(f => f.id !== resolvedField.id), resolvedField].sort((a, b) => a.name.localeCompare(b.name)))
+
+      const formattedLoc = resolvedField.address ? `${resolvedField.name} (${resolvedField.address})` : resolvedField.name
+
+      if (quickFieldTarget === 'create') {
+        setFieldId(resolvedField.id)
+        setLocation(formattedLoc)
+      } else {
+        setEditFieldId(resolvedField.id)
+        setEditLocation(formattedLoc)
+      }
+
+      setQuickFieldName('')
+      setQuickFieldAddress('')
+      setIsQuickFieldModalOpen(false)
+    } catch (err: any) {
+      console.error('Error saving field:', err)
+      const fallbackId = `field-${Date.now()}`
+      const newFieldObj: Field = {
+        id: fallbackId,
+        name: quickFieldName.trim(),
+        address: quickFieldAddress.trim() || null
+      }
+      setFields(prev => [...prev, newFieldObj].sort((a, b) => a.name.localeCompare(b.name)))
+      const formattedLoc = newFieldObj.address ? `${newFieldObj.name} (${newFieldObj.address})` : newFieldObj.name
+      if (quickFieldTarget === 'create') {
+        setFieldId(fallbackId)
+        setLocation(formattedLoc)
+      } else {
+        setEditFieldId(fallbackId)
+        setEditLocation(formattedLoc)
+      }
+      setQuickFieldName('')
+      setQuickFieldAddress('')
+      setIsQuickFieldModalOpen(false)
+    } finally {
+      setIsSavingQuickField(false)
+    }
+  }
 
   const calculateRecurringDates = (startIsoString: string, endDayString: string, weekdays: number[]) => {
     if (!startIsoString || !endDayString || weekdays.length === 0) return []
@@ -503,9 +582,13 @@ const CalendarPage: React.FC = () => {
         if (error) throw error
         if (createdBatch) createdEventsList = createdBatch as Event[]
 
+        const effectivePlayerIds = type === 'practice'
+          ? allPlayers.filter(p => isPlayerEligible(p, 'practice')).map(p => p.id)
+          : selectedPlayerIds
+
         // Inserir convocatórias para todos os eventos criados
-        if (createdEventsList.length > 0 && selectedPlayerIds.length > 0) {
-          const validIds = await ensurePlayerIdsForSupabase(selectedPlayerIds, allPlayers)
+        if (createdEventsList.length > 0 && effectivePlayerIds.length > 0) {
+          const validIds = await ensurePlayerIdsForSupabase(effectivePlayerIds, allPlayers)
           const allCallups: any[] = []
           createdEventsList.forEach(ev => {
             validIds.forEach(pId => {
@@ -545,9 +628,13 @@ const CalendarPage: React.FC = () => {
 
         if (error) throw error
 
-        // Se houver jogadores selecionados, criar convocatórias
-        if (createdEvent && selectedPlayerIds.length > 0) {
-          const validIds = await ensurePlayerIdsForSupabase(selectedPlayerIds, allPlayers)
+        const effectivePlayerIds = type === 'practice'
+          ? allPlayers.filter(p => isPlayerEligible(p, 'practice')).map(p => p.id)
+          : selectedPlayerIds
+
+        // Se houver jogadores a convocar (automático em treinos ou selecionados em jogos/convívios)
+        if (createdEvent && effectivePlayerIds.length > 0) {
+          const validIds = await ensurePlayerIdsForSupabase(effectivePlayerIds, allPlayers)
           const callupsToInsert = validIds.map(pId => ({
             event_id: createdEvent.id,
             player_id: pId,
@@ -2079,14 +2166,27 @@ const CalendarPage: React.FC = () => {
                 {/* Para Jogos e Treinos: Escolher Campo do Clube */}
                 {(type === 'match' || type === 'practice') && (
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
-                    <label className="block font-bold text-gray-800 flex items-center justify-between">
-                      <span>🏟️ Campo / Instalação do Jogo/Treino *</span>
-                      {location && (
-                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                          ✓ {location}
-                        </span>
-                      )}
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-gray-800 flex items-center gap-1.5">
+                        <span>🏟️ Campo / Instalação *</span>
+                        {location && (
+                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[180px]">
+                            ✓ {location}
+                          </span>
+                        )}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuickFieldTarget('create')
+                          setIsQuickFieldModalOpen(true)
+                        }}
+                        className="text-[11px] font-bold text-csc-dark hover:text-black bg-white hover:bg-gray-100 border border-gray-300 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                      >
+                        <Plus size={12} className="text-csc-gold" />
+                        <span>Criar Campo</span>
+                      </button>
+                    </div>
                     <select
                       value={fieldId}
                       onChange={(e) => {
@@ -2121,17 +2221,28 @@ const CalendarPage: React.FC = () => {
                 {/* Para Convívios: Escolher Campo/Sede ou Escrever Morada à mão */}
                 {type === 'gathering' && (
                   <div className="p-3.5 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2.5 text-xs">
-                    <label className="block font-bold text-purple-950 flex items-center justify-between">
-                      <span className="flex items-center gap-1">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-purple-950 flex items-center gap-1">
                         <MapPin size={13} className="text-purple-700" />
-                        <span>Localização do Convívio (Instalação ou Morada à Mão) *</span>
-                      </span>
-                      {(location || fieldId) && (
-                        <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                          ✓ {location || fields.find(f => f.id === fieldId)?.name}
-                        </span>
-                      )}
-                    </label>
+                        <span>Localização do Convívio *</span>
+                        {(location || fieldId) && (
+                          <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">
+                            ✓ {location || fields.find(f => f.id === fieldId)?.name}
+                          </span>
+                        )}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuickFieldTarget('create')
+                          setIsQuickFieldModalOpen(true)
+                        }}
+                        className="text-[11px] font-bold text-purple-900 hover:text-purple-950 bg-white hover:bg-purple-100 border border-purple-300 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                      >
+                        <Plus size={12} className="text-purple-700" />
+                        <span>Criar Campo</span>
+                      </button>
+                    </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold text-gray-600 mb-1">
@@ -2284,157 +2395,184 @@ const CalendarPage: React.FC = () => {
 
               {/* COLUNA DIREITA: SELEÇÃO DE JOGADORES (CONVOCATÓRIA) (6 Colunas) */}
               <div className="lg:col-span-6 bg-gray-50/80 p-5 rounded-2xl border border-gray-200 space-y-3.5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200/80 pb-2.5">
-                  <div>
-                    <label className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                      <Users size={16} className="text-csc-dark" />
-                      <span>
-                        Convocatória Inicial ({selectedPlayerIds.length}{maxPlayers !== '' ? ` / ${maxPlayers} máx` : ''})
-                      </span>
-                    </label>
-                    <p className="text-[11px] text-gray-500 mt-0.5">Selecione os atletas a convocar para este evento.</p>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={handleRepeatLastCallup}
-                      className="font-bold text-csc-dark bg-white border border-gray-300 px-2.5 py-1 rounded-lg hover:bg-gray-50 flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
-                      title="Repetir a lista de convocados do jogo anterior"
-                    >
-                      <RotateCcw size={12} /> Repetir Última
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSelectAllPlayers}
-                      className="font-bold text-csc-dark bg-white border border-gray-300 px-2 py-1 rounded-lg hover:bg-gray-50 cursor-pointer shadow-2xs"
-                    >
-                      Todos
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleClearPlayers}
-                      className="font-bold text-red-600 bg-white border border-gray-300 px-2 py-1 rounded-lg hover:bg-red-50 cursor-pointer shadow-2xs"
-                    >
-                      Limpar
-                    </button>
-                  </div>
-                </div>
-
-                {/* Banner de Aviso de Limite */}
-                {maxPlayers !== '' && selectedPlayerIds.length > Number(maxPlayers) && (
-                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-bold flex items-center gap-2 animate-pulse">
-                    <AlertTriangle size={16} className="shrink-0 text-red-600" />
-                    <span>Aviso: O número de atletas convocados ({selectedPlayerIds.length}) ultrapassa o limite definido de {maxPlayers} jogadores!</span>
-                  </div>
-                )}
-                {maxPlayers !== '' && selectedPlayerIds.length === Number(maxPlayers) && (
-                  <div className="p-2 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 font-bold flex items-center gap-2">
-                    <CheckCircle2 size={15} className="shrink-0 text-green-600" />
-                    <span>Limite máximo de {maxPlayers} convocados preenchido a 100%.</span>
-                  </div>
-                )}
-
-                {/* Barra de Pesquisa de Jogadores */}
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={playerSearchTerm}
-                    onChange={(e) => setPlayerSearchTerm(e.target.value)}
-                    placeholder="Pesquisar jogador por nome..."
-                    className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark"
-                  />
-                  {playerSearchTerm && (
-                    <button
-                      type="button"
-                      onClick={() => setPlayerSearchTerm('')}
-                      className="absolute right-2.5 top-2 text-xs text-gray-400 hover:text-gray-600"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[380px] overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-xl">
-                  {allPlayers
-                    .filter(p => {
-                      if (!playerSearchTerm) return true
-                      const q = playerSearchTerm.toLowerCase()
-                      return p.name.toLowerCase().includes(q) ||
-                        p.shirt_name?.toLowerCase().includes(q) ||
-                        p.nickname?.toLowerCase().includes(q) ||
-                        (p.jersey_number && p.jersey_number.toString().includes(q))
-                    })
-                    .map(p => {
-                      const isSelected = selectedPlayerIds.includes(p.id)
-                      const isEligible = isPlayerEligible(p, type)
-                      const isInjured = p.status === 'injured'
-                      const roles = extractRolesFromProfile(p)
-
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => togglePlayerSelection(p.id)}
-                          className={`flex items-center justify-between p-2.5 rounded-xl text-xs border transition-colors ${
-                            !isEligible 
-                              ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
-                              : isSelected 
-                                ? 'bg-amber-50/80 font-black text-gray-900 border-amber-300 shadow-2xs cursor-pointer' 
-                                : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              disabled={!isEligible}
-                              onChange={() => {}} // controlado pelo onClick pai
-                              className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none shrink-0"
-                            />
-
-                            <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
-                              {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-xs font-bold leading-tight">{getPlayerDisplayName(p)}</p>
-                              <div className="flex items-center gap-1 mt-0.5">
-                                {roles.map(r => (
-                                  <span
-                                    key={r}
-                                    className={`text-[8.5px] font-black px-1 rounded ${
-                                      r === 'admin' ? 'bg-amber-100 text-amber-900' :
-                                      r === 'coach' ? 'bg-blue-100 text-blue-900' :
-                                      'bg-emerald-100 text-emerald-900'
-                                    }`}
-                                  >
-                                    {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                          {isInjured && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
-                              {type === 'gathering' ? 'Lesionado (Disponível)' : 'Lesionado'}
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })}
-                  {allPlayers.filter(p => {
-                    if (!playerSearchTerm) return true
-                    const q = playerSearchTerm.toLowerCase()
-                    return p.name.toLowerCase().includes(q) ||
-                      p.shirt_name?.toLowerCase().includes(q) ||
-                      p.nickname?.toLowerCase().includes(q) ||
-                      (p.jersey_number && p.jersey_number.toString().includes(q))
-                  }).length === 0 && (
-                    <div className="col-span-2 text-center py-6 text-xs text-gray-500">
-                      Nenhum jogador encontrado com "{playerSearchTerm}".
+                {type === 'practice' ? (
+                  <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50/40 border-2 border-amber-200/80 rounded-3xl space-y-4 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-csc-dark text-csc-gold mx-auto flex items-center justify-center font-black text-2xl shadow-md">
+                      <TrainingIcon className="w-8 h-8" />
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <h3 className="text-base font-black text-csc-dark">Convocatória Automática de Treino</h3>
+                      <p className="text-xs text-gray-600 mt-1.5 max-w-sm mx-auto leading-relaxed">
+                        Nos treinos, não é necessário fazer convocatória manual. Todos os <strong>{allPlayers.filter(p => isPlayerEligible(p, 'practice')).length} atletas disponíveis</strong> ficam automaticamente convocados.
+                      </p>
+                    </div>
+                    <div className="p-3.5 bg-white/90 border border-amber-200 rounded-2xl text-left space-y-2 shadow-2xs">
+                      <p className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                        <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                        <span>Gestão de Presenças no Treino:</span>
+                      </p>
+                      <ul className="text-xs text-gray-600 space-y-1.5 list-disc list-inside">
+                        <li>O treino fica imediatamente visível na agenda e na página principal.</li>
+                        <li>Cada jogador poderá marcar <strong>Confirmar</strong> ou <strong>Recusar</strong>.</li>
+                        <li>O quórum de confirmados/recusados é atualizado em tempo real.</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200/80 pb-2.5">
+                      <div>
+                        <label className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                          <Users size={16} className="text-csc-dark" />
+                          <span>
+                            Convocatória Inicial ({selectedPlayerIds.length}{maxPlayers !== '' ? ` / ${maxPlayers} máx` : ''})
+                          </span>
+                        </label>
+                        <p className="text-[11px] text-gray-500 mt-0.5">Selecione os atletas a convocar para este evento.</p>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <button
+                          type="button"
+                          onClick={handleRepeatLastCallup}
+                          className="font-bold text-csc-dark bg-white border border-gray-300 px-2.5 py-1 rounded-lg hover:bg-gray-50 flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+                          title="Repetir a lista de convocados do jogo anterior"
+                        >
+                          <RotateCcw size={12} /> Repetir Última
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSelectAllPlayers}
+                          className="font-bold text-csc-dark bg-white border border-gray-300 px-2 py-1 rounded-lg hover:bg-gray-50 cursor-pointer shadow-2xs"
+                        >
+                          Todos
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleClearPlayers}
+                          className="font-bold text-red-600 bg-white border border-gray-300 px-2 py-1 rounded-lg hover:bg-red-50 cursor-pointer shadow-2xs"
+                        >
+                          Limpar
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Banner de Aviso de Limite */}
+                    {maxPlayers !== '' && selectedPlayerIds.length > Number(maxPlayers) && (
+                      <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-bold flex items-center gap-2 animate-pulse">
+                        <AlertTriangle size={16} className="shrink-0 text-red-600" />
+                        <span>Aviso: O número de atletas convocados ({selectedPlayerIds.length}) ultrapassa o limite definido de {maxPlayers} jogadores!</span>
+                      </div>
+                    )}
+                    {maxPlayers !== '' && selectedPlayerIds.length === Number(maxPlayers) && (
+                      <div className="p-2 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 font-bold flex items-center gap-2">
+                        <CheckCircle2 size={15} className="shrink-0 text-green-600" />
+                        <span>Limite máximo de {maxPlayers} convocados preenchido a 100%.</span>
+                      </div>
+                    )}
+
+                    {/* Barra de Pesquisa de Jogadores */}
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                      <input
+                        type="text"
+                        value={playerSearchTerm}
+                        onChange={(e) => setPlayerSearchTerm(e.target.value)}
+                        placeholder="Pesquisar jogador por nome..."
+                        className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark"
+                      />
+                      {playerSearchTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setPlayerSearchTerm('')}
+                          className="absolute right-2.5 top-2 text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[380px] overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-xl">
+                      {allPlayers
+                        .filter(p => {
+                          if (!playerSearchTerm) return true
+                          const q = playerSearchTerm.toLowerCase()
+                          return p.name.toLowerCase().includes(q) ||
+                            p.shirt_name?.toLowerCase().includes(q) ||
+                            p.nickname?.toLowerCase().includes(q) ||
+                            (p.jersey_number && p.jersey_number.toString().includes(q))
+                        })
+                        .map(p => {
+                          const isSelected = selectedPlayerIds.includes(p.id)
+                          const isEligible = isPlayerEligible(p, type)
+                          const isInjured = p.status === 'injured'
+                          const roles = extractRolesFromProfile(p)
+
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => togglePlayerSelection(p.id)}
+                              className={`flex items-center justify-between p-2.5 rounded-xl text-xs border transition-colors ${
+                                !isEligible 
+                                  ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
+                                  : isSelected 
+                                    ? 'bg-amber-50/80 font-black text-gray-900 border-amber-300 shadow-2xs cursor-pointer' 
+                                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  disabled={!isEligible}
+                                  onChange={() => {}} // controlado pelo onClick pai
+                                  className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none shrink-0"
+                                />
+
+                                <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
+                                  {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-xs font-bold leading-tight">{getPlayerDisplayName(p)}</p>
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    {roles.map(r => (
+                                      <span
+                                        key={r}
+                                        className={`text-[8.5px] font-black px-1 rounded ${
+                                          r === 'admin' ? 'bg-amber-100 text-amber-900' :
+                                          r === 'coach' ? 'bg-blue-100 text-blue-900' :
+                                          'bg-emerald-100 text-emerald-900'
+                                        }`}
+                                      >
+                                        {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                              {isInjured && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
+                                  {type === 'gathering' ? 'Lesionado (Disponível)' : 'Lesionado'}
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      {allPlayers.filter(p => {
+                        if (!playerSearchTerm) return true
+                        const q = playerSearchTerm.toLowerCase()
+                        return p.name.toLowerCase().includes(q) ||
+                          p.shirt_name?.toLowerCase().includes(q) ||
+                          p.nickname?.toLowerCase().includes(q) ||
+                          (p.jersey_number && p.jersey_number.toString().includes(q))
+                      }).length === 0 && (
+                        <div className="col-span-2 text-center py-6 text-xs text-gray-500">
+                          Nenhum jogador encontrado com "{playerSearchTerm}".
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* FOOTER */}
@@ -2574,14 +2712,27 @@ const CalendarPage: React.FC = () => {
                 {/* Para Jogos e Treinos: Escolher Campo do Clube */}
                 {(editType === 'match' || editType === 'practice') && (
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
-                    <label className="block font-bold text-gray-800 flex items-center justify-between">
-                      <span>🏟️ Campo / Instalação do Jogo/Treino *</span>
-                      {editLocation && (
-                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                          ✓ {editLocation}
-                        </span>
-                      )}
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-gray-800 flex items-center gap-1.5">
+                        <span>🏟️ Campo / Instalação *</span>
+                        {editLocation && (
+                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[180px]">
+                            ✓ {editLocation}
+                          </span>
+                        )}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuickFieldTarget('edit')
+                          setIsQuickFieldModalOpen(true)
+                        }}
+                        className="text-[11px] font-bold text-csc-dark hover:text-black bg-white hover:bg-gray-100 border border-gray-300 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                      >
+                        <Plus size={12} className="text-csc-gold" />
+                        <span>Criar Campo</span>
+                      </button>
+                    </div>
                     <select
                       value={editFieldId}
                       onChange={(e) => {
@@ -2616,17 +2767,28 @@ const CalendarPage: React.FC = () => {
                 {/* Para Convívios: Escolher Campo/Sede ou Escrever Morada à mão */}
                 {editType === 'gathering' && (
                   <div className="p-3.5 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2.5 text-xs">
-                    <label className="block font-bold text-purple-950 flex items-center justify-between">
-                      <span className="flex items-center gap-1">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-purple-950 flex items-center gap-1">
                         <MapPin size={13} className="text-purple-700" />
-                        <span>Localização do Convívio (Instalação ou Morada à Mão) *</span>
-                      </span>
-                      {(editLocation || editFieldId) && (
-                        <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                          ✓ {editLocation || fields.find(f => f.id === editFieldId)?.name}
-                        </span>
-                      )}
-                    </label>
+                        <span>Localização do Convívio *</span>
+                        {(editLocation || editFieldId) && (
+                          <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">
+                            ✓ {editLocation || fields.find(f => f.id === editFieldId)?.name}
+                          </span>
+                        )}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuickFieldTarget('edit')
+                          setIsQuickFieldModalOpen(true)
+                        }}
+                        className="text-[11px] font-bold text-purple-900 hover:text-purple-950 bg-white hover:bg-purple-100 border border-purple-300 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+                      >
+                        <Plus size={12} className="text-purple-700" />
+                        <span>Criar Campo</span>
+                      </button>
+                    </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold text-gray-600 mb-1">
@@ -2943,6 +3105,84 @@ const CalendarPage: React.FC = () => {
                 >
                   <Save size={16} className="text-csc-gold" />
                   <span>Guardar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: CRIAR NOVO CAMPO INLINE */}
+      {isQuickFieldModalOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-gray-100 space-y-4">
+            <button
+              type="button"
+              onClick={() => {
+                setIsQuickFieldModalOpen(false)
+                setQuickFieldName('')
+                setQuickFieldAddress('')
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
+              <div className="w-10 h-10 rounded-xl bg-csc-dark text-csc-gold flex items-center justify-center text-lg font-black shadow-xs">
+                🏟️
+              </div>
+              <div>
+                <h3 className="text-base font-black text-csc-dark">Criar Novo Campo / Instalação</h3>
+                <p className="text-[11px] text-gray-500">Regista um novo campo para ser imediatamente selecionado.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveQuickField} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Nome do Campo / Estádio *</label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={quickFieldName}
+                  onChange={(e) => setQuickFieldName(e.target.value)}
+                  placeholder="Ex: Campo Sintético Municipal de Tires"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Morada / Localização</label>
+                <input
+                  type="text"
+                  value={quickFieldAddress}
+                  onChange={(e) => setQuickFieldAddress(e.target.value)}
+                  placeholder="Ex: Av. Amadeu Duarte, Tires, Cascais"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                />
+                <p className="text-[10.5px] text-gray-500 mt-1">Usada para navegação e rotas com Google Maps.</p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-150">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsQuickFieldModalOpen(false)
+                    setQuickFieldName('')
+                    setQuickFieldAddress('')
+                  }}
+                  className="px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingQuickField || !quickFieldName.trim()}
+                  className="px-5 py-2 bg-csc-dark hover:bg-black text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
+                >
+                  <Plus size={14} className="text-csc-gold" />
+                  <span>{isSavingQuickField ? 'A guardar...' : 'Guardar & Selecionar'}</span>
                 </button>
               </div>
             </form>

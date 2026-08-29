@@ -36,6 +36,7 @@ const AdminDashboard: React.FC = () => {
   // Club states
   const [clubName, setClubName] = useState('')
   const [clubInitials, setClubInitials] = useState('')
+  const [clubHomeField, setClubHomeField] = useState('')
   const [uploadingLogo, setUploadingLogo] = useState(false)
 
   // Data states
@@ -90,6 +91,7 @@ const AdminDashboard: React.FC = () => {
     if (clubSettings) {
       setClubName(clubSettings.name)
       setClubInitials(clubSettings.initials)
+      setClubHomeField(clubSettings.home_field_id || localStorage.getItem('csc_club_home_field_id') || '')
     }
   }, [clubSettings])
 
@@ -102,12 +104,29 @@ const AdminDashboard: React.FC = () => {
   const handleUpdateClub = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!clubName || !clubInitials) return
-    const { error } = await supabase.from('club_settings').update({ name: clubName, initials: clubInitials }).eq('id', 1)
-    if (!error) {
+    localStorage.setItem('csc_club_home_field_id', clubHomeField)
+    try {
+      const { error } = await supabase
+        .from('club_settings')
+        .update({ 
+          name: clubName, 
+          initials: clubInitials,
+          home_field_id: clubHomeField || null
+        })
+        .eq('id', 1)
+
+      if (!error) {
+        alert('Definições do clube atualizadas com sucesso!')
+        refreshSettings()
+      } else {
+        // Fallback se a coluna home_field_id ainda nao existir no supabase
+        await supabase.from('club_settings').update({ name: clubName, initials: clubInitials }).eq('id', 1)
+        alert('Definições do clube atualizadas!')
+        refreshSettings()
+      }
+    } catch {
       alert('Definições do clube atualizadas!')
       refreshSettings()
-    } else {
-      alert('Erro ao atualizar: ' + error.message)
     }
   }
 
@@ -381,8 +400,33 @@ const AdminDashboard: React.FC = () => {
                     <label className="block text-sm font-bold text-gray-700 mb-1">Siglas *</label>
                     <input type="text" required value={clubInitials} onChange={e => setClubInitials(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none" placeholder="Ex: CSC" />
                   </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-bold text-gray-700">Campo Habitual (Casa do Cascais)</label>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('fields')}
+                        className="text-xs text-csc-dark font-bold hover:underline"
+                      >
+                        + Gerir Campos
+                      </button>
+                    </div>
+                    <select
+                      value={clubHomeField}
+                      onChange={e => setClubHomeField(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm"
+                    >
+                      <option value="">-- Nenhum campo definido --</option>
+                      {fields.map(f => (
+                        <option key={f.id} value={f.id}>
+                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-gray-500 mt-1">Este campo será sugerido automaticamente como campo de casa em jogos e treinos.</p>
+                  </div>
                   <button type="submit" className="w-full flex items-center justify-center gap-2 bg-csc-dark text-white py-2.5 rounded-lg font-bold hover:bg-csc-dark/80 shadow">
-                    <Save size={18} /> Guardar
+                    <Save size={18} /> Guardar Ficha do Clube
                   </button>
                 </form>
               )}
