@@ -149,28 +149,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userEmail) {
         const cleanEmail = userEmail.trim().toLowerCase()
 
-        // A. Procurar ficha no Supabase com este email (mas com ID diferente/antigo)
-        const { data: matchByEmail } = await supabase
+        // A. Procurar todas as fichas no Supabase com este email
+        const { data: matchingProfiles } = await supabase
           .from('profiles')
           .select('*')
           .ilike('email', cleanEmail)
-          .neq('id', userId)
-          .maybeSingle()
 
+        // Encontrar ficha que tenha dados de atleta (número, posição, camisola ou ID diferente)
+        const squadCardFromDb = (matchingProfiles || []).find(p => p.jersey_number != null || p.shirt_name || (p.id !== userId && p.position))
+        
         // B. Se não estiver no Supabase, procurar na lista de sementes (INITIAL_PLAYERS_DATA)
-        const seedMatch = !matchByEmail 
+        const seedMatch = !squadCardFromDb 
           ? INITIAL_PLAYERS_DATA.find(p => p.email && p.email.toLowerCase().trim() === cleanEmail)
           : null
 
-        const targetCard = matchByEmail || seedMatch
+        const targetCard = squadCardFromDb || seedMatch
 
         if (targetCard) {
-          const oldId = matchByEmail?.id
-
           // PRESERVAR 100% dos dados da ficha de atleta (nome, número, posição, alcunha, camisola, notas, foto do atleta)
           // NUNCA substituir o nome ou a foto do atleta pelos metadados do Google
-          const athletePhoto = targetCard.photo_url || data?.photo_url || null
-          const googleAvatar = currentUser?.user_metadata?.avatar_url || currentUser?.user_metadata?.picture
+          const athletePhoto = targetCard.photo_url || null
 
           const mergedData: Partial<Profile> = {
             ...targetCard,
@@ -179,7 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: targetCard.name, // MANTER O NOME DO ATLETA (ex: Bruno Raul / Tochê)
             shirt_name: targetCard.shirt_name || targetCard.nickname || null,
             nickname: targetCard.nickname || null,
-            photo_url: athletePhoto || googleAvatar || null, // Preservar foto do atleta se existir
+            photo_url: athletePhoto, // Preservar foto do atleta se existir
           }
 
           if (data) {
@@ -201,13 +199,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (inserted) data = inserted
           }
 
-          // Se existia um registo separado anterior no Supabase, migrar referências e eliminar placeholder
-          if (oldId) {
+          // Se existiam registos placeholder anteriores no Supabase, migrar referências e eliminar
+          const oldProfiles = (matchingProfiles || []).filter(p => p.id !== userId)
+          for (const oldP of oldProfiles) {
             await Promise.allSettled([
-              supabase.from('callups').update({ player_id: userId }).eq('player_id', oldId),
-              supabase.from('dues').update({ player_id: userId }).eq('player_id', oldId),
-              supabase.from('stats').update({ player_id: userId }).eq('player_id', oldId),
-              supabase.from('profiles').delete().eq('id', oldId)
+              supabase.from('callups').update({ player_id: userId }).eq('player_id', oldP.id),
+              supabase.from('dues').update({ player_id: userId }).eq('player_id', oldP.id),
+              supabase.from('stats').update({ player_id: userId }).eq('player_id', oldP.id),
+              supabase.from('profiles').delete().eq('id', oldP.id)
             ])
           }
         }
@@ -216,14 +215,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 3. Se ainda não existir perfil (nem no DB nem associado a atleta), criar novo membro base
       if (!data) {
         const googleName = currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name
-        const googleAvatar = currentUser?.user_metadata?.avatar_url || currentUser?.user_metadata?.picture
 
         const newProfile: Partial<Profile> = {
           id: userId,
           name: googleName || (userEmail ? userEmail.split('@')[0] : 'Novo Atleta'),
           email: userEmail ? userEmail.trim().toLowerCase() : '',
           phone: userPhone || null,
-          photo_url: googleAvatar || null,
+          photo_url: null,
           role: 'player',
           status: 'active'
         }

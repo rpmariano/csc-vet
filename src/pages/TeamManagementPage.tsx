@@ -192,10 +192,20 @@ const TeamManagementPage: React.FC = () => {
       }
 
       if (matchedIdx !== -1) {
+        const existing = playersList[matchedIdx]
+        // Se remotePlayer for uma conta de login sem dados desportivos próprios, não sobrepor a identidade do atleta
+        const isGenericAccount = remotePlayer.jersey_number == null && !remotePlayer.shirt_name && !remotePlayer.nif
+
         playersList[matchedIdx] = {
-          ...playersList[matchedIdx],
+          ...existing,
           ...remotePlayer,
-          id: remotePlayer.id, // Forçar o UUID real
+          id: remotePlayer.id, // Forçar o UUID real da conta
+          name: isGenericAccount ? existing.name : (remotePlayer.name || existing.name),
+          shirt_name: existing.shirt_name || remotePlayer.shirt_name || null,
+          nickname: existing.nickname || remotePlayer.nickname || null,
+          jersey_number: existing.jersey_number ?? remotePlayer.jersey_number ?? null,
+          photo_url: existing.photo_url || remotePlayer.photo_url || null,
+          position: existing.position || remotePlayer.position || 'Médio Centro',
         }
       } else {
         playersList.push(remotePlayer)
