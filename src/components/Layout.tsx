@@ -21,6 +21,7 @@ import {
 import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
 import { AutoAssociationModal } from './AutoAssociationModal'
+import { PWAInstallPrompt, PWAInstallMenuItem } from './PWAInstallPrompt'
 
 const Layout: React.FC = () => {
   const { profile, actualRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
@@ -328,6 +329,9 @@ const Layout: React.FC = () => {
                       <Settings size={16} className="text-gray-300" />
                       <span>Definições do Perfil</span>
                     </Link>
+
+                    {/* Botão de Instalação PWA */}
+                    <PWAInstallMenuItem onClickExtra={() => setIsMobileMenuOpen(false)} />
                   </div>
                 </div>
               </div>
@@ -554,6 +558,8 @@ const Layout: React.FC = () => {
                   <Settings size={17} className={location.pathname === '/settings' ? 'text-csc-dark' : 'text-gray-300'} />
                   <span>Definições do Perfil</span>
                 </Link>
+
+                <PWAInstallMenuItem />
               </div>
             </div>
           </nav>
@@ -836,6 +842,9 @@ const Layout: React.FC = () => {
 
       {/* Modal de Associação Inteligente Automática para novos atletas */}
       <AutoAssociationModal />
+
+      {/* Gestor e Prompt de Instalação PWA */}
+      <PWAInstallPrompt />
     </div>
   )
 }

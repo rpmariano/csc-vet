@@ -9,8 +9,14 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'cascais-emblem.png', 'logo-clube-horizontal.svg'],
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        cleanupOutdatedCaches: true
+      },
       manifest: {
+        id: '/csc-vet/',
         name: 'GDS Cascais - Veteranos',
         short_name: 'CSC Veteranos',
         description: 'Aplicação Oficial de Gestão de Futebol de Veteranos do GDS Cascais',
@@ -19,22 +25,31 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/csc-vet/',
+        scope: '/csc-vet/',
         icons: [
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }
