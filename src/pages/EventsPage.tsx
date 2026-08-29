@@ -1855,7 +1855,7 @@ const EventsPage: React.FC = () => {
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-300">
             <button
               onClick={() => setActiveCallupModalEvent(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 cursor-pointer"
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-100 cursor-pointer z-10 bg-white shadow-sm border border-gray-200 flex items-center justify-center"
             >
               <X size={20} />
             </button>
