@@ -24,7 +24,6 @@ import {
   Edit,
   Save,
   CalendarRange,
-  Link2,
   PartyPopper,
   Trophy,
   Sparkles
@@ -205,7 +204,6 @@ const CalendarPage: React.FC = () => {
   const [isFriendly, setIsFriendly] = useState(false)
   const [tournamentId, setTournamentId] = useState('')
   const [maxPlayers, setMaxPlayers] = useState<number | ''>('')
-  const [relatedGatheringId, setRelatedGatheringId] = useState('')
 
   // Recurrence states
   const [isRecurring, setIsRecurring] = useState(false)
@@ -224,7 +222,6 @@ const CalendarPage: React.FC = () => {
   const [editMaxPlayers, setEditMaxPlayers] = useState<number | ''>('')
   const [editTournamentId, setEditTournamentId] = useState('')
   const [editIsFriendly, setEditIsFriendly] = useState(false)
-  const [editRelatedGatheringId, setEditRelatedGatheringId] = useState('')
   const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
   const [isEditBatchCalling, setIsEditBatchCalling] = useState(false)
 
@@ -496,9 +493,8 @@ const CalendarPage: React.FC = () => {
           location: finalLocation || null,
           description,
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
-          is_friendly: type === 'match' ? isFriendly : undefined,
+          is_friendly: type === 'match' ? isFriendly : false,
           tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
-          related_gathering_id: relatedGatheringId || null,
           created_by: profile?.id
         }
 
@@ -509,14 +505,6 @@ const CalendarPage: React.FC = () => {
           .single()
 
         if (error) throw error
-
-        // Se tiver evento associado, atualizar o outro evento bidirecionalmente
-        if (createdEvent && relatedGatheringId) {
-          await supabase
-            .from('events')
-            .update({ related_gathering_id: createdEvent.id })
-            .eq('id', relatedGatheringId)
-        }
 
         // Se houver jogadores selecionados, criar convocatórias
         if (createdEvent && selectedPlayerIds.length > 0) {
@@ -544,7 +532,6 @@ const CalendarPage: React.FC = () => {
       setRecurrenceEndDate('')
       setRecurrenceWeekdays([])
       setSelectedPlayerIds([])
-      setRelatedGatheringId('')
       fetchEventsAndData()
     } catch (err: any) {
       alert('Erro ao criar evento: ' + (err.message || 'Erro'))
@@ -567,9 +554,6 @@ const CalendarPage: React.FC = () => {
     setEditMaxPlayers(ev.max_players ?? '')
     setEditTournamentId(ev.tournament_id || (ev.tournament?.id || ''))
     setEditIsFriendly(Boolean(ev.is_friendly))
-    // Look up existing related event (bidirectional)
-    const linked = events.find(e => e.id !== ev.id && (e.id === ev.related_gathering_id || e.related_gathering_id === ev.id))
-    setEditRelatedGatheringId(linked ? linked.id : (ev.related_gathering_id || ''))
     setEditPlayerSearchTerm('')
     setIsEditModalOpen(true)
   }
@@ -601,8 +585,7 @@ const CalendarPage: React.FC = () => {
         description: editDescription,
         max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
         tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
-        is_friendly: editType === 'match' ? editIsFriendly : false,
-        related_gathering_id: editRelatedGatheringId || null
+        is_friendly: editType === 'match' ? editIsFriendly : false
       }
 
       const { error } = await supabase
@@ -611,23 +594,6 @@ const CalendarPage: React.FC = () => {
         .eq('id', selectedEvent.id)
 
       if (error) throw error
-
-      // Atualização Bidirecional no Supabase
-      if (editRelatedGatheringId) {
-        await supabase
-          .from('events')
-          .update({ related_gathering_id: selectedEvent.id })
-          .eq('id', editRelatedGatheringId)
-      } else {
-        // Se removeu a associação, limpa o evento anteriormente associado
-        const prevLinked = events.find(e => e.id !== selectedEvent.id && (e.id === selectedEvent.related_gathering_id || e.related_gathering_id === selectedEvent.id))
-        if (prevLinked) {
-          await supabase
-            .from('events')
-            .update({ related_gathering_id: null })
-            .eq('id', prevLinked.id)
-        }
-      }
 
       const fieldObj = fields.find(f => f.id === editFieldId)
       setSelectedEvent(prev => prev ? {
@@ -913,7 +879,6 @@ const CalendarPage: React.FC = () => {
     const callups = eventCallups[event.id] || []
     const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
     const confirmedCount = callups.filter(c => c.status === 'confirmed').length
-    const linkedEvent = events.find(e => e.id !== event.id && (e.id === event.related_gathering_id || e.related_gathering_id === event.id))
 
     const isMatch = event.type === 'match'
     const isPractice = event.type === 'practice'
@@ -972,51 +937,45 @@ const CalendarPage: React.FC = () => {
       <div
         key={event.id}
         onClick={() => setSelectedEvent(event)}
-        className={`rounded-2xl border transition-all cursor-pointer bg-white overflow-hidden shadow-xs hover:shadow-md hover:border-csc-gold flex flex-col justify-between ${
+        className={`rounded-3xl border-2 transition-all cursor-pointer bg-white overflow-hidden shadow-sm hover:shadow-lg flex flex-col justify-between ${
           isMatch 
-            ? 'border-blue-200/80 hover:bg-blue-50/5' 
+            ? 'border-blue-300 hover:border-blue-500' 
             : isPractice 
-            ? 'border-emerald-200/80 hover:bg-emerald-50/5' 
-            : 'border-purple-200/80 hover:bg-purple-50/5'
+            ? 'border-emerald-300 hover:border-emerald-500' 
+            : 'border-purple-300 hover:border-purple-500'
         }`}
       >
-        {/* Top Accent Line / Header */}
-        <div className={`px-4 py-2.5 flex items-center justify-between border-b ${
+        {/* Barra Marcante de Cabeçalho do Evento (Forte Presença Visual) */}
+        <div className={`px-4 py-3 flex items-center justify-between text-white shadow-xs ${
           isMatch 
-            ? 'bg-gradient-to-r from-blue-50 via-indigo-50 to-white border-blue-100' 
+            ? 'bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 border-b-2 border-blue-950' 
             : isPractice 
-            ? 'bg-gradient-to-r from-emerald-50 via-teal-50 to-white border-emerald-100' 
-            : 'bg-gradient-to-r from-purple-50 via-fuchsia-50 to-white border-purple-100'
+            ? 'bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-900 border-b-2 border-emerald-950' 
+            : 'bg-gradient-to-r from-purple-700 via-purple-800 to-fuchsia-950 border-b-2 border-purple-950'
         }`}>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs ${
-              isMatch 
-                ? 'bg-blue-600 text-white' 
-                : isPractice 
-                ? 'bg-emerald-700 text-white' 
-                : 'bg-purple-700 text-white'
-            }`}>
-              {isMatch ? <Trophy size={12} /> : isPractice ? <TrainingIcon size={12} className="text-white" /> : <PartyPopper size={12} />}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs sm:text-sm font-black uppercase tracking-wider flex items-center gap-1.5 drop-shadow-xs">
+              {isMatch ? <Trophy size={16} className="text-amber-300" /> : isPractice ? <TrainingIcon size={16} className="text-white" /> : <PartyPopper size={16} className="text-pink-300" />}
               <span>{isMatch ? 'Jogo' : isPractice ? 'Treino' : 'Convívio'}</span>
             </span>
 
             {isMatch && event.is_friendly && (
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-400 text-amber-950 shadow-2xs">
                 Amigável
               </span>
             )}
 
             {isMatch && event.tournament?.name && !event.is_friendly && (
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-100 text-blue-900 border border-blue-200 truncate max-w-[130px]">
+              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-lg bg-white/20 text-white border border-white/30 backdrop-blur-xs truncate max-w-[150px] shadow-2xs">
                 🏆 {event.tournament.name}
               </span>
             )}
           </div>
 
           {callups.length > 0 && (
-            <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1 bg-white px-2.5 py-0.5 rounded-full border border-gray-200 shadow-2xs">
-              <Users size={12} className="text-csc-dark" />
-              <span><strong className="text-csc-dark">{confirmedCount}</strong>/{callups.length} conf.</span>
+            <span className="text-xs font-bold flex items-center gap-1 bg-white/20 text-white px-2.5 py-1 rounded-full border border-white/30 backdrop-blur-xs shadow-2xs">
+              <Users size={13} className="text-white" />
+              <span><strong>{confirmedCount}</strong>/{callups.length} conf.</span>
             </span>
           )}
         </div>
@@ -1059,11 +1018,11 @@ const CalendarPage: React.FC = () => {
               </div>
             )}
 
-            {/* Concentração Acima da Hora */}
+            {/* Concentração Acima da Hora (por extenso) */}
             {event.meeting_time && (
               <div className="flex items-center">
-                <div className="inline-flex items-center gap-1 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-xl shadow-2xs">
-                  <span>⏱️ Conc: {event.meeting_time.substring(0, 5)}</span>
+                <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl shadow-2xs">
+                  <span>⏱️ Concentração: {event.meeting_time.substring(0, 5)}</span>
                 </div>
               </div>
             )}
@@ -1099,34 +1058,6 @@ const CalendarPage: React.FC = () => {
                 </div>
               )
             })()}
-
-            {/* Linked / Associated Event (Bidirecional) */}
-            {linkedEvent && (
-              <div 
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelectedEvent(linkedEvent)
-                }}
-                className="p-2.5 rounded-xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 text-indigo-950 flex items-center justify-between gap-2 shadow-2xs hover:border-indigo-400 transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold text-xs shadow-2xs">
-                    {linkedEvent.type === 'gathering' ? '🎉' : linkedEvent.type === 'match' ? '⚽' : '🏃'}
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-indigo-700 block">
-                      {linkedEvent.type === 'gathering' ? 'Convívio Associado' : linkedEvent.type === 'match' ? 'Jogo Associado' : 'Treino Associado'}
-                    </span>
-                    <span className="text-xs font-black text-gray-900 truncate block group-hover:text-indigo-900">
-                      {linkedEvent.title}
-                    </span>
-                  </div>
-                </div>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-white text-indigo-700 border border-indigo-200 shrink-0 shadow-2xs">
-                  {new Date(linkedEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} ↗
-                </span>
-              </div>
-            )}
           </div>
 
           <div className="space-y-3">
@@ -1719,35 +1650,6 @@ const CalendarPage: React.FC = () => {
                   })()}
                 </div>
 
-                {/* Evento Associado / Linkado (Bidirecional) */}
-                {(() => {
-                  const linked = events.find(e => e.id !== selectedEvent.id && (e.id === selectedEvent.related_gathering_id || e.related_gathering_id === selectedEvent.id))
-                  if (!linked) return null
-                  return (
-                    <div 
-                      onClick={() => setSelectedEvent(linked)}
-                      className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200 text-indigo-950 flex items-center justify-between gap-3 shadow-2xs hover:border-indigo-400 transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">
-                          {linked.type === 'gathering' ? '🎉' : linked.type === 'match' ? '⚽' : '🏃'}
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 block">
-                            {linked.type === 'gathering' ? 'Convívio Associado' : linked.type === 'match' ? 'Jogo Associado' : 'Treino Associado'}
-                          </span>
-                          <span className="text-sm font-black text-gray-900 truncate block group-hover:text-indigo-900">
-                            {linked.title}
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-white text-indigo-700 border border-indigo-200 shrink-0 shadow-2xs">
-                        {new Date(linked.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} ↗
-                      </span>
-                    </div>
-                  )
-                })()}
-
                 {/* Observações / Descrição (diretamente acima da confirmação) */}
                 {selectedEvent.description && (
                   <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-700 space-y-1">
@@ -2324,26 +2226,6 @@ const CalendarPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Associar a outro Evento (Bidirecional) */}
-                <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
-                  <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                    <Link2 size={14} className="text-indigo-600" />
-                    <span>🔗 Associar a outro Evento (ex: Convívio pós-jogo/treino, Jogo/Treino)</span>
-                  </label>
-                  <select
-                    value={relatedGatheringId}
-                    onChange={(e) => setRelatedGatheringId(e.target.value)}
-                    className="w-full px-3 py-2 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-600 bg-white text-xs font-medium"
-                  >
-                    <option value="">-- Nenhum evento associado --</option>
-                    {events.map(e => (
-                      <option key={e.id} value={e.id}>
-                        [{e.type === 'gathering' ? 'Convívio' : e.type === 'match' ? 'Jogo' : 'Treino'}] {e.title} • {new Date(e.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} às {new Date(e.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
                   <textarea
@@ -2801,28 +2683,6 @@ const CalendarPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                {/* Associar a outro Evento (Bidirecional) */}
-                <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
-                  <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                    <Link2 size={14} className="text-indigo-600" />
-                    <span>🔗 Associar a outro Evento (ex: Convívio pós-jogo/treino, Jogo/Treino)</span>
-                  </label>
-                  <select
-                    value={editRelatedGatheringId}
-                    onChange={(e) => setEditRelatedGatheringId(e.target.value)}
-                    className="w-full px-3 py-2 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-600 bg-white text-xs font-medium"
-                  >
-                    <option value="">-- Nenhum evento associado --</option>
-                    {events
-                      .filter(e => e.id !== (selectedEvent?.id || ''))
-                      .map(e => (
-                        <option key={e.id} value={e.id}>
-                          [{e.type === 'gathering' ? 'Convívio' : e.type === 'match' ? 'Jogo' : 'Treino'}] {e.title} • {new Date(e.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} às {new Date(e.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                        </option>
-                      ))}
-                  </select>
-                </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
