@@ -1127,17 +1127,19 @@ const TeamManagementPage: React.FC = () => {
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     {isCoachOrAdmin && (
                       <>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openAssociateModal(person)
-                          }}
-                          className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
-                          title="Associar a Utilizador"
-                        >
-                          <Link2 size={15} />
-                        </button>
+                        {person.id.startsWith('seed-') && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openAssociateModal(person)
+                            }}
+                            className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
+                            title="Associar a Utilizador"
+                          >
+                            <Link2 size={15} />
+                          </button>
+                        )}
 
                         <button
                           type="button"
@@ -1286,17 +1288,19 @@ const TeamManagementPage: React.FC = () => {
 
                   {isCoachOrAdmin && (
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openAssociateModal(person)
-                        }}
-                        className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
-                        title="Associar a Utilizador"
-                      >
-                        <Link2 size={14} />
-                      </button>
+                      {person.id.startsWith('seed-') && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openAssociateModal(person)
+                          }}
+                          className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
+                          title="Associar a Utilizador"
+                        >
+                          <Link2 size={14} />
+                        </button>
+                      )}
 
                       <button
                         type="button"
@@ -2275,7 +2279,7 @@ const TeamManagementPage: React.FC = () => {
 
             {/* Bottom Actions Footer */}
             <div className="pt-4 border-t border-gray-200 flex flex-wrap justify-between items-center gap-3">
-              {isCoachOrAdmin && (
+              {isCoachOrAdmin && selectedProfile?.id?.startsWith('seed-') && (
                 <button
                   type="button"
                   onClick={() => {
