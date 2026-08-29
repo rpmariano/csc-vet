@@ -160,15 +160,28 @@ const TeamManagementPage: React.FC = () => {
         matchedIdx = playersList.findIndex(p => p.email && p.email.toLowerCase().trim() === remEmail)
       }
 
-      // 3. Verificar por nome / alcunha / partes do nome
+      // 3. Verificar por número de camisola (#24)
+      if (matchedIdx === -1 && remotePlayer.jersey_number != null) {
+        matchedIdx = playersList.findIndex(p => p.jersey_number === remotePlayer.jersey_number)
+      }
+
+      // 4. Verificar por nome na camisola / alcunha
+      if (matchedIdx === -1 && (remotePlayer.shirt_name || remotePlayer.nickname)) {
+        const remShirt = (remotePlayer.shirt_name || remotePlayer.nickname || '').toLowerCase().trim()
+        matchedIdx = playersList.findIndex(p => {
+          const pShirt = (p.shirt_name || '').toLowerCase().trim()
+          const pNick = (p.nickname || '').toLowerCase().trim()
+          return (pShirt && pShirt === remShirt) || (pNick && pNick === remShirt)
+        })
+      }
+
+      // 5. Verificar por nome / partes do nome
       if (matchedIdx === -1 && remotePlayer.name) {
         const remName = remotePlayer.name.toLowerCase().trim()
         matchedIdx = playersList.findIndex(p => {
           const pName = (p.name || '').toLowerCase().trim()
-          const pShirt = (p.shirt_name || '').toLowerCase().trim()
-          const pNick = (p.nickname || '').toLowerCase().trim()
           if (!pName) return false
-          if (pName === remName || pShirt === remName || pNick === remName) return true
+          if (pName === remName) return true
 
           // Correspondência por partes do nome se ambos tiverem mais de 1 palavra
           const remParts = remName.split(' ').filter(w => w.length > 2)

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
+import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 
 export type UserRole = 'player' | 'coach' | 'admin'
 export type ProfileStatus = 'active' | 'inactive' | 'injured'
@@ -144,9 +145,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .maybeSingle()
 
-      // 2. Se temos o email, verificar se existe uma ficha criada previamente com ID diferente (placeholder ou de semente)
+      // 2. Se temos o email do utilizador autenticado, procurar ficha de atleta existente no plantel (DB ou Seed)
       if (userEmail) {
         const cleanEmail = userEmail.trim().toLowerCase()
+
+        // A. Procurar ficha no Supabase com este email (mas com ID diferente/antigo)
         const { data: matchByEmail } = await supabase
           .from('profiles')
           .select('*')
@@ -154,22 +157,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .neq('id', userId)
           .maybeSingle()
 
-        if (matchByEmail) {
-          const oldId = matchByEmail.id
-          const googleName = currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name
+        // B. Se não estiver no Supabase, procurar na lista de sementes (INITIAL_PLAYERS_DATA)
+        const seedMatch = !matchByEmail 
+          ? INITIAL_PLAYERS_DATA.find(p => p.email && p.email.toLowerCase().trim() === cleanEmail)
+          : null
+
+        const targetCard = matchByEmail || seedMatch
+
+        if (targetCard) {
+          const oldId = matchByEmail?.id
+
+          // PRESERVAR 100% dos dados da ficha de atleta (nome, número, posição, alcunha, camisola, notas, foto do atleta)
+          // NUNCA substituir o nome ou a foto do atleta pelos metadados do Google
+          const athletePhoto = targetCard.photo_url || data?.photo_url || null
           const googleAvatar = currentUser?.user_metadata?.avatar_url || currentUser?.user_metadata?.picture
 
-          // Dados completos combinando a ficha anterior com o login novo
           const mergedData: Partial<Profile> = {
-            ...matchByEmail,
+            ...targetCard,
             id: userId,
             email: cleanEmail,
-            name: matchByEmail.name || googleName || 'Atleta',
-            photo_url: matchByEmail.photo_url || googleAvatar || null
+            name: targetCard.name, // MANTER O NOME DO ATLETA (ex: Bruno Raul / Tochê)
+            shirt_name: targetCard.shirt_name || targetCard.nickname || null,
+            nickname: targetCard.nickname || null,
+            photo_url: athletePhoto || googleAvatar || null, // Preservar foto do atleta se existir
           }
 
           if (data) {
-            // Atualizar o registo do utilizador atual com todos os dados da ficha
+            // Atualizar o perfil do utilizador na BD com os dados completos do atleta
             const { data: updated } = await supabase
               .from('profiles')
               .update(mergedData)
@@ -178,7 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .single()
             if (updated) data = updated
           } else {
-            // Criar o registo com o ID do auth contendo os dados da ficha
+            // Criar o registo com o ID do auth contendo os dados do atleta
             const { data: inserted } = await supabase
               .from('profiles')
               .insert([mergedData])
@@ -187,17 +201,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (inserted) data = inserted
           }
 
-          // Migrar dependências da ficha antiga para o novo userId
-          await Promise.allSettled([
-            supabase.from('callups').update({ player_id: userId }).eq('player_id', oldId),
-            supabase.from('dues').update({ player_id: userId }).eq('player_id', oldId),
-            supabase.from('stats').update({ player_id: userId }).eq('player_id', oldId),
-            supabase.from('profiles').delete().eq('id', oldId)
-          ])
+          // Se existia um registo separado anterior no Supabase, migrar referências e eliminar placeholder
+          if (oldId) {
+            await Promise.allSettled([
+              supabase.from('callups').update({ player_id: userId }).eq('player_id', oldId),
+              supabase.from('dues').update({ player_id: userId }).eq('player_id', oldId),
+              supabase.from('stats').update({ player_id: userId }).eq('player_id', oldId),
+              supabase.from('profiles').delete().eq('id', oldId)
+            ])
+          }
         }
       }
 
-      // 3. Se ainda não existir perfil nem pelo ID nem pelo email, criar perfil inicial
+      // 3. Se ainda não existir perfil (nem no DB nem associado a atleta), criar novo membro base
       if (!data) {
         const googleName = currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name
         const googleAvatar = currentUser?.user_metadata?.avatar_url || currentUser?.user_metadata?.picture
@@ -220,29 +236,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (!createErr && created) {
           data = created
-        }
-      }
-
-      // 4. Se o utilizador tem perfil mas o nome ainda for genérico ou sem foto, atualizar com metadados do Google
-      if (data && currentUser) {
-        const googleName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name
-        const googleAvatar = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture
-        const isGenericName = !data.name || data.name === 'Novo Jogador' || data.name === 'Novo Atleta'
-        const needsNameUpdate = isGenericName && !!googleName
-        const needsPhotoUpdate = !data.photo_url && !!googleAvatar
-
-        if (needsNameUpdate || needsPhotoUpdate) {
-          const updates: Partial<Profile> = {}
-          if (needsNameUpdate) updates.name = googleName
-          if (needsPhotoUpdate) updates.photo_url = googleAvatar
-
-          const { data: refreshed } = await supabase
-            .from('profiles')
-            .update(updates)
-            .eq('id', userId)
-            .select()
-            .single()
-          if (refreshed) data = refreshed
         }
       }
 
