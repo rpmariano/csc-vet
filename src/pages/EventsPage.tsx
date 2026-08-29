@@ -170,7 +170,15 @@ interface Event {
 }
 
 interface Field { id: string; name: string; address?: string | null }
-interface Opponent { id: string; name: string; home_field_id: string | null }
+interface Opponent {
+  id: string
+  name: string
+  initials?: string | null
+  logo_url?: string | null
+  home_field_id?: string | null
+  contact_name?: string | null
+  contact_phone?: string | null
+}
 interface Tournament { id: string; name: string; season: string }
 
 interface CallupWithPlayer {
@@ -232,6 +240,16 @@ const EventsPage: React.FC = () => {
   const [quickFieldAddress, setQuickFieldAddress] = useState('')
   const [isSavingQuickField, setIsSavingQuickField] = useState(false)
 
+  // Quick Opponent Modal
+  const [isQuickOpponentModalOpen, setIsQuickOpponentModalOpen] = useState(false)
+  const [quickOppTarget, setQuickOppTarget] = useState<'create' | 'edit'>('create')
+  const [quickOppName, setQuickOppName] = useState('')
+  const [quickOppInitials, setQuickOppInitials] = useState('')
+  const [quickOppHomeFieldId, setQuickOppHomeFieldId] = useState('')
+  const [quickOppContactName, setQuickOppContactName] = useState('')
+  const [quickOppContactPhone, setQuickOppContactPhone] = useState('')
+  const [isSavingQuickOpp, setIsSavingQuickOpp] = useState(false)
+
   // Estados para Edição de Evento
   const [editingEvent, setEditingEvent] = useState<Event | null>(null)
   const [editTitle, setEditTitle] = useState('')
@@ -250,7 +268,7 @@ const EventsPage: React.FC = () => {
   const [isBatchCalling, setIsBatchCalling] = useState(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
-  const [unsavedModalTarget, setUnsavedModalTarget] = useState<'edit' | 'quickField' | null>(null)
+  const [unsavedModalTarget, setUnsavedModalTarget] = useState<'edit' | 'quickField' | 'quickOpp' | null>(null)
   const [viewModeTab, setViewModeTab] = useState<'create' | 'list'>('create')
 
   const handleAttemptCloseEditModal = () => {
@@ -264,6 +282,19 @@ const EventsPage: React.FC = () => {
       setIsQuickFieldModalOpen(false)
       setQuickFieldName('')
       setQuickFieldAddress('')
+    }
+  }
+
+  const handleAttemptCloseQuickOppModal = () => {
+    if (quickOppName.trim() || quickOppInitials.trim() || quickOppContactName.trim()) {
+      setUnsavedModalTarget('quickOpp')
+    } else {
+      setIsQuickOpponentModalOpen(false)
+      setQuickOppName('')
+      setQuickOppInitials('')
+      setQuickOppHomeFieldId('')
+      setQuickOppContactName('')
+      setQuickOppContactPhone('')
     }
   }
 
@@ -310,6 +341,69 @@ const EventsPage: React.FC = () => {
       alert('Erro ao criar campo: ' + (err.message || 'Erro de ligação'))
     } finally {
       setIsSavingQuickField(false)
+    }
+  }
+
+  const handleSaveQuickOpponent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!quickOppName.trim()) return
+    setIsSavingQuickOpp(true)
+    try {
+      const newId = crypto.randomUUID()
+      const newOppPayload: Opponent = {
+        id: newId,
+        name: quickOppName.trim(),
+        initials: quickOppInitials.trim() || undefined,
+        home_field_id: quickOppHomeFieldId || null,
+        contact_name: quickOppContactName.trim() || null,
+        contact_phone: quickOppContactPhone.trim() || null
+      }
+
+      const { data, error } = await supabase
+        .from('opponents')
+        .insert([{
+          id: newId,
+          name: newOppPayload.name,
+          initials: newOppPayload.initials || null,
+          home_field_id: newOppPayload.home_field_id || null,
+          contact_name: newOppPayload.contact_name || null,
+          contact_phone: newOppPayload.contact_phone || null
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      const resolvedOpp = (data as Opponent) || newOppPayload
+      setOpponents(prev => [...prev.filter(o => o.id !== resolvedOpp.id), resolvedOpp].sort((a, b) => a.name.localeCompare(b.name)))
+
+      if (quickOppTarget === 'create') {
+        setOpponentId(resolvedOpp.id)
+        if (homeAway === 'away' && resolvedOpp.home_field_id) {
+          setFieldId(resolvedOpp.home_field_id)
+          const f = fields.find(item => item.id === resolvedOpp.home_field_id)
+          if (f) setLocationText(f.address ? `${f.name} (${f.address})` : f.name)
+        }
+      } else {
+        setEditOpponentId(resolvedOpp.id)
+        if (editHomeAway === 'away' && resolvedOpp.home_field_id) {
+          setEditFieldId(resolvedOpp.home_field_id)
+          const f = fields.find(item => item.id === resolvedOpp.home_field_id)
+          if (f) setEditLocationText(f.address ? `${f.name} (${f.address})` : f.name)
+        }
+      }
+
+      setIsQuickOpponentModalOpen(false)
+      setQuickOppName('')
+      setQuickOppInitials('')
+      setQuickOppHomeFieldId('')
+      setQuickOppContactName('')
+      setQuickOppContactPhone('')
+    } catch (err: any) {
+      console.error(err)
+      alert('Erro ao criar adversário: ' + (err.message || 'Erro de ligação'))
+    } finally {
+      setIsSavingQuickOpp(false)
     }
   }
 
@@ -1052,10 +1146,18 @@ const EventsPage: React.FC = () => {
                     <label className="block text-[11px] font-bold text-gray-700 mb-1">Adversário</label>
                     <select
                       value={opponentId}
-                      onChange={(e) => setOpponentId(e.target.value)}
+                      onChange={(e) => {
+                        if (e.target.value === '__new__') {
+                          setQuickOppTarget('create')
+                          setIsQuickOpponentModalOpen(true)
+                        } else {
+                          setOpponentId(e.target.value)
+                        }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
                     >
                       <option value="">-- Selecionar Adversário --</option>
+                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
                       {opponents.map(o => (
                         <option key={o.id} value={o.id}>{o.name}</option>
                       ))}
@@ -1916,8 +2018,20 @@ const EventsPage: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">Adversário</label>
-                      <select value={editOpponentId} onChange={e => setEditOpponentId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white">
-                        <option value="">-- Selecionar --</option>
+                      <select 
+                        value={editOpponentId} 
+                        onChange={e => {
+                          if (e.target.value === '__new__') {
+                            setQuickOppTarget('edit')
+                            setIsQuickOpponentModalOpen(true)
+                          } else {
+                            setEditOpponentId(e.target.value)
+                          }
+                        }} 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                      >
+                        <option value="">-- Selecionar Adversário --</option>
+                        <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
                         {opponents.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                       </select>
                     </div>
@@ -2203,13 +2317,13 @@ const EventsPage: React.FC = () => {
                   autoFocus
                   value={quickFieldName}
                   onChange={(e) => setQuickFieldName(e.target.value)}
-                  placeholder="Ex: Campo Sintético Municipal de Tires"
+                  placeholder="Ex: Campo Municipal de Tires"
                   className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Morada / Localização</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Morada / Localização Completa</label>
                 <input
                   type="text"
                   value={quickFieldAddress}
@@ -2234,6 +2348,124 @@ const EventsPage: React.FC = () => {
                   className="px-5 py-2 bg-csc-dark hover:bg-black text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
                 >
                   {isSavingQuickField ? 'A criar...' : 'Guardar Campo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CRIAR NOVO ADVERSÁRIO INLINE */}
+      {isQuickOpponentModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleAttemptCloseQuickOppModal()
+          }}
+        >
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-gray-100 space-y-4">
+            <button
+              type="button"
+              onClick={handleAttemptCloseQuickOppModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-900 flex items-center justify-center text-lg font-black shadow-xs">
+                🛡️
+              </div>
+              <div>
+                <h3 className="text-base font-black text-csc-dark">Criar Novo Adversário</h3>
+                <p className="text-[11px] text-gray-500">Regista uma nova equipa/clube adversário para seleção imediata.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveQuickOpponent} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Nome do Clube / Equipa *</label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={quickOppName}
+                  onChange={(e) => setQuickOppName(e.target.value)}
+                  placeholder="Ex: G.D. Estoril Praia"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Sigla (opcional)</label>
+                  <input
+                    type="text"
+                    value={quickOppInitials}
+                    onChange={(e) => setQuickOppInitials(e.target.value)}
+                    placeholder="Ex: GDEP"
+                    maxLength={6}
+                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white uppercase font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Campo Habitual</label>
+                  <select
+                    value={quickOppHomeFieldId}
+                    onChange={(e) => setQuickOppHomeFieldId(e.target.value)}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                  >
+                    <option value="">-- Sem Campo --</option>
+                    {fields.map(f => (
+                      <option key={f.id} value={f.id}>🏟️ {f.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Nome do Contacto</label>
+                  <input
+                    type="text"
+                    value={quickOppContactName}
+                    onChange={(e) => setQuickOppContactName(e.target.value)}
+                    placeholder="Ex: Diretor desportivo"
+                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Telefone Contacto</label>
+                  <input
+                    type="tel"
+                    value={quickOppContactPhone}
+                    onChange={(e) => setQuickOppContactPhone(e.target.value)}
+                    placeholder="Ex: 912 345 678"
+                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={handleAttemptCloseQuickOppModal}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingQuickOpp || !quickOppName.trim()}
+                  className="flex-1 px-4 py-2.5 bg-csc-dark hover:bg-csc-dark/90 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {isSavingQuickOpp ? (
+                    <span>A registar...</span>
+                  ) : (
+                    <span>➕ Criar Adversário</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -2320,6 +2552,10 @@ const EventsPage: React.FC = () => {
             setUnsavedModalTarget(null)
             const fakeEvent = { preventDefault: () => {} } as React.FormEvent
             await handleSaveQuickField(fakeEvent)
+          } else if (unsavedModalTarget === 'quickOpp') {
+            setUnsavedModalTarget(null)
+            const fakeEvent = { preventDefault: () => {} } as React.FormEvent
+            await handleSaveQuickOpponent(fakeEvent)
           }
         }}
         onExitWithoutSaving={() => {
@@ -2329,6 +2565,13 @@ const EventsPage: React.FC = () => {
             setIsQuickFieldModalOpen(false)
             setQuickFieldName('')
             setQuickFieldAddress('')
+          } else if (unsavedModalTarget === 'quickOpp') {
+            setIsQuickOpponentModalOpen(false)
+            setQuickOppName('')
+            setQuickOppInitials('')
+            setQuickOppHomeFieldId('')
+            setQuickOppContactName('')
+            setQuickOppContactPhone('')
           }
           setUnsavedModalTarget(null)
         }}
