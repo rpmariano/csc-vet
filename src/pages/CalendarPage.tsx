@@ -197,9 +197,9 @@ const CalendarPage: React.FC = () => {
     }
   }, [dateTime])
 
-  // Desativar recorrência em convívios
+  // Desativar recorrência em eventos que não sejam treino
   useEffect(() => {
-    if (type === 'gathering') {
+    if (type !== 'practice') {
       setIsRecurring(false)
     }
   }, [type])
@@ -1777,8 +1777,8 @@ const CalendarPage: React.FC = () => {
                 />
               </div>
 
-              {/* SELEÇÃO DE RECORRÊNCIA (Apenas para Jogos e Treinos) */}
-              {type !== 'gathering' && (
+              {/* SELEÇÃO DE RECORRÊNCIA (Apenas para Treinos) */}
+              {type === 'practice' && (
                 <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -1790,7 +1790,7 @@ const CalendarPage: React.FC = () => {
                       />
                       <span className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
                         <Repeat size={16} className="text-csc-gold" />
-                        <span>Marcar {type === 'practice' ? 'Treino' : 'Jogo'} com Recorrência Semanal</span>
+                        <span>Marcar Treino com Recorrência Semanal</span>
                       </span>
                     </label>
                     {isRecurring && (

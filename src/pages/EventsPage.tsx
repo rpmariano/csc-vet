@@ -220,11 +220,12 @@ const EventsPage: React.FC = () => {
   const [editFieldId, setEditFieldId] = useState('')
   const [editLocationText, setEditLocationText] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  const [editMaxPlayers, setEditMaxPlayers] = useState<number | ''>('')
   const [editIsFriendly, setEditIsFriendly] = useState(false)
   const [editTournamentId, setEditTournamentId] = useState('')
   const [editOpponentId, setEditOpponentId] = useState('')
   const [editHomeAway, setEditHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
+  const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
+  const [isBatchCalling, setIsBatchCalling] = useState(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
@@ -253,11 +254,11 @@ const EventsPage: React.FC = () => {
     setEditFieldId(ev.field_id || '')
     setEditLocationText(ev.location || '')
     setEditDescription(ev.description || '')
-    setEditMaxPlayers(ev.max_players ?? '')
     setEditIsFriendly(ev.is_friendly ?? false)
     setEditTournamentId(ev.tournament_id || '')
     setEditOpponentId(ev.opponent_id || '')
     setEditHomeAway(ev.home_away || 'home')
+    setEditPlayerSearchTerm('')
   }
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -274,7 +275,7 @@ const EventsPage: React.FC = () => {
         field_id: editFieldId || null,
         location: !editFieldId ? (editLocationText.trim() || null) : null,
         description: editDescription.trim() || null,
-        max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
+        max_players: null,
         is_friendly: editType === 'match' ? editIsFriendly : false,
         tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
         opponent_id: editType === 'match' ? (editOpponentId || null) : null,
@@ -310,9 +311,9 @@ const EventsPage: React.FC = () => {
     }
   }, [eventDate])
 
-  // Desativar recorrência em convívios
+  // Desativar recorrência em eventos que não sejam treinos
   useEffect(() => {
-    if (type === 'gathering') {
+    if (type !== 'practice') {
       setIsRecurring(false)
     }
   }, [type])
@@ -728,7 +729,7 @@ const EventsPage: React.FC = () => {
                 {[
                   { id: 'gathering', label: 'Convívio', icon: PartyPopper, color: 'text-purple-700 bg-purple-50 border-purple-300' },
                   { id: 'practice', label: 'Treino', icon: TrainingIcon, color: 'text-emerald-700 bg-emerald-50 border-emerald-300' },
-                  { id: 'match', label: 'Jogo Oficial', icon: Trophy, color: 'text-amber-800 bg-amber-50 border-amber-300' },
+                  { id: 'match', label: 'Jogo', icon: Trophy, color: 'text-amber-800 bg-amber-50 border-amber-300' },
                 ].map(t => {
                   const Icon = t.icon
                   const isSelected = type === t.id
@@ -943,8 +944,8 @@ const EventsPage: React.FC = () => {
               />
             </div>
 
-            {/* 6. Recorrência Opcional (Apenas para Treinos e Jogos, não para Convívios) */}
-            {type !== 'gathering' && (
+            {/* 6. Recorrência Opcional (Apenas para Treinos) */}
+            {type === 'practice' && (
               <div className="p-3 bg-amber-50/50 border border-amber-200 rounded-2xl space-y-2 text-xs">
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -956,7 +957,7 @@ const EventsPage: React.FC = () => {
                     />
                     <span className="font-bold text-gray-900 flex items-center gap-1.5">
                       <Repeat size={14} className="text-csc-gold" />
-                      <span>Repetir {type === 'practice' ? 'Treino' : 'Jogo'} Semanalmente</span>
+                      <span>Repetir Treino Semanalmente</span>
                     </span>
                   </label>
                 </div>
@@ -1714,11 +1715,145 @@ const EventsPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Limite de Convocados */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Limite de Convocados (opcional)</label>
-                <input type="number" min="1" max="50" value={editMaxPlayers} onChange={e => setEditMaxPlayers(e.target.value ? Number(e.target.value) : '')} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" placeholder="Ex: 18" />
-              </div>
+              {/* Gestão de Convocatórias */}
+              {editingEvent && (() => {
+                const currentCallups = eventCallups[editingEvent.id] || []
+                const calledPlayerIds = currentCallups.map(c => c.player_id)
+                const editUncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
+
+                const handleEditAddAll = async () => {
+                  if (editUncalledPlayers.length === 0 || isBatchCalling) return
+                  setIsBatchCalling(true)
+                  try {
+                    const validIds = await ensurePlayerIdsForSupabase(editUncalledPlayers.map(p => p.id), allPlayers)
+                    if (validIds.length > 0) {
+                      const payload = validIds.map(pId => ({
+                        event_id: editingEvent.id,
+                        player_id: pId,
+                        status: 'called'
+                      }))
+                      const { error } = await supabase.from('callups').insert(payload)
+                      if (error) throw error
+                      await fetchData()
+                    }
+                  } catch (err: any) {
+                    alert('Erro ao convocar todos: ' + err.message)
+                  } finally {
+                    setIsBatchCalling(false)
+                  }
+                }
+
+                const handleEditRemoveAll = async () => {
+                  if (currentCallups.length === 0 || isBatchCalling) return
+                  if (!confirm('Tem a certeza que deseja remover todos os convocados deste evento?')) return
+                  setIsBatchCalling(true)
+                  try {
+                    const callupIds = currentCallups.map(c => c.id)
+                    const { error } = await supabase.from('callups').delete().in('id', callupIds)
+                    if (error) throw error
+                    await fetchData()
+                  } catch (err: any) {
+                    alert('Erro ao remover todos: ' + err.message)
+                  } finally {
+                    setIsBatchCalling(false)
+                  }
+                }
+
+                const filteredMembers = allPlayers.filter(p => 
+                  p.name.toLowerCase().includes(editPlayerSearchTerm.toLowerCase()) ||
+                  (p.jersey_number && p.jersey_number.toString().includes(editPlayerSearchTerm))
+                )
+
+                return (
+                  <div className="p-4 bg-gray-50 border-2 border-amber-200 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-gray-900 flex items-center gap-1.5">
+                        <Users size={15} className="text-csc-dark" />
+                        <span>Convocatória ({calledPlayerIds.length} convocados)</span>
+                      </span>
+                      <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2 py-0.5 rounded-full">
+                        {allPlayers.length} Membros
+                      </span>
+                    </div>
+
+                    {/* Botões Rápidos */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleEditAddAll}
+                        disabled={editUncalledPlayers.length === 0 || isBatchCalling}
+                        className="px-2.5 py-1.5 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 disabled:opacity-40"
+                      >
+                        <Sparkles size={12} className="text-csc-gold" />
+                        <span>{isBatchCalling ? 'A processar...' : `✨ Convocar Todos (${editUncalledPlayers.length})`}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleEditRemoveAll}
+                        disabled={currentCallups.length === 0 || isBatchCalling}
+                        className="px-2.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
+                      >
+                        <span>✕ Remover Todos</span>
+                      </button>
+                    </div>
+
+                    {/* Barra de Pesquisa de Membros na Edição */}
+                    <div className="relative">
+                      <Search size={13} className="absolute left-3 top-2.5 text-gray-400" />
+                      <input
+                        type="text"
+                        value={editPlayerSearchTerm}
+                        onChange={(e) => setEditPlayerSearchTerm(e.target.value)}
+                        placeholder="Pesquisar membro na convocatória..."
+                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark"
+                      />
+                    </div>
+
+                    {/* Lista de membros um a um */}
+                    <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-2xl">
+                      {filteredMembers.map(p => {
+                        const callup = currentCallups.find(c => c.player_id === p.id)
+                        const isCalled = !!callup
+
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              if (isCalled && callup) {
+                                handleRemovePlayerFromCallup(callup.id, editingEvent.id)
+                              } else {
+                                handleAddPlayerToCallup(editingEvent.id, p.id)
+                              }
+                            }}
+                            className={`flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                              isCalled
+                                ? 'bg-amber-50/80 font-black text-gray-900 border border-amber-200'
+                                : 'text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={isCalled}
+                                onChange={() => {}}
+                                className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none"
+                              />
+                              <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
+                                {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
+                              </div>
+                              <span className="truncate">{p.name}</span>
+                            </div>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isCalled ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}`}>
+                              {isCalled ? '✓ Convocado' : '+ Convocar'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Descrição */}
               <div>
