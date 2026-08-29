@@ -6,7 +6,8 @@ import {
   XCircle, 
   ChevronRight, 
   ChevronLeft,
-  Trophy
+  Trophy,
+  ShieldAlert
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -98,6 +99,22 @@ const Home: React.FC = () => {
   // Matches Carousel State
   const [upcomingMatches, setUpcomingMatches] = useState<Event[]>([])
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+
+  // Suspension Alerts State
+  const [suspensionAlerts, setSuspensionAlerts] = useState<{key: string, msg: string}[]>([])
+
+  useEffect(() => {
+    if (profile && (profile.role === 'coach' || profile.role === 'admin')) {
+      const alerts = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('csc_suspension_alert_')) {
+          alerts.push({ key, msg: localStorage.getItem(key) || '' })
+        }
+      }
+      setSuspensionAlerts(alerts)
+    }
+  }, [profile])
 
   // Practices State
   const [upcomingPractices, setUpcomingPractices] = useState<Event[]>([])
@@ -328,7 +345,35 @@ const Home: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* 1. Alerta de Convocatórias Pendentes: Estilo Banner Ação Rápida com Suporte Touch Slide */}
+      {/* Suspension Alerts (Coaches / Admins Only) */}
+      {suspensionAlerts.length > 0 && (
+        <div className="space-y-2">
+          {suspensionAlerts.map(alert => (
+            <div key={alert.key} className="bg-red-50 border border-red-300 rounded-3xl p-4 shadow-sm flex items-start gap-3">
+              <div className="mt-0.5 text-red-600 bg-red-100 rounded-full p-1.5 shrink-0">
+                <ShieldAlert size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs font-black text-red-900 uppercase tracking-wider mb-1">Alerta de Suspensão</h4>
+                <p className="text-sm font-bold text-red-800">{alert.msg}</p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => {
+                  localStorage.removeItem(alert.key)
+                  setSuspensionAlerts(prev => prev.filter(a => a.key !== alert.key))
+                }}
+                className="w-8 h-8 rounded-full bg-white border border-red-200 text-red-700 hover:bg-red-50 hover:border-red-400 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 shadow-2xs"
+                title="Dispensar Alerta"
+              >
+                <XCircle size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Hero / Callup Alerts */}
       {pendingCallupsCount > 0 && currentPending && (() => {
         const ev = currentPending.event
         const isPractice = ev?.type === 'practice'

@@ -10,6 +10,7 @@ interface MatchReportModalProps {
   event: any
   isCoachOrAdmin: boolean
   onSaved?: () => void
+  tournamentRules?: any
 }
 
 interface PlayerMatchStat {
@@ -83,7 +84,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   eventId,
   event,
   isCoachOrAdmin,
-  onSaved
+  onSaved,
+  tournamentRules
 }) => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -225,6 +227,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         .eq('id', eventId)
 
       const participatingPlayers = playerStats.filter(p => p.lineup_status !== 'none' || p.goals > 0 || p.yellow_cards > 0 || p.red_cards > 0)
+      
+      const newSuspensions = []
 
       for (const p of participatingPlayers) {
         const payload: any = {
@@ -246,6 +250,42 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           .update({ notes: `lineup:${p.lineup_status}` })
           .eq('event_id', eventId)
           .eq('player_id', p.player_id)
+
+        // Verificação de Castigos / Suspensões se este evento pertence a um torneio
+        if (event?.tournament_id && tournamentRules?.yellow_cards_to_suspension && p.yellow_cards > 0) {
+          // Precisamos buscar todos os cartões amarelos deste jogador neste torneio
+          const { data: pastStats } = await supabase
+            .from('stats')
+            .select('yellow_cards, event:events!inner(tournament_id)')
+            .eq('player_id', p.player_id)
+            .eq('events.tournament_id', event.tournament_id)
+          
+          let totalYellows = p.yellow_cards
+          if (pastStats) {
+            totalYellows = pastStats.reduce((acc, st) => acc + (st.yellow_cards || 0), 0)
+          }
+
+          // Nota: Ao ler os stats acabámos de gravar o atual, portanto o current já lá pode estar incluído se o select os apanhou, 
+          // mas o UPSERT pode ter acontecido, então é mais seguro ler tudo incluindo o atual depois do UPSERT e somar.
+          // Na verdade, se pastStats traz a soma de TUDO, totalYellows = soma.
+          totalYellows = pastStats ? pastStats.reduce((acc, st) => acc + (st.yellow_cards || 0), 0) : p.yellow_cards
+
+          if (totalYellows > 0 && totalYellows % tournamentRules.yellow_cards_to_suspension === 0) {
+            newSuspensions.push(p.name)
+            await supabase.from('tournament_suspensions').insert([{
+              tournament_id: event.tournament_id,
+              player_id: p.player_id,
+              reason: `Acumulação de Amarelos (${totalYellows})`,
+              status: 'active'
+            }])
+          }
+        }
+      }
+
+      if (newSuspensions.length > 0) {
+        const names = newSuspensions.join(', ')
+        // Mostraremos um alerta na UI ou apenas toast
+        localStorage.setItem(`csc_suspension_alert_${event.tournament_id}`, `Os seguintes jogadores atingiram o limite de amarelos e estão suspensos no próximo jogo: ${names}`)
       }
 
       const nonParticipants = playerStats.filter(p => p.lineup_status === 'none' && p.goals === 0 && p.yellow_cards === 0 && p.red_cards === 0)

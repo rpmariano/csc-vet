@@ -235,13 +235,31 @@ interface Opponent {
   contact_name?: string | null
   contact_phone?: string | null
 }
-interface Tournament { id: string; name: string; season: string }
+interface TournamentRules {
+  min_age: number;
+  exceptions_allowed: boolean;
+  exceptions_count: number;
+  exceptions_min_age: number;
+  max_squad_size: number;
+  max_match_players: number;
+  min_match_players: number;
+  match_duration_mins: number;
+  half_duration_mins: number;
+  rolling_subs: boolean;
+  yellow_cards_to_suspension: number;
+  walkover_score: string;
+  max_walkovers_allowed: number;
+  delay_tolerance_mins: number;
+}
+interface Tournament { id: string; name: string; season: string; rules?: TournamentRules }
+interface TournamentPlayer { tournament_id: string; player_id: string }
+interface TournamentSuspension { id: string; tournament_id: string; player_id: string; reason: string; status: string }
 
 interface CallupWithPlayer {
   id: string
   event_id: string
   player_id: string
-  status: 'called' | 'confirmed' | 'declined'
+  status: 'called' | 'confirmed' | 'declined' | 'pending'
   player: Profile
 }
 
@@ -254,6 +272,8 @@ const EventsPage: React.FC = () => {
   const [fields, setFields] = useState<Field[]>([])
   const [opponents, setOpponents] = useState<Opponent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
+  const [tournamentPlayersMap, setTournamentPlayersMap] = useState<TournamentPlayer[]>([])
+  const [tournamentSuspensions, setTournamentSuspensions] = useState<TournamentSuspension[]>([])
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
@@ -718,25 +738,30 @@ const EventsPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [evRes, fRes, oRes, tRes, profRes, callRes] = await Promise.all([
+      const [evRes, fRes, oRes, tRes, profRes, callRes, tpRes, suspRes] = await Promise.all([
         supabase.from('events').select('*').order('date_time', { ascending: false }),
         supabase.from('fields').select('id, name, address'),
         supabase.from('opponents').select('id, name, home_field_id'),
-        supabase.from('tournaments').select('id, name, season'),
+        supabase.from('tournaments').select('id, name, season, rules'),
         supabase.from('profiles').select('*').order('name', { ascending: true }),
-        supabase.from('callups').select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)')
+        supabase.from('callups').select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)'),
+        supabase.from('tournament_players').select('tournament_id, player_id'),
+        supabase.from('tournament_suspensions').select('*').eq('status', 'active')
       ])
 
       if (evRes.data) setEvents(evRes.data as Event[])
       if (fRes.data) setFields(fRes.data as Field[])
       if (oRes.data) setOpponents(oRes.data)
       if (tRes.data) setTournaments(tRes.data)
+      if (tpRes.data) setTournamentPlayersMap(tpRes.data)
+      if (suspRes.data) setTournamentSuspensions(suspRes.data)
       if (profRes.data) {
         const merged = mergeProfilesWithSeedData((profRes.data as Profile[]) || [])
         setAllPlayers(merged)
         const initialEligible = merged.filter(p => isPlayerEligible(p, type))
         setSelectedPlayerIds(initialEligible.map(p => p.id))
       }
+      if (tpRes.data) setTournamentPlayersMap(tpRes.data)
 
       if (callRes.data && evRes.data && profRes.data) {
         const eventsList = evRes.data as Event[]
@@ -813,8 +838,18 @@ const EventsPage: React.FC = () => {
     return fields[0] || null
   }
 
-  const isPlayerEligible = (player: Profile, eventType: string) => {
+  const isPlayerEligible = (player: Profile, eventType: string, tId?: string | null) => {
     if (player.status === 'inactive') return false
+    
+    // Se for um jogo de um torneio específico, verificar se está inscrito e se não está suspenso
+    if (eventType === 'match' && tId) {
+      const isRegistered = tournamentPlayersMap.some(tp => tp.tournament_id === tId && tp.player_id === player.id)
+      if (!isRegistered) return false
+
+      const isSuspended = tournamentSuspensions.some(ts => ts.tournament_id === tId && ts.player_id === player.id && ts.status === 'active')
+      if (isSuspended) return false
+    }
+
     if (eventType === 'gathering') return true
     return player.status === 'active'
   }
@@ -822,9 +857,9 @@ const EventsPage: React.FC = () => {
   useEffect(() => {
     setSelectedPlayerIds(prev => prev.filter(id => {
       const p = allPlayers.find(pl => pl.id === id)
-      return p ? isPlayerEligible(p, type) : false
+      return p ? isPlayerEligible(p, type, tournamentId) : false
     }))
-  }, [type, allPlayers])
+  }, [type, allPlayers, tournamentId, tournamentPlayersMap])
 
   // Gestão automática de campo na criação de jogos / treinos
   useEffect(() => {
@@ -873,14 +908,14 @@ const EventsPage: React.FC = () => {
   }, [editingEvent, editType, editHomeAway, editOpponentId, opponents, fields, clubSettings])
 
   const handleSelectAll = () => {
-    const eligible = allPlayers.filter(p => isPlayerEligible(p, type))
+    const eligible = allPlayers.filter(p => isPlayerEligible(p, type, tournamentId))
     setSelectedPlayerIds(eligible.map(p => p.id))
   }
 
   const handleSelectOnlyPlayers = () => {
     const players = allPlayers.filter(p => {
       const roles = extractRolesFromProfile(p)
-      return roles.includes('player') && isPlayerEligible(p, type)
+      return roles.includes('player') && isPlayerEligible(p, type, tournamentId)
     })
     setSelectedPlayerIds(players.map(p => p.id))
   }
@@ -888,7 +923,7 @@ const EventsPage: React.FC = () => {
   const handleSelectStaff = () => {
     const staff = allPlayers.filter(p => {
       const roles = extractRolesFromProfile(p)
-      return (roles.includes('coach') || roles.includes('admin')) && isPlayerEligible(p, type)
+      return (roles.includes('coach') || roles.includes('admin')) && isPlayerEligible(p, type, tournamentId)
     })
     setSelectedPlayerIds(staff.map(p => p.id))
   }
@@ -903,7 +938,7 @@ const EventsPage: React.FC = () => {
       const lastPlayerIds = eventCallups[lastEventWithCallups.id].map(c => c.player_id)
       const validLastIds = lastPlayerIds.filter(id => {
         const p = allPlayers.find(pl => pl.id === id)
-        return p ? isPlayerEligible(p, type) : false
+        return p ? isPlayerEligible(p, type, tournamentId) : false
       })
       setSelectedPlayerIds(validLastIds)
       toast.success('Convocatória anterior repetida com sucesso!')
@@ -914,17 +949,51 @@ const EventsPage: React.FC = () => {
 
   const togglePlayer = (id: string) => {
     const p = allPlayers.find(pl => pl.id === id)
-    if (p && !isPlayerEligible(p, type)) {
-      toast.warning('Este membro está lesionado e não pode ser convocado para jogos ou treinos (apenas convívios).')
+    if (p && !isPlayerEligible(p, type, tournamentId)) {
+      toast.warning('Este membro não pode ser convocado (lesionado, não inscrito no torneio ou inativo).')
       return
     }
 
     const willSelect = !selectedPlayerIds.includes(id)
+
+    if (willSelect && type === 'match' && tournamentId) {
+      const tour = tournaments.find(t => t.id === tournamentId)
+      if (tour?.rules) {
+        const { rules } = tour
+        
+        // 1. Validar limite de jogadores do torneio
+        if (rules.max_match_players && selectedPlayerIds.length >= rules.max_match_players) {
+          toast.error(`Esta convocatória atingiu o limite do torneio (${rules.max_match_players} convocados).`)
+          return
+        }
+
+        // 2. Validar limite de exceções de idade
+        if (p?.birth_date && rules.min_age && rules.exceptions_allowed) {
+          const age = Math.floor((new Date().getTime() - new Date(p.birth_date).getTime()) / 3.15576e+10)
+          if (age < rules.min_age) {
+            const currentExceptions = selectedPlayerIds.filter(sId => {
+              const selP = allPlayers.find(pl => pl.id === sId)
+              if (selP?.birth_date) {
+                const sAge = Math.floor((new Date().getTime() - new Date(selP.birth_date).getTime()) / 3.15576e+10)
+                return sAge < rules.min_age
+              }
+              return false
+            }).length
+
+            if (currentExceptions >= rules.exceptions_count) {
+              toast.error(`Não podes convocar mais jogadores abaixo dos ${rules.min_age} anos. O limite do torneio (${rules.exceptions_count}) já foi atingido.`)
+              return
+            }
+          }
+        }
+      }
+    }
+
     if (willSelect && maxPlayers !== '' && selectedPlayerIds.length >= Number(maxPlayers)) {
       setConfirmModalConfig({
         isOpen: true,
         title: 'Limite de Convocatória Atingido',
-        description: `A convocatória já atingiu o limite definido de ${maxPlayers} membros (${selectedPlayerIds.length} selecionados). Desejas convocar este elemento mesmo assim?`,
+        description: `A convocatória já atingiu o limite manual definido de ${maxPlayers} membros (${selectedPlayerIds.length} selecionados). Desejas convocar este elemento mesmo assim?`,
         confirmText: 'Sim, Convocar Membro',
         cancelText: 'Cancelar',
         variant: 'warning',
@@ -1193,9 +1262,44 @@ const EventsPage: React.FC = () => {
     try {
       const ev = events.find(e => e.id === eventId)
       const p = allPlayers.find(pl => pl.id === playerId)
-      if (ev && p && !isPlayerEligible(p, ev.type)) {
+      if (ev && p && !isPlayerEligible(p, ev.type, ev.tournament_id)) {
         toast.warning('Este membro não está apto/elegível para este tipo de evento.')
         return
+      }
+
+      // Validar regras do torneio
+      if (ev && ev.type === 'match' && ev.tournament_id) {
+        const tour = tournaments.find(t => t.id === ev.tournament_id)
+        if (tour?.rules) {
+          const { rules } = tour
+          const currentCallups = eventCallups[eventId] || []
+          
+          if (rules.max_match_players && currentCallups.length >= rules.max_match_players) {
+            toast.error(`A convocatória atingiu o limite do torneio (${rules.max_match_players} convocados).`)
+            return
+          }
+
+          if (p?.birth_date && rules.min_age && rules.exceptions_allowed) {
+            const age = Math.floor((new Date().getTime() - new Date(p.birth_date).getTime()) / 3.15576e+10)
+            if (age < rules.min_age) {
+              const currentExceptions = currentCallups.filter(c => {
+                if (c.player?.id) {
+                  const selP = allPlayers.find(pl => pl.id === c.player.id)
+                  if (selP?.birth_date) {
+                    const sAge = Math.floor((new Date().getTime() - new Date(selP.birth_date).getTime()) / 3.15576e+10)
+                    return sAge < rules.min_age
+                  }
+                }
+                return false
+              }).length
+
+              if (currentExceptions >= rules.exceptions_count) {
+                toast.error(`Não podes convocar mais jogadores abaixo dos ${rules.min_age} anos. O limite (${rules.exceptions_count}) já foi atingido.`)
+                return
+              }
+            }
+          }
+        }
       }
 
       const validIds = await ensurePlayerIdsForSupabase([playerId], allPlayers)
@@ -1256,11 +1360,11 @@ const EventsPage: React.FC = () => {
 
   const currentLocationStr = getActiveLocationString()
 
-  const totalCount = allPlayers.filter(p => isPlayerEligible(p, type)).length
-  const playersCount = allPlayers.filter(p => extractRolesFromProfile(p).includes('player') && isPlayerEligible(p, type)).length
+  const totalCount = allPlayers.filter(p => isPlayerEligible(p, type, tournamentId)).length
+  const playersCount = allPlayers.filter(p => extractRolesFromProfile(p).includes('player') && isPlayerEligible(p, type, tournamentId)).length
   const staffCount = allPlayers.filter(p => {
     const roles = extractRolesFromProfile(p)
-    return (roles.includes('coach') || roles.includes('admin')) && isPlayerEligible(p, type)
+    return (roles.includes('coach') || roles.includes('admin')) && isPlayerEligible(p, type, tournamentId)
   }).length
 
   return (
@@ -2642,10 +2746,10 @@ const EventsPage: React.FC = () => {
                 </div>
               ) : editingEvent && (() => {
                 const rawCurrentCallups = eventCallups[editingEvent.id] || []
-                const eligibleMembers = allPlayers.filter(p => isPlayerEligible(p, editingEvent.type))
+                const eligibleMembers = allPlayers.filter(p => isPlayerEligible(p, editingEvent.type, editingEvent.tournament_id))
                 const currentCallups = rawCurrentCallups.filter(c => {
                   const p = allPlayers.find(pl => pl.id === c.player_id) || c.player
-                  return p ? isPlayerEligible(p, editingEvent.type) : false
+                  return p ? isPlayerEligible(p, editingEvent.type, editingEvent.tournament_id) : false
                 })
                 const calledPlayerIds = currentCallups.map(c => c.player_id)
 
@@ -3178,6 +3282,7 @@ const EventsPage: React.FC = () => {
           eventId={activeCallupModalEvent.id}
           event={activeCallupModalEvent}
           isCoachOrAdmin={!!isCoachOrAdmin}
+          tournamentRules={tournaments.find(t => t.id === activeCallupModalEvent.tournament_id)?.rules}
           onSaved={() => {
             fetchData()
           }}

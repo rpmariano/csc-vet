@@ -81,7 +81,7 @@ export const MatchReportsPage: React.FC = () => {
       const [{ data: eventsData }, { data: tourData }] = await Promise.all([
         supabase
           .from('events')
-          .select('*, opponent:opponents(id, name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
+          .select('*, opponent:opponents(id, name, initials, logo_url), tournament:tournaments(id, name, season, rules), field:fields(id, name, address)')
           .eq('type', 'match')
           .order('date_time', { ascending: false }),
         supabase
@@ -473,6 +473,7 @@ export const MatchReportsPage: React.FC = () => {
           eventId={selectedEventForReport.id}
           event={selectedEventForReport}
           isCoachOrAdmin={!!isCoachOrAdmin}
+          tournamentRules={(selectedEventForReport as any)?.tournament?.rules}
           onSaved={handleSavedReport}
         />
       )}

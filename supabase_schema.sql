@@ -90,6 +90,17 @@ CREATE TABLE IF NOT EXISTS public.tournament_players (
 );
 ALTER TABLE public.tournament_players ENABLE ROW LEVEL SECURITY;
 
+-- Tabela de Suspensões do Torneio
+CREATE TABLE IF NOT EXISTS public.tournament_suspensions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id UUID REFERENCES public.tournaments(id) ON DELETE CASCADE,
+    player_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    reason TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE public.tournament_suspensions ENABLE ROW LEVEL SECURITY;
+
 -- 3. Tabela de Eventos
 CREATE TABLE IF NOT EXISTS public.events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -276,6 +287,17 @@ USING (true);
 
 CREATE POLICY "Treinadores e admins gerem presenças" 
 ON public.attendances FOR ALL 
+TO authenticated 
+USING (public.get_user_role() IN ('coach', 'admin'));
+
+-- Políticas para TOURNAMENT_SUSPENSIONS
+CREATE POLICY "Suspensões legíveis por todos" 
+ON public.tournament_suspensions FOR SELECT 
+TO authenticated 
+USING (true);
+
+CREATE POLICY "Treinadores e admins gerem suspensões" 
+ON public.tournament_suspensions FOR ALL 
 TO authenticated 
 USING (public.get_user_role() IN ('coach', 'admin'));
 
