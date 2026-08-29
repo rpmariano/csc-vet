@@ -2181,18 +2181,21 @@ const EventsPage: React.FC = () => {
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-200 p-5 rounded-t-3xl flex justify-between items-center z-10">
               <h3 className="text-lg font-black text-gray-900">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
-              <button onClick={handleAttemptCloseEditModal} className="text-gray-400 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 cursor-pointer"><X size={20} /></button>
+              <button onClick={handleAttemptCloseEditModal} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black flex items-center justify-center cursor-pointer transition-all active:scale-90"><X size={18} className="stroke-[2.5]" /></button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
               {/* Tipo */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Tipo</label>
-                <select value={editType} onChange={e => setEditType(e.target.value as any)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-medium bg-white">
-                  <option value="practice">Treino</option>
-                  <option value="match">Jogo</option>
-                  <option value="gathering">Convívio</option>
-                </select>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
+                <div className="w-full px-3 py-2.5 border border-gray-200 bg-gray-100/90 text-gray-800 rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
+                  <span className="flex items-center gap-1.5">
+                    <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-gray-500 bg-gray-200/90 px-2 py-0.5 rounded-md">
+                    🔒 Tipo Bloqueado
+                  </span>
+                </div>
               </div>
 
               {/* Título (Apenas para Convívios) */}

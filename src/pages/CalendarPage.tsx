@@ -279,7 +279,7 @@ const CalendarPage: React.FC = () => {
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [modalCallupStatusFilter, setModalCallupStatusFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
-  const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(false)
+  const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 640 : true)
   const [currentPendingIndex, setCurrentPendingIndex] = useState(0)
   const [pendingTouchStartX, setPendingTouchStartX] = useState<number | null>(null)
 
@@ -318,6 +318,7 @@ const CalendarPage: React.FC = () => {
       document.body.style.overflow = 'hidden'
       setSheetTranslateY(0)
       setIsDraggingSheet(false)
+      setIsModalCallupsExpanded(typeof window !== 'undefined' ? window.innerWidth >= 640 : true)
       return () => {
         document.body.style.overflow = prevOverflow
       }
@@ -2408,18 +2409,19 @@ const CalendarPage: React.FC = () => {
               <div className="w-12 h-1.5 bg-gray-300 rounded-full hover:bg-gray-400 active:bg-gray-500 transition-colors" />
             </div>
 
-            {/* Botão Fechar */}
+            {/* Botão Fechar no Topo com Alto Contraste e Visibilidade */}
             <button
+              type="button"
               onClick={() => {
                 setSelectedEvent(null)
                 setSheetTranslateY(0)
                 setPlayerSearchTerm('')
                 setModalCallupStatusFilter('all')
               }}
-              className="absolute top-3.5 right-4 sm:top-5 sm:right-5 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10 cursor-pointer"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white text-gray-800 hover:text-black shadow-lg border border-gray-200/90 flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90"
               title="Fechar"
             >
-              <X size={22} />
+              <X size={20} className="stroke-[2.5]" />
             </button>
 
             {/* Topo Premium Unificado da Persiana (Layout Verde Oficial CSC com Carrossel Integrado) */}
@@ -3087,10 +3089,10 @@ const CalendarPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseAddModal}
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10 cursor-pointer"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-2xs border border-gray-200"
               title="Fechar"
             >
-              <X size={24} />
+              <X size={20} className="stroke-[2.5]" />
             </button>
             <h2 className="text-2xl font-black text-csc-dark mb-6">Criar Novo Evento</h2>
             
@@ -3618,10 +3620,10 @@ const CalendarPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseEditModal}
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10 cursor-pointer"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-2xs border border-gray-200"
               title="Fechar"
             >
-              <X size={24} />
+              <X size={20} className="stroke-[2.5]" />
             </button>
 
             <div className="flex items-center gap-2 mb-1">
@@ -3652,15 +3654,14 @@ const CalendarPage: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
-                  <select
-                    value={editType}
-                    onChange={(e) => setEditType(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
-                  >
-                    <option value="practice">Treino</option>
-                    <option value="match">Jogo</option>
-                    <option value="gathering">Convívio</option>
-                  </select>
+                  <div className="w-full px-3 py-2.5 border border-gray-200 bg-gray-100/90 text-gray-800 rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
+                    <span className="flex items-center gap-1.5">
+                      <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-500 bg-gray-200/90 px-2 py-0.5 rounded-md">
+                      🔒 Tipo Bloqueado
+                    </span>
+                  </div>
                 </div>
 
                 {editType === 'match' && (
