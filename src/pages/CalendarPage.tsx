@@ -2009,7 +2009,7 @@ const CalendarPage: React.FC = () => {
               )}
             </div>
 
-            {/* Carrossel de Convocatórias Pendentes: Setas e Indicadores (Otimizado para Rato e Desktop) */}
+            {/* Carrossel de Convocatórias Pendentes: Apenas Setas e Contador */}
             {myPendingEvents.length > 1 && (
               <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-600/40">
                 <button
@@ -2021,21 +2021,8 @@ const CalendarPage: React.FC = () => {
                   <ChevronLeft size={18} />
                 </button>
 
-                <div className="flex items-center gap-1.5 bg-black/10 px-3 py-1 rounded-full border border-black/10">
-                  {myPendingEvents.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setCurrentPendingIndex(idx)}
-                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                        idx === activeIndex
-                          ? 'bg-csc-dark w-5'
-                          : 'bg-black/25 hover:bg-black/40 w-2'
-                      }`}
-                      title={`Convocatória ${idx + 1}`}
-                    />
-                  ))}
-                  <span className="text-[11px] font-black text-csc-dark ml-1 pl-1.5 border-l border-black/20 leading-none">
+                <div className="flex items-center bg-black/10 px-3.5 py-1 rounded-full border border-black/10">
+                  <span className="text-xs font-black text-csc-dark leading-none tracking-wider">
                     {activeIndex + 1}/{myPendingEvents.length}
                   </span>
                 </div>
@@ -2458,39 +2445,19 @@ const CalendarPage: React.FC = () => {
                     </button>
 
                     <div className="flex items-center gap-2 select-none min-w-0">
-                      <span className="text-xs font-black text-amber-300 flex items-center gap-1">
+                      <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
                         <span>🔔 Convocatória Pendente</span>
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-white/15 text-white">
+                        <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-white/20 text-white tracking-wider">
                           {activeIndex + 1}/{myPendingEvents.length}
                         </span>
                       </span>
-
-                      {/* Traços centrados */}
-                      <div className="flex items-center gap-1">
-                        {myPendingEvents.map((item, idx) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedEvent(item)
-                              if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
-                            }}
-                            className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                              idx === activeIndex
-                                ? 'bg-csc-gold w-4'
-                                : 'bg-white/30 hover:bg-white/50 w-1.5'
-                            }`}
-                            title={item.title}
-                          />
-                        ))}
-                      </div>
                     </div>
 
                     <button
                       type="button"
                       onClick={nextEvent}
                       className="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-white/10 hover:bg-white/20 text-white"
-                      title="Próxima Convocatória (ou desliza para a esquerda 👈)"
+                      title="Próxima Convocatória"
                     >
                       <ChevronRight size={16} />
                     </button>

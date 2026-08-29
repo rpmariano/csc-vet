@@ -357,7 +357,7 @@ const Home: React.FC = () => {
           </div>
         )}
 
-        {/* Carrossel de Comunicados: Setas e Indicadores (Otimizado para Rato e Desktop) */}
+        {/* Carrossel de Comunicados: Apenas Setas e Contador */}
         {announcements.length > 1 && (
           <div className="flex items-center justify-between gap-2 pt-1 border-t border-emerald-700/50">
             <button
@@ -366,24 +366,11 @@ const Home: React.FC = () => {
               className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-white/15 shadow-2xs shrink-0"
               title="Comunicado Anterior"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={18} />
             </button>
 
-            <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1 rounded-full border border-white/15">
-              {announcements.map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setCurrentAnnouncementIndex(idx)}
-                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                    idx === currentAnnouncementIndex
-                      ? 'bg-csc-gold w-5'
-                      : 'bg-white/40 hover:bg-white/60 w-2'
-                  }`}
-                  title={`Comunicado ${idx + 1}`}
-                />
-              ))}
-              <span className="text-[11px] font-black text-white ml-1 pl-1.5 border-l border-white/20 leading-none">
+            <div className="flex items-center bg-black/30 px-3.5 py-1 rounded-full border border-white/15">
+              <span className="text-xs font-black text-white leading-none tracking-wider">
                 {currentAnnouncementIndex + 1}/{announcements.length}
               </span>
             </div>
@@ -394,7 +381,7 @@ const Home: React.FC = () => {
               className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-white/15 shadow-2xs shrink-0"
               title="Próximo Comunicado"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={18} />
             </button>
           </div>
         )}
@@ -498,7 +485,7 @@ const Home: React.FC = () => {
               )}
             </div>
 
-            {/* Carrossel de Convocatórias Pendentes: Setas e Indicadores (Otimizado para Rato e Desktop) */}
+            {/* Carrossel de Convocatórias Pendentes: Apenas Setas e Contador */}
             {pendingCallupsCount > 1 && (
               <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-600/40">
                 <button
@@ -510,21 +497,8 @@ const Home: React.FC = () => {
                   <ChevronLeft size={18} />
                 </button>
 
-                <div className="flex items-center gap-1.5 bg-black/10 px-3 py-1 rounded-full border border-black/10">
-                  {pendingCallups.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setCurrentPendingCallupIndex(idx)}
-                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                        idx === activeIndex
-                          ? 'bg-csc-dark w-5'
-                          : 'bg-black/25 hover:bg-black/40 w-2'
-                      }`}
-                      title={`Convocatória ${idx + 1}`}
-                    />
-                  ))}
-                  <span className="text-[11px] font-black text-csc-dark ml-1 pl-1.5 border-l border-black/20 leading-none">
+                <div className="flex items-center bg-black/10 px-3.5 py-1 rounded-full border border-black/10">
+                  <span className="text-xs font-black text-csc-dark leading-none tracking-wider">
                     {activeIndex + 1}/{pendingCallupsCount}
                   </span>
                 </div>
@@ -724,7 +698,7 @@ const Home: React.FC = () => {
                     </div>
                   )
                 })()}
-                {/* Carrossel de Jogos: Setas e Indicadores (Otimizado para Rato e Desktop) */}
+                {/* Carrossel de Jogos: Apenas Setas e Contador */}
                 {upcomingMatches.length > 1 && (
                   <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-gray-100">
                     <button
@@ -733,29 +707,14 @@ const Home: React.FC = () => {
                         e.stopPropagation()
                         prevMatchSlide()
                       }}
-                      className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
+                      className="w-8 h-8 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
                       title="Jogo Anterior"
                     >
-                      <ChevronLeft size={16} />
-                      <span className="hidden sm:inline text-[11px] font-extrabold">Anterior</span>
+                      <ChevronLeft size={18} />
                     </button>
 
-                    <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-                      {upcomingMatches.map((_, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setCurrentMatchIndex(idx)
-                          }}
-                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                            idx === currentMatchIndex ? 'bg-blue-700 w-5' : 'bg-blue-300 hover:bg-blue-400 w-2'
-                          }`}
-                          title={`Jogo ${idx + 1}`}
-                        />
-                      ))}
-                      <span className="text-[10px] font-black text-blue-900 ml-1 pl-1.5 border-l border-blue-300 leading-none">
+                    <div className="flex items-center bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+                      <span className="text-xs font-black text-blue-900 leading-none tracking-wider">
                         {currentMatchIndex + 1}/{upcomingMatches.length}
                       </span>
                     </div>
@@ -766,11 +725,10 @@ const Home: React.FC = () => {
                         e.stopPropagation()
                         nextMatchSlide()
                       }}
-                      className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
+                      className="w-8 h-8 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
                       title="Próximo Jogo"
                     >
-                      <span className="hidden sm:inline text-[11px] font-extrabold">Próximo</span>
-                      <ChevronRight size={16} />
+                      <ChevronRight size={18} />
                     </button>
                   </div>
                 )}
