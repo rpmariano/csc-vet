@@ -471,27 +471,27 @@ const Home: React.FC = () => {
                 {/* Duelo de Equipas / Matchup em Destaque */}
                 <div 
                   onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
-                  className="bg-black/30 backdrop-blur-xs p-4 sm:p-6 rounded-2xl border border-white/15 hover:border-csc-gold/70 transition-all cursor-pointer group"
+                  className="bg-gray-100 p-4 sm:p-6 rounded-2xl border border-gray-200 hover:border-csc-gold/70 transition-all cursor-pointer group shadow-inner"
                 >
                   <div className="grid grid-cols-11 items-center gap-2">
                     {/* Equipa 1 */}
                     <div className="col-span-5 flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left min-w-0">
                       {leftLogo ? (
-                        <img src={leftLogo} alt={leftInitials} className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 drop-shadow-md group-hover:scale-105 transition-transform" />
+                        <img src={leftLogo} alt={leftInitials} className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 drop-shadow-sm group-hover:scale-105 transition-transform bg-white rounded-xl" />
                       ) : (
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/15 text-csc-gold rounded-2xl flex items-center justify-center text-base font-black border border-white/20 shrink-0">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white text-csc-gold rounded-xl flex items-center justify-center text-base font-black border border-gray-200 shrink-0 shadow-sm">
                           {leftInitials}
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-base sm:text-lg font-black text-white truncate leading-tight uppercase">{leftInitials}</p>
-                        <p className="text-xs text-emerald-200/80 truncate hidden sm:block font-medium">{leftName}</p>
+                        <p className="text-base sm:text-lg font-black text-gray-900 truncate leading-tight uppercase">{leftInitials}</p>
+                        <p className="text-xs text-gray-500 truncate hidden sm:block font-medium">{leftName}</p>
                       </div>
                     </div>
 
                     {/* VS Central */}
                     <div className="col-span-1 flex flex-col items-center justify-center">
-                      <span className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-csc-dark font-black text-xs flex items-center justify-center shadow-lg border border-white/40">
+                      <span className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-csc-dark font-black text-xs flex items-center justify-center shadow-md border border-white">
                         VS
                       </span>
                     </div>
@@ -499,13 +499,13 @@ const Home: React.FC = () => {
                     {/* Equipa 2 */}
                     <div className="col-span-5 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 text-center sm:text-right min-w-0">
                       <div className="min-w-0">
-                        <p className="text-base sm:text-lg font-black text-white truncate leading-tight uppercase">{rightInitials}</p>
-                        <p className="text-xs text-emerald-200/80 truncate hidden sm:block font-medium">{rightName}</p>
+                        <p className="text-base sm:text-lg font-black text-gray-900 truncate leading-tight uppercase">{rightInitials}</p>
+                        <p className="text-xs text-gray-500 truncate hidden sm:block font-medium">{rightName}</p>
                       </div>
                       {rightLogo ? (
-                        <img src={rightLogo} alt={rightInitials} className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 drop-shadow-md group-hover:scale-105 transition-transform" />
+                        <img src={rightLogo} alt={rightInitials} className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 drop-shadow-sm group-hover:scale-105 transition-transform bg-white rounded-xl" />
                       ) : (
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/15 text-csc-gold rounded-2xl flex items-center justify-center text-base font-black border border-white/20 shrink-0">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white text-csc-gold rounded-xl flex items-center justify-center text-base font-black border border-gray-200 shrink-0 shadow-sm">
                           {rightInitials}
                         </div>
                       )}
