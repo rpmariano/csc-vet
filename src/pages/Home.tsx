@@ -12,7 +12,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
-import { TrainingIcon } from './EventsPage'
 import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
 
 interface Event {
@@ -66,9 +65,7 @@ const Home: React.FC = () => {
   const [upcomingMatches, setUpcomingMatches] = useState<Event[]>([])
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
 
-  // Practices Carousel State
-  const [upcomingPractices, setUpcomingPractices] = useState<Event[]>([])
-  const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0)
+
 
   // Announcements Carousel State
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
@@ -144,41 +141,7 @@ const Home: React.FC = () => {
         }
         setUpcomingMatches(resolvedMatches)
 
-        // 2. Fetch upcoming practices
-        const { data: practices } = await supabase
-          .from('events')
-          .select('*, field:fields(id, name, address)')
-          .eq('type', 'practice')
-          .gte('date_time', nowStr)
-          .order('date_time', { ascending: true })
-
-        let resolvedPractices: Event[] = (practices && practices.length > 0) ? (practices as Event[]) : []
-        if (resolvedPractices.length === 0) {
-          const { data: allP } = await supabase
-            .from('events')
-            .select('*, field:fields(id, name, address)')
-            .eq('type', 'practice')
-            .order('date_time', { ascending: true })
-          if (allP && allP.length > 0) {
-            resolvedPractices = allP as Event[]
-          }
-        }
-        if (resolvedPractices.length === 0) {
-          resolvedPractices = [
-            {
-              id: 'p-demo',
-              title: 'Treino Semanal Veteranos',
-              type: 'practice',
-              date_time: '2026-09-02T22:00:00Z',
-              meeting_time: '21:30:00',
-              location: 'Campo Sintético Municipal',
-              description: 'Balneário 4 às 21h30'
-            }
-          ]
-        }
-        setUpcomingPractices(resolvedPractices)
-
-        // 3. Fetch announcements
+        // 2. Fetch announcements
         const { data: anns } = await supabase
           .from('announcements')
           .select('*')
@@ -210,21 +173,7 @@ const Home: React.FC = () => {
           // Atleta lesionado ou inativo: não tem convocatórias para treinos
           setMyCallups(rawCalls.filter(c => c.event?.type !== 'practice'))
         } else {
-          // Atleta apto: garantir convocatórias para todos os treinos futuros
-          const userCalls = [...rawCalls]
-          const existingPracticeEventIds = new Set(userCalls.filter(c => c.event?.type === 'practice').map(c => c.event_id))
-          resolvedPractices.forEach(p => {
-            if (!existingPracticeEventIds.has(p.id)) {
-              userCalls.push({
-                id: `auto-${p.id}-${profile.id}`,
-                event_id: p.id,
-                player_id: profile.id,
-                status: 'called',
-                event: p
-              })
-            }
-          })
-          setMyCallups(userCalls)
+          setMyCallups(rawCalls)
         }
       } catch (err) {
         console.error(err)
@@ -260,20 +209,6 @@ const Home: React.FC = () => {
     }
   }
 
-  const nextPracticeSlide = (e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    if (upcomingPractices.length > 1) {
-      setCurrentPracticeIndex(prev => (prev + 1) % upcomingPractices.length)
-    }
-  }
-
-  const prevPracticeSlide = (e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    if (upcomingPractices.length > 1) {
-      setCurrentPracticeIndex(prev => (prev - 1 + upcomingPractices.length) % upcomingPractices.length)
-    }
-  }
-
   const nextAnnouncementSlide = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     if (announcements.length > 1) {
@@ -303,9 +238,9 @@ const Home: React.FC = () => {
   }
 
   // Touch swipe support for mobile carousels
-  const [touchState, setTouchState] = useState<{ startX: number; target: 'match' | 'practice' | 'announcement' | 'pending' | null }>({ startX: 0, target: null })
+  const [touchState, setTouchState] = useState<{ startX: number; target: 'match' | 'announcement' | 'pending' | null }>({ startX: 0, target: null })
 
-  const handleTouchStart = (e: React.TouchEvent, target: 'match' | 'practice' | 'announcement' | 'pending') => {
+  const handleTouchStart = (e: React.TouchEvent, target: 'match' | 'announcement' | 'pending') => {
     setTouchState({ startX: e.targetTouches[0].clientX, target })
   }
 
@@ -317,13 +252,11 @@ const Home: React.FC = () => {
       if (diff > 0) {
         // Swipe para a esquerda -> Próximo slide
         if (touchState.target === 'match') nextMatchSlide()
-        else if (touchState.target === 'practice') nextPracticeSlide()
         else if (touchState.target === 'announcement') nextAnnouncementSlide()
         else if (touchState.target === 'pending') nextPendingSlide()
       } else {
         // Swipe para a direita -> Slide anterior
         if (touchState.target === 'match') prevMatchSlide()
-        else if (touchState.target === 'practice') prevPracticeSlide()
         else if (touchState.target === 'announcement') prevAnnouncementSlide()
         else if (touchState.target === 'pending') prevPendingSlide()
       }
@@ -351,7 +284,6 @@ const Home: React.FC = () => {
   const pendingCallupsCount = pendingCallups.length
 
   const currentMatch = upcomingMatches[currentMatchIndex]
-  const currentPractice = upcomingPractices[currentPracticeIndex]
   const currentAnnouncement = announcements[currentAnnouncementIndex] || announcements[0]
 
   const renderAnnouncementsCard = () => {
@@ -753,153 +685,6 @@ const Home: React.FC = () => {
                       ))}
                       <span className="text-[10px] font-black text-blue-900 ml-1 pl-1.5 border-l border-blue-300 leading-none">
                         {currentMatchIndex + 1}/{upcomingMatches.length}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 2. CARD DOS TREINOS */}
-          {currentPractice && (
-            <div 
-              onTouchStart={(e) => handleTouchStart(e, 'practice')}
-              onTouchEnd={handleTouchEnd}
-              className="bg-white rounded-2xl border border-emerald-200 overflow-hidden shadow-xs hover:border-emerald-400 transition-all select-none"
-            >
-              {/* Header */}
-              <div className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-900 px-4 py-2.5 text-white flex items-center justify-between shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <TrainingIcon size={16} className="text-white" />
-                  <h2 className="text-xs sm:text-sm font-black tracking-wide">
-                    Treinos Marcados
-                  </h2>
-                  <span className="text-[9px] font-black uppercase px-2 py-0.2 rounded-full bg-white/20 text-white border border-white/30">
-                    {upcomingPractices.length} {upcomingPractices.length === 1 ? 'Treino' : 'Treinos'}
-                  </span>
-                </div>
-
-                <span 
-                  onClick={() => navigate(`/calendar?event=${currentPractice.id}`)}
-                  className="text-[10.5px] font-bold text-emerald-200 hover:text-white cursor-pointer flex items-center gap-0.5"
-                >
-                  <span>Agenda</span>
-                  <ChevronRight size={12} />
-                </span>
-              </div>
-
-              {/* Conteúdo do Treino */}
-              <div 
-                onClick={() => navigate(`/calendar?event=${currentPractice.id}`)}
-                className="p-4 space-y-3 cursor-pointer hover:bg-emerald-50/15 transition-colors group"
-              >
-                <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-                  <span className="text-xs font-black text-gray-900">{currentPractice.title}</span>
-                  {currentPractice.meeting_time && (
-                    <span className="text-[11px] font-extrabold text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-lg shadow-2xs">
-                      ⏱️ Concentração: {currentPractice.meeting_time.substring(0, 5)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Data, Horário e Localização Completa */}
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 text-xs text-gray-700 space-y-2 shadow-2xs">
-                  <div className="flex items-center gap-1.5 font-bold text-gray-900 pb-2 border-b border-gray-200/60">
-                    <Calendar size={14} className="text-emerald-700 shrink-0" />
-                    <span>{new Date(currentPractice.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' })} às {new Date(currentPractice.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-gray-800">
-                    <MapPin size={15} className="text-red-600 shrink-0 mt-0.5 self-start" />
-                    <div>
-                      <span className="font-extrabold text-gray-900">Local: </span>
-                      <span className="font-medium text-gray-800">{getEventLocation(currentPractice) || 'Campo Cascais'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Observações / Instruções */}
-                {currentPractice.description && (
-                  <div className="text-xs text-gray-700 bg-amber-50/70 p-2.5 rounded-xl border border-amber-200">
-                    <strong className="text-amber-950">Indicações:</strong> {currentPractice.description}
-                  </div>
-                )}
-
-                {/* RSVP Convocatória */}
-                {(() => {
-                  const currentPracticeCallup = myCallups.find(c => c.event_id === currentPractice.id)
-                  if (!currentPracticeCallup) return null
-
-                  const practiceTime = new Date(currentPractice.date_time).getTime()
-                  const now = new Date().getTime()
-                  const diffDays = Math.ceil((practiceTime - now) / (1000 * 60 * 60 * 24))
-                  const isPracticeRsvpOpen = diffDays <= 6
-
-                  return (
-                    <div 
-                      onClick={(e) => e.stopPropagation()}
-                      className="pt-1.5 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap"
-                    >
-                      <span className="text-xs font-bold text-gray-700">A tua presença:</span>
-                      {!isPracticeRsvpOpen ? (
-                        <span className="text-[11px] font-bold text-amber-900 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-xl">
-                          ⏱️ Abre 6 dias antes ({new Date(practiceTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })})
-                        </span>
-                      ) : (
-                        <div className="flex gap-1.5">
-                          <button
-                            type="button"
-                            disabled={currentPracticeCallup.status === 'confirmed'}
-                            onClick={() => handleCallupResponse(currentPracticeCallup.id, 'confirmed')}
-                            className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
-                              currentPracticeCallup.status === 'confirmed'
-                                ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
-                                : 'bg-white text-emerald-700 border border-emerald-600 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
-                            }`}
-                          >
-                            <CheckCircle2 size={13} />
-                            <span>Confirmar</span>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={currentPracticeCallup.status === 'declined'}
-                            onClick={() => handleCallupResponse(currentPracticeCallup.id, 'declined')}
-                            className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
-                              currentPracticeCallup.status === 'declined'
-                                ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
-                                : 'bg-white text-red-700 border border-red-600 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
-                            }`}
-                          >
-                            <XCircle size={13} />
-                            <span>Recusar</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
-
-                {/* Traços do Carrossel e Contador Centralizados na Parte Inferior */}
-                {upcomingPractices.length > 1 && (
-                  <div className="flex items-center justify-center gap-2 pt-2 border-t border-gray-100">
-                    <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                      {upcomingPractices.map((_, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setCurrentPracticeIndex(idx)
-                          }}
-                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                            idx === currentPracticeIndex ? 'bg-emerald-700 w-5' : 'bg-emerald-300 hover:bg-emerald-400 w-2'
-                          }`}
-                          title={`Treino ${idx + 1}`}
-                        />
-                      ))}
-                      <span className="text-[10px] font-black text-emerald-900 ml-1 pl-1.5 border-l border-emerald-300 leading-none">
-                        {currentPracticeIndex + 1}/{upcomingPractices.length}
                       </span>
                     </div>
                   </div>
