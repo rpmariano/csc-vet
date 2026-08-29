@@ -32,6 +32,7 @@ import type { Profile } from '../context/AuthContext'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { MatchReportModal } from '../components/MatchReportModal'
 import { toast } from '../context/ToastContext'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
@@ -257,6 +258,7 @@ const EventsPage: React.FC = () => {
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [rsvpTabFilter, setRsvpTabFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
+  const [isMatchReportOpen, setIsMatchReportOpen] = useState(false)
 
   // Generic Confirmation Modal State
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
@@ -1896,6 +1898,17 @@ const EventsPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Botão Ficha de Jogo (quando Jogo) */}
+                {activeCallupModalEvent.type === 'match' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsMatchReportOpen(true)}
+                    className="px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-dark font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
+                  >
+                    <span>📋 Ficha de Jogo</span>
+                  </button>
+                )}
+
                 {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
                 {isCoachOrAdmin && (
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -2872,6 +2885,20 @@ const EventsPage: React.FC = () => {
         }}
         onCancel={() => setUnsavedModalTarget(null)}
       />
+
+      {/* Modal de Ficha de Jogo (Esquema Tático, Marcadores, Cartões e Ocorrências) */}
+      {activeCallupModalEvent && activeCallupModalEvent.type === 'match' && (
+        <MatchReportModal
+          isOpen={isMatchReportOpen}
+          onClose={() => setIsMatchReportOpen(false)}
+          eventId={activeCallupModalEvent.id}
+          event={activeCallupModalEvent}
+          isCoachOrAdmin={!!isCoachOrAdmin}
+          onSaved={() => {
+            fetchData()
+          }}
+        />
+      )}
 
       {/* Modal Genérico de Confirmação (Estilo Unificado e Elegante) */}
       <ConfirmModal

@@ -38,6 +38,7 @@ import { TrainingIcon } from './EventsPage'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { MatchReportModal } from '../components/MatchReportModal'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 
@@ -296,6 +297,7 @@ const CalendarPage: React.FC = () => {
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [modalCallupStatusFilter, setModalCallupStatusFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
   const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 640 : true)
+  const [isMatchReportOpen, setIsMatchReportOpen] = useState(false)
 
 
   // Generic Confirmation Modal State
@@ -2359,6 +2361,17 @@ const CalendarPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Botão Ficha de Jogo (quando Jogo) */}
+                {selectedEvent.type === 'match' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsMatchReportOpen(true)}
+                    className="px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-dark font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
+                  >
+                    <span>📋 Ficha de Jogo</span>
+                  </button>
+                )}
+
                 {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
                 {isCoachOrAdmin && (
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -2450,10 +2463,17 @@ const CalendarPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs text-gray-600">
+                      <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs text-gray-600 gap-2">
                         <span className="font-bold">
-                          Condição: <strong className="text-gray-900">{isAway ? '✈️ Fora de Casa' : selectedEvent.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}</strong>
+                          Condição: <strong className="text-gray-900">{isAway ? '✈️ Fora' : selectedEvent.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Casa'}</strong>
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsMatchReportOpen(true)}
+                          className="px-2.5 py-1 bg-csc-dark hover:bg-emerald-950 text-white rounded-xl text-[11px] font-black flex items-center gap-1 cursor-pointer shadow-2xs transition-all active:scale-95 shrink-0"
+                        >
+                          <span>📋 Ficha de Jogo</span>
+                        </button>
                       </div>
                     </div>
                   )
@@ -4341,6 +4361,20 @@ const CalendarPage: React.FC = () => {
         }}
         onCancel={() => setUnsavedModalTarget(null)}
       />
+
+      {/* Modal de Ficha de Jogo (Esquema Tático, Marcadores, Cartões e Ocorrências) */}
+      {selectedEvent && selectedEvent.type === 'match' && (
+        <MatchReportModal
+          isOpen={isMatchReportOpen}
+          onClose={() => setIsMatchReportOpen(false)}
+          eventId={selectedEvent.id}
+          event={selectedEvent}
+          isCoachOrAdmin={!!isCoachOrAdmin}
+          onSaved={() => {
+            fetchEventsAndData()
+          }}
+        />
+      )}
 
       {/* Modal Genérico de Confirmação (Estilo Unificado e Elegante) */}
       <ConfirmModal
