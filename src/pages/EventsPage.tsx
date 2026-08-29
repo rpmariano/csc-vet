@@ -1772,9 +1772,10 @@ const EventsPage: React.FC = () => {
             {/* Topo Premium da Persiana/Modal de Dossier & RSVP */}
             <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold mb-5 relative overflow-hidden">
               <div className="flex items-center justify-between gap-3 pr-8">
+                {/* 1. Símbolo + 2. Pílula de Tipo + 3. Data e Hora */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   {/* Símbolo Oficial do CSC */}
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-white p-1 shadow-md shrink-0 border border-csc-gold flex items-center justify-center">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white p-1 shadow-md shrink-0 border border-csc-gold flex items-center justify-center">
                     <img 
                       src="/csc-vet/cascais-emblem.png" 
                       alt="CSC" 
@@ -1782,55 +1783,57 @@ const EventsPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-csc-dark px-2 py-0.5 rounded-md">
-                        Dossier de Evento & RSVP
-                      </span>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                        activeCallupModalEvent.type === 'match' ? 'bg-blue-500 text-white' : activeCallupModalEvent.type === 'practice' ? 'bg-emerald-600 text-white' : 'bg-purple-600 text-white'
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider shadow-2xs ${
+                        activeCallupModalEvent.type === 'match' 
+                          ? 'bg-blue-600 text-white' 
+                          : activeCallupModalEvent.type === 'practice' 
+                          ? 'bg-emerald-700 text-white' 
+                          : 'bg-purple-700 text-white'
                       }`}>
                         {activeCallupModalEvent.type === 'match' ? '⚽ Jogo' : activeCallupModalEvent.type === 'practice' ? '🏃 Treino' : '🎉 Convívio'}
                       </span>
                     </div>
 
-                    <h2 className="text-base sm:text-lg font-black text-white leading-tight truncate">
-                      {activeCallupModalEvent.title}
-                    </h2>
-
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-200">
-                      <div className="flex items-center gap-1 font-bold text-csc-gold">
-                        <Clock size={12} />
-                        <span>
-                          {new Date(activeCallupModalEvent.date_time).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })}
-                        </span>
-                      </div>
-                      {(() => {
-                        const fieldObj = fields.find(f => f.id === activeCallupModalEvent.field_id)
-                        const locationName = activeCallupModalEvent.field_id ? getFieldName(activeCallupModalEvent.field_id) : (activeCallupModalEvent.location || 'Sem local')
-                        const mapsQuery = fieldObj ? (fieldObj.address ? `${fieldObj.name}, ${fieldObj.address}` : fieldObj.name) : (activeCallupModalEvent.location || '')
-
-                        return (
-                          <div className="flex items-center gap-1 font-semibold truncate max-w-full">
-                            <MapPin size={12} className="text-red-400 shrink-0" />
-                            <span className="truncate">{locationName}</span>
-                            {mapsQuery && (
-                              <a
-                                href={getGoogleMapsUrl(mapsQuery)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-csc-dark bg-amber-400 hover:bg-amber-300 px-1.5 py-0.2 rounded text-[9.5px] font-black flex items-center gap-0.5 shrink-0"
-                              >
-                                <span>Maps</span>
-                                <ExternalLink size={9} />
-                              </a>
-                            )}
-                          </div>
-                        )
-                      })()}
-                    </div>
+                    <p className="text-xs sm:text-sm font-bold text-gray-100 flex items-center gap-1.5 truncate">
+                      <Clock size={13} className="text-csc-gold shrink-0" />
+                      <span>
+                        {new Date(activeCallupModalEvent.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })}, {new Date(activeCallupModalEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </p>
                   </div>
                 </div>
+
+                {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
+                {isCoachOrAdmin && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ev = activeCallupModalEvent
+                        setActiveCallupModalEvent(null)
+                        openEditModal(ev)
+                      }}
+                      className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                      title="Modificar evento"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const evId = activeCallupModalEvent.id
+                        setActiveCallupModalEvent(null)
+                        handleDeleteEvent(evId)
+                      }}
+                      className="p-2 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
+                      title="Apagar evento"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

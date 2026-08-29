@@ -2329,11 +2329,12 @@ const CalendarPage: React.FC = () => {
               <X size={22} />
             </button>
 
-            {/* Topo Premium da Persiana (Layout Inspirado na Identidade Oficial CSC) */}
+            {/* Topo Premium da Persiana (Apenas Símbolo, Pílula de Tipo, Data/Hora e Ações Admin/Treinador) */}
             <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold relative overflow-hidden">
               <div className="flex items-center justify-between gap-3 pr-8 sm:pr-10">
+                {/* Símbolo + Pílula do Tipo + Data e Hora */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {/* Símbolo Oficial do CSC */}
+                  {/* 1. Símbolo Oficial */}
                   <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white p-1 shadow-md shrink-0 border border-csc-gold flex items-center justify-center">
                     <img 
                       src="/csc-vet/cascais-emblem.png" 
@@ -2342,62 +2343,56 @@ const CalendarPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-wider ${
-                        selectedEvent.type === 'match' ? 'bg-blue-500 text-white' : selectedEvent.type === 'practice' ? 'bg-emerald-600 text-white' : 'bg-purple-600 text-white'
+                  {/* 2. Pílula do Tipo & 3. Data e Hora */}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider shadow-2xs ${
+                        selectedEvent.type === 'match' 
+                          ? 'bg-blue-600 text-white' 
+                          : selectedEvent.type === 'practice' 
+                          ? 'bg-emerald-700 text-white' 
+                          : 'bg-purple-700 text-white'
                       }`}>
                         {selectedEvent.type === 'match' ? '⚽ Jogo' : selectedEvent.type === 'practice' ? '🏃 Treino' : '🎉 Convívio'}
                       </span>
-                      {selectedEvent.is_friendly && (
+
+                      {selectedEvent.is_friendly && selectedEvent.type === 'match' && (
                         <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-400 text-csc-dark">
                           Amigável
                         </span>
                       )}
                       {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-900/80 text-blue-200 border border-blue-400/30 truncate max-w-[140px]">
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-900/80 text-blue-200 border border-blue-400/30 truncate max-w-[150px]">
                           🏆 {selectedEvent.tournament.name}
                         </span>
                       )}
                     </div>
 
-                    <h3 className="text-sm sm:text-base font-black text-white leading-tight truncate">
-                      {selectedEvent.type === 'match' && selectedEvent.opponent ? (
-                        `${formatClubSigla(clubSettings?.initials)} vs ${formatOpponentSigla(selectedEvent.opponent)} • ${selectedEvent.title}`
-                      ) : (
-                        selectedEvent.title
-                      )}
-                    </h3>
-
-                    <p className="text-[11px] font-bold text-csc-gold flex items-center gap-1.5 truncate">
-                      <Clock size={12} />
+                    <p className="text-xs sm:text-sm font-bold text-gray-100 flex items-center gap-1.5 truncate">
+                      <Clock size={13} className="text-csc-gold shrink-0" />
                       <span>
                         {new Date(selectedEvent.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })}, {new Date(selectedEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                       </span>
-                      {selectedEvent.meeting_time && (
-                        <span className="bg-amber-400 text-csc-dark font-black text-[9.5px] px-1.5 py-0.2 rounded">
-                          Conc: {selectedEvent.meeting_time.substring(0, 5)}
-                        </span>
-                      )}
                     </p>
                   </div>
                 </div>
 
+                {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
                 {isCoachOrAdmin && (
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleStartEditEvent(selectedEvent)}
-                      className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                      title="Editar evento"
+                      className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                      title="Modificar evento"
                     >
                       <Edit size={14} />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
-                      className="p-2 bg-red-600/30 hover:bg-red-600/50 text-red-200 border border-red-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95"
-                      title="Eliminar evento"
+                      className="p-2 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
+                      title="Apagar evento"
                     >
                       <Trash2 size={14} />
                     </button>
