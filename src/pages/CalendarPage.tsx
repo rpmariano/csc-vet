@@ -2242,34 +2242,20 @@ const CalendarPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Coluna Direita: Secção de Eventos do Dia Selecionado */}
-          <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-6">
+          {/* Coluna Direita: Eventos do Dia Selecionado Diretamente */}
+          <div className="lg:col-span-5 space-y-3 lg:sticky lg:top-6">
             {selectedDate && (
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-150 space-y-3.5">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <CalendarDaysIcon size={18} className="text-csc-gold" />
-                    <h3 className="text-sm font-black text-gray-900 capitalize">
-                      {selectedDate.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' })}
-                    </h3>
-                  </div>
-                  <span className="text-[11px] font-bold px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full">
-                    {selectedDayEvents.length} {selectedDayEvents.length === 1 ? 'evento' : 'eventos'}
-                  </span>
+              selectedDayEvents.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-xs bg-white rounded-2xl p-6 border border-dashed border-gray-200 shadow-2xs">
+                  <CalendarDaysIcon size={28} className="mx-auto text-gray-300 mb-2" />
+                  <p className="font-bold text-sm text-gray-600">Sem eventos neste dia.</p>
+                  <p className="mt-1 text-xs text-gray-400">Seleciona outro dia no calendário para consultar os eventos agendados.</p>
                 </div>
-
-                {selectedDayEvents.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400 text-xs bg-gray-50/70 rounded-2xl p-6 border border-dashed border-gray-200">
-                    <CalendarDaysIcon size={28} className="mx-auto text-gray-300 mb-2" />
-                    <p className="font-bold text-sm text-gray-600">Sem eventos neste dia.</p>
-                    <p className="mt-1 text-xs text-gray-400">Seleciona outro dia no calendário para consultar os eventos agendados.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {selectedDayEvents.map(event => renderEventCard(event))}
-                  </div>
-                )}
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  {selectedDayEvents.map(event => renderEventCard(event))}
+                </div>
+              )
             )}
           </div>
         </div>
