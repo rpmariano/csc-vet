@@ -15,7 +15,6 @@ import {
   Shield,
   ChevronDown,
   Sparkles,
-  Eye,
   ArrowRight,
   Check
 } from 'lucide-react'
@@ -24,7 +23,7 @@ import type { UserRole } from '../context/AuthContext'
 import { AutoAssociationModal } from './AutoAssociationModal'
 
 const Layout: React.FC = () => {
-  const { profile, actualRole, isSimulatingRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
+  const { profile, actualRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
@@ -45,36 +44,8 @@ const Layout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-150 flex flex-col md:flex-row">
-      {/* Banner Superior de Simulação de Papel */}
-      {isSimulatingRole && (
-        <div className="bg-amber-500 text-csc-dark px-4 py-1.5 text-xs font-black flex items-center justify-between shadow-md z-40 sticky top-0 md:fixed md:top-0 md:left-0 md:right-0">
-          <div className="flex items-center gap-1.5">
-            <Eye size={14} className="text-csc-dark" />
-            <span>
-              A visualizar perfil: <strong className="uppercase underline">{profile?.role === 'coach' ? 'Treinador' : profile?.role === 'admin' ? 'Administrador' : 'Jogador'}</strong>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {canSwitchRoles && (
-              <button
-                onClick={() => setIsRoleModalOpen(true)}
-                className="bg-csc-dark text-white text-[10px] px-2 py-0.5 rounded font-bold hover:bg-black transition-colors"
-              >
-                Alternar Perfil
-              </button>
-            )}
-            <button
-              onClick={() => setSimulatedRole(null)}
-              className="bg-white text-csc-dark text-[10px] px-2 py-0.5 rounded font-bold hover:bg-gray-100 transition-colors shadow-xs"
-            >
-              Voltar ao Principal
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Mobile Header (Limpo e elegante) */}
-      <header className={`bg-white text-csc-dark flex items-center justify-between px-3.5 py-2.5 md:hidden border-b-4 border-csc-gold shadow-sm sticky ${isSimulatingRole ? 'top-8' : 'top-0'} z-30`}>
+      <header className="bg-white text-csc-dark flex items-center justify-between px-3.5 py-2.5 md:hidden border-b-4 border-csc-gold shadow-sm sticky top-0 z-30">
         <Link to="/" className="flex items-center gap-2">
           <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-9 object-contain" />
         </Link>
@@ -380,7 +351,7 @@ const Layout: React.FC = () => {
       )}
 
       {/* Desktop Sidebar Navigation */}
-      <aside className={`bg-csc-dark text-white w-64 flex-shrink-0 flex-col justify-between hidden md:flex border-r-2 border-csc-light/20 ${isSimulatingRole ? 'pt-8' : ''}`}>
+      <aside className="bg-csc-dark text-white w-64 flex-shrink-0 flex-col justify-between hidden md:flex border-r-2 border-csc-light/20">
         <div className="bg-white p-6 border-b-4 border-csc-gold">
           <img src="/csc-vet/logo-clube-horizontal.svg" alt="Logo" className="h-16 w-full object-contain" />
         </div>
