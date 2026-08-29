@@ -308,83 +308,16 @@ const Home: React.FC = () => {
       {/* GRELHA PRINCIPAL DO DASHBOARD */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         
-        {/* COLUNA PRINCIPAL (2/3 em Desktop) */}
+        {/* COLUNA ESQUERDA / PRINCIPAL (2/3 em Desktop: Jogos e Treinos) */}
         <div className="lg:col-span-2 space-y-5">
 
-          {/* 2. CARD: COMUNICAÇÕES & AVISOS */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs">
-            <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <Bell size={18} className="text-csc-dark" />
-                <h2 className="text-sm sm:text-base font-black text-gray-900">Comunicados & Avisos Oficiais</h2>
-              </div>
-              <Link to="/announcements" className="text-xs font-bold text-csc-gold hover:underline flex items-center gap-1">
-                <span>Ver todos</span>
-                <ChevronRight size={14} />
-              </Link>
-            </div>
-
-            <div className="space-y-2">
-              {announcements.slice(0, 3).map(ann => (
-                <div key={ann.id} className="p-3 bg-gray-50 rounded-xl border border-gray-150 hover:bg-gray-100/70 transition-colors">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-bold text-xs sm:text-sm text-gray-900">{ann.title}</p>
-                    <span className="text-[10px] font-semibold text-gray-400">
-                      {new Date(ann.published_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{ann.content}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 3. CARD: ESTADO DE QUOTAS */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-2.5">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <DollarSign size={18} className={pendingDues.length > 0 ? "text-amber-500" : "text-emerald-600"} />
-                <h3 className="text-sm sm:text-base font-black text-gray-900">Quotas & Mensalidades</h3>
-              </div>
-              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-                pendingDues.length > 0 ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-              }`}>
-                {pendingDues.length > 0 ? `${pendingDues.length} Pendente` : '✓ Em Dia'}
-              </span>
-            </div>
-
-            {pendingDues.length > 0 ? (
-              <div className="bg-red-50/70 border border-red-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="space-y-0.5">
-                  <p className="text-xs text-gray-700 font-semibold">
-                    Mês de referência: <strong className="text-gray-900">{pendingDues[0].month_year}</strong>
-                  </p>
-                  <p className="text-[11px] text-gray-500">
-                    Regulariza a tua quota junto do responsável financeiro ou tesoureiro.
-                  </p>
-                </div>
-                <p className="text-lg sm:text-xl font-black text-red-700 shrink-0">
-                  {pendingDues[0].amount} €
-                </p>
-              </div>
-            ) : (
-              <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 flex items-center justify-between text-xs text-emerald-900">
-                <span className="font-bold flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                  <span>As tuas quotas do clube encontram-se regularizadas!</span>
-                </span>
-                <span className="font-extrabold text-emerald-700 shrink-0">0.00 €</span>
-              </div>
-            )}
-          </div>
-
-          {/* 4. CARD DO JOGO (VERSÃO REDUZIDA E COMPACTA) */}
+          {/* 1. CARD DO JOGO (VERSÃO COMPACTA) */}
           {currentMatch && (
             <div className="bg-white rounded-2xl border border-blue-200 overflow-hidden shadow-xs hover:border-blue-400 transition-all">
-              {/* Header Reduzido */}
-              <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 px-4 py-2 text-white flex items-center justify-between shadow-2xs">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 px-4 py-2.5 text-white flex items-center justify-between shadow-2xs">
                 <div className="flex items-center gap-2">
-                  <Trophy size={15} className="text-amber-300" />
+                  <Trophy size={16} className="text-amber-300" />
                   <h2 className="text-xs sm:text-sm font-black tracking-wide">
                     Próximo Jogo
                   </h2>
@@ -426,12 +359,12 @@ const Home: React.FC = () => {
                 </div>
               </div>
 
-              {/* Conteúdo Reduzido do Jogo */}
+              {/* Conteúdo do Jogo */}
               <div 
                 onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
-                className="p-3.5 space-y-2.5 cursor-pointer hover:bg-blue-50/15 transition-colors group"
+                className="p-4 space-y-3 cursor-pointer hover:bg-blue-50/15 transition-colors group"
               >
-                {/* Linha 1: Badges Compactas + Concentração */}
+                {/* Linha 1: Badges Compactas + Concentração por extenso */}
                 <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-blue-600 text-white uppercase">
@@ -451,8 +384,8 @@ const Home: React.FC = () => {
                   </div>
 
                   {currentMatch.meeting_time && (
-                    <span className="text-[10.5px] font-bold text-amber-900 bg-amber-100/90 border border-amber-200 px-2 py-0.5 rounded-md">
-                      ⏱️ Conc: {currentMatch.meeting_time.substring(0, 5)}
+                    <span className="text-[11px] font-extrabold text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                      ⏱️ Concentração: {currentMatch.meeting_time.substring(0, 5)}
                     </span>
                   )}
                 </div>
@@ -469,34 +402,34 @@ const Home: React.FC = () => {
                   const rightName = isAway ? (clubSettings?.name || 'CSC Cascais') : currentMatch.opponent?.name
 
                   return (
-                    <div className="bg-gray-50/90 p-2.5 rounded-xl border border-gray-200/80 flex items-center justify-between gap-2">
-                      <div className="flex-1 flex items-center gap-2 min-w-0">
+                    <div className="bg-gray-50/90 p-3 rounded-xl border border-gray-200/80 flex items-center justify-between gap-2">
+                      <div className="flex-1 flex items-center gap-2.5 min-w-0">
                         {leftLogo ? (
-                          <img src={leftLogo} alt="Team" className="w-8 h-8 object-contain shrink-0" />
+                          <img src={leftLogo} alt="Team" className="w-9 h-9 object-contain shrink-0" />
                         ) : (
-                          <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
+                          <div className="w-9 h-9 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
                             {leftInitials}
                           </div>
                         )}
                         <div className="min-w-0">
                           <p className="text-xs font-black text-gray-900 truncate leading-tight">{leftInitials}</p>
-                          <p className="text-[10px] text-gray-500 truncate leading-tight">{leftName}</p>
+                          <p className="text-[11px] text-gray-500 truncate leading-tight">{leftName}</p>
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+                      <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shrink-0 shadow-2xs">
                         VS
                       </span>
 
-                      <div className="flex-1 flex items-center justify-end gap-2 text-right min-w-0">
+                      <div className="flex-1 flex items-center justify-end gap-2.5 text-right min-w-0">
                         <div className="min-w-0">
                           <p className="text-xs font-black text-gray-900 truncate leading-tight">{rightInitials}</p>
-                          <p className="text-[10px] text-gray-500 truncate leading-tight">{rightName}</p>
+                          <p className="text-[11px] text-gray-500 truncate leading-tight">{rightName}</p>
                         </div>
                         {rightLogo ? (
-                          <img src={rightLogo} alt="Team" className="w-8 h-8 object-contain shrink-0" />
+                          <img src={rightLogo} alt="Team" className="w-9 h-9 object-contain shrink-0" />
                         ) : (
-                          <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-[10px] font-black shrink-0">
+                          <div className="w-9 h-9 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
                             {rightInitials}
                           </div>
                         )}
@@ -507,25 +440,28 @@ const Home: React.FC = () => {
                   <h3 className="text-sm font-black text-gray-900">{currentMatch.title}</h3>
                 )}
 
-                {/* Linha 3: Info rápida (Data, Hora, Local) */}
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-600 bg-white p-2 rounded-lg border border-gray-150">
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1 font-bold text-gray-800">
-                      <Calendar size={13} className="text-blue-700" />
-                      <span>{new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} às {new Date(currentMatch.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </span>
-                    <span className="text-gray-400">•</span>
-                    <span className="flex items-center gap-1 truncate max-w-[150px] sm:max-w-[200px]">
-                      <MapPin size={12} className="text-red-600 shrink-0" />
-                      <span className="truncate">{currentMatch.location || currentMatch.field?.name || 'A definir'}</span>
+                {/* Linha 3: Data, Horário e Localização Completa */}
+                <div className="bg-white p-3 rounded-xl border border-gray-200 text-xs text-gray-700 space-y-2 shadow-2xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-gray-100">
+                    <div className="flex items-center gap-1.5 font-bold text-gray-900">
+                      <Calendar size={14} className="text-blue-700 shrink-0" />
+                      <span>{new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' })} às {new Date(currentMatch.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <span className="font-bold text-[10px] text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
+                      {currentMatch.home_away === 'away' ? '✈️ Fora de Casa' : currentMatch.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}
                     </span>
                   </div>
-                  <span className="font-bold text-[10px] text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded">
-                    {currentMatch.home_away === 'away' ? '✈️ Fora' : '🏠 Casa'}
-                  </span>
+
+                  <div className="flex items-center gap-2 text-gray-800">
+                    <MapPin size={15} className="text-red-600 shrink-0 mt-0.5 self-start" />
+                    <div>
+                      <span className="font-extrabold text-gray-900">Local: </span>
+                      <span className="font-medium text-gray-800">{currentMatch.location || currentMatch.field?.name || 'Local a definir'}</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Linha 4: Convocatória RSVP (Compacta) */}
+                {/* Linha 4: Convocatória RSVP */}
                 {(() => {
                   const currentMatchCallup = myCallups.find(c => c.event_id === currentMatch.id)
                   if (!currentMatchCallup) return null
@@ -541,26 +477,26 @@ const Home: React.FC = () => {
                           type="button"
                           disabled={currentMatchCallup.status === 'confirmed'}
                           onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
-                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all flex items-center gap-1 ${
+                          className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
                             currentMatchCallup.status === 'confirmed'
                               ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
                               : 'bg-white text-emerald-700 border border-emerald-600 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
                           }`}
                         >
-                          <CheckCircle2 size={12} />
+                          <CheckCircle2 size={13} />
                           <span>Confirmar</span>
                         </button>
                         <button
                           type="button"
                           disabled={currentMatchCallup.status === 'declined'}
                           onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
-                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all flex items-center gap-1 ${
+                          className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
                             currentMatchCallup.status === 'declined'
                               ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
                               : 'bg-white text-red-700 border border-red-600 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
                           }`}
                         >
-                          <XCircle size={12} />
+                          <XCircle size={13} />
                           <span>Recusar</span>
                         </button>
                       </div>
@@ -571,13 +507,13 @@ const Home: React.FC = () => {
             </div>
           )}
 
-          {/* 5. CARD DOS TREINOS (TREINOS MARCADOS) */}
+          {/* 2. CARD DOS TREINOS */}
           {currentPractice && (
             <div className="bg-white rounded-2xl border border-emerald-200 overflow-hidden shadow-xs hover:border-emerald-400 transition-all">
-              {/* Header Reduzido */}
-              <div className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-900 px-4 py-2 text-white flex items-center justify-between shadow-2xs">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-900 px-4 py-2.5 text-white flex items-center justify-between shadow-2xs">
                 <div className="flex items-center gap-2">
-                  <TrainingIcon size={15} className="text-white" />
+                  <TrainingIcon size={16} className="text-white" />
                   <h2 className="text-xs sm:text-sm font-black tracking-wide">
                     Treinos Marcados
                   </h2>
@@ -619,36 +555,40 @@ const Home: React.FC = () => {
                 </div>
               </div>
 
-              {/* Conteúdo Reduzido do Treino */}
+              {/* Conteúdo do Treino */}
               <div 
                 onClick={() => navigate(`/calendar?event=${currentPractice.id}`)}
-                className="p-3.5 space-y-2.5 cursor-pointer hover:bg-emerald-50/15 transition-colors group"
+                className="p-4 space-y-3 cursor-pointer hover:bg-emerald-50/15 transition-colors group"
               >
                 <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
                   <span className="text-xs font-black text-gray-900">{currentPractice.title}</span>
                   {currentPractice.meeting_time && (
-                    <span className="text-[10.5px] font-bold text-amber-900 bg-amber-100/90 border border-amber-200 px-2 py-0.5 rounded-md">
-                      ⏱️ Conc: {currentPractice.meeting_time.substring(0, 5)}
+                    <span className="text-[11px] font-extrabold text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-lg shadow-2xs">
+                      ⏱️ Concentração: {currentPractice.meeting_time.substring(0, 5)}
                     </span>
                   )}
                 </div>
 
-                {/* Info rápida (Data, Hora, Local) */}
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-600 bg-gray-50 p-2 rounded-lg border border-gray-150">
-                  <span className="flex items-center gap-1 font-bold text-gray-800">
-                    <Calendar size={13} className="text-emerald-700" />
-                    <span>{new Date(currentPractice.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })} às {new Date(currentPractice.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-                  </span>
-                  <span className="flex items-center gap-1 truncate max-w-[200px]">
-                    <MapPin size={12} className="text-red-600 shrink-0" />
-                    <span className="truncate">{currentPractice.location || currentPractice.field?.name || 'Campo Cascais'}</span>
-                  </span>
+                {/* Data, Horário e Localização Completa */}
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 text-xs text-gray-700 space-y-2 shadow-2xs">
+                  <div className="flex items-center gap-1.5 font-bold text-gray-900 pb-2 border-b border-gray-200/60">
+                    <Calendar size={14} className="text-emerald-700 shrink-0" />
+                    <span>{new Date(currentPractice.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' })} às {new Date(currentPractice.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-gray-800">
+                    <MapPin size={15} className="text-red-600 shrink-0 mt-0.5 self-start" />
+                    <div>
+                      <span className="font-extrabold text-gray-900">Local: </span>
+                      <span className="font-medium text-gray-800">{currentPractice.location || currentPractice.field?.name || 'Campo Cascais'}</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Observações / Instruções */}
                 {currentPractice.description && (
-                  <div className="text-[11px] text-gray-600 bg-amber-50/60 p-2 rounded-lg border border-amber-200">
-                    <strong>Indicações:</strong> {currentPractice.description}
+                  <div className="text-xs text-gray-700 bg-amber-50/70 p-2.5 rounded-xl border border-amber-200">
+                    <strong className="text-amber-950">Indicações:</strong> {currentPractice.description}
                   </div>
                 )}
 
@@ -668,26 +608,26 @@ const Home: React.FC = () => {
                           type="button"
                           disabled={currentPracticeCallup.status === 'confirmed'}
                           onClick={() => handleCallupResponse(currentPracticeCallup.id, 'confirmed')}
-                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all flex items-center gap-1 ${
+                          className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
                             currentPracticeCallup.status === 'confirmed'
                               ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
                               : 'bg-white text-emerald-700 border border-emerald-600 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
                           }`}
                         >
-                          <CheckCircle2 size={12} />
+                          <CheckCircle2 size={13} />
                           <span>Confirmar</span>
                         </button>
                         <button
                           type="button"
                           disabled={currentPracticeCallup.status === 'declined'}
                           onClick={() => handleCallupResponse(currentPracticeCallup.id, 'declined')}
-                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all flex items-center gap-1 ${
+                          className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
                             currentPracticeCallup.status === 'declined'
                               ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
                               : 'bg-white text-red-700 border border-red-600 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
                           }`}
                         >
-                          <XCircle size={12} />
+                          <XCircle size={13} />
                           <span>Recusar</span>
                         </button>
                       </div>
@@ -700,9 +640,9 @@ const Home: React.FC = () => {
 
         </div>
 
-        {/* COLUNA DIREITA (Sidebar no Desktop com Perfil do Jogador e Acesso Rápido) */}
+        {/* COLUNA DIREITA / SIDEBAR EM DESKTOP (Perfil, Comunicações, Quotas e Atalhos) */}
         <div className="space-y-5">
-          {/* CARD: PERFIL DO ATLETA */}
+          {/* CARD 1: PERFIL DO ATLETA */}
           {profile && (
             <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs">
               <div className="flex items-center gap-3.5 mb-3 pb-3 border-b border-gray-100">
@@ -751,7 +691,74 @@ const Home: React.FC = () => {
             </div>
           )}
 
-          {/* CARD: ATALHOS RÁPIDOS */}
+          {/* CARD 2: COMUNICAÇÕES & AVISOS */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs">
+            <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Bell size={18} className="text-csc-dark" />
+                <h2 className="text-sm sm:text-base font-black text-gray-900">Comunicados & Avisos</h2>
+              </div>
+              <Link to="/announcements" className="text-xs font-bold text-csc-gold hover:underline flex items-center gap-1">
+                <span>Ver todos</span>
+                <ChevronRight size={14} />
+              </Link>
+            </div>
+
+            <div className="space-y-2">
+              {announcements.slice(0, 3).map(ann => (
+                <div key={ann.id} className="p-3 bg-gray-50 rounded-xl border border-gray-150 hover:bg-gray-100/70 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-bold text-xs sm:text-sm text-gray-900">{ann.title}</p>
+                    <span className="text-[10px] font-semibold text-gray-400">
+                      {new Date(ann.published_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{ann.content}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CARD 3: ESTADO DE QUOTAS */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-2.5">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <DollarSign size={18} className={pendingDues.length > 0 ? "text-amber-500" : "text-emerald-600"} />
+                <h3 className="text-sm sm:text-base font-black text-gray-900">Quotas & Mensalidades</h3>
+              </div>
+              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                pendingDues.length > 0 ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+              }`}>
+                {pendingDues.length > 0 ? `${pendingDues.length} Pendente` : '✓ Em Dia'}
+              </span>
+            </div>
+
+            {pendingDues.length > 0 ? (
+              <div className="bg-red-50/70 border border-red-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="space-y-0.5">
+                  <p className="text-xs text-gray-700 font-semibold">
+                    Mês de referência: <strong className="text-gray-900">{pendingDues[0].month_year}</strong>
+                  </p>
+                  <p className="text-[11px] text-gray-500">
+                    Regulariza a tua quota junto do tesoureiro.
+                  </p>
+                </div>
+                <p className="text-lg sm:text-xl font-black text-red-700 shrink-0">
+                  {pendingDues[0].amount} €
+                </p>
+              </div>
+            ) : (
+              <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 flex items-center justify-between text-xs text-emerald-900">
+                <span className="font-bold flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  <span>Quotas regularizadas!</span>
+                </span>
+                <span className="font-extrabold text-emerald-700 shrink-0">0.00 €</span>
+              </div>
+            )}
+          </div>
+
+          {/* CARD 4: ATALHOS RÁPIDOS */}
           <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-2.5">
             <h3 className="text-xs font-black uppercase text-gray-400 tracking-wider">
               Acesso Rápido
