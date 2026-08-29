@@ -272,6 +272,11 @@ const EventsPage: React.FC = () => {
   const [unsavedModalTarget, setUnsavedModalTarget] = useState<'edit' | 'quickField' | 'quickOpp' | null>(null)
   const [viewModeTab, setViewModeTab] = useState<'create' | 'list'>('create')
 
+  // Estados para Filtros da Lista de Eventos Agendados
+  const [eventListSearch, setEventListSearch] = useState('')
+  const [eventListTypeFilter, setEventListTypeFilter] = useState<'all' | 'match' | 'practice' | 'gathering'>('all')
+  const [eventListTimeFilter, setEventListTimeFilter] = useState<'upcoming' | 'past' | 'all'>('upcoming')
+
   const handleAttemptCloseEditModal = () => {
     setUnsavedModalTarget('edit')
   }
@@ -1502,32 +1507,137 @@ const EventsPage: React.FC = () => {
       )}
 
       {/* ABA 2: LISTA DE EVENTOS REGISTADOS & RSVP */}
-      {viewModeTab === 'list' && (
-        <div className="max-w-5xl mx-auto space-y-4">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-5 sm:p-6">
-            <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-150">
-              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
-                <CalendarRange size={20} className="text-csc-dark" />
-                <span>Lista de Eventos & Quórum RSVP</span>
-              </h3>
-              <span className="text-xs font-bold text-gray-500">
-                {events.length} registados
-              </span>
+      {viewModeTab === 'list' && (() => {
+        const filteredScheduledEvents = events.filter((event) => {
+          const q = eventListSearch.toLowerCase().trim()
+          const oppName = event.opponent_id ? getOpponentName(event.opponent_id).toLowerCase() : ''
+          const locationStr = (event.field_id ? getFieldName(event.field_id) : (event.location || '')).toLowerCase()
+          const titleStr = (event.title || '').toLowerCase()
+          const descStr = (event.description || '').toLowerCase()
+
+          if (q) {
+            const match = titleStr.includes(q) || oppName.includes(q) || locationStr.includes(q) || descStr.includes(q)
+            if (!match) return false
+          }
+
+          if (eventListTypeFilter !== 'all' && event.type !== eventListTypeFilter) {
+            return false
+          }
+
+          const eventTime = new Date(event.date_time).getTime()
+          const now = Date.now()
+          if (eventListTimeFilter === 'upcoming') {
+            if (eventTime < now - 4 * 60 * 60 * 1000) return false
+          } else if (eventListTimeFilter === 'past') {
+            if (eventTime >= now - 4 * 60 * 60 * 1000) return false
+          }
+
+          return true
+        }).sort((a, b) => {
+          const timeA = new Date(a.date_time).getTime()
+          const timeB = new Date(b.date_time).getTime()
+          if (eventListTimeFilter === 'past') {
+            return timeB - timeA
+          }
+          return timeA - timeB
+        })
+
+        return (
+          <div className="max-w-5xl mx-auto space-y-4">
+            {/* Barra de Filtros e Pesquisa de Eventos */}
+            <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="relative flex-1 w-full">
+                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={eventListSearch}
+                    onChange={e => setEventListSearch(e.target.value)}
+                    placeholder="Pesquisar por título, adversário, local..."
+                    className="w-full pl-10 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all"
+                  />
+                  {eventListSearch && (
+                    <button 
+                      onClick={() => setEventListSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filtro Temporal (Próximos / Anteriores / Todos) */}
+                <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto shrink-0">
+                  {[
+                    { id: 'upcoming', label: 'Próximos' },
+                    { id: 'past', label: 'Anteriores' },
+                    { id: 'all', label: 'Todos' }
+                  ].map(tf => (
+                    <button
+                      key={tf.id}
+                      type="button"
+                      onClick={() => setEventListTimeFilter(tf.id as any)}
+                      className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                        eventListTimeFilter === tf.id
+                          ? 'bg-white text-csc-dark shadow-xs'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      {tf.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filtro de Tipo de Evento (Todos / Jogos / Treinos / Convívios) */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-gray-100">
+                {[
+                  { id: 'all', label: 'Todos os Tipos', emoji: '📋' },
+                  { id: 'match', label: 'Jogos', emoji: '⚽' },
+                  { id: 'practice', label: 'Treinos', emoji: '🏃' },
+                  { id: 'gathering', label: 'Convívios', emoji: '🎉' }
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setEventListTypeFilter(item.id as any)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                      eventListTypeFilter === item.id
+                        ? 'bg-csc-dark text-csc-gold shadow-2xs border border-csc-dark'
+                        : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200'
+                    }`}
+                  >
+                    <span>{item.emoji}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-5 sm:p-6">
+              <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-150">
+                <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                  <CalendarRange size={20} className="text-csc-dark" />
+                  <span>Lista de Eventos & Quórum RSVP</span>
+                </h3>
+                <span className="text-xs font-bold text-gray-500">
+                  A apresentar {filteredScheduledEvents.length} de {events.length} registados
+                </span>
               </div>
-            ) : events.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-300 p-6">
-                <Calendar size={40} className="mx-auto text-gray-300 mb-2" />
-                <p className="font-bold text-gray-700">Não há eventos agendados.</p>
-                <p className="text-xs text-gray-500 mt-1">Crie o primeiro evento clicando na aba "Criar Novo Evento".</p>
-              </div>
-            ) : (
-              <div className="space-y-3.5">
-                {events.map((event) => {
+
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
+                </div>
+              ) : filteredScheduledEvents.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-300 p-6">
+                  <Calendar size={40} className="mx-auto text-gray-300 mb-2" />
+                  <p className="font-bold text-gray-700">Nenhum evento encontrado com os filtros atuais.</p>
+                  <p className="text-xs text-gray-500 mt-1">Tente alterar os filtros ou o termo de pesquisa.</p>
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  {filteredScheduledEvents.map((event) => {
                   const callups = eventCallups[event.id] || []
                   const confirmedList = callups.filter(c => c.status === 'confirmed')
                   const declinedList = callups.filter(c => c.status === 'declined')
@@ -1644,7 +1754,7 @@ const EventsPage: React.FC = () => {
             )}
           </div>
         </div>
-      )}
+      )})()}
 
       {/* ========================================================================= */}
       {/* MODAL DETALHADO DE CONVOCATÓRIA & GESTÃO COMPLETA DE RSVP                */}
