@@ -1199,10 +1199,10 @@ const CalendarPage: React.FC = () => {
                     type="button"
                     disabled={myCallup.status === 'confirmed'}
                     onClick={() => handleCallupResponse(event.id, 'confirmed')}
-                    className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-2xs flex items-center gap-1 ${
+                    className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
                       myCallup.status === 'confirmed'
-                        ? 'bg-emerald-800 text-white cursor-not-allowed opacity-80 ring-2 ring-emerald-600/40'
-                        : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95'
+                        ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                        : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
                     }`}
                   >
                     <CheckCircle2 size={13} />
@@ -1212,10 +1212,10 @@ const CalendarPage: React.FC = () => {
                     type="button"
                     disabled={myCallup.status === 'declined'}
                     onClick={() => handleCallupResponse(event.id, 'declined')}
-                    className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-2xs flex items-center gap-1 ${
+                    className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
                       myCallup.status === 'declined'
-                        ? 'bg-red-800 text-white cursor-not-allowed opacity-80 ring-2 ring-red-600/40'
-                        : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95'
+                        ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                        : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
                     }`}
                   >
                     <XCircle size={13} />
@@ -1548,33 +1548,10 @@ const CalendarPage: React.FC = () => {
                 </div>
 
                 {selectedDayEvents.length === 0 ? (
-                  <div className="space-y-4">
-                    <div className="text-center py-4 text-gray-400 text-xs bg-gray-50/70 rounded-xl p-3 border border-dashed border-gray-200">
-                      <p className="font-semibold text-gray-600">Sem eventos neste dia.</p>
-                      <p className="mt-0.5 text-[11px]">Apresentamos abaixo os próximos eventos na agenda:</p>
-                    </div>
-
-                    {/* Próximos Eventos em Destaque (Jogos, Treinos, Convívios) */}
-                    {(() => {
-                      const now = new Date()
-                      const upcoming = filteredEvents.filter(e => new Date(e.date_time) >= now)
-                      const toShow = (upcoming.length > 0 ? upcoming : filteredEvents).slice(0, 4)
-                      if (toShow.length === 0) return null
-
-                      return (
-                        <div className="space-y-3 pt-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-gray-800 uppercase tracking-wider">
-                              📅 Próximos Eventos Agendados
-                            </span>
-                            <span className="text-[10px] font-bold text-csc-dark bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                              {toShow.length} {toShow.length === 1 ? 'evento' : 'eventos'}
-                            </span>
-                          </div>
-                          {toShow.map(ev => renderEventCard(ev))}
-                        </div>
-                      )
-                    })()}
+                  <div className="text-center py-8 text-gray-400 text-xs bg-gray-50/70 rounded-2xl p-6 border border-dashed border-gray-200">
+                    <CalendarDaysIcon size={28} className="mx-auto text-gray-300 mb-2" />
+                    <p className="font-bold text-sm text-gray-600">Sem eventos neste dia.</p>
+                    <p className="mt-1 text-xs text-gray-400">Seleciona outro dia no calendário para consultar os eventos agendados.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1818,10 +1795,10 @@ const CalendarPage: React.FC = () => {
                           type="button"
                           disabled={myCallup.status === 'confirmed'}
                           onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                          className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs ${
+                          className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${
                             myCallup.status === 'confirmed' 
-                              ? 'bg-emerald-800 text-white cursor-not-allowed opacity-80 ring-2 ring-emerald-600/40' 
-                              : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95'
+                              ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none' 
+                              : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-xs'
                           }`}
                         >
                           <CheckCircle2 size={15} /> Confirmar
@@ -1830,10 +1807,10 @@ const CalendarPage: React.FC = () => {
                           type="button"
                           disabled={myCallup.status === 'declined'}
                           onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                          className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs ${
+                          className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${
                             myCallup.status === 'declined' 
-                              ? 'bg-red-800 text-white cursor-not-allowed opacity-80 ring-2 ring-red-600/40' 
-                              : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95'
+                              ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none' 
+                              : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95 shadow-xs'
                           }`}
                         >
                           <XCircle size={15} /> Recusar

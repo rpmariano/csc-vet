@@ -541,10 +541,10 @@ const Home: React.FC = () => {
                           type="button"
                           disabled={currentMatchCallup.status === 'confirmed'}
                           onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
-                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all shadow-2xs flex items-center gap-1 ${
+                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all flex items-center gap-1 ${
                             currentMatchCallup.status === 'confirmed'
-                              ? 'bg-emerald-800 text-white cursor-not-allowed opacity-80 ring-2 ring-emerald-600/40'
-                              : 'bg-white text-emerald-700 border border-emerald-400 hover:bg-emerald-50 cursor-pointer active:scale-95'
+                              ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                              : 'bg-white text-emerald-700 border border-emerald-600 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
                           }`}
                         >
                           <CheckCircle2 size={12} />
@@ -554,10 +554,10 @@ const Home: React.FC = () => {
                           type="button"
                           disabled={currentMatchCallup.status === 'declined'}
                           onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
-                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all shadow-2xs flex items-center gap-1 ${
+                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all flex items-center gap-1 ${
                             currentMatchCallup.status === 'declined'
-                              ? 'bg-red-800 text-white cursor-not-allowed opacity-80 ring-2 ring-red-600/40'
-                              : 'bg-white text-red-700 border border-red-400 hover:bg-red-50 cursor-pointer active:scale-95'
+                              ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                              : 'bg-white text-red-700 border border-red-600 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
                           }`}
                         >
                           <XCircle size={12} />
@@ -668,10 +668,10 @@ const Home: React.FC = () => {
                           type="button"
                           disabled={currentPracticeCallup.status === 'confirmed'}
                           onClick={() => handleCallupResponse(currentPracticeCallup.id, 'confirmed')}
-                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all shadow-2xs flex items-center gap-1 ${
+                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all flex items-center gap-1 ${
                             currentPracticeCallup.status === 'confirmed'
-                              ? 'bg-emerald-800 text-white cursor-not-allowed opacity-80 ring-2 ring-emerald-600/40'
-                              : 'bg-white text-emerald-700 border border-emerald-400 hover:bg-emerald-50 cursor-pointer active:scale-95'
+                              ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                              : 'bg-white text-emerald-700 border border-emerald-600 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
                           }`}
                         >
                           <CheckCircle2 size={12} />
@@ -681,10 +681,10 @@ const Home: React.FC = () => {
                           type="button"
                           disabled={currentPracticeCallup.status === 'declined'}
                           onClick={() => handleCallupResponse(currentPracticeCallup.id, 'declined')}
-                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all shadow-2xs flex items-center gap-1 ${
+                          className={`text-xs font-black px-3 py-1 rounded-xl transition-all flex items-center gap-1 ${
                             currentPracticeCallup.status === 'declined'
-                              ? 'bg-red-800 text-white cursor-not-allowed opacity-80 ring-2 ring-red-600/40'
-                              : 'bg-white text-red-700 border border-red-400 hover:bg-red-50 cursor-pointer active:scale-95'
+                              ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                              : 'bg-white text-red-700 border border-red-600 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
                           }`}
                         >
                           <XCircle size={12} />
