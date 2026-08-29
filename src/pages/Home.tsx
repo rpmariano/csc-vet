@@ -153,21 +153,6 @@ const Home: React.FC = () => {
             resolvedMatches = allM as Event[]
           }
         }
-        if (resolvedMatches.length === 0) {
-          resolvedMatches = [
-            {
-              id: 'm-demo',
-              title: 'Pescadores CC vs CSC',
-              type: 'match',
-              date_time: '2026-09-12T18:00:00Z',
-              meeting_time: '16:00:00',
-              location: 'Costa da Caparica',
-              description: 'Jogo Amigável de preparação.',
-              is_friendly: true,
-              home_away: 'away'
-            }
-          ]
-        }
         setUpcomingMatches(resolvedMatches)
 
         // 2. Fetch upcoming practices
@@ -180,6 +165,8 @@ const Home: React.FC = () => {
           .limit(3)
         if (practices) {
           setUpcomingPractices(practices as Event[])
+        } else {
+          setUpcomingPractices([])
         }
 
         // 3. Fetch announcements (apenas ativos)
@@ -192,15 +179,7 @@ const Home: React.FC = () => {
           const activeAnns = (anns as Announcement[]).filter(a => a.is_active !== false)
           setAnnouncements(activeAnns)
         } else {
-          setAnnouncements([
-            {
-              id: 'a-demo',
-              title: 'Comunicações Importantes',
-              content: 'Caros atletas, recordamos que os treinos começam pontualmente. A comparência no balneário deve ser feita 30 minutos antes.',
-              published_at: new Date().toISOString(),
-              is_active: true
-            }
-          ])
+          setAnnouncements([])
         }
 
         // 4. Fetch callups

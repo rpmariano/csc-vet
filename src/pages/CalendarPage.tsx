@@ -838,27 +838,10 @@ const CalendarPage: React.FC = () => {
         setTournaments(tourRes.data as Tournament[])
       }
 
-      if (evRes.data && evRes.data.length > 0) {
+      if (evRes.data) {
         setEvents(evRes.data as Event[])
       } else {
-        setEvents([
-          {
-            id: '1',
-            title: 'Treino Semanal Veteranos',
-            type: 'practice',
-            date_time: new Date(Date.now() + 86400000 * 2).toISOString(),
-            location: 'Campo Sintético Municipal',
-            description: 'Treino geral com foco físico e tático.'
-          },
-          {
-            id: '2',
-            title: 'CSC vs Belenenses Veteranos',
-            type: 'match',
-            date_time: new Date(Date.now() + 86400000 * 5).toISOString(),
-            location: 'Estádio do Restelo',
-            description: 'Jogo da 3ª Jornada da Liga de Veteranos.'
-          }
-        ])
+        setEvents([])
       }
 
       let mergedPlayers: Profile[] = []
