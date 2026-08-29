@@ -331,27 +331,22 @@ const CalendarPage: React.FC = () => {
 
     setSheetTranslateY(0)
 
-    // 2. Transição horizontal por Slide / Swipe no Carrossel de Eventos
+    // 2. Transição horizontal por Slide / Swipe no Carrossel (exclusivo para eventos pendentes no alerta de convocatória)
     if (selectedEvent && Math.abs(lastDeltaX) > 40 && Math.abs(lastDeltaX) > Math.abs(lastDeltaY) * 1.1) {
-      const isCurrentPending = myPendingEvents.some(pe => pe.id === selectedEvent.id)
-      const carouselList = (isCurrentPending && myPendingEvents.length > 1) 
-        ? myPendingEvents 
-        : (filteredEvents.length > 1 ? filteredEvents : events)
-
-      if (carouselList.length > 1) {
-        const curIdx = carouselList.findIndex(e => e.id === selectedEvent.id)
+      if (myPendingEvents.length > 1 && myPendingEvents.some(pe => pe.id === selectedEvent.id)) {
+        const curIdx = myPendingEvents.findIndex(e => e.id === selectedEvent.id)
         const activeIdx = curIdx >= 0 ? curIdx : 0
 
         if (lastDeltaX < -40) {
-          // Slide para a Esquerda (Avançar para o Próximo Evento)
-          const nextIdx = (activeIdx + 1) % carouselList.length
-          const nextEv = carouselList[nextIdx]
+          // Slide para a Esquerda (Avançar para o Próximo Evento Pendente)
+          const nextIdx = (activeIdx + 1) % myPendingEvents.length
+          const nextEv = myPendingEvents[nextIdx]
           setSelectedEvent(nextEv)
           if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
         } else if (lastDeltaX > 40) {
-          // Slide para a Direita (Retroceder para o Evento Anterior)
-          const prevIdx = (activeIdx - 1 + carouselList.length) % carouselList.length
-          const prevEv = carouselList[prevIdx]
+          // Slide para a Direita (Retroceder para o Evento Pendente Anterior)
+          const prevIdx = (activeIdx - 1 + myPendingEvents.length) % myPendingEvents.length
+          const prevEv = myPendingEvents[prevIdx]
           setSelectedEvent(prevEv)
           if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
         }
@@ -2263,66 +2258,47 @@ const CalendarPage: React.FC = () => {
               
               {/* COLUNA ESQUERDA (5 Colunas): Detalhes do Evento, Matchup VS e Presença Pessoal */}
               <div className="lg:col-span-5 space-y-5">
-                {/* Carrossel Superior de Navegação entre Eventos (com Suporte a Slide/Swipe) */}
-                {(() => {
-                  const isCurrentInPending = myPendingEvents.some(pe => pe.id === selectedEvent.id)
-                  const carouselList = (isCurrentInPending && myPendingEvents.length > 1)
-                    ? myPendingEvents
-                    : (filteredEvents.length > 1 ? filteredEvents : (events.length > 1 ? events : []))
-
-                  if (carouselList.length <= 1) return null
-
-                  const curIdx = carouselList.findIndex(e => e.id === selectedEvent.id)
+                {/* Carrossel Superior de Navegação EXCLUSIVO para Convocatórias Pendentes do Alerta */}
+                {myPendingEvents.length > 1 && myPendingEvents.some(pe => pe.id === selectedEvent.id) && (() => {
+                  const curIdx = myPendingEvents.findIndex(pe => pe.id === selectedEvent.id)
                   const activeIndex = curIdx !== -1 ? curIdx : 0
 
                   const nextEvent = (e?: React.MouseEvent) => {
                     e?.stopPropagation()
-                    const nextIdx = (activeIndex + 1) % carouselList.length
-                    setSelectedEvent(carouselList[nextIdx])
+                    const nextIdx = (activeIndex + 1) % myPendingEvents.length
+                    setSelectedEvent(myPendingEvents[nextIdx])
                     if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
                   }
 
                   const prevEvent = (e?: React.MouseEvent) => {
                     e?.stopPropagation()
-                    const prevIdx = (activeIndex - 1 + carouselList.length) % carouselList.length
-                    setSelectedEvent(carouselList[prevIdx])
+                    const prevIdx = (activeIndex - 1 + myPendingEvents.length) % myPendingEvents.length
+                    setSelectedEvent(myPendingEvents[prevIdx])
                     if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
                   }
 
                   return (
-                    <div className={`rounded-2xl p-2.5 sm:p-3 shadow-xs border flex items-center justify-between gap-2 transition-all ${
-                      isCurrentInPending
-                        ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-csc-dark border-amber-600/50'
-                        : 'bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white border-emerald-800/80'
-                    }`}>
+                    <div className="rounded-2xl p-2.5 sm:p-3 shadow-xs border flex items-center justify-between gap-2 transition-all bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-csc-dark border-amber-600/50">
                       <button
                         type="button"
                         onClick={prevEvent}
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 ${
-                          isCurrentInPending
-                            ? 'bg-black/10 hover:bg-black/20 text-csc-dark'
-                            : 'bg-white/10 hover:bg-white/20 text-white'
-                        }`}
-                        title="Evento Anterior (ou desliza para a direita 👉)"
+                        className="w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-black/10 hover:bg-black/20 text-csc-dark"
+                        title="Convocatória Anterior (ou desliza para a direita 👉)"
                       >
                         <ChevronLeft size={18} />
                       </button>
 
                       <div className="flex flex-col items-center justify-center text-center min-w-0 flex-1 select-none">
-                        <span className={`text-xs font-black tracking-wide flex items-center gap-1.5 ${
-                          isCurrentInPending ? 'text-amber-950' : 'text-csc-gold'
-                        }`}>
-                          <span>{isCurrentInPending ? '🔔 Convocatória Pendente' : '📅 Eventos da Agenda'}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-black ${
-                            isCurrentInPending ? 'bg-black/15 text-csc-dark' : 'bg-white/15 text-white'
-                          }`}>
-                            {activeIndex + 1}/{carouselList.length}
+                        <span className="text-xs font-black tracking-wide flex items-center gap-1.5 text-amber-950">
+                          <span>🔔 Convocatória Pendente</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-black/15 text-csc-dark">
+                            {activeIndex + 1}/{myPendingEvents.length}
                           </span>
                         </span>
 
                         {/* Traços centrados */}
                         <div className="flex items-center gap-1.5 mt-1.5">
-                          {carouselList.map((item, idx) => (
+                          {myPendingEvents.map((item, idx) => (
                             <button
                               key={item.id}
                               type="button"
@@ -2332,8 +2308,8 @@ const CalendarPage: React.FC = () => {
                               }}
                               className={`h-1.5 rounded-full transition-all cursor-pointer ${
                                 idx === activeIndex
-                                  ? (isCurrentInPending ? 'bg-csc-dark w-5' : 'bg-csc-gold w-5')
-                                  : (isCurrentInPending ? 'bg-black/25 hover:bg-black/40 w-2' : 'bg-white/30 hover:bg-white/50 w-2')
+                                  ? 'bg-csc-dark w-5'
+                                  : 'bg-black/25 hover:bg-black/40 w-2'
                               }`}
                               title={item.title}
                             />
@@ -2344,12 +2320,8 @@ const CalendarPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={nextEvent}
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 ${
-                          isCurrentInPending
-                            ? 'bg-black/10 hover:bg-black/20 text-csc-dark'
-                            : 'bg-white/10 hover:bg-white/20 text-white'
-                        }`}
-                        title="Próximo Evento (ou desliza para a esquerda 👈)"
+                        className="w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-black/10 hover:bg-black/20 text-csc-dark"
+                        title="Próxima Convocatória (ou desliza para a esquerda 👈)"
                       >
                         <ChevronRight size={18} />
                       </button>
