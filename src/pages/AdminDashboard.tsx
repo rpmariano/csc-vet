@@ -1464,7 +1464,7 @@ const AdminDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {isTourModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-gray-200 overflow-hidden animate-scale-in">
+          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-gray-200 overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
             <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2.5">
                 <Trophy size={22} className="text-csc-gold" />
@@ -1480,7 +1480,7 @@ const AdminDashboard: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveTournamentForm} className="p-6 space-y-4">
+            <form onSubmit={handleSaveTournamentForm} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
                   Nome da Competição *
