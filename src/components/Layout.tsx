@@ -287,7 +287,7 @@ const Layout: React.FC = () => {
                       }`}
                     >
                       <BarChart3 size={16} className="text-purple-400" />
-                      <span>Estatísticas & Desempenho</span>
+                      <span>Estatísticas</span>
                     </Link>
 
                     {(isAdmin || isCoach) && (
@@ -493,11 +493,11 @@ const Layout: React.FC = () => {
               </div>
             )}
 
-            {/* 3. INFORMAÇÃO & DESPORTO (Apenas Admin/Treinador) */}
+            {/* 3. COMUNICADOS & AVISOS (Apenas Admin/Treinador) */}
             {(isAdmin || isCoach) && (
               <div>
                 <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-3">
-                  Informação & Desporto
+                  Comunicação
                 </p>
                 <div className="space-y-1">
                   <Link
@@ -508,16 +508,6 @@ const Layout: React.FC = () => {
                   >
                     <FileText size={17} className={location.pathname === '/announcements' ? 'text-csc-dark' : 'text-amber-400'} />
                     <span>Comunicados & Avisos</span>
-                  </Link>
-
-                  <Link
-                    to="/stats"
-                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                      location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <BarChart3 size={17} className={location.pathname === '/stats' ? 'text-csc-dark' : 'text-purple-400'} />
-                    <span>Estatísticas & Desempenho</span>
                   </Link>
                 </div>
               </div>
