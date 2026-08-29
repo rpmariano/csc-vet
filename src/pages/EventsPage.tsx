@@ -1022,24 +1022,34 @@ const EventsPage: React.FC = () => {
 
   const handleAddPlayerToCallup = async (eventId: string, playerId: string) => {
     try {
+      const ev = events.find(e => e.id === eventId) || editingEvent
+      const p = allPlayers.find(pl => pl.id === playerId)
+      if (ev && p && !isPlayerEligible(p, ev.type)) {
+        toast.warning('Este atleta está lesionado e não pode ser convocado para jogos ou treinos (apenas convívios).')
+        return
+      }
+
       const [validPlayerId] = await ensurePlayerIdsForSupabase([playerId], allPlayers)
       if (!validPlayerId) {
         toast.error('Não foi possível processar o atleta.')
         return
       }
 
-      const { data, error } = await supabase.from('callups').insert([{
+      const { data, error } = await supabase.from('callups').upsert([{
         event_id: eventId,
         player_id: validPlayerId,
         status: 'called'
-      }]).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)').single()
+      }], {
+        onConflict: 'event_id, player_id',
+        ignoreDuplicates: true
+      }).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)').maybeSingle()
 
       if (error) throw error
 
       if (data) {
         setEventCallups(prev => ({
           ...prev,
-          [eventId]: [...(prev[eventId] || []), data as unknown as CallupWithPlayer]
+          [eventId]: [...(prev[eventId] || []).filter(c => c.player_id !== validPlayerId), data as unknown as CallupWithPlayer]
         }))
         toast.success('Atleta adicionado à convocatória!')
       }
@@ -2347,7 +2357,8 @@ const EventsPage: React.FC = () => {
               ) : editingEvent && (() => {
                 const currentCallups = eventCallups[editingEvent.id] || []
                 const calledPlayerIds = currentCallups.map(c => c.player_id)
-                const editUncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
+                const eligibleMembers = allPlayers.filter(p => isPlayerEligible(p, editingEvent.type))
+                const editUncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id) && isPlayerEligible(p, editingEvent.type))
 
                 const handleEditAddAll = async () => {
                   if (editUncalledPlayers.length === 0 || isBatchCalling) return
@@ -2379,7 +2390,7 @@ const EventsPage: React.FC = () => {
                         }
                       }
                       await fetchData()
-                      toast.success('Todos os membros foram convocados com sucesso!')
+                      toast.success('Todos os membros elegíveis foram convocados com sucesso!')
                     }
                   } catch (err: any) {
                     toast.error('Erro ao convocar todos: ' + err.message)
@@ -2428,7 +2439,7 @@ const EventsPage: React.FC = () => {
                         <span>Convocatória ({calledPlayerIds.length} convocados)</span>
                       </span>
                       <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2 py-0.5 rounded-full">
-                        {allPlayers.length} Membros
+                        {eligibleMembers.length} Elegíveis {allPlayers.length !== eligibleMembers.length ? `(${allPlayers.length} Total)` : ''}
                       </span>
                     </div>
 

@@ -3835,7 +3835,8 @@ const CalendarPage: React.FC = () => {
                 {selectedEvent && (() => {
                   const currentCallups = eventCallups[selectedEvent.id] || []
                   const calledPlayerIds = currentCallups.map(c => c.player_id)
-                  const editUncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
+                  const eligibleMembers = allPlayers.filter(p => isPlayerEligible(p, editType))
+                  const editUncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id) && isPlayerEligible(p, editType))
 
                   const handleEditAddAll = async () => {
                     if (editUncalledPlayers.length === 0 || isEditBatchCalling) return
@@ -3868,7 +3869,7 @@ const CalendarPage: React.FC = () => {
                           }
                         }
                         await fetchEventsAndData()
-                        toast.success('Todos os membros foram convocados com sucesso!')
+                        toast.success('Todos os membros elegíveis foram convocados com sucesso!')
                       }
                     } catch (err: any) {
                       toast.error('Erro ao convocar todos: ' + err.message)
@@ -3908,7 +3909,7 @@ const CalendarPage: React.FC = () => {
                           }
                         }
                         await fetchEventsAndData()
-                        toast.success('Jogadores convocados com sucesso!')
+                        toast.success('Jogadores elegíveis convocados com sucesso!')
                       }
                     } catch (err: any) {
                       toast.error('Erro ao convocar jogadores: ' + err.message)
@@ -3990,6 +3991,10 @@ const CalendarPage: React.FC = () => {
                       const { error } = await supabase.from('callups').delete().eq('id', existing.id)
                       if (!error) await fetchEventsAndData()
                     } else {
+                      if (!isPlayerEligible(player, editType)) {
+                        toast.warning('Este atleta está lesionado e não pode ser convocado para jogos ou treinos (apenas convívios).')
+                        return
+                      }
                       const validIds = await ensurePlayerIdsForSupabase([player.id], allPlayers)
                       if (validIds.length > 0) {
                         const { error } = await supabase.from('callups').upsert([{
@@ -4022,7 +4027,7 @@ const CalendarPage: React.FC = () => {
                           <span>Convocatória ({calledPlayerIds.length} convocados)</span>
                         </span>
                         <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2.5 py-0.5 rounded-full">
-                          {allPlayers.length} Membros
+                          {eligibleMembers.length} Elegíveis {allPlayers.length !== eligibleMembers.length ? `(${allPlayers.length} Total)` : ''}
                         </span>
                       </div>
 
