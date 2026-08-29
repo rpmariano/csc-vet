@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { TrainingIcon } from './EventsPage'
+import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
 
 interface Event {
   id: string
@@ -624,24 +625,26 @@ const Home: React.FC = () => {
                 {/* Linha 2: Matchup VS Compacto */}
                 {currentMatch.opponent ? (() => {
                   const isAway = currentMatch.home_away === 'away'
+                  const cscSigla = formatClubSigla(clubSettings?.initials)
+                  const oppSigla = formatOpponentSigla(currentMatch.opponent)
                   const leftLogo = isAway ? currentMatch.opponent?.logo_url : clubSettings?.logo_url
-                  const leftInitials = isAway ? (currentMatch.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')
+                  const leftInitials = isAway ? oppSigla : cscSigla
 
                   const rightLogo = isAway ? clubSettings?.logo_url : currentMatch.opponent?.logo_url
-                  const rightInitials = isAway ? (clubSettings?.initials || 'CSC') : (currentMatch.opponent?.initials || 'ADV')
+                  const rightInitials = isAway ? cscSigla : oppSigla
 
                   return (
                     <div className="bg-gray-50/90 p-3 rounded-xl border border-gray-200/80 flex items-center justify-between gap-2">
                       <div className="flex-1 flex items-center gap-2.5 min-w-0">
                         {leftLogo ? (
-                          <img src={leftLogo} alt="Team" className="w-9 h-9 object-contain shrink-0" />
+                          <img src={leftLogo} alt={leftInitials} className="w-9 h-9 object-contain shrink-0" />
                         ) : (
                           <div className="w-9 h-9 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
                             {leftInitials}
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="text-xs font-black text-gray-900 truncate leading-tight">{leftInitials}</p>
+                          <p className="text-xs font-black text-gray-900 truncate leading-tight uppercase">{leftInitials}</p>
                         </div>
                       </div>
 
@@ -651,10 +654,10 @@ const Home: React.FC = () => {
 
                       <div className="flex-1 flex items-center justify-end gap-2.5 text-right min-w-0">
                         <div className="min-w-0">
-                          <p className="text-xs font-black text-gray-900 truncate leading-tight">{rightInitials}</p>
+                          <p className="text-xs font-black text-gray-900 truncate leading-tight uppercase">{rightInitials}</p>
                         </div>
                         {rightLogo ? (
-                          <img src={rightLogo} alt="Team" className="w-9 h-9 object-contain shrink-0" />
+                          <img src={rightLogo} alt={rightInitials} className="w-9 h-9 object-contain shrink-0" />
                         ) : (
                           <div className="w-9 h-9 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
                             {rightInitials}

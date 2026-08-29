@@ -45,6 +45,30 @@ export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: stri
   return player.name || 'Atleta'
 }
 
+export const formatClubSigla = (initials?: string | null): string => {
+  if (!initials) return 'CSC'
+  const trimmed = initials.trim()
+  if (trimmed === 'GDS CASCAIS' || trimmed === 'GDSCASCAIS' || trimmed.length > 5 || trimmed.includes(' ')) {
+    return 'CSC'
+  }
+  return trimmed.toUpperCase()
+}
+
+export const formatOpponentSigla = (opp?: { name?: string; initials?: string | null } | null): string => {
+  if (!opp) return 'ADV'
+  if (opp.initials && opp.initials.trim().length <= 6 && !opp.initials.trim().includes(' ')) {
+    return opp.initials.trim().toUpperCase()
+  }
+  if (opp.name) {
+    const words = opp.name.trim().split(/\s+/).filter(w => w.length > 1)
+    if (words.length > 1) {
+      return words.map(w => w[0].toUpperCase()).join('').substring(0, 5)
+    }
+    return opp.name.substring(0, 4).toUpperCase()
+  }
+  return 'ADV'
+}
+
 const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
   const emailMap = new Map<string, Profile>()
 
@@ -1125,19 +1149,18 @@ const CalendarPage: React.FC = () => {
     const isPractice = event.type === 'practice'
     const isAway = event.home_away === 'away'
 
-    const cscSigla = clubSettings?.initials || 'CSC'
-    const oppSigla = event.opponent?.initials || event.opponent?.name?.substring(0, 6) || 'ADV'
+    const cscSigla = formatClubSigla(clubSettings?.initials)
+    const oppSigla = formatOpponentSigla(event.opponent)
 
     // Bloco equipa Cascais
     const cscBlock = (isRight: boolean) => (
-      <div className={`flex-1 flex flex-col ${isRight ? 'items-end text-right' : 'items-start text-left'} min-w-0 justify-center`}>
-        {/* Símbolo + Sigla */}
+      <div className={`flex-1 flex items-center ${isRight ? 'justify-end' : 'justify-start'} min-w-0`}>
         <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {clubSettings?.logo_url ? (
-            <img src={clubSettings.logo_url} alt="CSC" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
+            <img src={clubSettings.logo_url} alt={cscSigla} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
           ) : (
             <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
-              CSC
+              {cscSigla}
             </div>
           )}
           <span className="font-black text-sm text-gray-900 uppercase tracking-tight whitespace-nowrap">
@@ -1149,14 +1172,13 @@ const CalendarPage: React.FC = () => {
 
     // Bloco equipa Adversário
     const opponentBlock = (isRight: boolean) => (
-      <div className={`flex-1 flex flex-col ${isRight ? 'items-end text-right' : 'items-start text-left'} min-w-0 justify-center`}>
-        {/* Símbolo + Sigla */}
+      <div className={`flex-1 flex items-center ${isRight ? 'justify-end' : 'justify-start'} min-w-0`}>
         <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {event.opponent?.logo_url ? (
-            <img src={event.opponent.logo_url} alt={event.opponent.name} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
+            <img src={event.opponent.logo_url} alt={oppSigla} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
           ) : (
             <div className="w-8 h-8 bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
-              ADV
+              {oppSigla}
             </div>
           )}
           <span className="font-black text-sm text-gray-900 uppercase tracking-tight whitespace-nowrap">
@@ -1217,14 +1239,14 @@ const CalendarPage: React.FC = () => {
           <div className="space-y-2.5">
             {/* Matchup Box (when event is a match with opponent) */}
             {isMatch && event.opponent && (
-              <div className="bg-gradient-to-b from-gray-50 to-white p-3.5 rounded-xl border border-gray-200/90 shadow-2xs space-y-2.5">
-                <div className="flex items-center justify-between gap-2.5">
+              <div className="bg-gradient-to-b from-gray-50 to-white p-3.5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-2.5">
+                <div className="flex items-center justify-between gap-3">
                   {/* Left Team (if away -> Opponent, else -> Cascais) */}
                   {isAway ? opponentBlock(false) : cscBlock(false)}
 
                   {/* VS Badge */}
-                  <div className="shrink-0 flex flex-col items-center">
-                    <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                  <div className="shrink-0 px-1 flex items-center justify-center">
+                    <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
                       VS
                     </span>
                   </div>
@@ -2013,51 +2035,60 @@ const CalendarPage: React.FC = () => {
                 {/* Matchup Box no Modal (quando Jogo com adversário) */}
                 {selectedEvent.type === 'match' && selectedEvent.opponent && (() => {
                   const isAway = selectedEvent.home_away === 'away'
+                  const cscSigla = formatClubSigla(clubSettings?.initials)
+                  const oppSigla = formatOpponentSigla(selectedEvent.opponent)
+                  const leftLogo = isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url
+                  const leftSigla = isAway ? oppSigla : cscSigla
+                  const leftName = isAway ? selectedEvent.opponent?.name : (clubSettings?.name || 'Cascais')
+                  const rightLogo = isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url
+                  const rightSigla = isAway ? cscSigla : oppSigla
+                  const rightName = isAway ? (clubSettings?.name || 'Cascais') : selectedEvent.opponent?.name
+
                   return (
-                    <div className="bg-gradient-to-b from-gray-50 to-white p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3">
-                      <div className="flex items-center justify-between gap-4">
-                        {/* Left Team (Adversário se fora, Cascais se casa/neutro) */}
-                        <div className={`flex-1 flex flex-col ${isAway ? 'items-start text-left' : 'items-start text-left'} min-w-0`}>
+                    <div className="bg-gradient-to-b from-gray-50 to-white p-4 sm:p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between gap-3 sm:gap-4">
+                        {/* Left Team */}
+                        <div className="flex-1 flex flex-col items-start text-left min-w-0">
                           <div className="flex items-center gap-2">
-                            {(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) ? (
-                              <img src={(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) || ''} alt="Team" className="w-10 h-10 object-contain shrink-0 drop-shadow-xs" />
+                            {leftLogo ? (
+                              <img src={leftLogo} alt={leftSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
                             ) : (
-                              <div className="w-10 h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shrink-0">
-                                {isAway ? (selectedEvent.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
+                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shrink-0">
+                                {leftSigla}
                               </div>
                             )}
-                            <span className="font-black text-sm sm:text-base text-gray-900 uppercase">
-                              {isAway ? (selectedEvent.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
+                            <span className="font-black text-sm sm:text-base text-gray-900 uppercase tracking-tight">
+                              {leftSigla}
                             </span>
                           </div>
-                          <span className="text-xs font-bold text-gray-700 mt-1 leading-snug">
-                            {isAway ? selectedEvent.opponent?.name : (clubSettings?.name || 'CSC Cascais')}
+                          <span className="text-[11px] sm:text-xs font-bold text-gray-600 mt-1 truncate max-w-full">
+                            {leftName}
                           </span>
                         </div>
 
                         {/* VS Badge */}
-                        <div className="shrink-0 flex flex-col items-center">
+                        <div className="shrink-0 px-1 flex flex-col items-center">
                           <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
                             VS
                           </span>
                         </div>
 
-                        {/* Right Team (Cascais se fora, Adversário se casa/neutro) */}
+                        {/* Right Team */}
                         <div className="flex-1 flex flex-col items-end text-right min-w-0">
                           <div className="flex items-center gap-2 flex-row-reverse">
-                            {(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) ? (
-                              <img src={(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) || ''} alt="Team" className="w-10 h-10 object-contain shrink-0 drop-shadow-xs" />
+                            {rightLogo ? (
+                              <img src={rightLogo} alt={rightSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
                             ) : (
-                              <div className="w-10 h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shrink-0">
-                                {isAway ? (clubSettings?.initials || 'CSC') : (selectedEvent.opponent?.initials || 'ADV')}
+                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shrink-0">
+                                {rightSigla}
                               </div>
                             )}
-                            <span className="font-black text-sm sm:text-base text-gray-900 uppercase">
-                              {isAway ? (clubSettings?.initials || 'CSC') : (selectedEvent.opponent?.initials || 'ADV')}
+                            <span className="font-black text-sm sm:text-base text-gray-900 uppercase tracking-tight">
+                              {rightSigla}
                             </span>
                           </div>
-                          <span className="text-xs font-bold text-gray-700 mt-1 leading-snug">
-                            {isAway ? (clubSettings?.name || 'CSC Cascais') : selectedEvent.opponent?.name}
+                          <span className="text-[11px] sm:text-xs font-bold text-gray-600 mt-1 truncate max-w-full">
+                            {rightName}
                           </span>
                         </div>
                       </div>
