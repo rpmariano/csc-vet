@@ -26,6 +26,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
+import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
@@ -182,6 +183,7 @@ interface CallupWithPlayer {
 
 const EventsPage: React.FC = () => {
   const { profile } = useAuth()
+  const { clubSettings } = useClub()
   const [events, setEvents] = useState<Event[]>([])
   
   // Lookups
@@ -525,6 +527,25 @@ const EventsPage: React.FC = () => {
     fetchData()
   }, [])
 
+  const getCascaisHomeField = () => {
+    if (clubSettings?.home_field_id) {
+      const f = fields.find(item => item.id === clubSettings.home_field_id)
+      if (f) return f
+    }
+    const localId = localStorage.getItem('csc_club_home_field_id')
+    if (localId) {
+      const f = fields.find(item => item.id === localId)
+      if (f) return f
+    }
+    const cascaisField = fields.find(f => 
+      f.name.toLowerCase().includes('cascais') || 
+      f.name.toLowerCase().includes('dramático') ||
+      f.name.toLowerCase().includes('dramatico')
+    )
+    if (cascaisField) return cascaisField
+    return fields[0] || null
+  }
+
   const isPlayerEligible = (player: Profile, eventType: string) => {
     if (player.status === 'inactive') return false
     if (eventType === 'gathering') return true
@@ -538,14 +559,51 @@ const EventsPage: React.FC = () => {
     }))
   }, [type, allPlayers])
 
+  // Gestão automática de campo na criação de jogos / treinos
   useEffect(() => {
-    if (type === 'match' && opponentId) {
-      const opp = opponents.find(o => o.id === opponentId)
-      if (homeAway === 'away' && opp?.home_field_id) {
-        setFieldId(opp.home_field_id)
+    if (type === 'match') {
+      if (homeAway === 'home') {
+        const cascais = getCascaisHomeField()
+        if (cascais) {
+          setFieldId(cascais.id)
+          setLocationText(cascais.address ? `${cascais.name} (${cascais.address})` : cascais.name)
+        }
+      } else if (homeAway === 'away' && opponentId) {
+        const opp = opponents.find(o => o.id === opponentId)
+        if (opp?.home_field_id) {
+          setFieldId(opp.home_field_id)
+          const f = fields.find(item => item.id === opp.home_field_id)
+          if (f) setLocationText(f.address ? `${f.name} (${f.address})` : f.name)
+        }
+      }
+    } else if (type === 'practice' && !fieldId) {
+      const cascais = getCascaisHomeField()
+      if (cascais) {
+        setFieldId(cascais.id)
+        setLocationText(cascais.address ? `${cascais.name} (${cascais.address})` : cascais.name)
       }
     }
-  }, [opponentId, homeAway, type, opponents])
+  }, [type, homeAway, opponentId, opponents, fields, clubSettings])
+
+  // Gestão automática de campo na edição de jogos
+  useEffect(() => {
+    if (editingEvent && editType === 'match') {
+      if (editHomeAway === 'home') {
+        const cascais = getCascaisHomeField()
+        if (cascais) {
+          setEditFieldId(cascais.id)
+          setEditLocationText(cascais.address ? `${cascais.name} (${cascais.address})` : cascais.name)
+        }
+      } else if (editHomeAway === 'away' && editOpponentId) {
+        const opp = opponents.find(o => o.id === editOpponentId)
+        if (opp?.home_field_id) {
+          setEditFieldId(opp.home_field_id)
+          const f = fields.find(item => item.id === opp.home_field_id)
+          if (f) setEditLocationText(f.address ? `${f.name} (${f.address})` : f.name)
+        }
+      }
+    }
+  }, [editingEvent, editType, editHomeAway, editOpponentId, opponents, fields, clubSettings])
 
   const handleSelectAll = () => {
     const eligible = allPlayers.filter(p => isPlayerEligible(p, type))
@@ -1036,20 +1094,64 @@ const EventsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 4. Localização */}
-            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2.5">
-              <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center justify-between">
-                <span className="flex items-center gap-1.5"><MapPin size={14} className="text-red-600" /> Campo / Instalação</span>
-                {currentLocationStr && <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {currentLocationStr}</span>}
-              </label>
-              <select required value={fieldId} onChange={(e) => {
-                  if (e.target.value === '__new__') { setQuickFieldTarget('create'); setIsQuickFieldModalOpen(true) } else { setFieldId(e.target.value); const sel = fields.find(f => f.id === e.target.value); setLocationText(sel ? (sel.address ? `${sel.name} (${sel.address})` : sel.name) : '') }
-                }} className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark bg-white text-xs font-medium">
-                <option value="">-- Escolher Campo / Instalação --</option>
-                <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
-                {fields.map(f => <option key={f.id} value={f.id}>🏟️ {f.name} {f.address ? `(${f.address})` : ''}</option>)}
-              </select>
-            </div>
+            {/* 4. Localização / Campo */}
+            {type === 'match' && homeAway === 'home' ? (
+              <div className="p-3.5 bg-emerald-50/80 border-2 border-emerald-300 rounded-2xl flex items-center justify-between shadow-2xs">
+                <div className="space-y-1 min-w-0 flex-1 pr-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                    <MapPin size={13} className="text-emerald-700 shrink-0" />
+                    <span>Campo do Jogo (Automático - Em Casa)</span>
+                  </span>
+                  <p className="text-xs font-black text-gray-900 truncate">
+                    🏟️ {(() => {
+                      const cascais = getCascaisHomeField()
+                      return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
+                    })()}
+                  </p>
+                </div>
+                {currentLocationStr && (
+                  <a
+                    href={getGoogleMapsUrl(currentLocationStr)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-black text-csc-dark bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-xl shadow-2xs shrink-0"
+                    title="Ver no Google Maps"
+                  >
+                    <MapPin size={12} className="text-red-500" />
+                    <span>Maps</span>
+                    <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
+            ) : (
+              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2.5">
+                <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><MapPin size={14} className="text-red-600" /> Campo / Instalação</span>
+                  {currentLocationStr && <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {currentLocationStr}</span>}
+                </label>
+                <select required value={fieldId} onChange={(e) => {
+                    if (e.target.value === '__new__') { setQuickFieldTarget('create'); setIsQuickFieldModalOpen(true) } else { setFieldId(e.target.value); const sel = fields.find(f => f.id === e.target.value); setLocationText(sel ? (sel.address ? `${sel.name} (${sel.address})` : sel.name) : '') }
+                  }} className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark bg-white text-xs font-medium">
+                  <option value="">-- Escolher Campo / Instalação --</option>
+                  <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
+                  {fields.map(f => <option key={f.id} value={f.id}>🏟️ {f.name} {f.address ? `(${f.address})` : ''}</option>)}
+                </select>
+                {currentLocationStr && (
+                  <div className="pt-1">
+                    <a
+                      href={getGoogleMapsUrl(currentLocationStr)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-black text-csc-dark bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1.5 rounded-xl transition-all shadow-2xs active:scale-95"
+                    >
+                      <MapPin size={13} className="text-red-600" />
+                      <span>Ver no Google Maps: "{currentLocationStr}"</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 5. Descrição */}
             <div>
@@ -1785,41 +1887,9 @@ const EventsPage: React.FC = () => {
                 <input type="time" value={editMeetingTime} onChange={e => setEditMeetingTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" />
               </div>
 
-              {/* Local */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-gray-700">
-                  📍 Campo / Instalação do Clube
-                </label>
-                <select
-                  required
-                  value={editFieldId}
-                  onChange={(e) => {
-                    if (e.target.value === '__new__') {
-                      setQuickFieldTarget('edit')
-                      setIsQuickFieldModalOpen(true)
-                    } else {
-                      setEditFieldId(e.target.value)
-                      const sel = fields.find(f => f.id === e.target.value)
-                      if (sel) {
-                        setEditLocationText(sel.address ? `${sel.name} (${sel.address})` : sel.name)
-                      } else {
-                        setEditLocationText('')
-                      }
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-medium bg-white"
-                >
-                  <option value="">-- Escolher Campo / Instalação do Clube --</option>
-                  <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
-                  {fields.map(f => (
-                    <option key={f.id} value={f.id}>🏟️ {f.name} {f.address ? `(${f.address})` : ''}</option>
-                  ))}
-                </select>
-              </div>
-
               {/* Campos específicos para Jogos */}
               {editType === 'match' && (
-                <div className="space-y-3 border-t border-gray-200 pt-3">
+                <div className="space-y-3 border-t border-b border-gray-200 py-3 bg-amber-50/40 p-3 rounded-2xl">
                   <div className="flex items-center gap-3">
                     <label className="text-xs font-bold text-gray-700 cursor-pointer">Amigável?</label>
                     <input 
@@ -1843,22 +1913,87 @@ const EventsPage: React.FC = () => {
                     </div>
                   )}
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Adversário</label>
-                    <select value={editOpponentId} onChange={e => setEditOpponentId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white">
-                      <option value="">-- Selecionar --</option>
-                      {opponents.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                    </select>
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Adversário</label>
+                      <select value={editOpponentId} onChange={e => setEditOpponentId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white">
+                        <option value="">-- Selecionar --</option>
+                        {opponents.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                      </select>
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Casa/Fora</label>
-                    <select value={editHomeAway} onChange={e => setEditHomeAway(e.target.value as any)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white">
-                      <option value="home">Casa</option>
-                      <option value="away">Fora</option>
-                      <option value="neutral">Neutro</option>
-                    </select>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Condição de Jogo</label>
+                      <select value={editHomeAway} onChange={e => setEditHomeAway(e.target.value as any)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium">
+                        <option value="home">🏠 Casa</option>
+                        <option value="away">✈️ Fora</option>
+                        <option value="neutral">⚖️ Campo Neutro</option>
+                      </select>
+                    </div>
                   </div>
+                </div>
+              )}
+
+              {/* Local / Campo */}
+              {editType === 'match' && editHomeAway === 'home' ? (
+                <div className="p-3.5 bg-emerald-50/80 border-2 border-emerald-300 rounded-2xl flex items-center justify-between shadow-2xs">
+                  <div className="space-y-1 min-w-0 flex-1 pr-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                      <MapPin size={13} className="text-emerald-700 shrink-0" />
+                      <span>Campo do Jogo (Automático - Em Casa)</span>
+                    </span>
+                    <p className="text-xs font-black text-gray-900 truncate">
+                      🏟️ {(() => {
+                        const cascais = getCascaisHomeField()
+                        return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
+                      })()}
+                    </p>
+                  </div>
+                  {editLocationText && (
+                    <a
+                      href={getGoogleMapsUrl(editLocationText)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-black text-csc-dark bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-xl shadow-2xs shrink-0"
+                      title="Ver no Google Maps"
+                    >
+                      <MapPin size={12} className="text-red-500" />
+                      <span>Maps</span>
+                      <ExternalLink size={11} />
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-700 flex items-center justify-between">
+                    <span>📍 Campo / Instalação</span>
+                    {editLocationText && <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {editLocationText}</span>}
+                  </label>
+                  <select
+                    required
+                    value={editFieldId}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') {
+                        setQuickFieldTarget('edit')
+                        setIsQuickFieldModalOpen(true)
+                      } else {
+                        setEditFieldId(e.target.value)
+                        const sel = fields.find(f => f.id === e.target.value)
+                        if (sel) {
+                          setEditLocationText(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                        } else {
+                          setEditLocationText('')
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-medium bg-white"
+                  >
+                    <option value="">-- Escolher Campo / Instalação --</option>
+                    <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
+                    {fields.map(f => (
+                      <option key={f.id} value={f.id}>🏟️ {f.name} {f.address ? `(${f.address})` : ''}</option>
+                    ))}
+                  </select>
                 </div>
               )}
 

@@ -48,6 +48,8 @@ export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: stri
   return player.name || 'Atleta'
 }
 
+export const getGoogleMapsUrl = (query: string) => query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : '#'
+
 export const formatClubSigla = (initials?: string | null): string => {
   if (!initials) return 'CSC'
   const trimmed = initials.trim()
@@ -207,11 +209,20 @@ interface Tournament {
   season?: string | null
 }
 
+interface Opponent {
+  id: string
+  name: string
+  initials?: string
+  logo_url?: string
+  home_field_id?: string | null
+}
+
 const CalendarPage: React.FC = () => {
   const { profile } = useAuth()
   const { clubSettings } = useClub()
   const [events, setEvents] = useState<Event[]>([])
   const [fields, setFields] = useState<Field[]>([])
+  const [opponents, setOpponents] = useState<Opponent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -311,6 +322,8 @@ const CalendarPage: React.FC = () => {
   const [description, setDescription] = useState('')
   const [isFriendly, setIsFriendly] = useState(false)
   const [tournamentId, setTournamentId] = useState('')
+  const [opponentId, setOpponentId] = useState('')
+  const [homeAway, setHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
   const [maxPlayers, setMaxPlayers] = useState<number | ''>('')
 
   // Recurrence states
@@ -331,6 +344,8 @@ const CalendarPage: React.FC = () => {
   const [editDescription, setEditDescription] = useState('')
   const [editMaxPlayers, setEditMaxPlayers] = useState<number | ''>('')
   const [editTournamentId, setEditTournamentId] = useState('')
+  const [editOpponentId, setEditOpponentId] = useState('')
+  const [editHomeAway, setEditHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
   const [editIsFriendly, setEditIsFriendly] = useState(false)
   const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
   const [isEditBatchCalling, setIsEditBatchCalling] = useState(false)
@@ -390,16 +405,72 @@ const CalendarPage: React.FC = () => {
     }
   }, [dateTime])
 
-  // Auto-selecionar o campo do clube nos treinos ou ao abrir modal se existir
-  useEffect(() => {
-    if (isAddModalOpen && !fieldId && clubSettings?.home_field_id) {
+  const getCascaisHomeField = () => {
+    if (clubSettings?.home_field_id) {
       const f = fields.find(item => item.id === clubSettings.home_field_id)
-      if (f) {
-        setFieldId(f.id)
-        setLocation(f.address ? `${f.name} (${f.address})` : f.name)
+      if (f) return f
+    }
+    const localId = localStorage.getItem('csc_club_home_field_id')
+    if (localId) {
+      const f = fields.find(item => item.id === localId)
+      if (f) return f
+    }
+    const cascaisField = fields.find(f => 
+      f.name.toLowerCase().includes('cascais') || 
+      f.name.toLowerCase().includes('dramático') ||
+      f.name.toLowerCase().includes('dramatico')
+    )
+    if (cascaisField) return cascaisField
+    return fields[0] || null
+  }
+
+  // Auto-selecionar o campo nos jogos e treinos ao criar
+  useEffect(() => {
+    if (isAddModalOpen) {
+      if (type === 'match') {
+        if (homeAway === 'home') {
+          const cascais = getCascaisHomeField()
+          if (cascais) {
+            setFieldId(cascais.id)
+            setLocation(cascais.address ? `${cascais.name} (${cascais.address})` : cascais.name)
+          }
+        } else if (homeAway === 'away' && opponentId) {
+          const opp = opponents.find(o => o.id === opponentId)
+          if (opp?.home_field_id) {
+            setFieldId(opp.home_field_id)
+            const f = fields.find(item => item.id === opp.home_field_id)
+            if (f) setLocation(f.address ? `${f.name} (${f.address})` : f.name)
+          }
+        }
+      } else if (type === 'practice' && !fieldId) {
+        const cascais = getCascaisHomeField()
+        if (cascais) {
+          setFieldId(cascais.id)
+          setLocation(cascais.address ? `${cascais.name} (${cascais.address})` : cascais.name)
+        }
       }
     }
-  }, [isAddModalOpen, type, clubSettings, fields, fieldId])
+  }, [isAddModalOpen, type, homeAway, opponentId, opponents, fields, clubSettings])
+
+  // Auto-selecionar o campo nos jogos ao editar
+  useEffect(() => {
+    if (isEditModalOpen && editType === 'match') {
+      if (editHomeAway === 'home') {
+        const cascais = getCascaisHomeField()
+        if (cascais) {
+          setEditFieldId(cascais.id)
+          setEditLocation(cascais.address ? `${cascais.name} (${cascais.address})` : cascais.name)
+        }
+      } else if (editHomeAway === 'away' && editOpponentId) {
+        const opp = opponents.find(o => o.id === editOpponentId)
+        if (opp?.home_field_id) {
+          setEditFieldId(opp.home_field_id)
+          const f = fields.find(item => item.id === opp.home_field_id)
+          if (f) setEditLocation(f.address ? `${f.name} (${f.address})` : f.name)
+        }
+      }
+    }
+  }, [isEditModalOpen, editType, editHomeAway, editOpponentId, opponents, fields, clubSettings])
 
   // Desativar recorrência em eventos que não sejam treino
   useEffect(() => {
@@ -508,7 +579,7 @@ const CalendarPage: React.FC = () => {
   const fetchEventsAndData = async () => {
     setLoading(true)
     try {
-      const [evRes, callupsRes, profilesRes, fieldsRes, tourRes] = await Promise.all([
+      const [evRes, callupsRes, profilesRes, fieldsRes, tourRes, oppsRes] = await Promise.all([
         supabase
           .from('events')
           .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
@@ -526,11 +597,19 @@ const CalendarPage: React.FC = () => {
           .select('id, name, address'),
         supabase
           .from('tournaments')
-          .select('id, name, season')
+          .select('id, name, season'),
+        supabase
+          .from('opponents')
+          .select('id, name, initials, logo_url, home_field_id')
+          .order('name')
       ])
 
       if (fieldsRes.data) {
         setFields(fieldsRes.data as Field[])
+      }
+
+      if (oppsRes.data) {
+        setOpponents(oppsRes.data as Opponent[])
       }
 
       if (tourRes.data) {
@@ -765,6 +844,8 @@ const CalendarPage: React.FC = () => {
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : undefined,
           tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
+          opponent_id: type === 'match' ? (opponentId || null) : null,
+          home_away: type === 'match' ? homeAway : null,
           created_by: profile?.id
         }))
 
@@ -811,6 +892,8 @@ const CalendarPage: React.FC = () => {
           max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
           is_friendly: type === 'match' ? isFriendly : false,
           tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
+          opponent_id: type === 'match' ? (opponentId || null) : null,
+          home_away: type === 'match' ? homeAway : null,
           created_by: profile?.id
         }
 
@@ -847,6 +930,8 @@ const CalendarPage: React.FC = () => {
       setDescription('')
       setMaxPlayers('')
       setTournamentId('')
+      setOpponentId('')
+      setHomeAway('home')
       setIsFriendly(true)
       setIsRecurring(false)
       setRecurrenceEndDate('')
@@ -873,6 +958,8 @@ const CalendarPage: React.FC = () => {
     setEditDescription(ev.description || '')
     setEditMaxPlayers(ev.max_players ?? '')
     setEditTournamentId(ev.tournament_id || (ev.tournament?.id || ''))
+    setEditOpponentId(ev.opponent_id || '')
+    setEditHomeAway(ev.home_away || 'home')
     setEditIsFriendly(Boolean(ev.is_friendly))
     setEditPlayerSearchTerm('')
     setIsEditModalOpen(true)
@@ -911,6 +998,8 @@ const CalendarPage: React.FC = () => {
         description: editDescription,
         max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
         tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
+        opponent_id: editType === 'match' ? (editOpponentId || null) : null,
+        home_away: editType === 'match' ? editHomeAway : null,
         is_friendly: editType === 'match' ? editIsFriendly : false
       }
 
@@ -2708,6 +2797,35 @@ const CalendarPage: React.FC = () => {
                         </select>
                       </div>
                     )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Adversário</label>
+                        <select
+                          value={opponentId}
+                          onChange={(e) => setOpponentId(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                        >
+                          <option value="">-- Selecionar Adversário --</option>
+                          {opponents.map(o => (
+                            <option key={o.id} value={o.id}>{o.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Condição de Jogo</label>
+                        <select
+                          value={homeAway}
+                          onChange={(e) => setHomeAway(e.target.value as any)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                        >
+                          <option value="home">🏠 Casa</option>
+                          <option value="away">✈️ Fora</option>
+                          <option value="neutral">⚖️ Campo Neutro</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -2735,45 +2853,75 @@ const CalendarPage: React.FC = () => {
                 </div>
 
                 {/* Campo / Instalação do Evento */}
-                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <label className="font-bold text-gray-800 flex items-center gap-1.5">
-                      <span>🏟️ Campo / Instalação *</span>
-                      {location && (
-                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                          ✓ {location}
-                        </span>
-                      )}
-                    </label>
+                {type === 'match' && homeAway === 'home' ? (
+                  <div className="p-3.5 bg-emerald-50/80 border-2 border-emerald-300 rounded-2xl flex items-center justify-between shadow-2xs">
+                    <div className="space-y-1 min-w-0 flex-1 pr-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                        <MapPin size={13} className="text-emerald-700 shrink-0" />
+                        <span>Campo do Jogo (Automático - Em Casa)</span>
+                      </span>
+                      <p className="text-xs font-black text-gray-900 truncate">
+                        🏟️ {(() => {
+                          const cascais = getCascaisHomeField()
+                          return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
+                        })()}
+                      </p>
+                    </div>
+                    {location && (
+                      <a
+                        href={getGoogleMapsUrl(location)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-black text-csc-dark bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-xl shadow-2xs shrink-0"
+                        title="Ver no Google Maps"
+                      >
+                        <MapPin size={12} className="text-red-500" />
+                        <span>Maps</span>
+                        <ExternalLink size={11} />
+                      </a>
+                    )}
                   </div>
-                  <select
-                    required
-                    value={fieldId}
-                    onChange={(e) => {
-                      if (e.target.value === '__new__') {
-                        setQuickFieldTarget('create')
-                        setIsQuickFieldModalOpen(true)
-                      } else {
-                        setFieldId(e.target.value)
-                        const sel = fields.find(f => f.id === e.target.value)
-                        if (sel) {
-                          setLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                ) : (
+                  <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-gray-800 flex items-center gap-1.5">
+                        <span>🏟️ Campo / Instalação *</span>
+                        {location && (
+                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                            ✓ {location}
+                          </span>
+                        )}
+                      </label>
+                    </div>
+                    <select
+                      required
+                      value={fieldId}
+                      onChange={(e) => {
+                        if (e.target.value === '__new__') {
+                          setQuickFieldTarget('create')
+                          setIsQuickFieldModalOpen(true)
                         } else {
-                          setLocation('')
+                          setFieldId(e.target.value)
+                          const sel = fields.find(f => f.id === e.target.value)
+                          if (sel) {
+                            setLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                          } else {
+                            setLocation('')
+                          }
                         }
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
-                  >
-                    <option value="">-- Escolher Campo / Instalação do Clube --</option>
-                    <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
-                    {fields.map(f => (
-                      <option key={f.id} value={f.id}>
-                        🏟️ {f.name} {f.address ? `(${f.address})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                    >
+                      <option value="">-- Escolher Campo / Instalação do Clube --</option>
+                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
+                      {fields.map(f => (
+                        <option key={f.id} value={f.id}>
+                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
@@ -3179,6 +3327,35 @@ const CalendarPage: React.FC = () => {
                         </select>
                       </div>
                     )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Adversário</label>
+                        <select
+                          value={editOpponentId}
+                          onChange={(e) => setEditOpponentId(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                        >
+                          <option value="">-- Selecionar Adversário --</option>
+                          {opponents.map(o => (
+                            <option key={o.id} value={o.id}>{o.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Condição de Jogo</label>
+                        <select
+                          value={editHomeAway}
+                          onChange={(e) => setEditHomeAway(e.target.value as any)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                        >
+                          <option value="home">🏠 Casa</option>
+                          <option value="away">✈️ Fora</option>
+                          <option value="neutral">⚖️ Campo Neutro</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -3207,45 +3384,75 @@ const CalendarPage: React.FC = () => {
                 </div>
 
                 {/* Campo / Instalação do Evento */}
-                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <label className="font-bold text-gray-800 flex items-center gap-1.5">
-                      <span>🏟️ Campo / Instalação *</span>
-                      {editLocation && (
-                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                          ✓ {editLocation}
-                        </span>
-                      )}
-                    </label>
+                {editType === 'match' && editHomeAway === 'home' ? (
+                  <div className="p-3.5 bg-emerald-50/80 border-2 border-emerald-300 rounded-2xl flex items-center justify-between shadow-2xs">
+                    <div className="space-y-1 min-w-0 flex-1 pr-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                        <MapPin size={13} className="text-emerald-700 shrink-0" />
+                        <span>Campo do Jogo (Automático - Em Casa)</span>
+                      </span>
+                      <p className="text-xs font-black text-gray-900 truncate">
+                        🏟️ {(() => {
+                          const cascais = getCascaisHomeField()
+                          return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
+                        })()}
+                      </p>
+                    </div>
+                    {editLocation && (
+                      <a
+                        href={getGoogleMapsUrl(editLocation)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-black text-csc-dark bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-xl shadow-2xs shrink-0"
+                        title="Ver no Google Maps"
+                      >
+                        <MapPin size={12} className="text-red-500" />
+                        <span>Maps</span>
+                        <ExternalLink size={11} />
+                      </a>
+                    )}
                   </div>
-                  <select
-                    required
-                    value={editFieldId}
-                    onChange={(e) => {
-                      if (e.target.value === '__new__') {
-                        setQuickFieldTarget('edit')
-                        setIsQuickFieldModalOpen(true)
-                      } else {
-                        setEditFieldId(e.target.value)
-                        const sel = fields.find(f => f.id === e.target.value)
-                        if (sel) {
-                          setEditLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                ) : (
+                  <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-gray-800 flex items-center gap-1.5">
+                        <span>🏟️ Campo / Instalação *</span>
+                        {editLocation && (
+                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                            ✓ {editLocation}
+                          </span>
+                        )}
+                      </label>
+                    </div>
+                    <select
+                      required
+                      value={editFieldId}
+                      onChange={(e) => {
+                        if (e.target.value === '__new__') {
+                          setQuickFieldTarget('edit')
+                          setIsQuickFieldModalOpen(true)
                         } else {
-                          setEditLocation('')
+                          setEditFieldId(e.target.value)
+                          const sel = fields.find(f => f.id === e.target.value)
+                          if (sel) {
+                            setEditLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                          } else {
+                            setEditLocation('')
+                          }
                         }
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
-                  >
-                    <option value="">-- Escolher Campo / Instalação do Clube --</option>
-                    <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
-                    {fields.map(f => (
-                      <option key={f.id} value={f.id}>
-                        🏟️ {f.name} {f.address ? `(${f.address})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                    >
+                      <option value="">-- Escolher Campo / Instalação do Clube --</option>
+                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
+                      {fields.map(f => (
+                        <option key={f.id} value={f.id}>
+                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
