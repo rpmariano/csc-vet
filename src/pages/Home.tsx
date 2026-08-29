@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { 
   Bell, 
   Calendar, 
-  DollarSign, 
   MapPin, 
   CheckCircle2, 
   XCircle, 
@@ -12,7 +11,6 @@ import {
   BarChart3,
   ChevronRight,
   ChevronLeft,
-  ArrowRight,
   Trophy
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -62,13 +60,6 @@ interface Callup {
   event: Event
 }
 
-interface Due {
-  id: string
-  month_year: string
-  amount: number
-  status: 'pending' | 'paid' | 'late'
-}
-
 const Home: React.FC = () => {
   const { profile } = useAuth()
   const { clubSettings } = useClub()
@@ -84,7 +75,6 @@ const Home: React.FC = () => {
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [myCallups, setMyCallups] = useState<Callup[]>([])
-  const [pendingDues, setPendingDues] = useState<Due[]>([])
   const [loading, setLoading] = useState(true)
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
@@ -214,21 +204,6 @@ const Home: React.FC = () => {
           })
           setMyCallups(userCalls)
         }
-
-        // 5. Fetch dues
-        const { data: duesData } = await supabase
-          .from('dues')
-          .select('*')
-          .eq('player_id', profile.id)
-          .neq('status', 'paid')
-
-        if (duesData && duesData.length > 0) {
-          setPendingDues(duesData as Due[])
-        } else {
-          setPendingDues([
-            { id: 'd-demo', month_year: '08 Setembro', amount: 15, status: 'pending' }
-          ])
-        }
       } catch (err) {
         console.error(err)
       } finally {
@@ -328,46 +303,6 @@ const Home: React.FC = () => {
     </div>
   )
 
-  const renderDuesCard = () => (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-2.5">
-      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <DollarSign size={18} className={pendingDues.length > 0 ? "text-amber-500" : "text-emerald-600"} />
-          <h3 className="text-sm sm:text-base font-black text-gray-900">Quotas & Mensalidades</h3>
-        </div>
-        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-          pendingDues.length > 0 ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-        }`}>
-          {pendingDues.length > 0 ? `${pendingDues.length} Pendente` : '✓ Em Dia'}
-        </span>
-      </div>
-
-      {pendingDues.length > 0 ? (
-        <div className="bg-red-50/70 border border-red-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="space-y-0.5">
-            <p className="text-xs text-gray-700 font-semibold">
-              Mês de referência: <strong className="text-gray-900">{pendingDues[0].month_year}</strong>
-            </p>
-            <p className="text-[11px] text-gray-500">
-              Regulariza a tua quota junto do tesoureiro.
-            </p>
-          </div>
-          <p className="text-lg sm:text-xl font-black text-red-700 shrink-0">
-            {pendingDues[0].amount} €
-          </p>
-        </div>
-      ) : (
-        <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 flex items-center justify-between text-xs text-emerald-900">
-          <span className="font-bold flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-            <span>Quotas regularizadas!</span>
-          </span>
-          <span className="font-extrabold text-emerald-700 shrink-0">0.00 €</span>
-        </div>
-      )}
-    </div>
-  )
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -411,10 +346,9 @@ const Home: React.FC = () => {
         )
       })()}
 
-      {/* 2. EM MOBILE: COMUNICADOS E QUOTAS NO TOPO (DEBAIXO DO ALERTA) */}
+      {/* 2. EM MOBILE: COMUNICADOS NO TOPO (DEBAIXO DO ALERTA) */}
       <div className="block lg:hidden space-y-5">
         {renderAnnouncementsCard()}
-        {renderDuesCard()}
       </div>
 
       {/* GRELHA PRINCIPAL DO DASHBOARD */}
@@ -759,70 +693,14 @@ const Home: React.FC = () => {
 
         </div>
 
-        {/* COLUNA DIREITA / SIDEBAR EM DESKTOP (Comunicações, Quotas, Perfil e Atalhos) */}
+        {/* COLUNA DIREITA / SIDEBAR EM DESKTOP (Comunicações e Atalhos) */}
         <div className="space-y-5">
-          {/* APENAS DESKTOP: COMUNICAÇÕES E QUOTAS NO TOPO DA SIDEBAR */}
+          {/* APENAS DESKTOP: COMUNICAÇÕES NO TOPO DA SIDEBAR */}
           <div className="hidden lg:block space-y-5">
             {renderAnnouncementsCard()}
-            {renderDuesCard()}
           </div>
 
-          {/* CARD 3: PERFIL DO ATLETA */}
-          {profile && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs">
-              <div className="flex items-center gap-3.5 mb-3 pb-3 border-b border-gray-100">
-                {profile.photo_url ? (
-                  <img src={profile.photo_url} alt={profile.name} className="w-11 h-11 rounded-full object-cover border-2 border-csc-gold" />
-                ) : (
-                  <div className="w-11 h-11 rounded-full bg-csc-dark text-white flex items-center justify-center font-black text-base">
-                    {profile.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="overflow-hidden">
-                  <p className="font-extrabold text-sm text-gray-900 truncate">{profile.name}</p>
-                  <p className="text-xs text-gray-500 font-medium">{profile.position || 'Jogador'}</p>
-                  <span className={`inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded mt-0.5 ${
-                    profile.status === 'injured'
-                      ? 'bg-red-100 text-red-800'
-                      : profile.status === 'inactive'
-                      ? 'bg-gray-200 text-gray-700'
-                      : 'bg-green-100 text-green-800'
-                  }`}>
-                    {profile.status === 'injured' ? '🔴 Lesionado' : profile.status === 'inactive' ? '⚪ Inativo' : '🟢 Apto'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 text-xs text-gray-600">
-                {profile.jersey_number && (
-                  <div className="flex justify-between py-0.5 border-b border-gray-50">
-                    <span className="font-semibold text-gray-400">Nº Camisola:</span>
-                    <strong className="text-gray-800">#{profile.jersey_number}</strong>
-                  </div>
-                )}
-                {profile.member_number && (
-                  <div className="flex justify-between py-0.5 border-b border-gray-50">
-                    <span className="font-semibold text-gray-400">Nº Sócio:</span>
-                    <strong className="text-gray-800">{profile.member_number}</strong>
-                  </div>
-                )}
-                <div className="flex justify-between py-0.5">
-                  <span className="font-semibold text-gray-400">Email:</span>
-                  <span className="text-gray-800 font-medium truncate max-w-[150px]">{profile.email}</span>
-                </div>
-              </div>
-
-              <Link
-                to="/settings"
-                className="mt-3 w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1"
-              >
-                <span>Editar o Meu Perfil</span>
-                <ArrowRight size={13} />
-              </Link>
-            </div>
-          )}
-
-          {/* CARD 4: ATALHOS RÁPIDOS */}
+          {/* CARD DE ATALHOS RÁPIDOS */}
           <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-2.5">
             <h3 className="text-xs font-black uppercase text-gray-400 tracking-wider">
               Acesso Rápido
