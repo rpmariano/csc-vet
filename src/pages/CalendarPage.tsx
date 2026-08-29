@@ -1180,42 +1180,56 @@ const CalendarPage: React.FC = () => {
             )}
 
             {/* Ação rápida de Presença (RSVP) */}
-            {myCallup && (
-              <div 
-                onClick={(e) => e.stopPropagation()} 
-                className="pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2"
-              >
-                <span className="text-xs font-bold text-gray-700">Presença:</span>
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <button
-                    type="button"
-                    disabled={myCallup.status === 'confirmed'}
-                    onClick={() => handleCallupResponse(event.id, 'confirmed')}
-                    className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
-                      myCallup.status === 'confirmed'
-                        ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
-                        : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
-                    }`}
-                  >
-                    <CheckCircle2 size={13} />
-                    <span>Confirmar</span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={myCallup.status === 'declined'}
-                    onClick={() => handleCallupResponse(event.id, 'declined')}
-                    className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
-                      myCallup.status === 'declined'
-                        ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
-                        : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
-                    }`}
-                  >
-                    <XCircle size={13} />
-                    <span>Recusar</span>
-                  </button>
+            {myCallup && (() => {
+              const eventTime = new Date(event.date_time).getTime()
+              const now = new Date().getTime()
+              const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
+              const isPractice = event.type === 'practice'
+              const isRsvpOpen = !isPractice || diffDays <= 6
+
+              return (
+                <div 
+                  onClick={(e) => e.stopPropagation()} 
+                  className="pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap"
+                >
+                  <span className="text-xs font-bold text-gray-700">Presença:</span>
+                  {!isRsvpOpen ? (
+                    <span className="text-[11px] font-bold text-amber-900 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-xl">
+                      ⏱️ Confirmações abrem 6 dias antes ({new Date(eventTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })})
+                    </span>
+                  ) : (
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <button
+                        type="button"
+                        disabled={myCallup.status === 'confirmed'}
+                        onClick={() => handleCallupResponse(event.id, 'confirmed')}
+                        className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                          myCallup.status === 'confirmed'
+                            ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                            : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
+                        }`}
+                      >
+                        <CheckCircle2 size={13} />
+                        <span>Confirmar</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={myCallup.status === 'declined'}
+                        onClick={() => handleCallupResponse(event.id, 'declined')}
+                        className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                          myCallup.status === 'declined'
+                            ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                            : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
+                        }`}
+                      >
+                        <XCircle size={13} />
+                        <span>Recusar</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              )
+            })()}
           </div>
         </div>
       </div>
@@ -1768,6 +1782,12 @@ const CalendarPage: React.FC = () => {
                   const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
                   if (!myCallup) return null
 
+                  const eventTime = new Date(selectedEvent.date_time).getTime()
+                  const now = new Date().getTime()
+                  const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
+                  const isPractice = selectedEvent.type === 'practice'
+                  const isRsvpOpen = !isPractice || diffDays <= 6
+
                   return (
                     <div className="p-4 bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl border border-gray-300 space-y-2.5 shadow-2xs">
                       <div>
@@ -1782,32 +1802,38 @@ const CalendarPage: React.FC = () => {
                           </span>
                         </p>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          disabled={myCallup.status === 'confirmed'}
-                          onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                          className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${
-                            myCallup.status === 'confirmed' 
-                              ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none' 
-                              : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-xs'
-                          }`}
-                        >
-                          <CheckCircle2 size={15} /> Confirmar
-                        </button>
-                        <button
-                          type="button"
-                          disabled={myCallup.status === 'declined'}
-                          onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                          className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${
-                            myCallup.status === 'declined' 
-                              ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none' 
-                              : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95 shadow-xs'
-                          }`}
-                        >
-                          <XCircle size={15} /> Recusar
-                        </button>
-                      </div>
+                      {!isRsvpOpen ? (
+                        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-950 font-medium">
+                          ⏱️ O pedido de confirmação de presença abre <strong>6 dias antes do treino</strong> (a {new Date(eventTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })}).
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={myCallup.status === 'confirmed'}
+                            onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
+                            className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${
+                              myCallup.status === 'confirmed' 
+                                ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none' 
+                                : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-xs'
+                            }`}
+                          >
+                            <CheckCircle2 size={15} /> Confirmar
+                          </button>
+                          <button
+                            type="button"
+                            disabled={myCallup.status === 'declined'}
+                            onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
+                            className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${
+                              myCallup.status === 'declined' 
+                                ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none' 
+                                : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95 shadow-xs'
+                            }`}
+                          >
+                            <XCircle size={15} /> Recusar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })()}

@@ -685,40 +685,51 @@ const Home: React.FC = () => {
                   const currentPracticeCallup = myCallups.find(c => c.event_id === currentPractice.id)
                   if (!currentPracticeCallup) return null
 
+                  const practiceTime = new Date(currentPractice.date_time).getTime()
+                  const now = new Date().getTime()
+                  const diffDays = Math.ceil((practiceTime - now) / (1000 * 60 * 60 * 24))
+                  const isPracticeRsvpOpen = diffDays <= 6
+
                   return (
                     <div 
                       onClick={(e) => e.stopPropagation()}
-                      className="pt-1.5 border-t border-gray-100 flex items-center justify-between gap-2"
+                      className="pt-1.5 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap"
                     >
                       <span className="text-xs font-bold text-gray-700">A tua presença:</span>
-                      <div className="flex gap-1.5">
-                        <button
-                          type="button"
-                          disabled={currentPracticeCallup.status === 'confirmed'}
-                          onClick={() => handleCallupResponse(currentPracticeCallup.id, 'confirmed')}
-                          className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
-                            currentPracticeCallup.status === 'confirmed'
-                              ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
-                              : 'bg-white text-emerald-700 border border-emerald-600 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
-                          }`}
-                        >
-                          <CheckCircle2 size={13} />
-                          <span>Confirmar</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={currentPracticeCallup.status === 'declined'}
-                          onClick={() => handleCallupResponse(currentPracticeCallup.id, 'declined')}
-                          className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
-                            currentPracticeCallup.status === 'declined'
-                              ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
-                              : 'bg-white text-red-700 border border-red-600 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
-                          }`}
-                        >
-                          <XCircle size={13} />
-                          <span>Recusar</span>
-                        </button>
-                      </div>
+                      {!isPracticeRsvpOpen ? (
+                        <span className="text-[11px] font-bold text-amber-900 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-xl">
+                          ⏱️ Abre 6 dias antes ({new Date(practiceTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })})
+                        </span>
+                      ) : (
+                        <div className="flex gap-1.5">
+                          <button
+                            type="button"
+                            disabled={currentPracticeCallup.status === 'confirmed'}
+                            onClick={() => handleCallupResponse(currentPracticeCallup.id, 'confirmed')}
+                            className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                              currentPracticeCallup.status === 'confirmed'
+                                ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                                : 'bg-white text-emerald-700 border border-emerald-600 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
+                            }`}
+                          >
+                            <CheckCircle2 size={13} />
+                            <span>Confirmar</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={currentPracticeCallup.status === 'declined'}
+                            onClick={() => handleCallupResponse(currentPracticeCallup.id, 'declined')}
+                            className={`text-xs font-black px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                              currentPracticeCallup.status === 'declined'
+                                ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
+                                : 'bg-white text-red-700 border border-red-600 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
+                            }`}
+                          >
+                            <XCircle size={13} />
+                            <span>Recusar</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })()}
