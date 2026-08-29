@@ -205,6 +205,8 @@ const CalendarPage: React.FC = () => {
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [modalCallupStatusFilter, setModalCallupStatusFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
   const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(false)
+  const [currentPendingIndex, setCurrentPendingIndex] = useState(0)
+  const [pendingTouchStartX, setPendingTouchStartX] = useState<number | null>(null)
 
   // Form states
   const [title, setTitle] = useState('')
@@ -1308,86 +1310,139 @@ const CalendarPage: React.FC = () => {
         </div>
       )}
 
-      {/* Banner Superior com Todas as Convocatórias Pendentes */}
-      {myPendingEvents.length > 0 && (
-        <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-csc-dark rounded-2xl p-3.5 sm:p-4 shadow-sm border-2 border-amber-600 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🔔</span>
-              <div>
-                <h3 className="text-xs sm:text-sm font-black">
-                  Tens {myPendingEvents.length} {myPendingEvents.length === 1 ? 'convocatória pendente' : 'convocatórias pendentes'}!
-                </h3>
-                <p className="text-[11px] font-semibold text-amber-950">Responde diretamente abaixo ou clica para ver os detalhes:</p>
+      {/* Banner Superior com Todas as Convocatórias Pendentes em Carrossel */}
+      {myPendingEvents.length > 0 && (() => {
+        const activeIndex = Math.min(currentPendingIndex, myPendingEvents.length - 1)
+        const pe = myPendingEvents[activeIndex] || myPendingEvents[0]
+        if (!pe) return null
+
+        const peCallups = eventCallups[pe.id] || []
+        const peCall = profile ? peCallups.find(c => c.player_id === profile.id) : null
+        const isPePractice = pe.type === 'practice'
+        const peTime = new Date(pe.date_time).getTime()
+        const peDiff = Math.ceil((peTime - Date.now()) / (1000 * 60 * 60 * 24))
+        const isPeRsvpOpen = !isPePractice || peDiff <= 6
+        const peEmoji = pe.type === 'match' ? '⚽' : pe.type === 'practice' ? '🏃' : '🎉'
+        const locStr = getEventLocation(pe) || 'Local a definir'
+        const dateStr = new Date(pe.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })
+
+        const nextSlide = (e?: React.MouseEvent) => {
+          e?.stopPropagation()
+          if (myPendingEvents.length > 1) {
+            setCurrentPendingIndex(prev => (prev + 1) % myPendingEvents.length)
+          }
+        }
+
+        const prevSlide = (e?: React.MouseEvent) => {
+          e?.stopPropagation()
+          if (myPendingEvents.length > 1) {
+            setCurrentPendingIndex(prev => (prev - 1 + myPendingEvents.length) % myPendingEvents.length)
+          }
+        }
+
+        return (
+          <div 
+            onTouchStart={(e) => setPendingTouchStartX(e.targetTouches[0].clientX)}
+            onTouchEnd={(e) => {
+              if (pendingTouchStartX === null) return
+              const diff = pendingTouchStartX - e.changedTouches[0].clientX
+              if (Math.abs(diff) > 40) {
+                if (diff > 0) nextSlide()
+                else prevSlide()
+              }
+              setPendingTouchStartX(null)
+            }}
+            className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-csc-dark rounded-3xl p-4 sm:p-5 shadow-sm border-2 border-amber-600 space-y-3 select-none"
+          >
+            {/* Header do Alerta */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl shrink-0">🔔</span>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-black text-csc-dark">
+                    Tens {myPendingEvents.length} {myPendingEvents.length === 1 ? 'convocatória pendente' : 'convocatórias pendentes'}!
+                  </h3>
+                  <p className="text-[11px] font-semibold text-amber-950">Responde diretamente abaixo ou clica para ver os detalhes:</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            {myPendingEvents.map(pe => {
-              const peCallups = eventCallups[pe.id] || []
-              const peCall = profile ? peCallups.find(c => c.player_id === profile.id) : null
-              const isPePractice = pe.type === 'practice'
-              const peTime = new Date(pe.date_time).getTime()
-              const peDiff = Math.ceil((peTime - Date.now()) / (1000 * 60 * 60 * 24))
-              const isPeRsvpOpen = !isPePractice || peDiff <= 6
-              const peEmoji = pe.type === 'match' ? '⚽' : pe.type === 'practice' ? '🏃' : '🎉'
-
-              return (
-                <div 
-                  key={pe.id}
-                  className="bg-white/95 backdrop-blur-xs p-3 rounded-xl border border-amber-300 shadow-xs flex flex-col justify-between space-y-2"
-                >
-                  <div 
-                    onClick={() => setSelectedEvent(pe)}
-                    className="cursor-pointer hover:opacity-80"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-gray-900 truncate flex items-center gap-1">
-                        <span>{peEmoji}</span>
-                        <span>{pe.title}</span>
-                      </span>
-                      <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.2 rounded">
-                        {new Date(pe.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-gray-600 mt-0.5 truncate">
-                      📍 {getEventLocation(pe) || 'Local a definir'}
-                    </p>
-                  </div>
-
-                  {isPeRsvpOpen ? (
-                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-gray-100">
-                      <button
-                        type="button"
-                        disabled={peCall?.status === 'confirmed'}
-                        onClick={() => handleCallupResponse(pe.id, 'confirmed')}
-                        className="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
-                      >
-                        <CheckCircle2 size={13} />
-                        <span>Confirmar</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={peCall?.status === 'declined'}
-                        onClick={() => handleCallupResponse(pe.id, 'declined')}
-                        className="flex-1 py-1.5 bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
-                      >
-                        <XCircle size={13} />
-                        <span>Recusar</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-[10px] text-center font-bold text-amber-800 bg-amber-50 py-1 rounded-lg border border-amber-200">
-                      Abre 6 dias antes do treino
-                    </div>
-                  )}
+            {/* Card do Evento Pendente Atual */}
+            <div className="bg-white/95 backdrop-blur-xs p-4 rounded-2xl border border-amber-300 shadow-xs space-y-3">
+              <div 
+                onClick={() => setSelectedEvent(pe)}
+                className="cursor-pointer hover:opacity-85 transition-opacity"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-black text-gray-900 truncate flex items-center gap-1.5">
+                    <span>{peEmoji}</span>
+                    <span>{pe.title}</span>
+                  </span>
+                  <span className="text-[11px] font-extrabold text-amber-900 bg-amber-100/90 border border-amber-300 px-2.5 py-0.5 rounded-lg shrink-0">
+                    {dateStr}
+                  </span>
                 </div>
-              )
-            })}
+                <p className="text-xs text-gray-600 mt-1 truncate flex items-center gap-1">
+                  <span>📍</span>
+                  <span className="truncate">{locStr}</span>
+                </p>
+              </div>
+
+              {/* Botões de Ação */}
+              {isPeRsvpOpen ? (
+                <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+                  <button
+                    type="button"
+                    disabled={peCall?.status === 'confirmed'}
+                    onClick={() => handleCallupResponse(pe.id, 'confirmed')}
+                    className="flex-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>Confirmar</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={peCall?.status === 'declined'}
+                    onClick={() => handleCallupResponse(pe.id, 'declined')}
+                    className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
+                  >
+                    <XCircle size={14} />
+                    <span>Recusar</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="text-[11px] text-center font-bold text-amber-900 bg-amber-50 py-1.5 rounded-xl border border-amber-200">
+                  Abre 6 dias antes do treino
+                </div>
+              )}
+            </div>
+
+            {/* Traços do Carrossel e Contador Centralizados na Parte Inferior */}
+            {myPendingEvents.length > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-0.5">
+                <div className="flex items-center gap-1.5 bg-black/10 px-3 py-1 rounded-full border border-black/10">
+                  {myPendingEvents.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setCurrentPendingIndex(idx)}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        idx === activeIndex
+                          ? 'bg-csc-dark w-5'
+                          : 'bg-black/25 hover:bg-black/40 w-2'
+                      }`}
+                      title={`Convocatória ${idx + 1}`}
+                    />
+                  ))}
+                  <span className="text-[11px] font-black text-csc-dark ml-1 pl-1.5 border-l border-black/20 leading-none">
+                    {activeIndex + 1}/{myPendingEvents.length}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Barra de Navegação & Filtros de Calendário */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-150 space-y-3.5">

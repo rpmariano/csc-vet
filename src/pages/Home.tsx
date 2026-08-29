@@ -5,7 +5,6 @@ import {
   MapPin, 
   CheckCircle2, 
   XCircle, 
-  AlertCircle, 
   ChevronRight, 
   Trophy
 } from 'lucide-react'
@@ -72,6 +71,9 @@ const Home: React.FC = () => {
   // Announcements Carousel State
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0)
+
+  // Pending Callups Carousel State
+  const [currentPendingCallupIndex, setCurrentPendingCallupIndex] = useState(0)
   const [myCallups, setMyCallups] = useState<Callup[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -262,10 +264,24 @@ const Home: React.FC = () => {
     }
   }
 
-  // Touch swipe support for mobile carousels
-  const [touchState, setTouchState] = useState<{ startX: number; target: 'match' | 'practice' | 'announcement' | null }>({ startX: 0, target: null })
+  const nextPendingSlide = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (pendingCallups.length > 1) {
+      setCurrentPendingCallupIndex(prev => (prev + 1) % pendingCallups.length)
+    }
+  }
 
-  const handleTouchStart = (e: React.TouchEvent, target: 'match' | 'practice' | 'announcement') => {
+  const prevPendingSlide = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (pendingCallups.length > 1) {
+      setCurrentPendingCallupIndex(prev => (prev - 1 + pendingCallups.length) % pendingCallups.length)
+    }
+  }
+
+  // Touch swipe support for mobile carousels
+  const [touchState, setTouchState] = useState<{ startX: number; target: 'match' | 'practice' | 'announcement' | 'pending' | null }>({ startX: 0, target: null })
+
+  const handleTouchStart = (e: React.TouchEvent, target: 'match' | 'practice' | 'announcement' | 'pending') => {
     setTouchState({ startX: e.targetTouches[0].clientX, target })
   }
 
@@ -279,11 +295,13 @@ const Home: React.FC = () => {
         if (touchState.target === 'match') nextMatchSlide()
         else if (touchState.target === 'practice') nextPracticeSlide()
         else if (touchState.target === 'announcement') nextAnnouncementSlide()
+        else if (touchState.target === 'pending') nextPendingSlide()
       } else {
         // Swipe para a direita -> Slide anterior
         if (touchState.target === 'match') prevMatchSlide()
         else if (touchState.target === 'practice') prevPracticeSlide()
         else if (touchState.target === 'announcement') prevAnnouncementSlide()
+        else if (touchState.target === 'pending') prevPendingSlide()
       }
     }
     setTouchState({ startX: 0, target: null })
@@ -391,34 +409,114 @@ const Home: React.FC = () => {
   return (
     <div className="space-y-5 pb-12">
       
-      {/* 1. ALERTA DE CONVOCATÓRIAS PENDENTES (NO TOPO ABSOLUTO) */}
+      {/* 1. ALERTA DE CONVOCATÓRIAS PENDENTES EM CARROSSEL */}
       {pendingCallupsCount > 0 && (() => {
-        const firstPending = pendingCallups[0]
-        const targetEventId = firstPending?.event_id || (firstPending?.event as any)?.id
-        const targetUrl = targetEventId ? `/calendar?event=${targetEventId}` : '/calendar'
+        const activeIndex = Math.min(currentPendingCallupIndex, pendingCallups.length - 1)
+        const currentPending = pendingCallups[activeIndex] || pendingCallups[0]
+        const ev = currentPending?.event
+        if (!currentPending || !ev) return null
+
+        const evTime = new Date(ev.date_time).getTime()
+        const now = Date.now()
+        const diffDays = Math.ceil((evTime - now) / (1000 * 60 * 60 * 24))
+        const isPractice = ev.type === 'practice'
+        const isRsvpOpen = !isPractice || diffDays <= 6
+        const evEmoji = ev.type === 'match' ? '⚽' : ev.type === 'practice' ? '🏃' : '🎉'
+        const locStr = ev.location || ev.field?.name || 'Local a definir'
+        const dateStr = new Date(ev.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })
 
         return (
           <div 
-            onClick={() => navigate(targetUrl)}
-            className="bg-amber-500 hover:bg-amber-400 text-csc-dark rounded-2xl p-4 shadow-sm flex items-center justify-between border-2 border-amber-600 cursor-pointer transition-all hover:shadow-md animate-pulse"
+            onTouchStart={(e) => handleTouchStart(e, 'pending')}
+            onTouchEnd={handleTouchEnd}
+            className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-csc-dark rounded-3xl p-4 sm:p-5 shadow-sm border-2 border-amber-600 space-y-3 select-none"
           >
-            <div className="flex items-center gap-3">
-              <AlertCircle size={24} className="shrink-0 text-csc-dark" />
-              <div>
-                <p className="font-black text-sm">
-                  Tens {pendingCallupsCount} {pendingCallupsCount === 1 ? 'convocatória pendente' : 'convocatórias pendentes'}!
-                </p>
-                <p className="text-xs font-medium text-amber-950">Clica para ver os detalhes e responder à convocatória.</p>
+            {/* Header do Alerta */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl shrink-0">🔔</span>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-black text-csc-dark">
+                    Tens {pendingCallupsCount} {pendingCallupsCount === 1 ? 'convocatória pendente' : 'convocatórias pendentes'}!
+                  </h3>
+                  <p className="text-[11px] font-semibold text-amber-950">Responde diretamente abaixo ou clica para ver os detalhes:</p>
+                </div>
               </div>
             </div>
-            <Link
-              to={targetUrl}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-csc-dark text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-sm shrink-0 hover:bg-black transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <span>Responder</span>
-              <ChevronRight size={14} />
-            </Link>
+
+            {/* Card do Evento Pendente Atual */}
+            <div className="bg-white/95 backdrop-blur-xs p-4 rounded-2xl border border-amber-300 shadow-xs space-y-3">
+              <div 
+                onClick={() => navigate(`/calendar?event=${ev.id || currentPending.event_id}`)}
+                className="cursor-pointer hover:opacity-85 transition-opacity"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-black text-gray-900 truncate flex items-center gap-1.5">
+                    <span>{evEmoji}</span>
+                    <span>{ev.title}</span>
+                  </span>
+                  <span className="text-[11px] font-extrabold text-amber-900 bg-amber-100/90 border border-amber-300 px-2.5 py-0.5 rounded-lg shrink-0">
+                    {dateStr}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1 truncate flex items-center gap-1">
+                  <span>📍</span>
+                  <span className="truncate">{locStr}</span>
+                </p>
+              </div>
+
+              {/* Botões de Ação */}
+              {isRsvpOpen ? (
+                <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+                  <button
+                    type="button"
+                    disabled={currentPending.status === 'confirmed'}
+                    onClick={() => handleCallupResponse(currentPending.id, 'confirmed')}
+                    className="flex-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>Confirmar</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={currentPending.status === 'declined'}
+                    onClick={() => handleCallupResponse(currentPending.id, 'declined')}
+                    className="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-800 border border-red-300 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
+                  >
+                    <XCircle size={14} />
+                    <span>Recusar</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="text-[11px] text-center font-bold text-amber-900 bg-amber-50 py-1.5 rounded-xl border border-amber-200">
+                  Abre 6 dias antes do treino
+                </div>
+              )}
+            </div>
+
+            {/* Traços do Carrossel e Contador Centralizados na Parte Inferior */}
+            {pendingCallupsCount > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-0.5">
+                <div className="flex items-center gap-1.5 bg-black/10 px-3 py-1 rounded-full border border-black/10">
+                  {pendingCallups.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setCurrentPendingCallupIndex(idx)}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        idx === activeIndex
+                          ? 'bg-csc-dark w-5'
+                          : 'bg-black/25 hover:bg-black/40 w-2'
+                      }`}
+                      title={`Convocatória ${idx + 1}`}
+                    />
+                  ))}
+                  <span className="text-[11px] font-black text-csc-dark ml-1 pl-1.5 border-l border-black/20 leading-none">
+                    {activeIndex + 1}/{pendingCallupsCount}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )
       })()}
