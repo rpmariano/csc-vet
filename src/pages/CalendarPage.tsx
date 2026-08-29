@@ -1166,41 +1166,34 @@ const CalendarPage: React.FC = () => {
                 className="pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2"
               >
                 <span className="text-xs font-bold text-gray-700">Presença:</span>
-                {myCallup.status === 'called' ? (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleCallupResponse(event.id, 'confirmed')}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1"
-                    >
-                      <CheckCircle2 size={13} />
-                      <span>Confirmar</span>
-                    </button>
-                    <button
-                      onClick={() => handleCallupResponse(event.id, 'declined')}
-                      className="bg-red-600 hover:bg-red-700 text-white text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1"
-                    >
-                      <XCircle size={13} />
-                      <span>Recusar</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-2xs ${
-                      myCallup.status === 'confirmed' 
-                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
-                        : 'bg-red-100 text-red-900 border border-rose-300'
-                    }`}>
-                      {myCallup.status === 'confirmed' ? <CheckCircle2 size={14} className="text-emerald-700" /> : <XCircle size={14} className="text-red-700" />}
-                      <span>{myCallup.status === 'confirmed' ? 'Confirmado' : 'Recusado'}</span>
-                    </span>
-                    <button
-                      onClick={() => handleCallupResponse(event.id, myCallup.status === 'confirmed' ? 'declined' : 'confirmed')}
-                      className="text-[11px] font-bold text-gray-500 hover:text-gray-800 underline cursor-pointer"
-                    >
-                      Alterar
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <button
+                    type="button"
+                    disabled={myCallup.status === 'confirmed'}
+                    onClick={() => handleCallupResponse(event.id, 'confirmed')}
+                    className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-2xs flex items-center gap-1 ${
+                      myCallup.status === 'confirmed'
+                        ? 'bg-emerald-800 text-white cursor-not-allowed opacity-80 ring-2 ring-emerald-600/40'
+                        : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95'
+                    }`}
+                  >
+                    <CheckCircle2 size={13} />
+                    <span>Confirmar</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={myCallup.status === 'declined'}
+                    onClick={() => handleCallupResponse(event.id, 'declined')}
+                    className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all shadow-2xs flex items-center gap-1 ${
+                      myCallup.status === 'declined'
+                        ? 'bg-red-800 text-white cursor-not-allowed opacity-80 ring-2 ring-red-600/40'
+                        : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95'
+                    }`}
+                  >
+                    <XCircle size={13} />
+                    <span>Recusar</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
