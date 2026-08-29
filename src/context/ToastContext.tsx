@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react'
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react'
+import { triggerHaptic } from '../utils/haptics'
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
 
@@ -42,6 +43,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [])
 
   const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 3800) => {
+    // Aciona feedback háptico de acordo com o tipo de mensagem
+    if (type === 'success') triggerHaptic('success')
+    else if (type === 'error') triggerHaptic('error')
+    else if (type === 'warning') triggerHaptic('warning')
+    else triggerHaptic('medium')
+
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     const newToast: ToastItem = { id, message, type, duration }
 

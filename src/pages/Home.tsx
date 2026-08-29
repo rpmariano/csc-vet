@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
+import { triggerHaptic } from '../utils/haptics'
 
 interface Event {
   id: string
@@ -187,6 +188,7 @@ const Home: React.FC = () => {
   }, [profile])
 
   const handleCallupResponse = async (callupId: string, status: 'confirmed' | 'declined') => {
+    triggerHaptic(status === 'confirmed' ? 'success' : 'warning')
     try {
       await supabase.from('callups').update({ status }).eq('id', callupId)
       setMyCallups(prev => prev.map(c => (c.id === callupId ? { ...c, status } : c)))
@@ -199,6 +201,7 @@ const Home: React.FC = () => {
   const nextMatchSlide = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     if (upcomingMatches.length > 1) {
+      triggerHaptic('light')
       setCurrentMatchIndex(prev => (prev + 1) % upcomingMatches.length)
     }
   }
@@ -206,6 +209,7 @@ const Home: React.FC = () => {
   const prevMatchSlide = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     if (upcomingMatches.length > 1) {
+      triggerHaptic('light')
       setCurrentMatchIndex(prev => (prev - 1 + upcomingMatches.length) % upcomingMatches.length)
     }
   }
@@ -213,6 +217,7 @@ const Home: React.FC = () => {
   const nextAnnouncementSlide = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     if (announcements.length > 1) {
+      triggerHaptic('light')
       setCurrentAnnouncementIndex(prev => (prev + 1) % announcements.length)
     }
   }
@@ -220,6 +225,7 @@ const Home: React.FC = () => {
   const prevAnnouncementSlide = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     if (announcements.length > 1) {
+      triggerHaptic('light')
       setCurrentAnnouncementIndex(prev => (prev - 1 + announcements.length) % announcements.length)
     }
   }
@@ -227,6 +233,7 @@ const Home: React.FC = () => {
   const nextPendingSlide = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     if (pendingCallups.length > 1) {
+      triggerHaptic('light')
       setCurrentPendingCallupIndex(prev => (prev + 1) % pendingCallups.length)
     }
   }
@@ -234,6 +241,7 @@ const Home: React.FC = () => {
   const prevPendingSlide = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     if (pendingCallups.length > 1) {
+      triggerHaptic('light')
       setCurrentPendingCallupIndex(prev => (prev - 1 + pendingCallups.length) % pendingCallups.length)
     }
   }

@@ -39,6 +39,7 @@ import { TrainingIcon } from './EventsPage'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { toast } from '../context/ToastContext'
+import { triggerHaptic } from '../utils/haptics'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -1346,22 +1347,27 @@ const CalendarPage: React.FC = () => {
   const weekDayNames = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
   const handlePrevMonth = () => {
+    triggerHaptic('light')
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
   }
 
   const handleNextMonth = () => {
+    triggerHaptic('light')
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
   }
 
   const handleMonthChange = (newMonth: number) => {
+    triggerHaptic('light')
     setCurrentDate(prev => new Date(prev.getFullYear(), newMonth, 1))
   }
 
   const handleYearChange = (newYear: number) => {
+    triggerHaptic('light')
     setCurrentDate(prev => new Date(newYear, prev.getMonth(), 1))
   }
 
   const handleToday = () => {
+    triggerHaptic('medium')
     const today = new Date()
     setCurrentDate(today)
     setSelectedDate(today)

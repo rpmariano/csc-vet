@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
 import { AutoAssociationModal } from './AutoAssociationModal'
 import { PWAInstallPrompt, PWAInstallMenuItem } from './PWAInstallPrompt'
+import { triggerHaptic } from '../utils/haptics'
 
 const Layout: React.FC = () => {
   const { profile, actualRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
@@ -35,12 +36,18 @@ const Layout: React.FC = () => {
   const canSwitchRoles = (assignedRoles?.length ?? 1) > 1
 
   const handleSelectRole = (role: UserRole) => {
+    triggerHaptic('medium')
     if (role === actualRole) {
       setSimulatedRole(null)
     } else {
       setSimulatedRole(role)
     }
     setIsRoleModalOpen(false)
+  }
+
+  const handleToggleClinical = () => {
+    triggerHaptic('medium')
+    toggleClinicalStatus()
   }
 
   return (
@@ -56,7 +63,7 @@ const Layout: React.FC = () => {
           {profile && (
             <button
               type="button"
-              onClick={() => toggleClinicalStatus()}
+              onClick={handleToggleClinical}
               className={`text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 transition-all border shadow-2xs cursor-pointer active:scale-95 ${
                 profile.status === 'injured'
                   ? 'bg-red-50 text-red-700 border-red-300 animate-pulse ring-1 ring-red-300'
@@ -644,6 +651,7 @@ const Layout: React.FC = () => {
         {/* 1. Home */}
         <Link 
           to="/" 
+          onClick={() => triggerHaptic('selection')}
           className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
             ${location.pathname === '/' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
           `}
@@ -655,6 +663,7 @@ const Layout: React.FC = () => {
         {/* 2. Agenda */}
         <Link 
           to="/calendar" 
+          onClick={() => triggerHaptic('selection')}
           className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
             ${location.pathname === '/calendar' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
           `}
@@ -667,6 +676,7 @@ const Layout: React.FC = () => {
         {(isAdmin || isCoach) ? (
           <Link 
             to="/events" 
+            onClick={() => triggerHaptic('selection')}
             className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
               ${location.pathname === '/events' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
             `}
@@ -677,6 +687,7 @@ const Layout: React.FC = () => {
         ) : (
           <Link 
             to="/stats" 
+            onClick={() => triggerHaptic('selection')}
             className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
               ${location.pathname === '/stats' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
             `}
@@ -690,6 +701,7 @@ const Layout: React.FC = () => {
         {(isAdmin || isCoach) && (
           <Link 
             to="/team-management" 
+            onClick={() => triggerHaptic('selection')}
             className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
               ${location.pathname === '/team-management' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
             `}
@@ -701,7 +713,10 @@ const Layout: React.FC = () => {
 
         {/* 5. Menu dos Traços (☰ Menu) */}
         <button
-          onClick={() => setIsMobileMenuOpen(true)}
+          onClick={() => {
+            triggerHaptic('selection')
+            setIsMobileMenuOpen(true)
+          }}
           className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all ${
             isMobileMenuOpen ? 'text-csc-gold bg-csc-light/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'
           }`}
