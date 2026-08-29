@@ -699,21 +699,32 @@ const TeamManagementPage: React.FC = () => {
 
     registeredUsersWithoutKit.forEach(userP => {
       const uEmail = (userP.email || '').toLowerCase().trim()
-      const uPhone = (userP.phone || '').trim()
+      const uPhone = (userP.phone || '').trim().replace(/\D/g, '')
       const uName = (userP.name || '').toLowerCase().trim()
+      const uWords = uName.split(' ').filter(w => w.length > 2)
 
       const match = unlinkedSquadProfiles.find(squadP => {
         const sEmail = (squadP.email || '').toLowerCase().trim()
-        const sPhone = (squadP.phone || '').trim()
+        const sPhone = (squadP.phone || '').trim().replace(/\D/g, '')
         const sName = (squadP.name || '').toLowerCase().trim()
-        const sShirt = (squadP.shirt_name || '').toLowerCase().trim()
+        const sWords = sName.split(' ').filter(w => w.length > 2)
 
-        return (
-          (uEmail && sEmail && uEmail === sEmail) ||
-          (uPhone && sPhone && uPhone === sPhone) ||
-          (uName && sName && (uName.includes(sName) || sName.includes(uName))) ||
-          (uName && sShirt && uName.includes(sShirt))
-        )
+        // 1. Email idêntico
+        if (uEmail && sEmail && uEmail === sEmail) return true
+
+        // 2. Telefone idêntico (>= 9 dígitos)
+        if (uPhone && sPhone && uPhone.length >= 9 && uPhone === sPhone) return true
+
+        // 3. Se a ficha tiver outro email atribuído, não associar por nome
+        if (sEmail && uEmail && sEmail !== uEmail) return false
+
+        // 4. Nome completo idêntico ou Primeiro + Último Nome
+        if (uName && sName && uName === sName) return true
+        if (uWords.length >= 2 && sWords.length >= 2) {
+          return uWords[0] === sWords[0] && uWords[uWords.length - 1] === sWords[sWords.length - 1]
+        }
+
+        return false
       })
 
       if (match) {

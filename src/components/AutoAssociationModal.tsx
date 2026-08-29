@@ -30,26 +30,48 @@ export const AutoAssociationModal: React.FC = () => {
 
     if (isAlreadyLinked) return
 
-    // Procurar correspondência nos dados do plantel por email, telefone ou nome
+    // Procurar correspondência nos dados do plantel por email, telefone ou nome estrito
     const userEmail = (user.email || profile.email || '').toLowerCase().trim()
-    const userPhone = (profile.phone || '').trim()
+    const userPhone = (profile.phone || '').trim().replace(/\D/g, '')
     const userName = (profile.name || '').toLowerCase().trim()
 
     let match: Partial<Profile> | undefined
 
+    // 1. Correspondência exata por Email
     if (userEmail) {
-      match = INITIAL_PLAYERS_DATA.find(p => p.email.toLowerCase().trim() === userEmail)
+      match = INITIAL_PLAYERS_DATA.find(p => p.email && p.email.toLowerCase().trim() === userEmail)
     }
 
-    if (!match && userPhone) {
-      match = INITIAL_PLAYERS_DATA.find(p => p.phone && p.phone.trim() === userPhone)
-    }
-
-    if (!match && userName && userName !== 'novo atleta') {
+    // 2. Correspondência exata por Telefone (se tiver pelo menos 9 dígitos)
+    if (!match && userPhone && userPhone.length >= 9) {
       match = INITIAL_PLAYERS_DATA.find(p => {
-        const pName = p.name.toLowerCase()
-        const pNick = (p.nickname || '').toLowerCase()
-        return pName.includes(userName) || userName.includes(pName) || (pNick && userName.includes(pNick))
+        const pPhone = (p.phone || '').trim().replace(/\D/g, '')
+        return pPhone.length >= 9 && pPhone === userPhone
+      })
+    }
+
+    // 3. Correspondência estrita por Nome Completo (Primeiro + Último Nome)
+    // Apenas se a ficha não pertencer explicitamente a outro email
+    if (!match && userName && userName !== 'novo atleta' && userName !== 'novo jogador') {
+      const uWords = userName.split(' ').filter(w => w.length > 2)
+
+      match = INITIAL_PLAYERS_DATA.find(p => {
+        const pEmail = (p.email || '').toLowerCase().trim()
+        // Se a ficha já tiver outro email oficial atribuído, não associar por nome
+        if (pEmail && userEmail && pEmail !== userEmail) return false
+
+        const pName = (p.name || '').toLowerCase().trim()
+        if (!pName) return false
+
+        if (pName === userName) return true
+
+        const pWords = pName.split(' ').filter(w => w.length > 2)
+        if (uWords.length >= 2 && pWords.length >= 2) {
+          const firstMatch = uWords[0] === pWords[0]
+          const lastMatch = uWords[uWords.length - 1] === pWords[pWords.length - 1]
+          return firstMatch && lastMatch
+        }
+        return false
       })
     }
 
