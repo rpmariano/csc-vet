@@ -1123,26 +1123,21 @@ const CalendarPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header Principal */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-csc-dark">Calendário & Agenda</h1>
-          <p className="text-gray-500 mt-1">Consulte os treinos, jogos no calendário e responda às convocatórias.</p>
-        </div>
-
-        {isCoachOrAdmin && (
+      {/* Botão Criar Evento (Coach/Admin) */}
+      {isCoachOrAdmin && (
+        <div className="flex justify-end">
           <button
             onClick={() => {
               setSelectedPlayerIds(allPlayers.map(p => p.id))
               setIsAddModalOpen(true)
             }}
-            className="flex items-center justify-center space-x-2 bg-csc-dark text-white px-4 py-2.5 rounded-xl font-bold hover:bg-csc-dark/80 transition-all shadow-sm shrink-0"
+            className="flex items-center justify-center space-x-2 bg-csc-dark text-white px-4 py-2.5 rounded-xl font-bold hover:bg-csc-dark/80 transition-all shadow-sm shrink-0 w-full sm:w-auto cursor-pointer"
           >
-            <Plus size={18} />
+            <Plus size={18} className="text-csc-gold" />
             <span>Criar Jogo / Treino</span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Barra de Navegação & Filtros de Calendário */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-150 space-y-3.5">
