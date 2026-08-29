@@ -6,11 +6,7 @@ import {
   CheckCircle2, 
   XCircle, 
   AlertCircle, 
-  Users,
-  Shield,
-  BarChart3,
-  ChevronRight,
-  ChevronLeft,
+  ChevronRight, 
   Trophy
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -73,11 +69,11 @@ const Home: React.FC = () => {
   const [upcomingPractices, setUpcomingPractices] = useState<Event[]>([])
   const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0)
 
+  // Announcements Carousel State
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0)
   const [myCallups, setMyCallups] = useState<Callup[]>([])
   const [loading, setLoading] = useState(true)
-
-  const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -252,6 +248,47 @@ const Home: React.FC = () => {
     }
   }
 
+  const nextAnnouncementSlide = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (announcements.length > 1) {
+      setCurrentAnnouncementIndex(prev => (prev + 1) % announcements.length)
+    }
+  }
+
+  const prevAnnouncementSlide = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (announcements.length > 1) {
+      setCurrentAnnouncementIndex(prev => (prev - 1 + announcements.length) % announcements.length)
+    }
+  }
+
+  // Touch swipe support for mobile carousels
+  const [touchState, setTouchState] = useState<{ startX: number; target: 'match' | 'practice' | 'announcement' | null }>({ startX: 0, target: null })
+
+  const handleTouchStart = (e: React.TouchEvent, target: 'match' | 'practice' | 'announcement') => {
+    setTouchState({ startX: e.targetTouches[0].clientX, target })
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchState.target) return
+    const endX = e.changedTouches[0].clientX
+    const diff = touchState.startX - endX
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) {
+        // Swipe para a esquerda -> Próximo slide
+        if (touchState.target === 'match') nextMatchSlide()
+        else if (touchState.target === 'practice') nextPracticeSlide()
+        else if (touchState.target === 'announcement') nextAnnouncementSlide()
+      } else {
+        // Swipe para a direita -> Slide anterior
+        if (touchState.target === 'match') prevMatchSlide()
+        else if (touchState.target === 'practice') prevPracticeSlide()
+        else if (touchState.target === 'announcement') prevAnnouncementSlide()
+      }
+    }
+    setTouchState({ startX: 0, target: null })
+  }
+
   const isCallupPendingResponse = (callup: Callup) => {
     if (callup.status !== 'called') return false
     const ev = callup.event
@@ -273,35 +310,75 @@ const Home: React.FC = () => {
 
   const currentMatch = upcomingMatches[currentMatchIndex]
   const currentPractice = upcomingPractices[currentPracticeIndex]
+  const currentAnnouncement = announcements[currentAnnouncementIndex] || announcements[0]
 
-  const renderAnnouncementsCard = () => (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs">
-      <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <Bell size={18} className="text-csc-dark" />
-          <h2 className="text-sm sm:text-base font-black text-gray-900">Comunicados & Avisos</h2>
+  const renderAnnouncementsCard = () => {
+    if (!currentAnnouncement && announcements.length === 0) return null
+
+    return (
+      <div 
+        onTouchStart={(e) => handleTouchStart(e, 'announcement')}
+        onTouchEnd={handleTouchEnd}
+        className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:border-gray-300 transition-all select-none"
+      >
+        {/* Header do Carrossel de Comunicados */}
+        <div className="bg-gradient-to-r from-gray-800 via-gray-900 to-black px-4 py-2.5 text-white flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2">
+            <Bell size={16} className="text-csc-gold" />
+            <h2 className="text-xs sm:text-sm font-black tracking-wide">
+              Comunicados
+            </h2>
+            <span className="text-[9px] font-black uppercase px-2 py-0.2 rounded-full bg-white/20 text-white border border-white/30">
+              {announcements.length} {announcements.length === 1 ? 'Aviso' : 'Avisos'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {/* Indicador de Carrossel sem setas */}
+            {announcements.length > 1 && (
+              <div className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full border border-white/20">
+                {announcements.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCurrentAnnouncementIndex(idx)}
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                      idx === currentAnnouncementIndex ? 'bg-csc-gold w-3.5' : 'bg-white/40 w-1.5'
+                    }`}
+                    title={`Aviso ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+            <Link to="/announcements" className="text-[10.5px] font-bold text-gray-300 hover:text-white flex items-center gap-0.5 ml-1">
+              <span>Ver todos</span>
+              <ChevronRight size={12} />
+            </Link>
+          </div>
         </div>
-        <Link to="/announcements" className="text-xs font-bold text-csc-gold hover:underline flex items-center gap-1">
-          <span>Ver todos</span>
-          <ChevronRight size={14} />
-        </Link>
-      </div>
 
-      <div className="space-y-2">
-        {announcements.slice(0, 3).map(ann => (
-          <div key={ann.id} className="p-3 bg-gray-50 rounded-xl border border-gray-150 hover:bg-gray-100/70 transition-colors">
-            <div className="flex items-center justify-between mb-1">
-              <p className="font-bold text-xs sm:text-sm text-gray-900">{ann.title}</p>
-              <span className="text-[10px] font-semibold text-gray-400">
-                {new Date(ann.published_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
+        {/* Conteúdo do Comunicado Atual */}
+        {currentAnnouncement ? (
+          <div 
+            onClick={() => navigate('/announcements')}
+            className="p-4 space-y-2 cursor-pointer hover:bg-gray-50/70 transition-colors"
+          >
+            <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
+              <h3 className="font-black text-sm text-gray-900 line-clamp-1">{currentAnnouncement.title}</h3>
+              <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md shrink-0 ml-2">
+                {new Date(currentAnnouncement.published_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
               </span>
             </div>
-            <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{ann.content}</p>
+            <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">{currentAnnouncement.content}</p>
           </div>
-        ))}
+        ) : (
+          <div className="p-4 text-xs text-gray-400 text-center">
+            Sem comunicados recentes.
+          </div>
+        )}
       </div>
-    </div>
-  )
+    )
+  }
 
   if (loading) {
     return (
@@ -359,7 +436,11 @@ const Home: React.FC = () => {
 
           {/* 1. CARD DO JOGO (VERSÃO COMPACTA) */}
           {currentMatch && (
-            <div className="bg-white rounded-2xl border border-blue-200 overflow-hidden shadow-xs hover:border-blue-400 transition-all">
+            <div 
+              onTouchStart={(e) => handleTouchStart(e, 'match')}
+              onTouchEnd={handleTouchEnd}
+              className="bg-white rounded-2xl border border-blue-200 overflow-hidden shadow-xs hover:border-blue-400 transition-all select-none"
+            >
               {/* Header */}
               <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 px-4 py-2.5 text-white flex items-center justify-between shadow-2xs">
                 <div className="flex items-center gap-2">
@@ -372,27 +453,21 @@ const Home: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Controles de Navegação */}
+                {/* Controles de Navegação (Sem Setas) */}
                 <div className="flex items-center gap-1.5">
                   {upcomingMatches.length > 1 && (
-                    <div className="flex items-center gap-1 bg-white/10 px-1.5 py-0.5 rounded-lg border border-white/20 text-xs">
-                      <button
-                        onClick={prevMatchSlide}
-                        className="p-0.5 hover:bg-white/20 rounded transition-colors cursor-pointer"
-                        title="Jogo Anterior"
-                      >
-                        <ChevronLeft size={14} />
-                      </button>
-                      <span className="text-[11px] font-black px-1">
-                        {currentMatchIndex + 1}/{upcomingMatches.length}
-                      </span>
-                      <button
-                        onClick={nextMatchSlide}
-                        className="p-0.5 hover:bg-white/20 rounded transition-colors cursor-pointer"
-                        title="Próximo Jogo"
-                      >
-                        <ChevronRight size={14} />
-                      </button>
+                    <div className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full border border-white/20">
+                      {upcomingMatches.map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setCurrentMatchIndex(idx)}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            idx === currentMatchIndex ? 'bg-amber-300 w-3.5' : 'bg-white/40 w-1.5'
+                          }`}
+                          title={`Jogo ${idx + 1}`}
+                        />
+                      ))}
                     </div>
                   )}
                   <span 
@@ -551,7 +626,11 @@ const Home: React.FC = () => {
 
           {/* 2. CARD DOS TREINOS */}
           {currentPractice && (
-            <div className="bg-white rounded-2xl border border-emerald-200 overflow-hidden shadow-xs hover:border-emerald-400 transition-all">
+            <div 
+              onTouchStart={(e) => handleTouchStart(e, 'practice')}
+              onTouchEnd={handleTouchEnd}
+              className="bg-white rounded-2xl border border-emerald-200 overflow-hidden shadow-xs hover:border-emerald-400 transition-all select-none"
+            >
               {/* Header */}
               <div className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-900 px-4 py-2.5 text-white flex items-center justify-between shadow-2xs">
                 <div className="flex items-center gap-2">
@@ -564,27 +643,21 @@ const Home: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Controles de Navegação */}
+                {/* Controles de Navegação (Sem Setas) */}
                 <div className="flex items-center gap-1.5">
                   {upcomingPractices.length > 1 && (
-                    <div className="flex items-center gap-1 bg-white/10 px-1.5 py-0.5 rounded-lg border border-white/20 text-xs">
-                      <button
-                        onClick={prevPracticeSlide}
-                        className="p-0.5 hover:bg-white/20 rounded transition-colors cursor-pointer"
-                        title="Treino Anterior"
-                      >
-                        <ChevronLeft size={14} />
-                      </button>
-                      <span className="text-[11px] font-black px-1">
-                        {currentPracticeIndex + 1}/{upcomingPractices.length}
-                      </span>
-                      <button
-                        onClick={nextPracticeSlide}
-                        className="p-0.5 hover:bg-white/20 rounded transition-colors cursor-pointer"
-                        title="Próximo Treino"
-                      >
-                        <ChevronRight size={14} />
-                      </button>
+                    <div className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full border border-white/20">
+                      {upcomingPractices.map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setCurrentPracticeIndex(idx)}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            idx === currentPracticeIndex ? 'bg-emerald-300 w-3.5' : 'bg-white/40 w-1.5'
+                          }`}
+                          title={`Treino ${idx + 1}`}
+                        />
+                      ))}
                     </div>
                   )}
                   <span 
@@ -693,66 +766,11 @@ const Home: React.FC = () => {
 
         </div>
 
-        {/* COLUNA DIREITA / SIDEBAR EM DESKTOP (Comunicações e Atalhos) */}
+        {/* COLUNA DIREITA / SIDEBAR EM DESKTOP (Comunicações) */}
         <div className="space-y-5">
           {/* APENAS DESKTOP: COMUNICAÇÕES NO TOPO DA SIDEBAR */}
           <div className="hidden lg:block space-y-5">
             {renderAnnouncementsCard()}
-          </div>
-
-          {/* CARD DE ATALHOS RÁPIDOS */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-2.5">
-            <h3 className="text-xs font-black uppercase text-gray-400 tracking-wider">
-              Acesso Rápido
-            </h3>
-
-            <div className="grid grid-cols-1 gap-2">
-              <Link
-                to="/calendar"
-                className="p-2.5 rounded-xl border border-gray-150 hover:border-csc-gold hover:bg-amber-50/20 transition-all flex items-center justify-between text-xs font-bold text-gray-800"
-              >
-                <div className="flex items-center gap-2">
-                  <Calendar size={15} className="text-csc-gold" />
-                  <span>Calendário & Convocatórias</span>
-                </div>
-                <ChevronRight size={14} className="text-gray-400" />
-              </Link>
-
-              <Link
-                to="/team-management"
-                className="p-2.5 rounded-xl border border-gray-150 hover:border-csc-gold hover:bg-amber-50/20 transition-all flex items-center justify-between text-xs font-bold text-gray-800"
-              >
-                <div className="flex items-center gap-2">
-                  <Users size={15} className="text-emerald-500" />
-                  <span>Plantel & Fichas de Jogadores</span>
-                </div>
-                <ChevronRight size={14} className="text-gray-400" />
-              </Link>
-
-              <Link
-                to="/stats"
-                className="p-2.5 rounded-xl border border-gray-150 hover:border-csc-gold hover:bg-amber-50/20 transition-all flex items-center justify-between text-xs font-bold text-gray-800"
-              >
-                <div className="flex items-center gap-2">
-                  <BarChart3 size={15} className="text-purple-500" />
-                  <span>Estatísticas & Desempenho</span>
-                </div>
-                <ChevronRight size={14} className="text-gray-400" />
-              </Link>
-
-              {isCoachOrAdmin && (
-                <Link
-                  to="/admin"
-                  className="p-2.5 rounded-xl border border-gray-150 hover:border-csc-gold hover:bg-amber-50/20 transition-all flex items-center justify-between text-xs font-bold text-gray-800"
-                >
-                  <div className="flex items-center gap-2">
-                    <Shield size={15} className="text-blue-500" />
-                    <span>Backoffice & Definições</span>
-                  </div>
-                  <ChevronRight size={14} className="text-gray-400" />
-                </Link>
-              )}
-            </div>
           </div>
         </div>
       </div>
