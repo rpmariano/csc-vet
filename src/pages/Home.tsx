@@ -576,21 +576,25 @@ const Home: React.FC = () => {
                         
                         <div className="flex gap-2">
                           <button
+                            type="button"
+                            disabled={currentMatchCallup.status === 'confirmed'}
                             onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
-                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs ${
                               currentMatchCallup.status === 'confirmed'
-                                ? 'bg-emerald-700 text-white font-black'
-                                : 'bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50'
+                                ? 'bg-emerald-800 text-white font-black cursor-not-allowed opacity-80 ring-2 ring-emerald-600/40'
+                                : 'bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50 cursor-pointer active:scale-95'
                             }`}
                           >
                             Confirmar
                           </button>
                           <button
+                            type="button"
+                            disabled={currentMatchCallup.status === 'declined'}
                             onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
-                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs ${
                               currentMatchCallup.status === 'declined'
-                                ? 'bg-red-700 text-white font-black'
-                                : 'bg-white text-red-700 border border-red-300 hover:bg-red-50'
+                                ? 'bg-red-800 text-white font-black cursor-not-allowed opacity-80 ring-2 ring-red-600/40'
+                                : 'bg-white text-red-700 border border-red-300 hover:bg-red-50 cursor-pointer active:scale-95'
                             }`}
                           >
                             Recusar
@@ -784,21 +788,25 @@ const Home: React.FC = () => {
                         
                         <div className="flex gap-2">
                           <button
+                            type="button"
+                            disabled={currentPracticeCallup.status === 'confirmed'}
                             onClick={() => handleCallupResponse(currentPracticeCallup.id, 'confirmed')}
-                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs ${
                               currentPracticeCallup.status === 'confirmed'
-                                ? 'bg-emerald-700 text-white font-black'
-                                : 'bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50'
+                                ? 'bg-emerald-800 text-white font-black cursor-not-allowed opacity-80 ring-2 ring-emerald-600/40'
+                                : 'bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50 cursor-pointer active:scale-95'
                             }`}
                           >
                             Confirmar
                           </button>
                           <button
+                            type="button"
+                            disabled={currentPracticeCallup.status === 'declined'}
                             onClick={() => handleCallupResponse(currentPracticeCallup.id, 'declined')}
-                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs ${
                               currentPracticeCallup.status === 'declined'
-                                ? 'bg-red-700 text-white font-black'
-                                : 'bg-white text-red-700 border border-red-300 hover:bg-red-50'
+                                ? 'bg-red-800 text-white font-black cursor-not-allowed opacity-80 ring-2 ring-red-600/40'
+                                : 'bg-white text-red-700 border border-red-300 hover:bg-red-50 cursor-pointer active:scale-95'
                             }`}
                           >
                             Recusar

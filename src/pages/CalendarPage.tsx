@@ -1707,17 +1707,25 @@ const CalendarPage: React.FC = () => {
                       </div>
                       <div className="flex gap-2">
                         <button
+                          type="button"
+                          disabled={myCallup.status === 'confirmed'}
                           onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                          className={`flex-1 px-4 py-2 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 ${
-                            myCallup.status === 'confirmed' ? 'bg-emerald-700 text-white' : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50'
+                          className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs ${
+                            myCallup.status === 'confirmed' 
+                              ? 'bg-emerald-800 text-white cursor-not-allowed opacity-80 ring-2 ring-emerald-600/40' 
+                              : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95'
                           }`}
                         >
                           <CheckCircle2 size={15} /> Confirmar
                         </button>
                         <button
+                          type="button"
+                          disabled={myCallup.status === 'declined'}
                           onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                          className={`flex-1 px-4 py-2 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 ${
-                            myCallup.status === 'declined' ? 'bg-red-700 text-white' : 'bg-white border border-red-600 text-red-700 hover:bg-red-50'
+                          className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs ${
+                            myCallup.status === 'declined' 
+                              ? 'bg-red-800 text-white cursor-not-allowed opacity-80 ring-2 ring-red-600/40' 
+                              : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95'
                           }`}
                         >
                           <XCircle size={15} /> Recusar
