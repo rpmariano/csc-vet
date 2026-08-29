@@ -1550,19 +1550,19 @@ const AdminDashboard: React.FC = () => {
                     <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
                   </div>
                   <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Permitir Exceções</label>
+                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({...tourRules, exceptions_allowed: e.target.value === 'true'})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm">
+                      <option value="true">Sim</option>
+                      <option value="false">Não</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Máx. Exceções de Idade</label>
                     <input type="number" min="0" value={tourRules.exceptions_count} onChange={e => setTourRules({...tourRules, exceptions_count: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" disabled={!tourRules.exceptions_allowed} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Idade Mín. da Exceção</label>
                     <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" disabled={!tourRules.exceptions_allowed} />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Permitir Exceções</label>
-                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({...tourRules, exceptions_allowed: e.target.value === 'true'})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm">
-                      <option value="true">Sim</option>
-                      <option value="false">Não</option>
-                    </select>
                   </div>
 
                   <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
@@ -1608,57 +1608,77 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
                   <div className="p-3 overflow-y-auto space-y-2 flex-1">
-                    {profiles.map(p => {
-                      const age = p.birth_date ? Math.floor((new Date().getTime() - new Date(p.birth_date).getTime()) / 3.15576e+10) : null
-                      const isTooYoung = age !== null && age < (tourRules.min_age || 0)
-                      const isExceptionButValid = isTooYoung && tourRules.exceptions_allowed && age >= tourRules.exceptions_min_age
-                      const isInvalid = isTooYoung && !isExceptionButValid
-                      const isSelected = tourPlayers.includes(p.id)
+                    {(() => {
+                      const currentExceptionsCount = tourPlayers.filter(pid => {
+                        const pData = profiles.find(pr => pr.id === pid)
+                        if (!pData) return false
+                        const pAge = pData.birth_date ? Math.floor((new Date().getTime() - new Date(pData.birth_date).getTime()) / 3.15576e+10) : null
+                        return pAge !== null && pAge < (tourRules.min_age || 0)
+                      }).length
 
-                      return (
-                        <label key={p.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'} ${isInvalid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'} transition-colors`}>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden shrink-0">
-                              {p.photo_url ? (
-                                <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500">{p.jersey_number || '-'}</div>
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-xs font-black text-gray-900">{p.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] text-gray-500 font-bold">Camisola #{p.jersey_number || 'N/A'}</span>
-                                {age !== null && (
-                                  <span className={`text-[10px] font-bold px-1.5 rounded-md ${isTooYoung ? (isExceptionButValid ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') : 'bg-green-100 text-green-700'}`}>
-                                    {age} anos
-                                  </span>
+                      return profiles.map(p => {
+                        const age = p.birth_date ? Math.floor((new Date().getTime() - new Date(p.birth_date).getTime()) / 3.15576e+10) : null
+                        const isTooYoung = age !== null && age < (tourRules.min_age || 0)
+                        const isExceptionButValid = isTooYoung && tourRules.exceptions_allowed && age >= tourRules.exceptions_min_age
+                        
+                        // Disable if too young and exceptions not allowed, or too young and under the min exception age
+                        let isInvalid = isTooYoung && !isExceptionButValid
+                        const isSelected = tourPlayers.includes(p.id)
+
+                        // If not selected, too young (but valid exception), and we already reached the max exceptions limit, block selection
+                        if (!isSelected && isExceptionButValid && currentExceptionsCount >= tourRules.exceptions_count) {
+                          isInvalid = true
+                        }
+
+                        return (
+                          <label key={p.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'} ${isInvalid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'} transition-colors`}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden shrink-0">
+                                {p.photo_url ? (
+                                  <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500">{p.jersey_number || '-'}</div>
                                 )}
                               </div>
+                              <div>
+                                <p className="text-xs font-black text-gray-900">{p.name}</p>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[10px] text-gray-500 font-bold">Camisola #{p.jersey_number || 'N/A'}</span>
+                                  {age !== null && (
+                                    <span className={`text-[10px] font-bold px-1.5 rounded-md ${isTooYoung ? (isExceptionButValid ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') : 'bg-green-100 text-green-700'}`}>
+                                      {age} anos
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              disabled={isInvalid}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  if (tourPlayers.length >= tourRules.max_squad_size) {
-                                    toast.warning(`Limite de plantel (${tourRules.max_squad_size}) atingido!`)
-                                    return
+                            <div className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={isInvalid}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    if (tourPlayers.length >= tourRules.max_squad_size) {
+                                      toast.warning(`Limite de plantel (${tourRules.max_squad_size}) atingido!`)
+                                      return
+                                    }
+                                    if (isExceptionButValid && currentExceptionsCount >= tourRules.exceptions_count) {
+                                      toast.warning(`Limite de exceções de idade (${tourRules.exceptions_count}) atingido!`)
+                                      return
+                                    }
+                                    setTourPlayers(prev => [...prev, p.id])
+                                  } else {
+                                    setTourPlayers(prev => prev.filter(id => id !== p.id))
                                   }
-                                  setTourPlayers(prev => [...prev, p.id])
-                                } else {
-                                  setTourPlayers(prev => prev.filter(id => id !== p.id))
-                                }
-                              }}
-                              className="w-4 h-4 text-csc-dark border-gray-300 rounded focus:ring-csc-dark"
-                            />
-                          </div>
-                        </label>
-                      )
-                    })}
+                                }}
+                                className="w-4 h-4 text-csc-dark border-gray-300 rounded focus:ring-csc-dark"
+                              />
+                            </div>
+                          </label>
+                        )
+                      })
+                    })()}
                   </div>
                 </div>
               ) : (
