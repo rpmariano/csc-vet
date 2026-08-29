@@ -31,6 +31,7 @@ import {
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
+import { useSearchParams } from 'react-router-dom'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
@@ -354,9 +355,25 @@ const CalendarPage: React.FC = () => {
     }
   }
 
+  const [searchParams] = useSearchParams()
+
   useEffect(() => {
     fetchEventsAndData()
   }, [])
+
+  // Auto-selecionar evento se passado por URL (?event=<id>)
+  useEffect(() => {
+    const eventIdParam = searchParams.get('event')
+    if (eventIdParam && events.length > 0) {
+      const target = events.find(e => e.id === eventIdParam)
+      if (target) {
+        setSelectedEvent(target)
+        const d = new Date(target.date_time)
+        setSelectedDate(d)
+        setCurrentDate(d)
+      }
+    }
+  }, [searchParams, events])
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
 
@@ -1436,9 +1453,33 @@ const CalendarPage: React.FC = () => {
                 </div>
 
                 {selectedDayEvents.length === 0 ? (
-                  <div className="text-center py-6 text-gray-400 text-xs">
-                    <p className="font-semibold text-gray-500">Sem eventos neste dia.</p>
-                    <p className="mt-1 text-[11px]">Clica num dia com marcações no calendário para ver os detalhes.</p>
+                  <div className="space-y-4">
+                    <div className="text-center py-4 text-gray-400 text-xs bg-gray-50/70 rounded-xl p-3 border border-dashed border-gray-200">
+                      <p className="font-semibold text-gray-600">Sem eventos neste dia.</p>
+                      <p className="mt-0.5 text-[11px]">Apresentamos abaixo os próximos eventos na agenda:</p>
+                    </div>
+
+                    {/* Próximos Eventos em Destaque (Jogos, Treinos, Convívios) */}
+                    {(() => {
+                      const now = new Date()
+                      const upcoming = filteredEvents.filter(e => new Date(e.date_time) >= now)
+                      const toShow = (upcoming.length > 0 ? upcoming : filteredEvents).slice(0, 4)
+                      if (toShow.length === 0) return null
+
+                      return (
+                        <div className="space-y-3 pt-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-gray-800 uppercase tracking-wider">
+                              📅 Próximos Eventos Agendados
+                            </span>
+                            <span className="text-[10px] font-bold text-csc-dark bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                              {toShow.length} {toShow.length === 1 ? 'evento' : 'eventos'}
+                            </span>
+                          </div>
+                          {toShow.map(ev => renderEventCard(ev))}
+                        </div>
+                      )
+                    })()}
                   </div>
                 ) : (
                   <div className="space-y-3">

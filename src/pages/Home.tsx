@@ -15,22 +15,35 @@ import {
   PlusCircle,
   BarChart3,
   ChevronRight,
-  ArrowRight
+  ChevronLeft,
+  ArrowRight,
+  Trophy
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
+import { TrainingIcon } from './EventsPage'
 
 interface Event {
   id: string
   title: string
   type: 'practice' | 'match' | 'gathering'
   date_time: string
+  meeting_time?: string | null
   location: string
   description: string
+  home_away?: 'home' | 'away' | 'neutral'
   is_friendly?: boolean
+  tournament_id?: string | null
+  tournament?: {
+    name: string
+  } | null
   tournament_name?: string
+  field?: {
+    name: string
+    address?: string | null
+  } | null
   opponent?: {
     name: string
     initials: string
@@ -62,8 +75,16 @@ interface Due {
 const Home: React.FC = () => {
   const { profile } = useAuth()
   const { clubSettings } = useClub()
-  const [nextMatch, setNextMatch] = useState<Event | null>(null)
-  const [nextPractice, setNextPractice] = useState<Event | null>(null)
+  const navigate = useNavigate()
+
+  // Matches Carousel State
+  const [upcomingMatches, setUpcomingMatches] = useState<Event[]>([])
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+
+  // Practices Carousel State
+  const [upcomingPractices, setUpcomingPractices] = useState<Event[]>([])
+  const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0)
+
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [myCallups, setMyCallups] = useState<Callup[]>([])
   const [pendingDues, setPendingDues] = useState<Due[]>([])
@@ -78,51 +99,75 @@ const Home: React.FC = () => {
       try {
         const nowStr = new Date().toISOString()
 
-        // 1. Fetch next match
+        // 1. Fetch upcoming matches
         const { data: matches } = await supabase
           .from('events')
-          .select('*, opponent:opponents(name, initials, logo_url)')
+          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
           .eq('type', 'match')
           .gte('date_time', nowStr)
           .order('date_time', { ascending: true })
-          .limit(1)
 
-        if (matches && matches.length > 0) {
-          setNextMatch(matches[0] as Event)
-        } else {
-          setNextMatch({
-            id: 'm-demo',
-            title: 'Pescadores CC vs CSC',
-            type: 'match',
-            date_time: '2026-09-12T18:00:00Z',
-            location: 'Costa da Caparica',
-            description: 'Jogo Amigável de preparação.',
-            is_friendly: true,
-            tournament_name: 'Amigável'
-          })
+        let resolvedMatches: Event[] = (matches && matches.length > 0) ? (matches as Event[]) : []
+        if (resolvedMatches.length === 0) {
+          const { data: allM } = await supabase
+            .from('events')
+            .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
+            .eq('type', 'match')
+            .order('date_time', { ascending: true })
+          if (allM && allM.length > 0) {
+            resolvedMatches = allM as Event[]
+          }
         }
+        if (resolvedMatches.length === 0) {
+          resolvedMatches = [
+            {
+              id: 'm-demo',
+              title: 'Pescadores CC vs CSC',
+              type: 'match',
+              date_time: '2026-09-12T18:00:00Z',
+              meeting_time: '16:00:00',
+              location: 'Costa da Caparica',
+              description: 'Jogo Amigável de preparação.',
+              is_friendly: true,
+              home_away: 'away'
+            }
+          ]
+        }
+        setUpcomingMatches(resolvedMatches)
 
-        // 2. Fetch next practice
+        // 2. Fetch upcoming practices
         const { data: practices } = await supabase
           .from('events')
-          .select('*')
+          .select('*, field:fields(id, name, address)')
           .eq('type', 'practice')
           .gte('date_time', nowStr)
           .order('date_time', { ascending: true })
-          .limit(1)
 
-        if (practices && practices.length > 0) {
-          setNextPractice(practices[0] as Event)
-        } else {
-          setNextPractice({
-            id: 'p-demo',
-            title: 'Treino Semanal',
-            type: 'practice',
-            date_time: '2026-09-02T22:00:00Z',
-            location: 'Campo Cascais',
-            description: 'Balneário 4 às 21h'
-          })
+        let resolvedPractices: Event[] = (practices && practices.length > 0) ? (practices as Event[]) : []
+        if (resolvedPractices.length === 0) {
+          const { data: allP } = await supabase
+            .from('events')
+            .select('*, field:fields(id, name, address)')
+            .eq('type', 'practice')
+            .order('date_time', { ascending: true })
+          if (allP && allP.length > 0) {
+            resolvedPractices = allP as Event[]
+          }
         }
+        if (resolvedPractices.length === 0) {
+          resolvedPractices = [
+            {
+              id: 'p-demo',
+              title: 'Treino Semanal Veteranos',
+              type: 'practice',
+              date_time: '2026-09-02T22:00:00Z',
+              meeting_time: '21:30:00',
+              location: 'Campo Sintético Municipal',
+              description: 'Balneário 4 às 21h30'
+            }
+          ]
+        }
+        setUpcomingPractices(resolvedPractices)
 
         // 3. Fetch announcements
         const { data: anns } = await supabase
@@ -187,7 +232,39 @@ const Home: React.FC = () => {
     }
   }
 
+  // Carousel Controls
+  const nextMatchSlide = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (upcomingMatches.length > 1) {
+      setCurrentMatchIndex(prev => (prev + 1) % upcomingMatches.length)
+    }
+  }
+
+  const prevMatchSlide = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (upcomingMatches.length > 1) {
+      setCurrentMatchIndex(prev => (prev - 1 + upcomingMatches.length) % upcomingMatches.length)
+    }
+  }
+
+  const nextPracticeSlide = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (upcomingPractices.length > 1) {
+      setCurrentPracticeIndex(prev => (prev + 1) % upcomingPractices.length)
+    }
+  }
+
+  const prevPracticeSlide = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (upcomingPractices.length > 1) {
+      setCurrentPracticeIndex(prev => (prev - 1 + upcomingPractices.length) % upcomingPractices.length)
+    }
+  }
+
   const pendingCallupsCount = myCallups.filter(c => c.status === 'called').length
+
+  const currentMatch = upcomingMatches[currentMatchIndex]
+  const currentPractice = upcomingPractices[currentPracticeIndex]
 
   if (loading) {
     return (
@@ -270,215 +347,484 @@ const Home: React.FC = () => {
         {/* COLUNA ESQUERDA / PRINCIPAL (2/3 da largura em Desktop) */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* CARD: PRÓXIMO JOGO */}
-          {nextMatch && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-center mb-5 pb-3 border-b border-gray-100">
+          {/* CARROSSEL DE JOGOS MARCADOS */}
+          {currentMatch && (
+            <div className="bg-white rounded-3xl border-2 border-blue-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-blue-500 transition-all">
+              {/* Header com Navegação do Carrossel */}
+              <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 px-5 py-3.5 text-white flex items-center justify-between shadow-xs">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">⚽</span>
-                  <h2 className="text-lg font-black text-gray-900">Próximo Jogo</h2>
-                </div>
-                <span className="text-xs font-bold text-csc-dark bg-amber-50 border border-amber-200 px-3 py-0.5 rounded-full uppercase">
-                  {nextMatch.is_friendly ? 'Jogo Amigável' : nextMatch.tournament_name || 'Competição Oficial'}
-                </span>
-              </div>
-              
-              {nextMatch.opponent ? (
-                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-150 mb-5">
-                  <div className="flex items-center justify-around gap-4">
-                    {/* Clube da Casa */}
-                    <div className="flex flex-col items-center gap-2 w-28 text-center">
-                      {clubSettings?.logo_url ? (
-                        <img src={clubSettings.logo_url} alt="Nós" className="w-16 h-16 object-contain" />
-                      ) : (
-                        <div className="w-16 h-16 bg-csc-dark text-white rounded-2xl flex items-center justify-center text-lg font-black shadow-sm">
-                          {clubSettings?.initials || 'CSC'}
-                        </div>
-                      )}
-                      <span className="text-xs font-bold text-gray-800">{clubSettings?.initials || clubSettings?.name || 'CSC'}</span>
-                    </div>
-
-                    <div className="flex flex-col items-center">
-                      <span className="text-gray-300 font-black text-xl">VS</span>
-                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">Confronto</span>
-                    </div>
-
-                    {/* Adversário */}
-                    <div className="flex flex-col items-center gap-2 w-28 text-center">
-                      {nextMatch.opponent.logo_url ? (
-                        <img src={nextMatch.opponent.logo_url} alt="Adv" className="w-16 h-16 object-contain" />
-                      ) : (
-                        <div className="w-16 h-16 bg-gray-200 rounded-2xl flex items-center justify-center text-lg font-black text-gray-600 shadow-sm">
-                          {nextMatch.opponent.initials || 'ADV'}
-                        </div>
-                      )}
-                      <span className="text-xs font-bold text-gray-800 line-clamp-1">{nextMatch.opponent.initials || nextMatch.opponent.name}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <h3 className="text-xl font-extrabold text-gray-850 mb-4">{nextMatch.title}</h3>
-              )}
-              
-              {/* Detalhes do Jogo */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-700 bg-white p-3 rounded-xl border border-gray-100">
-                <div className="flex items-center gap-2.5">
-                  <Calendar size={16} className="text-csc-gold shrink-0" />
-                  <span>
-                    <strong>Data:</strong> {new Date(nextMatch.date_time).toLocaleDateString('pt-PT', {
-                      weekday: 'short',
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
+                  <Trophy size={18} className="text-amber-300" />
+                  <h2 className="text-sm sm:text-base font-black tracking-wide">
+                    Jogos Marcados
+                  </h2>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                    {upcomingMatches.length} {upcomingMatches.length === 1 ? 'Jogo' : 'Jogos'}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2.5">
-                  <Clock size={16} className="text-csc-gold shrink-0" />
-                  <span>
-                    <strong>Horário:</strong> {new Date(nextMatch.date_time).toLocaleTimeString('pt-PT', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between sm:col-span-2 pt-2 border-t border-gray-100">
-                  <div className="flex items-center gap-2.5 truncate">
-                    <MapPin size={16} className="text-csc-gold shrink-0" />
-                    <span className="truncate"><strong>Local:</strong> {nextMatch.location}</span>
-                  </div>
-                  {nextMatch.location && (
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextMatch.location)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0 shadow-2xs"
-                      title="Abrir no Google Maps"
-                    >
-                      <MapPin size={12} className="text-red-500" />
-                      <span>Google Maps</span>
-                      <ExternalLink size={10} className="opacity-70" />
-                    </a>
+                {/* Controles de Navegação */}
+                <div className="flex items-center gap-2">
+                  {upcomingMatches.length > 1 && (
+                    <div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-xl border border-white/20">
+                      <button
+                        onClick={prevMatchSlide}
+                        className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer active:scale-90"
+                        title="Jogo Anterior"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <span className="text-xs font-black px-1.5">
+                        {currentMatchIndex + 1} / {upcomingMatches.length}
+                      </span>
+                      <button
+                        onClick={nextMatchSlide}
+                        className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer active:scale-90"
+                        title="Próximo Jogo"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
                   )}
+
+                  <span className="text-[11px] font-bold text-blue-200 hidden sm:inline-flex items-center gap-1 ml-1 group-hover:text-white">
+                    <span>Ver Detalhes</span>
+                    <ChevronRight size={14} />
+                  </span>
                 </div>
               </div>
 
-              {/* Convocatória ligada a este jogo */}
-              {(() => {
-                const currentMatchCallup = myCallups.find(c => c.event_id === nextMatch.id)
-                if (!currentMatchCallup) return null
+              {/* Cartão Clicável do Jogo Atual */}
+              <div 
+                onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
+                className="p-5 sm:p-6 space-y-4 cursor-pointer hover:bg-blue-50/20 transition-colors group"
+              >
+                {/* Badges do Jogo */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-blue-600 text-white shadow-2xs uppercase">
+                      Jogo
+                    </span>
+                    {currentMatch.is_friendly ? (
+                      <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-amber-100 text-amber-950 border border-amber-300">
+                        Amigável
+                      </span>
+                    ) : (
+                      (currentMatch.tournament?.name || currentMatch.tournament_name) && (
+                        <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-blue-100 text-blue-900 border border-blue-200">
+                          🏆 {currentMatch.tournament?.name || currentMatch.tournament_name}
+                        </span>
+                      )
+                    )}
+                  </div>
 
-                return (
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-                      <div>
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">A tua convocatória:</span>
-                        <p className="text-xs font-black mt-0.5">
-                          {currentMatchCallup.status === 'confirmed' ? (
-                            <span className="text-green-700 flex items-center gap-1"><CheckCircle2 size={15}/> Presença Confirmada</span>
-                          ) : currentMatchCallup.status === 'declined' ? (
-                            <span className="text-red-700 flex items-center gap-1"><XCircle size={15}/> Marcaste Ausência</span>
-                          ) : (
-                            <span className="text-amber-700 flex items-center gap-1"><AlertCircle size={15}/> A aguardar a tua resposta</span>
-                          )}
-                        </p>
+                  <span className="text-xs font-black text-blue-700 group-hover:text-blue-900 flex items-center gap-1 underline underline-offset-2">
+                    <span>Abrir na Agenda</span>
+                    <ArrowRight size={13} />
+                  </span>
+                </div>
+
+                {/* Bloco Matchup VS */}
+                {currentMatch.opponent ? (() => {
+                  const isAway = currentMatch.home_away === 'away'
+                  return (
+                    <div className="bg-gradient-to-b from-gray-50 to-white p-4 rounded-2xl border border-gray-200 shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between gap-4">
+                        {/* Equipa Esquerda */}
+                        <div className="flex-1 flex flex-col items-start text-left min-w-0">
+                          <div className="flex items-center gap-2">
+                            {(isAway ? currentMatch.opponent?.logo_url : clubSettings?.logo_url) ? (
+                              <img src={(isAway ? currentMatch.opponent?.logo_url : clubSettings?.logo_url) || ''} alt="Team" className="w-10 h-10 object-contain drop-shadow-xs" />
+                            ) : (
+                              <div className="w-10 h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shadow-2xs">
+                                {isAway ? (currentMatch.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
+                              </div>
+                            )}
+                            <span className="font-black text-sm sm:text-base text-gray-900 uppercase">
+                              {isAway ? (currentMatch.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-gray-700 mt-1 leading-snug">
+                            {isAway ? currentMatch.opponent?.name : (clubSettings?.name || 'CSC Cascais')}
+                          </span>
+                        </div>
+
+                        {/* VS Badge */}
+                        <div className="shrink-0 flex flex-col items-center">
+                          <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                            VS
+                          </span>
+                        </div>
+
+                        {/* Equipa Direita */}
+                        <div className="flex-1 flex flex-col items-end text-right min-w-0">
+                          <div className="flex items-center gap-2 flex-row-reverse">
+                            {(isAway ? clubSettings?.logo_url : currentMatch.opponent?.logo_url) ? (
+                              <img src={(isAway ? clubSettings?.logo_url : currentMatch.opponent?.logo_url) || ''} alt="Team" className="w-10 h-10 object-contain drop-shadow-xs" />
+                            ) : (
+                              <div className="w-10 h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shadow-2xs">
+                                {isAway ? (clubSettings?.initials || 'CSC') : (currentMatch.opponent?.initials || 'ADV')}
+                              </div>
+                            )}
+                            <span className="font-black text-sm sm:text-base text-gray-900 uppercase">
+                              {isAway ? (clubSettings?.initials || 'CSC') : (currentMatch.opponent?.initials || 'ADV')}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-gray-700 mt-1 leading-snug">
+                            {isAway ? (clubSettings?.name || 'CSC Cascais') : currentMatch.opponent?.name}
+                          </span>
+                        </div>
                       </div>
-                      
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
-                          className={`text-xs px-3.5 py-1.5 rounded-lg font-bold transition-all shadow-xs ${
-                            currentMatchCallup.status === 'confirmed'
-                              ? 'bg-green-700 text-white font-black'
-                              : 'bg-white text-green-700 border border-green-300 hover:bg-green-50'
-                          }`}
-                        >
-                          Confirmar
-                        </button>
-                        <button
-                          onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
-                          className={`text-xs px-3.5 py-1.5 rounded-lg font-bold transition-all shadow-xs ${
-                            currentMatchCallup.status === 'declined'
-                              ? 'bg-red-700 text-white font-black'
-                              : 'bg-white text-red-700 border border-red-300 hover:bg-red-50'
-                          }`}
-                        >
-                          Recusar
-                        </button>
+
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-600">
+                        <span className="font-bold">
+                          Condição: <strong className="text-gray-900">{isAway ? '✈️ Fora de Casa' : currentMatch.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}</strong>
+                        </span>
                       </div>
                     </div>
+                  )
+                })() : (
+                  <h3 className="text-lg font-black text-gray-900">{currentMatch.title}</h3>
+                )}
+
+                {/* Concentração por extenso (se existir) */}
+                {currentMatch.meeting_time && (
+                  <div className="flex items-center">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl shadow-2xs">
+                      <span>⏱️ Concentração: {currentMatch.meeting_time.substring(0, 5)}</span>
+                    </div>
                   </div>
-                )
-              })()}
+                )}
+
+                {/* Data, Horário e Localização */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-700 bg-gray-50/80 p-3.5 rounded-2xl border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={15} className="text-csc-dark shrink-0" />
+                    <span>
+                      <strong>Data:</strong> {new Date(currentMatch.date_time).toLocaleDateString('pt-PT', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Clock size={15} className="text-csc-dark shrink-0" />
+                    <span>
+                      <strong>Horário:</strong> {new Date(currentMatch.date_time).toLocaleTimeString('pt-PT', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:col-span-2 pt-2 border-t border-gray-200">
+                    <div className="flex items-center gap-2 truncate">
+                      <MapPin size={15} className="text-red-600 shrink-0" />
+                      <span className="truncate">
+                        <strong>Local:</strong> {currentMatch.location || currentMatch.field?.name || 'Local a definir'}
+                      </span>
+                    </div>
+                    {(currentMatch.location || currentMatch.field?.name) && (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentMatch.location || currentMatch.field?.name || '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2.5 py-1 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0 shadow-2xs ml-2"
+                        title="Abrir no Google Maps"
+                      >
+                        <MapPin size={11} className="text-red-500" />
+                        <span>Maps</span>
+                        <ExternalLink size={10} className="opacity-70" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Observações / Descrição */}
+                {currentMatch.description && (
+                  <div className="text-xs text-gray-700 bg-white p-3 rounded-xl border border-gray-200">
+                    <p className="whitespace-pre-line leading-relaxed">{currentMatch.description}</p>
+                  </div>
+                )}
+
+                {/* Convocatória ligada a este jogo */}
+                {(() => {
+                  const currentMatchCallup = myCallups.find(c => c.event_id === currentMatch.id)
+                  if (!currentMatchCallup) return null
+
+                  return (
+                    <div 
+                      onClick={(e) => e.stopPropagation()}
+                      className="pt-2 border-t border-gray-100"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 p-3.5 rounded-2xl border border-gray-200">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">A tua convocatória:</span>
+                          <p className="text-xs font-black mt-0.5">
+                            {currentMatchCallup.status === 'confirmed' ? (
+                              <span className="text-emerald-700 flex items-center gap-1"><CheckCircle2 size={15}/> Presença Confirmada</span>
+                            ) : currentMatchCallup.status === 'declined' ? (
+                              <span className="text-red-700 flex items-center gap-1"><XCircle size={15}/> Marcaste Ausência</span>
+                            ) : (
+                              <span className="text-amber-700 flex items-center gap-1"><AlertCircle size={15}/> A aguardar a tua resposta</span>
+                            )}
+                          </p>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
+                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                              currentMatchCallup.status === 'confirmed'
+                                ? 'bg-emerald-700 text-white font-black'
+                                : 'bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50'
+                            }`}
+                          >
+                            Confirmar
+                          </button>
+                          <button
+                            onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
+                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                              currentMatchCallup.status === 'declined'
+                                ? 'bg-red-700 text-white font-black'
+                                : 'bg-white text-red-700 border border-red-300 hover:bg-red-50'
+                            }`}
+                          >
+                            Recusar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Indicadores / Pontos do Carrossel de Jogos */}
+                {upcomingMatches.length > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
+                    {upcomingMatches.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentMatchIndex(idx)}
+                        className={`h-2 rounded-full transition-all cursor-pointer ${
+                          idx === currentMatchIndex ? 'w-6 bg-blue-700' : 'w-2 bg-gray-300 hover:bg-gray-400'
+                        }`}
+                        title={`Ir para Jogo ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          {/* CARD: PRÓXIMO TREINO */}
-          {nextPractice && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+          {/* CARROSSEL DE TREINOS MARCADOS */}
+          {currentPractice && (
+            <div className="bg-white rounded-3xl border-2 border-emerald-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-emerald-500 transition-all">
+              {/* Header com Navegação do Carrossel */}
+              <div className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-900 px-5 py-3.5 text-white flex items-center justify-between shadow-xs">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">🏃</span>
-                  <h2 className="text-lg font-black text-gray-900">Próximo Treino</h2>
-                </div>
-                <span className="text-xs font-bold text-green-800 bg-green-50 border border-green-200 px-3 py-0.5 rounded-full uppercase">
-                  Semanal
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-700 mb-4">
-                <div className="flex items-center gap-2.5">
-                  <Calendar size={16} className="text-csc-gold shrink-0" />
-                  <span>
-                    <strong>Data:</strong> {new Date(nextPractice.date_time).toLocaleDateString('pt-PT', {
-                      weekday: 'short',
-                      day: '2-digit',
-                      month: 'long'
-                    })}
+                  <TrainingIcon size={18} className="text-white" />
+                  <h2 className="text-sm sm:text-base font-black tracking-wide">
+                    Treinos Marcados
+                  </h2>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                    {upcomingPractices.length} {upcomingPractices.length === 1 ? 'Treino' : 'Treinos'}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2.5">
-                  <Clock size={16} className="text-csc-gold shrink-0" />
-                  <span>
-                    <strong>Horário:</strong> {new Date(nextPractice.date_time).toLocaleTimeString('pt-PT', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between sm:col-span-2 pt-2 border-t border-gray-100">
-                  <div className="flex items-center gap-2.5 truncate">
-                    <MapPin size={16} className="text-csc-gold shrink-0" />
-                    <span className="truncate"><strong>Local:</strong> {nextPractice.location}</span>
-                  </div>
-                  {nextPractice.location && (
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextPractice.location)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0 shadow-2xs"
-                      title="Abrir no Google Maps"
-                    >
-                      <MapPin size={12} className="text-red-500" />
-                      <span>Google Maps</span>
-                      <ExternalLink size={10} className="opacity-70" />
-                    </a>
+                {/* Controles de Navegação */}
+                <div className="flex items-center gap-2">
+                  {upcomingPractices.length > 1 && (
+                    <div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-xl border border-white/20">
+                      <button
+                        onClick={prevPracticeSlide}
+                        className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer active:scale-90"
+                        title="Treino Anterior"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <span className="text-xs font-black px-1.5">
+                        {currentPracticeIndex + 1} / {upcomingPractices.length}
+                      </span>
+                      <button
+                        onClick={nextPracticeSlide}
+                        className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer active:scale-90"
+                        title="Próximo Treino"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
                   )}
+
+                  <span className="text-[11px] font-bold text-emerald-200 hidden sm:inline-flex items-center gap-1 ml-1 group-hover:text-white">
+                    <span>Ver Detalhes</span>
+                    <ChevronRight size={14} />
+                  </span>
                 </div>
               </div>
 
-              {nextPractice.description && (
-                <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-900 font-medium">
-                  <Info size={16} className="shrink-0 mt-0.5 text-amber-700" />
-                  <div>
-                    <strong>Instruções do Balneário:</strong> {nextPractice.description}
+              {/* Cartão Clicável do Treino Atual */}
+              <div 
+                onClick={() => navigate(`/calendar?event=${currentPractice.id}`)}
+                className="p-5 sm:p-6 space-y-4 cursor-pointer hover:bg-emerald-50/20 transition-colors group"
+              >
+                {/* Badges do Treino */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-emerald-700 text-white shadow-2xs uppercase flex items-center gap-1">
+                      <TrainingIcon size={12} className="text-white" />
+                      <span>Treino</span>
+                    </span>
+                    <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300">
+                      Semanal
+                    </span>
+                  </div>
+
+                  <span className="text-xs font-black text-emerald-700 group-hover:text-emerald-900 flex items-center gap-1 underline underline-offset-2">
+                    <span>Abrir na Agenda</span>
+                    <ArrowRight size={13} />
+                  </span>
+                </div>
+
+                <h3 className="text-lg font-black text-gray-900">{currentPractice.title}</h3>
+
+                {/* Concentração por extenso (se existir) */}
+                {currentPractice.meeting_time && (
+                  <div className="flex items-center">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl shadow-2xs">
+                      <span>⏱️ Concentração: {currentPractice.meeting_time.substring(0, 5)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Data, Horário e Localização */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-700 bg-gray-50/80 p-3.5 rounded-2xl border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={15} className="text-csc-dark shrink-0" />
+                    <span>
+                      <strong>Data:</strong> {new Date(currentPractice.date_time).toLocaleDateString('pt-PT', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Clock size={15} className="text-csc-dark shrink-0" />
+                    <span>
+                      <strong>Horário:</strong> {new Date(currentPractice.date_time).toLocaleTimeString('pt-PT', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:col-span-2 pt-2 border-t border-gray-200">
+                    <div className="flex items-center gap-2 truncate">
+                      <MapPin size={15} className="text-red-600 shrink-0" />
+                      <span className="truncate">
+                        <strong>Local:</strong> {currentPractice.location || currentPractice.field?.name || 'Campo Cascais'}
+                      </span>
+                    </div>
+                    {(currentPractice.location || currentPractice.field?.name) && (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentPractice.location || currentPractice.field?.name || '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2.5 py-1 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors shrink-0 shadow-2xs ml-2"
+                        title="Abrir no Google Maps"
+                      >
+                        <MapPin size={11} className="text-red-500" />
+                        <span>Maps</span>
+                        <ExternalLink size={10} className="opacity-70" />
+                      </a>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {/* Instruções do Balneário / Observações */}
+                {currentPractice.description && (
+                  <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-3.5 flex items-start gap-2.5 text-xs text-amber-950 font-medium">
+                    <Info size={16} className="shrink-0 mt-0.5 text-amber-700" />
+                    <div>
+                      <strong>Instruções do Balneário:</strong> {currentPractice.description}
+                    </div>
+                  </div>
+                )}
+
+                {/* Convocatória ligada a este treino */}
+                {(() => {
+                  const currentPracticeCallup = myCallups.find(c => c.event_id === currentPractice.id)
+                  if (!currentPracticeCallup) return null
+
+                  return (
+                    <div 
+                      onClick={(e) => e.stopPropagation()}
+                      className="pt-2 border-t border-gray-100"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 p-3.5 rounded-2xl border border-gray-200">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">A tua convocatória:</span>
+                          <p className="text-xs font-black mt-0.5">
+                            {currentPracticeCallup.status === 'confirmed' ? (
+                              <span className="text-emerald-700 flex items-center gap-1"><CheckCircle2 size={15}/> Presença Confirmada</span>
+                            ) : currentPracticeCallup.status === 'declined' ? (
+                              <span className="text-red-700 flex items-center gap-1"><XCircle size={15}/> Marcaste Ausência</span>
+                            ) : (
+                              <span className="text-amber-700 flex items-center gap-1"><AlertCircle size={15}/> A aguardar a tua resposta</span>
+                            )}
+                          </p>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleCallupResponse(currentPracticeCallup.id, 'confirmed')}
+                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                              currentPracticeCallup.status === 'confirmed'
+                                ? 'bg-emerald-700 text-white font-black'
+                                : 'bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-50'
+                            }`}
+                          >
+                            Confirmar
+                          </button>
+                          <button
+                            onClick={() => handleCallupResponse(currentPracticeCallup.id, 'declined')}
+                            className={`text-xs px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                              currentPracticeCallup.status === 'declined'
+                                ? 'bg-red-700 text-white font-black'
+                                : 'bg-white text-red-700 border border-red-300 hover:bg-red-50'
+                            }`}
+                          >
+                            Recusar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Indicadores / Pontos do Carrossel de Treinos */}
+                {upcomingPractices.length > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
+                    {upcomingPractices.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentPracticeIndex(idx)}
+                        className={`h-2 rounded-full transition-all cursor-pointer ${
+                          idx === currentPracticeIndex ? 'w-6 bg-emerald-700' : 'w-2 bg-gray-300 hover:bg-gray-400'
+                        }`}
+                        title={`Ir para Treino ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
