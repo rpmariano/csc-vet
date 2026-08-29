@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { 
   Calendar, 
   MapPin, 
@@ -6,8 +6,7 @@ import {
   XCircle, 
   ChevronRight, 
   ChevronLeft,
-  Trophy,
-  Bell
+  Trophy
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -59,17 +58,41 @@ interface Callup {
   event: Event
 }
 
-type LayoutProposal = 'proposal1' | 'proposal2' | 'proposal3'
+// Hook para suporte a touch swipe / slide no telemóvel
+const useSwipe = (onSwipeLeft?: () => void, onSwipeRight?: () => void) => {
+  const touchStartX = useRef<number | null>(null)
+  const touchEndX = useRef<number | null>(null)
+  const minSwipeDistance = 45
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchEndX.current = null
+    touchStartX.current = e.targetTouches[0].clientX
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX
+  }
+
+  const onTouchEnd = () => {
+    if (touchStartX.current === null || touchEndX.current === null) return
+    const distance = touchStartX.current - touchEndX.current
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe && onSwipeLeft) {
+      onSwipeLeft()
+    } else if (isRightSwipe && onSwipeRight) {
+      onSwipeRight()
+    }
+  }
+
+  return { onTouchStart, onTouchMove, onTouchEnd }
+}
 
 const Home: React.FC = () => {
   const { profile } = useAuth()
   const { clubSettings } = useClub()
   const navigate = useNavigate()
-
-  // Layout Selector State (Persistente)
-  const [selectedLayout, setSelectedLayout] = useState<LayoutProposal>(() => {
-    return (localStorage.getItem('csc_home_layout_preview') as LayoutProposal) || 'proposal1'
-  })
 
   // Matches Carousel State
   const [upcomingMatches, setUpcomingMatches] = useState<Event[]>([])
@@ -87,12 +110,6 @@ const Home: React.FC = () => {
   const [myCallups, setMyCallups] = useState<Callup[]>([])
   const [fields, setFields] = useState<{ id: string; name: string; address?: string | null }[]>([])
   const [loading, setLoading] = useState(true)
-
-  const handleSelectLayout = (layout: LayoutProposal) => {
-    triggerHaptic('medium')
-    setSelectedLayout(layout)
-    localStorage.setItem('csc_home_layout_preview', layout)
-  }
 
   const getEventLocation = (ev?: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null) => {
     if (!ev) return ''
@@ -263,6 +280,11 @@ const Home: React.FC = () => {
     }
   }
 
+  // Swipe handlers para touch / telemóvel
+  const matchSwipeHandlers = useSwipe(() => nextMatchSlide(), () => prevMatchSlide())
+  const pendingSwipeHandlers = useSwipe(() => nextPendingSlide(), () => prevPendingSlide())
+  const announcementSwipeHandlers = useSwipe(() => nextAnnouncementSlide(), () => prevAnnouncementSlide())
+
   const isCallupPendingResponse = (callup: Callup) => {
     if (callup.status !== 'called') return false
     const ev = callup.event
@@ -302,845 +324,392 @@ const Home: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* ====== BARRA DE SELEÇÃO INTERATIVA DAS 3 PROPOSTAS ====== */}
-      <div className="bg-white/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl border border-gray-200/90 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 select-none">
-        <div className="flex items-center gap-2 px-2 self-start md:self-center">
-          <div className="w-7 h-7 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-            🎨
-          </div>
-          <div>
-            <span className="text-xs font-black text-gray-900 block leading-tight">Escolhe o Layout da Homepage</span>
-            <span className="text-[10px] font-bold text-gray-500">Clica para comparar os 3 designs em tempo real</span>
-          </div>
-        </div>
+    <div className="space-y-6 pb-12">
+      {/* 1. Alerta de Convocatórias Pendentes: Estilo Banner Ação Rápida com Suporte Touch Slide */}
+      {pendingCallupsCount > 0 && currentPending && (() => {
+        const ev = currentPending.event
+        const isPractice = ev?.type === 'practice'
+        const evTime = ev?.date_time ? new Date(ev.date_time).getTime() : 0
+        const diffDays = Math.ceil((evTime - Date.now()) / (1000 * 60 * 60 * 24))
+        const isRsvpOpen = !isPractice || diffDays <= 6
+        const evEmoji = ev?.type === 'match' ? '⚽' : ev?.type === 'practice' ? '🏃' : '🎉'
 
-        <div className="grid grid-cols-3 gap-1 bg-gray-100/90 p-1 rounded-xl w-full md:w-auto border border-gray-200/60">
-          <button
-            type="button"
-            onClick={() => handleSelectLayout('proposal1')}
-            className={`px-3 py-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-              selectedLayout === 'proposal1'
-                ? 'bg-csc-dark text-csc-gold shadow-xs ring-1 ring-csc-gold/40'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/70'
-            }`}
+        return (
+          <div 
+            {...pendingSwipeHandlers}
+            className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 rounded-3xl p-4 sm:p-5 shadow-sm border-2 border-amber-600 space-y-3 select-none touch-pan-y"
           >
-            <span>🎟️ Proposta 1</span>
-            <span className="hidden sm:inline text-[10px] opacity-85">(Matchday Pass)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectLayout('proposal2')}
-            className={`px-3 py-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-              selectedLayout === 'proposal2'
-                ? 'bg-csc-dark text-csc-gold shadow-xs ring-1 ring-csc-gold/40'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/70'
-            }`}
-          >
-            <span>📊 Proposta 2</span>
-            <span className="hidden sm:inline text-[10px] opacity-85">(Grelha Modular)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectLayout('proposal3')}
-            className={`px-3 py-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-              selectedLayout === 'proposal3'
-                ? 'bg-csc-dark text-csc-gold shadow-xs ring-1 ring-csc-gold/40'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/70'
-            }`}
-          >
-            <span>🏟️ Proposta 3</span>
-            <span className="hidden sm:inline text-[10px] opacity-85">(Hero Panorâmico)</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 🌟 PROPOSTA 1: MATCHDAY HUB & BILHETE DE ESTÁDIO (ESTILO OFICIAL CSC)      */}
-      {/* ========================================================================= */}
-      {selectedLayout === 'proposal1' && (
-        <div className="space-y-6 animate-fade-in">
-          
-          {/* 1. Alerta de Convocatórias Pendentes: Estilo Banner Ação Rápida */}
-          {pendingCallupsCount > 0 && currentPending && (() => {
-            const ev = currentPending.event
-            const isPractice = ev?.type === 'practice'
-            const evTime = ev?.date_time ? new Date(ev.date_time).getTime() : 0
-            const diffDays = Math.ceil((evTime - Date.now()) / (1000 * 60 * 60 * 24))
-            const isRsvpOpen = !isPractice || diffDays <= 6
-            const evEmoji = ev?.type === 'match' ? '⚽' : ev?.type === 'practice' ? '🏃' : '🎉'
-
-            return (
-              <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 rounded-3xl p-4 sm:p-5 shadow-sm border-2 border-amber-600 space-y-3 select-none">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-xs p-4 rounded-2xl border border-amber-300 shadow-2xs">
-                  <div 
-                    onClick={() => navigate(`/calendar?event=${ev?.id || currentPending.event_id}`)}
-                    className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer hover:opacity-85 transition-opacity"
-                  >
-                    <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-300 text-amber-900 flex items-center justify-center text-lg shrink-0 font-black">
-                      {evEmoji}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black uppercase text-amber-950 px-2 py-0.2 rounded bg-amber-200/80">
-                          Convocatória Pendente
-                        </span>
-                        <span className="text-xs font-bold text-gray-500">
-                          {ev?.date_time && new Date(ev.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
-                        </span>
-                      </div>
-                      <h4 className="text-sm font-black text-gray-900 truncate mt-0.5">{ev?.title}</h4>
-                      <p className="text-xs text-gray-600 truncate flex items-center gap-1 mt-0.5">
-                        <MapPin size={12} className="text-red-500 shrink-0" />
-                        <span className="truncate">{getEventLocation(ev) || 'Local a definir'}</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Ações RSVP */}
-                  {isRsvpOpen ? (
-                    <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-amber-100">
-                      <button
-                        type="button"
-                        onClick={() => handleCallupResponse(currentPending.id, 'confirmed')}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-                      >
-                        <CheckCircle2 size={14} />
-                        <span>Confirmar</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCallupResponse(currentPending.id, 'declined')}
-                        className="px-4 py-2 bg-white hover:bg-red-50 text-red-700 border border-red-300 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
-                      >
-                        <XCircle size={14} />
-                        <span>Recusar</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-xs font-bold text-amber-900 bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-300 self-start sm:self-center">
-                      Abre 6 dias antes
-                    </span>
-                  )}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 backdrop-blur-xs p-4 rounded-2xl border border-amber-300 shadow-2xs">
+              <div 
+                onClick={() => navigate(`/calendar?event=${ev?.id || currentPending.event_id}`)}
+                className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer hover:opacity-85 transition-opacity"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-300 text-amber-900 flex items-center justify-center text-lg shrink-0 font-black">
+                  {evEmoji}
                 </div>
-
-                {/* Navegação do Alerta se existirem múltiplos */}
-                {pendingCallupsCount > 1 && (
-                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-600/40">
-                    <button
-                      type="button"
-                      onClick={prevPendingSlide}
-                      className="w-8 h-8 rounded-xl bg-black/15 hover:bg-black/25 text-csc-dark flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs shrink-0"
-                      title="Convocatória Anterior"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-
-                    <div className="flex items-center bg-black/10 px-3.5 py-1 rounded-full border border-black/10">
-                      <span className="text-xs font-black text-csc-dark leading-none tracking-wider">
-                        {activePendingIndex + 1}/{pendingCallupsCount}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={nextPendingSlide}
-                      className="w-8 h-8 rounded-xl bg-black/15 hover:bg-black/25 text-csc-dark flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs shrink-0"
-                      title="Próxima Convocatória"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )
-          })()}
-
-          {/* 2. Grelha: Bilhete Matchday Pass (8 Colunas) + Comunicados (4 Colunas) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            {/* BILHETE DE JOGO MATCHDAY PASS (8/12) */}
-            <div className="lg:col-span-8">
-              {currentMatch ? (() => {
-                const isAway = currentMatch.home_away === 'away'
-                const cscSigla = formatClubSigla(clubSettings?.initials)
-                const oppSigla = formatOpponentSigla(currentMatch.opponent)
-                const leftLogo = isAway ? currentMatch.opponent?.logo_url : clubSettings?.logo_url
-                const leftInitials = isAway ? oppSigla : cscSigla
-                const leftName = isAway ? (currentMatch.opponent?.name || oppSigla) : (clubSettings?.name || 'GDS Cascais')
-
-                const rightLogo = isAway ? clubSettings?.logo_url : currentMatch.opponent?.logo_url
-                const rightInitials = isAway ? cscSigla : oppSigla
-                const rightName = isAway ? (clubSettings?.name || 'GDS Cascais') : (currentMatch.opponent?.name || oppSigla)
-
-                return (
-                  <div className="bg-gradient-to-br from-[#003322] via-[#004830] to-[#002416] text-white rounded-3xl p-5 sm:p-7 shadow-xl border-2 border-csc-gold relative overflow-hidden space-y-5 select-none">
-                    
-                    {/* Topo do Bilhete: Competição & Countdown */}
-                    <div className="flex items-center justify-between gap-3 border-b border-white/15 pb-4">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-black uppercase px-2.5 py-1 rounded-lg bg-csc-gold text-csc-dark shadow-xs flex items-center gap-1.5">
-                          <Trophy size={13} />
-                          <span>{currentMatch.is_friendly ? 'Jogo Amigável' : (currentMatch.tournament?.name || currentMatch.tournament_name || 'Jogo Oficial')}</span>
-                        </span>
-                        <span className="text-xs font-bold text-emerald-200/90 bg-white/10 px-2.5 py-1 rounded-lg border border-white/15">
-                          {currentMatch.home_away === 'away' ? '✈️ Fora de Casa' : currentMatch.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}
-                        </span>
-                      </div>
-
-                      <span className="text-xs font-black text-amber-300 bg-black/30 border border-amber-400/40 px-3 py-1 rounded-full shrink-0 shadow-2xs">
-                        {getCountdownLabel(currentMatch.date_time)}
-                      </span>
-                    </div>
-
-                    {/* Duelo de Equipas / Matchup em Destaque */}
-                    <div 
-                      onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
-                      className="bg-black/30 backdrop-blur-xs p-4 sm:p-6 rounded-2xl border border-white/15 hover:border-csc-gold/70 transition-all cursor-pointer group"
-                    >
-                      <div className="grid grid-cols-11 items-center gap-2">
-                        {/* Equipa 1 */}
-                        <div className="col-span-5 flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left min-w-0">
-                          {leftLogo ? (
-                            <img src={leftLogo} alt={leftInitials} className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 drop-shadow-md group-hover:scale-105 transition-transform" />
-                          ) : (
-                            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/15 text-csc-gold rounded-2xl flex items-center justify-center text-base font-black border border-white/20 shrink-0">
-                              {leftInitials}
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <p className="text-base sm:text-lg font-black text-white truncate leading-tight uppercase">{leftInitials}</p>
-                            <p className="text-xs text-emerald-200/80 truncate hidden sm:block font-medium">{leftName}</p>
-                          </div>
-                        </div>
-
-                        {/* VS Central */}
-                        <div className="col-span-1 flex flex-col items-center justify-center">
-                          <span className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-csc-dark font-black text-xs flex items-center justify-center shadow-lg border border-white/40">
-                            VS
-                          </span>
-                        </div>
-
-                        {/* Equipa 2 */}
-                        <div className="col-span-5 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 text-center sm:text-right min-w-0">
-                          <div className="min-w-0">
-                            <p className="text-base sm:text-lg font-black text-white truncate leading-tight uppercase">{rightInitials}</p>
-                            <p className="text-xs text-emerald-200/80 truncate hidden sm:block font-medium">{rightName}</p>
-                          </div>
-                          {rightLogo ? (
-                            <img src={rightLogo} alt={rightInitials} className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 drop-shadow-md group-hover:scale-105 transition-transform" />
-                          ) : (
-                            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/15 text-csc-gold rounded-2xl flex items-center justify-center text-base font-black border border-white/20 shrink-0">
-                              {rightInitials}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Informações de Estádio, Horário e Concentração */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      <div className="bg-white/10 p-3 rounded-2xl border border-white/15 flex items-center gap-3">
-                        <Calendar size={18} className="text-csc-gold shrink-0" />
-                        <div>
-                          <p className="text-[11px] text-emerald-200 font-bold uppercase">Data e Horário</p>
-                          <p className="text-xs font-black text-white">
-                            {new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'long' })} às {new Date(currentMatch.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="bg-white/10 p-3 rounded-2xl border border-white/15 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <MapPin size={18} className="text-amber-400 shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[11px] text-emerald-200 font-bold uppercase">Local do Jogo</p>
-                            <p className="text-xs font-black text-white truncate">{getEventLocation(currentMatch) || 'A definir'}</p>
-                          </div>
-                        </div>
-                        {currentMatch.meeting_time && (
-                          <span className="text-[11px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-1 rounded-lg shrink-0">
-                            ⏱️ {currentMatch.meeting_time.substring(0, 5)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Barra de Presença Integrada no Bilhete */}
-                    {currentMatchCallup && (
-                      <div className="bg-white/10 p-3 rounded-2xl border border-white/15 flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <span className="text-xs font-bold text-emerald-100 flex items-center gap-1.5">
-                          <span>A tua presença:</span>
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
-                            currentMatchCallup.status === 'confirmed' ? 'bg-emerald-500 text-white' :
-                            currentMatchCallup.status === 'declined' ? 'bg-red-500 text-white' : 'bg-amber-400 text-csc-dark'
-                          }`}>
-                            {currentMatchCallup.status === 'confirmed' ? 'Confirmada' :
-                             currentMatchCallup.status === 'declined' ? 'Recusada' : 'Aguardando Resposta'}
-                          </span>
-                        </span>
-
-                        <div className="flex gap-2 w-full sm:w-auto">
-                          <button
-                            type="button"
-                            disabled={currentMatchCallup.status === 'confirmed'}
-                            onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
-                            className="flex-1 sm:flex-none px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
-                          >
-                            <CheckCircle2 size={13} /> Confirmar
-                          </button>
-                          <button
-                            type="button"
-                            disabled={currentMatchCallup.status === 'declined'}
-                            onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
-                            className="flex-1 sm:flex-none px-4 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
-                          >
-                            <XCircle size={13} /> Recusar
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Navegação de Jogos no Bilhete */}
-                    {upcomingMatches.length > 1 && (
-                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/15">
-                        <button
-                          type="button"
-                          onClick={prevMatchSlide}
-                          className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-white/15 shadow-2xs shrink-0"
-                          title="Jogo Anterior"
-                        >
-                          <ChevronLeft size={18} />
-                        </button>
-
-                        <div className="flex items-center bg-black/30 px-3.5 py-1 rounded-full border border-white/15">
-                          <span className="text-xs font-black text-csc-gold leading-none tracking-wider">
-                            {currentMatchIndex + 1}/{upcomingMatches.length}
-                          </span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={nextMatchSlide}
-                          className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-white/15 shadow-2xs shrink-0"
-                          title="Próximo Jogo"
-                        >
-                          <ChevronRight size={18} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })() : (
-                <div className="bg-white p-8 rounded-3xl border border-gray-200 text-center text-gray-500 font-bold">
-                  Sem jogos agendados no momento.
-                </div>
-              )}
-            </div>
-
-            {/* COMUNICADOS OFICIAIS (4/12) */}
-            <div className="lg:col-span-4 space-y-4">
-              <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-200/90 space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">📢</span>
-                    <h3 className="text-sm font-black text-gray-900">Comunicados Oficiais</h3>
-                  </div>
-                  <Link to="/announcements" className="text-xs font-bold text-csc-dark hover:underline flex items-center gap-0.5">
-                    <span>Ver todos</span>
-                    <ChevronRight size={12} />
-                  </Link>
-                </div>
-
-                {currentAnnouncement ? (
-                  <div 
-                    onClick={() => navigate('/announcements')}
-                    className="p-4 rounded-2xl bg-gray-50/90 border border-gray-200/70 hover:bg-gray-100/80 transition-all cursor-pointer space-y-2.5"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-black text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md">
-                        {new Date(currentAnnouncement.published_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
-                      </span>
-                      <span className="text-[10.5px] font-bold text-gray-400">Oficial CSC</span>
-                    </div>
-                    <h4 className="text-sm font-black text-gray-900 line-clamp-2">{currentAnnouncement.title}</h4>
-                    <p className="text-xs text-gray-600 line-clamp-3 leading-relaxed">{currentAnnouncement.content}</p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400 text-center py-4">Sem comunicados recentes.</p>
-                )}
-
-                {/* Navegação dos Comunicados */}
-                {announcements.length > 1 && (
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
-                    <button
-                      type="button"
-                      onClick={prevAnnouncementSlide}
-                      className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-gray-200 shrink-0"
-                      title="Anterior"
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-
-                    <div className="flex items-center bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
-                      <span className="text-xs font-black text-gray-700 leading-none">
-                        {currentAnnouncementIndex + 1}/{announcements.length}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={nextAnnouncementSlide}
-                      className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-gray-200 shrink-0"
-                      title="Próximo"
-                    >
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 📊 PROPOSTA 2: GRELHA MODULAR 2/3 + 1/3 (DESIGN LIMPO E MINIMALISTA)        */}
-      {/* ========================================================================= */}
-      {selectedLayout === 'proposal2' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in">
-          
-          {/* COLUNA ESQUERDA (8 Colunas) */}
-          <div className="lg:col-span-8 space-y-5">
-            
-            {/* Alerta de Convocatórias Pendentes Clean */}
-            {pendingCallupsCount > 0 && currentPending && (() => {
-              const ev = currentPending.event
-              return (
-                <div className="bg-amber-50/70 border-2 border-amber-300 p-4 sm:p-5 rounded-3xl space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-                      <Bell size={15} className="text-amber-600" />
-                      <span>Convocatória Pendente ({activePendingIndex + 1}/{pendingCallupsCount})</span>
+                    <span className="text-xs font-black uppercase text-amber-950 px-2 py-0.2 rounded bg-amber-200/80">
+                      Convocatória Pendente
                     </span>
-                    <span className="text-[11px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-bold text-gray-500">
                       {ev?.date_time && new Date(ev.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
                     </span>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-amber-200">
-                    <div className="min-w-0">
-                      <h4 className="text-sm font-black text-gray-900 truncate">{ev?.title}</h4>
-                      <p className="text-xs text-gray-600 truncate">{getEventLocation(ev) || 'Local a definir'}</p>
-                    </div>
-
-                    <div className="flex gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleCallupResponse(currentPending.id, 'confirmed')}
-                        className="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-black flex items-center gap-1 hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer"
-                      >
-                        <CheckCircle2 size={13} /> Confirmar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCallupResponse(currentPending.id, 'declined')}
-                        className="px-3.5 py-1.5 bg-white text-red-700 border border-red-300 rounded-xl text-xs font-black flex items-center gap-1 hover:bg-red-50 active:scale-95 transition-all cursor-pointer"
-                      >
-                        <XCircle size={13} /> Recusar
-                      </button>
-                    </div>
-                  </div>
-
-                  {pendingCallupsCount > 1 && (
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-200/80">
-                      <button onClick={prevPendingSlide} className="w-7 h-7 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center justify-center cursor-pointer">
-                        <ChevronLeft size={16} />
-                      </button>
-                      <span className="text-xs font-black text-amber-950">{activePendingIndex + 1}/{pendingCallupsCount}</span>
-                      <button onClick={nextPendingSlide} className="w-7 h-7 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center justify-center cursor-pointer">
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  )}
+                  <h4 className="text-sm font-black text-gray-900 truncate mt-0.5">{ev?.title}</h4>
+                  <p className="text-xs text-gray-600 truncate flex items-center gap-1 mt-0.5">
+                    <MapPin size={12} className="text-red-500 shrink-0" />
+                    <span className="truncate">{getEventLocation(ev) || 'Local a definir'}</span>
+                  </p>
                 </div>
-              )
-            })()}
-
-            {/* Card de Jogo Minimalista / Branco com Bordas Suaves */}
-            {currentMatch && (() => {
-              const isAway = currentMatch.home_away === 'away'
-              const cscSigla = formatClubSigla(clubSettings?.initials)
-              const oppSigla = formatOpponentSigla(currentMatch.opponent)
-              const leftLogo = isAway ? currentMatch.opponent?.logo_url : clubSettings?.logo_url
-              const leftInitials = isAway ? oppSigla : cscSigla
-              const rightLogo = isAway ? clubSettings?.logo_url : currentMatch.opponent?.logo_url
-              const rightInitials = isAway ? cscSigla : oppSigla
-
-              return (
-                <div className="bg-white rounded-3xl p-5 sm:p-6 border border-gray-200 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                    <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 uppercase flex items-center gap-1.5">
-                      <Trophy size={13} />
-                      <span>{currentMatch.is_friendly ? 'Amigável' : (currentMatch.tournament?.name || currentMatch.tournament_name || 'Competição')}</span>
-                    </span>
-                    <span className="text-xs font-extrabold text-gray-500 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-200">
-                      {new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'long' })} às {new Date(currentMatch.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-
-                  {/* VS Minimalista */}
-                  <div 
-                    onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
-                    className="p-4 rounded-2xl bg-gray-50 hover:bg-blue-50/30 transition-colors border border-gray-150 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {leftLogo ? (
-                          <img src={leftLogo} alt={leftInitials} className="w-12 h-12 object-contain shrink-0" />
-                        ) : (
-                          <div className="w-12 h-12 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center font-black text-sm">{leftInitials}</div>
-                        )}
-                        <span className="text-base font-black text-gray-900 uppercase truncate">{leftInitials}</span>
-                      </div>
-
-                      <span className="text-xs font-black px-2.5 py-1 rounded-full bg-white text-gray-700 border border-gray-200 shrink-0 shadow-2xs">
-                        VS
-                      </span>
-
-                      <div className="flex items-center justify-end gap-3 flex-1 text-right min-w-0">
-                        <span className="text-base font-black text-gray-900 uppercase truncate">{rightInitials}</span>
-                        {rightLogo ? (
-                          <img src={rightLogo} alt={rightInitials} className="w-12 h-12 object-contain shrink-0" />
-                        ) : (
-                          <div className="w-12 h-12 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center font-black text-sm">{rightInitials}</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600 pt-1">
-                    <p className="flex items-center gap-1.5">
-                      <MapPin size={14} className="text-red-500 shrink-0" />
-                      <span>{getEventLocation(currentMatch) || 'Local a definir'}</span>
-                    </p>
-                    {currentMatch.meeting_time && (
-                      <span className="font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                        ⏱️ Concentração: {currentMatch.meeting_time.substring(0, 5)}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Navegação */}
-                  {upcomingMatches.length > 1 && (
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
-                      <button onClick={prevMatchSlide} className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center cursor-pointer">
-                        <ChevronLeft size={16} />
-                      </button>
-                      <span className="text-xs font-black text-gray-700">{currentMatchIndex + 1}/{upcomingMatches.length}</span>
-                      <button onClick={nextMatchSlide} className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center cursor-pointer">
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
-          </div>
-
-          {/* COLUNA DIREITA (4 Colunas) */}
-          <div className="lg:col-span-4 space-y-5">
-            
-            {/* Widget de Comunicados Minimalista */}
-            <div className="bg-white rounded-3xl p-5 border border-gray-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                <span className="text-xs font-black text-gray-900 flex items-center gap-1.5">
-                  <span>📢</span> Comunicados Oficiais
-                </span>
-                <Link to="/announcements" className="text-[11px] font-bold text-csc-dark hover:underline">Ver todos</Link>
               </div>
 
-              {currentAnnouncement && (
-                <div onClick={() => navigate('/announcements')} className="space-y-1.5 cursor-pointer hover:opacity-85">
-                  <span className="text-[10px] font-black bg-emerald-50 text-emerald-900 border border-emerald-200 px-2 py-0.5 rounded-md">
-                    {new Date(currentAnnouncement.published_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
-                  </span>
-                  <h4 className="text-xs font-black text-gray-900">{currentAnnouncement.title}</h4>
-                  <p className="text-xs text-gray-600 line-clamp-3 leading-relaxed">{currentAnnouncement.content}</p>
-                </div>
-              )}
-
-              {announcements.length > 1 && (
-                <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
-                  <button onClick={prevAnnouncementSlide} className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center cursor-pointer">
-                    <ChevronLeft size={14} />
+              {/* Ações RSVP */}
+              {isRsvpOpen ? (
+                <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-amber-100">
+                  <button
+                    type="button"
+                    onClick={() => handleCallupResponse(currentPending.id, 'confirmed')}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>Confirmar</span>
                   </button>
-                  <span className="text-xs font-black text-gray-700">{currentAnnouncementIndex + 1}/{announcements.length}</span>
-                  <button onClick={nextAnnouncementSlide} className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center cursor-pointer">
-                    <ChevronRight size={14} />
+                  <button
+                    type="button"
+                    onClick={() => handleCallupResponse(currentPending.id, 'declined')}
+                    className="px-4 py-2 bg-white hover:bg-red-50 text-red-700 border border-red-300 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
+                  >
+                    <XCircle size={14} />
+                    <span>Recusar</span>
                   </button>
-                </div>
-              )}
-            </div>
-
-            {/* Widget Próximo Treino */}
-            <div className="bg-emerald-50/70 border border-emerald-200 p-5 rounded-3xl space-y-2">
-              <span className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
-                <span>🏃</span> Próximo Treino
-              </span>
-              {upcomingPractices.length > 0 ? (
-                <div 
-                  onClick={() => navigate(`/calendar?event=${upcomingPractices[0].id}`)}
-                  className="cursor-pointer hover:opacity-85"
-                >
-                  <p className="text-sm font-black text-emerald-950">
-                    {new Date(upcomingPractices[0].date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
-                  </p>
-                  <p className="text-xs text-emerald-800 font-bold mt-0.5">
-                    ⏰ às {new Date(upcomingPractices[0].date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                  <p className="text-xs text-emerald-700 mt-1 truncate">
-                    📍 {getEventLocation(upcomingPractices[0]) || 'Estádio Municipal'}
-                  </p>
                 </div>
               ) : (
-                <p className="text-xs text-emerald-800">Sem treinos marcados para breve.</p>
+                <span className="text-xs font-bold text-amber-900 bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-300 self-start sm:self-center">
+                  Abre 6 dias antes
+                </span>
               )}
             </div>
 
-          </div>
-        </div>
-      )}
+            {/* Navegação do Alerta se existirem múltiplos */}
+            {pendingCallupsCount > 1 && (
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-amber-600/40">
+                <button
+                  type="button"
+                  onClick={prevPendingSlide}
+                  className="w-8 h-8 rounded-xl bg-black/15 hover:bg-black/25 text-csc-dark flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs shrink-0"
+                  title="Convocatória Anterior"
+                >
+                  <ChevronLeft size={18} />
+                </button>
 
-      {/* ========================================================================= */}
-      {/* 🏟️ PROPOSTA 3: HERO MATCHDAY PANORÂMICO (FULL-WIDTH NO TOPO)              */}
-      {/* ========================================================================= */}
-      {selectedLayout === 'proposal3' && (
-        <div className="space-y-6 animate-fade-in">
-          
-          {/* BANNER SUPERIOR PANORÂMICO HERO MATCHDAY (100% Largura) */}
-          {currentMatch && (() => {
+                <div className="flex items-center bg-black/10 px-3.5 py-1 rounded-full border border-black/10">
+                  <span className="text-xs font-black text-csc-dark leading-none tracking-wider">
+                    {activePendingIndex + 1}/{pendingCallupsCount}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={nextPendingSlide}
+                  className="w-8 h-8 rounded-xl bg-black/15 hover:bg-black/25 text-csc-dark flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-2xs shrink-0"
+                  title="Próxima Convocatória"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* 2. Grelha Principal: Bilhete Matchday Pass (8 Colunas) + Sidebar (4 Colunas: Próximo Treino + Comunicados) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* BILHETE DE JOGO MATCHDAY PASS (8/12) */}
+        <div className="lg:col-span-8">
+          {currentMatch ? (() => {
             const isAway = currentMatch.home_away === 'away'
             const cscSigla = formatClubSigla(clubSettings?.initials)
             const oppSigla = formatOpponentSigla(currentMatch.opponent)
             const leftLogo = isAway ? currentMatch.opponent?.logo_url : clubSettings?.logo_url
             const leftInitials = isAway ? oppSigla : cscSigla
+            const leftName = isAway ? (currentMatch.opponent?.name || oppSigla) : (clubSettings?.name || 'GDS Cascais')
+
             const rightLogo = isAway ? clubSettings?.logo_url : currentMatch.opponent?.logo_url
             const rightInitials = isAway ? cscSigla : oppSigla
+            const rightName = isAway ? (clubSettings?.name || 'GDS Cascais') : (currentMatch.opponent?.name || oppSigla)
 
             return (
-              <div className="bg-gradient-to-r from-gray-900 via-csc-dark to-gray-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-csc-gold relative overflow-hidden space-y-6 select-none">
-                
-                {/* Linha Topo: Informações da Partida */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/15 pb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase px-3 py-1 rounded-lg bg-csc-gold text-csc-dark shadow-xs">
-                      🏆 {currentMatch.is_friendly ? 'Jogo Amigável' : (currentMatch.tournament?.name || 'Campeonato')}
+              <div 
+                {...matchSwipeHandlers}
+                className="bg-gradient-to-br from-[#003322] via-[#004830] to-[#002416] text-white rounded-3xl p-5 sm:p-7 shadow-xl border-2 border-csc-gold relative overflow-hidden space-y-5 select-none touch-pan-y"
+              >
+                {/* Topo do Bilhete: Competição & Countdown */}
+                <div className="flex items-center justify-between gap-3 border-b border-white/15 pb-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black uppercase px-2.5 py-1 rounded-lg bg-csc-gold text-csc-dark shadow-xs flex items-center gap-1.5">
+                      <Trophy size={13} />
+                      <span>{currentMatch.is_friendly ? 'Jogo Amigável' : (currentMatch.tournament?.name || currentMatch.tournament_name || 'Jogo Oficial')}</span>
                     </span>
-                    <span className="text-xs font-bold text-gray-300">
-                      {new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })} às {new Date(currentMatch.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                    <span className="text-xs font-bold text-emerald-200/90 bg-white/10 px-2.5 py-1 rounded-lg border border-white/15">
+                      {currentMatch.home_away === 'away' ? '✈️ Fora de Casa' : currentMatch.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-amber-300 bg-black/40 px-3 py-1 rounded-full border border-amber-400/40">
-                      {getCountdownLabel(currentMatch.date_time)}
-                    </span>
+                  <span className="text-xs font-black text-amber-300 bg-black/30 border border-amber-400/40 px-3 py-1 rounded-full shrink-0 shadow-2xs">
+                    {getCountdownLabel(currentMatch.date_time)}
+                  </span>
+                </div>
+
+                {/* Duelo de Equipas / Matchup em Destaque */}
+                <div 
+                  onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
+                  className="bg-black/30 backdrop-blur-xs p-4 sm:p-6 rounded-2xl border border-white/15 hover:border-csc-gold/70 transition-all cursor-pointer group"
+                >
+                  <div className="grid grid-cols-11 items-center gap-2">
+                    {/* Equipa 1 */}
+                    <div className="col-span-5 flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left min-w-0">
+                      {leftLogo ? (
+                        <img src={leftLogo} alt={leftInitials} className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 drop-shadow-md group-hover:scale-105 transition-transform" />
+                      ) : (
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/15 text-csc-gold rounded-2xl flex items-center justify-center text-base font-black border border-white/20 shrink-0">
+                          {leftInitials}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-base sm:text-lg font-black text-white truncate leading-tight uppercase">{leftInitials}</p>
+                        <p className="text-xs text-emerald-200/80 truncate hidden sm:block font-medium">{leftName}</p>
+                      </div>
+                    </div>
+
+                    {/* VS Central */}
+                    <div className="col-span-1 flex flex-col items-center justify-center">
+                      <span className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-csc-dark font-black text-xs flex items-center justify-center shadow-lg border border-white/40">
+                        VS
+                      </span>
+                    </div>
+
+                    {/* Equipa 2 */}
+                    <div className="col-span-5 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 text-center sm:text-right min-w-0">
+                      <div className="min-w-0">
+                        <p className="text-base sm:text-lg font-black text-white truncate leading-tight uppercase">{rightInitials}</p>
+                        <p className="text-xs text-emerald-200/80 truncate hidden sm:block font-medium">{rightName}</p>
+                      </div>
+                      {rightLogo ? (
+                        <img src={rightLogo} alt={rightInitials} className="w-14 h-14 sm:w-16 sm:h-16 object-contain shrink-0 drop-shadow-md group-hover:scale-105 transition-transform" />
+                      ) : (
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/15 text-csc-gold rounded-2xl flex items-center justify-center text-base font-black border border-white/20 shrink-0">
+                          {rightInitials}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Informações de Estádio, Horário e Concentração */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="bg-white/10 p-3 rounded-2xl border border-white/15 flex items-center gap-3">
+                    <Calendar size={18} className="text-csc-gold shrink-0" />
+                    <div>
+                      <p className="text-[11px] text-emerald-200 font-bold uppercase">Data e Horário</p>
+                      <p className="text-xs font-black text-white">
+                        {new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'long' })} às {new Date(currentMatch.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/10 p-3 rounded-2xl border border-white/15 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <MapPin size={18} className="text-amber-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[11px] text-emerald-200 font-bold uppercase">Local do Jogo</p>
+                        <p className="text-xs font-black text-white truncate">{getEventLocation(currentMatch) || 'A definir'}</p>
+                      </div>
+                    </div>
                     {currentMatch.meeting_time && (
-                      <span className="text-xs font-extrabold text-white bg-white/15 px-3 py-1 rounded-full border border-white/20">
-                        ⏱️ Concentração: {currentMatch.meeting_time.substring(0, 5)}
+                      <span className="text-[11px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2 py-1 rounded-lg shrink-0">
+                        ⏱️ {currentMatch.meeting_time.substring(0, 5)}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Confronto Panorâmico Central */}
-                <div 
-                  onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
-                  className="grid grid-cols-1 md:grid-cols-12 items-center gap-6 cursor-pointer group"
-                >
-                  {/* Duelo (8 Colunas) */}
-                  <div className="md:col-span-8 flex items-center justify-around gap-4 bg-black/30 p-5 sm:p-6 rounded-2xl border border-white/15 group-hover:border-csc-gold transition-colors">
-                    {/* Equipa 1 */}
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      {leftLogo ? (
-                        <img src={leftLogo} alt={leftInitials} className="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0 drop-shadow-md group-hover:scale-105 transition-transform" />
-                      ) : (
-                        <div className="w-16 h-16 bg-white/15 text-csc-gold rounded-2xl flex items-center justify-center text-lg font-black">{leftInitials}</div>
-                      )}
-                      <p className="text-lg sm:text-2xl font-black text-white uppercase truncate">{leftInitials}</p>
-                    </div>
-
-                    <span className="w-10 h-10 rounded-full bg-csc-gold text-csc-dark font-black text-sm flex items-center justify-center shadow-md">
-                      VS
+                {/* Barra de Presença Integrada no Bilhete */}
+                {currentMatchCallup && (
+                  <div className="bg-white/10 p-3 rounded-2xl border border-white/15 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <span className="text-xs font-bold text-emerald-100 flex items-center gap-1.5">
+                      <span>A tua presença:</span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
+                        currentMatchCallup.status === 'confirmed' ? 'bg-emerald-500 text-white' :
+                        currentMatchCallup.status === 'declined' ? 'bg-red-500 text-white' : 'bg-amber-400 text-csc-dark'
+                      }`}>
+                        {currentMatchCallup.status === 'confirmed' ? 'Confirmada' :
+                         currentMatchCallup.status === 'declined' ? 'Recusada' : 'Aguardando Resposta'}
+                      </span>
                     </span>
 
-                    {/* Equipa 2 */}
-                    <div className="flex items-center justify-end gap-3.5 min-w-0 text-right">
-                      <p className="text-lg sm:text-2xl font-black text-white uppercase truncate">{rightInitials}</p>
-                      {rightLogo ? (
-                        <img src={rightLogo} alt={rightInitials} className="w-16 h-16 sm:w-20 sm:h-20 object-contain shrink-0 drop-shadow-md group-hover:scale-105 transition-transform" />
-                      ) : (
-                        <div className="w-16 h-16 bg-white/15 text-csc-gold rounded-2xl flex items-center justify-center text-lg font-black">{rightInitials}</div>
-                      )}
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        disabled={currentMatchCallup.status === 'confirmed'}
+                        onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
+                        className="flex-1 sm:flex-none px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
+                      >
+                        <CheckCircle2 size={13} /> Confirmar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={currentMatchCallup.status === 'declined'}
+                        onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
+                        className="flex-1 sm:flex-none px-4 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
+                      >
+                        <XCircle size={13} /> Recusar
+                      </button>
                     </div>
                   </div>
+                )}
 
-                  {/* Caixa de Resposta Rápida (4 Colunas) */}
-                  <div className="md:col-span-4 bg-white/10 p-5 rounded-2xl border border-white/15 flex flex-col justify-between space-y-4">
-                    <div>
-                      <p className="text-xs font-black text-emerald-200 uppercase">Localização</p>
-                      <p className="text-xs font-bold text-white truncate mt-0.5">{getEventLocation(currentMatch) || 'Local a definir'}</p>
-                    </div>
-
-                    {currentMatchCallup && (
-                      <div className="space-y-2 pt-2 border-t border-white/15">
-                        <p className="text-xs font-bold text-gray-300">A tua convocatória:</p>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            disabled={currentMatchCallup.status === 'confirmed'}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleCallupResponse(currentMatchCallup.id, 'confirmed')
-                            }}
-                            className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
-                          >
-                            <CheckCircle2 size={13} /> Confirmar
-                          </button>
-                          <button
-                            type="button"
-                            disabled={currentMatchCallup.status === 'declined'}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleCallupResponse(currentMatchCallup.id, 'declined')
-                            }}
-                            className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
-                          >
-                            <XCircle size={13} /> Recusar
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Navegação de Jogos no Topo */}
+                {/* Navegação de Jogos no Bilhete (Setas + Contador + Slide Touch) */}
                 {upcomingMatches.length > 1 && (
                   <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/15">
-                    <button onClick={prevMatchSlide} className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer">
+                    <button
+                      type="button"
+                      onClick={prevMatchSlide}
+                      className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-white/15 shadow-2xs shrink-0"
+                      title="Jogo Anterior"
+                    >
                       <ChevronLeft size={18} />
                     </button>
-                    <span className="text-xs font-black text-csc-gold">{currentMatchIndex + 1}/{upcomingMatches.length}</span>
-                    <button onClick={nextMatchSlide} className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer">
+
+                    <div className="flex items-center bg-black/30 px-3.5 py-1 rounded-full border border-white/15">
+                      <span className="text-xs font-black text-csc-gold leading-none tracking-wider">
+                        {currentMatchIndex + 1}/{upcomingMatches.length}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={nextMatchSlide}
+                      className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-white/15 shadow-2xs shrink-0"
+                      title="Próximo Jogo"
+                    >
                       <ChevronRight size={18} />
                     </button>
                   </div>
                 )}
               </div>
             )
-          })()}
+          })() : (
+            <div className="bg-white p-8 rounded-3xl border border-gray-200 text-center text-gray-500 font-bold">
+              Sem jogos agendados no momento.
+            </div>
+          )}
+        </div>
 
-          {/* GRELHA INFERIOR EM 2 COLUNAS IGUAIS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            
-            {/* Coluna 1: Convocatórias Pendentes */}
-            <div className="bg-white rounded-3xl p-5 border border-gray-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                <span className="text-xs font-black text-gray-900 flex items-center gap-1.5">
-                  <Bell size={16} className="text-amber-500" />
-                  <span>Convocatórias Pendentes ({pendingCallupsCount})</span>
-                </span>
-                <Link to="/calendar" className="text-xs font-bold text-csc-dark hover:underline">Ver agenda</Link>
-              </div>
-
-              {pendingCallupsCount > 0 && currentPending ? (() => {
-                const ev = currentPending.event
-                return (
-                  <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-3">
-                    <div>
-                      <span className="text-[10px] font-black uppercase text-amber-900 bg-amber-100 px-2 py-0.5 rounded">
-                        {ev?.type === 'match' ? '⚽ Jogo' : ev?.type === 'practice' ? '🏃 Treino' : '🎉 Convívio'}
-                      </span>
-                      <h4 className="text-sm font-black text-gray-900 mt-1">{ev?.title}</h4>
-                      <p className="text-xs text-gray-600 mt-0.5">📍 {getEventLocation(ev) || 'Local a definir'}</p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleCallupResponse(currentPending.id, 'confirmed')}
-                        className="flex-1 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1 cursor-pointer active:scale-95"
-                      >
-                        <CheckCircle2 size={13} /> Confirmar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCallupResponse(currentPending.id, 'declined')}
-                        className="flex-1 py-1.5 bg-white text-red-700 border border-red-300 rounded-xl text-xs font-black flex items-center justify-center gap-1 cursor-pointer active:scale-95"
-                      >
-                        <XCircle size={13} /> Recusar
-                      </button>
-                    </div>
-
-                    {pendingCallupsCount > 1 && (
-                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-amber-200">
-                        <button onClick={prevPendingSlide} className="w-7 h-7 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center justify-center cursor-pointer">
-                          <ChevronLeft size={15} />
-                        </button>
-                        <span className="text-xs font-black text-amber-950">{activePendingIndex + 1}/{pendingCallupsCount}</span>
-                        <button onClick={nextPendingSlide} className="w-7 h-7 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center justify-center cursor-pointer">
-                          <ChevronRight size={15} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })() : (
-                <p className="text-xs text-gray-400 text-center py-6">Não tens convocatórias pendentes.</p>
-              )}
+        {/* SIDEBAR (4/12 Colunas): PRÓXIMO TREINO + COMUNICADOS OFICIAIS */}
+        <div className="lg:col-span-4 space-y-5">
+          
+          {/* Card Próximo Treino (Adicionado da Versão 2) */}
+          <div className="bg-emerald-50/80 border border-emerald-200 p-5 rounded-3xl space-y-2.5 shadow-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-emerald-200/60">
+              <span className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🏃</span> Próximo Treino
+              </span>
+              <Link to="/calendar" className="text-[11px] font-bold text-emerald-800 hover:underline flex items-center gap-0.5">
+                <span>Agenda</span>
+                <ChevronRight size={12} />
+              </Link>
             </div>
 
-            {/* Coluna 2: Comunicados Oficiais */}
-            <div className="bg-white rounded-3xl p-5 border border-gray-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                <span className="text-xs font-black text-gray-900 flex items-center gap-1.5">
-                  <span>📢</span> Comunicados Oficiais
-                </span>
-                <Link to="/announcements" className="text-xs font-bold text-csc-dark hover:underline">Ver todos</Link>
+            {upcomingPractices.length > 0 ? (
+              <div 
+                onClick={() => navigate(`/calendar?event=${upcomingPractices[0].id}`)}
+                className="cursor-pointer hover:opacity-85 transition-opacity space-y-1.5 pt-0.5"
+              >
+                <p className="text-sm font-black text-emerald-950 capitalize">
+                  {new Date(upcomingPractices[0].date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
+                </p>
+                <p className="text-xs text-emerald-800 font-extrabold flex items-center gap-1">
+                  <span>⏰ às {new Date(upcomingPractices[0].date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+                </p>
+                <p className="text-xs text-emerald-700 font-medium truncate flex items-center gap-1">
+                  <MapPin size={13} className="text-emerald-600 shrink-0" />
+                  <span className="truncate">{getEventLocation(upcomingPractices[0]) || 'Estádio Municipal'}</span>
+                </p>
               </div>
+            ) : (
+              <p className="text-xs text-emerald-800 py-1">Sem treinos marcados para breve.</p>
+            )}
+          </div>
 
-              {currentAnnouncement ? (
-                <div onClick={() => navigate('/announcements')} className="p-4 bg-gray-50 border border-gray-200 rounded-2xl space-y-2 cursor-pointer hover:bg-gray-100 transition-colors">
-                  <span className="text-[10px] font-black bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded">
+          {/* Card Comunicados Oficiais com Suporte Touch Slide */}
+          <div 
+            {...announcementSwipeHandlers}
+            className="bg-white rounded-3xl p-5 shadow-sm border border-gray-200/90 space-y-4 select-none touch-pan-y"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📢</span>
+                <h3 className="text-sm font-black text-gray-900">Comunicados Oficiais</h3>
+              </div>
+              <Link to="/announcements" className="text-xs font-bold text-csc-dark hover:underline flex items-center gap-0.5">
+                <span>Ver todos</span>
+                <ChevronRight size={12} />
+              </Link>
+            </div>
+
+            {currentAnnouncement ? (
+              <div 
+                onClick={() => navigate('/announcements')}
+                className="p-4 rounded-2xl bg-gray-50/90 border border-gray-200/70 hover:bg-gray-100/80 transition-all cursor-pointer space-y-2.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md">
                     {new Date(currentAnnouncement.published_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}
                   </span>
-                  <h4 className="text-sm font-black text-gray-900">{currentAnnouncement.title}</h4>
-                  <p className="text-xs text-gray-600 line-clamp-3 leading-relaxed">{currentAnnouncement.content}</p>
+                  <span className="text-[10.5px] font-bold text-gray-400">Oficial CSC</span>
                 </div>
-              ) : (
-                <p className="text-xs text-gray-400 text-center py-6">Sem comunicados recentes.</p>
-              )}
+                <h4 className="text-sm font-black text-gray-900 line-clamp-2">{currentAnnouncement.title}</h4>
+                <p className="text-xs text-gray-600 line-clamp-3 leading-relaxed">{currentAnnouncement.content}</p>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 text-center py-4">Sem comunicados recentes.</p>
+            )}
 
-              {announcements.length > 1 && (
-                <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
-                  <button onClick={prevAnnouncementSlide} className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center cursor-pointer">
-                    <ChevronLeft size={15} />
-                  </button>
-                  <span className="text-xs font-black text-gray-700">{currentAnnouncementIndex + 1}/{announcements.length}</span>
-                  <button onClick={nextAnnouncementSlide} className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center cursor-pointer">
-                    <ChevronRight size={15} />
-                  </button>
+            {/* Navegação dos Comunicados (Setas + Contador + Slide Touch) */}
+            {announcements.length > 1 && (
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={prevAnnouncementSlide}
+                  className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-gray-200 shrink-0"
+                  title="Anterior"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                <div className="flex items-center bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
+                  <span className="text-xs font-black text-gray-700 leading-none">
+                    {currentAnnouncementIndex + 1}/{announcements.length}
+                  </span>
                 </div>
-              )}
-            </div>
 
+                <button
+                  type="button"
+                  onClick={nextAnnouncementSlide}
+                  className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-all cursor-pointer active:scale-90 border border-gray-200 shrink-0"
+                  title="Próximo"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
+
         </div>
-      )}
+
+      </div>
     </div>
   )
 }
