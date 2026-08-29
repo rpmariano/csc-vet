@@ -389,7 +389,7 @@ const StatsPage: React.FC = () => {
                     }`}>
                       {idx + 1}
                     </span>
-                    <span className="text-xs sm:text-sm font-black text-gray-800 truncate">{player.name}</span>
+                    <span className="text-xs sm:text-sm font-black text-gray-800 truncate">{player.shirt_name || player.name}</span>
                   </div>
                   <span className="text-xs font-black text-indigo-900 bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded-xl shrink-0 flex items-center gap-1">
                     <Award size={13} className="text-indigo-600" />
@@ -403,110 +403,196 @@ const StatsPage: React.FC = () => {
       </div>
 
       {/* 5. Tabela Completa de Rendimento do Plantel */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-gray-150 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
-            <Users size={18} className="text-csc-dark" />
-            <span>Tabela Geral de Rendimento do Plantel ({aggregatedStats.length} Atletas)</span>
-          </h3>
-          <span className="text-xs text-gray-500 font-bold">
-            Filtro ativo: <strong className="text-gray-900">{activeFilterLabel}</strong>
-          </span>
-        </div>
+      <TableSection
+        aggregatedStats={aggregatedStats}
+        activeFilterLabel={activeFilterLabel}
+      />
+    </div>
+  )
+}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs sm:text-sm">
-            <thead className="bg-gray-50 text-gray-600 font-black uppercase text-[10px] tracking-wider border-b border-gray-200">
+// ─── Componente de Tabela com Ordenação ────────────────────────────────────────
+type SortKey = 'name' | 'games_played' | 'goals' | 'assists' | 'mvp_count' | 'yellow_cards' | 'red_cards'
+type SortDir = 'asc' | 'desc'
+
+function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats: PlayerStats[], activeFilterLabel: string }) {
+  const [sortKey, setSortKey] = useState<SortKey>('goals')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir(key === 'name' ? 'asc' : 'desc')
+    }
+  }
+
+  const sorted = useMemo(() => {
+    return [...aggregatedStats].sort((a, b) => {
+      let valA: string | number
+      let valB: string | number
+      if (sortKey === 'name') {
+        valA = (a.shirt_name || a.name).toLowerCase()
+        valB = (b.shirt_name || b.name).toLowerCase()
+      } else if (sortKey === 'red_cards') {
+        // disciplina: ordenar por vermelho primeiro, depois amarelos
+        valA = a.red_cards * 100 + a.yellow_cards
+        valB = b.red_cards * 100 + b.yellow_cards
+      } else {
+        valA = a[sortKey] as number
+        valB = b[sortKey] as number
+      }
+      if (valA < valB) return sortDir === 'asc' ? -1 : 1
+      if (valA > valB) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [aggregatedStats, sortKey, sortDir])
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <span className="text-gray-300 ml-1">↕</span>
+    return <span className="text-csc-gold ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>
+  }
+
+  const thClass = (col: SortKey) =>
+    `cursor-pointer select-none transition-colors hover:text-gray-900 hover:bg-gray-100 ${
+      sortKey === col ? 'text-csc-dark bg-csc-gold/10' : 'text-gray-500'
+    }`
+
+  return (
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="p-4 sm:p-5 border-b border-gray-150 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+          <Users size={18} className="text-csc-dark" />
+          <span>Tabela Geral de Rendimento do Plantel ({aggregatedStats.length} Atletas)</span>
+        </h3>
+        <span className="text-xs text-gray-500 font-bold">
+          Filtro ativo: <strong className="text-gray-900">{activeFilterLabel}</strong>
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs sm:text-sm">
+          <thead className="bg-gray-50 font-black uppercase text-[10px] tracking-wider border-b border-gray-200">
+            <tr>
+              <th
+                className={`px-4 sm:px-6 py-3.5 ${thClass('name')}`}
+                onClick={() => handleSort('name')}
+              >
+                Jogador <SortIcon col="name" />
+              </th>
+              <th
+                className={`px-3 sm:px-4 py-3.5 text-center ${thClass('games_played')}`}
+                onClick={() => handleSort('games_played')}
+              >
+                Jogos <SortIcon col="games_played" />
+              </th>
+              <th
+                className={`px-3 sm:px-4 py-3.5 text-center ${thClass('goals')}`}
+                onClick={() => handleSort('goals')}
+              >
+                Golos ⚽ <SortIcon col="goals" />
+              </th>
+              <th
+                className={`px-3 sm:px-4 py-3.5 text-center ${thClass('assists')}`}
+                onClick={() => handleSort('assists')}
+              >
+                Ass. 👟 <SortIcon col="assists" />
+              </th>
+              <th
+                className={`px-3 sm:px-4 py-3.5 text-center ${thClass('mvp_count')}`}
+                onClick={() => handleSort('mvp_count')}
+              >
+                MVP ⭐ <SortIcon col="mvp_count" />
+              </th>
+              <th
+                className={`px-4 sm:px-6 py-3.5 text-center ${thClass('red_cards')}`}
+                onClick={() => handleSort('red_cards')}
+              >
+                Disciplina <SortIcon col="red_cards" />
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 font-semibold">
+            {sorted.length === 0 ? (
               <tr>
-                <th className="px-4 sm:px-6 py-3.5">Jogador</th>
-                <th className="px-3 sm:px-4 py-3.5 text-center">Jogos</th>
-                <th className="px-3 sm:px-4 py-3.5 text-center">Golos ⚽</th>
-                <th className="px-3 sm:px-4 py-3.5 text-center">Ass. 👟</th>
-                <th className="px-3 sm:px-4 py-3.5 text-center">MVP ⭐</th>
-                <th className="px-4 sm:px-6 py-3.5 text-center">Disciplina</th>
+                <td colSpan={6} className="px-6 py-8 text-center text-gray-400 italic text-xs">
+                  Sem registos estatísticos para o filtro selecionado ({activeFilterLabel}).
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 font-semibold">
-              {aggregatedStats.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-400 italic text-xs">
-                    Sem registos estatísticos para o filtro selecionado ({activeFilterLabel}).
-                  </td>
-                </tr>
-              ) : (
-                aggregatedStats.map((player) => (
-                  <tr key={player.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="px-4 sm:px-6 py-3.5">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-700 text-xs font-black flex items-center justify-center shrink-0 border border-gray-200">
-                          {player.jersey_number || '-'}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="font-black text-gray-900 truncate">
+            ) : (
+              sorted.map((player) => (
+                <tr key={player.id} className="hover:bg-gray-50/80 transition-colors">
+                  <td className="px-4 sm:px-6 py-3.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-7 h-7 rounded-full bg-csc-dark text-csc-gold text-xs font-black flex items-center justify-center shrink-0 border border-csc-gold/40 shadow-xs">
+                        {player.jersey_number || '—'}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-black text-gray-900 truncate">
+                          {player.shirt_name || player.name}
+                        </p>
+                        {player.shirt_name && (
+                          <p className="text-[10px] text-gray-400 font-bold truncate">
                             {player.name}
                           </p>
-                          {player.shirt_name && (
-                            <p className="text-[10px] text-gray-400 font-bold truncate">
-                              {player.shirt_name}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3.5 text-center text-gray-700 font-black">
-                      {player.games_played}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3.5 text-center">
-                      {player.goals > 0 ? (
-                        <span className="font-black text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-lg">
-                          {player.goals}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">0</span>
-                      )}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3.5 text-center">
-                      {player.assists > 0 ? (
-                        <span className="font-black text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">
-                          {player.assists}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">0</span>
-                      )}
-                    </td>
-                    <td className="px-3 sm:px-4 py-3.5 text-center">
-                      {player.mvp_count > 0 ? (
-                        <span className="inline-flex items-center gap-0.5 text-xs font-black text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg">
-                          <Award size={12} className="text-indigo-600" />
-                          <span>{player.mvp_count}</span>
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {player.yellow_cards > 0 && (
-                          <span className="flex items-center gap-0.5 bg-yellow-100 text-yellow-900 border border-yellow-300 px-1.5 py-0.5 rounded text-xs font-black">
-                            🟨 {player.yellow_cards}
-                          </span>
-                        )}
-                        {player.red_cards > 0 && (
-                          <span className="flex items-center gap-0.5 bg-red-100 text-red-900 border border-red-300 px-1.5 py-0.5 rounded text-xs font-black">
-                            🟥 {player.red_cards}
-                          </span>
-                        )}
-                        {player.yellow_cards === 0 && player.red_cards === 0 && (
-                          <span className="text-[11px] text-gray-400 font-medium">Limpo</span>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  </td>
+                  <td className="px-3 sm:px-4 py-3.5 text-center text-gray-700 font-black">
+                    {player.games_played}
+                  </td>
+                  <td className="px-3 sm:px-4 py-3.5 text-center">
+                    {player.goals > 0 ? (
+                      <span className="font-black text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-lg">
+                        {player.goals}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">0</span>
+                    )}
+                  </td>
+                  <td className="px-3 sm:px-4 py-3.5 text-center">
+                    {player.assists > 0 ? (
+                      <span className="font-black text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">
+                        {player.assists}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">0</span>
+                    )}
+                  </td>
+                  <td className="px-3 sm:px-4 py-3.5 text-center">
+                    {player.mvp_count > 0 ? (
+                      <span className="inline-flex items-center gap-0.5 text-xs font-black text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg">
+                        <Award size={12} className="text-indigo-600" />
+                        <span>{player.mvp_count}</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-4 sm:px-6 py-3.5">
+                    <div className="flex items-center justify-center gap-1.5">
+                      {player.yellow_cards > 0 && (
+                        <span className="flex items-center gap-0.5 bg-yellow-100 text-yellow-900 border border-yellow-300 px-1.5 py-0.5 rounded text-xs font-black">
+                          🟨 {player.yellow_cards}
+                        </span>
+                      )}
+                      {player.red_cards > 0 && (
+                        <span className="flex items-center gap-0.5 bg-red-100 text-red-900 border border-red-300 px-1.5 py-0.5 rounded text-xs font-black">
+                          🟥 {player.red_cards}
+                        </span>
+                      )}
+                      {player.yellow_cards === 0 && player.red_cards === 0 && (
+                        <span className="text-[11px] text-emerald-600 font-bold">Limpo</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )
