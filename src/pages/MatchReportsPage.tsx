@@ -1,0 +1,395 @@
+import React, { useEffect, useState, useMemo } from 'react'
+import { 
+  Trophy, 
+  Calendar, 
+  MapPin, 
+  Search, 
+  Filter, 
+  ChevronRight
+} from 'lucide-react'
+import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../context/AuthContext'
+import { useClub } from '../context/ClubContext'
+import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
+import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
+
+interface Opponent {
+  id: string
+  name: string
+  initials?: string | null
+  logo_url?: string | null
+}
+
+interface Tournament {
+  id: string
+  name: string
+  season?: string | null
+}
+
+interface Field {
+  id: string
+  name: string
+  address?: string | null
+}
+
+interface MatchEvent {
+  id: string
+  title: string
+  date_time: string
+  meeting_time?: string | null
+  type: string
+  field_id?: string | null
+  location?: string | null
+  description?: string | null
+  is_friendly?: boolean | null
+  is_active?: boolean | null
+  tournament_id?: string | null
+  opponent_id?: string | null
+  home_away?: 'home' | 'away' | 'neutral' | null
+  home_score?: number | null
+  away_score?: number | null
+  opponent?: Opponent | null
+  tournament?: Tournament | null
+  field?: Field | null
+}
+
+type FilterType = 'all' | 'official' | 'tournament' | 'friendly'
+
+export const MatchReportsPage: React.FC = () => {
+  const { profile } = useAuth()
+  const { clubSettings } = useClub()
+  const [loading, setLoading] = useState(true)
+  const [matches, setMatches] = useState<MatchEvent[]>([])
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
+  
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState<FilterType>('all')
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string>('')
+
+  // Modal de Ficha de Jogo
+  const [selectedEventForReport, setSelectedEventForReport] = useState<MatchEvent | null>(null)
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+
+  const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
+
+  const fetchMatches = async () => {
+    setLoading(true)
+    try {
+      const [{ data: eventsData }, { data: tourData }] = await Promise.all([
+        supabase
+          .from('events')
+          .select('*, opponent:opponents(id, name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
+          .eq('type', 'match')
+          .order('date_time', { ascending: false }),
+        supabase
+          .from('tournaments')
+          .select('id, name, season')
+          .order('name', { ascending: true })
+      ])
+
+      const now = new Date().getTime()
+      
+      // Filtrar apenas jogos ocorridos (data passada OU com resultado já registado)
+      const pastMatches = (eventsData || []).filter((e: any) => {
+        // Se for jogador (não coach/admin), só vê eventos ativos
+        if (e.is_active === false && !isCoachOrAdmin) return false
+        
+        const eventTime = new Date(e.date_time).getTime()
+        const hasScore = e.home_score !== null && e.home_score !== undefined
+        return eventTime <= now || hasScore
+      })
+
+      setMatches(pastMatches)
+      setTournaments(tourData || [])
+      if (tourData && tourData.length > 0 && !selectedTournamentId) {
+        setSelectedTournamentId(tourData[0].id)
+      }
+    } catch (err) {
+      console.error('Error loading match reports:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchMatches()
+  }, [profile?.role])
+
+  // Filtragem dos jogos
+  const filteredMatches = useMemo(() => {
+    return matches.filter(m => {
+      const q = searchTerm.toLowerCase().trim()
+      if (q) {
+        const oppName = m.opponent?.name?.toLowerCase() || ''
+        const titleStr = (m.title || '').toLowerCase()
+        const locationStr = (m.field?.name || m.location || '').toLowerCase()
+        const tourName = m.tournament?.name?.toLowerCase() || ''
+        if (!oppName.includes(q) && !titleStr.includes(q) && !locationStr.includes(q) && !tourName.includes(q)) {
+          return false
+        }
+      }
+
+      if (filterType === 'official') {
+        return m.is_friendly !== true
+      }
+      if (filterType === 'friendly') {
+        return m.is_friendly === true
+      }
+      if (filterType === 'tournament') {
+        if (!selectedTournamentId) return true
+        return m.tournament_id === selectedTournamentId
+      }
+
+      return true
+    })
+  }, [matches, searchTerm, filterType, selectedTournamentId])
+
+  const handleOpenReport = (ev: MatchEvent) => {
+    setSelectedEventForReport(ev)
+    setIsReportModalOpen(true)
+  }
+
+  const handleSavedReport = () => {
+    fetchMatches()
+  }
+
+  return (
+    <div className="space-y-4 pb-12">
+      
+      {/* Barra de Pesquisa e Filtros */}
+      <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-200 space-y-3">
+        {/* Pesquisa Rápida */}
+        <div className="relative">
+          <Search size={16} className="absolute left-3.5 top-3 text-gray-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Pesquisar por adversário, torneio ou local..."
+            className="w-full pl-9.5 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold outline-none focus:bg-white focus:ring-2 focus:ring-csc-dark transition-all"
+          />
+        </div>
+
+        {/* Pílulas de Contexto */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: 'all', label: 'Todos os Jogos', emoji: '🌐' },
+            { id: 'official', label: 'Competições Oficiais', emoji: '🏆' },
+            { id: 'tournament', label: 'Por Torneio', emoji: '🏅' },
+            { id: 'friendly', label: 'Amigáveis', emoji: '⚽' },
+          ].map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setFilterType(opt.id as FilterType)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                filterType === opt.id
+                  ? 'bg-csc-dark text-white shadow-sm ring-2 ring-csc-gold/40'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+              }`}
+            >
+              <span>{opt.emoji}</span>
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Linha 2: Dropdown de Torneio (condicional) */}
+        {filterType === 'tournament' && (
+          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+            <Filter size={14} className="text-csc-gold shrink-0" />
+            <label className="text-xs font-bold text-gray-600 shrink-0">Selecionar torneio:</label>
+            <select
+              value={selectedTournamentId}
+              onChange={(e) => setSelectedTournamentId(e.target.value)}
+              className="flex-1 py-2 px-3 rounded-xl text-xs font-black outline-none cursor-pointer border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark focus:border-csc-dark"
+            >
+              {tournaments.length === 0 ? (
+                <option value="">Sem torneios registados</option>
+              ) : (
+                tournaments.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}{t.season ? ` (${t.season})` : ''}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Lista de Jogos Ocorridos */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center min-h-[35vh]">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark mb-3"></div>
+          <p className="text-xs font-bold text-gray-500">A carregar fichas de jogo...</p>
+        </div>
+      ) : filteredMatches.length === 0 ? (
+        <div className="bg-white rounded-3xl p-10 text-center border border-dashed border-gray-300 space-y-3">
+          <Trophy size={42} className="mx-auto text-gray-300" />
+          <p className="font-black text-gray-800 text-sm sm:text-base">Nenhum jogo ocorrido encontrado</p>
+          <p className="text-xs text-gray-500 max-w-sm mx-auto">
+            Assim que os jogos da época forem realizados ou tiverem resultado registado, as suas fichas técnicas aparecerão aqui.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredMatches.map(m => {
+            const dateObj = new Date(m.date_time)
+            const dateFormatted = dateObj.toLocaleDateString('pt-PT', { 
+              weekday: 'short', 
+              day: 'numeric', 
+              month: 'short', 
+              year: 'numeric' 
+            })
+            const timeFormatted = dateObj.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
+
+            const isAway = m.home_away === 'away'
+            const cscSigla = formatClubSigla(clubSettings?.initials)
+            const oppSigla = formatOpponentSigla(m.opponent)
+            
+            const leftSigla = isAway ? oppSigla : cscSigla
+            const rightSigla = isAway ? cscSigla : oppSigla
+
+            const leftLogo = isAway ? m.opponent?.logo_url : '/csc-vet/cascais-emblem.png'
+            const rightLogo = isAway ? '/csc-vet/cascais-emblem.png' : m.opponent?.logo_url
+
+            const locationStr = m.field?.name || m.location || 'Campo a definir'
+            const hasScore = m.home_score !== null && m.home_score !== undefined
+
+            const parsedMeta = parseMatchReportMetadata(m.description)
+            const formationDisplay = (parsedMeta.tacticalFormation || '4-3-3').replace(/^1-/, '')
+
+            return (
+              <div
+                key={m.id}
+                onClick={() => handleOpenReport(m)}
+                className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 hover:border-csc-gold/80 shadow-sm p-4 sm:p-5 transition-all cursor-pointer hover:shadow-md active:scale-[0.99] space-y-3.5 group"
+              >
+                {/* Header do Card: Data, Competição e Condição */}
+                <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2.5 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-gray-900 capitalize flex items-center gap-1.5">
+                      <Calendar size={14} className="text-csc-dark" />
+                      <span>{dateFormatted} • {timeFormatted}</span>
+                    </span>
+                    {m.is_active === false && (
+                      <span className="text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full">
+                        Rascunho
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {m.tournament ? (
+                      <span className="text-[10px] font-black bg-emerald-50 text-emerald-900 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <Trophy size={11} className="text-emerald-700" />
+                        <span>{m.tournament.name}</span>
+                      </span>
+                    ) : m.is_friendly ? (
+                      <span className="text-[10px] font-black bg-purple-50 text-purple-900 border border-purple-200 px-2.5 py-0.5 rounded-full">
+                        ⚽ Amigável
+                      </span>
+                    ) : null}
+
+                    <span className="text-[10px] font-extrabold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                      {isAway ? '✈️ Fora' : '🏠 Casa'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Scoreboard Central */}
+                <div className="grid grid-cols-11 items-center gap-2 py-1 text-center">
+                  {/* Equipa Esquerda */}
+                  <div className="col-span-4 flex items-center justify-end gap-2.5 min-w-0">
+                    <span className="text-sm sm:text-base font-black text-gray-900 uppercase truncate">
+                      {leftSigla}
+                    </span>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-50 p-1 border border-gray-200 flex items-center justify-center shrink-0 shadow-2xs">
+                      {leftLogo ? (
+                        <img src={leftLogo} alt={leftSigla} className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="font-black text-csc-dark text-xs">{leftSigla}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Placar */}
+                  <div className="col-span-3 flex flex-col items-center justify-center">
+                    {hasScore ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-2xl sm:text-3xl font-black text-csc-dark bg-gray-100 px-2.5 py-0.5 rounded-xl border border-gray-200 shadow-inner">
+                          {m.home_score}
+                        </span>
+                        <span className="text-lg font-black text-csc-gold">:</span>
+                        <span className="text-2xl sm:text-3xl font-black text-csc-dark bg-gray-100 px-2.5 py-0.5 rounded-xl border border-gray-200 shadow-inner">
+                          {m.away_score}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-black text-gray-400 uppercase tracking-widest px-2 py-1 bg-gray-100 rounded-lg">
+                        VS
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Equipa Direita */}
+                  <div className="col-span-4 flex items-center justify-start gap-2.5 min-w-0">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-50 p-1 border border-gray-200 flex items-center justify-center shrink-0 shadow-2xs">
+                      {rightLogo ? (
+                        <img src={rightLogo} alt={rightSigla} className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="font-black text-csc-dark text-xs">{rightSigla}</span>
+                      )}
+                    </div>
+                    <span className="text-sm sm:text-base font-black text-gray-900 uppercase truncate">
+                      {rightSigla}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer do Card: Local e Botão de Ação */}
+                <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-gray-100 text-xs">
+                  <div className="flex items-center gap-1.5 text-gray-500 font-semibold truncate min-w-0">
+                    <MapPin size={13} className="text-red-500 shrink-0" />
+                    <span className="truncate">{locationStr}</span>
+                    {formationDisplay && (
+                      <span className="hidden sm:inline-block text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md font-bold ml-1">
+                        Tática: {formationDisplay}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 text-csc-dark group-hover:text-emerald-800 font-black shrink-0">
+                    <span>{isCoachOrAdmin ? 'Editar Ficha' : 'Ver Ficha'}</span>
+                    <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </div>
+
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Modal da Ficha de Jogo */}
+      {selectedEventForReport && (
+        <MatchReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => {
+            setIsReportModalOpen(false)
+            setSelectedEventForReport(null)
+          }}
+          eventId={selectedEventForReport.id}
+          event={selectedEventForReport}
+          isCoachOrAdmin={!!isCoachOrAdmin}
+          onSaved={handleSavedReport}
+        />
+      )}
+
+    </div>
+  )
+}
+
+export default MatchReportsPage

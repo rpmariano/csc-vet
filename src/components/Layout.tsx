@@ -15,7 +15,8 @@ import {
   ChevronDown,
   Sparkles,
   ArrowRight,
-  Check
+  Check,
+  ClipboardList
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
@@ -261,13 +262,35 @@ const Layout: React.FC = () => {
                   </div>
                 )}
 
-                {/* 2. Informação & Comunicação (Apenas Admin/Treinador) */}
-                {(isAdmin || isCoach) && (
-                  <div>
-                    <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-2">
-                      Informação & Desporto
-                    </p>
-                    <div className="space-y-1">
+                {/* 2. Informação & Desporto (Acessível a Todos) */}
+                <div>
+                  <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-2">
+                    Desporto & Rendimento
+                  </p>
+                  <div className="space-y-1">
+                    <Link
+                      to="/match-reports"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
+                        location.pathname === '/match-reports' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
+                      }`}
+                    >
+                      <ClipboardList size={16} className="text-emerald-400" />
+                      <span>Fichas de Jogo</span>
+                    </Link>
+
+                    <Link
+                      to="/stats"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
+                        location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
+                      }`}
+                    >
+                      <BarChart3 size={16} className="text-purple-400" />
+                      <span>Estatísticas & Desempenho</span>
+                    </Link>
+
+                    {(isAdmin || isCoach) && (
                       <Link
                         to="/announcements"
                         onClick={() => setIsMobileMenuOpen(false)}
@@ -278,20 +301,9 @@ const Layout: React.FC = () => {
                         <FileText size={16} className="text-amber-400" />
                         <span>Comunicados & Avisos</span>
                       </Link>
-
-                      <Link
-                        to="/stats"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                          location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
-                        }`}
-                      >
-                        <BarChart3 size={16} className="text-purple-400" />
-                        <span>Estatísticas & Desempenho</span>
-                      </Link>
-                    </div>
+                    )}
                   </div>
-                )}
+                </div>
 
 
               </div>
@@ -403,38 +415,48 @@ const Layout: React.FC = () => {
                   <span>Agenda</span>
                 </Link>
 
-                {(isAdmin || isCoach) && (
-                  <Link
-                    to="/team-management"
-                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                      location.pathname === '/team-management' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <Users size={17} className={location.pathname === '/team-management' ? 'text-csc-dark' : 'text-emerald-400'} />
-                    <span>Plantel</span>
-                  </Link>
-                )}
+                <Link
+                  to="/match-reports"
+                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                    location.pathname === '/match-reports' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <ClipboardList size={17} className={location.pathname === '/match-reports' ? 'text-csc-dark' : 'text-emerald-400'} />
+                  <span>Fichas de Jogo</span>
+                </Link>
 
-                {(isAdmin || isCoach) ? (
-                  <Link
-                    to="/events"
-                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                      location.pathname === '/events' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <PlusCircle size={17} className={location.pathname === '/events' ? 'text-csc-dark' : 'text-amber-400'} />
-                    <span>Gestão de Eventos</span>
-                  </Link>
-                ) : (
-                  <Link
-                    to="/stats"
-                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                      location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <BarChart3 size={17} className={location.pathname === '/stats' ? 'text-csc-dark' : 'text-purple-400'} />
-                    <span>Estatísticas</span>
-                  </Link>
+                <Link
+                  to="/stats"
+                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                    location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <BarChart3 size={17} className={location.pathname === '/stats' ? 'text-csc-dark' : 'text-purple-400'} />
+                  <span>Estatísticas</span>
+                </Link>
+
+                {(isAdmin || isCoach) && (
+                  <>
+                    <Link
+                      to="/team-management"
+                      className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                        location.pathname === '/team-management' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <Users size={17} className={location.pathname === '/team-management' ? 'text-csc-dark' : 'text-emerald-400'} />
+                      <span>Plantel</span>
+                    </Link>
+
+                    <Link
+                      to="/events"
+                      className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+                        location.pathname === '/events' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <PlusCircle size={17} className={location.pathname === '/events' ? 'text-csc-dark' : 'text-amber-400'} />
+                      <span>Gestão de Eventos</span>
+                    </Link>
+                  </>
                 )}
               </div>
             </div>

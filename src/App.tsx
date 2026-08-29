@@ -17,6 +17,7 @@ import FinancePage from './pages/FinancePage'
 import SettingsPage from './pages/SettingsPage'
 import EventsPage from './pages/EventsPage'
 import AdminDashboard from './pages/AdminDashboard'
+import MatchReportsPage from './pages/MatchReportsPage'
 
 const App: React.FC = () => {
   return (
@@ -33,6 +34,7 @@ const App: React.FC = () => {
               <Route element={<Layout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/match-reports" element={<MatchReportsPage />} />
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
 
