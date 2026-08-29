@@ -1888,22 +1888,6 @@ const CalendarPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Botão Criar Evento (Coach/Admin) */}
-      {isCoachOrAdmin && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => {
-              setSelectedPlayerIds(allPlayers.map(p => p.id))
-              setIsAddModalOpen(true)
-            }}
-            className="flex items-center justify-center space-x-2 bg-csc-dark text-white px-4 py-2.5 rounded-xl font-bold hover:bg-csc-dark/80 transition-all shadow-sm shrink-0 w-full sm:w-auto cursor-pointer"
-          >
-            <Plus size={18} className="text-csc-gold" />
-            <span>Criar Jogo / Treino</span>
-          </button>
-        </div>
-      )}
-
       {/* Banner Superior com Todas as Convocatórias Pendentes em Carrossel */}
       {myPendingEvents.length > 0 && (() => {
         const activeIndex = Math.min(currentPendingIndex, myPendingEvents.length - 1)
