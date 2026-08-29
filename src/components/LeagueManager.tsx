@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Trophy, Trash2, Shield, Plus } from 'lucide-react'
+import { Trophy, Trash2, Shield, Plus, X } from 'lucide-react'
+import { toast } from '../context/ToastContext'
 
 interface LeagueManagerProps {
   tournamentId: string
@@ -27,6 +28,11 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   const [newHomeScore, setNewHomeScore] = useState<string>('0')
   const [newAwayScore, setNewAwayScore] = useState<string>('0')
 
+  // New Group modal
+  const [isNewGroupModalOpen, setIsNewGroupModalOpen] = useState(false)
+  const [newGroupName, setNewGroupName] = useState('')
+  const [newGroupPhase, setNewGroupPhase] = useState('1')
+
   useEffect(() => {
     fetchData()
   }, [tournamentId])
@@ -51,11 +57,12 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   }
 
   const handleAddGroup = async () => {
-    const name = prompt('Nome do Grupo (ex: Grupo A, Apuramento Campeão)')
-    if (!name) return
-    const phaseStr = prompt('Qual a Fase? (1 = Fase Inicial, 2 = Fase Final)')
-    const phase = phaseStr ? parseInt(phaseStr) : 1
-    await supabase.from('tournament_groups').insert([{ tournament_id: tournamentId, name, phase }])
+    if (!newGroupName.trim()) return
+    const phase = parseInt(newGroupPhase) || 1
+    await supabase.from('tournament_groups').insert([{ tournament_id: tournamentId, name: newGroupName.trim(), phase }])
+    setNewGroupName('')
+    setNewGroupPhase('1')
+    setIsNewGroupModalOpen(false)
     fetchData()
   }
 
@@ -68,7 +75,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     // Check if team already exists in any group for this tournament
     const existing = teams.find(t => t.opponent_id === opponent_id)
     if (existing) {
-      alert('Esta equipa já está associada a um grupo neste torneio.')
+      toast.warning('Esta equipa já está associada a um grupo neste torneio.')
       return
     }
 
@@ -92,7 +99,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   const handleAddMatch = async () => {
     if (!newMatchGroup || !newHomeTeam || !newAwayTeam) return
     if (newHomeTeam === newAwayTeam) {
-      alert('Uma equipa não pode jogar contra si mesma!')
+      toast.warning('Uma equipa não pode jogar contra si mesma!')
       return
     }
 
@@ -173,7 +180,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                       <Shield size={18} className="text-blue-500" />
                       Grupos e Equipas
                     </h3>
-                    <button onClick={handleAddGroup} className="text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors cursor-pointer">
+                    <button onClick={() => setIsNewGroupModalOpen(true)} className="text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors cursor-pointer">
                       + Novo Grupo
                     </button>
                   </div>
@@ -433,6 +440,62 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
           )}
         </div>
       </div>
+
+      {/* MODAL: Criar Novo Grupo */}
+      {isNewGroupModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white">
+              <div className="flex items-center gap-2">
+                <Plus size={18} className="text-csc-gold" />
+                <h3 className="font-black text-sm">Novo Grupo</h3>
+              </div>
+              <button onClick={() => setIsNewGroupModalOpen(false)} className="p-1 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">Nome do Grupo *</label>
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={e => setNewGroupName(e.target.value)}
+                  placeholder="Ex: Grupo A, Apuramento Campeão"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">Fase</label>
+                <select
+                  value={newGroupPhase}
+                  onChange={e => setNewGroupPhase(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                >
+                  <option value="1">Fase 1 (Fase Inicial)</option>
+                  <option value="2">Fase 2 (Fase Final)</option>
+                </select>
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  onClick={() => setIsNewGroupModalOpen(false)}
+                  className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddGroup}
+                  disabled={!newGroupName.trim()}
+                  className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer"
+                >
+                  Criar Grupo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
