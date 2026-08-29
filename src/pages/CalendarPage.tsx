@@ -116,7 +116,17 @@ const ensurePlayerIdsForSupabase = async (pIds: string[], playerList: Profile[])
   const playerMap = new Map<string, Profile>(playerList.map(p => [p.id, p]))
   const resolvedIds: string[] = []
 
+  let dbProfiles: { id: string; email?: string | null; name?: string | null }[] = []
+  try {
+    const { data } = await supabase.from('profiles').select('id, email, name')
+    if (data) dbProfiles = data
+  } catch (e) {
+    console.error('Error fetching db profiles for matching:', e)
+  }
+
   for (const id of pIds) {
+    if (!id || typeof id !== 'string') continue
+
     if (!id.startsWith('seed-')) {
       resolvedIds.push(id)
       continue
@@ -124,18 +134,32 @@ const ensurePlayerIdsForSupabase = async (pIds: string[], playerList: Profile[])
     const seedP = playerMap.get(id)
     if (!seedP) continue
 
+    // 1. Verificar por email na BD
+    const matchByEmail = seedP.email 
+      ? dbProfiles.find(dp => dp.email && dp.email.toLowerCase().trim() === seedP.email!.toLowerCase().trim())
+      : null
+
+    if (matchByEmail?.id) {
+      seedP.id = matchByEmail.id
+      resolvedIds.push(matchByEmail.id)
+      continue
+    }
+
+    // 2. Verificar por nome na BD
+    const matchByName = seedP.name
+      ? dbProfiles.find(dp => dp.name && dp.name.toLowerCase().trim() === seedP.name.toLowerCase().trim())
+      : null
+
+    if (matchByName?.id) {
+      seedP.id = matchByName.id
+      resolvedIds.push(matchByName.id)
+      continue
+    }
+
+    // 3. Tentar inserir se não existir
     try {
-      if (seedP.email) {
-        const { data: existing } = await supabase.from('profiles').select('id').eq('email', seedP.email).maybeSingle()
-        if (existing && existing.id) {
-          seedP.id = existing.id
-          resolvedIds.push(existing.id)
-          continue
-        }
-      }
-      
       const newId = crypto.randomUUID()
-      const { error } = await supabase.from('profiles').insert([{
+      const { data: inserted, error } = await supabase.from('profiles').insert([{
         id: newId,
         name: seedP.name,
         shirt_name: seedP.shirt_name || null,
@@ -146,17 +170,28 @@ const ensurePlayerIdsForSupabase = async (pIds: string[], playerList: Profile[])
         email: seedP.email || null,
         phone: seedP.phone || null,
         birth_date: seedP.birth_date || null
-      }])
+      }]).select('id').maybeSingle()
+
       if (!error) {
-        seedP.id = newId
-        resolvedIds.push(newId)
+        const finalId = inserted?.id || newId
+        seedP.id = finalId
+        dbProfiles.push({ id: finalId, email: seedP.email, name: seedP.name })
+        resolvedIds.push(finalId)
+      } else {
+        if (seedP.name) {
+          const { data: recheck } = await supabase.from('profiles').select('id').ilike('name', seedP.name.trim()).maybeSingle()
+          if (recheck?.id) {
+            seedP.id = recheck.id
+            resolvedIds.push(recheck.id)
+          }
+        }
       }
     } catch (err) {
       console.error('Error ensuring profile exists:', err)
     }
   }
 
-  return resolvedIds
+  return Array.from(new Set(resolvedIds.filter(id => id && !id.startsWith('seed-'))))
 }
 
 interface Event {
@@ -1095,7 +1130,10 @@ const CalendarPage: React.FC = () => {
             })
           })
           if (allCallups.length > 0) {
-            await supabase.from('callups').insert(allCallups)
+            await supabase.from('callups').upsert(allCallups, {
+              onConflict: 'event_id, player_id',
+              ignoreDuplicates: true
+            })
           }
         }
 
@@ -1137,7 +1175,12 @@ const CalendarPage: React.FC = () => {
             player_id: pId,
             status: 'called'
           }))
-          await supabase.from('callups').insert(callupsToInsert)
+          if (callupsToInsert.length > 0) {
+            await supabase.from('callups').upsert(callupsToInsert, {
+              onConflict: 'event_id, player_id',
+              ignoreDuplicates: true
+            })
+          }
         }
         toast.success('✨ Evento criado com sucesso!')
       }
@@ -3800,13 +3843,30 @@ const CalendarPage: React.FC = () => {
                     try {
                       const validIds = await ensurePlayerIdsForSupabase(editUncalledPlayers.map(p => p.id), allPlayers)
                       if (validIds.length > 0) {
-                        const payload = validIds.map(pId => ({
-                          event_id: selectedEvent.id,
-                          player_id: pId,
-                          status: 'called'
-                        }))
-                        const { error } = await supabase.from('callups').insert(payload)
-                        if (error) throw error
+                        // Obter convocatórias existentes na base de dados para garantir que não há conflitos
+                        const { data: existingDbCallups } = await supabase
+                          .from('callups')
+                          .select('player_id')
+                          .eq('event_id', selectedEvent.id)
+                        
+                        const existingPlayerIds = new Set((existingDbCallups || []).map(c => c.player_id))
+                        const toInsert = validIds.filter(pId => pId && !existingPlayerIds.has(pId))
+
+                        if (toInsert.length > 0) {
+                          const payload = toInsert.map(pId => ({
+                            event_id: selectedEvent.id,
+                            player_id: pId,
+                            status: 'called' as const
+                          }))
+                          const { error } = await supabase.from('callups').upsert(payload, {
+                            onConflict: 'event_id, player_id',
+                            ignoreDuplicates: true
+                          })
+                          if (error) {
+                            const { error: insertErr } = await supabase.from('callups').insert(payload)
+                            if (insertErr) throw insertErr
+                          }
+                        }
                         await fetchEventsAndData()
                         toast.success('Todos os membros foram convocados com sucesso!')
                       }
@@ -3824,13 +3884,29 @@ const CalendarPage: React.FC = () => {
                     try {
                       const validIds = await ensurePlayerIdsForSupabase(uncalledAthletes.map(p => p.id), allPlayers)
                       if (validIds.length > 0) {
-                        const payload = validIds.map(pId => ({
-                          event_id: selectedEvent.id,
-                          player_id: pId,
-                          status: 'called'
-                        }))
-                        const { error } = await supabase.from('callups').insert(payload)
-                        if (error) throw error
+                        const { data: existingDbCallups } = await supabase
+                          .from('callups')
+                          .select('player_id')
+                          .eq('event_id', selectedEvent.id)
+                        
+                        const existingPlayerIds = new Set((existingDbCallups || []).map(c => c.player_id))
+                        const toInsert = validIds.filter(pId => pId && !existingPlayerIds.has(pId))
+
+                        if (toInsert.length > 0) {
+                          const payload = toInsert.map(pId => ({
+                            event_id: selectedEvent.id,
+                            player_id: pId,
+                            status: 'called' as const
+                          }))
+                          const { error } = await supabase.from('callups').upsert(payload, {
+                            onConflict: 'event_id, player_id',
+                            ignoreDuplicates: true
+                          })
+                          if (error) {
+                            const { error: insertErr } = await supabase.from('callups').insert(payload)
+                            if (insertErr) throw insertErr
+                          }
+                        }
                         await fetchEventsAndData()
                         toast.success('Jogadores convocados com sucesso!')
                       }
@@ -3848,13 +3924,29 @@ const CalendarPage: React.FC = () => {
                     try {
                       const validIds = await ensurePlayerIdsForSupabase(uncalledStaff.map(p => p.id), allPlayers)
                       if (validIds.length > 0) {
-                        const payload = validIds.map(pId => ({
-                          event_id: selectedEvent.id,
-                          player_id: pId,
-                          status: 'called'
-                        }))
-                        const { error } = await supabase.from('callups').insert(payload)
-                        if (error) throw error
+                        const { data: existingDbCallups } = await supabase
+                          .from('callups')
+                          .select('player_id')
+                          .eq('event_id', selectedEvent.id)
+                        
+                        const existingPlayerIds = new Set((existingDbCallups || []).map(c => c.player_id))
+                        const toInsert = validIds.filter(pId => pId && !existingPlayerIds.has(pId))
+
+                        if (toInsert.length > 0) {
+                          const payload = toInsert.map(pId => ({
+                            event_id: selectedEvent.id,
+                            player_id: pId,
+                            status: 'called' as const
+                          }))
+                          const { error } = await supabase.from('callups').upsert(payload, {
+                            onConflict: 'event_id, player_id',
+                            ignoreDuplicates: true
+                          })
+                          if (error) {
+                            const { error: insertErr } = await supabase.from('callups').insert(payload)
+                            if (insertErr) throw insertErr
+                          }
+                        }
                         await fetchEventsAndData()
                         toast.success('Staff/Treinadores convocados com sucesso!')
                       }
@@ -3900,11 +3992,14 @@ const CalendarPage: React.FC = () => {
                     } else {
                       const validIds = await ensurePlayerIdsForSupabase([player.id], allPlayers)
                       if (validIds.length > 0) {
-                        const { error } = await supabase.from('callups').insert([{
+                        const { error } = await supabase.from('callups').upsert([{
                           event_id: selectedEvent.id,
                           player_id: validIds[0],
                           status: 'called'
-                        }])
+                        }], {
+                          onConflict: 'event_id, player_id',
+                          ignoreDuplicates: true
+                        })
                         if (!error) await fetchEventsAndData()
                       }
                     }
