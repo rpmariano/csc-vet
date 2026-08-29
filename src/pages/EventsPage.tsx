@@ -1490,41 +1490,62 @@ const EventsPage: React.FC = () => {
                 <div className="space-y-4">
                   {/* Quorum Metric Cards */}
                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    <div 
-                      onClick={() => setRsvpTabFilter('confirmed')}
-                      className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all ${
-                        rsvpTabFilter === 'confirmed' ? 'bg-emerald-100 border-emerald-400 shadow-sm' : 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/50'
+                    <button 
+                      type="button"
+                      onClick={() => setRsvpTabFilter(prev => prev === 'confirmed' ? 'all' : 'confirmed')}
+                      className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
+                        rsvpTabFilter === 'confirmed' ? 'bg-emerald-100 border-emerald-500 shadow-md ring-2 ring-emerald-500/40' : 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/60'
                       }`}
+                      title="Filtrar por Confirmados"
                     >
                       <p className="text-2xl font-black text-emerald-800">{confirmedList.length}</p>
                       <p className="text-[11px] font-bold text-emerald-900 flex items-center justify-center gap-1 mt-0.5">
                         <CheckCircle2 size={12} /> Confirmados
                       </p>
-                    </div>
+                      {rsvpTabFilter === 'confirmed' && (
+                        <span className="text-[9px] font-black uppercase text-emerald-900 bg-emerald-200/90 px-1.5 py-0.2 rounded-full mt-1">
+                          Filtro Ativo
+                        </span>
+                      )}
+                    </button>
 
-                    <div 
-                      onClick={() => setRsvpTabFilter('called')}
-                      className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all ${
-                        rsvpTabFilter === 'called' ? 'bg-amber-100 border-amber-400 shadow-sm' : 'bg-amber-50/70 border-amber-200 hover:bg-amber-100/50'
+                    <button 
+                      type="button"
+                      onClick={() => setRsvpTabFilter(prev => prev === 'called' ? 'all' : 'called')}
+                      className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
+                        rsvpTabFilter === 'called' ? 'bg-amber-100 border-amber-500 shadow-md ring-2 ring-amber-500/40' : 'bg-amber-50/70 border-amber-200 hover:bg-amber-100/60'
                       }`}
+                      title="Filtrar por Pendentes"
                     >
                       <p className="text-2xl font-black text-amber-800">{pendingList.length}</p>
                       <p className="text-[11px] font-bold text-amber-900 flex items-center justify-center gap-1 mt-0.5">
                         <HelpCircle size={12} /> Pendentes
                       </p>
-                    </div>
+                      {rsvpTabFilter === 'called' && (
+                        <span className="text-[9px] font-black uppercase text-amber-900 bg-amber-200/90 px-1.5 py-0.2 rounded-full mt-1">
+                          Filtro Ativo
+                        </span>
+                      )}
+                    </button>
 
-                    <div 
-                      onClick={() => setRsvpTabFilter('declined')}
-                      className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all ${
-                        rsvpTabFilter === 'declined' ? 'bg-red-100 border-red-400 shadow-sm' : 'bg-red-50/70 border-red-200 hover:bg-red-100/50'
+                    <button 
+                      type="button"
+                      onClick={() => setRsvpTabFilter(prev => prev === 'declined' ? 'all' : 'declined')}
+                      className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
+                        rsvpTabFilter === 'declined' ? 'bg-red-100 border-red-500 shadow-md ring-2 ring-red-500/40' : 'bg-red-50/70 border-red-200 hover:bg-red-100/60'
                       }`}
+                      title="Filtrar por Recusados"
                     >
                       <p className="text-2xl font-black text-red-800">{declinedList.length}</p>
                       <p className="text-[11px] font-bold text-red-900 flex items-center justify-center gap-1 mt-0.5">
                         <XCircle size={12} /> Recusados
                       </p>
-                    </div>
+                      {rsvpTabFilter === 'declined' && (
+                        <span className="text-[9px] font-black uppercase text-red-900 bg-red-200/90 px-1.5 py-0.2 rounded-full mt-1">
+                          Filtro Ativo
+                        </span>
+                      )}
+                    </button>
                   </div>
 
                   {/* Filter Tabs */}
