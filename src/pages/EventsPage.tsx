@@ -44,34 +44,50 @@ export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: stri
 }
 
 const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
-  const emailMap = new Map<string, Profile>()
+  const playersList: Profile[] = INITIAL_PLAYERS_DATA.map((seedPlayer, idx) => ({
+    ...seedPlayer,
+    id: `seed-${idx}`,
+  } as Profile))
 
-  // 1. Iniciar com todos os 31 atletas do plantel (dados do PDF)
-  INITIAL_PLAYERS_DATA.forEach((seedPlayer, idx) => {
-    const emailKey = (seedPlayer.email || `player-${idx}@csc.pt`).toLowerCase().trim()
-    emailMap.set(emailKey, {
-      ...seedPlayer,
-      id: `seed-${idx}`,
-    } as Profile)
-  })
-
-  // 2. Sobrepor perfis do Supabase (que têm UUIDs reais, fotos carregadas e edições mais recentes)
   remoteProfiles.forEach((remotePlayer) => {
+    let matchedIdx = -1
+
+    // 1. Verificar por email
     if (remotePlayer.email) {
-      const emailKey = remotePlayer.email.toLowerCase().trim()
-      const existing = emailMap.get(emailKey)
-      emailMap.set(emailKey, {
-        ...(existing || {}),
+      const remEmail = remotePlayer.email.toLowerCase().trim()
+      matchedIdx = playersList.findIndex(p => p.email && p.email.toLowerCase().trim() === remEmail)
+    }
+
+    // 2. Verificar por nome / nome da camisola / alcunha
+    if (matchedIdx === -1 && remotePlayer.name) {
+      const remName = remotePlayer.name.toLowerCase().trim()
+      matchedIdx = playersList.findIndex(p => p.name && (
+        p.name.toLowerCase().trim() === remName ||
+        p.shirt_name?.toLowerCase().trim() === remName ||
+        p.nickname?.toLowerCase().trim() === remName
+      ))
+    }
+
+    // 3. Verificar por número da camisola
+    if (matchedIdx === -1 && remotePlayer.jersey_number != null) {
+      matchedIdx = playersList.findIndex(p => p.jersey_number === remotePlayer.jersey_number)
+    }
+
+    if (matchedIdx !== -1) {
+      const seed = playersList[matchedIdx]
+      playersList[matchedIdx] = {
+        ...seed,
         ...remotePlayer,
-        shirt_name: remotePlayer.shirt_name || existing?.shirt_name || null,
-        jersey_number: remotePlayer.jersey_number ?? existing?.jersey_number ?? null,
-      })
+        id: remotePlayer.id, // UUID real do Supabase
+        shirt_name: remotePlayer.shirt_name || seed.shirt_name || null,
+        jersey_number: remotePlayer.jersey_number ?? seed.jersey_number ?? null,
+      }
     } else {
-      emailMap.set(remotePlayer.id, remotePlayer)
+      playersList.push(remotePlayer)
     }
   })
 
-  return Array.from(emailMap.values()).sort((a, b) => {
+  return playersList.sort((a, b) => {
     if (a.jersey_number && b.jersey_number) return a.jersey_number - b.jersey_number
     if (a.jersey_number) return -1
     if (b.jersey_number) return 1
@@ -645,6 +661,7 @@ const EventsPage: React.FC = () => {
           if (!map[c.event_id]) map[c.event_id] = []
           map[c.event_id].push({
             ...c,
+            player_id: fullP?.id || c.player_id,
             player: fullP
           } as CallupWithPlayer)
         })
@@ -2365,7 +2382,20 @@ const EventsPage: React.FC = () => {
                   return p ? isPlayerEligible(p, editingEvent.type) : false
                 })
                 const calledPlayerIds = currentCallups.map(c => c.player_id)
-                const editUncalledPlayers = eligibleMembers.filter(p => !calledPlayerIds.includes(p.id))
+
+                const isMemberCalled = (player: Profile) => {
+                  return calledPlayerIds.includes(player.id) || currentCallups.some(c => 
+                    c.player_id === player.id || 
+                    (c.player && (
+                      c.player.id === player.id ||
+                      (c.player.name && player.name && c.player.name.toLowerCase().trim() === player.name.toLowerCase().trim()) ||
+                      (c.player.email && player.email && c.player.email.toLowerCase().trim() === player.email.toLowerCase().trim())
+                    ))
+                  )
+                }
+
+                const calledMembersCount = eligibleMembers.filter(p => isMemberCalled(p)).length
+                const editUncalledPlayers = eligibleMembers.filter(p => !isMemberCalled(p))
 
                 const handleEditAddAll = async () => {
                   if (editUncalledPlayers.length === 0 || isBatchCalling) return
@@ -2419,8 +2449,7 @@ const EventsPage: React.FC = () => {
                       setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
                       setIsBatchCalling(true)
                       try {
-                        const callupIds = currentCallups.map(c => c.id)
-                        const { error } = await supabase.from('callups').delete().in('id', callupIds)
+                        const { error } = await supabase.from('callups').delete().eq('event_id', editingEvent.id)
                         if (error) throw error
                         await fetchData()
                         toast.info('Todos os convocados foram removidos.')
@@ -2443,7 +2472,7 @@ const EventsPage: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black text-gray-900 flex items-center gap-1.5">
                         <Users size={15} className="text-csc-dark" />
-                        <span>Convocatória ({calledPlayerIds.length} convocados)</span>
+                        <span>Convocatória ({calledMembersCount} convocados)</span>
                       </span>
                       <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2 py-0.5 rounded-full">
                         {eligibleMembers.length} Membros
@@ -2487,8 +2516,15 @@ const EventsPage: React.FC = () => {
                     {/* Lista de membros um a um */}
                     <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-2xl">
                       {filteredMembers.map(p => {
-                        const callup = currentCallups.find(c => c.player_id === p.id)
-                        const isCalled = !!callup
+                        const callup = currentCallups.find(c => 
+                          c.player_id === p.id ||
+                          (c.player && (
+                            c.player.id === p.id ||
+                            (c.player.name && p.name && c.player.name.toLowerCase().trim() === p.name.toLowerCase().trim()) ||
+                            (c.player.email && p.email && c.player.email.toLowerCase().trim() === p.email.toLowerCase().trim())
+                          ))
+                        )
+                        const isCalled = isMemberCalled(p)
 
                         return (
                           <div
