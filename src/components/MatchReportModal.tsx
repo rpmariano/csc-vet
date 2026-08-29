@@ -584,6 +584,11 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                   ⚽ {p.goals}
                                 </span>
                               )}
+                              {p.assists > 0 && (
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-900 rounded-lg border border-blue-200 flex items-center gap-1">
+                                  <Footprints size={12} className="text-blue-600" /> {p.assists} ass
+                                </span>
+                              )}
                               {p.yellow_cards > 0 && (
                                 <span className="px-2 py-0.5 bg-yellow-100 text-yellow-900 rounded-lg border border-yellow-300 flex items-center gap-1">
                                   🟨
@@ -680,6 +685,29 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                 if (p.lineup_status === 'none') handleStatChange(p.player_id, 'lineup_status', 'starter')
                               }}
                               className="w-5 h-5 rounded-lg bg-amber-200 text-amber-900 text-xs font-black flex items-center justify-center hover:bg-amber-300 cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {/* Contador de Assistências (👟) */}
+                          <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-xl px-2 py-1">
+                            <Footprints size={13} className="text-blue-600 shrink-0" />
+                            <button
+                              type="button"
+                              onClick={() => handleStatChange(p.player_id, 'assists', Math.max(0, p.assists - 1))}
+                              className="w-5 h-5 rounded-lg bg-blue-200 text-blue-900 text-xs font-black flex items-center justify-center hover:bg-blue-300 cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <span className="text-xs font-black text-blue-950 w-4 text-center">{p.assists}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleStatChange(p.player_id, 'assists', p.assists + 1)
+                                if (p.lineup_status === 'none') handleStatChange(p.player_id, 'lineup_status', 'starter')
+                              }}
+                              className="w-5 h-5 rounded-lg bg-blue-200 text-blue-900 text-xs font-black flex items-center justify-center hover:bg-blue-300 cursor-pointer"
                             >
                               +
                             </button>
