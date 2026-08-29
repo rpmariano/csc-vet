@@ -1,7 +1,12 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../context/AuthContext'
 
 const Login: React.FC = () => {
+  const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
+
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -9,6 +14,12 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate('/', { replace: true })
+    }
+  }, [user, authLoading, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +46,7 @@ const Login: React.FC = () => {
           password,
         })
         if (signInError) throw signInError
+        navigate('/', { replace: true })
       }
     } catch (err: any) {
       setError(err.message || 'Ocorreu um erro inesperado.')
@@ -47,10 +59,12 @@ const Login: React.FC = () => {
     setError(null)
     setLoading(true)
     try {
+      // Redirecionar diretamente para a raiz da aplicação (evitando ficar preso em /login)
+      const redirectUrl = `${window.location.origin}${import.meta.env.BASE_URL || '/'}`
       const { error: googleError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + window.location.pathname,
+          redirectTo: redirectUrl,
         },
       })
       if (googleError) throw googleError
@@ -58,6 +72,10 @@ const Login: React.FC = () => {
       setError(err.message || 'Erro ao iniciar sessão com o Google.')
       setLoading(false)
     }
+  }
+
+  if (user && !authLoading) {
+    return <Navigate to="/" replace />
   }
 
   const isConfigured = !!import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('placeholder');
