@@ -28,6 +28,7 @@ import { useAuth, extractRolesFromProfile, encodeRolesToNotes, cleanNotesFromRol
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../components/SoccerPitchSelector'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
+import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 
 const POSITIONS = [
   'Guarda-redes',
@@ -94,6 +95,29 @@ const TeamManagementPage: React.FC = () => {
   const [insuranceDocUrl, setInsuranceDocUrl] = useState<string | null>(null)
   const [medicalExamDocUrl, setMedicalExamDocUrl] = useState<string | null>(null)
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
+  const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false)
+
+  const isFormDirty = () => {
+    return Boolean(
+      formName.trim() ||
+      formShirtName.trim() ||
+      formEmail.trim() ||
+      formPhone.trim() ||
+      formNif.trim() ||
+      formAddress.trim() ||
+      formEmergencyName.trim() ||
+      formMedicalNotes.trim()
+    )
+  }
+
+  const handleAttemptCloseFormModal = () => {
+    if (isFormDirty()) {
+      setIsUnsavedModalOpen(true)
+    } else {
+      setIsFormModalOpen(false)
+      resetForm()
+    }
+  }
 
   const isCoachOrAdmin = currentUserProfile && ['coach', 'admin'].includes(currentUserProfile.role)
   const isAdmin = currentUserProfile?.role === 'admin'
@@ -1180,10 +1204,16 @@ const TeamManagementPage: React.FC = () => {
 
       {/* MODAL 1: CRIAR / EDITAR FICHA DE MEMBRO */}
       {isFormModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 lg:p-6 z-50 overflow-y-auto">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 lg:p-6 z-50 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleAttemptCloseFormModal()
+          }}
+        >
           <div className="bg-white rounded-3xl max-w-4xl xl:max-w-5xl w-full p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-200">
             <button
-              onClick={() => setIsFormModalOpen(false)}
+              type="button"
+              onClick={handleAttemptCloseFormModal}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors"
             >
               <X size={22} />
@@ -1697,7 +1727,7 @@ const TeamManagementPage: React.FC = () => {
               <div className="pt-2 flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsFormModalOpen(false)}
+                  onClick={handleAttemptCloseFormModal}
                   className="flex-1 py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 text-sm cursor-pointer"
                 >
                   Cancelar
@@ -2333,6 +2363,22 @@ const TeamManagementPage: React.FC = () => {
           </div>
         )
       })()}
+
+      {/* MODAL: CONFIRMAÇÃO DE SAÍDA COM ALTERAÇÕES NÃO GUARDADAS */}
+      <UnsavedChangesModal
+        isOpen={isUnsavedModalOpen}
+        onSaveAndExit={async () => {
+          setIsUnsavedModalOpen(false)
+          const fakeEvent = { preventDefault: () => {} } as React.FormEvent
+          await handleSaveMember(fakeEvent)
+        }}
+        onExitWithoutSaving={() => {
+          setIsUnsavedModalOpen(false)
+          setIsFormModalOpen(false)
+          resetForm()
+        }}
+        onCancel={() => setIsUnsavedModalOpen(false)}
+      />
     </div>
   )
 }

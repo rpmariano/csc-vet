@@ -29,6 +29,7 @@ import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
+import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -247,6 +248,21 @@ const EventsPage: React.FC = () => {
   const [isBatchCalling, setIsBatchCalling] = useState(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
+  const [unsavedModalTarget, setUnsavedModalTarget] = useState<'edit' | 'quickField' | null>(null)
+
+  const handleAttemptCloseEditModal = () => {
+    setUnsavedModalTarget('edit')
+  }
+
+  const handleAttemptCloseQuickFieldModal = () => {
+    if (quickFieldName.trim() || quickFieldAddress.trim()) {
+      setUnsavedModalTarget('quickField')
+    } else {
+      setIsQuickFieldModalOpen(false)
+      setQuickFieldName('')
+      setQuickFieldAddress('')
+    }
+  }
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
 
@@ -1797,11 +1813,11 @@ const EventsPage: React.FC = () => {
       )}
       {/* ====== MODAL DE EDIÇÃO DE EVENTO ====== */}
       {editingEvent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onClick={() => setEditingEvent(null)}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onClick={handleAttemptCloseEditModal}>
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-200 p-5 rounded-t-3xl flex justify-between items-center z-10">
               <h3 className="text-lg font-black text-gray-900">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
-              <button onClick={() => setEditingEvent(null)} className="text-gray-400 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 cursor-pointer"><X size={20} /></button>
+              <button onClick={handleAttemptCloseEditModal} className="text-gray-400 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 cursor-pointer"><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
@@ -2076,7 +2092,7 @@ const EventsPage: React.FC = () => {
 
               {/* Botões */}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setEditingEvent(null)} className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">
+                <button type="button" onClick={handleAttemptCloseEditModal} className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">
                   Cancelar
                 </button>
                 <button type="submit" disabled={isSavingEdit} className="flex-1 px-4 py-2.5 bg-csc-dark hover:bg-csc-dark/90 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50">
@@ -2090,15 +2106,16 @@ const EventsPage: React.FC = () => {
 
       {/* MODAL: CRIAR NOVO CAMPO INLINE */}
       {isQuickFieldModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fade-in">
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleAttemptCloseQuickFieldModal()
+          }}
+        >
           <div className="bg-white rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-gray-100 space-y-4">
             <button
               type="button"
-              onClick={() => {
-                setIsQuickFieldModalOpen(false)
-                setQuickFieldName('')
-                setQuickFieldAddress('')
-              }}
+              onClick={handleAttemptCloseQuickFieldModal}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <X size={20} />
@@ -2143,11 +2160,7 @@ const EventsPage: React.FC = () => {
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-150">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsQuickFieldModalOpen(false)
-                    setQuickFieldName('')
-                    setQuickFieldAddress('')
-                  }}
+                  onClick={handleAttemptCloseQuickFieldModal}
                   className="px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   Cancelar
@@ -2232,6 +2245,32 @@ const EventsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL: CONFIRMAÇÃO DE SAÍDA COM ALTERAÇÕES NÃO GUARDADAS */}
+      <UnsavedChangesModal
+        isOpen={unsavedModalTarget !== null}
+        onSaveAndExit={async () => {
+          if (unsavedModalTarget === 'edit') {
+            setUnsavedModalTarget(null)
+            setIsResendPromptOpen(true)
+          } else if (unsavedModalTarget === 'quickField') {
+            setUnsavedModalTarget(null)
+            const fakeEvent = { preventDefault: () => {} } as React.FormEvent
+            await handleSaveQuickField(fakeEvent)
+          }
+        }}
+        onExitWithoutSaving={() => {
+          if (unsavedModalTarget === 'edit') {
+            setEditingEvent(null)
+          } else if (unsavedModalTarget === 'quickField') {
+            setIsQuickFieldModalOpen(false)
+            setQuickFieldName('')
+            setQuickFieldAddress('')
+          }
+          setUnsavedModalTarget(null)
+        }}
+        onCancel={() => setUnsavedModalTarget(null)}
+      />
 
     </div>
   )

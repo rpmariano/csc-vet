@@ -37,6 +37,7 @@ import { useSearchParams } from 'react-router-dom'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
 import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
+import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -340,6 +341,43 @@ const CalendarPage: React.FC = () => {
   const [quickFieldAddress, setQuickFieldAddress] = useState('')
   const [quickFieldTarget, setQuickFieldTarget] = useState<'create' | 'edit'>('create')
   const [isSavingQuickField, setIsSavingQuickField] = useState(false)
+
+  // Unsaved changes prompt state
+  const [unsavedModalTarget, setUnsavedModalTarget] = useState<'add' | 'edit' | 'quickField' | null>(null)
+
+  const isAddFormDirty = () => {
+    return Boolean(
+      title.trim() ||
+      location.trim() ||
+      description.trim() ||
+      tournamentId ||
+      maxPlayers !== '' ||
+      selectedPlayerIds.length > 0 ||
+      isRecurring
+    )
+  }
+
+  const handleAttemptCloseAddModal = () => {
+    if (isAddFormDirty()) {
+      setUnsavedModalTarget('add')
+    } else {
+      setIsAddModalOpen(false)
+    }
+  }
+
+  const handleAttemptCloseEditModal = () => {
+    setUnsavedModalTarget('edit')
+  }
+
+  const handleAttemptCloseQuickFieldModal = () => {
+    if (quickFieldName.trim() || quickFieldAddress.trim()) {
+      setUnsavedModalTarget('quickField')
+    } else {
+      setIsQuickFieldModalOpen(false)
+      setQuickFieldName('')
+      setQuickFieldAddress('')
+    }
+  }
 
   // Pre-select weekday when dateTime changes
   useEffect(() => {
@@ -2588,10 +2626,16 @@ const CalendarPage: React.FC = () => {
 
       {/* Modal Criar Evento com Seleção de Convocatória (Versão Larga 2 Colunas) */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleAttemptCloseAddModal()
+          }}
+        >
           <div className="bg-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
             <button
-              onClick={() => setIsAddModalOpen(false)}
+              type="button"
+              onClick={handleAttemptCloseAddModal}
               className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10 cursor-pointer"
               title="Fechar"
             >
@@ -3026,7 +3070,7 @@ const CalendarPage: React.FC = () => {
               <div className="col-span-full pt-5 border-t border-gray-200 flex items-center justify-end gap-3 mt-2">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={handleAttemptCloseAddModal}
                   className="px-5 py-2.5 border border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-100 rounded-xl text-xs sm:text-sm font-bold text-gray-700 transition-colors cursor-pointer shadow-2xs"
                 >
                   Cancelar
@@ -3046,10 +3090,16 @@ const CalendarPage: React.FC = () => {
 
       {/* MODAL 3: EDITAR EVENTO ESPECÍFICO (Versão Larga 2 Colunas) */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleAttemptCloseEditModal()
+          }}
+        >
           <div className="bg-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
             <button
-              onClick={() => setIsEditModalOpen(false)}
+              type="button"
+              onClick={handleAttemptCloseEditModal}
               className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10 cursor-pointer"
               title="Fechar"
             >
@@ -3460,7 +3510,7 @@ const CalendarPage: React.FC = () => {
               <div className="col-span-full pt-5 border-t border-gray-200 flex items-center justify-end gap-3 mt-2">
                 <button
                   type="button"
-                  onClick={() => setIsEditModalOpen(false)}
+                  onClick={handleAttemptCloseEditModal}
                   className="px-5 py-2.5 border border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-100 rounded-xl text-xs sm:text-sm font-bold text-gray-700 transition-colors cursor-pointer shadow-2xs"
                 >
                   Cancelar
@@ -3481,15 +3531,16 @@ const CalendarPage: React.FC = () => {
 
       {/* MODAL 4: CRIAR NOVO CAMPO INLINE */}
       {isQuickFieldModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleAttemptCloseQuickFieldModal()
+          }}
+        >
           <div className="bg-white rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-gray-100 space-y-4">
             <button
               type="button"
-              onClick={() => {
-                setIsQuickFieldModalOpen(false)
-                setQuickFieldName('')
-                setQuickFieldAddress('')
-              }}
+              onClick={handleAttemptCloseQuickFieldModal}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <X size={20} />
@@ -3534,11 +3585,7 @@ const CalendarPage: React.FC = () => {
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-150">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsQuickFieldModalOpen(false)
-                    setQuickFieldName('')
-                    setQuickFieldAddress('')
-                  }}
+                  onClick={handleAttemptCloseQuickFieldModal}
                   className="px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   Cancelar
@@ -3624,6 +3671,48 @@ const CalendarPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL: CONFIRMAÇÃO DE SAÍDA COM ALTERAÇÕES NÃO GUARDADAS */}
+      <UnsavedChangesModal
+        isOpen={unsavedModalTarget !== null}
+        onSaveAndExit={async () => {
+          if (unsavedModalTarget === 'add') {
+            setUnsavedModalTarget(null)
+            const fakeEvent = { preventDefault: () => {} } as React.FormEvent
+            await handleAddEvent(fakeEvent)
+          } else if (unsavedModalTarget === 'edit') {
+            setUnsavedModalTarget(null)
+            setIsResendPromptOpen(true)
+          } else if (unsavedModalTarget === 'quickField') {
+            setUnsavedModalTarget(null)
+            const fakeEvent = { preventDefault: () => {} } as React.FormEvent
+            await handleSaveQuickField(fakeEvent)
+          }
+        }}
+        onExitWithoutSaving={() => {
+          if (unsavedModalTarget === 'add') {
+            setIsAddModalOpen(false)
+            setTitle('')
+            setLocation('')
+            setDescription('')
+            setMaxPlayers('')
+            setTournamentId('')
+            setIsFriendly(true)
+            setIsRecurring(false)
+            setRecurrenceEndDate('')
+            setRecurrenceWeekdays([])
+            setSelectedPlayerIds([])
+          } else if (unsavedModalTarget === 'edit') {
+            setIsEditModalOpen(false)
+          } else if (unsavedModalTarget === 'quickField') {
+            setIsQuickFieldModalOpen(false)
+            setQuickFieldName('')
+            setQuickFieldAddress('')
+          }
+          setUnsavedModalTarget(null)
+        }}
+        onCancel={() => setUnsavedModalTarget(null)}
+      />
     </div>
   )
 }
