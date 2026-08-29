@@ -1600,7 +1600,7 @@ const EventsPage: React.FC = () => {
               className="w-full py-3.5 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-2xl font-black transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 text-sm"
             >
               <Check size={18} className="text-csc-gold" />
-              <span>Publicar Evento e Convoques</span>
+              <span>Publicar Evento e Convocar</span>
             </button>
           </form>
         </div>
