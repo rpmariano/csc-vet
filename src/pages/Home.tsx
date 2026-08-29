@@ -610,39 +610,6 @@ const Home: React.FC = () => {
         {/* SIDEBAR (4/12 Colunas): PRÓXIMO TREINO + COMUNICADOS OFICIAIS */}
         <div className="lg:col-span-4 space-y-5">
           
-          {/* Card Próximo Treino (Adicionado da Versão 2) */}
-          <div className="bg-emerald-50/80 border border-emerald-200 p-5 rounded-3xl space-y-2.5 shadow-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-emerald-200/60">
-              <span className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
-                <span>🏃</span> Próximo Treino
-              </span>
-              <Link to="/calendar" className="text-[11px] font-bold text-emerald-800 hover:underline flex items-center gap-0.5">
-                <span>Agenda</span>
-                <ChevronRight size={12} />
-              </Link>
-            </div>
-
-            {upcomingPractices.length > 0 ? (
-              <div 
-                onClick={() => navigate(`/calendar?event=${upcomingPractices[0].id}`)}
-                className="cursor-pointer hover:opacity-85 transition-opacity space-y-1.5 pt-0.5"
-              >
-                <p className="text-sm font-black text-emerald-950 capitalize">
-                  {new Date(upcomingPractices[0].date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
-                </p>
-                <p className="text-xs text-emerald-800 font-extrabold flex items-center gap-1">
-                  <span>⏰ às {new Date(upcomingPractices[0].date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-                </p>
-                <p className="text-xs text-emerald-700 font-medium truncate flex items-center gap-1">
-                  <MapPin size={13} className="text-emerald-600 shrink-0" />
-                  <span className="truncate">{getEventLocation(upcomingPractices[0]) || 'Estádio Municipal'}</span>
-                </p>
-              </div>
-            ) : (
-              <p className="text-xs text-emerald-800 py-1">Sem treinos marcados para breve.</p>
-            )}
-          </div>
-
           {/* Card Comunicados Oficiais com Suporte Touch Slide */}
           <div 
             {...announcementSwipeHandlers}
@@ -704,6 +671,39 @@ const Home: React.FC = () => {
                   <ChevronRight size={16} />
                 </button>
               </div>
+            )}
+          </div>
+
+          {/* Card Próximo Treino (Adicionado da Versão 2) */}
+          <div className="bg-emerald-50/80 border border-emerald-200 p-5 rounded-3xl space-y-2.5 shadow-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-emerald-200/60">
+              <span className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🏃</span> Próximo Treino
+              </span>
+              <Link to="/calendar" className="text-[11px] font-bold text-emerald-800 hover:underline flex items-center gap-0.5">
+                <span>Agenda</span>
+                <ChevronRight size={12} />
+              </Link>
+            </div>
+
+            {upcomingPractices.length > 0 ? (
+              <div 
+                onClick={() => navigate(`/calendar?event=${upcomingPractices[0].id}`)}
+                className="cursor-pointer hover:opacity-85 transition-opacity space-y-1.5 pt-0.5"
+              >
+                <p className="text-sm font-black text-emerald-950 capitalize">
+                  {new Date(upcomingPractices[0].date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
+                </p>
+                <p className="text-xs text-emerald-800 font-extrabold flex items-center gap-1">
+                  <span>⏰ às {new Date(upcomingPractices[0].date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+                </p>
+                <p className="text-xs text-emerald-700 font-medium truncate flex items-center gap-1">
+                  <MapPin size={13} className="text-emerald-600 shrink-0" />
+                  <span className="truncate">{getEventLocation(upcomingPractices[0]) || 'Estádio Municipal'}</span>
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-emerald-800 py-1">Sem treinos marcados para breve.</p>
             )}
           </div>
 
