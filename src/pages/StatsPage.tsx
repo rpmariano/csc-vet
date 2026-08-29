@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { Award, Sparkles, Footprints, Flame, Trophy, Calendar, Filter, Users } from 'lucide-react'
+import { Award, Sparkles, Footprints, Flame, Trophy, Filter, Users } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 
 interface Tournament {
@@ -227,89 +227,54 @@ const StatsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Barra de Filtros Segmentados */}
-      <div className="bg-white rounded-2xl p-2 sm:p-2.5 shadow-sm border border-gray-200 flex flex-wrap items-center gap-2">
-        
-        {/* Botão 1: Global Oficial (Default) */}
-        <button
-          type="button"
-          onClick={() => setFilterType('global_official')}
-          className={`flex-1 min-w-[150px] py-2.5 px-3.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            filterType === 'global_official'
-              ? 'bg-csc-dark text-white shadow-sm ring-2 ring-csc-gold/30'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200/80 hover:text-gray-900'
-          }`}
-        >
-          <Trophy size={15} className={filterType === 'global_official' ? 'text-csc-gold' : 'text-gray-500'} />
-          <span>Competições Oficiais</span>
-        </button>
-
-        {/* Botão 2: Por Torneio */}
-        <div className={`flex-1 min-w-[190px] flex items-center rounded-xl p-1 transition-all ${
-          filterType === 'tournament' ? 'bg-csc-dark text-white shadow-sm ring-2 ring-csc-gold/30' : 'bg-gray-100'
-        }`}>
-          <button
-            type="button"
-            onClick={() => setFilterType('tournament')}
-            className={`py-1.5 px-2.5 rounded-lg text-xs font-black flex items-center gap-1.5 cursor-pointer ${
-              filterType === 'tournament' ? 'text-csc-gold' : 'text-gray-700 hover:text-gray-900'
-            }`}
-          >
-            <Filter size={14} />
-            <span>Por Torneio:</span>
-          </button>
-          
-          <select
-            value={selectedTournamentId}
-            onChange={(e) => {
-              setSelectedTournamentId(e.target.value)
-              setFilterType('tournament')
-            }}
-            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-black outline-none cursor-pointer border ${
-              filterType === 'tournament'
-                ? 'bg-emerald-950 text-white border-emerald-700'
-                : 'bg-white text-gray-800 border-gray-200'
-            }`}
-          >
-            {tournaments.length === 0 ? (
-              <option value="">Sem torneios registados</option>
-            ) : (
-              tournaments.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.name} {t.season ? `(${t.season})` : ''}
-                </option>
-              ))
-            )}
-          </select>
+      {/* 2. Barra de Filtros Redesenhada */}
+      <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-200 space-y-3">
+        {/* Linha 1: Pílulas de contexto */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: 'all', label: 'Todos os Jogos', emoji: '🌐' },
+            { id: 'global_official', label: 'Competições Oficiais', emoji: '🏆' },
+            { id: 'tournament', label: 'Por Torneio', emoji: '🏅' },
+            { id: 'friendly', label: 'Amigáveis', emoji: '⚽' },
+          ].map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setFilterType(opt.id as StatsFilterType)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                filterType === opt.id
+                  ? 'bg-csc-dark text-white shadow-sm ring-2 ring-csc-gold/40'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+              }`}
+            >
+              <span>{opt.emoji}</span>
+              <span>{opt.label}</span>
+            </button>
+          ))}
         </div>
 
-        {/* Botão 3: Amigáveis */}
-        <button
-          type="button"
-          onClick={() => setFilterType('friendly')}
-          className={`flex-1 min-w-[130px] py-2.5 px-3.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
-            filterType === 'friendly'
-              ? 'bg-csc-dark text-white shadow-sm ring-2 ring-csc-gold/30'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200/80 hover:text-gray-900'
-          }`}
-        >
-          <Calendar size={15} className={filterType === 'friendly' ? 'text-csc-gold' : 'text-gray-500'} />
-          <span>Jogos Amigáveis</span>
-        </button>
-
-        {/* Botão 4: Todos */}
-        <button
-          type="button"
-          onClick={() => setFilterType('all')}
-          className={`py-2.5 px-3.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            filterType === 'all'
-              ? 'bg-csc-dark text-white shadow-sm ring-2 ring-csc-gold/30'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-900'
-          }`}
-          title="Todos os Jogos (Oficiais + Amigáveis)"
-        >
-          <span>Todos</span>
-        </button>
+        {/* Linha 2: Dropdown de torneio (só aparece quando "Por Torneio" está ativo) */}
+        {filterType === 'tournament' && (
+          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+            <Filter size={14} className="text-csc-gold shrink-0" />
+            <label className="text-xs font-bold text-gray-600 shrink-0">Selecionar torneio:</label>
+            <select
+              value={selectedTournamentId}
+              onChange={(e) => setSelectedTournamentId(e.target.value)}
+              className="flex-1 py-2 px-3 rounded-xl text-xs font-black outline-none cursor-pointer border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark focus:border-csc-dark"
+            >
+              {tournaments.length === 0 ? (
+                <option value="">Sem torneios registados</option>
+              ) : (
+                tournaments.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}{t.season ? ` (${t.season})` : ''}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* 3. Cards Resumo Rápidos */}
