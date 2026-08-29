@@ -78,7 +78,7 @@ const Layout: React.FC = () => {
         </Link>
         
         <div className="flex items-center gap-2">
-          {/* Toggle Clínico no Canto Superior: Disponível / Lesionado */}
+          {/* Toggle Clínico no Canto Superior: Apto / Lesionado */}
           {profile && (
             <button
               type="button"
@@ -88,10 +88,10 @@ const Layout: React.FC = () => {
                   ? 'bg-red-50 text-red-700 border-red-300 animate-pulse ring-1 ring-red-300'
                   : 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-200'
               }`}
-              title="Clique para alternar entre Disponível e Lesionado"
+              title="Clique para alternar entre Apto e Lesionado"
             >
               <span>{profile.status === 'injured' ? '🔴' : '🟢'}</span>
-              <span>{profile.status === 'injured' ? 'Lesionado' : 'Disponível'}</span>
+              <span>{profile.status === 'injured' ? 'Lesionado' : 'Apto'}</span>
             </button>
           )}
 
@@ -491,7 +491,7 @@ const Layout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Toggle Clínico no Canto Superior: Disponível / Lesionado */}
+            {/* Toggle Clínico no Canto Superior: Apto / Lesionado */}
             {profile && (
               <button
                 type="button"
@@ -501,10 +501,10 @@ const Layout: React.FC = () => {
                     ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
                     : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-100'
                 }`}
-                title="Clique para alternar o seu estado entre Disponível e Lesionado"
+                title="Clique para alternar o seu estado entre Apto e Lesionado"
               >
                 <span className="text-sm">{profile.status === 'injured' ? '🔴' : '🟢'}</span>
-                <span>{profile.status === 'injured' ? 'Lesionado (Dep. Médico)' : 'Disponível / Apto'}</span>
+                <span>{profile.status === 'injured' ? 'Lesionado' : 'Apto'}</span>
               </button>
             )}
 

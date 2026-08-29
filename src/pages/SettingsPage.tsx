@@ -239,7 +239,7 @@ const SettingsPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Toggle Clínico: Disponível / Lesionado */}
+          {/* Toggle Clínico: Apto / Lesionado */}
           <button
             type="button"
             onClick={() => toggleClinicalStatus()}
@@ -248,10 +248,10 @@ const SettingsPage: React.FC = () => {
                 ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
                 : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-150'
             }`}
-            title="Clique para alternar o seu estado físico entre Disponível e Lesionado"
+            title="Clique para alternar o seu estado físico entre Apto e Lesionado"
           >
             <span>{isInjured ? '🔴' : '🟢'}</span>
-            <span>{isInjured ? 'Lesionado (Dep. Médico)' : 'Disponível / Apto'}</span>
+            <span>{isInjured ? 'Lesionado' : 'Apto'}</span>
           </button>
         </div>
       </div>

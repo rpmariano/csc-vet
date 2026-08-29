@@ -1759,7 +1759,7 @@ const TeamManagementPage: React.FC = () => {
                       {selectedProfile.status === 'active' ? <CheckCircle2 size={12}/> :
                        selectedProfile.status === 'injured' ? <HeartPulse size={12}/> :
                        <XCircle size={12}/>}
-                      <span>{selectedProfile.status === 'active' ? 'Ativo / Disponível' : selectedProfile.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
+                      <span>{selectedProfile.status === 'active' ? 'Apto' : selectedProfile.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
                     </span>
                   </div>
 

@@ -781,8 +781,14 @@ const Home: React.FC = () => {
                 <div className="overflow-hidden">
                   <p className="font-extrabold text-sm text-gray-900 truncate">{profile.name}</p>
                   <p className="text-xs text-gray-500 font-medium">{profile.position || 'Jogador'}</p>
-                  <span className="inline-block text-[10px] font-black uppercase px-2 py-0.2 rounded bg-green-100 text-green-800 mt-0.5">
-                    🟢 Disponível
+                  <span className={`inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded mt-0.5 ${
+                    profile.status === 'injured'
+                      ? 'bg-red-100 text-red-800'
+                      : profile.status === 'inactive'
+                      ? 'bg-gray-200 text-gray-700'
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {profile.status === 'injured' ? '🔴 Lesionado' : profile.status === 'inactive' ? '⚪ Inativo' : '🟢 Apto'}
                   </span>
                 </div>
               </div>
