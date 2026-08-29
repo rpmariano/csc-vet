@@ -1536,7 +1536,7 @@ const CalendarPage: React.FC = () => {
       {/* Modal Detalhes Evento & Convocatória (Versão Web Expandida) */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-5xl w-full p-5 sm:p-7 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
+          <div className="bg-white rounded-3xl max-w-6xl xl:max-w-7xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
             <button
               onClick={() => {
                 setSelectedEvent(null)
@@ -1544,17 +1544,17 @@ const CalendarPage: React.FC = () => {
                 setPlayerSearchTerm('')
                 setModalCallupStatusFilter('all')
               }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10"
+              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10 cursor-pointer"
               title="Fechar"
             >
-              <X size={22} />
+              <X size={24} />
             </button>
 
-            {/* Grelha Responsiva Versão Web (2 Colunas no Desktop) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Grelha Responsiva Versão Web (2 Colunas Amplas no Desktop) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               
               {/* COLUNA ESQUERDA (5 Colunas): Detalhes do Evento, Matchup VS e Presença Pessoal */}
-              <div className="lg:col-span-5 space-y-4">
+              <div className="lg:col-span-5 space-y-5">
                 {/* Header do Evento (Tipo + Badges + Botões de Ação) */}
                 <div className="flex items-center justify-between gap-2 pr-10">
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -1567,13 +1567,13 @@ const CalendarPage: React.FC = () => {
                     </span>
 
                     {selectedEvent.is_friendly && selectedEvent.type === 'match' && (
-                      <span className="text-[11px] font-black px-2 py-0.5 rounded-xl bg-amber-100 text-amber-900 border border-amber-300">
+                      <span className="text-[11px] font-black px-2.5 py-0.5 rounded-xl bg-amber-100 text-amber-900 border border-amber-300">
                         Amigável
                       </span>
                     )}
 
                     {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
-                      <span className="flex items-center space-x-1 text-xs text-blue-900 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-xl font-extrabold truncate max-w-[150px]">
+                      <span className="flex items-center space-x-1 text-xs text-blue-900 bg-blue-100 border border-blue-200 px-2.5 py-0.5 rounded-xl font-extrabold truncate max-w-[200px]">
                         <Award size={13} />
                         <span className="truncate">{selectedEvent.tournament.name}</span>
                       </span>
@@ -1585,7 +1585,7 @@ const CalendarPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleStartEditEvent(selectedEvent)}
-                        className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer"
+                        className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
                         title="Editar dados deste evento"
                       >
                         <Edit size={13} />
@@ -1607,55 +1607,55 @@ const CalendarPage: React.FC = () => {
                 {selectedEvent.type === 'match' && selectedEvent.opponent && (() => {
                   const isAway = selectedEvent.home_away === 'away'
                   return (
-                    <div className="bg-gradient-to-b from-gray-50 to-white p-4 rounded-2xl border border-gray-200/90 shadow-2xs space-y-2.5">
-                      <div className="flex items-center justify-between gap-3">
+                    <div className="bg-gradient-to-b from-gray-50 to-white p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between gap-4">
                         {/* Left Team (Adversário se fora, Cascais se casa/neutro) */}
                         <div className={`flex-1 flex flex-col ${isAway ? 'items-start text-left' : 'items-start text-left'} min-w-0`}>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
                             {(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) ? (
-                              <img src={(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) || ''} alt="Team" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+                              <img src={(isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url) || ''} alt="Team" className="w-10 h-10 object-contain shrink-0 drop-shadow-xs" />
                             ) : (
-                              <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+                              <div className="w-10 h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shrink-0">
                                 {isAway ? (selectedEvent.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
                               </div>
                             )}
-                            <span className="font-black text-sm text-gray-900 uppercase">
+                            <span className="font-black text-sm sm:text-base text-gray-900 uppercase">
                               {isAway ? (selectedEvent.opponent?.initials || 'ADV') : (clubSettings?.initials || 'CSC')}
                             </span>
                           </div>
-                          <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
+                          <span className="text-xs font-bold text-gray-700 mt-1 leading-snug">
                             {isAway ? selectedEvent.opponent?.name : (clubSettings?.name || 'CSC Cascais')}
                           </span>
                         </div>
 
                         {/* VS Badge */}
                         <div className="shrink-0 flex flex-col items-center">
-                          <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                          <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
                             VS
                           </span>
                         </div>
 
                         {/* Right Team (Cascais se fora, Adversário se casa/neutro) */}
                         <div className="flex-1 flex flex-col items-end text-right min-w-0">
-                          <div className="flex items-center gap-1.5 flex-row-reverse">
+                          <div className="flex items-center gap-2 flex-row-reverse">
                             {(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) ? (
-                              <img src={(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) || ''} alt="Team" className="w-8 h-8 object-contain shrink-0 drop-shadow-xs" />
+                              <img src={(isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url) || ''} alt="Team" className="w-10 h-10 object-contain shrink-0 drop-shadow-xs" />
                             ) : (
-                              <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+                              <div className="w-10 h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shrink-0">
                                 {isAway ? (clubSettings?.initials || 'CSC') : (selectedEvent.opponent?.initials || 'ADV')}
                               </div>
                             )}
-                            <span className="font-black text-sm text-gray-900 uppercase">
+                            <span className="font-black text-sm sm:text-base text-gray-900 uppercase">
                               {isAway ? (clubSettings?.initials || 'CSC') : (selectedEvent.opponent?.initials || 'ADV')}
                             </span>
                           </div>
-                          <span className="text-xs font-bold text-gray-600 truncate mt-0.5 max-w-full">
+                          <span className="text-xs font-bold text-gray-700 mt-1 leading-snug">
                             {isAway ? (clubSettings?.name || 'CSC Cascais') : selectedEvent.opponent?.name}
                           </span>
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
+                      <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs text-gray-600">
                         <span className="font-bold">
                           Condição: <strong className="text-gray-900">{isAway ? '✈️ Fora de Casa' : selectedEvent.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}</strong>
                         </span>
@@ -2034,8 +2034,8 @@ const CalendarPage: React.FC = () => {
                         </button>
                       </div>
                     ) : (
-                      <div className="max-h-[460px] overflow-y-auto pr-1">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="max-h-[480px] overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           {filteredCallups.map(c => {
                             const roles = extractRolesFromProfile(c.player as any)
                             const isConfirmed = c.status === 'confirmed'
@@ -2044,7 +2044,7 @@ const CalendarPage: React.FC = () => {
                             return (
                               <div
                                 key={c.id}
-                                className={`p-2.5 rounded-2xl border flex items-center justify-between text-xs transition-all shadow-2xs ${
+                                className={`p-3 rounded-2xl border flex items-center justify-between text-xs transition-all shadow-2xs ${
                                   isConfirmed 
                                     ? 'bg-emerald-50/90 border-emerald-200' 
                                     : isDeclined 
@@ -2053,25 +2053,25 @@ const CalendarPage: React.FC = () => {
                                 }`}
                               >
                                 <div className="min-w-0 flex-1 mr-2">
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-2">
                                     {isConfirmed ? (
-                                      <CheckCircle2 size={13} className="text-emerald-700 shrink-0" />
+                                      <CheckCircle2 size={15} className="text-emerald-700 shrink-0" />
                                     ) : isDeclined ? (
-                                      <XCircle size={13} className="text-red-700 shrink-0" />
+                                      <XCircle size={15} className="text-red-700 shrink-0" />
                                     ) : (
-                                      <HelpCircle size={13} className="text-amber-700 shrink-0" />
+                                      <HelpCircle size={15} className="text-amber-700 shrink-0" />
                                     )}
-                                    <span className={`font-black truncate ${isDeclined ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                                    <span className={`font-black text-xs leading-snug break-words ${isDeclined ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                                       {c.player?.name || 'Membro'}
                                     </span>
                                   </div>
-                                  <div className="flex gap-1 mt-1 pl-4">
+                                  <div className="flex flex-wrap items-center gap-1 mt-1 pl-5">
                                     {roles.map(r => (
-                                      <span key={r} className="text-[8px] font-black px-1.5 py-0.2 rounded bg-gray-200/80 text-gray-800">
-                                        {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
+                                      <span key={r} className="text-[8.5px] font-black px-1.5 py-0.5 rounded bg-gray-200/80 text-gray-800">
+                                        {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
                                       </span>
                                     ))}
-                                    <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded ${
+                                    <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded ${
                                       isConfirmed ? 'bg-emerald-200 text-emerald-900' : isDeclined ? 'bg-red-200 text-red-900' : 'bg-amber-100 text-amber-900'
                                     }`}>
                                       {isConfirmed ? 'Confirmado' : isDeclined ? 'Recusado' : 'Pendente'}
@@ -2084,27 +2084,27 @@ const CalendarPage: React.FC = () => {
                                     {!isConfirmed && (
                                       <button 
                                         onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'confirmed')} 
-                                        className="p-1 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer" 
+                                        className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-xl transition-colors cursor-pointer" 
                                         title="Confirmar Presença"
                                       >
-                                        <CheckCircle2 size={14} />
+                                        <CheckCircle2 size={15} />
                                       </button>
                                     )}
                                     {!isDeclined && (
                                       <button 
                                         onClick={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'declined')} 
-                                        className="p-1 text-red-600 hover:bg-red-100 rounded-lg transition-colors cursor-pointer" 
+                                        className="p-1.5 text-red-600 hover:bg-red-100 rounded-xl transition-colors cursor-pointer" 
                                         title="Recusar Presença"
                                       >
-                                        <XCircle size={14} />
+                                        <XCircle size={15} />
                                       </button>
                                     )}
                                     <button 
                                       onClick={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)} 
-                                      className="p-1 text-gray-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer" 
+                                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer" 
                                       title="Remover da Convocatória"
                                     >
-                                      <Trash2 size={13} />
+                                      <Trash2 size={14} />
                                     </button>
                                   </div>
                                 )}
@@ -2123,166 +2123,120 @@ const CalendarPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Criar Evento com Seleção de Convocatória */}
+      {/* Modal Criar Evento com Seleção de Convocatória (Versão Larga 2 Colunas) */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
             <button
               onClick={() => setIsAddModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1"
+              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10 cursor-pointer"
+              title="Fechar"
             >
-              <X size={22} />
+              <X size={24} />
             </button>
-            <h2 className="text-2xl font-extrabold text-csc-dark mb-6">Criar Novo Evento</h2>
+            <h2 className="text-2xl font-black text-csc-dark mb-6">Criar Novo Evento</h2>
             
-            <form onSubmit={handleAddEvent} className="space-y-4">
-              {type === 'gathering' && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Título do Convívio *</label>
-                  <input
-                    type="text"
-                    required={type === 'gathering'}
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
-                    placeholder="Ex: Jantar de Natal / Reentré"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Tipo de Evento</label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value as any)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                >
-                  <option value="match">Jogo</option>
-                  <option value="practice">Treino</option>
-                  <option value="gathering">Convívio</option>
-                </select>
-              </div>
-
-              {type === 'match' && (
-                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="isFriendly"
-                      checked={isFriendly}
-                      onChange={(e) => {
-                        setIsFriendly(e.target.checked)
-                        if (e.target.checked) setTournamentId('')
-                      }}
-                      className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
-                    />
-                    <label htmlFor="isFriendly" className="ml-2 text-sm font-semibold text-gray-700 cursor-pointer">
-                      Jogo Amigável
-                    </label>
-                  </div>
-                  {!isFriendly && (
-                    <div className="animate-fade-in">
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Torneio / Competição</label>
-                      <select
-                        value={tournamentId}
-                        onChange={(e) => setTournamentId(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
-                      >
-                        <option value="">-- Selecionar Torneio --</option>
-                        {tournaments.map(t => (
-                          <option key={t.id} value={t.id}>
-                            🏆 {t.name} {t.season ? `(${t.season})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={dateTime}
-                    onChange={(e) => setDateTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Concentração (opcional)</label>
-                  <input
-                    type="time"
-                    value={meetingTime}
-                    onChange={(e) => setMeetingTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
-                    placeholder="Ex: 19:30"
-                  />
-                </div>
-              </div>
-
-              {/* Para Jogos e Treinos: Escolher Campo do Clube */}
-              {(type === 'match' || type === 'practice') && (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
-                  <label className="block font-bold text-gray-800 flex items-center justify-between">
-                    <span>🏟️ Campo / Instalação do Jogo/Treino *</span>
-                    {location && (
-                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                        ✓ {location}
-                      </span>
-                    )}
-                  </label>
-                  <select
-                    value={fieldId}
-                    onChange={(e) => {
-                      setFieldId(e.target.value)
-                      const sel = fields.find(f => f.id === e.target.value)
-                      if (sel) {
-                        setLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
-                  >
-                    <option value="">-- Escolher Campo do Clube --</option>
-                    {fields.map(f => (
-                      <option key={f.id} value={f.id}>
-                        🏟️ {f.name} {f.address ? `(${f.address})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {!fieldId && (
+            <form onSubmit={handleAddEvent} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* COLUNA ESQUERDA: Dados do Evento (6 Colunas) */}
+              <div className="lg:col-span-6 space-y-4">
+                {type === 'gathering' && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Título do Convívio *</label>
                     <input
                       type="text"
-                      required={!fieldId}
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
-                      placeholder="Ou digite o nome do campo / estádio adversário..."
+                      required={type === 'gathering'}
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                      placeholder="Ex: Jantar de Natal / Reentré"
                     />
-                  )}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                  >
+                    <option value="match">Jogo</option>
+                    <option value="practice">Treino</option>
+                    <option value="gathering">Convívio</option>
+                  </select>
                 </div>
-              )}
 
-              {/* Para Convívios: Escolher Campo/Sede ou Escrever Morada à mão */}
-              {type === 'gathering' && (
-                <div className="p-3.5 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2.5 text-xs">
-                  <label className="block font-bold text-purple-950 flex items-center justify-between">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={13} className="text-purple-700" />
-                      <span>Localização do Convívio (Instalação ou Morada à Mão) *</span>
-                    </span>
-                    {location && (
-                      <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                        ✓ Definido
-                      </span>
+                {type === 'match' && (
+                  <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="isFriendly"
+                        checked={isFriendly}
+                        onChange={(e) => {
+                          setIsFriendly(e.target.checked)
+                          if (e.target.checked) setTournamentId('')
+                        }}
+                        className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
+                      />
+                      <label htmlFor="isFriendly" className="ml-2 text-sm font-semibold text-gray-700 cursor-pointer">
+                        Jogo Amigável
+                      </label>
+                    </div>
+                    {!isFriendly && (
+                      <div className="animate-fade-in">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Torneio / Competição</label>
+                        <select
+                          value={tournamentId}
+                          onChange={(e) => setTournamentId(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                        >
+                          <option value="">-- Selecionar Torneio --</option>
+                          {tournaments.map(t => (
+                            <option key={t.id} value={t.id}>
+                              🏆 {t.name} {t.season ? `(${t.season})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     )}
-                  </label>
+                  </div>
+                )}
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                      Instalação do Clube (Opcional):
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={dateTime}
+                      onChange={(e) => setDateTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Concentração (opcional)</label>
+                    <input
+                      type="time"
+                      value={meetingTime}
+                      onChange={(e) => setMeetingTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                      placeholder="Ex: 19:30"
+                    />
+                  </div>
+                </div>
+
+                {/* Para Jogos e Treinos: Escolher Campo do Clube */}
+                {(type === 'match' || type === 'practice') && (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
+                    <label className="block font-bold text-gray-800 flex items-center justify-between">
+                      <span>🏟️ Campo / Instalação do Jogo/Treino *</span>
+                      {location && (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                          ✓ {location}
+                        </span>
+                      )}
                     </label>
                     <select
                       value={fieldId}
@@ -2293,184 +2247,229 @@ const CalendarPage: React.FC = () => {
                           setLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white font-medium"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
                     >
-                      <option value="">-- Escolher Instalação/Sede do Clube ou escrever abaixo --</option>
+                      <option value="">-- Escolher Campo do Clube --</option>
                       {fields.map(f => (
                         <option key={f.id} value={f.id}>
                           🏟️ {f.name} {f.address ? `(${f.address})` : ''}
                         </option>
                       ))}
                     </select>
+                    {!fieldId && (
+                      <input
+                        type="text"
+                        required={!fieldId}
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                        placeholder="Ou digite o nome do campo / estádio adversário..."
+                      />
+                    )}
                   </div>
+                )}
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                      Morada / Restaurante / Local (escrito à mão):
+                {/* Para Convívios: Escolher Campo/Sede ou Escrever Morada à mão */}
+                {type === 'gathering' && (
+                  <div className="p-3.5 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2.5 text-xs">
+                    <label className="block font-bold text-purple-950 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={13} className="text-purple-700" />
+                        <span>Localização do Convívio (Instalação ou Morada à Mão) *</span>
+                      </span>
+                      {(location || fieldId) && (
+                        <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                          ✓ {location || fields.find(f => f.id === fieldId)?.name}
+                        </span>
+                      )}
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white"
-                      placeholder="Ex: Restaurante O Pescador, Av. Marginal, Cascais..."
-                    />
-                  </div>
-                </div>
-              )}
 
-              {/* Associar a outro Evento (Bidirecional) */}
-              <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
-                <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                  <Link2 size={14} className="text-indigo-600" />
-                  <span>🔗 Associar a outro Evento (ex: Convívio pós-jogo/treino, Jogo/Treino)</span>
-                </label>
-                <select
-                  value={relatedGatheringId}
-                  onChange={(e) => setRelatedGatheringId(e.target.value)}
-                  className="w-full px-3 py-2 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-600 bg-white text-xs font-medium"
-                >
-                  <option value="">-- Nenhum evento associado --</option>
-                  {events
-                    .filter(e => {
-                      if (!dateTime) return true
-                      const diffDays = Math.abs(new Date(e.date_time).getTime() - new Date(dateTime).getTime()) / (1000 * 3600 * 24)
-                      return diffDays <= 14 // Próximas duas semanas ou mesmo período
-                    })
-                    .map(e => (
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                        Instalação do Clube (Opcional):
+                      </label>
+                      <select
+                        value={fieldId}
+                        onChange={(e) => {
+                          setFieldId(e.target.value)
+                          const sel = fields.find(f => f.id === e.target.value)
+                          if (sel) {
+                            setLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white font-medium"
+                      >
+                        <option value="">-- Escolher Instalação/Sede do Clube ou escrever abaixo --</option>
+                        {fields.map(f => (
+                          <option key={f.id} value={f.id}>
+                            🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                        Morada / Restaurante / Local (escrito à mão):
+                      </label>
+                      <input
+                        type="text"
+                        required={!fieldId}
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white"
+                        placeholder="Ex: Restaurante O Pescador, Av. Marginal, Cascais..."
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Associar a outro Evento (Bidirecional) */}
+                <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
+                  <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                    <Link2 size={14} className="text-indigo-600" />
+                    <span>🔗 Associar a outro Evento (ex: Convívio pós-jogo/treino, Jogo/Treino)</span>
+                  </label>
+                  <select
+                    value={relatedGatheringId}
+                    onChange={(e) => setRelatedGatheringId(e.target.value)}
+                    className="w-full px-3 py-2 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-600 bg-white text-xs font-medium"
+                  >
+                    <option value="">-- Nenhum evento associado --</option>
+                    {events.map(e => (
                       <option key={e.id} value={e.id}>
                         [{e.type === 'gathering' ? 'Convívio' : e.type === 'match' ? 'Jogo' : 'Treino'}] {e.title} • {new Date(e.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} às {new Date(e.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                       </option>
                     ))}
-                </select>
-              </div>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Descrição / Instruções</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white"
-                  placeholder="Horário de chegada, equipamento a levar..."
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                    placeholder="Informações adicionais, indicações para atletas..."
+                  />
+                </div>
 
-              {/* SELEÇÃO DE RECORRÊNCIA (Apenas para Treinos) */}
-              {type === 'practice' && (
-                <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={isRecurring}
-                        onChange={(e) => setIsRecurring(e.target.checked)}
-                        className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
-                      />
-                      <span className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                        <Repeat size={16} className="text-csc-gold" />
-                        <span>Marcar Treino com Recorrência Semanal</span>
-                      </span>
-                    </label>
+                {/* SELEÇÃO DE RECORRÊNCIA (Apenas para Treinos) */}
+                {type === 'practice' && (
+                  <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={isRecurring}
+                          onChange={(e) => setIsRecurring(e.target.checked)}
+                          className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
+                        />
+                        <span className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                          <Repeat size={16} className="text-csc-gold" />
+                          <span>Marcar Treino com Recorrência Semanal</span>
+                        </span>
+                      </label>
+                      {isRecurring && (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-csc-gold text-csc-dark shadow-2xs">
+                          Recorrência Ativa
+                        </span>
+                      )}
+                    </div>
+
                     {isRecurring && (
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-csc-gold text-csc-dark shadow-2xs">
-                        Recorrência Ativa
-                      </span>
+                      <div className="pt-2 space-y-3 border-t border-amber-200/60 text-xs">
+                        {/* Dias da Semana */}
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-1.5">
+                            Dias da semana em que se realiza o evento:
+                          </label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              { label: 'Seg', val: 1 },
+                              { label: 'Ter', val: 2 },
+                              { label: 'Qua', val: 3 },
+                              { label: 'Qui', val: 4 },
+                              { label: 'Sex', val: 5 },
+                              { label: 'Sáb', val: 6 },
+                              { label: 'Dom', val: 0 }
+                            ].map(d => {
+                              const isChecked = recurrenceWeekdays.includes(d.val)
+                              return (
+                                <button
+                                  key={d.val}
+                                  type="button"
+                                  onClick={() => {
+                                    setRecurrenceWeekdays(prev => 
+                                      prev.includes(d.val) 
+                                        ? prev.filter(v => v !== d.val) 
+                                        : [...prev, d.val]
+                                    )
+                                  }}
+                                  className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                                    isChecked 
+                                      ? 'bg-csc-dark text-white shadow-xs font-black' 
+                                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  {d.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Data Limite da Recorrência */}
+                        <div>
+                          <label className="block font-bold text-gray-700 mb-1">
+                            Repetir até à data (Data Final) *
+                          </label>
+                          <input
+                            type="date"
+                            required={isRecurring}
+                            value={recurrenceEndDate}
+                            min={dateTime ? dateTime.split('T')[0] : undefined}
+                            onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                            className="w-full sm:w-60 px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                          />
+                        </div>
+
+                        {/* Contador e Pré-visualização em tempo real */}
+                        {dateTime && recurrenceEndDate && recurrenceWeekdays.length > 0 && (() => {
+                          const generated = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
+                          return (
+                            <div className="p-2.5 bg-white border border-amber-200 rounded-lg font-medium text-amber-950 flex items-center gap-2">
+                              <CalendarRange size={16} className="text-csc-gold shrink-0" />
+                              <span>
+                                ✨ Serão criados <strong>{generated.length} eventos</strong> entre {new Date(dateTime).toLocaleDateString('pt-PT')} e {new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}.
+                              </span>
+                            </div>
+                          )
+                        })()}
+                      </div>
                     )}
                   </div>
+                )}
+              </div>
 
-                  {isRecurring && (
-                    <div className="pt-2 space-y-3 border-t border-amber-200/60 text-xs">
-                      {/* Dias da Semana */}
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-1.5">
-                          Dias da semana em que se realiza o evento:
-                        </label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {[
-                            { label: 'Seg', val: 1 },
-                            { label: 'Ter', val: 2 },
-                            { label: 'Qua', val: 3 },
-                            { label: 'Qui', val: 4 },
-                            { label: 'Sex', val: 5 },
-                            { label: 'Sáb', val: 6 },
-                            { label: 'Dom', val: 0 }
-                          ].map(d => {
-                            const isChecked = recurrenceWeekdays.includes(d.val)
-                            return (
-                              <button
-                                key={d.val}
-                                type="button"
-                                onClick={() => {
-                                  setRecurrenceWeekdays(prev => 
-                                    prev.includes(d.val) 
-                                      ? prev.filter(v => v !== d.val) 
-                                      : [...prev, d.val]
-                                  )
-                                }}
-                                className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
-                                  isChecked 
-                                    ? 'bg-csc-dark text-white shadow-xs font-black' 
-                                    : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
-                                }`}
-                              >
-                                {d.label}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Data Limite da Recorrência */}
-                      <div>
-                        <label className="block font-bold text-gray-700 mb-1">
-                          Repetir até à data (Data Final) *
-                        </label>
-                        <input
-                          type="date"
-                          required={isRecurring}
-                          value={recurrenceEndDate}
-                          min={dateTime ? dateTime.split('T')[0] : undefined}
-                          onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                          className="w-full sm:w-60 px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
-                        />
-                      </div>
-
-                      {/* Contador e Pré-visualização em tempo real */}
-                      {dateTime && recurrenceEndDate && recurrenceWeekdays.length > 0 && (() => {
-                        const generated = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
-                        return (
-                          <div className="p-2.5 bg-white border border-amber-200 rounded-lg font-medium text-amber-950 flex items-center gap-2">
-                            <CalendarRange size={16} className="text-csc-gold shrink-0" />
-                            <span>
-                              ✨ Serão criados <strong>{generated.length} eventos</strong> entre {new Date(dateTime).toLocaleDateString('pt-PT')} e {new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}.
-                            </span>
-                          </div>
-                        )
-                      })()}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* SELEÇÃO DE JOGADORES (CONVOCATÓRIA) */}
-              <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              {/* COLUNA DIREITA: SELEÇÃO DE JOGADORES (CONVOCATÓRIA) (6 Colunas) */}
+              <div className="lg:col-span-6 bg-gray-50/80 p-5 rounded-2xl border border-gray-200 space-y-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200/80 pb-2.5">
                   <div>
-                    <label className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                    <label className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
                       <Users size={16} className="text-csc-dark" />
                       <span>
                         Convocatória Inicial ({selectedPlayerIds.length}{maxPlayers !== '' ? ` / ${maxPlayers} máx` : ''})
                       </span>
                     </label>
-                    <p className="text-[11px] text-gray-500">Selecione os atletas a convocar para este jogo/treino.</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">Selecione os atletas a convocar para este evento.</p>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <button
                       type="button"
                       onClick={handleRepeatLastCallup}
-                      className="font-bold text-csc-dark bg-white border border-gray-300 px-2 py-1 rounded hover:bg-gray-50 flex items-center gap-1 shadow-sm"
+                      className="font-bold text-csc-dark bg-white border border-gray-300 px-2.5 py-1 rounded-lg hover:bg-gray-50 flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
                       title="Repetir a lista de convocados do jogo anterior"
                     >
                       <RotateCcw size={12} /> Repetir Última
@@ -2478,15 +2477,14 @@ const CalendarPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleSelectAllPlayers}
-                      className="font-bold text-csc-dark hover:underline"
+                      className="font-bold text-csc-dark bg-white border border-gray-300 px-2 py-1 rounded-lg hover:bg-gray-50 cursor-pointer shadow-2xs"
                     >
                       Todos
                     </button>
-                    <span className="text-gray-300">|</span>
                     <button
                       type="button"
                       onClick={handleClearPlayers}
-                      className="font-bold text-gray-500 hover:underline"
+                      className="font-bold text-red-600 bg-white border border-gray-300 px-2 py-1 rounded-lg hover:bg-red-50 cursor-pointer shadow-2xs"
                     >
                       Limpar
                     </button>
@@ -2495,13 +2493,13 @@ const CalendarPage: React.FC = () => {
 
                 {/* Banner de Aviso de Limite */}
                 {maxPlayers !== '' && selectedPlayerIds.length > Number(maxPlayers) && (
-                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 font-bold flex items-center gap-2 animate-pulse">
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-bold flex items-center gap-2 animate-pulse">
                     <AlertTriangle size={16} className="shrink-0 text-red-600" />
                     <span>Aviso: O número de atletas convocados ({selectedPlayerIds.length}) ultrapassa o limite definido de {maxPlayers} jogadores!</span>
                   </div>
                 )}
                 {maxPlayers !== '' && selectedPlayerIds.length === Number(maxPlayers) && (
-                  <div className="p-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-800 font-bold flex items-center gap-2">
+                  <div className="p-2 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 font-bold flex items-center gap-2">
                     <CheckCircle2 size={15} className="shrink-0 text-green-600" />
                     <span>Limite máximo de {maxPlayers} convocados preenchido a 100%.</span>
                   </div>
@@ -2515,7 +2513,7 @@ const CalendarPage: React.FC = () => {
                     value={playerSearchTerm}
                     onChange={(e) => setPlayerSearchTerm(e.target.value)}
                     placeholder="Pesquisar jogador por nome..."
-                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg outline-none focus:ring-1 focus:ring-csc-dark"
+                    className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark"
                   />
                   {playerSearchTerm && (
                     <button
@@ -2528,7 +2526,7 @@ const CalendarPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto p-1 bg-white border border-gray-200 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[380px] overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-xl">
                   {allPlayers
                     .filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase()))
                     .map(p => {
@@ -2540,7 +2538,7 @@ const CalendarPage: React.FC = () => {
                         <div
                           key={p.id}
                           onClick={() => togglePlayerSelection(p.id)}
-                          className={`flex items-center justify-between p-2 rounded-md text-xs border transition-colors ${
+                          className={`flex items-center justify-between p-2.5 rounded-xl text-xs border transition-colors ${
                             !isEligible 
                               ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
                               : isSelected 
@@ -2548,13 +2546,13 @@ const CalendarPage: React.FC = () => {
                                 : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 cursor-pointer'
                           }`}
                         >
-                          <div className="flex items-center gap-2 truncate">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
                             <input
                               type="checkbox"
                               checked={isSelected}
                               disabled={!isEligible}
                               onChange={() => {}} // controlado pelo onClick pai
-                              className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 pointer-events-none"
+                              className="h-3.5 w-3.5 text-csc-dark rounded border-gray-300 pointer-events-none shrink-0"
                             />
                             <span className="truncate">{p.name}</span>
                           </div>
@@ -2567,192 +2565,156 @@ const CalendarPage: React.FC = () => {
                       )
                     })}
                   {allPlayers.filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase())).length === 0 && (
-                    <div className="col-span-2 text-center py-3 text-xs text-gray-500">
+                    <div className="col-span-2 text-center py-6 text-xs text-gray-500">
                       Nenhum jogador encontrado com "{playerSearchTerm}".
                     </div>
                   )}
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="w-full bg-csc-dark text-white py-3 rounded-xl font-bold hover:bg-csc-dark/80 transition-colors shadow-md mt-4 text-sm"
-              >
-                {isRecurring ? 'Criar Eventos Recorrentes e Enviar Convocatórias' : 'Criar Evento e Enviar Convocatória'}
-              </button>
+              {/* FOOTER */}
+              <div className="col-span-full pt-4 border-t border-gray-200 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-5 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-csc-dark text-white rounded-xl text-xs font-bold hover:bg-black transition-all shadow-md cursor-pointer active:scale-95"
+                >
+                  Criar Evento
+                </button>
+              </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL 3: EDITAR EVENTO ESPECÍFICO */}
+      {/* MODAL 3: EDITAR EVENTO ESPECÍFICO (Versão Larga 2 Colunas) */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
             <button
               onClick={() => setIsEditModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100"
+              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-colors z-10 cursor-pointer"
+              title="Fechar"
             >
-              <X size={20} />
+              <X size={24} />
             </button>
 
             <div className="flex items-center gap-2 mb-1">
-              <Edit size={20} className="text-csc-gold" />
-              <h2 className="text-xl font-black text-csc-dark">Editar Dados do Evento</h2>
+              <Edit size={22} className="text-csc-gold" />
+              <h2 className="text-2xl font-black text-csc-dark">Editar Dados do Evento</h2>
             </div>
-            <p className="text-xs text-gray-500 mb-5">
-              Altera a data, horário, localização ou detalhes deste dia específico na agenda.
+            <p className="text-xs text-gray-500 mb-6">
+              Altera a data, horário, localização, notas ou gere a convocatória deste evento na agenda.
             </p>
 
-            <form onSubmit={handleSaveEditedEvent} className="space-y-4">
-              {editType === 'gathering' && (
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Título do Convívio *</label>
-                  <input
-                    type="text"
-                    required={editType === 'gathering'}
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                    placeholder="Ex: Jantar de Natal / Reentré"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
-                <select
-                  value={editType}
-                  onChange={(e) => setEditType(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                >
-                  <option value="practice">Treino</option>
-                  <option value="match">Jogo</option>
-                  <option value="gathering">Convívio</option>
-                </select>
-              </div>
-
-              {editType === 'match' && (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2.5 text-xs">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="editIsFriendly"
-                      checked={editIsFriendly}
-                      onChange={(e) => {
-                        setEditIsFriendly(e.target.checked)
-                        if (e.target.checked) setEditTournamentId('')
-                      }}
-                      className="h-3.5 w-3.5 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
-                    />
-                    <label htmlFor="editIsFriendly" className="ml-2 font-semibold text-gray-700 cursor-pointer">
-                      Jogo Amigável
-                    </label>
-                  </div>
-                  {!editIsFriendly && (
-                    <div className="animate-fade-in">
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">Torneio / Competição</label>
-                      <select
-                        value={editTournamentId}
-                        onChange={(e) => setEditTournamentId(e.target.value)}
-                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white font-medium"
-                      >
-                        <option value="">-- Selecionar Torneio --</option>
-                        {tournaments.map(t => (
-                          <option key={t.id} value={t.id}>
-                            🏆 {t.name} {t.season ? `(${t.season})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={editDateTime}
-                    onChange={(e) => setEditDateTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Concentração (opcional)</label>
-                  <input
-                    type="time"
-                    value={editMeetingTime}
-                    onChange={(e) => setEditMeetingTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                    placeholder="Ex: 19:30"
-                  />
-                </div>
-              </div>
-
-              {/* Para Jogos e Treinos: Escolher Campo do Clube */}
-              {(editType === 'match' || editType === 'practice') && (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
-                  <label className="block font-bold text-gray-800 flex items-center justify-between">
-                    <span>🏟️ Campo / Instalação do Jogo/Treino *</span>
-                    {editLocation && (
-                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                        ✓ {editLocation}
-                      </span>
-                    )}
-                  </label>
-                  <select
-                    value={editFieldId}
-                    onChange={(e) => {
-                      setEditFieldId(e.target.value)
-                      const sel = fields.find(f => f.id === e.target.value)
-                      if (sel) {
-                        setEditLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
-                  >
-                    <option value="">-- Escolher Campo do Clube --</option>
-                    {fields.map(f => (
-                      <option key={f.id} value={f.id}>
-                        🏟️ {f.name} {f.address ? `(${f.address})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {!editFieldId && (
+            <form onSubmit={handleSaveEditedEvent} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* COLUNA ESQUERDA: Dados do Evento (6 Colunas) */}
+              <div className="lg:col-span-6 space-y-4">
+                {editType === 'gathering' && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Título do Convívio *</label>
                     <input
                       type="text"
-                      required={!editFieldId}
-                      value={editLocation}
-                      onChange={(e) => setEditLocation(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
-                      placeholder="Ou digite o nome do campo / estádio adversário..."
+                      required={editType === 'gathering'}
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                      placeholder="Ex: Jantar de Natal / Reentré"
                     />
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* Para Convívios: Escolher Campo/Sede ou Escrever Morada à mão */}
-              {editType === 'gathering' && (
-                <div className="p-3.5 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2.5 text-xs">
-                  <label className="block font-bold text-purple-950 flex items-center justify-between">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={13} className="text-purple-700" />
-                      <span>Localização do Convívio (Instalação ou Morada à Mão) *</span>
-                    </span>
-                    {editLocation && (
-                      <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                        ✓ Definido
-                      </span>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
+                  <select
+                    value={editType}
+                    onChange={(e) => setEditType(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                  >
+                    <option value="practice">Treino</option>
+                    <option value="match">Jogo</option>
+                    <option value="gathering">Convívio</option>
+                  </select>
+                </div>
+
+                {editType === 'match' && (
+                  <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="editIsFriendly"
+                        checked={editIsFriendly}
+                        onChange={(e) => {
+                          setEditIsFriendly(e.target.checked)
+                          if (e.target.checked) setEditTournamentId('')
+                        }}
+                        className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
+                      />
+                      <label htmlFor="editIsFriendly" className="ml-2 text-sm font-semibold text-gray-700 cursor-pointer">
+                        Jogo Amigável
+                      </label>
+                    </div>
+                    {!editIsFriendly && (
+                      <div className="animate-fade-in">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Torneio / Competição</label>
+                        <select
+                          value={editTournamentId}
+                          onChange={(e) => setEditTournamentId(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                        >
+                          <option value="">-- Selecionar Torneio --</option>
+                          {tournaments.map(t => (
+                            <option key={t.id} value={t.id}>
+                              🏆 {t.name} {t.season ? `(${t.season})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     )}
-                  </label>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={editDateTime}
+                      onChange={(e) => setEditDateTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                    />
+                  </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                      Instalação do Clube (Opcional):
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Concentração (opcional)</label>
+                    <input
+                      type="time"
+                      value={editMeetingTime}
+                      onChange={(e) => setEditMeetingTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      placeholder="Ex: 19:30"
+                    />
+                  </div>
+                </div>
+
+                {/* Para Jogos e Treinos: Escolher Campo do Clube */}
+                {(editType === 'match' || editType === 'practice') && (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
+                    <label className="block font-bold text-gray-800 flex items-center justify-between">
+                      <span>🏟️ Campo / Instalação do Jogo/Treino *</span>
+                      {editLocation && (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                          ✓ {editLocation}
+                        </span>
+                      )}
                     </label>
                     <select
                       value={editFieldId}
@@ -2763,320 +2725,375 @@ const CalendarPage: React.FC = () => {
                           setEditLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white font-medium"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
                     >
-                      <option value="">-- Escolher Instalação/Sede do Clube ou escrever abaixo --</option>
+                      <option value="">-- Escolher Campo do Clube --</option>
                       {fields.map(f => (
                         <option key={f.id} value={f.id}>
                           🏟️ {f.name} {f.address ? `(${f.address})` : ''}
                         </option>
                       ))}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                      Morada / Restaurante / Local (escrito à mão):
-                    </label>
-                    <input
-                      type="text"
-                      required={!editFieldId}
-                      value={editLocation}
-                      onChange={(e) => setEditLocation(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white"
-                      placeholder="Ex: Restaurante O Pescador, Av. Marginal, Cascais..."
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Associar a outro Evento (Bidirecional) */}
-              <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
-                <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                  <Link2 size={14} className="text-indigo-600" />
-                  <span>🔗 Associar a outro Evento (ex: Convívio pós-jogo/treino, Jogo/Treino)</span>
-                </label>
-                <select
-                  value={editRelatedGatheringId}
-                  onChange={(e) => setEditRelatedGatheringId(e.target.value)}
-                  className="w-full px-3 py-2 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-600 bg-white text-xs font-medium"
-                >
-                  <option value="">-- Nenhum evento associado --</option>
-                  {events
-                    .filter(e => e.id !== (selectedEvent?.id || ''))
-                    .map(e => (
-                      <option key={e.id} value={e.id}>
-                        [{e.type === 'gathering' ? 'Convívio' : e.type === 'match' ? 'Jogo' : 'Treino'}] {e.title} • {new Date(e.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} às {new Date(e.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
-                <textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                />
-              </div>
-
-              {/* Gestão de Convocatórias no Modal de Edição */}
-              {selectedEvent && (() => {
-                const currentCallups = eventCallups[selectedEvent.id] || []
-                const calledPlayerIds = currentCallups.map(c => c.player_id)
-                const editUncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
-
-                const handleEditAddAll = async () => {
-                  if (editUncalledPlayers.length === 0 || isEditBatchCalling) return
-                  setIsEditBatchCalling(true)
-                  try {
-                    const validIds = await ensurePlayerIdsForSupabase(editUncalledPlayers.map(p => p.id), allPlayers)
-                    if (validIds.length > 0) {
-                      const payload = validIds.map(pId => ({
-                        event_id: selectedEvent.id,
-                        player_id: pId,
-                        status: 'called'
-                      }))
-                      const { error } = await supabase.from('callups').insert(payload)
-                      if (error) throw error
-                      await fetchEventsAndData()
-                    }
-                  } catch (err: any) {
-                    alert('Erro ao convocar todos: ' + err.message)
-                  } finally {
-                    setIsEditBatchCalling(false)
-                  }
-                }
-
-                const handleEditAddOnlyPlayers = async () => {
-                  const uncalledAthletes = editUncalledPlayers.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role))
-                  if (uncalledAthletes.length === 0 || isEditBatchCalling) return
-                  setIsEditBatchCalling(true)
-                  try {
-                    const validIds = await ensurePlayerIdsForSupabase(uncalledAthletes.map(p => p.id), allPlayers)
-                    if (validIds.length > 0) {
-                      const payload = validIds.map(pId => ({
-                        event_id: selectedEvent.id,
-                        player_id: pId,
-                        status: 'called'
-                      }))
-                      const { error } = await supabase.from('callups').insert(payload)
-                      if (error) throw error
-                      await fetchEventsAndData()
-                    }
-                  } catch (err: any) {
-                    alert('Erro ao convocar jogadores: ' + err.message)
-                  } finally {
-                    setIsEditBatchCalling(false)
-                  }
-                }
-
-                const handleEditAddStaff = async () => {
-                  const uncalledStaff = editUncalledPlayers.filter(p => ['coach', 'admin'].includes(p.role))
-                  if (uncalledStaff.length === 0 || isEditBatchCalling) return
-                  setIsEditBatchCalling(true)
-                  try {
-                    const validIds = await ensurePlayerIdsForSupabase(uncalledStaff.map(p => p.id), allPlayers)
-                    if (validIds.length > 0) {
-                      const payload = validIds.map(pId => ({
-                        event_id: selectedEvent.id,
-                        player_id: pId,
-                        status: 'called'
-                      }))
-                      const { error } = await supabase.from('callups').insert(payload)
-                      if (error) throw error
-                      await fetchEventsAndData()
-                    }
-                  } catch (err: any) {
-                    alert('Erro ao convocar staff: ' + err.message)
-                  } finally {
-                    setIsEditBatchCalling(false)
-                  }
-                }
-
-                const handleEditRemoveAll = async () => {
-                  if (currentCallups.length === 0 || isEditBatchCalling) return
-                  if (!confirm('Tem a certeza que deseja remover todos os convocados deste evento?')) return
-                  setIsEditBatchCalling(true)
-                  try {
-                    const callupIds = currentCallups.map(c => c.id)
-                    const { error } = await supabase.from('callups').delete().in('id', callupIds)
-                    if (error) throw error
-                    await fetchEventsAndData()
-                  } catch (err: any) {
-                    alert('Erro ao remover todos: ' + err.message)
-                  } finally {
-                    setIsEditBatchCalling(false)
-                  }
-                }
-
-                const handleToggleCallup = async (player: Profile) => {
-                  const existing = currentCallups.find(c => c.player_id === player.id)
-                  if (existing) {
-                    const { error } = await supabase.from('callups').delete().eq('id', existing.id)
-                    if (!error) await fetchEventsAndData()
-                  } else {
-                    const validIds = await ensurePlayerIdsForSupabase([player.id], allPlayers)
-                    if (validIds.length > 0) {
-                      const { error } = await supabase.from('callups').insert([{
-                        event_id: selectedEvent.id,
-                        player_id: validIds[0],
-                        status: 'called'
-                      }])
-                      if (!error) await fetchEventsAndData()
-                    }
-                  }
-                }
-
-                const filteredMembers = allPlayers.filter(p =>
-                  p.name.toLowerCase().includes(editPlayerSearchTerm.toLowerCase()) ||
-                  (p.jersey_number && p.jersey_number.toString().includes(editPlayerSearchTerm))
-                )
-
-                return (
-                  <div className="p-4 bg-gray-50 border-2 border-amber-200 rounded-2xl space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-gray-900 flex items-center gap-1.5">
-                        <Users size={15} className="text-csc-dark" />
-                        <span>Convocatória ({calledPlayerIds.length} convocados)</span>
-                      </span>
-                      <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2 py-0.5 rounded-full">
-                        {allPlayers.length} Membros
-                      </span>
-                    </div>
-
-                    {/* Botões Rápidos de Convocação */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                      <button
-                        type="button"
-                        onClick={handleEditAddAll}
-                        disabled={editUncalledPlayers.length === 0 || isEditBatchCalling}
-                        className="px-2 py-1.5 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 disabled:opacity-40"
-                      >
-                        <Sparkles size={11} className="text-csc-gold" />
-                        <span>✨ Todos ({editUncalledPlayers.length})</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleEditAddOnlyPlayers}
-                        disabled={editUncalledPlayers.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
-                        className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
-                      >
-                        <span>⚽ Jogadores</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleEditAddStaff}
-                        disabled={editUncalledPlayers.filter(p => ['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
-                        className="px-2 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
-                      >
-                        <span>📋 Staff</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleEditRemoveAll}
-                        disabled={currentCallups.length === 0 || isEditBatchCalling}
-                        className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-900 border border-red-200 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
-                      >
-                        <span>✕ Limpar</span>
-                      </button>
-                    </div>
-
-                    {/* Barra de Pesquisa de Membros */}
-                    <div className="relative">
-                      <Search size={13} className="absolute left-3 top-2.5 text-gray-400" />
+                    {!editFieldId && (
                       <input
                         type="text"
-                        value={editPlayerSearchTerm}
-                        onChange={(e) => setEditPlayerSearchTerm(e.target.value)}
-                        placeholder="Pesquisar por nome ou nº camisola..."
-                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark font-medium"
+                        required={!editFieldId}
+                        value={editLocation}
+                        onChange={(e) => setEditLocation(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                        placeholder="Ou digite o nome do campo / estádio adversário..."
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Para Convívios: Escolher Campo/Sede ou Escrever Morada à mão */}
+                {editType === 'gathering' && (
+                  <div className="p-3.5 bg-purple-50/50 border border-purple-200 rounded-xl space-y-2.5 text-xs">
+                    <label className="block font-bold text-purple-950 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={13} className="text-purple-700" />
+                        <span>Localização do Convívio (Instalação ou Morada à Mão) *</span>
+                      </span>
+                      {(editLocation || editFieldId) && (
+                        <span className="text-[10px] text-purple-800 font-bold bg-purple-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                          ✓ {editLocation || fields.find(f => f.id === editFieldId)?.name}
+                        </span>
+                      )}
+                    </label>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                        Instalação do Clube (Opcional):
+                      </label>
+                      <select
+                        value={editFieldId}
+                        onChange={(e) => {
+                          setEditFieldId(e.target.value)
+                          const sel = fields.find(f => f.id === e.target.value)
+                          if (sel) {
+                            setEditLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white font-medium"
+                      >
+                        <option value="">-- Escolher Instalação/Sede do Clube ou escrever abaixo --</option>
+                        {fields.map(f => (
+                          <option key={f.id} value={f.id}>
+                            🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                        Morada / Restaurante / Local (escrito à mão):
+                      </label>
+                      <input
+                        type="text"
+                        required={!editFieldId}
+                        value={editLocation}
+                        onChange={(e) => setEditLocation(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-purple-700 text-xs bg-white"
+                        placeholder="Ex: Restaurante O Pescador, Av. Marginal, Cascais..."
                       />
                     </div>
+                  </div>
+                )}
 
-                    {/* Lista Selecionável Um a Um */}
-                    <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
-                      {filteredMembers.map(p => {
-                        const isCalled = calledPlayerIds.includes(p.id)
-                        const isEligible = isPlayerEligible(p, editType)
-                        const roles = extractRolesFromProfile(p)
+                {/* Associar a outro Evento (Bidirecional) */}
+                <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
+                  <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                    <Link2 size={14} className="text-indigo-600" />
+                    <span>🔗 Associar a outro Evento (ex: Convívio pós-jogo/treino, Jogo/Treino)</span>
+                  </label>
+                  <select
+                    value={editRelatedGatheringId}
+                    onChange={(e) => setEditRelatedGatheringId(e.target.value)}
+                    className="w-full px-3 py-2 border border-indigo-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-600 bg-white text-xs font-medium"
+                  >
+                    <option value="">-- Nenhum evento associado --</option>
+                    {events
+                      .filter(e => e.id !== (selectedEvent?.id || ''))
+                      .map(e => (
+                        <option key={e.id} value={e.id}>
+                          [{e.type === 'gathering' ? 'Convívio' : e.type === 'match' ? 'Jogo' : 'Treino'}] {e.title} • {new Date(e.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} às {new Date(e.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                        </option>
+                      ))}
+                  </select>
+                </div>
 
-                        return (
-                          <div
-                            key={p.id}
-                            onClick={() => isEligible && handleToggleCallup(p)}
-                            className={`flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer pt-2 ${
-                              !isEligible 
-                                ? 'bg-red-50/60 text-red-700 opacity-60 cursor-not-allowed'
-                                : isCalled 
-                                  ? 'bg-amber-50/80 font-black text-gray-900 border border-amber-200' 
-                                  : 'text-gray-700 hover:bg-gray-50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <input
-                                type="checkbox"
-                                checked={isCalled}
-                                disabled={!isEligible}
-                                onChange={() => {}}
-                                className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none"
-                              />
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                    placeholder="Observações ou notas do evento..."
+                  />
+                </div>
+              </div>
 
-                              <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
-                                {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
-                              </div>
+              {/* COLUNA DIREITA: GESTÃO DA CONVOCATÓRIA (6 Colunas) */}
+              <div className="lg:col-span-6 bg-gray-50/80 p-5 rounded-2xl border border-gray-200 space-y-3.5">
+                {selectedEvent && (() => {
+                  const currentCallups = eventCallups[selectedEvent.id] || []
+                  const calledPlayerIds = currentCallups.map(c => c.player_id)
+                  const editUncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
 
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-xs font-bold leading-tight">{p.name}</p>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  {roles.map(r => (
-                                    <span
-                                      key={r}
-                                      className={`text-[8.5px] font-black px-1 rounded ${
-                                        r === 'admin' ? 'bg-amber-100 text-amber-900' :
-                                        r === 'coach' ? 'bg-blue-100 text-blue-900' :
-                                        'bg-emerald-100 text-emerald-900'
-                                      }`}
-                                    >
-                                      {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
-                                    </span>
-                                  ))}
+                  const handleEditAddAll = async () => {
+                    if (editUncalledPlayers.length === 0 || isEditBatchCalling) return
+                    setIsEditBatchCalling(true)
+                    try {
+                      const validIds = await ensurePlayerIdsForSupabase(editUncalledPlayers.map(p => p.id), allPlayers)
+                      if (validIds.length > 0) {
+                        const payload = validIds.map(pId => ({
+                          event_id: selectedEvent.id,
+                          player_id: pId,
+                          status: 'called'
+                        }))
+                        const { error } = await supabase.from('callups').insert(payload)
+                        if (error) throw error
+                        await fetchEventsAndData()
+                      }
+                    } catch (err: any) {
+                      alert('Erro ao convocar todos: ' + err.message)
+                    } finally {
+                      setIsEditBatchCalling(false)
+                    }
+                  }
+
+                  const handleEditAddOnlyPlayers = async () => {
+                    const uncalledAthletes = editUncalledPlayers.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role))
+                    if (uncalledAthletes.length === 0 || isEditBatchCalling) return
+                    setIsEditBatchCalling(true)
+                    try {
+                      const validIds = await ensurePlayerIdsForSupabase(uncalledAthletes.map(p => p.id), allPlayers)
+                      if (validIds.length > 0) {
+                        const payload = validIds.map(pId => ({
+                          event_id: selectedEvent.id,
+                          player_id: pId,
+                          status: 'called'
+                        }))
+                        const { error } = await supabase.from('callups').insert(payload)
+                        if (error) throw error
+                        await fetchEventsAndData()
+                      }
+                    } catch (err: any) {
+                      alert('Erro ao convocar jogadores: ' + err.message)
+                    } finally {
+                      setIsEditBatchCalling(false)
+                    }
+                  }
+
+                  const handleEditAddStaff = async () => {
+                    const uncalledStaff = editUncalledPlayers.filter(p => ['coach', 'admin'].includes(p.role))
+                    if (uncalledStaff.length === 0 || isEditBatchCalling) return
+                    setIsEditBatchCalling(true)
+                    try {
+                      const validIds = await ensurePlayerIdsForSupabase(uncalledStaff.map(p => p.id), allPlayers)
+                      if (validIds.length > 0) {
+                        const payload = validIds.map(pId => ({
+                          event_id: selectedEvent.id,
+                          player_id: pId,
+                          status: 'called'
+                        }))
+                        const { error } = await supabase.from('callups').insert(payload)
+                        if (error) throw error
+                        await fetchEventsAndData()
+                      }
+                    } catch (err: any) {
+                      alert('Erro ao convocar staff: ' + err.message)
+                    } finally {
+                      setIsEditBatchCalling(false)
+                    }
+                  }
+
+                  const handleEditRemoveAll = async () => {
+                    if (currentCallups.length === 0 || isEditBatchCalling) return
+                    if (!confirm('Tem a certeza que deseja remover todos os convocados deste evento?')) return
+                    setIsEditBatchCalling(true)
+                    try {
+                      const callupIds = currentCallups.map(c => c.id)
+                      const { error } = await supabase.from('callups').delete().in('id', callupIds)
+                      if (error) throw error
+                      await fetchEventsAndData()
+                    } catch (err: any) {
+                      alert('Erro ao remover todos: ' + err.message)
+                    } finally {
+                      setIsEditBatchCalling(false)
+                    }
+                  }
+
+                  const handleToggleCallup = async (player: Profile) => {
+                    const existing = currentCallups.find(c => c.player_id === player.id)
+                    if (existing) {
+                      const { error } = await supabase.from('callups').delete().eq('id', existing.id)
+                      if (!error) await fetchEventsAndData()
+                    } else {
+                      const validIds = await ensurePlayerIdsForSupabase([player.id], allPlayers)
+                      if (validIds.length > 0) {
+                        const { error } = await supabase.from('callups').insert([{
+                          event_id: selectedEvent.id,
+                          player_id: validIds[0],
+                          status: 'called'
+                        }])
+                        if (!error) await fetchEventsAndData()
+                      }
+                    }
+                  }
+
+                  const filteredMembers = allPlayers.filter(p =>
+                    p.name.toLowerCase().includes(editPlayerSearchTerm.toLowerCase()) ||
+                    (p.jersey_number && p.jersey_number.toString().includes(editPlayerSearchTerm))
+                  )
+
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between border-b border-gray-200/80 pb-2.5">
+                        <span className="text-xs font-black text-gray-900 flex items-center gap-1.5">
+                          <Users size={15} className="text-csc-dark" />
+                          <span>Convocatória ({calledPlayerIds.length} convocados)</span>
+                        </span>
+                        <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2.5 py-0.5 rounded-full">
+                          {allPlayers.length} Membros
+                        </span>
+                      </div>
+
+                      {/* Botões Rápidos de Convocação */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleEditAddAll}
+                          disabled={editUncalledPlayers.length === 0 || isEditBatchCalling}
+                          className="px-2 py-1.5 bg-csc-dark hover:bg-black text-white rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer active:scale-95 disabled:opacity-40"
+                        >
+                          <Sparkles size={11} className="text-csc-gold" />
+                          <span>✨ Todos ({editUncalledPlayers.length})</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleEditAddOnlyPlayers}
+                          disabled={editUncalledPlayers.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
+                          className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
+                        >
+                          <span>⚽ Jogadores</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleEditAddStaff}
+                          disabled={editUncalledPlayers.filter(p => ['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
+                          className="px-2 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
+                        >
+                          <span>📋 Staff</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleEditRemoveAll}
+                          disabled={currentCallups.length === 0 || isEditBatchCalling}
+                          className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-900 border border-red-200 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
+                        >
+                          <span>✕ Limpar</span>
+                        </button>
+                      </div>
+
+                      {/* Barra de Pesquisa de Membros */}
+                      <div className="relative">
+                        <Search size={13} className="absolute left-3 top-2.5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={editPlayerSearchTerm}
+                          onChange={(e) => setEditPlayerSearchTerm(e.target.value)}
+                          placeholder="Pesquisar por nome ou nº camisola..."
+                          className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark font-medium"
+                        />
+                      </div>
+
+                      {/* Lista Selecionável Um a Um */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[380px] overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-xl">
+                        {filteredMembers.map(p => {
+                          const isCalled = calledPlayerIds.includes(p.id)
+                          const isEligible = isPlayerEligible(p, editType)
+                          const roles = extractRolesFromProfile(p)
+
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => isEligible && handleToggleCallup(p)}
+                              className={`flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer border ${
+                                !isEligible 
+                                  ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
+                                  : isCalled 
+                                    ? 'bg-amber-50/80 font-black text-gray-900 border-amber-200' 
+                                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <input
+                                  type="checkbox"
+                                  checked={isCalled}
+                                  disabled={!isEligible}
+                                  onChange={() => {}}
+                                  className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none shrink-0"
+                                />
+
+                                <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
+                                  {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-xs font-bold leading-tight">{p.name}</p>
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    {roles.map(r => (
+                                      <span
+                                        key={r}
+                                        className={`text-[8.5px] font-black px-1 rounded ${
+                                          r === 'admin' ? 'bg-amber-100 text-amber-900' :
+                                          r === 'coach' ? 'bg-blue-100 text-blue-900' :
+                                          'bg-emerald-100 text-emerald-900'
+                                        }`}
+                                      >
+                                        {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
+                                      </span>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
+
+                              {p.status === 'injured' && (
+                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
+                                  {editType === 'gathering' ? 'Lesionado (Pode ir)' : 'Lesionado'}
+                                </span>
+                              )}
                             </div>
-
-                            {p.status === 'injured' && (
-                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
-                                {editType === 'gathering' ? 'Lesionado (Pode ir)' : 'Lesionado'}
-                              </span>
-                            )}
-                          </div>
-                        )
-                      })}
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )
-              })()}
+                  )
+                })()}
+              </div>
 
-              <div className="pt-3 border-t border-gray-200 flex items-center justify-between gap-2">
+              {/* FOOTER */}
+              <div className="col-span-full pt-4 border-t border-gray-200 flex items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50"
+                  className="px-5 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
                 >
                   Cancelar
                 </button>
 
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-csc-dark text-white rounded-lg text-xs font-bold hover:bg-black transition-colors flex items-center gap-1.5 shadow"
+                  className="px-6 py-2.5 bg-csc-dark text-white rounded-xl text-xs font-bold hover:bg-black transition-all flex items-center gap-1.5 shadow-md cursor-pointer active:scale-95"
                 >
-                  <Save size={14} />
+                  <Save size={15} className="text-csc-gold" />
                   <span>Guardar Alterações</span>
                 </button>
               </div>
