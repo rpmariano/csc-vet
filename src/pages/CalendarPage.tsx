@@ -815,6 +815,24 @@ const CalendarPage: React.FC = () => {
     const eventIdParam = searchParams.get('event')
     if (!eventIdParam) return
 
+    const fetchCallupsForTarget = async (evId: string) => {
+      try {
+        const { data: cData } = await supabase
+          .from('callups')
+          .select('*, player:profiles(*)')
+          .eq('event_id', evId)
+
+        if (cData && cData.length > 0) {
+          setEventCallups(prev => ({
+            ...prev,
+            [evId]: cData as CallupWithPlayer[]
+          }))
+        }
+      } catch (e) {
+        console.error('Erro ao carregar convocatórias do evento direto:', e)
+      }
+    }
+
     if (events.length > 0) {
       const target = events.find(e => e.id === eventIdParam)
       if (target) {
@@ -822,6 +840,7 @@ const CalendarPage: React.FC = () => {
         const d = new Date(target.date_time)
         setSelectedDate(d)
         setCurrentDate(d)
+        fetchCallupsForTarget(eventIdParam)
         return
       }
     }
@@ -834,7 +853,8 @@ const CalendarPage: React.FC = () => {
           .select(`
             *,
             field:fields(*),
-            tournament:tournaments(*)
+            tournament:tournaments(*),
+            opponent:opponents(*)
           `)
           .eq('id', eventIdParam)
           .single()
@@ -844,6 +864,7 @@ const CalendarPage: React.FC = () => {
           const d = new Date(data.date_time)
           setSelectedDate(d)
           setCurrentDate(d)
+          fetchCallupsForTarget(eventIdParam)
         }
       } catch (err) {
         console.error('Erro ao carregar evento do link:', err)
@@ -1161,27 +1182,32 @@ const CalendarPage: React.FC = () => {
   const handleCallupResponse = async (eventId: string, status: 'confirmed' | 'declined') => {
     if (!profile) return
     try {
-      const existingCallup = eventCallups[eventId]?.find(c => c.player_id === profile.id)
+      const list = eventCallups[eventId] || []
+      const existingCallup = list.find(c => c.player_id === profile.id || c.player?.id === profile.id)
       
-      if (existingCallup) {
+      if (existingCallup && existingCallup.id && !existingCallup.id.startsWith('auto-') && !existingCallup.id.startsWith('temp-')) {
         await supabase.from('callups').update({ status }).eq('id', existingCallup.id)
       } else {
-        // Se ainda não existia linha para o atleta, insere
-        await supabase.from('callups').insert([{
+        // Se ainda não existia linha no Supabase para o atleta ou era id temporário, faz upsert/insert
+        const { data: newRow } = await supabase.from('callups').upsert([{
           event_id: eventId,
           player_id: profile.id,
           status
-        }])
+        }], { onConflict: 'event_id,player_id' }).select().single()
+
+        if (newRow && existingCallup) {
+          existingCallup.id = newRow.id
+        }
       }
 
       // Atualiza estado local imediatamente
       setEventCallups(prev => {
-        const list = prev[eventId] ? [...prev[eventId]] : []
-        const index = list.findIndex(c => c.player_id === profile.id)
+        const curList = prev[eventId] ? [...prev[eventId]] : []
+        const index = curList.findIndex(c => c.player_id === profile.id || c.player?.id === profile.id)
         if (index >= 0) {
-          list[index] = { ...list[index], status }
+          curList[index] = { ...curList[index], status }
         } else {
-          list.push({
+          curList.push({
             id: Math.random().toString(),
             event_id: eventId,
             player_id: profile.id,
@@ -1189,10 +1215,11 @@ const CalendarPage: React.FC = () => {
             player: profile
           })
         }
-        return { ...prev, [eventId]: list }
+        return { ...prev, [eventId]: curList }
       })
     } catch (err: any) {
-      alert('Erro ao atualizar resposta: ' + err.message)
+      console.error('Erro ao atualizar resposta:', err)
+      alert('Erro ao atualizar resposta: ' + (err.message || 'Erro'))
     }
   }
 
@@ -1399,7 +1426,16 @@ const CalendarPage: React.FC = () => {
 
   const renderEventCard = (event: Event) => {
     const callups = eventCallups[event.id] || []
-    const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
+    let myCallup = profile ? callups.find(c => c.player_id === profile.id || c.player?.id === profile.id || (c.player?.email && profile.email && c.player.email.toLowerCase().trim() === profile.email.toLowerCase().trim())) : null
+    if (!myCallup && profile && (event.type === 'practice' || event.type === 'gathering' || isPlayerEligible(profile, event.type) || profile.role === 'player')) {
+      myCallup = {
+        id: `temp-${event.id}-${profile.id}`,
+        event_id: event.id,
+        player_id: profile.id,
+        status: 'called',
+        player: profile
+      }
+    }
     const confirmedCount = callups.filter(c => c.status === 'confirmed').length
 
     const isMatch = event.type === 'match'
@@ -2425,7 +2461,21 @@ const CalendarPage: React.FC = () => {
                 {/* Painel do Atleta Atual (RSVP Pessoal) */}
                 {(() => {
                   const callups = eventCallups[selectedEvent.id] || []
-                  const myCallup = profile ? callups.find(c => c.player_id === profile.id) : null
+                  let myCallup = profile 
+                    ? callups.find(c => c.player_id === profile.id || c.player?.id === profile.id || (c.player?.email && profile.email && c.player.email.toLowerCase().trim() === profile.email.toLowerCase().trim())) 
+                    : null
+                  
+                  // Se o atleta for elegível para este evento mas ainda não houver registo pré-carregado no mapa de convocatórias:
+                  if (!myCallup && profile && (selectedEvent.type === 'practice' || selectedEvent.type === 'gathering' || isPlayerEligible(profile, selectedEvent.type) || profile.role === 'player')) {
+                    myCallup = {
+                      id: `temp-${selectedEvent.id}-${profile.id}`,
+                      event_id: selectedEvent.id,
+                      player_id: profile.id,
+                      status: 'called',
+                      player: profile
+                    }
+                  }
+
                   if (!myCallup) return null
 
                   const eventTime = new Date(selectedEvent.date_time).getTime()
