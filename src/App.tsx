@@ -57,10 +57,12 @@ const App: React.FC = () => {
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/standings" element={<StandingsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                {/* Comunicados: leitura aberta a todos (a própria página restringe a
+                    criação/edição a coach e admin); a RLS já protege a escrita. */}
+                <Route path="/announcements" element={<AnnouncementsPage />} />
 
                 {/* Coach and Admin Only */}
                 <Route element={<ProtectedRoute allowedRoles={['coach', 'admin']} />}>
-                  <Route path="/announcements" element={<AnnouncementsPage />} />
                   <Route path="/events" element={<EventsPage />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/team-management" element={<TeamManagementPage />} />
