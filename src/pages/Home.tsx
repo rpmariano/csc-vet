@@ -329,10 +329,11 @@ const Home: React.FC = () => {
 
   // Aparência por tipo de evento — para os diferentes compromissos da lista
   // "Por responder" se distinguirem ao primeiro olhar, sem precisar de ler o título.
+  // Tons claros: a lista vive agora num cartão verde-escuro, não em branco.
   const tipoInfo = (tipo?: Event['type']) => {
-    if (tipo === 'match') return { Icon: Trophy, cor: 'text-amber-600', borda: 'border-l-csc-gold' }
-    if (tipo === 'practice') return { Icon: Dumbbell, cor: 'text-emerald-600', borda: 'border-l-emerald-500' }
-    return { Icon: Users, cor: 'text-blue-600', borda: 'border-l-blue-500' }
+    if (tipo === 'match') return { Icon: Trophy, cor: 'text-csc-gold' }
+    if (tipo === 'practice') return { Icon: Dumbbell, cor: 'text-emerald-300' }
+    return { Icon: Users, cor: 'text-blue-300' }
   }
 
   // Separa o nome do campo da morada, para a morada poder quebrar linha em vez
@@ -408,23 +409,19 @@ const Home: React.FC = () => {
             const local = infoLocal(currentMatch)
 
             return (
-              <div {...matchSwipeHandlers} className="relative bg-gradient-to-br from-csc-dark to-csc-light text-white rounded-3xl overflow-hidden select-none touch-pan-y shadow-lg">
-                {/* Brilho radial subtil atrás do confronto — dá profundidade ao gradiente
-                    sem se tornar um efeito chamativo. */}
-                <div className="pointer-events-none absolute inset-x-0 top-16 h-56 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.10),transparent_70%)]" />
-
+              <div {...matchSwipeHandlers} className="relative bg-csc-dark text-white rounded-3xl overflow-hidden select-none touch-pan-y shadow-lg">
                 {/* Contador de dias: canto, para não quebrar a simetria do resto do cartão */}
-                <span className="absolute top-4 right-4 text-xs font-bold text-white bg-white/15 rounded-full px-3 py-1">
+                <span className="absolute top-4 right-4 text-xs font-bold text-white bg-white/10 rounded-full px-3 py-1">
                   {getCountdownLabel(currentMatch.date_time)}
                 </span>
 
-                <div className="relative p-6 sm:p-7 flex flex-col items-center text-center space-y-5">
+                <div className="relative p-6 sm:p-8 flex flex-col items-center text-center space-y-5">
                   <div>
-                    <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-csc-gold">Próximo jogo</span>
-                    <p className="text-xs text-white/60 mt-1">{competitionLabel} · {venueLabel}</p>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-csc-gold">Próximo jogo</span>
+                    <p className="text-xs text-white/70 mt-1">{competitionLabel} · {venueLabel}</p>
                   </div>
 
-                  <p className="text-lg font-bold capitalize">
+                  <p className="text-lg font-black capitalize">
                     {new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
                   </p>
 
@@ -442,7 +439,7 @@ const Home: React.FC = () => {
                         {local.nome}
                       </span>
                       {local.morada && (
-                        <span className="text-xs text-white/55 leading-snug max-w-[280px]">{local.morada}</span>
+                        <span className="text-xs text-white/70 leading-snug max-w-[280px]">{local.morada}</span>
                       )}
                     </a>
                   )}
@@ -455,13 +452,13 @@ const Home: React.FC = () => {
                   >
                     <div className="flex flex-col items-center gap-2 w-24">
                       {leftLogo ? (
-                        <img src={leftLogo} alt="" className="w-16 h-16 sm:w-[72px] sm:h-[72px] object-contain rounded-full bg-white p-1.5 shadow-md group-hover:scale-105 transition-transform" />
+                        <img src={leftLogo} alt="" className="w-16 h-16 object-contain rounded-full bg-white p-2 shadow-md group-hover:scale-105 transition-transform" />
                       ) : (
-                        <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-full bg-white text-csc-dark flex items-center justify-center text-sm font-black shadow-md">{leftInitials}</div>
+                        <div className="w-16 h-16 rounded-full bg-white text-csc-dark flex items-center justify-center text-sm font-black shadow-md">{leftInitials}</div>
                       )}
                       <div>
                         <p className="text-sm font-black uppercase leading-tight">{leftInitials}</p>
-                        <p className="text-[11px] text-white/55">{isAway ? 'Fora' : 'Casa'}</p>
+                        <p className="text-[11px] text-white/70">{isAway ? 'Fora' : 'Casa'}</p>
                       </div>
                     </div>
 
@@ -474,13 +471,13 @@ const Home: React.FC = () => {
 
                     <div className="flex flex-col items-center gap-2 w-24">
                       {rightLogo ? (
-                        <img src={rightLogo} alt="" className="w-16 h-16 sm:w-[72px] sm:h-[72px] object-contain rounded-full bg-white p-1.5 shadow-md group-hover:scale-105 transition-transform" />
+                        <img src={rightLogo} alt="" className="w-16 h-16 object-contain rounded-full bg-white p-2 shadow-md group-hover:scale-105 transition-transform" />
                       ) : (
-                        <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-full bg-white/15 text-white flex items-center justify-center text-sm font-black shadow-md">{rightInitials}</div>
+                        <div className="w-16 h-16 rounded-full bg-white/15 text-white flex items-center justify-center text-sm font-black shadow-md">{rightInitials}</div>
                       )}
                       <div>
                         <p className="text-sm font-black uppercase leading-tight">{rightInitials}</p>
-                        <p className="text-[11px] text-white/55">{isAway ? 'Casa' : 'Fora'}</p>
+                        <p className="text-[11px] text-white/70">{isAway ? 'Casa' : 'Fora'}</p>
                       </div>
                     </div>
                   </div>
@@ -489,18 +486,18 @@ const Home: React.FC = () => {
                   <div className="flex items-center gap-6">
                     {horaConcentracao && (
                       <div>
-                        <p className="text-[11px] text-white/55 uppercase tracking-wide">Concentração</p>
-                        <p className="text-base font-bold">{horaConcentracao}</p>
+                        <p className="text-[10px] text-white/70 uppercase tracking-widest font-black">Concentração</p>
+                        <p className="text-base font-black">{horaConcentracao}</p>
                       </div>
                     )}
                     <div>
-                      <p className="text-[11px] text-white/55 uppercase tracking-wide">Pontapé de saída</p>
-                      <p className="text-base font-bold">{horaJogo}</p>
+                      <p className="text-[10px] text-white/70 uppercase tracking-widest font-black">Pontapé de saída</p>
+                      <p className="text-base font-black">{horaJogo}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* RSVP: existe uma vez na app, e é aqui */}
+                {/* RSVP: existe uma vez na app, e é aqui — barra dourada de bordo a bordo */}
                 {currentMatchCallup && (
                   currentMatchCallup.status === 'called' ? (
                     <div className="relative bg-csc-gold px-5 py-3.5 flex items-center justify-center gap-3">
@@ -515,7 +512,7 @@ const Home: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
-                        className="h-10 px-5 rounded-full border-2 border-csc-dark/35 text-csc-dark text-sm font-bold cursor-pointer active:scale-95 transition-transform"
+                        className="h-10 px-5 rounded-full border-2 border-csc-dark text-csc-dark hover:bg-csc-dark/10 text-sm font-bold cursor-pointer active:scale-95 transition-transform"
                       >
                         Não
                       </button>
@@ -557,7 +554,7 @@ const Home: React.FC = () => {
               </div>
             )
           })() : (
-            <div className="bg-white p-8 rounded-2xl border border-gray-200 text-center text-gray-500 font-medium">
+            <div className="bg-csc-dark rounded-3xl p-8 text-center text-white/70 font-medium">
               Sem jogos agendados no momento.
             </div>
           )}
@@ -570,20 +567,20 @@ const Home: React.FC = () => {
               resolve-se na própria linha. */}
           {outrasPendentes.length > 0 && (
             <div className="space-y-2.5">
-              <div className="flex items-baseline justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Por responder</span>
-                <span className="text-xs font-bold text-amber-700 bg-amber-100 rounded-full px-2.5 py-0.5">{outrasPendentes.length}</span>
+              <div className="flex items-baseline justify-between px-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Por responder</span>
+                <span className="text-xs font-bold text-csc-dark bg-csc-gold rounded-full px-2.5 py-0.5">{outrasPendentes.length}</span>
               </div>
-              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div className="bg-csc-dark rounded-3xl overflow-hidden">
                 {outrasPendentes.map((callup, idx) => {
                   const ev = callup.event
                   if (!ev) return null
                   const { dia, mes } = formatarDiaMes(ev.date_time)
-                  const { Icon, cor, borda } = tipoInfo(ev.type)
+                  const { Icon, cor } = tipoInfo(ev.type)
                   return (
                     <div
                       key={callup.id}
-                      className={`flex items-center gap-3 pl-3 pr-4 py-3 border-l-[3px] ${borda} ${idx > 0 ? 'border-t border-gray-100' : ''}`}
+                      className={`flex items-center gap-3 pl-4 pr-4 py-3 ${idx > 0 ? 'border-t border-white/10' : ''}`}
                     >
                       <button
                         type="button"
@@ -591,15 +588,15 @@ const Home: React.FC = () => {
                         className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
                       >
                         <div className="w-10 shrink-0 flex flex-col items-center">
-                          <span className="text-lg font-black text-csc-dark leading-none">{dia}</span>
-                          <span className="text-[11px] text-gray-500 uppercase">{mes}</span>
+                          <span className="text-lg font-black text-csc-gold leading-none">{dia}</span>
+                          <span className="text-[11px] text-white/60 uppercase">{mes}</span>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-gray-900 truncate flex items-center gap-1.5">
+                          <p className="text-sm font-bold text-white truncate flex items-center gap-1.5">
                             <Icon size={13} className={`${cor} shrink-0`} />
                             <span className="truncate">{tituloEvento(ev)}</span>
                           </p>
-                          <p className="text-xs text-gray-500 truncate">
+                          <p className="text-xs text-white/60 truncate">
                             {new Date(ev.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} · {getEventLocation(ev) || 'Local a definir'}
                           </p>
                         </div>
@@ -609,7 +606,7 @@ const Home: React.FC = () => {
                           type="button"
                           onClick={() => handleCallupResponse(callup.id, 'confirmed')}
                           aria-label="Confirmar presença"
-                          className="w-11 h-11 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center transition-colors cursor-pointer"
+                          className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-emerald-300 flex items-center justify-center transition-colors cursor-pointer"
                         >
                           <Check size={18} strokeWidth={2.5} />
                         </button>
@@ -617,7 +614,7 @@ const Home: React.FC = () => {
                           type="button"
                           onClick={() => handleCallupResponse(callup.id, 'declined')}
                           aria-label="Recusar presença"
-                          className="w-11 h-11 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-400 flex items-center justify-center transition-colors cursor-pointer"
+                          className="w-11 h-11 rounded-full border border-white/15 hover:bg-white/10 text-white/50 flex items-center justify-center transition-colors cursor-pointer"
                         >
                           <X size={18} strokeWidth={2.5} />
                         </button>
