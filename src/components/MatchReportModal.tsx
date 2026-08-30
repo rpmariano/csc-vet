@@ -340,7 +340,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         </button>
 
         {/* Modal Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-150 pr-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200 pr-10">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
@@ -864,7 +864,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
             {/* Botões de Ação Final */}
             {isCoachOrAdmin && isEditing && (
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-150">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}

@@ -1281,7 +1281,7 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* Card Footer */}
-                <div className="bg-gray-50 px-3.5 py-2.5 border-t border-gray-150 flex items-center justify-between text-xs">
+                <div className="bg-gray-50 px-3.5 py-2.5 border-t border-gray-200 flex items-center justify-between text-xs">
                   <span className="text-xs font-black text-csc-dark group-hover:underline flex items-center gap-1">
                     Ver Ficha Completa
                   </span>
@@ -1352,7 +1352,7 @@ const TeamManagementPage: React.FC = () => {
             >
               <X size={22} />
             </button>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-150 pb-4 mb-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-4 mb-5">
               <div>
                 <h2 className="text-2xl font-black text-csc-dark mb-0.5">
                   {isEditing ? 'Editar Ficha do Membro' : 'Criar Ficha de Novo Membro'}
@@ -2084,17 +2084,17 @@ const TeamManagementPage: React.FC = () => {
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 text-xs">
-                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200">
                       <p className="text-gray-400 font-bold uppercase text-[9px]">Nome Completo</p>
                       <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.name}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200">
                       <p className="text-gray-400 font-bold uppercase text-[9px]">Nome na Camisola</p>
                       <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200">
                       <p className="text-gray-400 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
                       <p className="font-extrabold text-gray-900 mt-0.5">
                         {selectedProfile.birth_date ? (
@@ -2103,29 +2103,29 @@ const TeamManagementPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200">
                       <p className="text-gray-400 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
                       <p className="font-extrabold text-gray-900 mt-0.5 font-mono">{selectedProfile.nif || '-'}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200">
                       <p className="text-gray-400 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
                       <p className="font-extrabold text-gray-900 mt-0.5 font-mono">{selectedProfile.id_number || '-'}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200">
                       <p className="text-gray-400 font-bold uppercase text-[9px]">Validade do CC</p>
                       <p className="font-extrabold text-gray-900 mt-0.5">
                         {selectedProfile.id_card_expiry ? new Date(selectedProfile.id_card_expiry).toLocaleDateString('pt-PT') : '-'}
                       </p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200">
                       <p className="text-gray-400 font-bold uppercase text-[9px]">Nacionalidade</p>
                       <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200">
                       <p className="text-gray-400 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
                       <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
                     </div>
@@ -2140,12 +2140,12 @@ const TeamManagementPage: React.FC = () => {
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200">
                       <p className="text-gray-400 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
                       <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.address || 'Não registada'}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-150">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200">
                       <p className="text-gray-400 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
                       <p className="font-extrabold text-gray-900 mt-0.5">
                         {selectedProfile.postal_code || '-'} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
@@ -2161,7 +2161,7 @@ const TeamManagementPage: React.FC = () => {
                     <span>3. Dados Bancários & Quotas</span>
                   </h4>
 
-                  <div className="bg-white p-3 rounded-xl border border-gray-150 flex items-center justify-between gap-3">
+                  <div className="bg-white p-3 rounded-xl border border-gray-200 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-gray-400 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
                       <p className="font-black text-gray-900 font-mono text-xs sm:text-sm mt-0.5">
@@ -2432,7 +2432,7 @@ const TeamManagementPage: React.FC = () => {
                   />
                 </div>
 
-                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 border border-gray-150 rounded-xl p-2 bg-gray-50/50">
+                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 border border-gray-200 rounded-xl p-2 bg-gray-50/50">
                   {otherUsers.length === 0 ? (
                     <p className="text-center py-6 text-xs text-gray-400 font-medium">
                       Nenhum outro utilizador encontrado.

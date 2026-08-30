@@ -1896,7 +1896,7 @@ const CalendarPage: React.FC = () => {
     <div className="space-y-6">
 
       {/* Barra de Navegação & Filtros de Calendário */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-150 space-y-3.5">
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 space-y-3.5">
         {/* Linha 1: Alternador de Visualização + Barra de Pesquisa + Filtro de Status */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Alternador de Visualização: Calendário vs Lista */}
@@ -2026,7 +2026,7 @@ const CalendarPage: React.FC = () => {
       ) : viewMode === 'calendar' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Coluna Esquerda: Grelha do Calendário Mensal Compacta */}
-          <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-150 overflow-hidden">
+          <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             {/* Cabeçalho do Calendário com Seleção Rápida de Mês e Ano */}
             <div className="p-3 sm:p-4 bg-gradient-to-r from-csc-dark via-gray-900 to-csc-dark text-white rounded-t-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm border-b border-white/10">
               <div className="flex items-center gap-2 flex-wrap">
@@ -4109,7 +4109,7 @@ const CalendarPage: React.FC = () => {
                 <p className="text-[10.5px] text-gray-500 mt-1">Usada para navegação e rotas com Google Maps.</p>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-150">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={handleAttemptCloseQuickFieldModal}

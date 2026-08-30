@@ -132,7 +132,7 @@ const FinancePage: React.FC = () => {
 
       {/* Cartões de Balanço */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 flex items-center justify-between">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-500">Saldo Disponível</p>
             <p className="text-2xl font-black text-csc-dark mt-1">{netBalance.toFixed(2)}€</p>
@@ -142,7 +142,7 @@ const FinancePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 flex items-center justify-between">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-500">Total Receitas</p>
             <p className="text-2xl font-black text-green-700 mt-1">+{totalIncome.toFixed(2)}€</p>
@@ -152,7 +152,7 @@ const FinancePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6 flex items-center justify-between">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-500">Total Despesas</p>
             <p className="text-2xl font-black text-red-700 mt-1">-{totalExpense.toFixed(2)}€</p>
@@ -166,7 +166,7 @@ const FinancePage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Adicionar Movimento e Registo Dues */}
         <div className="space-y-6 h-fit">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-805 mb-4 flex items-center space-x-2">
               <DollarSign size={20} className="text-csc-dark" />
               <span>Registar Movimento</span>
@@ -224,7 +224,7 @@ const FinancePage: React.FC = () => {
         {/* Tabelas de Quotas e Transações */}
         <div className="lg:col-span-2 space-y-6">
           {/* Tabela de Controlo de Quotas */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-805 mb-4">Controlo de Quotas (Jogadores)</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -268,7 +268,7 @@ const FinancePage: React.FC = () => {
           </div>
 
           {/* Últimos Movimentos */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-150 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-805 mb-4">Últimos Movimentos</h3>
             <div className="space-y-3">
               {transactions.map((t) => (

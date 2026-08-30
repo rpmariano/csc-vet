@@ -2030,7 +2030,7 @@ const EventsPage: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-5 sm:p-6">
-              <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-150">
+              <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-200">
                 <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
                   <CalendarRange size={20} className="text-csc-dark" />
                   <span>Lista de Eventos & Quórum RSVP</span>
@@ -2106,7 +2106,7 @@ const EventsPage: React.FC = () => {
                       </div>
 
                       {/* Event Meta Details */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-700 bg-white/70 p-2.5 rounded-xl border border-gray-150">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-700 bg-white/70 p-2.5 rounded-xl border border-gray-200">
                         <div className="flex items-center gap-1.5">
                           <Clock size={13} className="text-csc-dark shrink-0" />
                           <span className="font-bold">
@@ -2497,7 +2497,7 @@ const EventsPage: React.FC = () => {
                             </div>
 
                             {/* RSVP Status Badge & Coach Action Buttons */}
-                            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-150">
+                            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-200">
                               <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 ${
                                 c.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
                                 c.status === 'declined' ? 'bg-red-100 text-red-800 border border-red-200' :
@@ -3030,7 +3030,7 @@ const EventsPage: React.FC = () => {
                 <p className="text-[10.5px] text-gray-500 mt-1">Usada para navegação e rotas com Google Maps.</p>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-150">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={handleAttemptCloseQuickFieldModal}

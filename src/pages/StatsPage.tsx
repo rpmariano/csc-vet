@@ -441,7 +441,7 @@ function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats:
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-4 sm:p-5 border-b border-gray-150 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="p-4 sm:p-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
           <Users size={18} className="text-csc-dark" />
           <span>Tabela Geral de Rendimento do Plantel ({aggregatedStats.length} Atletas)</span>

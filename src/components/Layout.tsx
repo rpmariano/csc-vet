@@ -51,7 +51,7 @@ const Layout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-150 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
       {/* Mobile Header (Limpo e elegante) */}
       <header className="bg-white text-csc-dark flex items-center justify-between px-3.5 py-2.5 md:hidden border-b-4 border-csc-gold shadow-sm sticky top-0 z-30">
         <Link to="/" className="flex items-center gap-2">
@@ -609,35 +609,38 @@ const Layout: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-8 max-w-lg md:max-w-7xl mx-auto w-full pb-24 md:pb-8">
+        <main className="flex-1 p-4 md:p-8 max-w-lg md:max-w-7xl mx-auto w-full pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-8">
           <Outlet />
         </main>
       </div>
 
       {/* Mobile Bottom Navigation: "Sacos" dos Jogadores/Treinadores + Menu dos Traços (☰) no Rodapé */}
-      <div className="fixed bottom-0 left-0 right-0 bg-csc-dark border-t-2 border-csc-light/20 px-1 py-1.5 flex justify-around items-center md:hidden z-40 shadow-2xl">
+      <nav
+        aria-label="Navegação principal"
+        className="fixed bottom-0 left-0 right-0 bg-csc-dark border-t-2 border-csc-light/20 px-1 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))] flex justify-around items-center md:hidden z-40 shadow-2xl"
+      >
         {/* 1. Home */}
         <Link 
           to="/" 
           onClick={() => triggerHaptic('selection')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+          className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
             ${location.pathname === '/' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
           `}
         >
           <Home size={19} />
-          <span className="text-[9px] font-bold mt-0.5">Home</span>
+          <span className="text-[10px] font-bold mt-0.5">Home</span>
         </Link>
 
         {/* 2. Agenda */}
         <Link 
           to="/calendar" 
           onClick={() => triggerHaptic('selection')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+          className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
             ${location.pathname === '/calendar' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
           `}
         >
           <Calendar size={19} />
-          <span className="text-[9px] font-bold mt-0.5">Agenda</span>
+          <span className="text-[10px] font-bold mt-0.5">Agenda</span>
         </Link>
 
         {/* 3. Ação do Saco: "Criar Evento" (se Coach/Admin) OU "Estatísticas" (se Jogador) */}
@@ -645,23 +648,23 @@ const Layout: React.FC = () => {
           <Link 
             to="/events" 
             onClick={() => triggerHaptic('selection')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+            className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
               ${location.pathname === '/events' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
             `}
           >
             <PlusCircle size={19} />
-            <span className="text-[9px] font-bold mt-0.5">Gestão</span>
+            <span className="text-[10px] font-bold mt-0.5">Gestão</span>
           </Link>
         ) : (
           <Link 
             to="/stats" 
             onClick={() => triggerHaptic('selection')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+            className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
               ${location.pathname === '/stats' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
             `}
           >
             <BarChart3 size={19} />
-            <span className="text-[9px] font-bold mt-0.5">Stats</span>
+            <span className="text-[10px] font-bold mt-0.5">Stats</span>
           </Link>
         )}
 
@@ -670,12 +673,12 @@ const Layout: React.FC = () => {
           <Link 
             to="/team-management" 
             onClick={() => triggerHaptic('selection')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+            className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
               ${location.pathname === '/team-management' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
             `}
           >
             <Users size={19} />
-            <span className="text-[9px] font-bold mt-0.5">Plantel</span>
+            <span className="text-[10px] font-bold mt-0.5">Plantel</span>
           </Link>
         )}
 
@@ -685,14 +688,14 @@ const Layout: React.FC = () => {
             triggerHaptic('selection')
             setIsMobileMenuOpen(true)
           }}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all ${
+          className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all ${
             isMobileMenuOpen ? 'text-csc-gold bg-csc-light/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'
           }`}
         >
           <Menu size={19} />
-          <span className="text-[9px] font-bold mt-0.5">Menu</span>
+          <span className="text-[10px] font-bold mt-0.5">Menu</span>
         </button>
-      </div>
+      </nav>
 
       {/* Modal de Alternância de Papel / Role Switcher */}
       {isRoleModalOpen && (
