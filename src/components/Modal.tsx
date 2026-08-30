@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useId } from 'react'
 import { X } from 'lucide-react'
 import { useModalA11y } from '../hooks/useModalA11y'
 
@@ -58,7 +58,7 @@ export const Modal: React.FC<ModalProps> = ({
   children,
 }) => {
   const painelRef = useModalA11y({ isOpen, onClose, closeOnEscape })
-  const tituloId = useRef(`modal-titulo-${Math.random().toString(36).slice(2, 9)}`)
+  const tituloId = useId()
 
   if (!isOpen) return null
 
@@ -77,7 +77,7 @@ export const Modal: React.FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-label={!title ? ariaLabel : undefined}
-        aria-labelledby={title ? tituloId.current : undefined}
+        aria-labelledby={title ? tituloId : undefined}
         tabIndex={-1}
         className={`bg-white rounded-2xl w-full ${LARGURAS[size]} shadow-2xl border border-gray-100 relative my-auto max-h-[90vh] flex flex-col animate-scale-up outline-none`}
       >
@@ -87,7 +87,7 @@ export const Modal: React.FC<ModalProps> = ({
 
             <div className="flex-1 min-w-0">
               {title && (
-                <h2 id={tituloId.current} className="text-lg font-black text-gray-900 leading-tight">
+                <h2 id={tituloId} className="text-lg font-black text-gray-900 leading-tight">
                   {title}
                 </h2>
               )}

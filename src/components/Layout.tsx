@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { 
   Home, 
@@ -34,8 +34,8 @@ const Layout: React.FC = () => {
   // Escape, prisão de foco e bloqueio de scroll para a gaveta e para o seletor de perfil.
   const gavetaRef = useModalA11y({ isOpen: isMobileMenuOpen, onClose: () => setIsMobileMenuOpen(false) })
   const perfilRef = useModalA11y({ isOpen: isRoleModalOpen, onClose: () => setIsRoleModalOpen(false) })
-  const perfilTituloId = useRef('titulo-alternar-perfil')
-  const gavetaTituloId = useRef('titulo-menu-principal')
+  const perfilTituloId = 'titulo-alternar-perfil'
+  const gavetaTituloId = 'titulo-menu-principal'
 
   const isAdmin = profile?.role === 'admin'
   const isCoach = profile?.role === 'coach'
@@ -122,7 +122,7 @@ const Layout: React.FC = () => {
             ref={gavetaRef}
             role="dialog"
             aria-modal="true"
-            aria-labelledby={gavetaTituloId.current}
+            aria-labelledby={gavetaTituloId}
             tabIndex={-1}
             className="relative w-4/5 max-w-xs bg-csc-dark text-white h-full flex flex-col justify-between p-5 z-10 shadow-2xl overflow-y-auto outline-none"
           >
@@ -131,7 +131,7 @@ const Layout: React.FC = () => {
               <div className="flex items-center justify-between pb-3 border-b border-csc-light/30">
                 <div className="flex items-center gap-2">
                   <Menu size={18} className="text-csc-gold" />
-                  <span id={gavetaTituloId.current} className="text-sm font-black uppercase tracking-wider text-white">Menu Principal</span>
+                  <span id={gavetaTituloId} className="text-sm font-black uppercase tracking-wider text-white">Menu Principal</span>
                 </div>
                 <button
                   type="button"
@@ -723,7 +723,7 @@ const Layout: React.FC = () => {
             ref={perfilRef}
             role="dialog"
             aria-modal="true"
-            aria-labelledby={perfilTituloId.current}
+            aria-labelledby={perfilTituloId}
             tabIndex={-1}
             className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-scale-up border border-gray-100 outline-none"
           >
@@ -741,7 +741,7 @@ const Layout: React.FC = () => {
                 <Sparkles size={22} className="text-csc-dark" />
               </div>
               <div>
-                <h3 id={perfilTituloId.current} className="text-lg font-black text-gray-900">Alternar Perfil de Acesso</h3>
+                <h3 id={perfilTituloId} className="text-lg font-black text-gray-900">Alternar Perfil de Acesso</h3>
                 <p className="text-xs text-gray-500 font-medium">Selecione o perfil com o qual deseja utilizar a aplicação</p>
               </div>
             </div>

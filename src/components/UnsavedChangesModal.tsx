@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useId } from 'react'
 import { AlertCircle, Save, LogOut, ArrowLeft } from 'lucide-react'
 import { useModalA11y } from '../hooks/useModalA11y'
 
@@ -23,7 +23,7 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
 }) => {
   // Escape fecha com 'Cancelar', que é a opção segura: não sai nem descarta nada.
   const painelRef = useModalA11y({ isOpen, onClose: onCancel })
-  const tituloId = useRef(`por-guardar-${Math.random().toString(36).slice(2, 9)}`)
+  const tituloId = useId()
 
   if (!isOpen) return null
 
@@ -33,7 +33,7 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
         ref={painelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={tituloId.current}
+        aria-labelledby={tituloId}
         tabIndex={-1}
         className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-scale-in outline-none"
       >
@@ -42,7 +42,7 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
             <AlertCircle size={24} />
           </div>
           <div>
-            <h3 id={tituloId.current} className="text-base font-black text-gray-900 leading-tight">
+            <h3 id={tituloId} className="text-base font-black text-gray-900 leading-tight">
               {title}
             </h3>
             <p className="text-xs text-gray-500 mt-0.5">

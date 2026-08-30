@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useId } from 'react'
 import { AlertCircle, Trash2, CheckCircle, AlertTriangle } from 'lucide-react'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -30,7 +30,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   // Escape, prisão de foco e bloqueio de scroll, mantendo o visual próprio deste modal.
   const painelRef = useModalA11y({ isOpen, onClose: onCancel })
-  const tituloId = useRef(`confirmar-${Math.random().toString(36).slice(2, 9)}`)
+  const tituloId = useId()
 
   if (!isOpen) return null
 
@@ -88,7 +88,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         ref={painelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={tituloId.current}
+        aria-labelledby={tituloId}
         tabIndex={-1}
         className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-scale-in outline-none"
       >
@@ -97,7 +97,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             {icon || vStyles.defaultIcon}
           </div>
           <div>
-            <h3 id={tituloId.current} className="text-base font-black text-gray-900 leading-tight">
+            <h3 id={tituloId} className="text-base font-black text-gray-900 leading-tight">
               {title}
             </h3>
             <p className="text-xs text-gray-500 mt-0.5">

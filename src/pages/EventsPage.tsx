@@ -57,86 +57,13 @@ const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
   })
 }
 
-const ensurePlayerIdsForSupabase = async (pIds: string[], playerList: Profile[]): Promise<string[]> => {
-  const playerMap = new Map<string, Profile>(playerList.map(p => [p.id, p]))
-  const resolvedIds: string[] = []
-
-  let dbProfiles: { id: string; email?: string | null; name?: string | null }[] = []
-  try {
-    const { data } = await supabase.from('profiles').select('id, email, name')
-    if (data) dbProfiles = data
-  } catch (e) {
-    console.error('Error fetching db profiles for matching:', e)
-  }
-
-  for (const id of pIds) {
-    if (!id || typeof id !== 'string') continue
-
-    if (!id.startsWith('seed-')) {
-      resolvedIds.push(id)
-      continue
-    }
-    const seedP = playerMap.get(id)
-    if (!seedP) continue
-
-    // 1. Verificar por email na BD
-    const matchByEmail = seedP.email 
-      ? dbProfiles.find(dp => dp.email && dp.email.toLowerCase().trim() === seedP.email!.toLowerCase().trim())
-      : null
-
-    if (matchByEmail?.id) {
-      seedP.id = matchByEmail.id
-      resolvedIds.push(matchByEmail.id)
-      continue
-    }
-
-    // 2. Verificar por nome na BD
-    const matchByName = seedP.name
-      ? dbProfiles.find(dp => dp.name && dp.name.toLowerCase().trim() === seedP.name.toLowerCase().trim())
-      : null
-
-    if (matchByName?.id) {
-      seedP.id = matchByName.id
-      resolvedIds.push(matchByName.id)
-      continue
-    }
-
-    // 3. Tentar inserir se não existir
-    try {
-      const newId = crypto.randomUUID()
-      const { data: inserted, error } = await supabase.from('profiles').insert([{
-        id: newId,
-        name: seedP.name,
-        shirt_name: seedP.shirt_name || null,
-        jersey_number: seedP.jersey_number || null,
-        position: seedP.position || null,
-        role: seedP.role || 'player',
-        status: seedP.status || 'active',
-        email: seedP.email || null,
-        phone: seedP.phone || null,
-        birth_date: seedP.birth_date || null
-      }]).select('id').maybeSingle()
-
-      if (!error) {
-        const finalId = inserted?.id || newId
-        seedP.id = finalId
-        dbProfiles.push({ id: finalId, email: seedP.email, name: seedP.name })
-        resolvedIds.push(finalId)
-      } else {
-        if (seedP.name) {
-          const { data: recheck } = await supabase.from('profiles').select('id').ilike('name', seedP.name.trim()).maybeSingle()
-          if (recheck?.id) {
-            seedP.id = recheck.id
-            resolvedIds.push(recheck.id)
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error ensuring profile exists:', err)
-    }
-  }
-
-  return Array.from(new Set(resolvedIds.filter(id => id && !id.startsWith('seed-'))))
+const ensurePlayerIdsForSupabase = async (pIds: string[], _playerList: Profile[]): Promise<string[]> => {
+  // Antes de agosto de 2026 o plantel vinha de uma lista embutida no código e os
+  // atletas ainda não registados circulavam com IDs falsos ("seed-3"). Esta função
+  // traduzia-os para UUIDs reais, criando o perfil na base de dados se preciso.
+  // O plantel passou a vir todo do Supabase, logo todos os IDs já são UUIDs reais:
+  // resta filtrar vazios e duplicados.
+  return Array.from(new Set(pIds.filter((id): id is string => Boolean(id) && typeof id === 'string')))
 }
 
 export const TrainingIcon: React.FC<{ size?: number; className?: string }> = ({ size = 20, className = '' }) => (
@@ -704,7 +631,7 @@ const EventsPage: React.FC = () => {
         supabase.from('opponents').select('id, name, home_field_id'),
         supabase.from('tournaments').select('id, name, season, rules'),
         supabase.from('profiles').select('*').order('name', { ascending: true }),
-        supabase.from('callups').select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)'),
+        supabase.from('callups').select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)'),
         supabase.from('tournament_players').select('tournament_id, player_id'),
         supabase.from('tournament_suspensions').select('*').eq('status', 'active')
       ])
@@ -1269,7 +1196,7 @@ const EventsPage: React.FC = () => {
         event_id: eventId,
         player_id: targetId,
         status: 'called'
-      }], { onConflict: 'event_id, player_id' }).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)').single()
+      }], { onConflict: 'event_id, player_id' }).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)').single()
 
       if (error) throw error
 
