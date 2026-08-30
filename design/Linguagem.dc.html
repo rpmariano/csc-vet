@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&display=swap">
+  <style>
+    body { margin: 0; font-family: Helvetica, Arial, sans-serif; }
+    a { color: #009662; } a:hover { color: #164f16; }
+    .mont { font-family: Montserrat, Helvetica, Arial, sans-serif; }
+    .lbl { font-family: Montserrat, Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6b7280; }
+    .cell { display: flex; flex-direction: column; gap: 4px; }
+    .spec { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: #9ca3af; }
+  </style>
+</helmet>
+
+<div style="width: 900px; background: #ffffff; padding: 40px 44px 48px; display: flex; flex-direction: column; gap: 40px; color: #1f2937;">
+
+  <div style="display: flex; flex-direction: column; gap: 6px; border-bottom: 3px solid #e3c04d; padding-bottom: 20px;">
+    <span class="lbl" style="color: #009662;">CSC Veteranos</span>
+    <h1 class="mont" style="margin: 0; font-size: 30px; font-weight: 900; letter-spacing: -0.025em; color: #16211b;">Linguagem de componentes</h1>
+    <p style="margin: 4px 0 0; font-size: 15px; color: #6b7280; max-width: 62ch; line-height: 1.55;">Os tokens de cor mantêm-se. O que muda é o <strong style="color: #1f2937;">peso</strong>: hoje quase tudo usa <code style="font-family: ui-monospace, monospace; font-size: 13px; background: #f3f4f6; padding: 1px 5px; border-radius: 3px;">font-black</code> a 9–11px. O peso deixa de ser decoração e passa a ser o instrumento da hierarquia.</p>
+  </div>
+
+  <!-- ESCALA TIPOGRÁFICA -->
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <span class="lbl">1 · Escala tipográfica</span>
+    <p style="margin: 0; font-size: 14px; color: #6b7280; max-width: 68ch; line-height: 1.55;">A app é usada por jogadores dos 40 aos 60, muitas vezes ao ar livre. O corpo de texto passa a ter <strong style="color: #1f2937;">13px como piso</strong>. Os 9px desaparecem por completo; os 11px sobrevivem só em etiquetas maiúsculas com espaçamento.</p>
+
+    <div style="display: grid; grid-template-columns: 130px 1fr 150px; gap: 0; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+      <div style="background: #f9fafb; padding: 10px 16px; border-bottom: 1px solid #e5e7eb;"><span class="spec" style="color: #6b7280;">USO</span></div>
+      <div style="background: #f9fafb; padding: 10px 16px; border-bottom: 1px solid #e5e7eb;"><span class="spec" style="color: #6b7280;">EXEMPLO</span></div>
+      <div style="background: #f9fafb; padding: 10px 16px; border-bottom: 1px solid #e5e7eb;"><span class="spec" style="color: #6b7280;">TAMANHO / PESO</span></div>
+
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span style="font-size: 13px; color: #6b7280;">Números de destaque</span></div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span class="mont" style="font-size: 28px; font-weight: 900; letter-spacing: -0.03em;">GDSC</span></div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span class="spec">28 / 900</span></div>
+
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span style="font-size: 13px; color: #6b7280;">Título de página</span></div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span class="mont" style="font-size: 22px; font-weight: 900; letter-spacing: -0.025em;">Olá, Ricardo</span></div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span class="spec">22 / 900</span></div>
+
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span style="font-size: 13px; color: #6b7280;">Título de cartão</span></div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span class="mont" style="font-size: 15px; font-weight: 800;">Convívio de equipa</span></div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span class="spec">15 / 800</span></div>
+
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span style="font-size: 13px; color: #6b7280;">Título de linha</span></div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span class="mont" style="font-size: 14px; font-weight: 700;">Treino de quinta-feira</span></div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span class="spec">14 / 700</span></div>
+
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span style="font-size: 13px; color: #6b7280;">Corpo · <strong style="color: #b45309;">piso</strong></span></div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span style="font-size: 13px; color: #6b7280;">20:00 · Complexo Desportivo de Cascais</span></div>
+      <div style="padding: 14px 16px; border-bottom: 1px solid #f3f4f6;"><span class="spec">13 / 400</span></div>
+
+      <div style="padding: 14px 16px;"><span style="font-size: 13px; color: #6b7280;">Etiqueta de secção</span></div>
+      <div style="padding: 14px 16px;"><span class="lbl">Por responder</span></div>
+      <div style="padding: 14px 16px;"><span class="spec">11 / 700 · 0.12em</span></div>
+    </div>
+  </div>
+
+  <!-- HIERARQUIA DE CARTÕES -->
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <span class="lbl">2 · Três níveis de peso</span>
+    <p style="margin: 0; font-size: 14px; color: #6b7280; max-width: 68ch; line-height: 1.55;">A regra que resolve o problema de fundo: <strong style="color: #1f2937;">um só elemento de nível 1 por ecrã</strong>. Hoje a Home tem três a competir — o banner âmbar, o bilhete e o cartão de comunicados.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+
+      <div class="cell">
+        <div style="background: #164f16; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; min-height: 132px;">
+          <span class="mont" style="font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #e3c04d;">Nível 1</span>
+          <span class="mont" style="font-size: 18px; font-weight: 900; color: #fff; letter-spacing: -0.02em; line-height: 1.15;">A ação que o ecrã existe para provocar</span>
+        </div>
+        <div style="padding-top: 8px;">
+          <div class="mont" style="font-size: 14px; font-weight: 700;">Fundo verde sólido</div>
+          <div style="font-size: 13px; color: #6b7280; line-height: 1.5; margin-top: 2px;">Sem gradiente, sem borda. O dourado só aqui, na etiqueta e na barra de ação. Um por ecrã.</div>
+        </div>
+      </div>
+
+      <div class="cell">
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; min-height: 132px;">
+          <span class="lbl">Nível 2</span>
+          <span class="mont" style="font-size: 18px; font-weight: 800; color: #1f2937; letter-spacing: -0.02em; line-height: 1.15;">Conteúdo que se percorre</span>
+        </div>
+        <div style="padding-top: 8px;">
+          <div class="mont" style="font-size: 14px; font-weight: 700;">Branco, traço de 1px</div>
+          <div style="font-size: 13px; color: #6b7280; line-height: 1.5; margin-top: 2px;">Sem sombra. Listas de linhas separadas por <code style="font-family: ui-monospace, monospace; font-size: 12px;">#f3f4f6</code>, não um cartão por item.</div>
+        </div>
+      </div>
+
+      <div class="cell">
+        <div style="background: #f3f4f6; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; min-height: 132px;">
+          <span class="lbl">Nível 3</span>
+          <span class="mont" style="font-size: 18px; font-weight: 700; color: #4b5563; letter-spacing: -0.02em; line-height: 1.15;">Referência, consultada de raro</span>
+        </div>
+        <div style="padding-top: 8px;">
+          <div class="mont" style="font-size: 14px; font-weight: 700;">Sem caixa nenhuma</div>
+          <div style="font-size: 13px; color: #6b7280; line-height: 1.5; margin-top: 2px;">Texto direto sobre o fundo da página. Comunicados e histórico vivem aqui.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CHIPS DE ESTADO -->
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <span class="lbl">3 · Chips de estado</span>
+    <p style="margin: 0; font-size: 14px; color: #6b7280; max-width: 68ch; line-height: 1.55;">Os emoji (🔴 🟢 ⚽ 🛡️) saem: leem-se mal, mudam de desenho conforme o telemóvel e um leitor de ecrã anuncia-os por extenso. Entram um ponto colorido e uma forma única.</p>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 6px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 999px; padding: 5px 12px;">
+        <div style="width: 7px; height: 7px; border-radius: 999px; background: #059669;"></div>
+        <span class="mont" style="font-size: 13px; font-weight: 700; color: #065f46;">Apto</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 999px; padding: 5px 12px;">
+        <div style="width: 7px; height: 7px; border-radius: 999px; background: #dc2626;"></div>
+        <span class="mont" style="font-size: 13px; font-weight: 700; color: #991b1b;">Lesionado</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; padding: 5px 12px;">
+        <div style="width: 7px; height: 7px; border-radius: 999px; background: #d97706;"></div>
+        <span class="mont" style="font-size: 13px; font-weight: 700; color: #92400e;">Por responder</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 999px; padding: 5px 12px;">
+        <div style="width: 7px; height: 7px; border-radius: 999px; background: #9ca3af;"></div>
+        <span class="mont" style="font-size: 13px; font-weight: 700; color: #4b5563;">Inativo</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; background: #164f16; border-radius: 999px; padding: 5px 12px;">
+        <span class="mont" style="font-size: 13px; font-weight: 700; color: #e3c04d;">Admin</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 999px; padding: 5px 12px;">
+        <span class="mont" style="font-size: 13px; font-weight: 700; color: #1e40af;">Treinador</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LISTA VS CARROSSEL -->
+  <div style="display: flex; flex-direction: column; gap: 16px; background: #f9fafb; border-radius: 14px; padding: 24px;">
+    <span class="lbl">4 · Listas, não carrosséis</span>
+    <p style="margin: 0; font-size: 14px; color: #4b5563; max-width: 68ch; line-height: 1.6;">A Home tem hoje três carrosséis — jogos, convocatórias e comunicados. Um carrossel esconde conteúdo atrás de uma interação e não diz o que falta ver; três obrigam o jogador a percorrer três pilhas separadas para saber o que tem de responder. A proposta troca-os todos por listas: <strong style="color: #1f2937;">tudo visível, contável de relance, sem estado escondido</strong>.</p>
+    <div style="display: flex; gap: 28px; padding-top: 4px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span class="mont" style="font-size: 24px; font-weight: 900; color: #dc2626;">3 → 0</span>
+        <span style="font-size: 13px; color: #6b7280;">carrosséis</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span class="mont" style="font-size: 24px; font-weight: 900; color: #dc2626;">2 → 1</span>
+        <span style="font-size: 13px; color: #6b7280;">sítios com RSVP</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span class="mont" style="font-size: 24px; font-weight: 900; color: #059669;">9 → 13px</span>
+        <span style="font-size: 13px; color: #6b7280;">piso do corpo de texto</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

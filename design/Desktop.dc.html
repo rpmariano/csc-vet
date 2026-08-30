@@ -1,0 +1,211 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&display=swap">
+  <style>
+    body { margin: 0; font-family: Helvetica, Arial, sans-serif; }
+    a { color: #009662; } a:hover { color: #164f16; }
+    .mont { font-family: Montserrat, Helvetica, Arial, sans-serif; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; background: #f3f4f6; display: flex; overflow: hidden; color: #1f2937;">
+
+  <!-- Sidebar: 256px, como hoje. A hierarquia muda por dentro. -->
+  <div style="width: 256px; background: #164f16; flex-shrink: 0; display: flex; flex-direction: column;">
+    <div style="background: #ffffff; border-bottom: 4px solid #e3c04d; padding: 20px; display: flex; align-items: center; justify-content: center;">
+      <span class="mont" style="font-size: 17px; font-weight: 900; color: #164f16; letter-spacing: -0.02em;">GDS CASCAIS</span>
+    </div>
+
+    <div style="padding: 20px 16px; display: flex; flex-direction: column; gap: 22px;">
+      <!-- Cartão de perfil: um só peso, sem gradiente nem borda dourada -->
+      <div style="background: rgba(0,0,0,.22); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: #009662; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; flex-shrink: 0;">R</div>
+          <div style="min-width: 0;">
+            <div class="mont" style="font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Ricardo Mariano</div>
+            <div style="display: flex; align-items: center; gap: 5px; margin-top: 2px;">
+              <div style="width: 6px; height: 6px; border-radius: 999px; background: #34d399;"></div>
+              <span style="font-size: 12px; color: rgba(255,255,255,.6);">Jogador · Apto</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span class="mont" style="font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.4); padding: 0 10px 6px;">Principal</span>
+        <div style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 10px; background: #e3c04d;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#164f16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          <span class="mont" style="font-size: 14px; font-weight: 700; color: #164f16;">Home</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 10px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span class="mont" style="font-size: 14px; font-weight: 600; color: rgba(255,255,255,.82);">Agenda</span>
+          <span class="mont" style="margin-left: auto; font-size: 12px; font-weight: 800; color: #164f16; background: #e3c04d; border-radius: 999px; padding: 1px 7px;">2</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 10px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
+          <span class="mont" style="font-size: 14px; font-weight: 600; color: rgba(255,255,255,.82);">Estatísticas</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 10px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0012 0V3H6zM6 5H3v2a3 3 0 003 3M18 5h3v2a3 3 0 01-3 3M9 21h6M12 15v6"/></svg>
+          <span class="mont" style="font-size: 14px; font-weight: 600; color: rgba(255,255,255,.82);">Classificações</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span class="mont" style="font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.4); padding: 0 10px 6px;">Clube</span>
+        <div style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 10px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+          <span class="mont" style="font-size: 14px; font-weight: 600; color: rgba(255,255,255,.82);">Fichas de jogo</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 10px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9v0a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          <span class="mont" style="font-size: 14px; font-weight: 600; color: rgba(255,255,255,.82);">A minha ficha</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conteúdo: grelha de 12, largura máxima 1120px — não max-w-lg -->
+  <div style="flex: 1; padding: 32px 40px; overflow: hidden;">
+    <div style="max-width: 1120px; display: flex; flex-direction: column; gap: 28px;">
+
+      <div style="display: flex; align-items: baseline; justify-content: space-between;">
+        <h1 class="mont" style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.025em; color: #16211b;">Olá, Ricardo</h1>
+        <span style="font-size: 14px; color: #6b7280;">Sábado, 30 de agosto</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; align-items: start;">
+
+        <!-- Nível 1: o próximo compromisso, 7 colunas -->
+        <div style="grid-column: span 7; background: #164f16; border-radius: 16px; overflow: hidden;">
+          <div style="padding: 22px 24px; display: flex; flex-direction: column; gap: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span class="mont" style="font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #e3c04d;">Próximo jogo</span>
+              <span class="mont" style="font-size: 13px; font-weight: 700; color: #fff; background: rgba(255,255,255,.14); border-radius: 999px; padding: 4px 12px;">Sábado, 6 Set · 10:00</span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 20px;">
+              <div style="flex: 1; display: flex; align-items: center; gap: 14px; min-width: 0;">
+                <div style="width: 56px; height: 56px; border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="mont" style="font-size: 15px; font-weight: 900; color: #164f16;">GDSC</span></div>
+                <div style="min-width: 0;">
+                  <div class="mont" style="font-size: 28px; font-weight: 900; color: #fff; letter-spacing: -0.03em; line-height: 1;">GDSC</div>
+                  <div style="font-size: 14px; color: rgba(255,255,255,.62); margin-top: 3px;">Em casa</div>
+                </div>
+              </div>
+              <span class="mont" style="font-size: 15px; font-weight: 700; color: rgba(255,255,255,.4);">vs</span>
+              <div style="flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 14px; min-width: 0; text-align: right;">
+                <div style="min-width: 0;">
+                  <div class="mont" style="font-size: 28px; font-weight: 900; color: #fff; letter-spacing: -0.03em; line-height: 1;">ESTO</div>
+                  <div style="font-size: 14px; color: rgba(255,255,255,.62); margin-top: 3px;">Estoril Veteranos</div>
+                </div>
+                <div style="width: 56px; height: 56px; border-radius: 12px; background: rgba(255,255,255,.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><span class="mont" style="font-size: 15px; font-weight: 900; color: #fff;">ESTO</span></div>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 36px;">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 13px; color: rgba(255,255,255,.55);">Concentração</span>
+                <span class="mont" style="font-size: 16px; font-weight: 800; color: #fff;">09:15</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 13px; color: rgba(255,255,255,.55);">Campo</span>
+                <span class="mont" style="font-size: 16px; font-weight: 800; color: #fff;">Complexo Desportivo de Cascais, nº2</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: #e3c04d; padding: 14px 24px; display: flex; align-items: center; gap: 12px;">
+            <span class="mont" style="flex: 1; font-size: 14px; font-weight: 800; color: #3c3008;">Vais estar presente?</span>
+            <button style="border: 0; background: #164f16; color: #fff; border-radius: 10px; padding: 0 22px; height: 44px; font-size: 14px; font-weight: 700; font-family: Montserrat, Helvetica, sans-serif; cursor: pointer;">Sim, vou</button>
+            <button style="background: transparent; color: #3c3008; border: 1.5px solid rgba(60,48,8,.35); border-radius: 10px; padding: 0 22px; height: 44px; font-size: 14px; font-weight: 700; font-family: Montserrat, Helvetica, sans-serif; cursor: pointer;">Não posso</button>
+          </div>
+        </div>
+
+        <!-- Nível 2 e 3: 5 colunas -->
+        <div style="grid-column: span 5; display: flex; flex-direction: column; gap: 24px;">
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between;">
+              <span class="mont" style="font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6b7280;">Por responder</span>
+              <span class="mont" style="font-size: 12px; font-weight: 800; color: #b45309; background: #fef3c7; border-radius: 999px; padding: 2px 9px;">2</span>
+            </div>
+            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-bottom: 1px solid #f3f4f6;">
+                <div style="width: 40px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center;">
+                  <span class="mont" style="font-size: 17px; font-weight: 900; color: #164f16; line-height: 1;">09</span>
+                  <span style="font-size: 11px; color: #6b7280; text-transform: uppercase;">Set</span>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div class="mont" style="font-size: 14px; font-weight: 700;">Treino</div>
+                  <div style="font-size: 13px; color: #6b7280;">20:00 · Cascais nº2</div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button aria-label="Confirmar" style="width: 44px; height: 44px; border-radius: 10px; border: 0; background: #ecfdf5; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  </button>
+                  <button aria-label="Recusar" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #e5e7eb; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 14px; padding: 13px 16px;">
+                <div style="width: 40px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center;">
+                  <span class="mont" style="font-size: 17px; font-weight: 900; color: #164f16; line-height: 1;">13</span>
+                  <span style="font-size: 11px; color: #6b7280; text-transform: uppercase;">Set</span>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div class="mont" style="font-size: 14px; font-weight: 700;">Convívio de equipa</div>
+                  <div style="font-size: 13px; color: #6b7280;">19:30 · Sede do clube</div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button aria-label="Confirmar" style="width: 44px; height: 44px; border-radius: 10px; border: 0; background: #ecfdf5; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  </button>
+                  <button aria-label="Recusar" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #e5e7eb; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between;">
+              <span class="mont" style="font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6b7280;">Comunicados</span>
+              <span class="mont" style="font-size: 13px; font-weight: 700; color: #009662;">Ver todos</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; gap: 10px; align-items: baseline;">
+                <div style="width: 5px; height: 5px; border-radius: 999px; background: #e3c04d; flex-shrink: 0; transform: translateY(-3px);"></div>
+                <div>
+                  <div class="mont" style="font-size: 14px; font-weight: 700; line-height: 1.35;">Quotas de setembro já disponíveis</div>
+                  <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">há 2 dias</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 10px; align-items: baseline;">
+                <div style="width: 5px; height: 5px; border-radius: 999px; background: #d1d5db; flex-shrink: 0; transform: translateY(-3px);"></div>
+                <div>
+                  <div class="mont" style="font-size: 14px; font-weight: 700; line-height: 1.35;">Novo equipamento — recolha na sede</div>
+                  <div style="font-size: 12px; color: #9ca3af; margin-top: 2px;">há 5 dias</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
