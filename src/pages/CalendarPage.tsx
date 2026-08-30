@@ -1552,9 +1552,9 @@ const CalendarPage: React.FC = () => {
       <div className={`flex-1 flex items-center ${isRight ? 'justify-end' : 'justify-start'} min-w-0`}>
         <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {clubSettings?.logo_url ? (
-            <img src={clubSettings.logo_url} alt={cscSigla} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
+            <img src={clubSettings.logo_url} alt={cscSigla} className="w-8 h-8 object-contain shrink-0 bg-white rounded-full p-0.5 border border-gray-100 shadow-xs" />
           ) : (
-            <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+            <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-full flex items-center justify-center text-xs font-black shrink-0">
               {cscSigla}
             </div>
           )}
@@ -1570,9 +1570,9 @@ const CalendarPage: React.FC = () => {
       <div className={`flex-1 flex items-center ${isRight ? 'justify-end' : 'justify-start'} min-w-0`}>
         <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {event.opponent?.logo_url ? (
-            <img src={event.opponent.logo_url} alt={oppSigla} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
+            <img src={event.opponent.logo_url} alt={oppSigla} className="w-8 h-8 object-contain shrink-0 bg-white rounded-full p-0.5 border border-gray-100 shadow-xs" />
           ) : (
-            <div className="w-8 h-8 bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+            <div className="w-8 h-8 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
               {oppSigla}
             </div>
           )}
@@ -1641,7 +1641,7 @@ const CalendarPage: React.FC = () => {
 
                   {/* VS Badge */}
                   <div className="shrink-0 px-1 flex items-center justify-center">
-                    <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                    <span className="w-7 h-7 flex items-center justify-center text-[11px] font-black rounded-full bg-csc-gold text-csc-dark shadow-xs">
                       VS
                     </span>
                   </div>
@@ -2313,9 +2313,9 @@ const CalendarPage: React.FC = () => {
                         <div className="flex-1 flex flex-col items-start text-left min-w-0">
                           <div className="flex items-center gap-2">
                             {leftLogo ? (
-                              <img src={leftLogo} alt={leftSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
+                              <img src={leftLogo} alt={leftSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 bg-white rounded-full p-0.5 border border-gray-100 shadow-xs" />
                             ) : (
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shrink-0">
+                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-csc-dark text-csc-gold rounded-full flex items-center justify-center text-xs font-black shrink-0">
                                 {leftSigla}
                               </div>
                             )}
@@ -2330,7 +2330,7 @@ const CalendarPage: React.FC = () => {
 
                         {/* VS Badge */}
                         <div className="shrink-0 px-1 flex flex-col items-center">
-                          <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                          <span className="w-8 h-8 flex items-center justify-center text-xs font-black rounded-full bg-csc-gold text-csc-dark shadow-xs">
                             VS
                           </span>
                         </div>
@@ -2339,9 +2339,9 @@ const CalendarPage: React.FC = () => {
                         <div className="flex-1 flex flex-col items-end text-right min-w-0">
                           <div className="flex items-center gap-2 flex-row-reverse">
                             {rightLogo ? (
-                              <img src={rightLogo} alt={rightSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
+                              <img src={rightLogo} alt={rightSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 bg-white rounded-full p-0.5 border border-gray-100 shadow-xs" />
                             ) : (
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shrink-0">
+                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-csc-dark text-csc-gold rounded-full flex items-center justify-center text-xs font-black shrink-0">
                                 {rightSigla}
                               </div>
                             )}
