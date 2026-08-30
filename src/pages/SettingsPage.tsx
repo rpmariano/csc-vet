@@ -12,7 +12,7 @@ import {
   AlertCircle,
   Lock
 } from 'lucide-react'
-import { useAuth, encodeRolesToNotes, cleanNotesFromRolesTag } from '../context/AuthContext'
+import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 import { toast } from '../context/ToastContext'
@@ -150,8 +150,9 @@ const SettingsPage: React.FC = () => {
 
     const sanitizeDate = (val?: string | null) => (val && val.trim() ? val.trim() : null)
     const sanitizeText = (val?: string | null) => (val && val.trim() ? val.trim() : null)
-    const currentRoles = assignedRoles || [profile.role]
-    const medicalNotesEncoded = encodeRolesToNotes(formMedicalNotes, currentRoles)
+    // Os papéis já não viajam escondidos dentro das notas médicas: vivem na coluna
+    // `roles`, que só um administrador pode escrever. Aqui guardamos apenas o texto.
+    const medicalNotesEncoded = sanitizeText(formMedicalNotes)
 
     const payload = {
       name: formName.trim(),
@@ -335,7 +336,7 @@ const SettingsPage: React.FC = () => {
                 value={formNif}
                 onChange={(e) => setFormNif(e.target.value)}
                 className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
-                placeholder="228649129"
+                placeholder="000 000 000"
               />
             </div>
           </div>
@@ -348,7 +349,7 @@ const SettingsPage: React.FC = () => {
                 value={formIdNumber}
                 onChange={(e) => setFormIdNumber(e.target.value)}
                 className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
-                placeholder="11960727"
+                placeholder="00000000"
               />
             </div>
             <div>
@@ -377,7 +378,7 @@ const SettingsPage: React.FC = () => {
               value={formAddress}
               onChange={(e) => setFormAddress(e.target.value)}
               className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
-              placeholder="Rua Serra da Arrábida, LT 1263, 3 Esq."
+              placeholder="Rua e número da morada"
             />
           </div>
 
@@ -389,7 +390,7 @@ const SettingsPage: React.FC = () => {
                 value={formPostalCode}
                 onChange={(e) => setFormPostalCode(e.target.value)}
                 className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
-                placeholder="2975-164"
+                placeholder="0000-000"
               />
             </div>
             <div>

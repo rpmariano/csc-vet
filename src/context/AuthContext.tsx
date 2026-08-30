@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
-import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 
 export type UserRole = 'player' | 'coach' | 'admin'
 export type ProfileStatus = 'active' | 'inactive' | 'injured'
@@ -15,7 +14,8 @@ export interface Profile {
   phone?: string | null
   photo_url?: string | null
   role: UserRole
-  roles?: UserRole[]
+  /** Coluna `roles` do Supabase, protegida por RLS. É a fonte de verdade dos papéis. */
+  roles?: UserRole[] | null
   status: ProfileStatus
   jersey_number?: number | null
   kit_size?: string | null
@@ -40,12 +40,6 @@ export interface Profile {
   created_at?: string
 }
 
-export const encodeRolesToNotes = (notes: string | null | undefined, roles: UserRole[]): string | null => {
-  const clean = (notes || '').replace(/<!--roles:[^>]+-->/g, '').trim()
-  const tag = `<!--roles:${roles.join(',')}-->`
-  return clean ? `${clean} ${tag}` : tag
-}
-
 export const formatDisplayName = (name: string, _shirtName?: string | null): string => {
   if (!name) return ''
   return name.trim()
@@ -57,21 +51,35 @@ export const cleanNotesFromRolesTag = (notes: string | null | undefined): string
   return cleaned || null
 }
 
+const VALID_ROLES: UserRole[] = ['player', 'coach', 'admin']
+
 export const extractRolesFromProfile = (profile: Profile | null | undefined): UserRole[] => {
   if (!profile) return ['player']
-  
-  // 1. Check if encoded in medical_notes or position
+
+  // 1. Coluna `roles` do Supabase — a fonte de verdade. É escrita apenas por
+  //    administradores (a RLS impede que cada um altere os seus próprios papéis).
+  if (Array.isArray(profile.roles) && profile.roles.length > 0) {
+    const fromColumn = profile.roles.filter(r => VALID_ROLES.includes(r))
+    if (fromColumn.length > 0) {
+      // O papel real tem sempre de constar, mesmo que a coluna esteja incompleta.
+      return fromColumn.includes(profile.role) ? fromColumn : [...fromColumn, profile.role]
+    }
+  }
+
+  // 2. Etiqueta <!--roles:...--> escondida em medical_notes/position: formato
+  //    legado, mantido apenas para o intervalo entre este deploy e a migração
+  //    supabase_roles_migration.sql. Assim que a migração correr, deixa de ter uso.
   const source = `${profile.medical_notes || ''} ${profile.position || ''}`
   const match = source.match(/<!--roles:([^>]+)-->/)
   if (match && match[1]) {
     const parsed = match[1]
       .split(',')
       .map(r => r.trim() as UserRole)
-      .filter(r => ['player', 'coach', 'admin'].includes(r))
+      .filter(r => VALID_ROLES.includes(r))
     if (parsed.length > 0) return parsed
   }
 
-  // 2. Fallback to base role
+  // 3. Derivar da coluna `role`
   if (profile.role === 'admin') return ['admin', 'coach', 'player']
   if (profile.role === 'coach') return ['coach', 'player']
   return ['player']
@@ -156,22 +164,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .ilike('email', cleanEmail)
 
         // Encontrar ficha que tenha dados de atleta (número, posição, camisola ou ID diferente)
-        const squadCardFromDb = (matchingProfiles || []).find(p => p.jersey_number != null || p.shirt_name || (p.id !== userId && p.position))
-        
-        // B. Se não estiver no Supabase, procurar na lista de sementes (INITIAL_PLAYERS_DATA)
-        const seedMatch = !squadCardFromDb 
-          ? INITIAL_PLAYERS_DATA.find(p => p.email && p.email.toLowerCase().trim() === cleanEmail)
-          : null
-
-        const targetCard = squadCardFromDb || seedMatch
+        const targetCard = (matchingProfiles || []).find(p => p.jersey_number != null || p.shirt_name || (p.id !== userId && p.position))
 
         if (targetCard) {
           // PRESERVAR 100% dos dados da ficha de atleta (nome, número, posição, alcunha, camisola, notas, foto do atleta)
           // NUNCA substituir o nome ou a foto do atleta pelos metadados do Google
           const athletePhoto = targetCard.photo_url || null
 
+          // `role` e `roles` ficam de fora de propósito: são geridos por
+          // administradores e a RLS rejeita a escrita, o que faria falhar o update.
+          const { role: _role, roles: _roles, ...cardWithoutRoles } = targetCard as Profile
+
           const mergedData: Partial<Profile> = {
-            ...targetCard,
+            ...cardWithoutRoles,
             id: userId,
             email: cleanEmail,
             name: targetCard.name, // MANTER O NOME DO ATLETA (ex: Bruno Raul / Tochê)

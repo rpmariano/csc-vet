@@ -35,7 +35,6 @@ import { supabase } from '../lib/supabaseClient'
 import { useSearchParams } from 'react-router-dom'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
-import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
@@ -77,51 +76,12 @@ export const formatOpponentSigla = (opp?: { name?: string; initials?: string | n
   return 'ADV'
 }
 
-const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
-  const playersList: Profile[] = INITIAL_PLAYERS_DATA.map((seedPlayer, idx) => ({
-    ...seedPlayer,
-    id: `seed-${idx}`,
-  } as Profile))
-
-  remoteProfiles.forEach((remotePlayer) => {
-    let matchedIdx = -1
-
-    // 1. Verificar por email
-    if (remotePlayer.email) {
-      const remEmail = remotePlayer.email.toLowerCase().trim()
-      matchedIdx = playersList.findIndex(p => p.email && p.email.toLowerCase().trim() === remEmail)
-    }
-
-    // 2. Verificar por nome / nome da camisola / alcunha
-    if (matchedIdx === -1 && remotePlayer.name) {
-      const remName = remotePlayer.name.toLowerCase().trim()
-      matchedIdx = playersList.findIndex(p => p.name && (
-        p.name.toLowerCase().trim() === remName ||
-        p.shirt_name?.toLowerCase().trim() === remName ||
-        p.nickname?.toLowerCase().trim() === remName
-      ))
-    }
-
-    // 3. Verificar por número da camisola
-    if (matchedIdx === -1 && remotePlayer.jersey_number != null) {
-      matchedIdx = playersList.findIndex(p => p.jersey_number === remotePlayer.jersey_number)
-    }
-
-    if (matchedIdx !== -1) {
-      const seed = playersList[matchedIdx]
-      playersList[matchedIdx] = {
-        ...seed,
-        ...remotePlayer,
-        id: remotePlayer.id, // UUID real do Supabase
-        shirt_name: remotePlayer.shirt_name || seed.shirt_name || null,
-        jersey_number: remotePlayer.jersey_number ?? seed.jersey_number ?? null,
-      }
-    } else {
-      playersList.push(remotePlayer)
-    }
-  })
-
-  return playersList.sort((a, b) => {
+const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
+  // A base de dados é a única fonte do plantel. Até agosto de 2026 esta função
+  // fundia os perfis do Supabase com uma lista de sementes em src/data/initialPlayers.ts,
+  // ficheiro que continha dados pessoais reais (NIF, IBAN, morada) e que por isso ia
+  // parar ao JavaScript servido publicamente. Foi removido.
+  return [...remoteProfiles].sort((a, b) => {
     if (a.jersey_number && b.jersey_number) return a.jersey_number - b.jersey_number
     if (a.jersey_number) return -1
     if (b.jersey_number) return 1
@@ -848,7 +808,7 @@ const CalendarPage: React.FC = () => {
 
       let mergedPlayers: Profile[] = []
       if (profilesRes.data) {
-        mergedPlayers = mergeProfilesWithSeedData((profilesRes.data as Profile[]) || [])
+        mergedPlayers = ordenarPlantel((profilesRes.data as Profile[]) || [])
         setAllPlayers(mergedPlayers)
       }
 

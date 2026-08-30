@@ -24,10 +24,9 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { useAuth, extractRolesFromProfile, encodeRolesToNotes, cleanNotesFromRolesTag } from '../context/AuthContext'
+import { useAuth, extractRolesFromProfile, cleanNotesFromRolesTag } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../components/SoccerPitchSelector'
-import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
@@ -139,80 +138,9 @@ const TeamManagementPage: React.FC = () => {
   const isCoachOrAdmin = currentUserProfile && ['coach', 'admin'].includes(currentUserProfile.role)
   const isAdmin = currentUserProfile?.role === 'admin'
 
-  const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
-    // 1. Iniciar com a lista dos atletas de semente
-    const playersList: Profile[] = INITIAL_PLAYERS_DATA.map((seedPlayer, idx) => ({
-      ...seedPlayer,
-      id: `seed-${idx}`,
-    } as Profile))
-
-    remoteProfiles.forEach((remotePlayer) => {
-      let matchedIdx = -1
-
-      // 1. Verificar por ID
-      if (remotePlayer.id && !remotePlayer.id.startsWith('seed-')) {
-        matchedIdx = playersList.findIndex(p => p.id === remotePlayer.id)
-      }
-
-      // 2. Verificar por email
-      if (matchedIdx === -1 && remotePlayer.email) {
-        const remEmail = remotePlayer.email.toLowerCase().trim()
-        matchedIdx = playersList.findIndex(p => p.email && p.email.toLowerCase().trim() === remEmail)
-      }
-
-      // 3. Verificar por número de camisola (#24)
-      if (matchedIdx === -1 && remotePlayer.jersey_number != null) {
-        matchedIdx = playersList.findIndex(p => p.jersey_number === remotePlayer.jersey_number)
-      }
-
-      // 4. Verificar por nome na camisola / alcunha
-      if (matchedIdx === -1 && (remotePlayer.shirt_name || remotePlayer.nickname)) {
-        const remShirt = (remotePlayer.shirt_name || remotePlayer.nickname || '').toLowerCase().trim()
-        matchedIdx = playersList.findIndex(p => {
-          const pShirt = (p.shirt_name || '').toLowerCase().trim()
-          const pNick = (p.nickname || '').toLowerCase().trim()
-          return (pShirt && pShirt === remShirt) || (pNick && pNick === remShirt)
-        })
-      }
-
-      // 5. Verificar por nome / partes do nome
-      if (matchedIdx === -1 && remotePlayer.name) {
-        const remName = remotePlayer.name.toLowerCase().trim()
-        matchedIdx = playersList.findIndex(p => {
-          const pName = (p.name || '').toLowerCase().trim()
-          if (!pName) return false
-          if (pName === remName) return true
-
-          // Correspondência por partes do nome se ambos tiverem mais de 1 palavra
-          const remParts = remName.split(' ').filter(w => w.length > 2)
-          const pParts = pName.split(' ').filter(w => w.length > 2)
-          const common = remParts.filter(w => pParts.includes(w))
-          return common.length >= 2
-        })
-      }
-
-      if (matchedIdx !== -1) {
-        const existing = playersList[matchedIdx]
-        // Se remotePlayer for uma conta de login sem dados desportivos próprios, não sobrepor a identidade do atleta
-        const isGenericAccount = remotePlayer.jersey_number == null && !remotePlayer.shirt_name && !remotePlayer.nif
-
-        playersList[matchedIdx] = {
-          ...existing,
-          ...remotePlayer,
-          id: remotePlayer.id, // Forçar o UUID real da conta
-          name: isGenericAccount ? existing.name : (remotePlayer.name || existing.name),
-          shirt_name: existing.shirt_name || remotePlayer.shirt_name || null,
-          nickname: existing.nickname || remotePlayer.nickname || null,
-          jersey_number: existing.jersey_number ?? remotePlayer.jersey_number ?? null,
-          photo_url: existing.photo_url || remotePlayer.photo_url || null,
-          position: existing.position || remotePlayer.position || 'Médio Centro',
-        }
-      } else {
-        playersList.push(remotePlayer)
-      }
-    })
-
-    return playersList.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
+    // A base de dados é a única fonte do plantel — ver nota em CalendarPage.
+    return [...remoteProfiles].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   }
 
   const fetchProfiles = async () => {
@@ -226,10 +154,10 @@ const TeamManagementPage: React.FC = () => {
       if (error) {
         console.warn('Supabase query error, fallback to merged dataset:', error)
       }
-      setProfiles(mergeProfilesWithSeedData((data as Profile[]) || []))
+      setProfiles(ordenarPlantel((data as Profile[]) || []))
     } catch (err) {
       console.error(err)
-      setProfiles(mergeProfilesWithSeedData([]))
+      setProfiles(ordenarPlantel([]))
     } finally {
       setLoading(false)
     }
@@ -465,7 +393,9 @@ const TeamManagementPage: React.FC = () => {
       : 'player'
 
     const positionStr = formPositions.length > 0 ? formPositions.join(', ') : 'Médio Centro'
-    const medicalNotesEncoded = encodeRolesToNotes(formMedicalNotes, formRoles)
+    // Os papéis passam a ir na coluna `roles`, protegida por RLS, em vez de uma
+    // etiqueta <!--roles:--> escondida dentro do texto das notas médicas.
+    const medicalNotesEncoded = formMedicalNotes && formMedicalNotes.trim() ? formMedicalNotes.trim() : null
 
     const sanitizeDate = (val?: string | null) => (val && val.trim() ? val.trim() : null)
     const sanitizeText = (val?: string | null) => (val && val.trim() ? val.trim() : null)
@@ -477,6 +407,9 @@ const TeamManagementPage: React.FC = () => {
       email: formEmail.trim().toLowerCase(),
       phone: sanitizeText(formPhone),
       role: primaryRole,
+      // Coluna `roles`: a lista completa de papéis atribuídos. Só administradores
+      // conseguem escrevê-la — a RLS rejeita a alteração feita pelo próprio.
+      roles: formRoles,
       status: formStatus,
       jersey_number: formJerseyNumber !== '' && !isNaN(Number(formJerseyNumber)) ? Number(formJerseyNumber) : null,
       kit_size: sanitizeText(formKitSize),
@@ -1463,7 +1396,7 @@ const TeamManagementPage: React.FC = () => {
                       value={formNif}
                       onChange={(e) => setFormNif(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                      placeholder="228649129"
+                      placeholder="000 000 000"
                     />
                   </div>
                 </div>
@@ -1476,7 +1409,7 @@ const TeamManagementPage: React.FC = () => {
                       value={formIdNumber}
                       onChange={(e) => setFormIdNumber(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                      placeholder="11960727"
+                      placeholder="00000000"
                     />
                   </div>
                   <div>
@@ -1505,7 +1438,7 @@ const TeamManagementPage: React.FC = () => {
                     value={formAddress}
                     onChange={(e) => setFormAddress(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                    placeholder="Rua Serra da Arrábida, LT 1263, 3 Esq."
+                    placeholder="Rua e número da morada"
                   />
                 </div>
 
@@ -1517,7 +1450,7 @@ const TeamManagementPage: React.FC = () => {
                       value={formPostalCode}
                       onChange={(e) => setFormPostalCode(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
-                      placeholder="2975-164"
+                      placeholder="0000-000"
                     />
                   </div>
                   <div>
