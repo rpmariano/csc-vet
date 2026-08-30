@@ -10,7 +10,6 @@ import {
   Trophy,
   Dumbbell,
   Users,
-  Navigation,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -409,106 +408,120 @@ const Home: React.FC = () => {
             const local = infoLocal(currentMatch)
 
             return (
-              <div {...matchSwipeHandlers} className="bg-csc-dark text-white rounded-2xl overflow-hidden select-none touch-pan-y">
-                <div className="p-5 sm:p-6 space-y-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-csc-gold">Próximo jogo</span>
-                      <p className="text-xs text-white/60 truncate mt-0.5">{competitionLabel} · {venueLabel}</p>
-                    </div>
-                    <span className="text-xs font-bold text-white bg-white/15 rounded-full px-3 py-1 shrink-0">
-                      {getCountdownLabel(currentMatch.date_time)}
-                    </span>
+              <div {...matchSwipeHandlers} className="relative bg-gradient-to-br from-csc-dark to-csc-light text-white rounded-3xl overflow-hidden select-none touch-pan-y shadow-lg">
+                {/* Brilho radial subtil atrás do confronto — dá profundidade ao gradiente
+                    sem se tornar um efeito chamativo. */}
+                <div className="pointer-events-none absolute inset-x-0 top-16 h-56 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.10),transparent_70%)]" />
+
+                {/* Contador de dias: canto, para não quebrar a simetria do resto do cartão */}
+                <span className="absolute top-4 right-4 text-xs font-bold text-white bg-white/15 rounded-full px-3 py-1">
+                  {getCountdownLabel(currentMatch.date_time)}
+                </span>
+
+                <div className="relative p-6 sm:p-7 flex flex-col items-center text-center space-y-5">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-csc-gold">Próximo jogo</span>
+                    <p className="text-xs text-white/60 mt-1">{competitionLabel} · {venueLabel}</p>
                   </div>
 
-                  {/* Data por extenso, em linha própria — antes ficava espremida a par do campo */}
-                  <p className="text-base font-bold capitalize -mb-1">
+                  <p className="text-lg font-bold capitalize">
                     {new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
                   </p>
 
-                  {/* Duelo de equipas: só as siglas — o nome por extenso não cabe e já
-                      está identificado pelo emblema e pela sigla. */}
-                  <div
-                    onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
-                    className="flex items-center gap-3 cursor-pointer group"
-                  >
-                    <div className="flex-1 flex items-center gap-3 min-w-0">
-                      {leftLogo ? (
-                        <img src={leftLogo} alt="" className="w-11 h-11 object-contain shrink-0 bg-white rounded-xl group-hover:scale-105 transition-transform" />
-                      ) : (
-                        <div className="w-11 h-11 bg-white text-csc-dark rounded-xl flex items-center justify-center text-xs font-black shrink-0">{leftInitials}</div>
-                      )}
-                      <p className="text-lg sm:text-xl font-black leading-tight uppercase truncate min-w-0">{leftInitials}</p>
-                    </div>
-                    <span className="text-xs font-bold text-white/40 shrink-0">vs</span>
-                    <div className="flex-1 flex items-center justify-end gap-3 min-w-0 text-right">
-                      <p className="text-lg sm:text-xl font-black leading-tight uppercase truncate min-w-0">{rightInitials}</p>
-                      {rightLogo ? (
-                        <img src={rightLogo} alt="" className="w-11 h-11 object-contain shrink-0 bg-white/15 rounded-xl group-hover:scale-105 transition-transform" />
-                      ) : (
-                        <div className="w-11 h-11 bg-white/15 text-white rounded-xl flex items-center justify-center text-xs font-black shrink-0">{rightInitials}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Horários: concentração e hora do jogo, lado a lado */}
-                  <div className="flex gap-6">
-                    {horaConcentracao && (
-                      <div>
-                        <p className="text-xs text-white/55">Concentração</p>
-                        <p className="text-sm font-bold">{horaConcentracao}</p>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-xs text-white/55">Jogo</p>
-                      <p className="text-sm font-bold">{horaJogo}</p>
-                    </div>
-                  </div>
-
-                  {/* Campo: nome + morada em linha própria, com espaço para quebrar —
-                      e um toque abre a localização no Maps em vez de cortar o texto. */}
+                  {/* Campo: nome + morada, centrados — um toque abre a localização no Maps */}
                   {local && (
                     <a
                       href={linkMapa(local.nome, local.morada)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={e => e.stopPropagation()}
-                      className="flex items-start gap-2.5 pt-1 group/campo"
+                      className="group/campo inline-flex flex-col items-center gap-0.5 -mt-2"
                     >
-                      <MapPin size={16} className="text-csc-gold shrink-0 mt-0.5" />
-                      <span className="min-w-0 flex-1">
-                        <span className="text-sm font-bold block group-hover/campo:underline">{local.nome}</span>
-                        {local.morada && (
-                          <span className="text-xs text-white/55 block leading-snug">{local.morada}</span>
-                        )}
+                      <span className="inline-flex items-center gap-1.5 text-sm font-bold group-hover/campo:underline">
+                        <MapPin size={14} className="text-csc-gold shrink-0" />
+                        {local.nome}
                       </span>
-                      <Navigation size={13} className="text-white/40 shrink-0 mt-1" />
+                      {local.morada && (
+                        <span className="text-xs text-white/55 leading-snug max-w-[280px]">{local.morada}</span>
+                      )}
                     </a>
                   )}
+
+                  {/* Duelo de equipas: emblemas em círculo e VS em traço dourado, como
+                      num bilhete — só as siglas, o nome por extenso já não cabia. */}
+                  <div
+                    onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
+                    className="w-full flex items-center justify-center gap-4 sm:gap-8 py-2 cursor-pointer group"
+                  >
+                    <div className="flex flex-col items-center gap-2 w-24">
+                      {leftLogo ? (
+                        <img src={leftLogo} alt="" className="w-16 h-16 sm:w-[72px] sm:h-[72px] object-contain rounded-full bg-white p-1.5 shadow-md group-hover:scale-105 transition-transform" />
+                      ) : (
+                        <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-full bg-white text-csc-dark flex items-center justify-center text-sm font-black shadow-md">{leftInitials}</div>
+                      )}
+                      <div>
+                        <p className="text-sm font-black uppercase leading-tight">{leftInitials}</p>
+                        <p className="text-[11px] text-white/55">{isAway ? 'Fora' : 'Casa'}</p>
+                      </div>
+                    </div>
+
+                    <span
+                      className="text-3xl sm:text-4xl font-black text-transparent shrink-0"
+                      style={{ WebkitTextStroke: '1.5px #e3c04d' }}
+                    >
+                      VS
+                    </span>
+
+                    <div className="flex flex-col items-center gap-2 w-24">
+                      {rightLogo ? (
+                        <img src={rightLogo} alt="" className="w-16 h-16 sm:w-[72px] sm:h-[72px] object-contain rounded-full bg-white p-1.5 shadow-md group-hover:scale-105 transition-transform" />
+                      ) : (
+                        <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-full bg-white/15 text-white flex items-center justify-center text-sm font-black shadow-md">{rightInitials}</div>
+                      )}
+                      <div>
+                        <p className="text-sm font-black uppercase leading-tight">{rightInitials}</p>
+                        <p className="text-[11px] text-white/55">{isAway ? 'Casa' : 'Fora'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Horários: concentração e hora do jogo */}
+                  <div className="flex items-center gap-6">
+                    {horaConcentracao && (
+                      <div>
+                        <p className="text-[11px] text-white/55 uppercase tracking-wide">Concentração</p>
+                        <p className="text-base font-bold">{horaConcentracao}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-[11px] text-white/55 uppercase tracking-wide">Pontapé de saída</p>
+                      <p className="text-base font-bold">{horaJogo}</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* RSVP: existe uma vez na app, e é aqui */}
                 {currentMatchCallup && (
                   currentMatchCallup.status === 'called' ? (
-                    <div className="bg-csc-gold px-5 py-3 flex items-center gap-3">
-                      <span className="flex-1 text-sm font-bold text-csc-dark">Vais estar presente?</span>
+                    <div className="relative bg-csc-gold px-5 py-3.5 flex items-center justify-center gap-3">
+                      <span className="text-sm font-bold text-csc-dark">Vais estar presente?</span>
                       <button
                         type="button"
                         onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
-                        className="h-11 px-5 rounded-lg bg-csc-dark text-white text-sm font-bold cursor-pointer active:scale-95 transition-transform"
+                        className="h-10 px-5 rounded-full bg-csc-dark text-white text-sm font-bold cursor-pointer active:scale-95 transition-transform"
                       >
                         Sim
                       </button>
                       <button
                         type="button"
                         onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
-                        className="h-11 px-5 rounded-lg border-2 border-csc-dark/35 text-csc-dark text-sm font-bold cursor-pointer active:scale-95 transition-transform"
+                        className="h-10 px-5 rounded-full border-2 border-csc-dark/35 text-csc-dark text-sm font-bold cursor-pointer active:scale-95 transition-transform"
                       >
                         Não
                       </button>
                     </div>
                   ) : (
-                    <div className="bg-white/10 px-5 py-3 flex items-center justify-between gap-3">
+                    <div className="relative bg-white/10 px-5 py-3.5 flex items-center justify-center gap-3">
                       <span className="text-sm text-white/80">A tua presença</span>
                       <span className={`inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-full ${
                         currentMatchCallup.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
@@ -521,7 +534,7 @@ const Home: React.FC = () => {
                 )}
 
                 {upcomingMatches.length > 1 && (
-                  <div className="flex items-center justify-between px-5 py-2.5 border-t border-white/10">
+                  <div className="relative flex items-center justify-center gap-4 px-5 py-2.5 border-t border-white/10">
                     <button
                       type="button"
                       onClick={prevMatchSlide}
