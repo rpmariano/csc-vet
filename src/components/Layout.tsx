@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { 
   Home, 
@@ -23,12 +23,19 @@ import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
 import { AutoAssociationModal } from './AutoAssociationModal'
 import { triggerHaptic } from '../utils/haptics'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 const Layout: React.FC = () => {
   const { profile, actualRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
+
+  // Escape, prisão de foco e bloqueio de scroll para a gaveta e para o seletor de perfil.
+  const gavetaRef = useModalA11y({ isOpen: isMobileMenuOpen, onClose: () => setIsMobileMenuOpen(false) })
+  const perfilRef = useModalA11y({ isOpen: isRoleModalOpen, onClose: () => setIsRoleModalOpen(false) })
+  const perfilTituloId = useRef('titulo-alternar-perfil')
+  const gavetaTituloId = useRef('titulo-menu-principal')
 
   const isAdmin = profile?.role === 'admin'
   const isCoach = profile?.role === 'coach'
@@ -111,16 +118,25 @@ const Layout: React.FC = () => {
           />
 
           {/* Painel do Menu */}
-          <div className="relative w-4/5 max-w-xs bg-csc-dark text-white h-full flex flex-col justify-between p-5 z-10 shadow-2xl overflow-y-auto">
+          <div
+            ref={gavetaRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={gavetaTituloId.current}
+            tabIndex={-1}
+            className="relative w-4/5 max-w-xs bg-csc-dark text-white h-full flex flex-col justify-between p-5 z-10 shadow-2xl overflow-y-auto outline-none"
+          >
             <div>
               {/* Topo do Menu */}
               <div className="flex items-center justify-between pb-3 border-b border-csc-light/30">
                 <div className="flex items-center gap-2">
                   <Menu size={18} className="text-csc-gold" />
-                  <span className="text-sm font-black uppercase tracking-wider text-white">Menu Principal</span>
+                  <span id={gavetaTituloId.current} className="text-sm font-black uppercase tracking-wider text-white">Menu Principal</span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
+                  aria-label="Fechar menu"
                   className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white"
                 >
                   <X size={20} />
@@ -699,10 +715,22 @@ const Layout: React.FC = () => {
 
       {/* Modal de Alternância de Papel / Role Switcher */}
       {isRoleModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-scale-up border border-gray-100">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onMouseDown={e => { if (e.target === e.currentTarget) setIsRoleModalOpen(false) }}
+        >
+          <div
+            ref={perfilRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={perfilTituloId.current}
+            tabIndex={-1}
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-scale-up border border-gray-100 outline-none"
+          >
             <button
+              type="button"
               onClick={() => setIsRoleModalOpen(false)}
+              aria-label="Fechar"
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <X size={20} />
@@ -713,7 +741,7 @@ const Layout: React.FC = () => {
                 <Sparkles size={22} className="text-csc-dark" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-gray-900">Alternar Perfil de Acesso</h3>
+                <h3 id={perfilTituloId.current} className="text-lg font-black text-gray-900">Alternar Perfil de Acesso</h3>
                 <p className="text-xs text-gray-500 font-medium">Selecione o perfil com o qual deseja utilizar a aplicação</p>
               </div>
             </div>

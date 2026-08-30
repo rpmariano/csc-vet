@@ -6,19 +6,36 @@ import { ToastProvider } from './context/ToastContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
-// Pages
+// Páginas carregadas a pedido.
+//
+// O bundle era um único ficheiro de ~1 MB: quem abria a Home descarregava também
+// a Agenda, os Eventos, o Plantel e o Backoffice. Numa app usada no telemóvel à
+// beira do relvado, com rede fraca, isso pesa. Com React.lazy cada rota vem no
+// seu próprio pedaço, e o Login — a primeira coisa que qualquer pessoa vê — fica
+// no arranque, para não haver um spinner a preceder o ecrã de entrada.
 import Login from './pages/Login'
-import Home from './pages/Home'
-import CalendarPage from './pages/CalendarPage'
-import StatsPage from './pages/StatsPage'
-import AnnouncementsPage from './pages/AnnouncementsPage'
-import TeamManagementPage from './pages/TeamManagementPage'
-import FinancePage from './pages/FinancePage'
-import SettingsPage from './pages/SettingsPage'
-import EventsPage from './pages/EventsPage'
-import AdminDashboard from './pages/AdminDashboard'
-import MatchReportsPage from './pages/MatchReportsPage'
-import { StandingsPage } from './pages/StandingsPage'
+
+const Home = React.lazy(() => import('./pages/Home'))
+const CalendarPage = React.lazy(() => import('./pages/CalendarPage'))
+const StatsPage = React.lazy(() => import('./pages/StatsPage'))
+const AnnouncementsPage = React.lazy(() => import('./pages/AnnouncementsPage'))
+const TeamManagementPage = React.lazy(() => import('./pages/TeamManagementPage'))
+const FinancePage = React.lazy(() => import('./pages/FinancePage'))
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'))
+const EventsPage = React.lazy(() => import('./pages/EventsPage'))
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'))
+const MatchReportsPage = React.lazy(() => import('./pages/MatchReportsPage'))
+const StandingsPage = React.lazy(() =>
+  import('./pages/StandingsPage').then(m => ({ default: m.StandingsPage })),
+)
+
+/** Mostrado enquanto o pedaço de código da rota é descarregado. */
+const EcraACarregar: React.FC = () => (
+  <div className="min-h-[60vh] flex items-center justify-center" role="status" aria-live="polite">
+    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark" />
+    <span className="sr-only">A carregar…</span>
+  </div>
+)
 
 const App: React.FC = () => {
   return (
@@ -26,6 +43,7 @@ const App: React.FC = () => {
       <ClubProvider>
         <ToastProvider>
           <Router basename={import.meta.env.BASE_URL}>
+          <React.Suspense fallback={<EcraACarregar />}>
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
@@ -58,6 +76,7 @@ const App: React.FC = () => {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </React.Suspense>
         </Router>
         </ToastProvider>
       </ClubProvider>
