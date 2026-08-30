@@ -2802,16 +2802,16 @@ const CalendarPage: React.FC = () => {
             if (e.target === e.currentTarget) handleAttemptCloseAddModal()
           }}
         >
-          <div className="bg-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
+          <div className="bg-csc-dark text-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/10">
             <button
               type="button"
               onClick={handleAttemptCloseAddModal}
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-2xs border border-gray-200"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-2xs border border-white/10"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
             </button>
-            <h2 className="text-2xl font-black text-csc-dark mb-6">Criar Novo Evento</h2>
+            <h2 className="text-2xl font-black text-white mb-6">Criar Novo Evento</h2>
             
             <form onSubmit={handleAddEvent} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               
@@ -2819,7 +2819,7 @@ const CalendarPage: React.FC = () => {
               <div className="lg:col-span-6 space-y-4">
                 {type === 'gathering' && (
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Título do Convívio *</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Título do Convívio *</label>
                     <input
                       type="text"
                       required={type === 'gathering'}
@@ -2832,7 +2832,7 @@ const CalendarPage: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
+                  <label className="block text-xs font-bold text-white/70 mb-1">Tipo de Evento</label>
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value as any)}
@@ -2845,7 +2845,7 @@ const CalendarPage: React.FC = () => {
                 </div>
 
                 {type === 'match' && (
-                  <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+                  <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl space-y-3">
                     <div className="flex items-center">
                       <input
                         type="checkbox"
@@ -2857,13 +2857,13 @@ const CalendarPage: React.FC = () => {
                         }}
                         className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
                       />
-                      <label htmlFor="isFriendly" className="ml-2 text-sm font-semibold text-gray-700 cursor-pointer">
+                      <label htmlFor="isFriendly" className="ml-2 text-sm font-semibold text-white/80 cursor-pointer">
                         Jogo Amigável
                       </label>
                     </div>
                     {!isFriendly && (
                       <div className="animate-fade-in">
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Torneio / Competição</label>
+                        <label className="block text-xs font-semibold text-white/60 mb-1">Torneio / Competição</label>
                         <select
                           value={tournamentId}
                           onChange={(e) => setTournamentId(e.target.value)}
@@ -2881,7 +2881,7 @@ const CalendarPage: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Adversário</label>
+                        <label className="block text-xs font-semibold text-white/60 mb-1">Adversário</label>
                         <select
                           value={opponentId}
                           onChange={(e) => {
@@ -2903,7 +2903,7 @@ const CalendarPage: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Condição de Jogo</label>
+                        <label className="block text-xs font-semibold text-white/60 mb-1">Condição de Jogo</label>
                         <select
                           value={homeAway}
                           onChange={(e) => setHomeAway(e.target.value as any)}
@@ -2920,7 +2920,7 @@ const CalendarPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Data e Hora *</label>
                     <input
                       type="datetime-local"
                       required
@@ -2930,7 +2930,7 @@ const CalendarPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Concentração (opcional)</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Concentração (opcional)</label>
                     <input
                       type="time"
                       value={meetingTime}
@@ -2943,13 +2943,13 @@ const CalendarPage: React.FC = () => {
 
                 {/* Campo / Instalação do Evento */}
                 {type === 'match' && homeAway === 'home' ? (
-                  <div className="p-3.5 bg-emerald-50/80 border-2 border-emerald-300 rounded-2xl flex items-center justify-between shadow-2xs">
+                  <div className="p-3.5 bg-emerald-500/10 border-2 border-emerald-400/40 rounded-2xl flex items-center justify-between shadow-2xs">
                     <div className="space-y-1 min-w-0 flex-1 pr-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-                        <MapPin size={13} className="text-emerald-700 shrink-0" />
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                        <MapPin size={13} className="text-emerald-400 shrink-0" />
                         <span>Campo do Jogo (Automático - Em Casa)</span>
                       </span>
-                      <p className="text-xs font-black text-gray-900 truncate">
+                      <p className="text-xs font-black text-white truncate">
                         🏟️ {(() => {
                           const cascais = getCascaisHomeField()
                           return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
@@ -2971,9 +2971,9 @@ const CalendarPage: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
+                  <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <label className="font-bold text-gray-800 flex items-center gap-1.5">
+                      <label className="font-bold text-white/80 flex items-center gap-1.5">
                         <span>🏟️ Campo / Instalação *</span>
                         {location && (
                           <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
@@ -3013,7 +3013,7 @@ const CalendarPage: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
+                  <label className="block text-xs font-bold text-white/70 mb-1">Descrição / Notas</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -3025,7 +3025,7 @@ const CalendarPage: React.FC = () => {
 
                 {/* SELEÇÃO DE RECORRÊNCIA (Apenas para Treinos) */}
                 {type === 'practice' && (
-                  <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-3">
+                  <div className="p-4 bg-amber-500/10 border border-amber-400/30 rounded-xl space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="flex items-center gap-2 cursor-pointer select-none">
                         <input
@@ -3034,7 +3034,7 @@ const CalendarPage: React.FC = () => {
                           onChange={(e) => setIsRecurring(e.target.checked)}
                           className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
                         />
-                        <span className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-white flex items-center gap-1.5">
                           <Repeat size={16} className="text-csc-gold" />
                           <span>Marcar Treino com Recorrência Semanal</span>
                         </span>
@@ -3047,10 +3047,10 @@ const CalendarPage: React.FC = () => {
                     </div>
 
                     {isRecurring && (
-                      <div className="pt-2 space-y-3 border-t border-amber-200/60 text-xs">
+                      <div className="pt-2 space-y-3 border-t border-amber-400/20 text-xs">
                         {/* Dias da Semana */}
                         <div>
-                          <label className="block font-bold text-gray-700 mb-1.5">
+                          <label className="block font-bold text-white/70 mb-1.5">
                             Dias da semana em que se realiza o evento:
                           </label>
                           <div className="flex flex-wrap gap-1.5">
@@ -3078,7 +3078,7 @@ const CalendarPage: React.FC = () => {
                                   className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
                                     isChecked 
                                       ? 'bg-csc-dark text-white shadow-xs font-black' 
-                                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                                      : 'bg-white/5 text-white/70 border border-white/15 hover:bg-white/10'
                                   }`}
                                 >
                                   {d.label}
@@ -3090,7 +3090,7 @@ const CalendarPage: React.FC = () => {
 
                         {/* Data Limite da Recorrência */}
                         <div>
-                          <label className="block font-bold text-gray-700 mb-1">
+                          <label className="block font-bold text-white/70 mb-1">
                             Repetir até à data (Data Final) *
                           </label>
                           <input
@@ -3107,7 +3107,7 @@ const CalendarPage: React.FC = () => {
                         {dateTime && recurrenceEndDate && recurrenceWeekdays.length > 0 && (() => {
                           const generated = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
                           return (
-                            <div className="p-2.5 bg-white border border-amber-200 rounded-lg font-medium text-amber-950 flex items-center gap-2">
+                            <div className="p-2.5 bg-white/5 border border-amber-400/30 rounded-lg font-medium text-amber-100 flex items-center gap-2">
                               <CalendarRange size={16} className="text-csc-gold shrink-0" />
                               <span>
                                 ✨ Serão criados <strong>{generated.length} eventos</strong> entre {new Date(dateTime).toLocaleDateString('pt-PT')} e {new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}.
@@ -3122,24 +3122,24 @@ const CalendarPage: React.FC = () => {
               </div>
 
               {/* COLUNA DIREITA: SELEÇÃO DE JOGADORES (CONVOCATÓRIA) (6 Colunas) */}
-              <div className="lg:col-span-6 bg-gray-50/80 p-5 rounded-2xl border border-gray-200 space-y-3.5">
+              <div className="lg:col-span-6 bg-white/5 p-5 rounded-2xl border border-white/10 space-y-3.5">
                 {type === 'practice' ? (
-                  <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50/40 border-2 border-amber-200/80 rounded-3xl space-y-4 text-center">
+                  <div className="p-6 bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-2 border-amber-400/30 rounded-3xl space-y-4 text-center">
                     <div className="w-14 h-14 rounded-2xl bg-csc-dark text-csc-gold mx-auto flex items-center justify-center font-black text-2xl shadow-md">
                       <TrainingIcon className="w-8 h-8" />
                     </div>
                     <div>
-                      <h3 className="text-base font-black text-csc-dark">Convocatória Automática de Treino</h3>
-                      <p className="text-xs text-gray-600 mt-1.5 max-w-sm mx-auto leading-relaxed">
+                      <h3 className="text-base font-black text-white">Convocatória Automática de Treino</h3>
+                      <p className="text-xs text-white/60 mt-1.5 max-w-sm mx-auto leading-relaxed">
                         Nos treinos, não é necessário fazer convocatória manual. Todos os <strong>{allPlayers.filter(p => isPlayerEligible(p, 'practice')).length} atletas disponíveis</strong> ficam automaticamente convocados.
                       </p>
                     </div>
-                    <div className="p-3.5 bg-white/90 border border-amber-200 rounded-2xl text-left space-y-2 shadow-2xs">
-                      <p className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                    <div className="p-3.5 bg-white/5 border border-amber-400/20 rounded-2xl text-left space-y-2 shadow-2xs">
+                      <p className="text-xs font-black text-amber-200 flex items-center gap-1.5">
                         <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
                         <span>Gestão de Presenças no Treino:</span>
                       </p>
-                      <ul className="text-xs text-gray-600 space-y-1.5 list-disc list-inside">
+                      <ul className="text-xs text-white/60 space-y-1.5 list-disc list-inside">
                         <li>O treino fica imediatamente visível na agenda e na página principal.</li>
                         <li>Cada jogador poderá marcar <strong>Confirmar</strong> ou <strong>Recusar</strong>.</li>
                         <li>O quórum de confirmados/recusados é atualizado em tempo real.</li>
@@ -3148,21 +3148,21 @@ const CalendarPage: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200/80 pb-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">
                       <div>
-                        <label className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
-                          <Users size={16} className="text-csc-dark" />
+                        <label className="text-sm font-bold text-white flex items-center gap-1.5">
+                          <Users size={16} className="text-csc-gold" />
                           <span>
                             Convocatória Inicial ({selectedPlayerIds.length}{maxPlayers !== '' ? ` / ${maxPlayers} máx` : ''})
                           </span>
                         </label>
-                        <p className="text-[11px] text-gray-500 mt-0.5">Selecione os atletas a convocar para este evento.</p>
+                        <p className="text-[11px] text-white/50 mt-0.5">Selecione os atletas a convocar para este evento.</p>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <button
                           type="button"
                           onClick={handleRepeatLastCallup}
-                          className="font-bold text-csc-dark bg-white border border-gray-300 px-2.5 py-1 rounded-lg hover:bg-gray-50 flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+                          className="font-bold text-white bg-white/10 border border-white/15 px-2.5 py-1 rounded-lg hover:bg-white/20 flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
                           title="Repetir a lista de convocados do jogo anterior"
                         >
                           <RotateCcw size={12} /> Repetir Última
@@ -3170,14 +3170,14 @@ const CalendarPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={handleSelectAllPlayers}
-                          className="font-bold text-csc-dark bg-white border border-gray-300 px-2 py-1 rounded-lg hover:bg-gray-50 cursor-pointer shadow-2xs"
+                          className="font-bold text-white bg-white/10 border border-white/15 px-2 py-1 rounded-lg hover:bg-white/20 cursor-pointer shadow-2xs"
                         >
                           Todos
                         </button>
                         <button
                           type="button"
                           onClick={handleClearPlayers}
-                          className="font-bold text-red-600 bg-white border border-gray-300 px-2 py-1 rounded-lg hover:bg-red-50 cursor-pointer shadow-2xs"
+                          className="font-bold text-red-300 bg-red-500/10 border border-red-400/20 px-2 py-1 rounded-lg hover:bg-red-500/20 cursor-pointer shadow-2xs"
                         >
                           Limpar
                         </button>
@@ -3186,13 +3186,13 @@ const CalendarPage: React.FC = () => {
 
                     {/* Banner de Aviso de Limite */}
                     {maxPlayers !== '' && selectedPlayerIds.length > Number(maxPlayers) && (
-                      <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-bold flex items-center gap-2 animate-pulse">
+                      <div className="p-2.5 bg-red-500/10 border border-red-400/30 rounded-xl text-xs text-red-300 font-bold flex items-center gap-2 animate-pulse">
                         <AlertTriangle size={16} className="shrink-0 text-red-600" />
                         <span>Aviso: O número de atletas convocados ({selectedPlayerIds.length}) ultrapassa o limite definido de {maxPlayers} jogadores!</span>
                       </div>
                     )}
                     {maxPlayers !== '' && selectedPlayerIds.length === Number(maxPlayers) && (
-                      <div className="p-2 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 font-bold flex items-center gap-2">
+                      <div className="p-2 bg-emerald-500/10 border border-emerald-400/30 rounded-xl text-xs text-emerald-300 font-bold flex items-center gap-2">
                         <CheckCircle2 size={15} className="shrink-0 text-green-600" />
                         <span>Limite máximo de {maxPlayers} convocados preenchido a 100%.</span>
                       </div>
@@ -3304,19 +3304,19 @@ const CalendarPage: React.FC = () => {
               </div>
 
               {/* FOOTER */}
-              <div className="col-span-full pt-5 border-t border-gray-200 flex items-center justify-end gap-3 mt-2">
+              <div className="col-span-full pt-5 border-t border-white/10 flex items-center justify-end gap-3 mt-2">
                 <button
                   type="button"
                   onClick={handleAttemptCloseAddModal}
-                  className="px-5 py-2.5 border border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-100 rounded-xl text-xs sm:text-sm font-bold text-gray-700 transition-colors cursor-pointer shadow-2xs"
+                  className="px-5 py-2.5 border border-white/15 hover:border-white/25 bg-white/5 hover:bg-white/10 rounded-xl text-xs sm:text-sm font-bold text-white transition-colors cursor-pointer shadow-2xs"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-dark hover:bg-black text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95"
+                  className="px-6 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95"
                 >
-                  <Plus size={16} className="text-csc-gold" />
+                  <Plus size={16} className="text-csc-dark" />
                   <span>Criar Evento</span>
                 </button>
               </div>
@@ -3333,11 +3333,11 @@ const CalendarPage: React.FC = () => {
             if (e.target === e.currentTarget) handleAttemptCloseEditModal()
           }}
         >
-          <div className="bg-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-gray-100">
+          <div className="bg-csc-dark text-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/10">
             <button
               type="button"
               onClick={handleAttemptCloseEditModal}
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-2xs border border-gray-200"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-2xs border border-white/10"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
@@ -3345,9 +3345,9 @@ const CalendarPage: React.FC = () => {
 
             <div className="flex items-center gap-2 mb-1">
               <Edit size={22} className="text-csc-gold" />
-              <h2 className="text-2xl font-black text-csc-dark">Editar Dados do Evento</h2>
+              <h2 className="text-2xl font-black text-white">Editar Dados do Evento</h2>
             </div>
-            <p className="text-xs text-gray-500 mb-6">
+            <p className="text-xs text-white/60 mb-6">
               Altera a data, horário, localização, notas ou gere a convocatória deste evento na agenda.
             </p>
 
@@ -3357,7 +3357,7 @@ const CalendarPage: React.FC = () => {
               <div className="lg:col-span-6 space-y-4">
                 {editType === 'gathering' && (
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Título do Convívio *</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Título do Convívio *</label>
                     <input
                       type="text"
                       required={editType === 'gathering'}
@@ -3370,19 +3370,19 @@ const CalendarPage: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
-                  <div className="w-full px-3 py-2.5 border border-gray-200 bg-gray-100/90 text-gray-800 rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
+                  <label className="block text-xs font-bold text-white/70 mb-1">Tipo de Evento</label>
+                  <div className="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-white rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
                     <span className="flex items-center gap-1.5">
                       <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
                     </span>
-                    <span className="text-[10px] font-bold text-gray-500 bg-gray-200/90 px-2 py-0.5 rounded-md">
+                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-md">
                       🔒 Tipo Bloqueado
                     </span>
                   </div>
                 </div>
 
                 {editType === 'match' && (
-                  <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+                  <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl space-y-3">
                     <div className="flex items-center">
                       <input
                         type="checkbox"
@@ -3394,13 +3394,13 @@ const CalendarPage: React.FC = () => {
                         }}
                         className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
                       />
-                      <label htmlFor="editIsFriendly" className="ml-2 text-sm font-semibold text-gray-700 cursor-pointer">
+                      <label htmlFor="editIsFriendly" className="ml-2 text-sm font-semibold text-white/80 cursor-pointer">
                         Jogo Amigável
                       </label>
                     </div>
                     {!editIsFriendly && (
                       <div className="animate-fade-in">
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Torneio / Competição</label>
+                        <label className="block text-xs font-semibold text-white/60 mb-1">Torneio / Competição</label>
                         <select
                           value={editTournamentId}
                           onChange={(e) => setEditTournamentId(e.target.value)}
@@ -3418,7 +3418,7 @@ const CalendarPage: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Adversário</label>
+                        <label className="block text-xs font-semibold text-white/60 mb-1">Adversário</label>
                         <select
                           value={editOpponentId}
                           onChange={(e) => {
@@ -3440,7 +3440,7 @@ const CalendarPage: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Condição de Jogo</label>
+                        <label className="block text-xs font-semibold text-white/60 mb-1">Condição de Jogo</label>
                         <select
                           value={editHomeAway}
                           onChange={(e) => setEditHomeAway(e.target.value as any)}
@@ -3457,7 +3457,7 @@ const CalendarPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Data e Hora *</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Data e Hora *</label>
                     <input
                       type="datetime-local"
                       required
@@ -3468,7 +3468,7 @@ const CalendarPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Concentração (opcional)</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Concentração (opcional)</label>
                     <input
                       type="time"
                       value={editMeetingTime}
@@ -3481,13 +3481,13 @@ const CalendarPage: React.FC = () => {
 
                 {/* Campo / Instalação do Evento */}
                 {editType === 'match' && editHomeAway === 'home' ? (
-                  <div className="p-3.5 bg-emerald-50/80 border-2 border-emerald-300 rounded-2xl flex items-center justify-between shadow-2xs">
+                  <div className="p-3.5 bg-emerald-500/10 border-2 border-emerald-400/40 rounded-2xl flex items-center justify-between shadow-2xs">
                     <div className="space-y-1 min-w-0 flex-1 pr-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-                        <MapPin size={13} className="text-emerald-700 shrink-0" />
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                        <MapPin size={13} className="text-emerald-400 shrink-0" />
                         <span>Campo do Jogo (Automático - Em Casa)</span>
                       </span>
-                      <p className="text-xs font-black text-gray-900 truncate">
+                      <p className="text-xs font-black text-white truncate">
                         🏟️ {(() => {
                           const cascais = getCascaisHomeField()
                           return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
@@ -3509,9 +3509,9 @@ const CalendarPage: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-xs">
+                  <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <label className="font-bold text-gray-800 flex items-center gap-1.5">
+                      <label className="font-bold text-white/80 flex items-center gap-1.5">
                         <span>🏟️ Campo / Instalação *</span>
                         {editLocation && (
                           <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
@@ -3551,7 +3551,7 @@ const CalendarPage: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
+                  <label className="block text-xs font-bold text-white/70 mb-1">Descrição / Notas</label>
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
@@ -3563,7 +3563,7 @@ const CalendarPage: React.FC = () => {
               </div>
 
               {/* COLUNA DIREITA: GESTÃO DA CONVOCATÓRIA (6 Colunas) */}
-              <div className="lg:col-span-6 bg-gray-50/80 p-5 rounded-2xl border border-gray-200 space-y-3.5">
+              <div className="lg:col-span-6 bg-white/5 p-5 rounded-2xl border border-white/10 space-y-3.5">
                 {selectedEvent && (() => {
                   const rawCurrentCallups = eventCallups[selectedEvent.id] || []
                   const eligibleMembers = allPlayers.filter(p => isPlayerEligible(p, editType))
@@ -3776,12 +3776,12 @@ const CalendarPage: React.FC = () => {
 
                   return (
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between border-b border-gray-200/80 pb-2.5">
-                        <span className="text-xs font-black text-gray-900 flex items-center gap-1.5">
-                          <Users size={15} className="text-csc-dark" />
+                      <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+                        <span className="text-xs font-black text-white flex items-center gap-1.5">
+                          <Users size={15} className="text-csc-gold" />
                           <span>Convocatória ({calledMembersCount} convocados)</span>
                         </span>
-                        <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2.5 py-0.5 rounded-full">
+                        <span className="text-[10px] bg-white/10 text-csc-gold font-bold px-2.5 py-0.5 rounded-full">
                           {eligibleMembers.length} Membros
                         </span>
                       </div>
@@ -3792,9 +3792,9 @@ const CalendarPage: React.FC = () => {
                           type="button"
                           onClick={handleEditAddAll}
                           disabled={editUncalledPlayers.length === 0 || isEditBatchCalling}
-                          className="px-2 py-1.5 bg-csc-dark hover:bg-black text-white rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer active:scale-95 disabled:opacity-40"
+                          className="px-2 py-1.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer active:scale-95 disabled:opacity-40"
                         >
-                          <Sparkles size={11} className="text-csc-gold" />
+                          <Sparkles size={11} className="text-csc-dark" />
                           <span>✨ Todos ({editUncalledPlayers.length})</span>
                         </button>
 
@@ -3904,20 +3904,20 @@ const CalendarPage: React.FC = () => {
               </div>
 
               {/* FOOTER */}
-              <div className="col-span-full pt-5 border-t border-gray-200 flex items-center justify-end gap-3 mt-2">
+              <div className="col-span-full pt-5 border-t border-white/10 flex items-center justify-end gap-3 mt-2">
                 <button
                   type="button"
                   onClick={handleAttemptCloseEditModal}
-                  className="px-5 py-2.5 border border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-100 rounded-xl text-xs sm:text-sm font-bold text-gray-700 transition-colors cursor-pointer shadow-2xs"
+                  className="px-5 py-2.5 border border-white/15 hover:border-white/25 bg-white/5 hover:bg-white/10 rounded-xl text-xs sm:text-sm font-bold text-white transition-colors cursor-pointer shadow-2xs"
                 >
                   Cancelar
                 </button>
 
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-dark hover:bg-black text-white rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95"
+                  className="px-6 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95"
                 >
-                  <Save size={16} className="text-csc-gold" />
+                  <Save size={16} className="text-csc-dark" />
                   <span>Guardar Alterações</span>
                 </button>
               </div>
