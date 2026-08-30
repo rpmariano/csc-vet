@@ -1552,13 +1552,13 @@ const CalendarPage: React.FC = () => {
       <div className={`flex-1 flex items-center ${isRight ? 'justify-end' : 'justify-start'} min-w-0`}>
         <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {clubSettings?.logo_url ? (
-            <img src={clubSettings.logo_url} alt={cscSigla} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
+            <img src={clubSettings.logo_url} alt={cscSigla} className="w-8 h-8 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
           ) : (
-            <div className="w-8 h-8 bg-csc-dark text-csc-gold rounded-lg flex items-center justify-center text-xs font-black shrink-0">
+            <div className="w-8 h-8 bg-white text-csc-dark rounded-full flex items-center justify-center text-xs font-black shrink-0">
               {cscSigla}
             </div>
           )}
-          <span className="font-black text-sm text-gray-900 uppercase tracking-tight whitespace-nowrap">
+          <span className="font-black text-sm text-white uppercase tracking-tight whitespace-nowrap">
             {cscSigla}
           </span>
         </div>
@@ -1570,90 +1570,76 @@ const CalendarPage: React.FC = () => {
       <div className={`flex-1 flex items-center ${isRight ? 'justify-end' : 'justify-start'} min-w-0`}>
         <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {event.opponent?.logo_url ? (
-            <img src={event.opponent.logo_url} alt={oppSigla} className="w-8 h-8 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
+            <img src={event.opponent.logo_url} alt={oppSigla} className="w-8 h-8 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
           ) : (
-            <div className="w-8 h-8 bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+            <div className="w-8 h-8 bg-white/15 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
               {oppSigla}
             </div>
           )}
-          <span className="font-black text-sm text-gray-900 uppercase tracking-tight whitespace-nowrap">
+          <span className="font-black text-sm text-white uppercase tracking-tight whitespace-nowrap">
             {oppSigla}
           </span>
         </div>
       </div>
     )
 
+    const tipoIcon = isMatch ? Trophy : isPractice ? TrainingIcon : PartyPopper
+    const tipoCor = isMatch ? 'text-csc-gold' : isPractice ? 'text-emerald-300' : 'text-blue-300'
+    const TipoIcon = tipoIcon
+
     return (
       <div
         key={event.id}
         onClick={() => setSelectedEvent(event)}
-        className={`rounded-3xl border-2 transition-all cursor-pointer bg-white overflow-hidden shadow-sm hover:shadow-lg flex flex-col justify-between ${
-          isMatch 
-            ? 'border-blue-300 hover:border-blue-500' 
-            : isPractice 
-            ? 'border-emerald-300 hover:border-emerald-500' 
-            : 'border-purple-300 hover:border-purple-500'
-        }`}
+        className="rounded-3xl transition-all cursor-pointer bg-csc-dark text-white overflow-hidden shadow-sm hover:shadow-lg flex flex-col justify-between"
       >
-        {/* Barra Marcante de Cabeçalho do Evento (Forte Presença Visual) */}
-        <div className={`px-4 py-3 flex items-center justify-between text-white shadow-xs ${
-          isMatch 
-            ? 'bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 border-b-2 border-blue-950' 
-            : isPractice 
-            ? 'bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-900 border-b-2 border-emerald-950' 
-            : 'bg-gradient-to-r from-purple-700 via-purple-800 to-fuchsia-950 border-b-2 border-purple-950'
-        }`}>
+        {/* Cabeçalho: tipo de evento por ícone + rótulo, não por cor de fundo */}
+        <div className="px-5 pt-5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs sm:text-sm font-black uppercase tracking-wider flex items-center gap-1.5 drop-shadow-xs">
-              {isMatch ? <Trophy size={16} className="text-amber-300" /> : isPractice ? <TrainingIcon size={16} className="text-white" /> : <PartyPopper size={16} className="text-pink-300" />}
+            <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${tipoCor}`}>
+              <TipoIcon size={14} />
               <span>{isMatch ? 'Jogo' : isPractice ? 'Treino' : 'Convívio'}</span>
             </span>
 
             {isMatch && event.is_friendly && (
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-400 text-amber-950 shadow-2xs">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white/10 text-white">
                 Amigável
               </span>
             )}
 
             {isMatch && event.tournament?.name && !event.is_friendly && (
-              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-lg bg-white/20 text-white border border-white/30 backdrop-blur-xs truncate max-w-[150px] shadow-2xs">
-                🏆 {event.tournament.name}
+              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-white/10 text-white truncate max-w-[150px]">
+                {event.tournament.name}
               </span>
             )}
           </div>
 
           {callups.length > 0 && (
-            <span className="text-xs font-bold flex items-center gap-1 bg-white/20 text-white px-2.5 py-1 rounded-full border border-white/30 backdrop-blur-xs shadow-2xs">
-              <Users size={13} className="text-white" />
-              <span><strong>{confirmedCount}</strong>/{callups.length} conf.</span>
+            <span className="text-xs font-bold flex items-center gap-1 bg-white/10 text-white px-2.5 py-1 rounded-full shrink-0">
+              <Users size={13} />
+              <span><strong>{confirmedCount}</strong>/{callups.length}</span>
             </span>
           )}
         </div>
 
-        <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-          <div className="space-y-2.5">
-            {/* Matchup Box (when event is a match with opponent) */}
+        <div className="p-5 space-y-3.5 flex-1 flex flex-col justify-between">
+          <div className="space-y-3">
+            {/* Duelo de equipas (quando é jogo com adversário definido) */}
             {isMatch && event.opponent && (
-              <div className="bg-gradient-to-b from-gray-50 to-white p-3.5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-2.5">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between gap-3">
-                  {/* Left Team (if away -> Opponent, else -> Cascais) */}
                   {isAway ? opponentBlock(false) : cscBlock(false)}
-
-                  {/* VS Badge */}
                   <div className="shrink-0 px-1 flex items-center justify-center">
-                    <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                    <span className="w-7 h-7 flex items-center justify-center text-[11px] font-black rounded-full bg-csc-gold text-csc-dark shadow-xs">
                       VS
                     </span>
                   </div>
-
-                  {/* Right Team (if away -> Cascais, else -> Opponent) */}
                   {isAway ? cscBlock(true) : opponentBlock(true)}
                 </div>
 
-                {/* Condition Pill */}
-                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
+                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-white/60">
                   <span className="font-bold">
-                    Condição: <strong className="text-gray-900">{isAway ? '✈️ Fora de Casa' : event.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Em Casa'}</strong>
+                    Condição: <strong className="text-white">{isAway ? 'Fora de Casa' : event.home_away === 'neutral' ? 'Campo Neutro' : 'Em Casa'}</strong>
                   </span>
                 </div>
               </div>
@@ -1662,7 +1648,7 @@ const CalendarPage: React.FC = () => {
             {/* Title (apenas exibido para convívios) */}
             {event.type === 'gathering' && (
               <div>
-                <h4 className="text-base font-black text-gray-900 leading-snug">
+                <h4 className="text-base font-black text-white leading-snug">
                   {event.title}
                 </h4>
               </div>
@@ -1671,8 +1657,8 @@ const CalendarPage: React.FC = () => {
             {/* Concentração Acima da Hora (por extenso) */}
             {event.meeting_time && (
               <div className="flex items-center">
-                <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl shadow-2xs">
-                  <span>⏱️ Concentração: {event.meeting_time.substring(0, 5)}</span>
+                <div className="inline-flex items-center gap-1.5 text-xs font-black text-csc-gold bg-white/10 px-3 py-1 rounded-full">
+                  <span>Concentração: {event.meeting_time.substring(0, 5)}</span>
                 </div>
               </div>
             )}
@@ -1683,22 +1669,22 @@ const CalendarPage: React.FC = () => {
               return (
                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                   {/* Hora */}
-                  <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-xl shrink-0">
-                    <Clock size={13} className="text-csc-dark" />
+                  <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-white bg-white/10 px-2.5 py-1 rounded-full shrink-0">
+                    <Clock size={13} className="text-csc-gold" />
                     <span>{new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
 
                   {/* Localização & Maps */}
                   {locStr && (
-                    <div className="inline-flex items-center gap-1 text-xs text-gray-700 bg-gray-100 px-2.5 py-1 rounded-xl max-w-full truncate min-w-0">
-                      <MapPin size={13} className="text-red-600 shrink-0" />
+                    <div className="inline-flex items-center gap-1 text-xs text-white/80 bg-white/10 px-2.5 py-1 rounded-full max-w-full truncate min-w-0">
+                      <MapPin size={13} className="text-csc-gold shrink-0" />
                       <span className="truncate">{locStr}</span>
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locStr)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="ml-1 p-0.5 text-blue-600 hover:text-blue-800 shrink-0"
+                        className="ml-1 p-0.5 text-white/60 hover:text-white shrink-0"
                         title="Ver no Google Maps"
                       >
                         <ExternalLink size={12} />
@@ -1716,7 +1702,7 @@ const CalendarPage: React.FC = () => {
               const clean = parseMatchReportMetadata(event.description).cleanDescription
               if (!clean) return null
               return (
-                <div className="text-xs text-gray-700 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
+                <div className="text-xs text-white/70 bg-white/5 p-2.5 rounded-xl">
                   <p className="whitespace-pre-line leading-relaxed">{clean}</p>
                 </div>
               )
@@ -1731,14 +1717,14 @@ const CalendarPage: React.FC = () => {
               const isRsvpOpen = !isPractice || diffDays <= 6
 
               return (
-                <div 
-                  onClick={(e) => e.stopPropagation()} 
-                  className="pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap"
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap"
                 >
-                  <span className="text-xs font-bold text-gray-700">Presença:</span>
+                  <span className="text-xs font-bold text-white/70">Presença:</span>
                   {!isRsvpOpen ? (
-                    <span className="text-[11px] font-bold text-amber-900 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-xl">
-                      ⏱️ Confirmações abrem 6 dias antes ({new Date(eventTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })})
+                    <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
+                      Confirmações abrem 6 dias antes ({new Date(eventTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })})
                     </span>
                   ) : (
                     <div className="flex items-center gap-1.5 sm:gap-2">
@@ -1746,10 +1732,10 @@ const CalendarPage: React.FC = () => {
                         type="button"
                         disabled={myCallup.status === 'confirmed'}
                         onClick={() => handleCallupResponse(event.id, 'confirmed')}
-                        className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                        className={`text-xs font-black px-3 py-1.5 rounded-full transition-all flex items-center gap-1 ${
                           myCallup.status === 'confirmed'
-                            ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
-                            : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-2xs'
+                            ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                            : 'bg-csc-gold text-csc-dark hover:brightness-105 cursor-pointer active:scale-95'
                         }`}
                       >
                         <CheckCircle2 size={13} />
@@ -1759,10 +1745,10 @@ const CalendarPage: React.FC = () => {
                         type="button"
                         disabled={myCallup.status === 'declined'}
                         onClick={() => handleCallupResponse(event.id, 'declined')}
-                        className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                        className={`text-xs font-black px-3 py-1.5 rounded-full transition-all flex items-center gap-1 ${
                           myCallup.status === 'declined'
-                            ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none'
-                            : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95 shadow-2xs'
+                            ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                            : 'border border-white/30 text-white hover:bg-white/10 cursor-pointer active:scale-95'
                         }`}
                       >
                         <XCircle size={13} />
@@ -2119,10 +2105,10 @@ const CalendarPage: React.FC = () => {
               transform: typeof window !== 'undefined' && window.innerWidth < 640 ? `translateY(${sheetTranslateY}px)` : undefined,
               transition: isDraggingSheet ? 'none' : 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)'
             }}
-            className="bg-white rounded-t-3xl sm:rounded-3xl max-w-6xl xl:max-w-7xl w-full p-4 sm:p-8 relative max-h-[90vh] sm:max-h-[88vh] overflow-y-auto shadow-2xl border border-gray-100 space-y-4 overscroll-contain"
+            className="bg-csc-dark text-white rounded-t-3xl sm:rounded-3xl max-w-6xl xl:max-w-7xl w-full p-4 sm:p-8 relative max-h-[90vh] sm:max-h-[88vh] overflow-y-auto shadow-2xl space-y-4 overscroll-contain"
           >
             {/* Persiana Top Drag Handle no Mobile (Zona de Toque Ampla e Fluida) */}
-            <div 
+            <div
               className="sm:hidden flex items-center justify-center pt-1 pb-3 cursor-grab active:cursor-grabbing touch-none select-none"
               onTouchStart={(e) => handleSheetTouchStart(e, true)}
               onTouchMove={handleSheetTouchMove}
@@ -2134,7 +2120,7 @@ const CalendarPage: React.FC = () => {
                 setModalCallupStatusFilter('all')
               }}
             >
-              <div className="w-12 h-1.5 bg-gray-300 rounded-full hover:bg-gray-400 active:bg-gray-500 transition-colors" />
+              <div className="w-12 h-1.5 bg-white/25 rounded-full hover:bg-white/40 active:bg-white/50 transition-colors" />
             </div>
 
             {/* Botão Fechar no Topo com Alto Contraste e Visibilidade */}
@@ -2146,7 +2132,7 @@ const CalendarPage: React.FC = () => {
                 setPlayerSearchTerm('')
                 setModalCallupStatusFilter('all')
               }}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white text-gray-800 hover:text-black shadow-lg border border-gray-200/90 flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
@@ -2307,30 +2293,30 @@ const CalendarPage: React.FC = () => {
                   const rightName = isAway ? (clubSettings?.name || 'Cascais') : selectedEvent.opponent?.name
 
                   return (
-                    <div className="bg-gradient-to-b from-gray-50 to-white p-4 sm:p-5 rounded-2xl border border-gray-200/90 shadow-2xs space-y-3">
+                    <div className="bg-white/5 p-4 sm:p-5 rounded-2xl space-y-3">
                       <div className="flex items-center justify-between gap-3 sm:gap-4">
                         {/* Left Team */}
                         <div className="flex-1 flex flex-col items-start text-left min-w-0">
                           <div className="flex items-center gap-2">
                             {leftLogo ? (
-                              <img src={leftLogo} alt={leftSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
+                              <img src={leftLogo} alt={leftSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
                             ) : (
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shrink-0">
+                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white text-csc-dark rounded-full flex items-center justify-center text-xs font-black shrink-0">
                                 {leftSigla}
                               </div>
                             )}
-                            <span className="font-black text-sm sm:text-base text-gray-900 uppercase tracking-tight">
+                            <span className="font-black text-sm sm:text-base text-white uppercase tracking-tight">
                               {leftSigla}
                             </span>
                           </div>
-                          <span className="text-[11px] sm:text-xs font-bold text-gray-600 mt-1 truncate max-w-full">
+                          <span className="text-[11px] sm:text-xs font-bold text-white/60 mt-1 truncate max-w-full">
                             {leftName}
                           </span>
                         </div>
 
                         {/* VS Badge */}
                         <div className="shrink-0 px-1 flex flex-col items-center">
-                          <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
+                          <span className="w-8 h-8 flex items-center justify-center text-xs font-black rounded-full bg-csc-gold text-csc-dark shadow-xs">
                             VS
                           </span>
                         </div>
@@ -2339,32 +2325,32 @@ const CalendarPage: React.FC = () => {
                         <div className="flex-1 flex flex-col items-end text-right min-w-0">
                           <div className="flex items-center gap-2 flex-row-reverse">
                             {rightLogo ? (
-                              <img src={rightLogo} alt={rightSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 drop-shadow-xs bg-white rounded-lg p-0.5 border border-gray-100" />
+                              <img src={rightLogo} alt={rightSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
                             ) : (
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-csc-dark text-csc-gold rounded-xl flex items-center justify-center text-xs font-black shrink-0">
+                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white text-csc-dark rounded-full flex items-center justify-center text-xs font-black shrink-0">
                                 {rightSigla}
                               </div>
                             )}
-                            <span className="font-black text-sm sm:text-base text-gray-900 uppercase tracking-tight">
+                            <span className="font-black text-sm sm:text-base text-white uppercase tracking-tight">
                               {rightSigla}
                             </span>
                           </div>
-                          <span className="text-[11px] sm:text-xs font-bold text-gray-600 mt-1 truncate max-w-full">
+                          <span className="text-[11px] sm:text-xs font-bold text-white/60 mt-1 truncate max-w-full">
                             {rightName}
                           </span>
                         </div>
                       </div>
 
-                      <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs text-gray-600 gap-2">
+                      <div className="pt-2.5 border-t border-white/10 flex items-center justify-between text-xs text-white/60 gap-2">
                         <span className="font-bold">
-                          Condição: <strong className="text-gray-900">{isAway ? '✈️ Fora' : selectedEvent.home_away === 'neutral' ? '🏟️ Campo Neutro' : '🏠 Casa'}</strong>
+                          Condição: <strong className="text-white">{isAway ? 'Fora' : selectedEvent.home_away === 'neutral' ? 'Campo Neutro' : 'Casa'}</strong>
                         </span>
                         <button
                           type="button"
                           onClick={() => setIsMatchReportOpen(true)}
-                          className="px-2.5 py-1 bg-csc-dark hover:bg-emerald-950 text-white rounded-xl text-[11px] font-black flex items-center gap-1 cursor-pointer shadow-2xs transition-all active:scale-95 shrink-0"
+                          className="px-2.5 py-1 bg-csc-gold hover:brightness-105 text-csc-dark rounded-full text-[11px] font-black flex items-center gap-1 cursor-pointer transition-all active:scale-95 shrink-0"
                         >
-                          <span>📋 Ficha de Jogo</span>
+                          <span>Ficha de Jogo</span>
                         </button>
                       </div>
                     </div>
@@ -2373,25 +2359,25 @@ const CalendarPage: React.FC = () => {
 
                 {/* Title (apenas exibido para convívios) */}
                 {selectedEvent.type === 'gathering' && (
-                  <h2 className="text-2xl font-black text-gray-900 leading-tight">{selectedEvent.title}</h2>
+                  <h2 className="text-2xl font-black text-white leading-tight">{selectedEvent.title}</h2>
                 )}
 
                 {/* Concentração Acima da Hora */}
                 {selectedEvent.meeting_time && (
                   <div className="flex items-center">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl shadow-2xs">
-                      <span>⏱️ Concentração: {selectedEvent.meeting_time.substring(0, 5)}</span>
+                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-csc-gold bg-white/10 px-3 py-1 rounded-full">
+                      <span>Concentração: {selectedEvent.meeting_time.substring(0, 5)}</span>
                     </div>
                   </div>
                 )}
 
                 {/* Info Box (Data, Hora e Local) */}
-                <div className="space-y-2 bg-gray-50 p-3.5 rounded-2xl border border-gray-200 text-xs">
-                  <div className="flex items-center text-gray-700 space-x-2.5">
-                    <Clock size={16} className="text-csc-dark shrink-0" />
+                <div className="space-y-2 bg-white/5 p-3.5 rounded-2xl text-xs">
+                  <div className="flex items-center text-white space-x-2.5">
+                    <Clock size={16} className="text-csc-gold shrink-0" />
                     <div>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase">Data e Horário</p>
-                      <p className="font-extrabold text-xs text-gray-850">
+                      <p className="text-[10px] font-bold text-white/60 uppercase">Data e Horário</p>
+                      <p className="font-extrabold text-xs text-white">
                         {new Date(selectedEvent.date_time).toLocaleString('pt-PT', { dateStyle: 'full', timeStyle: 'short' })}
                       </p>
                     </div>
@@ -2400,12 +2386,12 @@ const CalendarPage: React.FC = () => {
                   {(() => {
                     const locStr = getEventLocation(selectedEvent)
                     return (
-                      <div className="flex items-center justify-between text-gray-700 pt-2 border-t border-gray-200/60">
+                      <div className="flex items-center justify-between text-white pt-2 border-t border-white/10">
                         <div className="flex items-center space-x-2.5 min-w-0">
-                          <MapPin size={16} className="text-red-600 shrink-0" />
+                          <MapPin size={16} className="text-csc-gold shrink-0" />
                           <div className="min-w-0">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase">Localização</p>
-                            <p className="font-extrabold text-xs text-gray-850 truncate">{locStr || 'Sem local definido'}</p>
+                            <p className="text-[10px] font-bold text-white/60 uppercase">Localização</p>
+                            <p className="font-extrabold text-xs text-white truncate">{locStr || 'Sem local definido'}</p>
                           </div>
                         </div>
                         {locStr && (
@@ -2413,10 +2399,10 @@ const CalendarPage: React.FC = () => {
                             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locStr)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2.5 py-1 bg-white border border-gray-300 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-xl text-[11px] font-bold flex items-center gap-1 shadow-2xs transition-colors shrink-0 ml-2"
+                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-full text-[11px] font-bold flex items-center gap-1 transition-colors shrink-0 ml-2"
                             title="Abrir no Google Maps"
                           >
-                            <MapPin size={12} className="text-red-500 shrink-0" />
+                            <MapPin size={12} className="text-csc-gold shrink-0" />
                             <span>Maps</span>
                             <ExternalLink size={10} className="opacity-60" />
                           </a>
@@ -2431,8 +2417,8 @@ const CalendarPage: React.FC = () => {
                   const clean = parseMatchReportMetadata(selectedEvent.description).cleanDescription
                   if (!clean) return null
                   return (
-                    <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-700 space-y-1">
-                      <p className="font-black text-gray-900">Observações & Informações:</p>
+                    <div className="p-3.5 bg-white/5 rounded-2xl text-xs text-white/70 space-y-1">
+                      <p className="font-black text-white">Observações & Informações:</p>
                       <p className="leading-relaxed">{clean}</p>
                     </div>
                   )
@@ -2441,7 +2427,7 @@ const CalendarPage: React.FC = () => {
                 {/* Painel do Atleta Atual (RSVP Pessoal) */}
                 {(() => {
                   let myCallup = getMyCallupForEvent(selectedEvent.id)
-                  
+
                   // Se o atleta for elegível para este evento mas ainda não houver registo pré-carregado no mapa de convocatórias:
                   if (!myCallup && profile && (selectedEvent.type === 'practice' || selectedEvent.type === 'gathering' || isPlayerEligible(profile, selectedEvent.type) || profile.role === 'player')) {
                     myCallup = {
@@ -2461,50 +2447,46 @@ const CalendarPage: React.FC = () => {
                   const isRsvpOpen = !isPractice || ((eventTime - now) <= 6 * 24 * 60 * 60 * 1000)
 
                   return (
-                    <div className="p-4 bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl border border-gray-300 space-y-3 shadow-2xs">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-600">A tua convocatória para este evento</p>
-                        <p className="text-sm font-black text-gray-900 mt-0.5">
-                          Estado: <span className={
-                            myCallup.status === 'confirmed' ? 'text-emerald-700' :
-                            myCallup.status === 'declined' ? 'text-red-700' : 'text-amber-700'
-                          }>
-                            {myCallup.status === 'confirmed' ? '✓ Confirmaste presença' :
-                             myCallup.status === 'declined' ? '✕ Recusaste presença' : '⏳ Aguarda a tua resposta'}
-                          </span>
-                        </p>
-                      </div>
-                      {!isRsvpOpen ? (
-                        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-950 font-medium">
-                          ⏱️ O pedido de confirmação de presença abre <strong>6 dias antes do treino</strong> (a {new Date(eventTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })}).
+                    <div className={isRsvpOpen && myCallup.status === 'called' ? 'rounded-2xl overflow-hidden' : 'p-4 bg-white/5 rounded-2xl space-y-3'}>
+                      {isRsvpOpen && myCallup.status === 'called' ? (
+                        // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home
+                        <div className="bg-csc-gold px-4 py-3.5 flex items-center justify-center gap-3">
+                          <span className="text-sm font-bold text-csc-dark">Vais estar presente?</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
+                            className="h-10 px-5 rounded-full bg-csc-dark text-white text-sm font-bold cursor-pointer active:scale-95 transition-transform"
+                          >
+                            Sim
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
+                            className="h-10 px-5 rounded-full border-2 border-csc-dark text-csc-dark hover:bg-csc-dark/10 text-sm font-bold cursor-pointer active:scale-95 transition-transform"
+                          >
+                            Não
+                          </button>
                         </div>
                       ) : (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            disabled={myCallup.status === 'confirmed'}
-                            onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                            className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${
-                              myCallup.status === 'confirmed' 
-                                ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none' 
-                                : 'bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 cursor-pointer active:scale-95 shadow-xs'
-                            }`}
-                          >
-                            <CheckCircle2 size={15} /> Confirmar
-                          </button>
-                          <button
-                            type="button"
-                            disabled={myCallup.status === 'declined'}
-                            onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                            className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 ${
-                              myCallup.status === 'declined' 
-                                ? 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed shadow-none' 
-                                : 'bg-white border border-red-600 text-red-700 hover:bg-red-50 cursor-pointer active:scale-95 shadow-xs'
-                            }`}
-                          >
-                            <XCircle size={15} /> Recusar
-                          </button>
-                        </div>
+                        <>
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-white/60">A tua convocatória para este evento</p>
+                            <p className="text-sm font-black text-white mt-0.5">
+                              Estado: <span className={
+                                myCallup.status === 'confirmed' ? 'text-emerald-300' :
+                                myCallup.status === 'declined' ? 'text-red-300' : 'text-csc-gold'
+                              }>
+                                {myCallup.status === 'confirmed' ? 'Confirmaste presença' :
+                                 myCallup.status === 'declined' ? 'Recusaste presença' : 'Aguarda a tua resposta'}
+                              </span>
+                            </p>
+                          </div>
+                          {!isRsvpOpen && (
+                            <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
+                              O pedido de confirmação de presença abre <strong className="text-white">6 dias antes do treino</strong> (a {new Date(eventTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })}).
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )

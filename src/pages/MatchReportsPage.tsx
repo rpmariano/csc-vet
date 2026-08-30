@@ -395,9 +395,9 @@ export const MatchReportsPage: React.FC = () => {
                     <span className="text-sm sm:text-base font-black text-gray-900 uppercase truncate">
                       {leftSigla}
                     </span>
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-50 p-1 border border-gray-200 flex items-center justify-center shrink-0 shadow-2xs">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-50 p-1 border border-gray-200 flex items-center justify-center shrink-0 shadow-xs">
                       {leftLogo ? (
-                        <img src={leftLogo} alt={leftSigla} className="w-full h-full object-contain" />
+                        <img src={leftLogo} alt={leftSigla} className="w-full h-full object-contain rounded-full" />
                       ) : (
                         <span className="font-black text-csc-dark text-xs">{leftSigla}</span>
                       )}
@@ -425,9 +425,9 @@ export const MatchReportsPage: React.FC = () => {
 
                   {/* Equipa Direita */}
                   <div className="col-span-4 flex items-center justify-start gap-2.5 min-w-0">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-50 p-1 border border-gray-200 flex items-center justify-center shrink-0 shadow-2xs">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-50 p-1 border border-gray-200 flex items-center justify-center shrink-0 shadow-xs">
                       {rightLogo ? (
-                        <img src={rightLogo} alt={rightSigla} className="w-full h-full object-contain" />
+                        <img src={rightLogo} alt={rightSigla} className="w-full h-full object-contain rounded-full" />
                       ) : (
                         <span className="font-black text-csc-dark text-xs">{rightSigla}</span>
                       )}
