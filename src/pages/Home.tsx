@@ -7,6 +7,10 @@ import {
   ChevronLeft,
   ShieldAlert,
   Megaphone,
+  Trophy,
+  Dumbbell,
+  Users,
+  Navigation,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -324,6 +328,28 @@ const Home: React.FC = () => {
     return `há ${dias} dias`
   }
 
+  // Aparência por tipo de evento — para os diferentes compromissos da lista
+  // "Por responder" se distinguirem ao primeiro olhar, sem precisar de ler o título.
+  const tipoInfo = (tipo?: Event['type']) => {
+    if (tipo === 'match') return { Icon: Trophy, cor: 'text-amber-600', borda: 'border-l-csc-gold' }
+    if (tipo === 'practice') return { Icon: Dumbbell, cor: 'text-emerald-600', borda: 'border-l-emerald-500' }
+    return { Icon: Users, cor: 'text-blue-600', borda: 'border-l-blue-500' }
+  }
+
+  // Separa o nome do campo da morada, para a morada poder quebrar linha em vez
+  // de ser cortada — e para se poder abrir diretamente no Google Maps.
+  const infoLocal = (ev?: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null) => {
+    if (!ev) return null
+    const campo = ev.field || (ev.field_id ? fields.find(f => f.id === ev.field_id) : null)
+    const nome = campo?.name || ev.location?.trim() || null
+    if (!nome) return null
+    // A morada só se junta ao nome do campo — texto livre em `location` já vem completo.
+    return { nome, morada: campo?.name ? campo.address || null : null }
+  }
+
+  const linkMapa = (nome: string, morada?: string | null) =>
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(morada ? `${nome}, ${morada}` : nome)}`
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -373,14 +399,14 @@ const Home: React.FC = () => {
             const oppSigla = formatOpponentSigla(currentMatch.opponent)
             const leftLogo = isAway ? currentMatch.opponent?.logo_url : clubSettings?.logo_url
             const leftInitials = isAway ? oppSigla : cscSigla
-            const leftName = isAway ? (currentMatch.opponent?.name || oppSigla) : (clubSettings?.name || 'GDS Cascais')
-
             const rightLogo = isAway ? clubSettings?.logo_url : currentMatch.opponent?.logo_url
             const rightInitials = isAway ? cscSigla : oppSigla
-            const rightName = isAway ? (clubSettings?.name || 'GDS Cascais') : (currentMatch.opponent?.name || oppSigla)
 
             const venueLabel = currentMatch.home_away === 'away' ? 'Fora de casa' : currentMatch.home_away === 'neutral' ? 'Campo neutro' : 'Em casa'
             const competitionLabel = currentMatch.is_friendly ? 'Jogo amigável' : (currentMatch.tournament?.name || currentMatch.tournament_name || 'Jogo oficial')
+            const horaJogo = new Date(currentMatch.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
+            const horaConcentracao = currentMatch.meeting_time ? currentMatch.meeting_time.substring(0, 5) : null
+            const local = infoLocal(currentMatch)
 
             return (
               <div {...matchSwipeHandlers} className="bg-csc-dark text-white rounded-2xl overflow-hidden select-none touch-pan-y">
@@ -395,7 +421,13 @@ const Home: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Duelo de equipas */}
+                  {/* Data por extenso, em linha própria — antes ficava espremida a par do campo */}
+                  <p className="text-base font-bold capitalize -mb-1">
+                    {new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
+                  </p>
+
+                  {/* Duelo de equipas: só as siglas — o nome por extenso não cabe e já
+                      está identificado pelo emblema e pela sigla. */}
                   <div
                     onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
                     className="flex items-center gap-3 cursor-pointer group"
@@ -406,17 +438,11 @@ const Home: React.FC = () => {
                       ) : (
                         <div className="w-11 h-11 bg-white text-csc-dark rounded-xl flex items-center justify-center text-xs font-black shrink-0">{leftInitials}</div>
                       )}
-                      <div className="min-w-0">
-                        <p className="text-lg sm:text-xl font-black leading-tight uppercase truncate">{leftInitials}</p>
-                        <p className="text-xs text-white/60 truncate">{leftName}</p>
-                      </div>
+                      <p className="text-lg sm:text-xl font-black leading-tight uppercase truncate min-w-0">{leftInitials}</p>
                     </div>
                     <span className="text-xs font-bold text-white/40 shrink-0">vs</span>
                     <div className="flex-1 flex items-center justify-end gap-3 min-w-0 text-right">
-                      <div className="min-w-0">
-                        <p className="text-lg sm:text-xl font-black leading-tight uppercase truncate">{rightInitials}</p>
-                        <p className="text-xs text-white/60 truncate">{rightName}</p>
-                      </div>
+                      <p className="text-lg sm:text-xl font-black leading-tight uppercase truncate min-w-0">{rightInitials}</p>
                       {rightLogo ? (
                         <img src={rightLogo} alt="" className="w-11 h-11 object-contain shrink-0 bg-white/15 rounded-xl group-hover:scale-105 transition-transform" />
                       ) : (
@@ -425,27 +451,40 @@ const Home: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Logística: o que o jogador precisa de reter */}
-                  <div className="flex gap-6 pb-1">
+                  {/* Horários: concentração e hora do jogo, lado a lado */}
+                  <div className="flex gap-6">
+                    {horaConcentracao && (
+                      <div>
+                        <p className="text-xs text-white/55">Concentração</p>
+                        <p className="text-sm font-bold">{horaConcentracao}</p>
+                      </div>
+                    )}
                     <div>
-                      <p className="text-xs text-white/55">Concentração</p>
-                      <p className="text-sm font-bold">
-                        {currentMatch.meeting_time
-                          ? currentMatch.meeting_time.substring(0, 5)
-                          : new Date(currentMatch.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs text-white/55">Campo</p>
-                      <p className="text-sm font-bold truncate">{getEventLocation(currentMatch) || 'A definir'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-white/55">Data</p>
-                      <p className="text-sm font-bold">
-                        {new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })}
-                      </p>
+                      <p className="text-xs text-white/55">Jogo</p>
+                      <p className="text-sm font-bold">{horaJogo}</p>
                     </div>
                   </div>
+
+                  {/* Campo: nome + morada em linha própria, com espaço para quebrar —
+                      e um toque abre a localização no Maps em vez de cortar o texto. */}
+                  {local && (
+                    <a
+                      href={linkMapa(local.nome, local.morada)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="flex items-start gap-2.5 pt-1 group/campo"
+                    >
+                      <MapPin size={16} className="text-csc-gold shrink-0 mt-0.5" />
+                      <span className="min-w-0 flex-1">
+                        <span className="text-sm font-bold block group-hover/campo:underline">{local.nome}</span>
+                        {local.morada && (
+                          <span className="text-xs text-white/55 block leading-snug">{local.morada}</span>
+                        )}
+                      </span>
+                      <Navigation size={13} className="text-white/40 shrink-0 mt-1" />
+                    </a>
+                  )}
                 </div>
 
                 {/* RSVP: existe uma vez na app, e é aqui */}
@@ -527,10 +566,11 @@ const Home: React.FC = () => {
                   const ev = callup.event
                   if (!ev) return null
                   const { dia, mes } = formatarDiaMes(ev.date_time)
+                  const { Icon, cor, borda } = tipoInfo(ev.type)
                   return (
                     <div
                       key={callup.id}
-                      className={`flex items-center gap-3 px-4 py-3 ${idx > 0 ? 'border-t border-gray-100' : ''}`}
+                      className={`flex items-center gap-3 pl-3 pr-4 py-3 border-l-[3px] ${borda} ${idx > 0 ? 'border-t border-gray-100' : ''}`}
                     >
                       <button
                         type="button"
@@ -542,7 +582,10 @@ const Home: React.FC = () => {
                           <span className="text-[11px] text-gray-500 uppercase">{mes}</span>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-gray-900 truncate">{tituloEvento(ev)}</p>
+                          <p className="text-sm font-bold text-gray-900 truncate flex items-center gap-1.5">
+                            <Icon size={13} className={`${cor} shrink-0`} />
+                            <span className="truncate">{tituloEvento(ev)}</span>
+                          </p>
                           <p className="text-xs text-gray-500 truncate">
                             {new Date(ev.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} · {getEventLocation(ev) || 'Local a definir'}
                           </p>

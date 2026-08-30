@@ -26,6 +26,9 @@ interface Announcement {
 
 const AnnouncementsPage: React.FC = () => {
   const { profile } = useAuth()
+  // A rota está aberta a todos os autenticados (a RLS já protege a escrita);
+  // só coach/admin veem o formulário de criação e as ações de gestão.
+  const isCoachOrAdmin = profile?.role === 'coach' || profile?.role === 'admin'
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -262,6 +265,10 @@ const AnnouncementsPage: React.FC = () => {
 
   // Filtragem
   const filteredAnnouncements = announcements.filter(ann => {
+    // Um jogador só deve ver o que está ativo — o filtro de estado e o ver
+    // inativos são ferramentas de gestão, não fazem sentido para quem só lê.
+    if (!isCoachOrAdmin && ann.is_active === false) return false
+
     // Filtro por Estado
     if (statusFilter === 'active' && ann.is_active === false) return false
     if (statusFilter === 'inactive' && ann.is_active !== false) return false
@@ -284,127 +291,131 @@ const AnnouncementsPage: React.FC = () => {
     <div className="space-y-4 pb-12">
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Formulário de Criação (Coluna Esquerda - 5 Colunas) */}
-        <div className="lg:col-span-5 bg-white rounded-3xl shadow-sm border border-gray-200/80 p-5 sm:p-6 space-y-4 sticky top-6">
-          <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
-            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center text-sm font-bold">
-              <Megaphone size={16} />
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-gray-900">Novo Comunicado</h3>
-              <p className="text-[11px] text-gray-500">Escreve e publica um aviso para todo o plantel.</p>
-            </div>
-          </div>
-
-          <form onSubmit={handlePublish} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                Título do Comunicado *
-              </label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold placeholder:font-normal placeholder:text-gray-400"
-                placeholder="Ex: Ponto de Encontro Alterado"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                Conteúdo da Mensagem *
-              </label>
-              <textarea
-                required
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={4}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white resize-none leading-relaxed placeholder:text-gray-400"
-                placeholder="Escreve aqui a mensagem completa para os atletas e equipa técnica..."
-              />
-            </div>
-
-            {/* Opção de Ativar de Imediato */}
-            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-gray-800 block">Ativar de Imediato</span>
-                <span className="text-[10.5px] text-gray-500 block">Fica visível no carrossel de avisos da Homepage</span>
+        {/* Formulário de Criação — apenas coach/admin. Para jogadores a rota é só de leitura. */}
+        {isCoachOrAdmin && (
+          <div className="lg:col-span-5 bg-white rounded-3xl shadow-sm border border-gray-200/80 p-5 sm:p-6 space-y-4 sticky top-6">
+            <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center text-sm font-bold">
+                <Megaphone size={16} />
               </div>
-              <button
-                type="button"
-                onClick={() => setIsActiveOnCreate(!isActiveOnCreate)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  isActiveOnCreate ? 'bg-emerald-600' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                    isActiveOnCreate ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
+              <div>
+                <h3 className="text-sm font-black text-gray-900">Novo Comunicado</h3>
+                <p className="text-[11px] text-gray-500">Escreve e publica um aviso para todo o plantel.</p>
+              </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={isPublishing || !title.trim() || !content.trim()}
-              className="w-full flex items-center justify-center gap-2 bg-csc-dark hover:bg-black active:bg-csc-dark text-white py-3 rounded-2xl font-black text-xs transition-all shadow-md active:scale-98 disabled:opacity-50 cursor-pointer"
-            >
-              <Plus size={16} className="text-csc-gold" />
-              <span>{isPublishing ? 'A publicar...' : 'Publicar Comunicado'}</span>
-            </button>
-          </form>
-        </div>
+            <form onSubmit={handlePublish} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                  Título do Comunicado *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold placeholder:font-normal placeholder:text-gray-400"
+                  placeholder="Ex: Ponto de Encontro Alterado"
+                />
+              </div>
 
-        {/* Lista e Histórico de Comunicados (Coluna Direita - 7 Colunas) */}
-        <div className="lg:col-span-7 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                  Conteúdo da Mensagem *
+                </label>
+                <textarea
+                  required
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={4}
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white resize-none leading-relaxed placeholder:text-gray-400"
+                  placeholder="Escreve aqui a mensagem completa para os atletas e equipa técnica..."
+                />
+              </div>
+
+              {/* Opção de Ativar de Imediato */}
+              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-gray-800 block">Ativar de Imediato</span>
+                  <span className="text-[10.5px] text-gray-500 block">Fica visível no carrossel de avisos da Homepage</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsActiveOnCreate(!isActiveOnCreate)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    isActiveOnCreate ? 'bg-emerald-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      isActiveOnCreate ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isPublishing || !title.trim() || !content.trim()}
+                className="w-full flex items-center justify-center gap-2 bg-csc-dark hover:bg-black active:bg-csc-dark text-white py-3 rounded-2xl font-black text-xs transition-all shadow-md active:scale-98 disabled:opacity-50 cursor-pointer"
+              >
+                <Plus size={16} className="text-csc-gold" />
+                <span>{isPublishing ? 'A publicar...' : 'Publicar Comunicado'}</span>
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Lista e Histórico de Comunicados */}
+        <div className={isCoachOrAdmin ? 'lg:col-span-7 space-y-4' : 'lg:col-span-12 space-y-4'}>
           <div className="bg-white rounded-3xl shadow-sm border border-gray-200/80 p-5 sm:p-6 space-y-4">
             
             {/* Barra de Filtros e Pesquisa */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200">
-              {/* Separadores de Filtro */}
-              <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-2xl w-fit">
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter('all')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    statusFilter === 'all'
-                      ? 'bg-white text-csc-dark shadow-2xs'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Todos ({announcements.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter('active')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-                    statusFilter === 'active'
-                      ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <span>Ativos</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                    statusFilter === 'active' ? 'bg-emerald-800 text-white' : 'bg-gray-200 text-gray-700'
-                  }`}>{activeCount}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter('inactive')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-                    statusFilter === 'inactive'
-                      ? 'bg-gray-800 text-white shadow-2xs'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <span>Inativos</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                    statusFilter === 'inactive' ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'
-                  }`}>{inactiveCount}</span>
-                </button>
-              </div>
+              {/* Separadores de Filtro — ver ativos/inativos é gestão, não faz sentido para quem só lê */}
+              {isCoachOrAdmin && (
+                <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-2xl w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      statusFilter === 'all'
+                        ? 'bg-white text-csc-dark shadow-2xs'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Todos ({announcements.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('active')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      statusFilter === 'active'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <span>Ativos</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      statusFilter === 'active' ? 'bg-emerald-800 text-white' : 'bg-gray-200 text-gray-700'
+                    }`}>{activeCount}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('inactive')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      statusFilter === 'inactive'
+                        ? 'bg-gray-800 text-white shadow-2xs'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <span>Inativos</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      statusFilter === 'inactive' ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'
+                    }`}>{inactiveCount}</span>
+                  </button>
+                </div>
+              )}
 
               {/* Input de Pesquisa */}
               <div className="relative flex-1 sm:max-w-[220px]">
@@ -430,7 +441,11 @@ const AnnouncementsPage: React.FC = () => {
                 <span className="text-3xl">📭</span>
                 <p className="text-xs font-bold text-gray-700">Nenhum comunicado encontrado.</p>
                 <p className="text-[11px] text-gray-400">
-                  {searchTerm ? 'Experimenta ajustar o termo de pesquisa.' : 'Cria um novo comunicado no formulário ao lado.'}
+                  {searchTerm
+                    ? 'Experimenta ajustar o termo de pesquisa.'
+                    : isCoachOrAdmin
+                      ? 'Cria um novo comunicado no formulário ao lado.'
+                      : 'Ainda não há comunicados publicados.'}
                 </p>
               </div>
             ) : (
@@ -469,20 +484,22 @@ const AnnouncementsPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Badge de Estado */}
-                        <div>
-                          {isActive ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                              <span>Ativo na Home</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-gray-200 text-gray-700 border border-gray-300">
-                              <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-                              <span>Desativado</span>
-                            </span>
-                          )}
-                        </div>
+                        {/* Badge de Estado — só interessa a quem gere comunicados */}
+                        {isCoachOrAdmin && (
+                          <div>
+                            {isActive ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                                <span>Ativo na Home</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-gray-200 text-gray-700 border border-gray-300">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                                <span>Desativado</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Conteúdo */}
@@ -490,56 +507,55 @@ const AnnouncementsPage: React.FC = () => {
                         {ann.content}
                       </div>
 
-                      {/* Barra de Ações: Ativar/Desativar, Editar, Apagar */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
-                        {/* Botão de Toggle Ativar/Desativar */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActive(ann)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            isActive
-                              ? 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
-                              : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 font-black'
-                          }`}
-                          title={isActive ? 'Ocultar da Homepage' : 'Mostrar na Homepage'}
-                        >
-                          {isActive ? (
-                            <>
-                              <EyeOff size={13} className="text-amber-600" />
-                              <span>Desativar</span>
-                            </>
-                          ) : (
-                            <>
-                              <Eye size={13} className="text-emerald-600" />
-                              <span>Ativar na Home</span>
-                            </>
-                          )}
-                        </button>
-
-                        <div className="flex items-center gap-1.5">
-                          {/* Botão Editar */}
+                      {/* Barra de Ações: Ativar/Desativar, Editar, Apagar — gestão, não leitura */}
+                      {isCoachOrAdmin && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
                           <button
                             type="button"
-                            onClick={() => handleStartEdit(ann)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                            title="Editar comunicado"
+                            onClick={() => handleToggleActive(ann)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              isActive
+                                ? 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 font-black'
+                            }`}
+                            title={isActive ? 'Ocultar da Homepage' : 'Mostrar na Homepage'}
                           >
-                            <Edit3 size={13} className="text-gray-600" />
-                            <span>Editar</span>
+                            {isActive ? (
+                              <>
+                                <EyeOff size={13} className="text-amber-600" />
+                                <span>Desativar</span>
+                              </>
+                            ) : (
+                              <>
+                                <Eye size={13} className="text-emerald-600" />
+                                <span>Ativar na Home</span>
+                              </>
+                            )}
                           </button>
 
-                          {/* Botão Apagar */}
-                          <button
-                            type="button"
-                            onClick={() => setDeletingAnn(ann)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-transparent hover:border-red-200"
-                            title="Eliminar comunicado"
-                          >
-                            <Trash2 size={14} />
-                            <span>Apagar</span>
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(ann)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                              title="Editar comunicado"
+                            >
+                              <Edit3 size={13} className="text-gray-600" />
+                              <span>Editar</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setDeletingAnn(ann)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-transparent hover:border-red-200"
+                              title="Eliminar comunicado"
+                            >
+                              <Trash2 size={14} />
+                              <span>Apagar</span>
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )
                 })}
