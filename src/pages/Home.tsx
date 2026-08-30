@@ -408,7 +408,7 @@ const Home: React.FC = () => {
             const local = infoLocal(currentMatch)
 
             return (
-              <div {...matchSwipeHandlers} className="relative bg-gradient-to-br from-csc-dark to-csc-blue text-white rounded-3xl overflow-hidden select-none touch-pan-y shadow-lg">
+              <div {...matchSwipeHandlers} className="relative bg-gradient-to-br from-csc-dark to-csc-light text-white rounded-3xl overflow-hidden select-none touch-pan-y shadow-lg">
                 {/* Brilho radial subtil atrás do confronto — dá profundidade ao gradiente
                     sem se tornar um efeito chamativo. */}
                 <div className="pointer-events-none absolute inset-x-0 top-16 h-56 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.10),transparent_70%)]" />
