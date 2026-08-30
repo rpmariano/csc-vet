@@ -24,6 +24,7 @@ import type { UserRole } from '../context/AuthContext'
 import { AutoAssociationModal } from './AutoAssociationModal'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { ClinicalStatusChip, RoleChip, RoleAvatar } from './StatusChip'
 
 const Layout: React.FC = () => {
   const { profile, actualRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
@@ -71,15 +72,10 @@ const Layout: React.FC = () => {
             <button
               type="button"
               onClick={handleToggleClinical}
-              className={`text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 transition-all border shadow-2xs cursor-pointer active:scale-95 ${
-                profile.status === 'injured'
-                  ? 'bg-red-50 text-red-700 border-red-300 animate-pulse ring-1 ring-red-300'
-                  : 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-200'
-              }`}
+              className={`transition-all cursor-pointer active:scale-95 rounded-full ${profile.status === 'injured' ? 'ring-1 ring-red-300' : 'ring-1 ring-emerald-200'}`}
               title="Clique para alternar entre Apto e Lesionado"
             >
-              <span>{profile.status === 'injured' ? '🔴' : '🟢'}</span>
-              <span>{profile.status === 'injured' ? 'Lesionado' : 'Apto'}</span>
+              <ClinicalStatusChip status={profile.status} size="sm" />
             </button>
           )}
 
@@ -87,13 +83,10 @@ const Layout: React.FC = () => {
           <button
             type="button"
             onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-            className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-black text-white flex items-center gap-1 transition-all ${
-              isAdmin ? 'bg-csc-gold text-csc-dark shadow-xs' : isCoach ? 'bg-blue-600' : 'bg-csc-dark'
-            } ${canSwitchRoles ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
+            className={`transition-all rounded-full ${canSwitchRoles ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
             title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
           >
-            <span>{isAdmin ? 'Admin' : isCoach ? 'Treinador' : 'Jogador'}</span>
-            {canSwitchRoles && <ChevronDown size={12} className="opacity-70" />}
+            <RoleChip role={profile?.role ?? 'player'} size="sm" className={canSwitchRoles ? 'pr-1.5' : ''} />
           </button>
 
           <Link to="/settings" title="Ver Perfil">
@@ -167,28 +160,17 @@ const Layout: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-                          className={`text-[9.5px] px-2 py-0.5 rounded font-black flex items-center gap-1 ${
-                            isAdmin ? 'bg-csc-gold text-csc-dark' : isCoach ? 'bg-blue-500 text-white' : 'bg-csc-light text-white'
-                          } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
+                          className={canSwitchRoles ? 'cursor-pointer active:scale-95' : ''}
                           title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
                         >
-                          <span>{isAdmin ? '🛡️ Admin' : isCoach ? '📋 Treinador' : '⚽ Jogador'}</span>
-                          {canSwitchRoles && <ChevronDown size={10} />}
+                          <RoleChip role={profile.role} size="sm" className={canSwitchRoles ? 'pr-1' : ''} />
+                          {canSwitchRoles && <ChevronDown size={10} className="inline ml-0.5 opacity-70" />}
                         </button>
 
                         {/* Estado Clínico (Apenas Jogador) */}
                         {isPlayer && (
-                          <button
-                            type="button"
-                            onClick={() => toggleClinicalStatus()}
-                            className={`text-[9.5px] px-2 py-0.5 rounded-full font-black flex items-center gap-1 border cursor-pointer ${
-                              profile.status === 'injured'
-                                ? 'bg-red-900/60 text-red-300 border-red-500'
-                                : 'bg-emerald-900/60 text-emerald-300 border-emerald-500'
-                            }`}
-                          >
-                            <span>{profile.status === 'injured' ? '🔴' : '🟢'}</span>
-                            <span>{profile.status === 'injured' ? 'Lesionado' : 'Apto'}</span>
+                          <button type="button" onClick={() => toggleClinicalStatus()} className="cursor-pointer">
+                            <ClinicalStatusChip status={profile.status} size="sm" />
                           </button>
                         )}
                       </div>
@@ -214,8 +196,9 @@ const Layout: React.FC = () => {
                       <Landmark size={15} className="text-emerald-400" />
                       <span className="text-xs font-black uppercase tracking-wider text-white">Quotas & Mensalidades</span>
                     </div>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Regularizadas 🟢
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      Regularizadas
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-300 leading-snug">
@@ -379,13 +362,11 @@ const Layout: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-                        className={`text-[9px] px-1.5 py-0.5 rounded font-black flex items-center gap-0.5 ${
-                          isAdmin ? 'bg-csc-gold text-csc-dark' : isCoach ? 'bg-blue-500 text-white' : 'bg-csc-light text-white'
-                        } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
+                        className={canSwitchRoles ? 'cursor-pointer active:scale-95' : ''}
                         title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
                       >
-                        <span>{isAdmin ? '🛡️ Admin' : isCoach ? '📋 Treinador' : '⚽ Jogador'}</span>
-                        {canSwitchRoles && <ChevronDown size={10} />}
+                        <RoleChip role={profile.role} size="sm" className={canSwitchRoles ? 'pr-1' : ''} />
+                        {canSwitchRoles && <ChevronDown size={10} className="inline ml-0.5 opacity-70" />}
                       </button>
                     </div>
                   </div>
@@ -407,8 +388,9 @@ const Layout: React.FC = () => {
                     <Landmark size={13} className="text-emerald-400" />
                     <span className="text-[11px] font-bold text-gray-200">Quotas</span>
                   </div>
-                  <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    Regularizadas 🟢
+                  <span className="inline-flex items-center gap-1 text-[9.5px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    Regularizadas
                   </span>
                 </div>
               )}
@@ -580,18 +562,8 @@ const Layout: React.FC = () => {
           <div className="flex items-center gap-3">
             {/* Toggle Clínico no Canto Superior: Apto / Lesionado */}
             {profile && (
-              <button
-                type="button"
-                onClick={() => toggleClinicalStatus()}
-                className={`text-xs font-black px-3.5 py-1.5 rounded-full flex items-center gap-2 transition-all border shadow-xs cursor-pointer active:scale-95 ${
-                  profile.status === 'injured'
-                    ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
-                    : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-100'
-                }`}
-                title="Clique para alternar o seu estado entre Apto e Lesionado"
-              >
-                <span className="text-sm">{profile.status === 'injured' ? '🔴' : '🟢'}</span>
-                <span>{profile.status === 'injured' ? 'Lesionado' : 'Apto'}</span>
+              <button type="button" onClick={() => toggleClinicalStatus()} className="cursor-pointer active:scale-95" title="Clique para alternar o seu estado entre Apto e Lesionado">
+                <ClinicalStatusChip status={profile.status} />
               </button>
             )}
 
@@ -599,12 +571,10 @@ const Layout: React.FC = () => {
             <button
               type="button"
               onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-              className={`text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-full font-black text-white flex items-center gap-1.5 transition-all ${
-                isAdmin ? 'bg-csc-gold text-csc-dark shadow-xs' : isCoach ? 'bg-blue-600' : 'bg-csc-dark'
-              } ${canSwitchRoles ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
+              className={canSwitchRoles ? 'cursor-pointer active:scale-95' : ''}
             >
-              <span>{isAdmin ? '🛡️ Admin' : isCoach ? '📋 Treinador' : '⚽ Jogador'}</span>
-              {canSwitchRoles && <ChevronDown size={13} className="opacity-70" />}
+              <RoleChip role={profile?.role ?? 'player'} className={canSwitchRoles ? 'pr-1.5' : ''} />
+              {canSwitchRoles && <ChevronDown size={13} className="inline ml-0.5 opacity-70" />}
             </button>
 
             {/* Link para Perfil / Settings */}
@@ -759,9 +729,7 @@ const Layout: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-csc-gold text-csc-dark font-black flex items-center justify-center text-lg shadow-xs shrink-0">
-                      🛡️
-                    </div>
+<RoleAvatar role="admin" />
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-gray-900">Administrador / Direção</p>
@@ -790,9 +758,7 @@ const Layout: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center text-lg shadow-xs shrink-0">
-                      📋
-                    </div>
+<RoleAvatar role="coach" />
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-gray-900">Treinador</p>
@@ -821,9 +787,7 @@ const Layout: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white font-black flex items-center justify-center text-lg shadow-xs shrink-0">
-                      ⚽
-                    </div>
+<RoleAvatar role="player" />
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-gray-900">Jogador (Atleta)</p>
