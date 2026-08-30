@@ -5,6 +5,7 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   ShieldAlert,
   Megaphone,
   Trophy,
@@ -125,6 +126,9 @@ const Home: React.FC = () => {
   const [myCallups, setMyCallups] = useState<Callup[]>([])
   const [fields, setFields] = useState<{ id: string; name: string; address?: string | null }[]>([])
   const [loading, setLoading] = useState(true)
+  // Comunicado atualmente aberto na Home (acordeão: um de cada vez, clicar
+  // outra vez fecha). Evita ter de sair da Home para ler a mensagem toda.
+  const [comunicadoAberto, setComunicadoAberto] = useState<string | null>(null)
 
   const getEventLocation = (ev?: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null) => {
     if (!ev) return ''
@@ -651,27 +655,42 @@ const Home: React.FC = () => {
             )}
 
             <div className="space-y-2.5">
-              <div className="flex items-baseline justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Comunicados</span>
+              <div className="flex items-baseline justify-between px-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Comunicados</span>
                 <Link to="/announcements" className="text-sm font-bold text-csc-light hover:text-csc-dark transition-colors">
                   Ver todos
                 </Link>
               </div>
               {announcements.length > 0 ? (
-                <div className="space-y-3">
-                  {announcements.slice(0, 2).map(a => (
-                    <div
-                      key={a.id}
-                      onClick={() => navigate('/announcements')}
-                      className="flex gap-2.5 items-baseline cursor-pointer group"
-                    >
-                      <span className="w-1 h-1 rounded-full bg-csc-gold shrink-0 -translate-y-0.5" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-900 group-hover:text-csc-dark transition-colors leading-snug">{a.title}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{formatarTempoRelativo(a.published_at)}</p>
+                <div className="bg-csc-dark rounded-3xl overflow-hidden">
+                  {announcements.slice(0, 3).map((a, idx) => {
+                    const aberto = comunicadoAberto === a.id
+                    return (
+                      <div key={a.id} className={idx > 0 ? 'border-t border-white/10' : ''}>
+                        <button
+                          type="button"
+                          onClick={() => setComunicadoAberto(aberto ? null : a.id)}
+                          aria-expanded={aberto}
+                          className="w-full flex items-start gap-3 px-4 py-3.5 text-left cursor-pointer"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-csc-gold shrink-0 mt-1.5" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-white leading-snug">{a.title}</p>
+                            <p className="text-xs text-white/50 mt-0.5">{formatarTempoRelativo(a.published_at)}</p>
+                          </div>
+                          <ChevronDown
+                            size={16}
+                            className={`text-white/40 shrink-0 mt-0.5 transition-transform ${aberto ? 'rotate-180' : ''}`}
+                          />
+                        </button>
+                        {aberto && (
+                          <div className="px-4 pb-4 pl-[26px]">
+                            <p className="text-sm text-white/80 leading-relaxed whitespace-pre-line">{a.content}</p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-sm text-gray-400">
