@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { Sparkles, X, Search, CheckCircle2, ChevronRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import type { Profile } from '../context/AuthContext'
-import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 
@@ -13,12 +12,35 @@ export const AutoAssociationModal: React.FC = () => {
   const [isManualSelect, setIsManualSelect] = useState(false)
   const [manualSearch, setManualSearch] = useState('')
   const [loading, setLoading] = useState(false)
+  // O plantel vem do Supabase. Até agosto de 2026 vinha de uma lista embutida no
+  // código que continha dados pessoais reais e era servida publicamente.
+  const [squad, setSquad] = useState<Profile[]>([])
   const [dismissed, setDismissed] = useState(() => {
     return sessionStorage.getItem('csc_dismiss_association_prompt') === 'true'
   })
 
   useEffect(() => {
     if (!user || !profile || dismissed) return
+    let cancelado = false
+
+    supabase
+      .from('profiles')
+      .select('id, name, nickname, shirt_name, email, phone, jersey_number, kit_size, birth_date, nationality, position, address, postal_code, city, nif, id_number, id_card_expiry, iban, gdpr_consent, member_number, status')
+      .not('jersey_number', 'is', null)
+      .then(({ data, error }) => {
+        if (cancelado) return
+        if (error) {
+          console.error('Erro ao carregar o plantel para associação:', error.message)
+          return
+        }
+        setSquad((data as Profile[]) || [])
+      })
+
+    return () => { cancelado = true }
+  }, [user, profile, dismissed])
+
+  useEffect(() => {
+    if (!user || !profile || dismissed || squad.length === 0) return
 
     // Verificar se o perfil atual já tem dados desportivos atribuídos (ex: camisola, posição ou morada)
     const isAlreadyLinked = Boolean(
@@ -39,12 +61,12 @@ export const AutoAssociationModal: React.FC = () => {
 
     // 1. Correspondência exata por Email
     if (userEmail) {
-      match = INITIAL_PLAYERS_DATA.find(p => p.email && p.email.toLowerCase().trim() === userEmail)
+      match = squad.find(p => p.email && p.email.toLowerCase().trim() === userEmail)
     }
 
     // 2. Correspondência exata por Telefone (se tiver pelo menos 9 dígitos)
     if (!match && userPhone && userPhone.length >= 9) {
-      match = INITIAL_PLAYERS_DATA.find(p => {
+      match = squad.find(p => {
         const pPhone = (p.phone || '').trim().replace(/\D/g, '')
         return pPhone.length >= 9 && pPhone === userPhone
       })
@@ -55,7 +77,7 @@ export const AutoAssociationModal: React.FC = () => {
     if (!match && userName && userName !== 'novo atleta' && userName !== 'novo jogador') {
       const uWords = userName.split(' ').filter(w => w.length > 2)
 
-      match = INITIAL_PLAYERS_DATA.find(p => {
+      match = squad.find(p => {
         const pEmail = (p.email || '').toLowerCase().trim()
         // Se a ficha já tiver outro email oficial atribuído, não associar por nome
         if (pEmail && userEmail && pEmail !== userEmail) return false
@@ -79,7 +101,7 @@ export const AutoAssociationModal: React.FC = () => {
       setMatchedPlayer(match)
       setIsOpen(true)
     }
-  }, [user, profile, dismissed])
+  }, [user, profile, dismissed, squad])
 
   const handleDismiss = () => {
     setIsOpen(false)
@@ -97,7 +119,6 @@ export const AutoAssociationModal: React.FC = () => {
         nickname: selectedTarget.nickname || profile.nickname,
         shirt_name: selectedTarget.shirt_name || selectedTarget.nickname || profile.shirt_name,
         phone: selectedTarget.phone || profile.phone,
-        role: selectedTarget.role || profile.role || 'player',
         status: selectedTarget.status || profile.status || 'active',
         jersey_number: selectedTarget.jersey_number !== undefined ? selectedTarget.jersey_number : profile.jersey_number,
         kit_size: selectedTarget.kit_size || profile.kit_size,
@@ -132,6 +153,8 @@ export const AutoAssociationModal: React.FC = () => {
           .neq('id', user.id)
           .maybeSingle()
 
+        // A ficha do plantel é uma linha real da tabela `profiles`. Passar as
+        // referências para a conta autenticada e remover a ficha órfã.
         if (placeholder?.id) {
           await Promise.allSettled([
             supabase.from('callups').update({ player_id: user.id }).eq('player_id', placeholder.id),
@@ -155,7 +178,7 @@ export const AutoAssociationModal: React.FC = () => {
 
   if (!isOpen || !matchedPlayer) return null
 
-  const filteredSquad = INITIAL_PLAYERS_DATA.filter(p => 
+  const filteredSquad = squad.filter(p => 
     !manualSearch ||
     p.name.toLowerCase().includes(manualSearch.toLowerCase()) ||
     (p.nickname && p.nickname.toLowerCase().includes(manualSearch.toLowerCase())) ||

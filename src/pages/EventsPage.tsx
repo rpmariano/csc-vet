@@ -30,7 +30,6 @@ import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
-import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal, parseMatchReportMetadata, buildDescriptionWithMatchReport } from '../components/MatchReportModal'
@@ -45,51 +44,12 @@ export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: stri
   return player.name || 'Atleta'
 }
 
-const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
-  const playersList: Profile[] = INITIAL_PLAYERS_DATA.map((seedPlayer, idx) => ({
-    ...seedPlayer,
-    id: `seed-${idx}`,
-  } as Profile))
-
-  remoteProfiles.forEach((remotePlayer) => {
-    let matchedIdx = -1
-
-    // 1. Verificar por email
-    if (remotePlayer.email) {
-      const remEmail = remotePlayer.email.toLowerCase().trim()
-      matchedIdx = playersList.findIndex(p => p.email && p.email.toLowerCase().trim() === remEmail)
-    }
-
-    // 2. Verificar por nome / nome da camisola / alcunha
-    if (matchedIdx === -1 && remotePlayer.name) {
-      const remName = remotePlayer.name.toLowerCase().trim()
-      matchedIdx = playersList.findIndex(p => p.name && (
-        p.name.toLowerCase().trim() === remName ||
-        p.shirt_name?.toLowerCase().trim() === remName ||
-        p.nickname?.toLowerCase().trim() === remName
-      ))
-    }
-
-    // 3. Verificar por número da camisola
-    if (matchedIdx === -1 && remotePlayer.jersey_number != null) {
-      matchedIdx = playersList.findIndex(p => p.jersey_number === remotePlayer.jersey_number)
-    }
-
-    if (matchedIdx !== -1) {
-      const seed = playersList[matchedIdx]
-      playersList[matchedIdx] = {
-        ...seed,
-        ...remotePlayer,
-        id: remotePlayer.id, // UUID real do Supabase
-        shirt_name: remotePlayer.shirt_name || seed.shirt_name || null,
-        jersey_number: remotePlayer.jersey_number ?? seed.jersey_number ?? null,
-      }
-    } else {
-      playersList.push(remotePlayer)
-    }
-  })
-
-  return playersList.sort((a, b) => {
+const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
+  // A base de dados é a única fonte do plantel. Até agosto de 2026 esta função
+  // fundia os perfis do Supabase com uma lista de sementes em src/data/initialPlayers.ts,
+  // ficheiro que continha dados pessoais reais (NIF, IBAN, morada) e que por isso ia
+  // parar ao JavaScript servido publicamente. Foi removido.
+  return [...remoteProfiles].sort((a, b) => {
     if (a.jersey_number && b.jersey_number) return a.jersey_number - b.jersey_number
     if (a.jersey_number) return -1
     if (b.jersey_number) return 1
@@ -97,86 +57,13 @@ const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
   })
 }
 
-const ensurePlayerIdsForSupabase = async (pIds: string[], playerList: Profile[]): Promise<string[]> => {
-  const playerMap = new Map<string, Profile>(playerList.map(p => [p.id, p]))
-  const resolvedIds: string[] = []
-
-  let dbProfiles: { id: string; email?: string | null; name?: string | null }[] = []
-  try {
-    const { data } = await supabase.from('profiles').select('id, email, name')
-    if (data) dbProfiles = data
-  } catch (e) {
-    console.error('Error fetching db profiles for matching:', e)
-  }
-
-  for (const id of pIds) {
-    if (!id || typeof id !== 'string') continue
-
-    if (!id.startsWith('seed-')) {
-      resolvedIds.push(id)
-      continue
-    }
-    const seedP = playerMap.get(id)
-    if (!seedP) continue
-
-    // 1. Verificar por email na BD
-    const matchByEmail = seedP.email 
-      ? dbProfiles.find(dp => dp.email && dp.email.toLowerCase().trim() === seedP.email!.toLowerCase().trim())
-      : null
-
-    if (matchByEmail?.id) {
-      seedP.id = matchByEmail.id
-      resolvedIds.push(matchByEmail.id)
-      continue
-    }
-
-    // 2. Verificar por nome na BD
-    const matchByName = seedP.name
-      ? dbProfiles.find(dp => dp.name && dp.name.toLowerCase().trim() === seedP.name.toLowerCase().trim())
-      : null
-
-    if (matchByName?.id) {
-      seedP.id = matchByName.id
-      resolvedIds.push(matchByName.id)
-      continue
-    }
-
-    // 3. Tentar inserir se não existir
-    try {
-      const newId = crypto.randomUUID()
-      const { data: inserted, error } = await supabase.from('profiles').insert([{
-        id: newId,
-        name: seedP.name,
-        shirt_name: seedP.shirt_name || null,
-        jersey_number: seedP.jersey_number || null,
-        position: seedP.position || null,
-        role: seedP.role || 'player',
-        status: seedP.status || 'active',
-        email: seedP.email || null,
-        phone: seedP.phone || null,
-        birth_date: seedP.birth_date || null
-      }]).select('id').maybeSingle()
-
-      if (!error) {
-        const finalId = inserted?.id || newId
-        seedP.id = finalId
-        dbProfiles.push({ id: finalId, email: seedP.email, name: seedP.name })
-        resolvedIds.push(finalId)
-      } else {
-        if (seedP.name) {
-          const { data: recheck } = await supabase.from('profiles').select('id').ilike('name', seedP.name.trim()).maybeSingle()
-          if (recheck?.id) {
-            seedP.id = recheck.id
-            resolvedIds.push(recheck.id)
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error ensuring profile exists:', err)
-    }
-  }
-
-  return Array.from(new Set(resolvedIds.filter(id => id && !id.startsWith('seed-'))))
+const ensurePlayerIdsForSupabase = async (pIds: string[], _playerList: Profile[]): Promise<string[]> => {
+  // Antes de agosto de 2026 o plantel vinha de uma lista embutida no código e os
+  // atletas ainda não registados circulavam com IDs falsos ("seed-3"). Esta função
+  // traduzia-os para UUIDs reais, criando o perfil na base de dados se preciso.
+  // O plantel passou a vir todo do Supabase, logo todos os IDs já são UUIDs reais:
+  // resta filtrar vazios e duplicados.
+  return Array.from(new Set(pIds.filter((id): id is string => Boolean(id) && typeof id === 'string')))
 }
 
 export const TrainingIcon: React.FC<{ size?: number; className?: string }> = ({ size = 20, className = '' }) => (
@@ -744,7 +631,7 @@ const EventsPage: React.FC = () => {
         supabase.from('opponents').select('id, name, home_field_id'),
         supabase.from('tournaments').select('id, name, season, rules'),
         supabase.from('profiles').select('*').order('name', { ascending: true }),
-        supabase.from('callups').select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)'),
+        supabase.from('callups').select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)'),
         supabase.from('tournament_players').select('tournament_id, player_id'),
         supabase.from('tournament_suspensions').select('*').eq('status', 'active')
       ])
@@ -756,7 +643,7 @@ const EventsPage: React.FC = () => {
       if (tpRes.data) setTournamentPlayersMap(tpRes.data)
       if (suspRes.data) setTournamentSuspensions(suspRes.data)
       if (profRes.data) {
-        const merged = mergeProfilesWithSeedData((profRes.data as Profile[]) || [])
+        const merged = ordenarPlantel((profRes.data as Profile[]) || [])
         setAllPlayers(merged)
         const initialEligible = merged.filter(p => isPlayerEligible(p, type))
         setSelectedPlayerIds(initialEligible.map(p => p.id))
@@ -766,7 +653,7 @@ const EventsPage: React.FC = () => {
       if (callRes.data && evRes.data && profRes.data) {
         const eventsList = evRes.data as Event[]
         const practiceEventIds = new Set(eventsList.filter(e => e.type === 'practice').map(e => e.id))
-        const merged = mergeProfilesWithSeedData((profRes.data as Profile[]) || [])
+        const merged = ordenarPlantel((profRes.data as Profile[]) || [])
         const playerMap = new Map<string, Profile>(merged.map(p => [p.id, p]))
 
         const map: Record<string, CallupWithPlayer[]> = {}
@@ -1309,7 +1196,7 @@ const EventsPage: React.FC = () => {
         event_id: eventId,
         player_id: targetId,
         status: 'called'
-      }], { onConflict: 'event_id, player_id' }).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, medical_notes)').single()
+      }], { onConflict: 'event_id, player_id' }).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)').single()
 
       if (error) throw error
 
@@ -2030,7 +1917,7 @@ const EventsPage: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-5 sm:p-6">
-              <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-150">
+              <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-200">
                 <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
                   <CalendarRange size={20} className="text-csc-dark" />
                   <span>Lista de Eventos & Quórum RSVP</span>
@@ -2106,7 +1993,7 @@ const EventsPage: React.FC = () => {
                       </div>
 
                       {/* Event Meta Details */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-700 bg-white/70 p-2.5 rounded-xl border border-gray-150">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-700 bg-white/70 p-2.5 rounded-xl border border-gray-200">
                         <div className="flex items-center gap-1.5">
                           <Clock size={13} className="text-csc-dark shrink-0" />
                           <span className="font-bold">
@@ -2497,7 +2384,7 @@ const EventsPage: React.FC = () => {
                             </div>
 
                             {/* RSVP Status Badge & Coach Action Buttons */}
-                            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-150">
+                            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-200">
                               <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 ${
                                 c.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
                                 c.status === 'declined' ? 'bg-red-100 text-red-800 border border-red-200' :
@@ -3030,7 +2917,7 @@ const EventsPage: React.FC = () => {
                 <p className="text-[10.5px] text-gray-500 mt-1">Usada para navegação e rotas com Google Maps.</p>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-150">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={handleAttemptCloseQuickFieldModal}

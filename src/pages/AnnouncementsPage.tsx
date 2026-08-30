@@ -362,7 +362,7 @@ const AnnouncementsPage: React.FC = () => {
           <div className="bg-white rounded-3xl shadow-sm border border-gray-200/80 p-5 sm:p-6 space-y-4">
             
             {/* Barra de Filtros e Pesquisa */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-150">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200">
               {/* Separadores de Filtro */}
               <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-2xl w-fit">
                 <button
@@ -661,7 +661,7 @@ const AnnouncementsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3 bg-gray-50 rounded-2xl border border-gray-150 text-xs text-gray-700">
+            <div className="p-3 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-700">
               <span className="font-bold text-gray-900 block truncate">{deletingAnn.title}</span>
               <span className="text-[11px] text-gray-500 line-clamp-2 mt-0.5">{deletingAnn.content}</span>
             </div>

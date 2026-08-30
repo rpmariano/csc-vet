@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useId } from 'react'
 import { AlertCircle, Trash2, CheckCircle, AlertTriangle } from 'lucide-react'
 import { triggerHaptic } from '../utils/haptics'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 export interface ConfirmModalProps {
   isOpen: boolean
@@ -27,6 +28,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onCancel,
   isLoading = false
 }) => {
+  // Escape, prisão de foco e bloqueio de scroll, mantendo o visual próprio deste modal.
+  const painelRef = useModalA11y({ isOpen, onClose: onCancel })
+  const tituloId = useId()
+
   if (!isOpen) return null
 
   const handleConfirm = () => {
@@ -75,14 +80,24 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const vStyles = getVariantStyles()
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-70 animate-fade-in select-none">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-scale-in">
+    <div
+      className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-70 animate-fade-in select-none"
+      onMouseDown={e => { if (e.target === e.currentTarget) handleCancel() }}
+    >
+      <div
+        ref={painelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={tituloId}
+        tabIndex={-1}
+        className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-scale-in outline-none"
+      >
         <div className="flex items-center gap-3">
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs ${vStyles.iconBg}`}>
             {icon || vStyles.defaultIcon}
           </div>
           <div>
-            <h3 className="text-base font-black text-gray-900 leading-tight">
+            <h3 id={tituloId} className="text-base font-black text-gray-900 leading-tight">
               {title}
             </h3>
             <p className="text-xs text-gray-500 mt-0.5">

@@ -81,7 +81,7 @@ const Login: React.FC = () => {
   const isConfigured = !!import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('placeholder');
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-150 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 border border-gray-100">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-csc-dark">Veteranos F.C.</h2>

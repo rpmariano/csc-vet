@@ -22,7 +22,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
     return <Navigate to="/login" replace />
   }
 
-  if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
+  // Sem perfil carregado não há como validar o cargo: negar em vez de deixar passar.
+  if (allowedRoles && (!profile || !allowedRoles.includes(profile.role))) {
     return <Navigate to="/" replace />
   }
 

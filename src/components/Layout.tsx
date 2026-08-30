@@ -23,12 +23,20 @@ import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
 import { AutoAssociationModal } from './AutoAssociationModal'
 import { triggerHaptic } from '../utils/haptics'
+import { useModalA11y } from '../hooks/useModalA11y'
+import { ClinicalStatusChip, RoleChip, RoleAvatar } from './StatusChip'
 
 const Layout: React.FC = () => {
   const { profile, actualRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
+
+  // Escape, prisão de foco e bloqueio de scroll para a gaveta e para o seletor de perfil.
+  const gavetaRef = useModalA11y({ isOpen: isMobileMenuOpen, onClose: () => setIsMobileMenuOpen(false) })
+  const perfilRef = useModalA11y({ isOpen: isRoleModalOpen, onClose: () => setIsRoleModalOpen(false) })
+  const perfilTituloId = 'titulo-alternar-perfil'
+  const gavetaTituloId = 'titulo-menu-principal'
 
   const isAdmin = profile?.role === 'admin'
   const isCoach = profile?.role === 'coach'
@@ -51,7 +59,7 @@ const Layout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-150 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
       {/* Mobile Header (Limpo e elegante) */}
       <header className="bg-white text-csc-dark flex items-center justify-between px-3.5 py-2.5 md:hidden border-b-4 border-csc-gold shadow-sm sticky top-0 z-30">
         <Link to="/" className="flex items-center gap-2">
@@ -64,15 +72,10 @@ const Layout: React.FC = () => {
             <button
               type="button"
               onClick={handleToggleClinical}
-              className={`text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 transition-all border shadow-2xs cursor-pointer active:scale-95 ${
-                profile.status === 'injured'
-                  ? 'bg-red-50 text-red-700 border-red-300 animate-pulse ring-1 ring-red-300'
-                  : 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-200'
-              }`}
+              className={`transition-all cursor-pointer active:scale-95 rounded-full ${profile.status === 'injured' ? 'ring-1 ring-red-300' : 'ring-1 ring-emerald-200'}`}
               title="Clique para alternar entre Apto e Lesionado"
             >
-              <span>{profile.status === 'injured' ? '🔴' : '🟢'}</span>
-              <span>{profile.status === 'injured' ? 'Lesionado' : 'Apto'}</span>
+              <ClinicalStatusChip status={profile.status} size="sm" />
             </button>
           )}
 
@@ -80,13 +83,10 @@ const Layout: React.FC = () => {
           <button
             type="button"
             onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-            className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full font-black text-white flex items-center gap-1 transition-all ${
-              isAdmin ? 'bg-csc-gold text-csc-dark shadow-xs' : isCoach ? 'bg-blue-600' : 'bg-csc-dark'
-            } ${canSwitchRoles ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
+            className={`transition-all rounded-full ${canSwitchRoles ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
             title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
           >
-            <span>{isAdmin ? 'Admin' : isCoach ? 'Treinador' : 'Jogador'}</span>
-            {canSwitchRoles && <ChevronDown size={12} className="opacity-70" />}
+            <RoleChip role={profile?.role ?? 'player'} size="sm" className={canSwitchRoles ? 'pr-1.5' : ''} />
           </button>
 
           <Link to="/settings" title="Ver Perfil">
@@ -111,16 +111,25 @@ const Layout: React.FC = () => {
           />
 
           {/* Painel do Menu */}
-          <div className="relative w-4/5 max-w-xs bg-csc-dark text-white h-full flex flex-col justify-between p-5 z-10 shadow-2xl overflow-y-auto">
+          <div
+            ref={gavetaRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={gavetaTituloId}
+            tabIndex={-1}
+            className="relative w-4/5 max-w-xs bg-csc-dark text-white h-full flex flex-col justify-between p-5 z-10 shadow-2xl overflow-y-auto outline-none"
+          >
             <div>
               {/* Topo do Menu */}
               <div className="flex items-center justify-between pb-3 border-b border-csc-light/30">
                 <div className="flex items-center gap-2">
                   <Menu size={18} className="text-csc-gold" />
-                  <span className="text-sm font-black uppercase tracking-wider text-white">Menu Principal</span>
+                  <span id={gavetaTituloId} className="text-sm font-black uppercase tracking-wider text-white">Menu Principal</span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
+                  aria-label="Fechar menu"
                   className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white"
                 >
                   <X size={20} />
@@ -151,28 +160,17 @@ const Layout: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-                          className={`text-[9.5px] px-2 py-0.5 rounded font-black flex items-center gap-1 ${
-                            isAdmin ? 'bg-csc-gold text-csc-dark' : isCoach ? 'bg-blue-500 text-white' : 'bg-csc-light text-white'
-                          } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
+                          className={canSwitchRoles ? 'cursor-pointer active:scale-95' : ''}
                           title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
                         >
-                          <span>{isAdmin ? '🛡️ Admin' : isCoach ? '📋 Treinador' : '⚽ Jogador'}</span>
-                          {canSwitchRoles && <ChevronDown size={10} />}
+                          <RoleChip role={profile.role} size="sm" className={canSwitchRoles ? 'pr-1' : ''} />
+                          {canSwitchRoles && <ChevronDown size={10} className="inline ml-0.5 opacity-70" />}
                         </button>
 
                         {/* Estado Clínico (Apenas Jogador) */}
                         {isPlayer && (
-                          <button
-                            type="button"
-                            onClick={() => toggleClinicalStatus()}
-                            className={`text-[9.5px] px-2 py-0.5 rounded-full font-black flex items-center gap-1 border cursor-pointer ${
-                              profile.status === 'injured'
-                                ? 'bg-red-900/60 text-red-300 border-red-500'
-                                : 'bg-emerald-900/60 text-emerald-300 border-emerald-500'
-                            }`}
-                          >
-                            <span>{profile.status === 'injured' ? '🔴' : '🟢'}</span>
-                            <span>{profile.status === 'injured' ? 'Lesionado' : 'Apto'}</span>
+                          <button type="button" onClick={() => toggleClinicalStatus()} className="cursor-pointer">
+                            <ClinicalStatusChip status={profile.status} size="sm" />
                           </button>
                         )}
                       </div>
@@ -198,8 +196,9 @@ const Layout: React.FC = () => {
                       <Landmark size={15} className="text-emerald-400" />
                       <span className="text-xs font-black uppercase tracking-wider text-white">Quotas & Mensalidades</span>
                     </div>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Regularizadas 🟢
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      Regularizadas
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-300 leading-snug">
@@ -363,13 +362,11 @@ const Layout: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-                        className={`text-[9px] px-1.5 py-0.5 rounded font-black flex items-center gap-0.5 ${
-                          isAdmin ? 'bg-csc-gold text-csc-dark' : isCoach ? 'bg-blue-500 text-white' : 'bg-csc-light text-white'
-                        } ${canSwitchRoles ? 'cursor-pointer hover:opacity-90 active:scale-95' : ''}`}
+                        className={canSwitchRoles ? 'cursor-pointer active:scale-95' : ''}
                         title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
                       >
-                        <span>{isAdmin ? '🛡️ Admin' : isCoach ? '📋 Treinador' : '⚽ Jogador'}</span>
-                        {canSwitchRoles && <ChevronDown size={10} />}
+                        <RoleChip role={profile.role} size="sm" className={canSwitchRoles ? 'pr-1' : ''} />
+                        {canSwitchRoles && <ChevronDown size={10} className="inline ml-0.5 opacity-70" />}
                       </button>
                     </div>
                   </div>
@@ -391,8 +388,9 @@ const Layout: React.FC = () => {
                     <Landmark size={13} className="text-emerald-400" />
                     <span className="text-[11px] font-bold text-gray-200">Quotas</span>
                   </div>
-                  <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    Regularizadas 🟢
+                  <span className="inline-flex items-center gap-1 text-[9.5px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    Regularizadas
                   </span>
                 </div>
               )}
@@ -564,18 +562,8 @@ const Layout: React.FC = () => {
           <div className="flex items-center gap-3">
             {/* Toggle Clínico no Canto Superior: Apto / Lesionado */}
             {profile && (
-              <button
-                type="button"
-                onClick={() => toggleClinicalStatus()}
-                className={`text-xs font-black px-3.5 py-1.5 rounded-full flex items-center gap-2 transition-all border shadow-xs cursor-pointer active:scale-95 ${
-                  profile.status === 'injured'
-                    ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
-                    : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-100'
-                }`}
-                title="Clique para alternar o seu estado entre Apto e Lesionado"
-              >
-                <span className="text-sm">{profile.status === 'injured' ? '🔴' : '🟢'}</span>
-                <span>{profile.status === 'injured' ? 'Lesionado' : 'Apto'}</span>
+              <button type="button" onClick={() => toggleClinicalStatus()} className="cursor-pointer active:scale-95" title="Clique para alternar o seu estado entre Apto e Lesionado">
+                <ClinicalStatusChip status={profile.status} />
               </button>
             )}
 
@@ -583,12 +571,10 @@ const Layout: React.FC = () => {
             <button
               type="button"
               onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-              className={`text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-full font-black text-white flex items-center gap-1.5 transition-all ${
-                isAdmin ? 'bg-csc-gold text-csc-dark shadow-xs' : isCoach ? 'bg-blue-600' : 'bg-csc-dark'
-              } ${canSwitchRoles ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
+              className={canSwitchRoles ? 'cursor-pointer active:scale-95' : ''}
             >
-              <span>{isAdmin ? '🛡️ Admin' : isCoach ? '📋 Treinador' : '⚽ Jogador'}</span>
-              {canSwitchRoles && <ChevronDown size={13} className="opacity-70" />}
+              <RoleChip role={profile?.role ?? 'player'} className={canSwitchRoles ? 'pr-1.5' : ''} />
+              {canSwitchRoles && <ChevronDown size={13} className="inline ml-0.5 opacity-70" />}
             </button>
 
             {/* Link para Perfil / Settings */}
@@ -609,35 +595,38 @@ const Layout: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-8 max-w-lg md:max-w-7xl mx-auto w-full pb-24 md:pb-8">
+        <main className="flex-1 p-4 md:p-8 max-w-lg md:max-w-7xl mx-auto w-full pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-8">
           <Outlet />
         </main>
       </div>
 
       {/* Mobile Bottom Navigation: "Sacos" dos Jogadores/Treinadores + Menu dos Traços (☰) no Rodapé */}
-      <div className="fixed bottom-0 left-0 right-0 bg-csc-dark border-t-2 border-csc-light/20 px-1 py-1.5 flex justify-around items-center md:hidden z-40 shadow-2xl">
+      <nav
+        aria-label="Navegação principal"
+        className="fixed bottom-0 left-0 right-0 bg-csc-dark border-t-2 border-csc-light/20 px-1 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom,0px))] flex justify-around items-center md:hidden z-40 shadow-2xl"
+      >
         {/* 1. Home */}
         <Link 
           to="/" 
           onClick={() => triggerHaptic('selection')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+          className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
             ${location.pathname === '/' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
           `}
         >
           <Home size={19} />
-          <span className="text-[9px] font-bold mt-0.5">Home</span>
+          <span className="text-[10px] font-bold mt-0.5">Home</span>
         </Link>
 
         {/* 2. Agenda */}
         <Link 
           to="/calendar" 
           onClick={() => triggerHaptic('selection')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+          className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
             ${location.pathname === '/calendar' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
           `}
         >
           <Calendar size={19} />
-          <span className="text-[9px] font-bold mt-0.5">Agenda</span>
+          <span className="text-[10px] font-bold mt-0.5">Agenda</span>
         </Link>
 
         {/* 3. Ação do Saco: "Criar Evento" (se Coach/Admin) OU "Estatísticas" (se Jogador) */}
@@ -645,23 +634,23 @@ const Layout: React.FC = () => {
           <Link 
             to="/events" 
             onClick={() => triggerHaptic('selection')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+            className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
               ${location.pathname === '/events' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
             `}
           >
             <PlusCircle size={19} />
-            <span className="text-[9px] font-bold mt-0.5">Gestão</span>
+            <span className="text-[10px] font-bold mt-0.5">Gestão</span>
           </Link>
         ) : (
           <Link 
             to="/stats" 
             onClick={() => triggerHaptic('selection')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+            className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
               ${location.pathname === '/stats' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
             `}
           >
             <BarChart3 size={19} />
-            <span className="text-[9px] font-bold mt-0.5">Stats</span>
+            <span className="text-[10px] font-bold mt-0.5">Stats</span>
           </Link>
         )}
 
@@ -670,12 +659,12 @@ const Layout: React.FC = () => {
           <Link 
             to="/team-management" 
             onClick={() => triggerHaptic('selection')}
-            className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all
+            className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
               ${location.pathname === '/team-management' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
             `}
           >
             <Users size={19} />
-            <span className="text-[9px] font-bold mt-0.5">Plantel</span>
+            <span className="text-[10px] font-bold mt-0.5">Plantel</span>
           </Link>
         )}
 
@@ -685,21 +674,33 @@ const Layout: React.FC = () => {
             triggerHaptic('selection')
             setIsMobileMenuOpen(true)
           }}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-xl transition-all ${
+          className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all ${
             isMobileMenuOpen ? 'text-csc-gold bg-csc-light/30 shadow-sm' : 'text-gray-400 hover:text-gray-200'
           }`}
         >
           <Menu size={19} />
-          <span className="text-[9px] font-bold mt-0.5">Menu</span>
+          <span className="text-[10px] font-bold mt-0.5">Menu</span>
         </button>
-      </div>
+      </nav>
 
       {/* Modal de Alternância de Papel / Role Switcher */}
       {isRoleModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-scale-up border border-gray-100">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
+          onMouseDown={e => { if (e.target === e.currentTarget) setIsRoleModalOpen(false) }}
+        >
+          <div
+            ref={perfilRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={perfilTituloId}
+            tabIndex={-1}
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-scale-up border border-gray-100 outline-none"
+          >
             <button
+              type="button"
               onClick={() => setIsRoleModalOpen(false)}
+              aria-label="Fechar"
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <X size={20} />
@@ -710,7 +711,7 @@ const Layout: React.FC = () => {
                 <Sparkles size={22} className="text-csc-dark" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-gray-900">Alternar Perfil de Acesso</h3>
+                <h3 id={perfilTituloId} className="text-lg font-black text-gray-900">Alternar Perfil de Acesso</h3>
                 <p className="text-xs text-gray-500 font-medium">Selecione o perfil com o qual deseja utilizar a aplicação</p>
               </div>
             </div>
@@ -728,9 +729,7 @@ const Layout: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-csc-gold text-csc-dark font-black flex items-center justify-center text-lg shadow-xs shrink-0">
-                      🛡️
-                    </div>
+<RoleAvatar role="admin" />
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-gray-900">Administrador / Direção</p>
@@ -759,9 +758,7 @@ const Layout: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center text-lg shadow-xs shrink-0">
-                      📋
-                    </div>
+<RoleAvatar role="coach" />
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-gray-900">Treinador</p>
@@ -790,9 +787,7 @@ const Layout: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white font-black flex items-center justify-center text-lg shadow-xs shrink-0">
-                      ⚽
-                    </div>
+<RoleAvatar role="player" />
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-gray-900">Jogador (Atleta)</p>

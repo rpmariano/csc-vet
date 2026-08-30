@@ -1,0 +1,39 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Home" },
+    { "id": "page-2", "name": "Linguagem" }
+  ],
+  "artboards": [
+    { "file": "Atual.dc.html", "x": 0, "y": 0, "w": 390, "h": 844, "page": "page-1", "title": "Home hoje" },
+    { "file": "Main.dc.html", "x": 510, "y": 0, "w": 390, "h": 844, "page": "page-1", "title": "Home proposta" },
+    { "file": "Desktop.dc.html", "x": 1020, "y": 0, "w": 1440, "h": 900, "page": "page-1", "title": "Desktop proposta" },
+    { "file": "Linguagem.dc.html", "x": 0, "y": 0, "w": 900, "h": 1180, "page": "page-2", "title": "Linguagem de componentes" }
+  ],
+  "annotations": [
+    {
+      "id": "nota-antes",
+      "x": 0,
+      "y": -132,
+      "w": 390,
+      "page": "page-1",
+      "text": "HOJE\nTrês carrosséis empilhados (1/2, 1/3, 1/4).\nRSVP aparece duas vezes.\nCorpo de texto a 9–11px, quase tudo font-black."
+    },
+    {
+      "id": "nota-proposta",
+      "x": 510,
+      "y": -132,
+      "w": 390,
+      "page": "page-1",
+      "text": "PROPOSTA\nUm só elemento alto: o próximo compromisso, com o RSVP lá dentro.\nAs pendentes passam a lista com ações na própria linha.\nComunicados descem a nível 3."
+    },
+    {
+      "id": "nota-desktop",
+      "x": 1020,
+      "y": -132,
+      "w": 600,
+      "page": "page-1",
+      "text": "DESKTOP\nGrelha de 12 até 1120px, em vez do max-w-lg que hoje espreme o conteúdo numa coluna estreita entre 768 e 1024px.\nA sidebar ganha o contador de pendentes."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

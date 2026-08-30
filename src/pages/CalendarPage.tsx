@@ -35,7 +35,6 @@ import { supabase } from '../lib/supabaseClient'
 import { useSearchParams } from 'react-router-dom'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
-import { INITIAL_PLAYERS_DATA } from '../data/initialPlayers'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
@@ -77,51 +76,12 @@ export const formatOpponentSigla = (opp?: { name?: string; initials?: string | n
   return 'ADV'
 }
 
-const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
-  const playersList: Profile[] = INITIAL_PLAYERS_DATA.map((seedPlayer, idx) => ({
-    ...seedPlayer,
-    id: `seed-${idx}`,
-  } as Profile))
-
-  remoteProfiles.forEach((remotePlayer) => {
-    let matchedIdx = -1
-
-    // 1. Verificar por email
-    if (remotePlayer.email) {
-      const remEmail = remotePlayer.email.toLowerCase().trim()
-      matchedIdx = playersList.findIndex(p => p.email && p.email.toLowerCase().trim() === remEmail)
-    }
-
-    // 2. Verificar por nome / nome da camisola / alcunha
-    if (matchedIdx === -1 && remotePlayer.name) {
-      const remName = remotePlayer.name.toLowerCase().trim()
-      matchedIdx = playersList.findIndex(p => p.name && (
-        p.name.toLowerCase().trim() === remName ||
-        p.shirt_name?.toLowerCase().trim() === remName ||
-        p.nickname?.toLowerCase().trim() === remName
-      ))
-    }
-
-    // 3. Verificar por número da camisola
-    if (matchedIdx === -1 && remotePlayer.jersey_number != null) {
-      matchedIdx = playersList.findIndex(p => p.jersey_number === remotePlayer.jersey_number)
-    }
-
-    if (matchedIdx !== -1) {
-      const seed = playersList[matchedIdx]
-      playersList[matchedIdx] = {
-        ...seed,
-        ...remotePlayer,
-        id: remotePlayer.id, // UUID real do Supabase
-        shirt_name: remotePlayer.shirt_name || seed.shirt_name || null,
-        jersey_number: remotePlayer.jersey_number ?? seed.jersey_number ?? null,
-      }
-    } else {
-      playersList.push(remotePlayer)
-    }
-  })
-
-  return playersList.sort((a, b) => {
+const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
+  // A base de dados é a única fonte do plantel. Até agosto de 2026 esta função
+  // fundia os perfis do Supabase com uma lista de sementes em src/data/initialPlayers.ts,
+  // ficheiro que continha dados pessoais reais (NIF, IBAN, morada) e que por isso ia
+  // parar ao JavaScript servido publicamente. Foi removido.
+  return [...remoteProfiles].sort((a, b) => {
     if (a.jersey_number && b.jersey_number) return a.jersey_number - b.jersey_number
     if (a.jersey_number) return -1
     if (b.jersey_number) return 1
@@ -129,86 +89,13 @@ const mergeProfilesWithSeedData = (remoteProfiles: Profile[]): Profile[] => {
   })
 }
 
-const ensurePlayerIdsForSupabase = async (pIds: string[], playerList: Profile[]): Promise<string[]> => {
-  const playerMap = new Map<string, Profile>(playerList.map(p => [p.id, p]))
-  const resolvedIds: string[] = []
-
-  let dbProfiles: { id: string; email?: string | null; name?: string | null }[] = []
-  try {
-    const { data } = await supabase.from('profiles').select('id, email, name')
-    if (data) dbProfiles = data
-  } catch (e) {
-    console.error('Error fetching db profiles for matching:', e)
-  }
-
-  for (const id of pIds) {
-    if (!id || typeof id !== 'string') continue
-
-    if (!id.startsWith('seed-')) {
-      resolvedIds.push(id)
-      continue
-    }
-    const seedP = playerMap.get(id)
-    if (!seedP) continue
-
-    // 1. Verificar por email na BD
-    const matchByEmail = seedP.email 
-      ? dbProfiles.find(dp => dp.email && dp.email.toLowerCase().trim() === seedP.email!.toLowerCase().trim())
-      : null
-
-    if (matchByEmail?.id) {
-      seedP.id = matchByEmail.id
-      resolvedIds.push(matchByEmail.id)
-      continue
-    }
-
-    // 2. Verificar por nome na BD
-    const matchByName = seedP.name
-      ? dbProfiles.find(dp => dp.name && dp.name.toLowerCase().trim() === seedP.name.toLowerCase().trim())
-      : null
-
-    if (matchByName?.id) {
-      seedP.id = matchByName.id
-      resolvedIds.push(matchByName.id)
-      continue
-    }
-
-    // 3. Tentar inserir se não existir
-    try {
-      const newId = crypto.randomUUID()
-      const { data: inserted, error } = await supabase.from('profiles').insert([{
-        id: newId,
-        name: seedP.name,
-        shirt_name: seedP.shirt_name || null,
-        jersey_number: seedP.jersey_number || null,
-        position: seedP.position || null,
-        role: seedP.role || 'player',
-        status: seedP.status || 'active',
-        email: seedP.email || null,
-        phone: seedP.phone || null,
-        birth_date: seedP.birth_date || null
-      }]).select('id').maybeSingle()
-
-      if (!error) {
-        const finalId = inserted?.id || newId
-        seedP.id = finalId
-        dbProfiles.push({ id: finalId, email: seedP.email, name: seedP.name })
-        resolvedIds.push(finalId)
-      } else {
-        if (seedP.name) {
-          const { data: recheck } = await supabase.from('profiles').select('id').ilike('name', seedP.name.trim()).maybeSingle()
-          if (recheck?.id) {
-            seedP.id = recheck.id
-            resolvedIds.push(recheck.id)
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error ensuring profile exists:', err)
-    }
-  }
-
-  return Array.from(new Set(resolvedIds.filter(id => id && !id.startsWith('seed-'))))
+const ensurePlayerIdsForSupabase = async (pIds: string[], _playerList: Profile[]): Promise<string[]> => {
+  // Antes de agosto de 2026 o plantel vinha de uma lista embutida no código e os
+  // atletas ainda não registados circulavam com IDs falsos ("seed-3"). Esta função
+  // traduzia-os para UUIDs reais, criando o perfil na base de dados se preciso.
+  // O plantel passou a vir todo do Supabase, logo todos os IDs já são UUIDs reais:
+  // resta filtrar vazios e duplicados.
+  return Array.from(new Set(pIds.filter((id): id is string => Boolean(id) && typeof id === 'string')))
 }
 
 interface Event {
@@ -797,7 +684,7 @@ const CalendarPage: React.FC = () => {
       const myCallupsPromise = profile?.id
         ? supabase
             .from('callups')
-            .select('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, position, status)')
+            .select('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)')
             .eq('player_id', profile.id)
         : Promise.resolve({ data: [] } as any)
 
@@ -808,7 +695,7 @@ const CalendarPage: React.FC = () => {
           .order('date_time', { ascending: true }),
         supabase
           .from('callups')
-          .select('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, position, status)')
+          .select('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)')
           .limit(5000),
         myCallupsPromise,
         supabase
@@ -848,7 +735,7 @@ const CalendarPage: React.FC = () => {
 
       let mergedPlayers: Profile[] = []
       if (profilesRes.data) {
-        mergedPlayers = mergeProfilesWithSeedData((profilesRes.data as Profile[]) || [])
+        mergedPlayers = ordenarPlantel((profilesRes.data as Profile[]) || [])
         setAllPlayers(mergedPlayers)
       }
 
@@ -1896,7 +1783,7 @@ const CalendarPage: React.FC = () => {
     <div className="space-y-6">
 
       {/* Barra de Navegação & Filtros de Calendário */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-150 space-y-3.5">
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 space-y-3.5">
         {/* Linha 1: Alternador de Visualização + Barra de Pesquisa + Filtro de Status */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Alternador de Visualização: Calendário vs Lista */}
@@ -2026,7 +1913,7 @@ const CalendarPage: React.FC = () => {
       ) : viewMode === 'calendar' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Coluna Esquerda: Grelha do Calendário Mensal Compacta */}
-          <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-150 overflow-hidden">
+          <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             {/* Cabeçalho do Calendário com Seleção Rápida de Mês e Ano */}
             <div className="p-3 sm:p-4 bg-gradient-to-r from-csc-dark via-gray-900 to-csc-dark text-white rounded-t-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm border-b border-white/10">
               <div className="flex items-center gap-2 flex-wrap">
@@ -4109,7 +3996,7 @@ const CalendarPage: React.FC = () => {
                 <p className="text-[10.5px] text-gray-500 mt-1">Usada para navegação e rotas com Google Maps.</p>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-150">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={handleAttemptCloseQuickFieldModal}
