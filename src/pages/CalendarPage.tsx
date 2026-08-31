@@ -100,6 +100,31 @@ const ensurePlayerIdsForSupabase = async (pIds: string[], _playerList: Profile[]
   return Array.from(new Set(pIds.filter((id): id is string => Boolean(id) && typeof id === 'string')))
 }
 
+// A tabela `callups` cresce sem parar (uma linha por atleta por evento, anos de jogos e
+// treinos). Um único `.select(...).limit(5000)` corta em silêncio a partir desse número de
+// linhas — sem ordenação explícita, não há garantia de quais ficam de fora — pelo que
+// convocatórias antigas (ou só as de eventos "menos sortudos" na varredura) desapareciam do
+// mapa local mesmo continuando a existir na base de dados: "Todos" reportava sucesso porque
+// verifica a BD diretamente, mas os checkboxes continuavam por marcar porque liam este cache.
+// Percorre a tabela às páginas em vez de confiar num limite fixo.
+const fetchAllCallups = async (selectClause: string): Promise<{ data: any[] | null; error: any }> => {
+  const PAGE_SIZE = 1000
+  const all: any[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('callups')
+      .select(selectClause)
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) return { data: null, error }
+    if (!data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return { data: all, error: null }
+}
+
 interface Event {
   id: string
   title: string
@@ -282,6 +307,14 @@ const CalendarPage: React.FC = () => {
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<number[]>([3]) // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
+
+  // Evita duplo-submit do formulário de criação de evento (duplo clique / duplo toque em
+  // ligação lenta insere o evento e as convocatórias duas vezes — ver handleAddEvent). O
+  // estado serve para desativar o botão na UI; o ref é a guarda síncrona real — entre o
+  // clique e o próximo repaint, o estado ainda não travou o botão (mesmo padrão já usado
+  // em isBatchCallingRef, noutro sítio desta página, para o mesmo tipo de bug).
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false)
+  const isCreatingEventRef = useRef(false)
 
   // Edit Event states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -651,10 +684,7 @@ const CalendarPage: React.FC = () => {
           .from('events')
           .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
-        supabase
-          .from('callups')
-          .select('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)')
-          .limit(5000),
+        fetchAllCallups('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
         myCallupsPromise,
         supabase
           .from('profiles')
@@ -911,6 +941,13 @@ const CalendarPage: React.FC = () => {
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Reentrância: um duplo clique/toque (ou o fluxo de "Guardar e Sair" do modal de alterações
+    // não guardadas) chamava esta função outra vez enquanto o primeiro pedido ainda estava em
+    // curso, criando o evento e as convocatórias duas vezes. O estado (isCreatingEvent) não
+    // chega sozinho — só atualiza no próximo render — por isso a guarda real é o ref.
+    if (isCreatingEventRef.current) return
+    isCreatingEventRef.current = true
+    setIsCreatingEvent(true)
     try {
       let createdEventsList: Event[] = []
 
@@ -1048,6 +1085,9 @@ const CalendarPage: React.FC = () => {
       fetchEventsAndData()
     } catch (err: any) {
       toast.error('Erro ao criar evento: ' + (err.message || 'Erro'))
+    } finally {
+      isCreatingEventRef.current = false
+      setIsCreatingEvent(false)
     }
   }
 
@@ -1180,14 +1220,16 @@ const CalendarPage: React.FC = () => {
       const existingCallup = list.find(c => c.player_id === profile.id || c.player?.id === profile.id)
       
       if (existingCallup && existingCallup.id && !existingCallup.id.startsWith('auto-') && !existingCallup.id.startsWith('temp-')) {
-        await supabase.from('callups').update({ status }).eq('id', existingCallup.id)
+        const { error } = await supabase.from('callups').update({ status }).eq('id', existingCallup.id)
+        if (error) throw error
       } else {
         // Se ainda não existia linha no Supabase para o atleta ou era id temporário, faz upsert/insert
-        const { data: newRow } = await supabase.from('callups').upsert([{
+        const { data: newRow, error } = await supabase.from('callups').upsert([{
           event_id: eventId,
           player_id: profile.id,
           status
         }], { onConflict: 'event_id,player_id' }).select().single()
+        if (error) throw error
 
         if (newRow && existingCallup) {
           existingCallup.id = newRow.id
@@ -3102,10 +3144,11 @@ const CalendarPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95"
+                  disabled={isCreatingEvent}
+                  className="px-6 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus size={16} className="text-csc-dark" />
-                  <span>Criar Evento</span>
+                  <span>{isCreatingEvent ? 'A criar...' : 'Criar Evento'}</span>
                 </button>
               </div>
             </form>

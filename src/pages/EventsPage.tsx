@@ -36,6 +36,7 @@ import { MatchReportModal, parseMatchReportMetadata, buildDescriptionWithMatchRe
 import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
 import { toast } from '../context/ToastContext'
+import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -66,6 +67,30 @@ const ensurePlayerIdsForSupabase = async (pIds: string[], _playerList: Profile[]
   // O plantel passou a vir todo do Supabase, logo todos os IDs já são UUIDs reais:
   // resta filtrar vazios e duplicados.
   return Array.from(new Set(pIds.filter((id): id is string => Boolean(id) && typeof id === 'string')))
+}
+
+// A tabela `callups` cresce sem parar (uma linha por atleta por evento, anos de jogos e
+// treinos). Um `.select(...)` sem paginação fica sujeito ao limite de linhas por omissão do
+// Postgrest — sem ordenação explícita, não há garantia de quais linhas ficam de fora — pelo
+// que convocatórias antigas desapareciam do mapa local mesmo continuando a existir na base
+// de dados: "Todos" reportava sucesso porque verifica a BD diretamente, mas os checkboxes
+// continuavam por marcar porque liam este cache. Percorre a tabela às páginas.
+const fetchAllCallups = async (selectClause: string): Promise<{ data: any[] | null; error: any }> => {
+  const PAGE_SIZE = 1000
+  const all: any[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('callups')
+      .select(selectClause)
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) return { data: null, error }
+    if (!data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return { data: all, error: null }
 }
 
 export const TrainingIcon: React.FC<{ size?: number; className?: string }> = ({ size = 20, className = '' }) => (
@@ -253,6 +278,11 @@ const EventsPage: React.FC = () => {
   // `isBatchCalling` (estado) ainda não travou o botão, o que já causou convocações em duplicado.
   const isBatchCallingRef = useRef(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
+  // Evita duplo-submit ao criar/publicar um evento (duplo clique/toque em ligação lenta
+  // criava o evento e enviava a convocatória duas vezes). Mesmo padrão do isBatchCallingRef
+  // acima: o estado só serve para desativar o botão na UI, a guarda real é o ref síncrono.
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false)
+  const isCreatingEventRef = useRef(false)
   const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
   const [unsavedModalTarget, setUnsavedModalTarget] = useState<'edit' | 'quickField' | 'quickOpp' | null>(null)
   // Ativação e Publicação de Convocatórias
@@ -635,10 +665,10 @@ const EventsPage: React.FC = () => {
       const [evRes, fRes, oRes, tRes, profRes, callRes, tpRes, suspRes] = await Promise.all([
         supabase.from('events').select('*').order('date_time', { ascending: false }),
         supabase.from('fields').select('id, name, address'),
-        supabase.from('opponents').select('id, name, home_field_id'),
+        supabase.from('opponents').select('id, name, initials, home_field_id'),
         supabase.from('tournaments').select('id, name, season, rules'),
         supabase.from('profiles').select('*').order('name', { ascending: true }),
-        supabase.from('callups').select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)'),
+        fetchAllCallups('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)'),
         supabase.from('tournament_players').select('tournament_id, player_id'),
         supabase.from('tournament_suspensions').select('*').eq('status', 'active')
       ])
@@ -917,9 +947,17 @@ const EventsPage: React.FC = () => {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Reentrância: sem esta guarda, um duplo clique/toque no botão "Publicar Evento e Enviar
+    // Convocatória" (sem `disabled` durante o pedido) chamava esta função duas vezes antes do
+    // primeiro pedido terminar, criando o evento e a convocatória duplicados.
+    if (isCreatingEventRef.current) return
+    isCreatingEventRef.current = true
+    setIsCreatingEvent(true)
     setSuccessMessage(null)
 
     if (!eventDate || !eventTime) {
+      isCreatingEventRef.current = false
+      setIsCreatingEvent(false)
       toast.warning('Por favor selecione a Data e a Hora do evento.')
       return
     }
@@ -1109,6 +1147,9 @@ const EventsPage: React.FC = () => {
     } catch (err: any) {
       console.error(err)
       toast.error("Erro ao criar evento: " + (err.message || 'Verifique a base de dados'))
+    } finally {
+      isCreatingEventRef.current = false
+      setIsCreatingEvent(false)
     }
   }
 
@@ -1250,6 +1291,24 @@ const EventsPage: React.FC = () => {
     if (!id) return ''
     const o = opponents.find(o => o.id === id)
     return o ? o.name : ''
+  }
+
+  // Título da lista de eventos. `event.title` de um jogo já vem como "Jogo vs <adversário>"
+  // (ver handleCreateEvent/handleConfirmSaveEdit) — juntar "CSC vs <adversário> • <title>"
+  // duplicava o nome do adversário duas vezes. Mostra antes as siglas (como na Home e na
+  // Agenda) seguidas da competição.
+  const getEventHeading = (ev: Event) => {
+    if (ev.type !== 'match' || !ev.opponent_id) return ev.title
+    const opponent = opponents.find(o => o.id === ev.opponent_id)
+    const cscSigla = formatClubSigla(clubSettings?.initials)
+    const oppSigla = formatOpponentSigla(opponent)
+    const isAway = ev.home_away === 'away'
+    const leftSigla = isAway ? oppSigla : cscSigla
+    const rightSigla = isAway ? cscSigla : oppSigla
+    const competitionLabel = ev.is_friendly
+      ? 'Jogo Amigável'
+      : (tournaments.find(t => t.id === ev.tournament_id)?.name || 'Jogo Oficial')
+    return `${leftSigla} vs ${rightSigla} • ${competitionLabel}`
   }
 
   const currentLocationStr = getActiveLocationString()
@@ -1760,13 +1819,16 @@ const EventsPage: React.FC = () => {
 
             <button
               type="submit"
-              className={`w-full py-3.5 text-white rounded-2xl font-black transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 text-sm ${
-                isActiveOnCreate 
-                  ? 'bg-csc-dark hover:bg-csc-dark/85' 
+              disabled={isCreatingEvent}
+              className={`w-full py-3.5 text-white rounded-2xl font-black transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                isActiveOnCreate
+                  ? 'bg-csc-dark hover:bg-csc-dark/85'
                   : 'bg-amber-700 hover:bg-amber-800'
               }`}
             >
-              {isActiveOnCreate ? (
+              {isCreatingEvent ? (
+                <span>A processar...</span>
+              ) : isActiveOnCreate ? (
                 <>
                   <Check size={18} className="text-csc-gold" />
                   <span>Publicar Evento e Enviar Convocatória</span>
@@ -1971,7 +2033,7 @@ const EventsPage: React.FC = () => {
                         <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-black text-white text-base leading-tight">
-                              {event.type === 'match' && event.opponent_id ? `CSC vs ${getOpponentName(event.opponent_id)} • ${event.title}` : event.title}
+                              {getEventHeading(event)}
                             </h4>
                             {event.is_active === false && (
                               <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
