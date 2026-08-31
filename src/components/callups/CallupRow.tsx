@@ -39,7 +39,7 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
   const isDeclined = status === 'declined'
 
   return (
-    <div className="flex items-center justify-between gap-2.5 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-xs">
+    <div className="flex items-center justify-between gap-2.5 p-3 rounded-2xl bg-white hover:bg-gray-50 border border-gray-200 transition-all text-xs">
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="shrink-0">
           {isConfirmed ? (
@@ -51,22 +51,22 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
               <XCircle size={13} />
             </div>
           ) : (
-            <div className="w-7 h-7 rounded-full bg-amber-400/25 text-amber-300 flex items-center justify-center" title="Pendente — ainda não respondeu">
+            <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center" title="Pendente — ainda não respondeu">
               <Clock size={13} />
             </div>
           )}
         </div>
 
         <div className="min-w-0">
-          <p className="font-extrabold text-white truncate flex items-center gap-1">
+          <p className="font-extrabold text-gray-900 truncate flex items-center gap-1">
             {player?.jersey_number && (
-              <span className="text-white/65 text-[10px] font-bold">#{player.jersey_number}</span>
+              <span className="text-gray-500 text-[10px] font-bold">#{player.jersey_number}</span>
             )}
             <span className="truncate">{displayName}</span>
           </p>
           <div className="flex items-center gap-1 mt-0.5 flex-wrap">
             {roles.map(r => (
-              <span key={r} className="text-[8.5px] font-black px-1.5 py-0.2 rounded bg-white/10 text-white/70">
+              <span key={r} className="text-[8.5px] font-black px-1.5 py-0.2 rounded bg-gray-100 text-gray-600">
                 {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
               </span>
             ))}
@@ -80,7 +80,7 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
             type="button"
             onClick={onConfirm}
             title="Marcar como Confirmado"
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isConfirmed ? 'bg-emerald-600 text-white' : 'bg-white/10 hover:bg-emerald-500/20 text-emerald-300 border border-white/10'}`}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isConfirmed ? 'bg-emerald-600 text-white' : 'bg-gray-100 hover:bg-emerald-100 text-emerald-600 border border-gray-200'}`}
           >
             <CheckCircle2 size={13} />
           </button>
@@ -88,7 +88,7 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
             type="button"
             onClick={onDecline}
             title="Marcar como Recusado"
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDeclined ? 'bg-red-600 text-white' : 'bg-white/10 hover:bg-red-500/20 text-red-300 border border-white/10'}`}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDeclined ? 'bg-red-600 text-white' : 'bg-gray-100 hover:bg-red-100 text-red-600 border border-gray-200'}`}
           >
             <XCircle size={13} />
           </button>
@@ -96,7 +96,7 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
             type="button"
             onClick={onSetPending}
             title="Colocar como Pendente"
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${status === 'called' ? 'bg-amber-600 text-white' : 'bg-white/10 hover:bg-amber-500/20 text-amber-300 border border-white/10'}`}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${status === 'called' ? 'bg-amber-600 text-white' : 'bg-gray-100 hover:bg-amber-100 text-amber-600 border border-gray-200'}`}
           >
             <Clock size={13} />
           </button>
@@ -104,7 +104,7 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
             type="button"
             onClick={onRemove}
             title="Remover da Convocatória"
-            className="p-1.5 text-white/65 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
           >
             <Trash2 size={13} />
           </button>

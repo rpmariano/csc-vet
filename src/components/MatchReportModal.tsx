@@ -204,6 +204,34 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     }))
   }
 
+  // Nunca mais de MAX_STARTERS titulares em simultâneo — onze é o máximo de um jogo de futebol.
+  const MAX_STARTERS_LIMIT = 11
+
+  const handleSetStarter = (playerId: string) => {
+    setPlayerStats(prev => {
+      const target = prev.find(p => p.player_id === playerId)
+      if (!target || target.lineup_status === 'starter') return prev
+      const currentStarters = prev.filter(p => p.lineup_status === 'starter').length
+      if (currentStarters >= MAX_STARTERS_LIMIT) {
+        toast.warning(`Já tens ${MAX_STARTERS_LIMIT} titulares selecionados. Passa outro atleta a suplente antes de adicionar este.`)
+        return prev
+      }
+      return prev.map(p => p.player_id === playerId ? { ...p, lineup_status: 'starter' } : p)
+    })
+  }
+
+  // Ao marcar golo/assistência a um atleta ainda "Não Jogou", promove-o automaticamente —
+  // mas só a titular se ainda houver vaga, caso contrário entra como suplente.
+  const handlePromoteIfNone = (playerId: string) => {
+    setPlayerStats(prev => {
+      const target = prev.find(p => p.player_id === playerId)
+      if (!target || target.lineup_status !== 'none') return prev
+      const currentStarters = prev.filter(p => p.lineup_status === 'starter').length
+      const newStatus: 'starter' | 'sub' = currentStarters < MAX_STARTERS_LIMIT ? 'starter' : 'sub'
+      return prev.map(p => p.player_id === playerId ? { ...p, lineup_status: newStatus } : p)
+    })
+  }
+
   const handleToggleMvp = (playerId: string) => {
     setPlayerStats(prev => prev.map(p => ({
       ...p,
@@ -350,7 +378,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/20 cursor-pointer z-20 bg-white/10 shadow-sm border border-white/10 transition-all active:scale-95"
+          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer z-20 active:scale-90 shadow-md border-2 border-white/40"
           title="Fechar"
         >
           <X size={19} className="stroke-[2.5]" />
@@ -573,17 +601,17 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                     {starters.length === 0 ? (
                       <p className="p-4 text-xs text-white/70 font-semibold italic text-center">Nenhum titular registado.</p>
                     ) : (
-                      <div className="divide-y divide-white/10">
+                      <div className="p-2.5 space-y-2">
                         {starters.map(p => {
                           const displayName = p.shirt_name || p.name
                           return (
-                          <div key={p.player_id} className="p-3 sm:px-4 flex items-center justify-between gap-2 hover:bg-white/10 transition-colors">
+                          <div key={p.player_id} className="p-3 sm:px-4 flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-8 h-8 rounded-full bg-csc-dark text-csc-gold border border-csc-gold/40 text-sm font-black flex items-center justify-center shrink-0 shadow-xs">
                                 {p.jersey_number || '—'}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-xs sm:text-sm font-black text-white truncate flex items-center gap-1.5">
+                                <p className="text-xs sm:text-sm font-black text-gray-900 truncate flex items-center gap-1.5">
                                   <span>{displayName}</span>
                                   {p.is_mvp && (
                                     <span className="text-[10px] font-black bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300 flex items-center gap-0.5">
@@ -636,17 +664,17 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                       <div className="bg-blue-900 text-white px-4 py-2 text-xs font-black uppercase tracking-wider">
                         <span>🔄 Suplentes Utilizados ({subs.length})</span>
                       </div>
-                      <div className="divide-y divide-white/10">
+                      <div className="p-2.5 space-y-2">
                         {subs.map(p => {
                           const displayName = p.shirt_name || p.name
                           return (
-                          <div key={p.player_id} className="p-3 sm:px-4 flex items-center justify-between gap-2 hover:bg-white/10 transition-colors">
+                          <div key={p.player_id} className="p-3 sm:px-4 flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-8 h-8 rounded-full bg-csc-dark text-csc-gold border border-csc-gold/40 text-sm font-black flex items-center justify-center shrink-0 shadow-xs">
                                 {p.jersey_number || '—'}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-xs sm:text-sm font-black text-white truncate">
+                                <p className="text-xs sm:text-sm font-black text-gray-900 truncate">
                                   {displayName}
                                 </p>
                                 {p.position && (
@@ -698,19 +726,19 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                     <span className="text-[10px] text-white/70 font-normal">Titulares: {starters.length} | Suplentes: {subs.length}</span>
                   </div>
 
-                  <div className="divide-y divide-white/10 max-h-[45vh] overflow-y-auto">
+                  <div className="p-2.5 space-y-2 max-h-[45vh] overflow-y-auto">
                     {playerStats.map(p => {
                       const displayName = p.shirt_name || p.name
                       return (
-                      <div key={p.player_id} className="p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 hover:bg-white/10 transition-colors">
-                        
+                      <div key={p.player_id} className="p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+
                         {/* Identificação e Seletor de Titularidade */}
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <span className="w-8 h-8 rounded-full bg-csc-dark text-csc-gold font-black text-sm flex items-center justify-center shrink-0 shadow-xs border border-csc-gold/40">
                             {p.jersey_number || '—'}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-black text-white truncate">{displayName}</p>
+                            <p className="text-sm font-black text-gray-900 truncate">{displayName}</p>
                             {p.position && (
                               <div className="flex items-center gap-1 flex-wrap mt-0.5">
                                 {p.position.split(',').map((pos: string, idx: number) => (
@@ -724,12 +752,12 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         {/* Controlos de Estado, Golos e Cartões */}
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
                           {/* Seletor de Estado */}
-                          <div className="flex items-center bg-white/10 p-1 rounded-xl border border-white/10 text-[11px] font-black">
+                          <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 text-[11px] font-black">
                             <button
                               type="button"
-                              onClick={() => handleStatChange(p.player_id, 'lineup_status', 'starter')}
+                              onClick={() => handleSetStarter(p.player_id)}
                               className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                                p.lineup_status === 'starter' ? 'bg-emerald-600 text-white shadow-xs' : 'text-white/60 hover:text-white'
+                                p.lineup_status === 'starter' ? 'bg-emerald-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
                               }`}
                             >
                               Titular
@@ -738,7 +766,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                               type="button"
                               onClick={() => handleStatChange(p.player_id, 'lineup_status', 'sub')}
                               className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                                p.lineup_status === 'sub' ? 'bg-blue-600 text-white shadow-xs' : 'text-white/60 hover:text-white'
+                                p.lineup_status === 'sub' ? 'bg-blue-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
                               }`}
                             >
                               Suplente
@@ -747,7 +775,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                               type="button"
                               onClick={() => handleStatChange(p.player_id, 'lineup_status', 'none')}
                               className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                                p.lineup_status === 'none' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white/70'
+                                p.lineup_status === 'none' ? 'bg-gray-300 text-gray-900' : 'text-gray-500 hover:text-gray-700'
                               }`}
                             >
                               Não Jogou
@@ -769,7 +797,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                               type="button"
                               onClick={() => {
                                 handleStatChange(p.player_id, 'goals', p.goals + 1)
-                                if (p.lineup_status === 'none') handleStatChange(p.player_id, 'lineup_status', 'starter')
+                                if (p.lineup_status === 'none') handlePromoteIfNone(p.player_id)
                               }}
                               className="w-5 h-5 rounded-lg bg-amber-200 text-amber-900 text-xs font-black flex items-center justify-center hover:bg-amber-300 cursor-pointer"
                             >
@@ -792,7 +820,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                               type="button"
                               onClick={() => {
                                 handleStatChange(p.player_id, 'assists', p.assists + 1)
-                                if (p.lineup_status === 'none') handleStatChange(p.player_id, 'lineup_status', 'starter')
+                                if (p.lineup_status === 'none') handlePromoteIfNone(p.player_id)
                               }}
                               className="w-5 h-5 rounded-lg bg-blue-200 text-blue-900 text-xs font-black flex items-center justify-center hover:bg-blue-300 cursor-pointer"
                             >
@@ -809,7 +837,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                 ? 'bg-yellow-200 border-yellow-400 text-yellow-950 ring-1 ring-yellow-400'
                                 : p.yellow_cards === 2
                                 ? 'bg-yellow-300 border-yellow-500 text-yellow-950 font-extrabold ring-2 ring-yellow-500'
-                                : 'bg-white/10 border-white/10 text-white/60 hover:text-white/70'
+                                : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
                             }`}
                             title="Alternar Cartões Amarelos (0 -> 1 -> 2)"
                           >
@@ -823,7 +851,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                             className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
                               p.red_cards === 1
                                 ? 'bg-red-500 text-white border-red-600 ring-2 ring-red-400'
-                                : 'bg-white/10 border-white/10 text-white/60 hover:text-white/70'
+                                : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
                             }`}
                             title="Alternar Cartão Vermelho Direto"
                           >
@@ -837,7 +865,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                             className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
                               p.is_mvp
                                 ? 'bg-amber-400 text-csc-dark border-amber-500 ring-2 ring-amber-300'
-                                : 'bg-white/10 border-white/10 text-white/60 hover:text-white/70'
+                                : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
                             }`}
                             title="Melhor em Campo (MVP)"
                           >
