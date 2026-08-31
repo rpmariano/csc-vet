@@ -33,6 +33,8 @@ import type { Profile } from '../context/AuthContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal, parseMatchReportMetadata, buildDescriptionWithMatchReport } from '../components/MatchReportModal'
+import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
+import { CallupRow } from '../components/callups/CallupRow'
 import { toast } from '../context/ToastContext'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
@@ -2213,64 +2215,13 @@ const EventsPage: React.FC = () => {
               return (
                 <div className="space-y-4">
                   {/* Quorum Metric Cards */}
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    <button 
-                      type="button"
-                      onClick={() => setRsvpTabFilter(prev => prev === 'confirmed' ? 'all' : 'confirmed')}
-                      className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
-                        rsvpTabFilter === 'confirmed' ? 'bg-emerald-500/20 border-emerald-400 shadow-md ring-2 ring-emerald-400/40' : 'bg-emerald-500/10 border-emerald-400/20 hover:bg-emerald-500/15'
-                      }`}
-                      title="Filtrar por Confirmados"
-                    >
-                      <p className="text-2xl font-black text-emerald-300">{confirmedList.length}</p>
-                      <p className="text-[11px] font-bold text-emerald-200 flex items-center justify-center gap-1 mt-0.5">
-                        <CheckCircle2 size={12} /> Confirmados
-                      </p>
-                      {rsvpTabFilter === 'confirmed' && (
-                        <span className="text-[9px] font-black uppercase text-emerald-200 bg-emerald-400/20 px-1.5 py-0.2 rounded-full mt-1">
-                          Filtro Ativo
-                        </span>
-                      )}
-                    </button>
-
-                    <button 
-                      type="button"
-                      onClick={() => setRsvpTabFilter(prev => prev === 'called' ? 'all' : 'called')}
-                      className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
-                        rsvpTabFilter === 'called' ? 'bg-amber-500/20 border-amber-400 shadow-md ring-2 ring-amber-400/40' : 'bg-amber-500/10 border-amber-400/20 hover:bg-amber-500/15'
-                      }`}
-                      title="Filtrar por Pendentes"
-                    >
-                      <p className="text-2xl font-black text-amber-300">{pendingList.length}</p>
-                      <p className="text-[11px] font-bold text-amber-200 flex items-center justify-center gap-1 mt-0.5">
-                        <HelpCircle size={12} /> Pendentes
-                      </p>
-                      {rsvpTabFilter === 'called' && (
-                        <span className="text-[9px] font-black uppercase text-amber-200 bg-amber-400/20 px-1.5 py-0.2 rounded-full mt-1">
-                          Filtro Ativo
-                        </span>
-                      )}
-                    </button>
-
-                    <button 
-                      type="button"
-                      onClick={() => setRsvpTabFilter(prev => prev === 'declined' ? 'all' : 'declined')}
-                      className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
-                        rsvpTabFilter === 'declined' ? 'bg-red-500/20 border-red-400 shadow-md ring-2 ring-red-400/40' : 'bg-red-500/10 border-red-400/20 hover:bg-red-500/15'
-                      }`}
-                      title="Filtrar por Recusados"
-                    >
-                      <p className="text-2xl font-black text-red-300">{declinedList.length}</p>
-                      <p className="text-[11px] font-bold text-red-200 flex items-center justify-center gap-1 mt-0.5">
-                        <XCircle size={12} /> Recusados
-                      </p>
-                      {rsvpTabFilter === 'declined' && (
-                        <span className="text-[9px] font-black uppercase text-red-200 bg-red-400/20 px-1.5 py-0.2 rounded-full mt-1">
-                          Filtro Ativo
-                        </span>
-                      )}
-                    </button>
-                  </div>
+                  <QuorumFilterCards
+                    confirmedCount={confirmedList.length}
+                    pendingCount={pendingList.length}
+                    declinedCount={declinedList.length}
+                    activeFilter={rsvpTabFilter}
+                    onSelect={(f) => setRsvpTabFilter(prev => prev === f ? 'all' : f)}
+                  />
 
                   {/* Filter Tabs */}
                   <div className="flex items-center gap-1 border-b border-white/10 pb-2 overflow-x-auto text-xs">
@@ -2342,106 +2293,20 @@ const EventsPage: React.FC = () => {
                         Nenhum membro encontrado neste filtro.
                       </p>
                     ) : (
-                      displayList.map(c => {
-                        const roles = extractRolesFromProfile(c.player as any)
-
-                        return (
-                          <div 
-                            key={c.id} 
-                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all gap-2"
-                          >
-                            {/* Member Info */}
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              {c.player?.photo_url ? (
-                                <img
-                                  src={c.player.photo_url}
-                                  alt={c.player.name}
-                                  className="w-8 h-8 rounded-xl object-cover border border-gray-200 shrink-0"
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded-xl bg-csc-dark text-csc-gold flex items-center justify-center font-black text-xs shrink-0">
-                                  {c.player?.jersey_number ? `#${c.player.jersey_number}` : (c.player?.name?.charAt(0) || 'M')}
-                                </div>
-                              )}
-
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-black text-white truncate">
-                                  {c.player?.jersey_number ? `#${c.player.jersey_number} ` : ''}{getPlayerDisplayName(c.player)}
-                                </p>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  {roles.map(r => (
-                                    <span
-                                      key={r}
-                                      className={`text-[8.5px] font-black px-1.5 py-0.2 rounded ${
-                                        r === 'admin' ? 'bg-amber-100 text-amber-900' :
-                                        r === 'coach' ? 'bg-blue-100 text-blue-900' :
-                                        'bg-emerald-100 text-emerald-900'
-                                      }`}
-                                    >
-                                      {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* RSVP Status Badge & Coach Action Buttons */}
-                            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-white/10">
-                              <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 ${
-                                c.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                                c.status === 'declined' ? 'bg-red-100 text-red-800 border border-red-200' :
-                                'bg-amber-100 text-amber-800 border border-amber-200'
-                              }`}>
-                                {c.status === 'confirmed' ? <CheckCircle2 size={11} /> :
-                                 c.status === 'declined' ? <XCircle size={11} /> :
-                                 <HelpCircle size={11} />}
-                                <span>{c.status === 'confirmed' ? 'Confirmado' : c.status === 'declined' ? 'Recusado' : 'Pendente'}</span>
-                              </span>
-
-                              {/* Ações Rápidas de Treinador/Admin */}
-                              {isCoachOrAdmin && (
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'confirmed')}
-                                    className={`p-1.5 rounded-lg transition-colors ${c.status === 'confirmed' ? 'bg-emerald-600 text-white' : 'bg-white/10 hover:bg-emerald-500/20 text-emerald-300 border border-white/10'}`}
-                                    title="Marcar como Confirmado"
-                                  >
-                                    <Check size={12} />
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'declined')}
-                                    className={`p-1.5 rounded-lg transition-colors ${c.status === 'declined' ? 'bg-red-600 text-white' : 'bg-white/10 hover:bg-red-500/20 text-red-300 border border-white/10'}`}
-                                    title="Marcar como Recusado"
-                                  >
-                                    <X size={12} />
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'called')}
-                                    className={`p-1.5 rounded-lg transition-colors ${c.status === 'called' ? 'bg-amber-600 text-white' : 'bg-white/10 hover:bg-amber-500/20 text-amber-300 border border-white/10'}`}
-                                    title="Colocar como Pendente"
-                                  >
-                                    <HelpCircle size={12} />
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemovePlayerFromCallup(c.id, activeCallupModalEvent.id)}
-                                    className="p-1.5 text-white/40 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors"
-                                    title="Remover da convocatória"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })
+                      displayList.map(c => (
+                        <CallupRow
+                          key={c.id}
+                          status={c.status}
+                          player={c.player}
+                          roles={extractRolesFromProfile(c.player as any)}
+                          displayName={getPlayerDisplayName(c.player)}
+                          isCoachOrAdmin={isCoachOrAdmin}
+                          onConfirm={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'confirmed')}
+                          onDecline={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'declined')}
+                          onSetPending={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'called')}
+                          onRemove={() => handleRemovePlayerFromCallup(c.id, activeCallupModalEvent.id)}
+                        />
+                      ))
                     )}
                   </div>
                 </div>
