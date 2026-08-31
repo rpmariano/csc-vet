@@ -176,17 +176,24 @@ export const StandingsPage = () => {
 
   const phaseGroups = groups.filter(g => g.phase === activePhase)
   const phasesAvailable = Array.from(new Set(groups.map(g => g.phase))).sort((a, b) => a - b)
+  const selectedTournament = tournaments.find(t => t.id === selectedTourId)
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-csc-dark rounded-2xl flex items-center justify-center text-csc-gold shadow-md">
-            <Trophy size={24} />
+          <div className="w-12 h-12 bg-csc-dark rounded-2xl flex items-center justify-center text-csc-gold shadow-md overflow-hidden shrink-0">
+            {selectedTournament?.image_url ? (
+              <img src={selectedTournament.image_url} alt="" className="w-full h-full object-contain" />
+            ) : (
+              <Trophy size={24} />
+            )}
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Classificações</h1>
-            <p className="text-sm font-bold text-gray-500">Tabelas e resultados oficiais.</p>
+            <p className="text-sm font-bold text-gray-500">
+              {selectedTournament?.organizer_name ? `Organização: ${selectedTournament.organizer_name}` : 'Tabelas e resultados oficiais.'}
+            </p>
           </div>
         </div>
 

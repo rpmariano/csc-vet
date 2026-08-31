@@ -54,6 +54,14 @@ export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: stri
 
 export const getGoogleMapsUrl = (query: string) => query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : '#'
 
+/**
+ * Um jogo com ficha de jogo lançada (resultado gravado) fica "fechado": os jogadores já
+ * não podem responder à convocatória e o evento deixa de poder ser editado ou apagado
+ * — a ficha e as estatísticas associadas já dependem daquele estado do evento.
+ */
+export const hasMatchReport = (ev?: { type?: string; home_score?: number | null } | null): boolean =>
+  !!ev && ev.type === 'match' && ev.home_score !== null && ev.home_score !== undefined
+
 export const formatClubSigla = (initials?: string | null): string => {
   if (!initials) return 'CSC'
   const trimmed = initials.trim()
@@ -146,6 +154,8 @@ interface Event {
     id: string
     name: string
     season?: string | null
+    image_url?: string | null
+    organizer_name?: string | null
   } | null
   max_players?: number | null
   home_away?: 'home' | 'away' | 'neutral' | null
@@ -682,7 +692,7 @@ const CalendarPage: React.FC = () => {
       const [evRes, callupsRes, myCallupsRes, profilesRes, fieldsRes, tourRes, oppsRes] = await Promise.all([
         supabase
           .from('events')
-          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
+          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season, image_url, organizer_name), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
         fetchAllCallups('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
         myCallupsPromise,
@@ -1093,6 +1103,10 @@ const CalendarPage: React.FC = () => {
 
   // --- EDIT EVENT SPECIFIC HANDLERS ---
   const handleStartEditEvent = (ev: Event) => {
+    if (hasMatchReport(ev)) {
+      toast.error('Este jogo já tem ficha de jogo lançada — o evento já não pode ser editado.')
+      return
+    }
     setEditTitle(ev.title || '')
     setEditType(ev.type)
     const d = new Date(ev.date_time)
@@ -1215,6 +1229,11 @@ const CalendarPage: React.FC = () => {
 
   const handleCallupResponse = async (eventId: string, status: 'confirmed' | 'declined') => {
     if (!profile) return
+    const targetEvent = events.find(e => e.id === eventId)
+    if (hasMatchReport(targetEvent)) {
+      toast.error('Este jogo já tem ficha de jogo lançada — a convocatória está fechada.')
+      return
+    }
     try {
       const list = eventCallups[eventId] || []
       const existingCallup = list.find(c => c.player_id === profile.id || c.player?.id === profile.id)
@@ -1608,7 +1627,10 @@ const CalendarPage: React.FC = () => {
             )}
 
             {isMatch && event.tournament?.name && !event.is_friendly && (
-              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-white/10 text-white truncate max-w-[150px]">
+              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-white/10 text-white truncate max-w-[150px] flex items-center gap-1">
+                {event.tournament.image_url && (
+                  <img src={event.tournament.image_url} alt="" className="w-3.5 h-3.5 object-contain rounded-full shrink-0" />
+                )}
                 {event.tournament.name}
               </span>
             )}
@@ -1714,7 +1736,8 @@ const CalendarPage: React.FC = () => {
               const now = new Date().getTime()
               const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
               const isPractice = event.type === 'practice'
-              const isRsvpOpen = !isPractice || diffDays <= 6
+              const closedByReport = hasMatchReport(event)
+              const isRsvpOpen = !closedByReport && (!isPractice || diffDays <= 6)
 
               return (
                 <div
@@ -1722,7 +1745,11 @@ const CalendarPage: React.FC = () => {
                   className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap"
                 >
                   <span className="text-xs font-bold text-white/70">Presença:</span>
-                  {!isRsvpOpen ? (
+                  {closedByReport ? (
+                    <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
+                      Jogo com ficha lançada — convocatória fechada
+                    </span>
+                  ) : !isRsvpOpen ? (
                     <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
                       Confirmações abrem 6 dias antes ({new Date(eventTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })})
                     </span>
@@ -2194,8 +2221,11 @@ const CalendarPage: React.FC = () => {
                         </span>
                       )}
                       {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-900/80 text-blue-200 border border-blue-400/30 truncate max-w-[150px]">
-                          🏆 {selectedEvent.tournament.name}
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-900/80 text-blue-200 border border-blue-400/30 truncate max-w-[150px] flex items-center gap-1">
+                          {selectedEvent.tournament.image_url ? (
+                            <img src={selectedEvent.tournament.image_url} alt="" className="w-3.5 h-3.5 object-contain rounded-full shrink-0" />
+                          ) : '🏆'}
+                          {selectedEvent.tournament.name}
                         </span>
                       )}
                     </div>
@@ -2223,14 +2253,16 @@ const CalendarPage: React.FC = () => {
                 {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
                 {isCoachOrAdmin && (
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleStartEditEvent(selectedEvent)}
-                      className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
-                      title="Modificar evento"
-                    >
-                      <Edit size={14} />
-                    </button>
+                    {!hasMatchReport(selectedEvent) && (
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditEvent(selectedEvent)}
+                        className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                        title="Modificar evento"
+                      >
+                        <Edit size={14} />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
@@ -2416,7 +2448,8 @@ const CalendarPage: React.FC = () => {
                   const eventTime = new Date(selectedEvent.date_time).getTime()
                   const now = new Date().getTime()
                   const isPractice = selectedEvent.type === 'practice'
-                  const isRsvpOpen = !isPractice || ((eventTime - now) <= 6 * 24 * 60 * 60 * 1000)
+                  const closedByReport = hasMatchReport(selectedEvent)
+                  const isRsvpOpen = !closedByReport && (!isPractice || ((eventTime - now) <= 6 * 24 * 60 * 60 * 1000))
 
                   return (
                     <div className={isRsvpOpen && myCallup.status === 'called' ? 'rounded-2xl overflow-hidden' : 'p-4 bg-white/5 rounded-2xl space-y-3'}>
@@ -2453,7 +2486,11 @@ const CalendarPage: React.FC = () => {
                               </span>
                             </p>
                           </div>
-                          {!isRsvpOpen && (
+                          {closedByReport ? (
+                            <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
+                              Este jogo já tem <strong className="text-white">ficha de jogo lançada</strong> — a convocatória está fechada e já não pode ser alterada.
+                            </div>
+                          ) : !isRsvpOpen && (
                             <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
                               O pedido de confirmação de presença abre <strong className="text-white">6 dias antes do treino</strong> (a {new Date(eventTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })}).
                             </div>
