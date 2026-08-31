@@ -11,6 +11,21 @@
 
   --font-sans: "Helvetica", "Arial", sans-serif;
   --font-display: "Montserrat", "Helvetica", sans-serif;
+
+  /*
+   * Escala nomeada de z-index para diálogos, para não se repetir o que
+   * aconteceu com "z-60" e "z-70": números escritos à mão sem parênteses
+   * retos não são utilitários Tailwind válidos (a escala nativa só vai até
+   * z-50) nem estavam definidos aqui, pelo que não geravam CSS nenhum — o
+   * diálogo ficava sem z-index elevado, silenciosamente.
+   *   z-modal          — um único modal/persiana sobre o conteúdo da página
+   *   z-modal-top       — um modal aberto a partir de dentro de outro modal
+   *   z-modal-confirm   — confirmação/aviso que tem de ficar por cima de tudo
+   *                       (ConfirmModal, UnsavedChangesModal, prompts finais)
+   */
+  --z-index-modal: 50;
+  --z-index-modal-top: 70;
+  --z-index-modal-confirm: 80;
 }
 
 body {

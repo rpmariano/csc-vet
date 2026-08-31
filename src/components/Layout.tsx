@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { 
-  Home, 
-  Calendar, 
-  BarChart3, 
-  Users, 
-  LogOut, 
-  FileText, 
+import {
+  Home,
+  Calendar,
+  BarChart3,
+  Users,
+  LogOut,
+  FileText,
   Landmark,
   PlusCircle,
   Menu,
@@ -17,7 +17,8 @@ import {
   ArrowRight,
   Check,
   ClipboardList,
-  Trophy
+  Trophy,
+  type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
@@ -25,6 +26,61 @@ import { AutoAssociationModal } from './AutoAssociationModal'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { ClinicalStatusChip, RoleChip, RoleAvatar } from './StatusChip'
+
+/**
+ * Itens de navegação — fonte única para a gaveta do telemóvel e para a sidebar
+ * do desktop. As duas superfícies mostram conjuntos diferentes (a gaveta
+ * complementa a barra de baixo, a sidebar mostra tudo), por isso não há uma
+ * lista única a percorrer nas duas; o que estava mesmo duplicado — o bloco de
+ * className com o ternário do estado ativo, repetido em cada link — passa a
+ * viver só em `DrawerLink`/`SidebarLink`, com a cor do ícone lida daqui.
+ */
+interface NavItem {
+  to: string
+  label: string
+  Icon: LucideIcon
+  /** Cor do ícone quando o link não está ativo (ativo é sempre text-csc-dark, sobre fundo dourado). */
+  color: string
+}
+
+const NAV_HOME: NavItem = { to: '/', label: 'Home', Icon: Home, color: 'text-csc-gold' }
+const NAV_CALENDAR: NavItem = { to: '/calendar', label: 'Agenda', Icon: Calendar, color: 'text-blue-400' }
+const NAV_MATCH_REPORTS: NavItem = { to: '/match-reports', label: 'Fichas de Jogo', Icon: ClipboardList, color: 'text-emerald-400' }
+const NAV_STATS: NavItem = { to: '/stats', label: 'Estatísticas', Icon: BarChart3, color: 'text-purple-400' }
+const NAV_STANDINGS: NavItem = { to: '/standings', label: 'Classificações', Icon: Trophy, color: 'text-yellow-400' }
+const NAV_TEAM: NavItem = { to: '/team-management', label: 'Plantel', Icon: Users, color: 'text-emerald-400' }
+// Cor unificada: o desktop já usava amber-400; a gaveta mobile usava blue-400 (igual à Agenda) — divergência que a duplicação escondia.
+const NAV_EVENTS: NavItem = { to: '/events', label: 'Gestão de Eventos', Icon: PlusCircle, color: 'text-amber-400' }
+const NAV_ADMIN: NavItem = { to: '/admin', label: 'Backoffice & Clube', Icon: Shield, color: 'text-csc-gold' }
+const NAV_FINANCE: NavItem = { to: '/finance', label: 'Financeiro & Quotas', Icon: Landmark, color: 'text-emerald-400' }
+const NAV_ANNOUNCEMENTS: NavItem = { to: '/announcements', label: 'Comunicados & Avisos', Icon: FileText, color: 'text-amber-400' }
+
+/** Link da gaveta mobile — mesmas classes que já existiam em cada bloco. */
+const DrawerLink: React.FC<{ item: NavItem; active: boolean; onNavigate: () => void }> = ({ item, active, onNavigate }) => (
+  <Link
+    to={item.to}
+    onClick={onNavigate}
+    className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
+      active ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
+    }`}
+  >
+    <item.Icon size={16} className={active ? 'text-csc-dark' : item.color} />
+    <span>{item.label}</span>
+  </Link>
+)
+
+/** Link da sidebar desktop — mesmas classes que já existiam em cada bloco. */
+const SidebarLink: React.FC<{ item: NavItem; active: boolean }> = ({ item, active }) => (
+  <Link
+    to={item.to}
+    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
+      active ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+    }`}
+  >
+    <item.Icon size={17} className={active ? 'text-csc-dark' : item.color} />
+    <span>{item.label}</span>
+  </Link>
+)
 
 const Layout: React.FC = () => {
   const { profile, actualRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
@@ -224,40 +280,11 @@ const Layout: React.FC = () => {
                       Administração & Clube
                     </p>
                     <div className="space-y-1">
-                      <Link
-                        to="/admin"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                          location.pathname === '/admin' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
-                        }`}
-                      >
-                        <Shield size={16} className="text-csc-gold" />
-                        <span>Backoffice & Clube</span>
-                      </Link>
-                      
+                      <DrawerLink item={NAV_ADMIN} active={location.pathname === '/admin'} onNavigate={() => setIsMobileMenuOpen(false)} />
                       {isAdmin && (
-                        <Link
-                          to="/finance"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                            location.pathname === '/finance' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
-                          }`}
-                        >
-                          <Landmark size={16} className="text-emerald-400" />
-                          <span>Financeiro & Quotas</span>
-                        </Link>
+                        <DrawerLink item={NAV_FINANCE} active={location.pathname === '/finance'} onNavigate={() => setIsMobileMenuOpen(false)} />
                       )}
-
-                      <Link
-                        to="/events"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                          location.pathname === '/events' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
-                        }`}
-                      >
-                        <PlusCircle size={16} className="text-blue-400" />
-                        <span>Gestão de Eventos</span>
-                      </Link>
+                      <DrawerLink item={NAV_EVENTS} active={location.pathname === '/events'} onNavigate={() => setIsMobileMenuOpen(false)} />
                     </div>
                   </div>
                 )}
@@ -268,50 +295,11 @@ const Layout: React.FC = () => {
                     Desporto & Rendimento
                   </p>
                   <div className="space-y-1">
-                    <Link
-                      to="/match-reports"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                        location.pathname === '/match-reports' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
-                      }`}
-                    >
-                      <ClipboardList size={16} className="text-emerald-400" />
-                      <span>Fichas de Jogo</span>
-                    </Link>
-
-                    <Link
-                      to="/stats"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                        location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
-                      }`}
-                    >
-                      <BarChart3 size={16} className="text-purple-400" />
-                      <span>Estatísticas</span>
-                    </Link>
-
-                    <Link
-                      to="/standings"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                        location.pathname === '/standings' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
-                      }`}
-                    >
-                      <Trophy size={16} className="text-yellow-400" />
-                      <span>Classificações</span>
-                    </Link>
-
+                    <DrawerLink item={NAV_MATCH_REPORTS} active={location.pathname === '/match-reports'} onNavigate={() => setIsMobileMenuOpen(false)} />
+                    <DrawerLink item={NAV_STATS} active={location.pathname === '/stats'} onNavigate={() => setIsMobileMenuOpen(false)} />
+                    <DrawerLink item={NAV_STANDINGS} active={location.pathname === '/standings'} onNavigate={() => setIsMobileMenuOpen(false)} />
                     {(isAdmin || isCoach) && (
-                      <Link
-                        to="/announcements"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-colors ${
-                          location.pathname === '/announcements' ? 'bg-csc-gold text-csc-dark' : 'text-gray-200 hover:bg-white/10'
-                        }`}
-                      >
-                        <FileText size={16} className="text-amber-400" />
-                        <span>Comunicados & Avisos</span>
-                      </Link>
+                      <DrawerLink item={NAV_ANNOUNCEMENTS} active={location.pathname === '/announcements'} onNavigate={() => setIsMobileMenuOpen(false)} />
                     )}
                   </div>
                 </div>
@@ -405,78 +393,16 @@ const Layout: React.FC = () => {
                 Principal
               </p>
               <div className="space-y-1">
-                <Link
-                  to="/"
-                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                    location.pathname === '/' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <Home size={17} className={location.pathname === '/' ? 'text-csc-dark' : 'text-csc-gold'} />
-                  <span>Home</span>
-                </Link>
-
-                <Link
-                  to="/calendar"
-                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                    location.pathname === '/calendar' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <Calendar size={17} className={location.pathname === '/calendar' ? 'text-csc-dark' : 'text-blue-400'} />
-                  <span>Agenda</span>
-                </Link>
-
-                <Link
-                  to="/match-reports"
-                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                    location.pathname === '/match-reports' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <ClipboardList size={17} className={location.pathname === '/match-reports' ? 'text-csc-dark' : 'text-emerald-400'} />
-                  <span>Fichas de Jogo</span>
-                </Link>
-
-                <Link
-                  to="/stats"
-                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                    location.pathname === '/stats' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <BarChart3 size={17} className={location.pathname === '/stats' ? 'text-csc-dark' : 'text-purple-400'} />
-                  <span>Estatísticas</span>
-                </Link>
-
-                <Link
-                  to="/standings"
-                  className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                    location.pathname === '/standings' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <Trophy size={17} className={location.pathname === '/standings' ? 'text-csc-dark' : 'text-yellow-400'} />
-                  <span>Classificações</span>
-                </Link>
-
+                <SidebarLink item={NAV_HOME} active={location.pathname === '/'} />
+                <SidebarLink item={NAV_CALENDAR} active={location.pathname === '/calendar'} />
+                <SidebarLink item={NAV_MATCH_REPORTS} active={location.pathname === '/match-reports'} />
+                <SidebarLink item={NAV_STATS} active={location.pathname === '/stats'} />
+                <SidebarLink item={NAV_STANDINGS} active={location.pathname === '/standings'} />
 
                 {(isAdmin || isCoach) && (
                   <>
-                    <Link
-                      to="/team-management"
-                      className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                        location.pathname === '/team-management' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      <Users size={17} className={location.pathname === '/team-management' ? 'text-csc-dark' : 'text-emerald-400'} />
-                      <span>Plantel</span>
-                    </Link>
-
-                    <Link
-                      to="/events"
-                      className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                        location.pathname === '/events' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      <PlusCircle size={17} className={location.pathname === '/events' ? 'text-csc-dark' : 'text-amber-400'} />
-                      <span>Gestão de Eventos</span>
-                    </Link>
+                    <SidebarLink item={NAV_TEAM} active={location.pathname === '/team-management'} />
+                    <SidebarLink item={NAV_EVENTS} active={location.pathname === '/events'} />
                   </>
                 )}
               </div>
@@ -489,27 +415,8 @@ const Layout: React.FC = () => {
                   Administração & Clube
                 </p>
                 <div className="space-y-1">
-                  <Link
-                    to="/admin"
-                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                      location.pathname === '/admin' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <Shield size={17} className={location.pathname === '/admin' ? 'text-csc-dark' : 'text-csc-gold'} />
-                    <span>Backoffice & Clube</span>
-                  </Link>
-
-                  {isAdmin && (
-                    <Link
-                      to="/finance"
-                      className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                        location.pathname === '/finance' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      <Landmark size={17} className={location.pathname === '/finance' ? 'text-csc-dark' : 'text-emerald-400'} />
-                      <span>Financeiro & Quotas</span>
-                    </Link>
-                  )}
+                  <SidebarLink item={NAV_ADMIN} active={location.pathname === '/admin'} />
+                  {isAdmin && <SidebarLink item={NAV_FINANCE} active={location.pathname === '/finance'} />}
                 </div>
               </div>
             )}
@@ -521,15 +428,7 @@ const Layout: React.FC = () => {
                   Comunicação
                 </p>
                 <div className="space-y-1">
-                  <Link
-                    to="/announcements"
-                    className={`flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs ${
-                      location.pathname === '/announcements' ? 'bg-csc-gold text-csc-dark shadow-sm' : 'text-gray-200 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <FileText size={17} className={location.pathname === '/announcements' ? 'text-csc-dark' : 'text-amber-400'} />
-                    <span>Comunicados & Avisos</span>
-                  </Link>
+                  <SidebarLink item={NAV_ANNOUNCEMENTS} active={location.pathname === '/announcements'} />
                 </div>
               </div>
             )}

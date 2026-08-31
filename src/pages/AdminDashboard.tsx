@@ -709,7 +709,7 @@ const AdminDashboard: React.FC = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 bg-csc-dark rounded-3xl border border-white/10">
           <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-csc-gold mb-3"></div>
-          <p className="text-xs font-bold text-white/50">A carregar dados...</p>
+          <p className="text-xs font-bold text-white/70">A carregar dados...</p>
         </div>
       ) : (
         <div>
@@ -779,7 +779,7 @@ const AdminDashboard: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                    <p className="text-[11px] text-white/50 mt-1.5 font-medium">Este campo é atribuído por omissão em novos jogos em casa e treinos.</p>
+                    <p className="text-[11px] text-white/70 mt-1.5 font-medium">Este campo é atribuído por omissão em novos jogos em casa e treinos.</p>
                   </div>
 
                   <div className="pt-2">
@@ -810,7 +810,7 @@ const AdminDashboard: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-white/50 text-center font-medium leading-relaxed">
+                  <p className="text-xs text-white/70 text-center font-medium leading-relaxed">
                     Carregue o logótipo oficial do clube (formato PNG com transparência recomendado).
                   </p>
                 </div>
@@ -828,7 +828,7 @@ const AdminDashboard: React.FC = () => {
                     htmlFor="club-logo-upload"
                     className={`w-full py-2.5 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer transition-all border shadow-xs ${
                       uploadingLogo 
-                        ? 'bg-white/5 text-white/30 border-white/10 cursor-not-allowed' 
+                        ? 'bg-white/5 text-white/60 border-white/10 cursor-not-allowed' 
                         : 'bg-white/10 border-white/15 text-white hover:bg-white/20 active:scale-98'
                     }`}
                   >
@@ -887,15 +887,15 @@ const AdminDashboard: React.FC = () => {
 
               {/* Lista de Campos */}
               <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-4 sm:p-6 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/50">
+                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/70">
                   <span>A apresentar {filteredFields.length} de {fields.length} campos registados</span>
                 </div>
 
                 {filteredFields.length === 0 ? (
-                  <div className="text-center py-12 text-white/30">
+                  <div className="text-center py-12 text-white/60">
                     <MapPin size={40} className="mx-auto mb-2 opacity-60" />
                     <p className="font-bold text-sm text-white/70">Nenhum campo encontrado</p>
-                    <p className="text-xs text-white/40 mt-0.5">Tente outro termo na pesquisa ou crie um novo campo.</p>
+                    <p className="text-xs text-white/65 mt-0.5">Tente outro termo na pesquisa ou crie um novo campo.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -922,7 +922,7 @@ const AdminDashboard: React.FC = () => {
                             {f.address ? (
                               <p className="text-xs text-white/60 font-medium pl-6 leading-relaxed">{f.address}</p>
                             ) : (
-                              <p className="text-xs text-white/40 italic pl-6">Sem morada definida</p>
+                              <p className="text-xs text-white/65 italic pl-6">Sem morada definida</p>
                             )}
                           </div>
 
@@ -1002,15 +1002,15 @@ const AdminDashboard: React.FC = () => {
 
               {/* Lista de Adversários */}
               <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-4 sm:p-6 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/50">
+                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/70">
                   <span>A apresentar {filteredOpponents.length} de {opponents.length} equipas registadas</span>
                 </div>
 
                 {filteredOpponents.length === 0 ? (
-                  <div className="text-center py-12 text-white/30">
+                  <div className="text-center py-12 text-white/60">
                     <Shield size={40} className="mx-auto mb-2 opacity-60" />
                     <p className="font-bold text-sm text-white/70">Nenhum adversário encontrado</p>
-                    <p className="text-xs text-white/40 mt-0.5">Tente outro filtro ou crie um novo adversário.</p>
+                    <p className="text-xs text-white/65 mt-0.5">Tente outro filtro ou crie um novo adversário.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -1039,12 +1039,12 @@ const AdminDashboard: React.FC = () => {
 
                             <div className="flex-1 min-w-0">
                               <h4 className="font-black text-sm text-white truncate">
-                                {o.name} {o.initials && <span className="text-white/50 font-semibold text-xs ml-1">({o.initials})</span>}
+                                {o.name} {o.initials && <span className="text-white/70 font-semibold text-xs ml-1">({o.initials})</span>}
                               </h4>
 
                               {homeField && (
                                 <p className="text-xs text-white/60 font-medium flex items-center gap-1 mt-1 truncate">
-                                  <span className="text-white/40">🏟️ Campo:</span>
+                                  <span className="text-white/65">🏟️ Campo:</span>
                                   <span className="truncate">{homeField.name}</span>
                                 </p>
                               )}
@@ -1053,7 +1053,7 @@ const AdminDashboard: React.FC = () => {
                                 <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-white/60 font-medium">
                                   {o.contact_name && (
                                     <span className="flex items-center gap-1">
-                                      <User size={12} className="text-white/40" />
+                                      <User size={12} className="text-white/65" />
                                       <span>{o.contact_name}</span>
                                     </span>
                                   )}
@@ -1084,7 +1084,7 @@ const AdminDashboard: React.FC = () => {
                                 <ExternalLink size={10} className="opacity-50" />
                               </a>
                             ) : (
-                              <span className="text-[11px] text-white/40 italic">Sem campo associado</span>
+                              <span className="text-[11px] text-white/65 italic">Sem campo associado</span>
                             )}
 
                             <div className="flex items-center gap-1.5">
@@ -1169,15 +1169,15 @@ const AdminDashboard: React.FC = () => {
 
               {/* Lista de Torneios */}
               <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-4 sm:p-6 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/50">
+                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/70">
                   <span>A apresentar {filteredTournaments.length} de {tournaments.length} torneios registados</span>
                 </div>
 
                 {filteredTournaments.length === 0 ? (
-                  <div className="text-center py-12 text-white/30">
+                  <div className="text-center py-12 text-white/60">
                     <Trophy size={40} className="mx-auto mb-2 opacity-60" />
                     <p className="font-bold text-sm text-white/70">Nenhum torneio encontrado</p>
-                    <p className="text-xs text-white/40 mt-0.5">Tente alterar os filtros ou adicione uma nova competição.</p>
+                    <p className="text-xs text-white/65 mt-0.5">Tente alterar os filtros ou adicione uma nova competição.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1192,7 +1192,7 @@ const AdminDashboard: React.FC = () => {
                             <div>
                               <h4 className="font-black text-sm text-white">{t.name}</h4>
                               {t.season && (
-                                <p className="text-xs text-white/50 font-semibold">Época: {t.season}</p>
+                                <p className="text-xs text-white/70 font-semibold">Época: {t.season}</p>
                               )}
                             </div>
                           </div>
@@ -1287,7 +1287,7 @@ const AdminDashboard: React.FC = () => {
                   placeholder="Ex: R. da Torre, 2750-760 Cascais"
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                 />
-                <p className="text-[11px] text-white/50 mt-1 font-medium">Usada para integração e navegação direta no Google Maps.</p>
+                <p className="text-[11px] text-white/70 mt-1 font-medium">Usada para integração e navegação direta no Google Maps.</p>
               </div>
 
               <div className="pt-4 border-t border-white/10 flex gap-2 justify-end">
@@ -1527,7 +1527,7 @@ const AdminDashboard: React.FC = () => {
               <details className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden group">
                 <summary className="px-4 py-3 text-sm font-bold text-white/80 cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors">
                   <span>⚙️ Configuração de Regras (Opcional)</span>
-                  <span className="text-white/40 group-open:rotate-180 transition-transform">▼</span>
+                  <span className="text-white/65 group-open:rotate-180 transition-transform">▼</span>
                 </summary>
                 <div className="p-4 border-t border-gray-200 bg-white grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto">
                   
@@ -1602,7 +1602,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="px-4 py-3 bg-white/10 border-b border-white/10 flex justify-between items-center">
                     <div>
                       <h4 className="text-sm font-bold text-white">Plantel Inscrito</h4>
-                      <p className="text-[10px] text-white/50 uppercase font-bold tracking-wider mt-0.5">
+                      <p className="text-[10px] text-white/70 uppercase font-bold tracking-wider mt-0.5">
                         {tourPlayers.length} / {tourRules.max_squad_size} Inscritos
                       </p>
                     </div>
@@ -1713,7 +1713,7 @@ const AdminDashboard: React.FC = () => {
       {/* MODAL GLOBAL: CONFIRMAÇÃO DE ALTERAÇÕES NÃO GRAVADAS */}
       {/* ========================================================================= */}
       {unsavedModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+        <div className="fixed inset-0 z-modal-confirm flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-sm w-full p-6 text-center space-y-4 animate-scale-in">
             <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 mx-auto">
               <AlertTriangle size={28} />

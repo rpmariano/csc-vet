@@ -1929,7 +1929,7 @@ const EventsPage: React.FC = () => {
                   <CalendarRange size={20} className="text-csc-gold" />
                   <span>Lista de Eventos & Quórum RSVP</span>
                 </h3>
-                <span className="text-xs font-bold text-white/50">
+                <span className="text-xs font-bold text-white/70">
                   A apresentar {filteredScheduledEvents.length} de {events.length} registados
                 </span>
               </div>
@@ -1942,7 +1942,7 @@ const EventsPage: React.FC = () => {
                 <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6">
                   <Calendar size={40} className="mx-auto text-white/20 mb-2" />
                   <p className="font-bold text-white/70">Nenhum evento encontrado com os filtros atuais.</p>
-                  <p className="text-xs text-white/40 mt-1">Tente alterar os filtros ou o termo de pesquisa.</p>
+                  <p className="text-xs text-white/65 mt-1">Tente alterar os filtros ou o termo de pesquisa.</p>
                 </div>
               ) : (
                 <div className="space-y-3.5">
@@ -1983,14 +1983,14 @@ const EventsPage: React.FC = () => {
                           <div className="flex gap-1 shrink-0">
                             <button
                               onClick={() => openEditModal(event)}
-                              className="text-white/40 hover:text-blue-300 p-1.5 rounded-xl hover:bg-blue-500/10 transition-colors cursor-pointer"
+                              className="text-white/65 hover:text-blue-300 p-1.5 rounded-xl hover:bg-blue-500/10 transition-colors cursor-pointer"
                               title="Editar evento"
                             >
                               <Edit size={16} />
                             </button>
                             <button
                               onClick={() => handleDeleteEvent(event.id)}
-                              className="text-white/40 hover:text-red-300 p-1.5 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"
+                              className="text-white/65 hover:text-red-300 p-1.5 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"
                               title="Eliminar evento"
                             >
                               <Trash2 size={16} />
@@ -2254,7 +2254,7 @@ const EventsPage: React.FC = () => {
                   {/* Lista de Membros e Gestão de Estado RSVP */}
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                     {displayList.length === 0 ? (
-                      <p className="text-center text-xs text-white/40 py-6">
+                      <p className="text-center text-xs text-white/65 py-6">
                         Nenhum membro encontrado neste filtro.
                       </p>
                     ) : (
@@ -2283,8 +2283,14 @@ const EventsPage: React.FC = () => {
       )}
       {/* ====== MODAL DE EDIÇÃO DE EVENTO ====== */}
       {editingEvent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onClick={handleAttemptCloseEditModal}>
-          <div className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal p-4"
+          onMouseDown={e => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
+            if (e.target === e.currentTarget) handleAttemptCloseEditModal()
+          }}
+        >
+          <div className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10">
             <div className="sticky top-0 bg-csc-dark border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
               <h3 className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
               <button onClick={handleAttemptCloseEditModal} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90"><X size={18} className="stroke-[2.5]" /></button>
@@ -2298,7 +2304,7 @@ const EventsPage: React.FC = () => {
                   <span className="flex items-center gap-1.5">
                     <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
                   </span>
-                  <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-md">
                     🔒 Tipo Bloqueado
                   </span>
                 </div>
@@ -2673,7 +2679,7 @@ const EventsPage: React.FC = () => {
                     <Send size={14} className={editIsActive ? 'text-emerald-600' : 'text-amber-600'} />
                     <span>Estado: {editIsActive ? 'Ativo (Publicado)' : 'Rascunho (Inativo)'}</span>
                   </label>
-                  <p className="text-[10.5px] text-white/50 mt-0.5">
+                  <p className="text-[10.5px] text-white/70 mt-0.5">
                     {editIsActive ? 'Visível a todos os atletas na agenda' : 'Oculto aos atletas até ser ativado'}
                   </p>
                 </div>
@@ -2711,8 +2717,9 @@ const EventsPage: React.FC = () => {
       {/* MODAL: CRIAR NOVO CAMPO INLINE */}
       {isQuickFieldModalOpen && (
         <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fade-in"
-          onClick={(e) => {
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-modal-top animate-fade-in"
+          onMouseDown={(e) => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseQuickFieldModal()
           }}
         >
@@ -2785,8 +2792,9 @@ const EventsPage: React.FC = () => {
       {/* MODAL: CRIAR NOVO ADVERSÁRIO INLINE */}
       {isQuickOpponentModalOpen && (
         <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fade-in"
-          onClick={(e) => {
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-modal-top animate-fade-in"
+          onMouseDown={(e) => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseQuickOppModal()
           }}
         >
@@ -2902,7 +2910,7 @@ const EventsPage: React.FC = () => {
 
       {/* MODAL: CONFIRMAÇÃO DE REENVIO DE CONVOCATÓRIAS APÓS EDIÇÃO */}
       {isResendPromptOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-60 animate-fade-in select-none">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-modal-confirm animate-fade-in select-none">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-scale-in">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">

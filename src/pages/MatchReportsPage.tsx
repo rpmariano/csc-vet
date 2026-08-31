@@ -312,13 +312,13 @@ export const MatchReportsPage: React.FC = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center min-h-[35vh] text-white">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold mb-3"></div>
-          <p className="text-xs font-bold text-white/50">A carregar fichas de jogo...</p>
+          <p className="text-xs font-bold text-white/70">A carregar fichas de jogo...</p>
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="bg-csc-dark text-white rounded-3xl p-10 text-center border border-dashed border-white/15 space-y-3">
           <Trophy size={42} className="mx-auto text-white/20" />
           <p className="font-black text-white text-sm sm:text-base">Nenhum jogo ocorrido encontrado</p>
-          <p className="text-xs text-white/50 max-w-sm mx-auto">
+          <p className="text-xs text-white/70 max-w-sm mx-auto">
             Assim que os jogos da época forem realizados ou tiverem resultado registado, as suas fichas técnicas aparecerão aqui.
           </p>
         </div>
@@ -417,7 +417,7 @@ export const MatchReportsPage: React.FC = () => {
                         </span>
                       </div>
                     ) : (
-                      <span className="text-xs font-black text-white/40 uppercase tracking-widest px-2 py-1 bg-white/10 rounded-lg">
+                      <span className="text-xs font-black text-white/65 uppercase tracking-widest px-2 py-1 bg-white/10 rounded-lg">
                         VS
                       </span>
                     )}

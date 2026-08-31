@@ -227,7 +227,7 @@ const SettingsPage: React.FC = () => {
                 </span>
               )}
             </div>
-            <p className="text-xs text-white/50 mt-0.5">
+            <p className="text-xs text-white/70 mt-0.5">
               Ficha cadastral de atleta • Grupo Dramático e Sportivo de Cascais
             </p>
           </div>
@@ -237,7 +237,7 @@ const SettingsPage: React.FC = () => {
         <div className="flex items-center flex-wrap gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
           {/* Badge de Atividade (Apenas Leitura para o Jogador) */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10" title="O estado de filiação/atividade é gerido pela direção do clube">
-            <span className="text-[11px] font-bold text-white/50">Atividade:</span>
+            <span className="text-[11px] font-bold text-white/70">Atividade:</span>
             <span className={`text-xs font-black px-2 py-0.5 rounded-md ${
               isInactive ? 'bg-gray-300 text-gray-800' : 'bg-emerald-100 text-emerald-800'
             }`}>
@@ -416,8 +416,8 @@ const SettingsPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block text-xs font-bold text-white/70 mb-1">Email de Acesso (Apenas Leitura)</label>
-              <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white/50 font-medium font-mono">
-                <Mail size={15} className="mr-2 text-white/30" />
+              <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white/70 font-medium font-mono">
+                <Mail size={15} className="mr-2 text-white/60" />
                 <span>{formEmail}</span>
               </div>
             </div>

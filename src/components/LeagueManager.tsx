@@ -443,7 +443,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
 
       {/* MODAL: Criar Novo Grupo */}
       {isNewGroupModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-modal-top flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2">
