@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Trophy, Trash2, Shield, Plus, X } from 'lucide-react'
+import { Trophy, Trash2, Shield, Plus, X, Users } from 'lucide-react'
 import { toast } from '../context/ToastContext'
 import { ConfirmModal } from './ConfirmModal'
 
@@ -233,7 +233,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-black text-gray-800 flex items-center gap-2">
-                      <Shield size={18} className="text-blue-500" />
+                      <Users size={18} className="text-blue-500" />
                       Grupos e Equipas
                     </h3>
                     <button onClick={() => setIsNewGroupModalOpen(true)} className="text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors cursor-pointer">
@@ -301,7 +301,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                                     </>
                                   ) : (
                                     <>
-                                      <Shield size={16} className="text-blue-500" />
+                                      <img src="/csc-vet/cascais-emblem.png" alt="" className="w-5 h-5 object-contain" />
                                       <span className="font-bold text-blue-800">GDS Cascais</span>
                                     </>
                                   )}
