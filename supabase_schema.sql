@@ -312,10 +312,20 @@ ON public.callups FOR DELETE
 TO authenticated 
 USING (public.get_user_role() IN ('coach', 'admin'));
 
-CREATE POLICY "Jogadores confirmam ou recusam a sua convocatória" 
-ON public.callups FOR UPDATE 
-TO authenticated 
+CREATE POLICY "Jogadores confirmam ou recusam a sua convocatória"
+ON public.callups FOR UPDATE
+TO authenticated
 USING (auth.uid() = player_id)
+WITH CHECK (auth.uid() = player_id AND status IN ('confirmed', 'declined'));
+
+-- Para treinos, a app convoca automaticamente todos os atletas aptos sem criar uma linha
+-- em `callups` (é um convocado "virtual", só no cliente). Quando esse jogador confirma ou
+-- recusa presença, o cliente faz um upsert — sem esta política de INSERT, a escrita falha
+-- silenciosamente (RLS rejeita, o Postgrest não lança exceção) e o jogador "desaparece" da
+-- convocatória em vez de ficar confirmado/recusado. Ver handleCallupResponse em CalendarPage.tsx.
+CREATE POLICY "Jogadores registam a sua própria resposta de convocatória"
+ON public.callups FOR INSERT
+TO authenticated
 WITH CHECK (auth.uid() = player_id AND status IN ('confirmed', 'declined'));
 
 -- 4. Políticas para ATTENDANCES (Presenças)

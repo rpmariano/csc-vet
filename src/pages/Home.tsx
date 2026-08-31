@@ -16,6 +16,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
+import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
 import { triggerHaptic } from '../utils/haptics'
 
@@ -246,10 +247,12 @@ const Home: React.FC = () => {
   const handleCallupResponse = async (callupId: string, status: 'confirmed' | 'declined') => {
     triggerHaptic(status === 'confirmed' ? 'success' : 'warning')
     try {
-      await supabase.from('callups').update({ status }).eq('id', callupId)
+      const { error } = await supabase.from('callups').update({ status }).eq('id', callupId)
+      if (error) throw error
       setMyCallups(prev => prev.map(c => (c.id === callupId ? { ...c, status } : c)))
-    } catch {
-      setMyCallups(prev => prev.map(c => (c.id === callupId ? { ...c, status } : c)))
+    } catch (err: any) {
+      console.error('Erro ao atualizar resposta:', err)
+      toast.error('Erro ao atualizar resposta: ' + (err.message || 'Erro'))
     }
   }
 

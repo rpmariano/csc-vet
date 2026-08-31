@@ -1230,14 +1230,16 @@ const CalendarPage: React.FC = () => {
       const existingCallup = list.find(c => c.player_id === profile.id || c.player?.id === profile.id)
       
       if (existingCallup && existingCallup.id && !existingCallup.id.startsWith('auto-') && !existingCallup.id.startsWith('temp-')) {
-        await supabase.from('callups').update({ status }).eq('id', existingCallup.id)
+        const { error } = await supabase.from('callups').update({ status }).eq('id', existingCallup.id)
+        if (error) throw error
       } else {
         // Se ainda não existia linha no Supabase para o atleta ou era id temporário, faz upsert/insert
-        const { data: newRow } = await supabase.from('callups').upsert([{
+        const { data: newRow, error } = await supabase.from('callups').upsert([{
           event_id: eventId,
           player_id: profile.id,
           status
         }], { onConflict: 'event_id,player_id' }).select().single()
+        if (error) throw error
 
         if (newRow && existingCallup) {
           existingCallup.id = newRow.id
