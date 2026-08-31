@@ -707,9 +707,9 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-200">
-          <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-csc-dark mb-3"></div>
-          <p className="text-xs font-bold text-gray-500">A carregar dados...</p>
+        <div className="flex flex-col items-center justify-center py-20 bg-csc-dark rounded-3xl border border-white/10">
+          <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-csc-gold mb-3"></div>
+          <p className="text-xs font-bold text-white/50">A carregar dados...</p>
         </div>
       ) : (
         <div>
@@ -719,10 +719,10 @@ const AdminDashboard: React.FC = () => {
           {activeTab === 'club' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Detalhes do Clube */}
-              <div className="md:col-span-2 bg-white rounded-3xl shadow-sm border border-gray-200 p-6 sm:p-7">
+              <div className="md:col-span-2 bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-6 sm:p-7">
                 <form onSubmit={handleUpdateClub} className="space-y-5">
-                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                    <h3 className="text-base sm:text-lg font-black text-csc-dark flex items-center gap-2">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
                       <Building2 size={20} className="text-csc-gold" />
                       <span>Identificação do Clube</span>
                     </h3>
@@ -730,24 +730,24 @@ const AdminDashboard: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">Nome Oficial *</label>
+                      <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">Nome Oficial *</label>
                       <input 
                         type="text" 
                         required 
                         value={clubName} 
                         onChange={e => setClubName(e.target.value)} 
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-csc-dark outline-none font-bold text-sm bg-white" 
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-csc-dark outline-none font-bold text-sm bg-white text-gray-900" 
                         placeholder="Ex: Grupo Dramático e Sportivo de Cascais" 
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">Sigla / Abreviatura *</label>
+                      <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">Sigla / Abreviatura *</label>
                       <input 
                         type="text" 
                         required 
                         value={clubInitials} 
                         onChange={e => setClubInitials(e.target.value)} 
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-csc-dark outline-none font-bold text-sm bg-white" 
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-csc-dark outline-none font-bold text-sm bg-white text-gray-900" 
                         placeholder="Ex: CSC" 
                       />
                     </div>
@@ -755,14 +755,14 @@ const AdminDashboard: React.FC = () => {
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-black text-gray-700 uppercase tracking-wider">Campo Habitual (Casa)</label>
+                      <label className="block text-xs font-black text-white/70 uppercase tracking-wider">Campo Habitual (Casa)</label>
                       <button
                         type="button"
                         onClick={() => {
                           setActiveTab('fields')
                           handleOpenCreateField()
                         }}
-                        className="text-xs text-csc-dark font-black hover:underline flex items-center gap-1 cursor-pointer"
+                        className="text-xs text-csc-gold font-black hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <Plus size={13} /> Novo Campo
                       </button>
@@ -779,15 +779,15 @@ const AdminDashboard: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                    <p className="text-[11px] text-gray-500 mt-1.5 font-medium">Este campo é atribuído por omissão em novos jogos em casa e treinos.</p>
+                    <p className="text-[11px] text-white/50 mt-1.5 font-medium">Este campo é atribuído por omissão em novos jogos em casa e treinos.</p>
                   </div>
 
                   <div className="pt-2">
                     <button 
                       type="submit" 
-                      className="w-full sm:w-auto px-6 py-3 bg-csc-dark text-white rounded-xl font-black text-sm hover:bg-csc-dark/90 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                      className="w-full sm:w-auto px-6 py-3 bg-csc-gold text-csc-dark rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                     >
-                      <Save size={17} className="text-csc-gold" />
+                      <Save size={17} className="text-csc-dark" />
                       <span>Guardar Dados do Clube</span>
                     </button>
                   </div>
@@ -795,27 +795,27 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Símbolo do Clube */}
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between">
+              <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-6 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-base font-black text-csc-dark border-b border-gray-100 pb-3 flex items-center gap-2">
+                  <h3 className="text-base font-black text-white border-b border-white/10 pb-3 flex items-center gap-2">
                     <Shield size={18} className="text-csc-gold" />
                     <span>Emblema do Clube</span>
                   </h3>
                   <div className="my-6 flex justify-center">
-                    <div className="w-36 h-36 bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center overflow-hidden p-3 shadow-inner">
+                    <div className="w-36 h-36 bg-white/5 border-2 border-dashed border-white/15 rounded-2xl flex items-center justify-center overflow-hidden p-3 shadow-inner">
                       {clubSettings?.logo_url ? (
                         <img src={clubSettings.logo_url} alt="Símbolo CSC" className="w-full h-full object-contain" />
                       ) : (
-                        <Shield size={48} className="text-gray-300" />
+                        <Shield size={48} className="text-white/20" />
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 text-center font-medium leading-relaxed">
+                  <p className="text-xs text-white/50 text-center font-medium leading-relaxed">
                     Carregue o logótipo oficial do clube (formato PNG com transparência recomendado).
                   </p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-gray-100">
+                <div className="mt-6 pt-4 border-t border-white/10">
                   <input
                     type="file"
                     accept="image/*"
@@ -828,8 +828,8 @@ const AdminDashboard: React.FC = () => {
                     htmlFor="club-logo-upload"
                     className={`w-full py-2.5 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer transition-all border shadow-xs ${
                       uploadingLogo 
-                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
-                        : 'bg-white border-gray-300 text-gray-800 hover:bg-gray-50 active:scale-98'
+                        ? 'bg-white/5 text-white/30 border-white/10 cursor-not-allowed' 
+                        : 'bg-white/10 border-white/15 text-white hover:bg-white/20 active:scale-98'
                     }`}
                   >
                     {uploadingLogo ? (
@@ -839,7 +839,7 @@ const AdminDashboard: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        <Upload size={15} className="text-csc-dark" />
+                        <Upload size={15} className="text-csc-gold" />
                         <span>Carregar Novo Símbolo</span>
                       </>
                     )}
@@ -863,7 +863,7 @@ const AdminDashboard: React.FC = () => {
                     value={fieldSearch}
                     onChange={e => setFieldSearch(e.target.value)}
                     placeholder="Pesquisar por nome ou morada do campo..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
                   />
                   {fieldSearch && (
                     <button 
@@ -886,16 +886,16 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Lista de Campos */}
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-gray-100 text-xs font-bold text-gray-500">
+              <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-4 sm:p-6 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/50">
                   <span>A apresentar {filteredFields.length} de {fields.length} campos registados</span>
                 </div>
 
                 {filteredFields.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400">
-                    <MapPin size={40} className="mx-auto mb-2 opacity-30" />
-                    <p className="font-bold text-sm text-gray-600">Nenhum campo encontrado</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Tente outro termo na pesquisa ou crie um novo campo.</p>
+                  <div className="text-center py-12 text-white/30">
+                    <MapPin size={40} className="mx-auto mb-2 opacity-60" />
+                    <p className="font-bold text-sm text-white/70">Nenhum campo encontrado</p>
+                    <p className="text-xs text-white/40 mt-0.5">Tente outro termo na pesquisa ou crie um novo campo.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -907,12 +907,12 @@ const AdminDashboard: React.FC = () => {
                       return (
                         <div 
                           key={f.id} 
-                          className="flex flex-col justify-between p-4 bg-gray-50 hover:bg-gray-100/60 rounded-2xl border border-gray-200 transition-all gap-3"
+                          className="flex flex-col justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all gap-3"
                         >
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <span className="text-base">🏟️</span>
-                              <h4 className="font-black text-sm text-csc-dark">{f.name}</h4>
+                              <h4 className="font-black text-sm text-white">{f.name}</h4>
                               {isDefaultClubField && (
                                 <span className="bg-csc-dark text-csc-gold text-[10px] font-black px-2 py-0.5 rounded-full border border-csc-gold/30">
                                   Casa do CSC
@@ -920,20 +920,20 @@ const AdminDashboard: React.FC = () => {
                               )}
                             </div>
                             {f.address ? (
-                              <p className="text-xs text-gray-600 font-medium pl-6 leading-relaxed">{f.address}</p>
+                              <p className="text-xs text-white/60 font-medium pl-6 leading-relaxed">{f.address}</p>
                             ) : (
-                              <p className="text-xs text-gray-400 italic pl-6">Sem morada definida</p>
+                              <p className="text-xs text-white/40 italic pl-6">Sem morada definida</p>
                             )}
                           </div>
 
-                          <div className="flex items-center justify-between pt-2 border-t border-gray-200/60 mt-1">
+                          <div className="flex items-center justify-between pt-2 border-t border-white/10 mt-1">
                             <a
                               href={mapsUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-2.5 py-1.5 bg-white border border-gray-200 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
+                              className="px-2.5 py-1.5 bg-white/10 border border-white/10 hover:border-red-400 hover:text-red-300 text-white/70 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
                             >
-                              <MapPin size={13} className="text-red-500 shrink-0" />
+                              <MapPin size={13} className="text-red-400 shrink-0" />
                               <span>Google Maps</span>
                               <ExternalLink size={10} className="opacity-50" />
                             </a>
@@ -941,14 +941,14 @@ const AdminDashboard: React.FC = () => {
                             <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => handleStartEditField(f)}
-                                className="p-2 bg-white border border-gray-200 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                                className="p-2 bg-white/10 border border-white/10 hover:border-csc-gold text-white/70 hover:text-csc-gold rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                                 title="Editar Campo"
                               >
                                 <Edit2 size={14} />
                               </button>
                               <button
                                 onClick={() => handleDeleteField(f.id, f.name)}
-                                className="p-2 bg-white border border-gray-200 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                                className="p-2 bg-white/10 border border-white/10 hover:border-red-400 text-red-400 hover:bg-red-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                                 title="Eliminar Campo"
                               >
                                 <Trash2 size={14} />
@@ -978,7 +978,7 @@ const AdminDashboard: React.FC = () => {
                     value={oppSearch}
                     onChange={e => setOppSearch(e.target.value)}
                     placeholder="Pesquisar por equipa, sigla, contacto ou campo..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
                   />
                   {oppSearch && (
                     <button 
@@ -1001,16 +1001,16 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Lista de Adversários */}
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-gray-100 text-xs font-bold text-gray-500">
+              <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-4 sm:p-6 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/50">
                   <span>A apresentar {filteredOpponents.length} de {opponents.length} equipas registadas</span>
                 </div>
 
                 {filteredOpponents.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400">
-                    <Shield size={40} className="mx-auto mb-2 opacity-30" />
-                    <p className="font-bold text-sm text-gray-600">Nenhum adversário encontrado</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Tente outro filtro ou crie um novo adversário.</p>
+                  <div className="text-center py-12 text-white/30">
+                    <Shield size={40} className="mx-auto mb-2 opacity-60" />
+                    <p className="font-bold text-sm text-white/70">Nenhum adversário encontrado</p>
+                    <p className="text-xs text-white/40 mt-0.5">Tente outro filtro ou crie um novo adversário.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -1022,7 +1022,7 @@ const AdminDashboard: React.FC = () => {
                       return (
                         <div 
                           key={o.id} 
-                          className="flex flex-col justify-between p-4 bg-gray-50 hover:bg-gray-100/60 rounded-2xl border border-gray-200 transition-all gap-3"
+                          className="flex flex-col justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all gap-3"
                         >
                           <div className="flex items-start gap-3.5">
                             {o.logo_url ? (
@@ -1032,35 +1032,35 @@ const AdminDashboard: React.FC = () => {
                                 className="w-13 h-13 object-contain bg-white rounded-xl border border-gray-200 p-1.5 shadow-2xs shrink-0" 
                               />
                             ) : (
-                              <div className="w-13 h-13 bg-gray-200 border border-gray-300 rounded-xl flex items-center justify-center font-black text-gray-600 text-sm shrink-0">
+                              <div className="w-13 h-13 bg-white/10 border border-white/15 rounded-xl flex items-center justify-center font-black text-white/70 text-sm shrink-0">
                                 {o.initials || o.name.substring(0, 3).toUpperCase()}
                               </div>
                             )}
 
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-black text-sm text-csc-dark truncate">
-                                {o.name} {o.initials && <span className="text-gray-500 font-semibold text-xs ml-1">({o.initials})</span>}
+                              <h4 className="font-black text-sm text-white truncate">
+                                {o.name} {o.initials && <span className="text-white/50 font-semibold text-xs ml-1">({o.initials})</span>}
                               </h4>
 
                               {homeField && (
-                                <p className="text-xs text-gray-600 font-medium flex items-center gap-1 mt-1 truncate">
-                                  <span className="text-gray-400">🏟️ Campo:</span>
+                                <p className="text-xs text-white/60 font-medium flex items-center gap-1 mt-1 truncate">
+                                  <span className="text-white/40">🏟️ Campo:</span>
                                   <span className="truncate">{homeField.name}</span>
                                 </p>
                               )}
 
                               {(o.contact_name || o.contact_phone) && (
-                                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-600 font-medium">
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-white/60 font-medium">
                                   {o.contact_name && (
                                     <span className="flex items-center gap-1">
-                                      <User size={12} className="text-gray-400" />
+                                      <User size={12} className="text-white/40" />
                                       <span>{o.contact_name}</span>
                                     </span>
                                   )}
                                   {o.contact_phone && (
                                     <a 
                                       href={`tel:${o.contact_phone}`}
-                                      className="flex items-center gap-1 text-csc-dark font-bold hover:underline"
+                                      className="flex items-center gap-1 text-csc-gold font-bold hover:underline"
                                     >
                                       <Phone size={12} className="text-csc-gold" />
                                       <span>{o.contact_phone}</span>
@@ -1071,33 +1071,33 @@ const AdminDashboard: React.FC = () => {
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between pt-2.5 border-t border-gray-200/60 mt-1">
+                          <div className="flex items-center justify-between pt-2.5 border-t border-white/10 mt-1">
                             {homeField ? (
                               <a
                                 href={mapsUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-2.5 py-1.5 bg-white border border-gray-200 hover:border-red-500 hover:text-red-600 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
+                                className="px-2.5 py-1.5 bg-white/10 border border-white/10 hover:border-red-400 hover:text-red-300 text-white/70 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
                               >
-                                <MapPin size={13} className="text-red-500 shrink-0" />
+                                <MapPin size={13} className="text-red-400 shrink-0" />
                                 <span>Ver Campo</span>
                                 <ExternalLink size={10} className="opacity-50" />
                               </a>
                             ) : (
-                              <span className="text-[11px] text-gray-400 italic">Sem campo associado</span>
+                              <span className="text-[11px] text-white/40 italic">Sem campo associado</span>
                             )}
 
                             <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => handleStartEditOpponent(o)}
-                                className="p-2 bg-white border border-gray-200 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                                className="p-2 bg-white/10 border border-white/10 hover:border-csc-gold text-white/70 hover:text-csc-gold rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                                 title="Editar Adversário"
                               >
                                 <Edit2 size={14} />
                               </button>
                               <button
                                 onClick={() => handleDeleteOpponent(o.id, o.name)}
-                                className="p-2 bg-white border border-gray-200 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                                className="p-2 bg-white/10 border border-white/10 hover:border-red-400 text-red-400 hover:bg-red-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                                 title="Eliminar Adversário"
                               >
                                 <Trash2 size={14} />
@@ -1128,7 +1128,7 @@ const AdminDashboard: React.FC = () => {
                       value={tourSearch}
                       onChange={e => setTourSearch(e.target.value)}
                       placeholder="Pesquisar por nome ou época da competição..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
                     />
                     {tourSearch && (
                       <button 
@@ -1168,38 +1168,38 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Lista de Torneios */}
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-4 sm:p-6 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-gray-100 text-xs font-bold text-gray-500">
+              <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-4 sm:p-6 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/50">
                   <span>A apresentar {filteredTournaments.length} de {tournaments.length} torneios registados</span>
                 </div>
 
                 {filteredTournaments.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400">
-                    <Trophy size={40} className="mx-auto mb-2 opacity-30" />
-                    <p className="font-bold text-sm text-gray-600">Nenhum torneio encontrado</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Tente alterar os filtros ou adicione uma nova competição.</p>
+                  <div className="text-center py-12 text-white/30">
+                    <Trophy size={40} className="mx-auto mb-2 opacity-60" />
+                    <p className="font-bold text-sm text-white/70">Nenhum torneio encontrado</p>
+                    <p className="text-xs text-white/40 mt-0.5">Tente alterar os filtros ou adicione uma nova competição.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {filteredTournaments.map(t => (
                       <div 
                         key={t.id} 
-                        className="flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100/60 rounded-2xl border border-gray-200 transition-all"
+                        className="flex justify-between items-center p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all"
                       >
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2">
                             <span className="text-lg">🏆</span>
                             <div>
-                              <h4 className="font-black text-sm text-csc-dark">{t.name}</h4>
+                              <h4 className="font-black text-sm text-white">{t.name}</h4>
                               {t.season && (
-                                <p className="text-xs text-gray-500 font-semibold">Época: {t.season}</p>
+                                <p className="text-xs text-white/50 font-semibold">Época: {t.season}</p>
                               )}
                             </div>
                           </div>
                           <div>
                             <span className={`inline-block text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                               t.status === 'ativo' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                              t.status === 'terminado' ? 'bg-gray-200 text-gray-700' :
+                              t.status === 'terminado' ? 'bg-white/10 text-white/70' :
                               'bg-amber-100 text-amber-800 border border-amber-300'
                             }`}>
                               {t.status}
@@ -1210,21 +1210,21 @@ const AdminDashboard: React.FC = () => {
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => setLeagueManagerTournamentId(t.id)}
-                            className="p-2 bg-white border border-gray-200 hover:border-blue-500 text-blue-600 hover:bg-blue-50 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                            className="p-2 bg-white/10 border border-white/10 hover:border-blue-400 text-blue-300 hover:bg-blue-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                             title="Gerir Liga (Grupos e Calendário)"
                           >
                             <Shield size={14} />
                           </button>
                           <button
                             onClick={() => handleStartEditTournament(t)}
-                            className="p-2 bg-white border border-gray-200 hover:border-csc-dark text-gray-700 hover:text-csc-dark rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                            className="p-2 bg-white/10 border border-white/10 hover:border-csc-gold text-white/70 hover:text-csc-gold rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                             title="Editar Regras e Detalhes"
                           >
                             <Edit2 size={14} />
                           </button>
                           <button
                             onClick={() => handleDeleteTournament(t.id, t.name)}
-                            className="p-2 bg-white border border-gray-200 hover:border-red-500 text-red-500 hover:bg-red-50 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                            className="p-2 bg-white/10 border border-white/10 hover:border-red-400 text-red-400 hover:bg-red-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                             title="Eliminar Torneio"
                           >
                             <Trash2 size={14} />
@@ -1245,8 +1245,8 @@ const AdminDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {isFieldModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-gray-200 overflow-hidden animate-scale-in">
-            <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white">
+          <div className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in">
+            <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2.5">
                 <MapPin size={22} className="text-csc-gold" />
                 <h3 className="font-black text-lg">
@@ -1263,7 +1263,7 @@ const AdminDashboard: React.FC = () => {
 
             <form onSubmit={handleSaveFieldForm} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                   Nome do Campo *
                 </label>
                 <input
@@ -1272,12 +1272,12 @@ const AdminDashboard: React.FC = () => {
                   value={fieldName}
                   onChange={e => setFieldName(e.target.value)}
                   placeholder="Ex: Estádio Municipal Dramático de Cascais"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                   Morada / Localização
                 </label>
                 <input
@@ -1285,24 +1285,24 @@ const AdminDashboard: React.FC = () => {
                   value={fieldAddress}
                   onChange={e => setFieldAddress(e.target.value)}
                   placeholder="Ex: R. da Torre, 2750-760 Cascais"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                 />
-                <p className="text-[11px] text-gray-500 mt-1 font-medium">Usada para integração e navegação direta no Google Maps.</p>
+                <p className="text-[11px] text-white/50 mt-1 font-medium">Usada para integração e navegação direta no Google Maps.</p>
               </div>
 
-              <div className="pt-4 border-t border-gray-100 flex gap-2 justify-end">
+              <div className="pt-4 border-t border-white/10 flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={handleRequestCloseFieldModal}
-                  className="px-5 py-2.5 border border-gray-300 rounded-xl font-bold text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 border border-white/15 rounded-xl font-bold text-sm text-white hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-dark text-white rounded-xl font-black text-sm hover:bg-csc-dark/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
+                  className="px-6 py-2.5 bg-csc-gold text-csc-dark rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
                 >
-                  <Save size={16} className="text-csc-gold" />
+                  <Save size={16} className="text-csc-dark" />
                   <span>{editingFieldId ? 'Atualizar Campo' : 'Guardar Campo'}</span>
                 </button>
               </div>
@@ -1316,8 +1316,8 @@ const AdminDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {isOppModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-gray-200 overflow-hidden animate-scale-in my-8">
-            <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white">
+          <div className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in my-8">
+            <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2.5">
                 <Shield size={22} className="text-csc-gold" />
                 <h3 className="font-black text-lg">
@@ -1335,7 +1335,7 @@ const AdminDashboard: React.FC = () => {
             <form onSubmit={handleSaveOpponentForm} className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                     Nome da Equipa *
                   </label>
                   <input
@@ -1344,11 +1344,11 @@ const AdminDashboard: React.FC = () => {
                     value={oppName}
                     onChange={e => setOppName(e.target.value)}
                     placeholder="Ex: Grupo Desportivo Pescadores"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                     Siglas
                   </label>
                   <input
@@ -1356,37 +1356,37 @@ const AdminDashboard: React.FC = () => {
                     value={oppInitials}
                     onChange={e => setOppInitials(e.target.value)}
                     placeholder="Ex: GDPCC"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                   Símbolo (Logótipo)
                 </label>
                 {existingLogoUrl && !oppLogo && (
-                  <div className="flex items-center gap-3 mb-2 p-2 bg-gray-50 border border-gray-200 rounded-xl">
+                  <div className="flex items-center gap-3 mb-2 p-2 bg-white/5 border border-white/10 rounded-xl">
                     <img src={existingLogoUrl} alt="Logo Atual" className="w-10 h-10 object-contain p-1 bg-white rounded-lg border" />
-                    <span className="text-xs text-gray-600 font-medium truncate flex-1">Símbolo atualmente guardado</span>
+                    <span className="text-xs text-white/60 font-medium truncate flex-1">Símbolo atualmente guardado</span>
                   </div>
                 )}
                 <input
                   type="file"
                   accept="image/*"
                   onChange={e => setOppLogo(e.target.files ? e.target.files[0] : null)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl text-xs bg-gray-50 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-dark file:text-white"
+                  className="w-full px-4 py-2 border border-white/15 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-dark"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                   Campo Habitual
                 </label>
                 <select
                   value={oppField}
                   onChange={e => setOppField(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                 >
                   <option value="">-- Nenhum campo habitual associado --</option>
                   {fields.map(f => (
@@ -1399,7 +1399,7 @@ const AdminDashboard: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                     Pessoa de Contacto
                   </label>
                   <input
@@ -1407,11 +1407,11 @@ const AdminDashboard: React.FC = () => {
                     value={oppContact}
                     onChange={e => setOppContact(e.target.value)}
                     placeholder="Ex: Sr. Carlos Diretor"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                     Telefone
                   </label>
                   <input
@@ -1419,29 +1419,29 @@ const AdminDashboard: React.FC = () => {
                     value={oppPhone}
                     onChange={e => setOppPhone(e.target.value)}
                     placeholder="Ex: 910 000 000"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-gray-100 flex gap-2 justify-end">
+              <div className="pt-4 border-t border-white/10 flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={handleRequestCloseOppModal}
-                  className="px-5 py-2.5 border border-gray-300 rounded-xl font-bold text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 border border-white/15 rounded-xl font-bold text-sm text-white hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={uploadingOppLogo}
-                  className="px-6 py-2.5 bg-csc-dark text-white rounded-xl font-black text-sm hover:bg-csc-dark/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98"
+                  className="px-6 py-2.5 bg-csc-gold text-csc-dark rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98"
                 >
                   {uploadingOppLogo ? (
                     <span>A enviar dados...</span>
                   ) : (
                     <>
-                      <Save size={16} className="text-csc-gold" />
+                      <Save size={16} className="text-csc-dark" />
                       <span>{editingOppId ? 'Atualizar Adversário' : 'Guardar Adversário'}</span>
                     </>
                   )}
@@ -1464,8 +1464,8 @@ const AdminDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {isTourModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-gray-200 overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
-            <div className="p-5 sm:p-6 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white">
+          <div className="bg-csc-dark text-white w-full max-w-3xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
+            <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2.5">
                 <Trophy size={22} className="text-csc-gold" />
                 <h3 className="font-black text-lg">
@@ -1482,7 +1482,7 @@ const AdminDashboard: React.FC = () => {
 
             <form onSubmit={handleSaveTournamentForm} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                   Nome da Competição *
                 </label>
                 <input
@@ -1491,13 +1491,13 @@ const AdminDashboard: React.FC = () => {
                   value={tourName}
                   onChange={e => setTourName(e.target.value)}
                   placeholder="Ex: Liga Veteranos AF Lisboa"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                     Época Desportiva
                   </label>
                   <input
@@ -1505,17 +1505,17 @@ const AdminDashboard: React.FC = () => {
                     value={tourSeason}
                     onChange={e => setTourSeason(e.target.value)}
                     placeholder="Ex: 2025/2026"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
                     Estado do Torneio
                   </label>
                   <select
                     value={tourStatus}
                     onChange={e => setTourStatus(e.target.value as any)}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
                   >
                     <option value="agendado">Agendado</option>
                     <option value="ativo">Ativo (Em Curso)</option>
@@ -1524,10 +1524,10 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <details className="mt-4 border border-gray-200 rounded-xl bg-gray-50 overflow-hidden group">
-                <summary className="px-4 py-3 text-sm font-bold text-gray-700 cursor-pointer flex justify-between items-center hover:bg-gray-100 transition-colors">
+              <details className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden group">
+                <summary className="px-4 py-3 text-sm font-bold text-white/80 cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors">
                   <span>⚙️ Configuração de Regras (Opcional)</span>
-                  <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                  <span className="text-white/40 group-open:rotate-180 transition-transform">▼</span>
                 </summary>
                 <div className="p-4 border-t border-gray-200 bg-white grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto">
                   
@@ -1537,7 +1537,7 @@ const AdminDashboard: React.FC = () => {
                     <select 
                       value={tourRules.format || 'single_league'} 
                       onChange={e => setTourRules({...tourRules, format: e.target.value as any})} 
-                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-bold bg-white"
+                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-bold bg-white text-gray-900"
                     >
                       <option value="single_league">Liga Única (1 Fase)</option>
                       <option value="two_phases">2 Fases (Grupos + Fase Final)</option>
@@ -1547,62 +1547,62 @@ const AdminDashboard: React.FC = () => {
                   <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Idade Mínima</label>
-                    <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                    <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Permitir Exceções</label>
-                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({...tourRules, exceptions_allowed: e.target.value === 'true'})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm">
+                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({...tourRules, exceptions_allowed: e.target.value === 'true'})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900">
                       <option value="true">Sim</option>
                       <option value="false">Não</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Máx. Exceções de Idade</label>
-                    <input type="number" min="0" value={tourRules.exceptions_count} onChange={e => setTourRules({...tourRules, exceptions_count: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" disabled={!tourRules.exceptions_allowed} />
+                    <input type="number" min="0" value={tourRules.exceptions_count} onChange={e => setTourRules({...tourRules, exceptions_count: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" disabled={!tourRules.exceptions_allowed} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Idade Mín. da Exceção</label>
-                    <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" disabled={!tourRules.exceptions_allowed} />
+                    <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" disabled={!tourRules.exceptions_allowed} />
                   </div>
 
                   <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Máx. Inscritos (Plantel)</label>
-                    <input type="number" min="0" value={tourRules.max_squad_size} onChange={e => setTourRules({...tourRules, max_squad_size: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                    <input type="number" min="0" value={tourRules.max_squad_size} onChange={e => setTourRules({...tourRules, max_squad_size: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Máx. Convocados / Jogo</label>
-                    <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({...tourRules, max_match_players: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                    <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({...tourRules, max_match_players: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
                   </div>
 
                   <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo & Subs</h4>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Duração Total (mins)</label>
-                    <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({...tourRules, match_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                    <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({...tourRules, match_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Duração 1ª Parte (mins)</label>
-                    <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({...tourRules, half_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                    <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({...tourRules, half_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
                   </div>
                   
                   <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Amarelos para Suspensão</label>
-                    <input type="number" min="0" value={tourRules.yellow_cards_to_suspension} onChange={e => setTourRules({...tourRules, yellow_cards_to_suspension: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
+                    <input type="number" min="0" value={tourRules.yellow_cards_to_suspension} onChange={e => setTourRules({...tourRules, yellow_cards_to_suspension: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Resultado p/ Falta Comp.</label>
-                    <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({...tourRules, walkover_score: e.target.value})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" placeholder="Ex: 5-0" />
+                    <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({...tourRules, walkover_score: e.target.value})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" placeholder="Ex: 5-0" />
                   </div>
                 </div>
               </details>
 
               {editingTourId ? (
-                <div className="mt-4 border border-gray-200 rounded-xl bg-gray-50 overflow-hidden flex flex-col max-h-[350px]">
-                  <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex justify-between items-center">
+                <div className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden flex flex-col max-h-[350px]">
+                  <div className="px-4 py-3 bg-white/10 border-b border-white/10 flex justify-between items-center">
                     <div>
-                      <h4 className="text-sm font-bold text-gray-800">Plantel Inscrito</h4>
-                      <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mt-0.5">
+                      <h4 className="text-sm font-bold text-white">Plantel Inscrito</h4>
+                      <p className="text-[10px] text-white/50 uppercase font-bold tracking-wider mt-0.5">
                         {tourPlayers.length} / {tourRules.max_squad_size} Inscritos
                       </p>
                     </div>
@@ -1683,8 +1683,8 @@ const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="mt-4 p-4 border border-blue-200 bg-blue-50 rounded-xl text-center">
-                  <p className="text-xs font-bold text-blue-700">Guarda o torneio primeiro para poderes inscrever o plantel da tua equipa.</p>
+                <div className="mt-4 p-4 border border-blue-400/30 bg-blue-500/10 rounded-xl text-center">
+                  <p className="text-xs font-bold text-blue-300">Guarda o torneio primeiro para poderes inscrever o plantel da tua equipa.</p>
                 </div>
               )}
 
@@ -1692,15 +1692,15 @@ const AdminDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleRequestCloseTourModal}
-                  className="px-5 py-2.5 border border-gray-300 rounded-xl font-bold text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 border border-white/15 rounded-xl font-bold text-sm text-white hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-dark text-white rounded-xl font-black text-sm hover:bg-csc-dark/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
+                  className="px-6 py-2.5 bg-csc-gold text-csc-dark rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
                 >
-                  <Save size={16} className="text-csc-gold" />
+                  <Save size={16} className="text-csc-dark" />
                   <span>{editingTourId ? 'Atualizar Torneio' : 'Guardar Torneio'}</span>
                 </button>
               </div>

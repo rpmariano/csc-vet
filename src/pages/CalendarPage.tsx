@@ -1804,7 +1804,7 @@ const CalendarPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Pesquisar por título, adversário, local..."
-                className="w-full pl-9 pr-8 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-csc-dark focus:border-transparent transition-all"
+                className="w-full pl-9 pr-8 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-csc-dark focus:border-transparent transition-all text-gray-900"
               />
               {searchQuery && (
                 <button
@@ -2825,7 +2825,7 @@ const CalendarPage: React.FC = () => {
                       required={type === 'gathering'}
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
                       placeholder="Ex: Jantar de Natal / Reentré"
                     />
                   </div>
@@ -2836,7 +2836,7 @@ const CalendarPage: React.FC = () => {
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
                   >
                     <option value="match">Jogo</option>
                     <option value="practice">Treino</option>
@@ -2867,7 +2867,7 @@ const CalendarPage: React.FC = () => {
                         <select
                           value={tournamentId}
                           onChange={(e) => setTournamentId(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
                         >
                           <option value="">-- Selecionar Torneio --</option>
                           {tournaments.map(t => (
@@ -2892,7 +2892,7 @@ const CalendarPage: React.FC = () => {
                               setOpponentId(e.target.value)
                             }
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
                         >
                           <option value="">-- Selecionar Adversário --</option>
                           <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
@@ -2907,7 +2907,7 @@ const CalendarPage: React.FC = () => {
                         <select
                           value={homeAway}
                           onChange={(e) => setHomeAway(e.target.value as any)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
                         >
                           <option value="home">🏠 Casa</option>
                           <option value="away">✈️ Fora</option>
@@ -2926,7 +2926,7 @@ const CalendarPage: React.FC = () => {
                       required
                       value={dateTime}
                       onChange={(e) => setDateTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
                     />
                   </div>
                   <div>
@@ -2935,7 +2935,7 @@ const CalendarPage: React.FC = () => {
                       type="time"
                       value={meetingTime}
                       onChange={(e) => setMeetingTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
                       placeholder="Ex: 19:30"
                     />
                   </div>
@@ -2999,7 +2999,7 @@ const CalendarPage: React.FC = () => {
                           }
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
                     >
                       <option value="">-- Escolher Campo / Instalação do Clube --</option>
                       <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
@@ -3018,7 +3018,7 @@ const CalendarPage: React.FC = () => {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
                     placeholder="Informações adicionais, indicações para atletas..."
                   />
                 </div>
@@ -3099,7 +3099,7 @@ const CalendarPage: React.FC = () => {
                             value={recurrenceEndDate}
                             min={dateTime ? dateTime.split('T')[0] : undefined}
                             onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                            className="w-full sm:w-60 px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                            className="w-full sm:w-60 px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
                           />
                         </div>
 
@@ -3206,7 +3206,7 @@ const CalendarPage: React.FC = () => {
                         value={playerSearchTerm}
                         onChange={(e) => setPlayerSearchTerm(e.target.value)}
                         placeholder="Pesquisar jogador por nome..."
-                        className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark"
+                        className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-gray-900"
                       />
                       {playerSearchTerm && (
                         <button
@@ -3363,7 +3363,7 @@ const CalendarPage: React.FC = () => {
                       required={editType === 'gathering'}
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
                       placeholder="Ex: Jantar de Natal / Reentré"
                     />
                   </div>
@@ -3404,7 +3404,7 @@ const CalendarPage: React.FC = () => {
                         <select
                           value={editTournamentId}
                           onChange={(e) => setEditTournamentId(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
                         >
                           <option value="">-- Selecionar Torneio --</option>
                           {tournaments.map(t => (
@@ -3429,7 +3429,7 @@ const CalendarPage: React.FC = () => {
                               setEditOpponentId(e.target.value)
                             }
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
                         >
                           <option value="">-- Selecionar Adversário --</option>
                           <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
@@ -3444,7 +3444,7 @@ const CalendarPage: React.FC = () => {
                         <select
                           value={editHomeAway}
                           onChange={(e) => setEditHomeAway(e.target.value as any)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
                         >
                           <option value="home">🏠 Casa</option>
                           <option value="away">✈️ Fora</option>
@@ -3463,7 +3463,7 @@ const CalendarPage: React.FC = () => {
                       required
                       value={editDateTime}
                       onChange={(e) => setEditDateTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
                     />
                   </div>
 
@@ -3473,7 +3473,7 @@ const CalendarPage: React.FC = () => {
                       type="time"
                       value={editMeetingTime}
                       onChange={(e) => setEditMeetingTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="Ex: 19:30"
                     />
                   </div>
@@ -3537,7 +3537,7 @@ const CalendarPage: React.FC = () => {
                           }
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
                     >
                       <option value="">-- Escolher Campo / Instalação do Clube --</option>
                       <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
@@ -3556,7 +3556,7 @@ const CalendarPage: React.FC = () => {
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                     placeholder="Observações ou notas do evento..."
                   />
                 </div>
@@ -3834,7 +3834,7 @@ const CalendarPage: React.FC = () => {
                           value={editPlayerSearchTerm}
                           onChange={(e) => setEditPlayerSearchTerm(e.target.value)}
                           placeholder="Pesquisar por nome na camisola ou nº..."
-                          className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark font-medium"
+                          className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark font-medium text-gray-900"
                         />
                       </div>
 
@@ -3963,7 +3963,7 @@ const CalendarPage: React.FC = () => {
                   value={quickFieldName}
                   onChange={(e) => setQuickFieldName(e.target.value)}
                   placeholder="Ex: Campo Sintético Municipal de Tires"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
                 />
               </div>
 
@@ -3974,7 +3974,7 @@ const CalendarPage: React.FC = () => {
                   value={quickFieldAddress}
                   onChange={(e) => setQuickFieldAddress(e.target.value)}
                   placeholder="Ex: Av. Amadeu Duarte, Tires, Cascais"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                 />
                 <p className="text-[10.5px] text-gray-500 mt-1">Usada para navegação e rotas com Google Maps.</p>
               </div>
@@ -4038,7 +4038,7 @@ const CalendarPage: React.FC = () => {
                   value={quickOppName}
                   onChange={(e) => setQuickOppName(e.target.value)}
                   placeholder="Ex: G.D. Estoril Praia"
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold text-gray-900"
                 />
               </div>
 
@@ -4051,7 +4051,7 @@ const CalendarPage: React.FC = () => {
                     onChange={(e) => setQuickOppInitials(e.target.value)}
                     placeholder="Ex: GDEP"
                     maxLength={6}
-                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white uppercase font-bold"
+                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white uppercase font-bold text-gray-900"
                   />
                 </div>
 
@@ -4060,7 +4060,7 @@ const CalendarPage: React.FC = () => {
                   <select
                     value={quickOppHomeFieldId}
                     onChange={(e) => setQuickOppHomeFieldId(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
                   >
                     <option value="">-- Sem Campo --</option>
                     {fields.map(f => (
@@ -4078,7 +4078,7 @@ const CalendarPage: React.FC = () => {
                     value={quickOppContactName}
                     onChange={(e) => setQuickOppContactName(e.target.value)}
                     placeholder="Ex: Diretor desportivo"
-                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
                   />
                 </div>
 
@@ -4089,7 +4089,7 @@ const CalendarPage: React.FC = () => {
                     value={quickOppContactPhone}
                     onChange={(e) => setQuickOppContactPhone(e.target.value)}
                     placeholder="Ex: 912 345 678"
-                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white"
+                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
                   />
                 </div>
               </div>
