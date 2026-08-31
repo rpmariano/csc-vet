@@ -578,6 +578,7 @@ const AnnouncementsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setEditingAnn(null)}
+              aria-label="Fechar"
               className="absolute top-4 right-4 text-white/70 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
             >
               <X size={20} />

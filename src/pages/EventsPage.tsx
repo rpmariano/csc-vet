@@ -1301,6 +1301,7 @@ const EventsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setViewModeTab('list')}
+                  aria-label="Voltar à lista"
                   className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 flex items-center justify-center cursor-pointer transition-all active:scale-90"
                 >
                   <X size={18} className="stroke-[2.5]" />
@@ -1842,8 +1843,9 @@ const EventsPage: React.FC = () => {
                     className="w-full pl-10 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
                   />
                   {eventListSearch && (
-                    <button 
+                    <button
                       onClick={() => setEventListSearch('')}
+                      aria-label="Limpar pesquisa"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                     >
                       <X size={15} />
@@ -2293,7 +2295,7 @@ const EventsPage: React.FC = () => {
           <div className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10">
             <div className="sticky top-0 bg-csc-dark border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
               <h3 className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
-              <button onClick={handleAttemptCloseEditModal} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90"><X size={18} className="stroke-[2.5]" /></button>
+              <button onClick={handleAttemptCloseEditModal} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90"><X size={18} className="stroke-[2.5]" /></button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
@@ -2727,6 +2729,7 @@ const EventsPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseQuickFieldModal}
+              aria-label="Fechar"
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <X size={20} />
@@ -2802,6 +2805,7 @@ const EventsPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseQuickOppModal}
+              aria-label="Fechar"
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <X size={20} />

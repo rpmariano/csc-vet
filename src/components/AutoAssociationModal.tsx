@@ -191,6 +191,7 @@ export const AutoAssociationModal: React.FC = () => {
       <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-300">
         <button
           onClick={handleDismiss}
+          aria-label="Fechar"
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer"
         >
           <X size={20} />

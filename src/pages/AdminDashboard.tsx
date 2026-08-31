@@ -866,8 +866,9 @@ const AdminDashboard: React.FC = () => {
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
                   />
                   {fieldSearch && (
-                    <button 
+                    <button
                       onClick={() => setFieldSearch('')}
+                      aria-label="Limpar pesquisa"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       <X size={15} />
@@ -981,8 +982,9 @@ const AdminDashboard: React.FC = () => {
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
                   />
                   {oppSearch && (
-                    <button 
+                    <button
                       onClick={() => setOppSearch('')}
+                      aria-label="Limpar pesquisa"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       <X size={15} />
@@ -1131,8 +1133,9 @@ const AdminDashboard: React.FC = () => {
                       className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
                     />
                     {tourSearch && (
-                      <button 
+                      <button
                         onClick={() => setTourSearch('')}
+                        aria-label="Limpar pesquisa"
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                       >
                         <X size={15} />
@@ -1255,6 +1258,7 @@ const AdminDashboard: React.FC = () => {
               </div>
               <button
                 onClick={handleRequestCloseFieldModal}
+                aria-label="Fechar"
                 className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
               >
                 <X size={20} />
@@ -1326,6 +1330,7 @@ const AdminDashboard: React.FC = () => {
               </div>
               <button
                 onClick={handleRequestCloseOppModal}
+                aria-label="Fechar"
                 className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
               >
                 <X size={20} />
@@ -1474,6 +1479,7 @@ const AdminDashboard: React.FC = () => {
               </div>
               <button
                 onClick={handleRequestCloseTourModal}
+                aria-label="Fechar"
                 className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
               >
                 <X size={20} />

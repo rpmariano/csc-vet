@@ -240,7 +240,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                                 <span className="flex items-center gap-2">
                                   {t.opponent_id ? (
                                     <>
-                                      {t.opponent?.logo_url ? <img src={t.opponent.logo_url} className="w-5 h-5 rounded-full object-cover" /> : <Shield size={16} className="text-gray-400" />}
+                                      {t.opponent?.logo_url ? <img src={t.opponent.logo_url} alt="" className="w-5 h-5 rounded-full object-cover" /> : <Shield size={16} className="text-gray-400" />}
                                       {t.opponent?.name}
                                     </>
                                   ) : (
@@ -450,7 +450,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                 <Plus size={18} className="text-csc-gold" />
                 <h3 className="font-black text-sm">Novo Grupo</h3>
               </div>
-              <button onClick={() => setIsNewGroupModalOpen(false)} className="p-1 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer">
+              <button onClick={() => setIsNewGroupModalOpen(false)} aria-label="Fechar" className="p-1 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer">
                 <X size={18} />
               </button>
             </div>
