@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { X, ShieldAlert, Award, Footprints, Save, CheckCircle2, Lock, Flame, Users, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../pages/CalendarPage'
+import { toast } from '../context/ToastContext'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -306,7 +307,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {
       console.error('Error saving match report:', err)
-      alert('Erro ao guardar a ficha de jogo. Por favor tenta novamente.')
+      toast.error('Erro ao guardar a ficha de jogo. Por favor tenta novamente.')
     } finally {
       setSaving(false)
     }

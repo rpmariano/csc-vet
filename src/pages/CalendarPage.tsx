@@ -3750,6 +3750,7 @@ const CalendarPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseQuickFieldModal}
+              aria-label="Fechar"
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <X size={20} />
@@ -3826,6 +3827,7 @@ const CalendarPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseQuickOppModal}
+              aria-label="Fechar"
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <X size={20} />

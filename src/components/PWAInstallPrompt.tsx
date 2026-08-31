@@ -121,6 +121,7 @@ export const PWAInstallPrompt: React.FC = () => {
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-gray-900 shadow-2xl relative border-2 border-csc-gold">
             <button
               onClick={() => setShowIOSModal(false)}
+              aria-label="Fechar"
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer"
             >
               <X size={20} />
@@ -256,6 +257,7 @@ export const PWAInstallMenuItem: React.FC<{ onClickExtra?: () => void }> = ({ on
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-gray-900 shadow-2xl relative border-2 border-csc-gold">
             <button
               onClick={() => setShowModal(false)}
+              aria-label="Fechar"
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer"
             >
               <X size={20} />

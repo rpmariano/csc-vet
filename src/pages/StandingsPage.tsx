@@ -270,7 +270,7 @@ export const StandingsPage = () => {
                                   {isCSC ? (
                                     <Shield size={16} className="text-blue-500" />
                                   ) : logo ? (
-                                    <img src={logo} className="w-full h-full object-cover" />
+                                    <img src={logo} alt="" className="w-full h-full object-cover" />
                                   ) : (
                                     <Shield size={16} className="text-gray-300" />
                                   )}
