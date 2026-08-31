@@ -66,14 +66,24 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     if (teamsRes.data) setTeams(teamsRes.data)
     if (matchesRes.data) setMatches(matchesRes.data)
     if (oppsRes.data) setOpponents(oppsRes.data)
-    
+
+    const firstError = tourRes.error || groupsRes.error || teamsRes.error || matchesRes.error || oppsRes.error
+    if (firstError) {
+      toast.error('Erro ao carregar dados da liga: ' + firstError.message)
+    }
+
     setLoading(false)
   }
 
   const handleAddGroup = async () => {
     if (!newGroupName.trim()) return
     const phase = parseInt(newGroupPhase) || 1
-    await supabase.from('tournament_groups').insert([{ tournament_id: tournamentId, name: newGroupName.trim(), phase }])
+    const { error } = await supabase.from('tournament_groups').insert([{ tournament_id: tournamentId, name: newGroupName.trim(), phase }])
+    if (error) {
+      toast.error('Não foi possível criar o grupo: ' + error.message)
+      return
+    }
+    toast.success('Grupo criado com sucesso!')
     setNewGroupName('')
     setNewGroupPhase('1')
     setIsNewGroupModalOpen(false)
@@ -93,12 +103,17 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       return
     }
 
-    await supabase.from('tournament_teams').insert([{
+    const { error } = await supabase.from('tournament_teams').insert([{
       tournament_id: tournamentId,
       group_id: selectedGroupForTeam,
       opponent_id
     }])
-    
+
+    if (error) {
+      toast.error('Não foi possível adicionar a equipa: ' + error.message)
+      return
+    }
+
     setSelectedGroupForTeam('')
     setSelectedOpponentToAdd('')
     fetchData()
@@ -111,7 +126,11 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       description: 'Esta equipa deixa de fazer parte do grupo. Os resultados já registados não são apagados.',
       onConfirm: async () => {
         closeConfirmModal()
-        await supabase.from('tournament_teams').delete().eq('id', id)
+        const { error } = await supabase.from('tournament_teams').delete().eq('id', id)
+        if (error) {
+          toast.error('Não foi possível remover a equipa: ' + error.message)
+          return
+        }
         fetchData()
       }
     })
@@ -124,7 +143,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       return
     }
 
-    await supabase.from('tournament_matches').insert([{
+    const { error } = await supabase.from('tournament_matches').insert([{
       tournament_id: tournamentId,
       group_id: newMatchGroup,
       matchday: parseInt(newMatchday),
@@ -134,6 +153,11 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       away_score: parseInt(newAwayScore),
       status: 'finished'
     }])
+
+    if (error) {
+      toast.error('Não foi possível registar o resultado: ' + error.message)
+      return
+    }
 
     // Reset some fields
     setNewHomeTeam('')
@@ -150,7 +174,11 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       description: 'Este resultado é apagado e deixa de contar para a classificação do grupo.',
       onConfirm: async () => {
         closeConfirmModal()
-        await supabase.from('tournament_matches').delete().eq('id', id)
+        const { error } = await supabase.from('tournament_matches').delete().eq('id', id)
+        if (error) {
+          toast.error('Não foi possível apagar o resultado: ' + error.message)
+          return
+        }
         fetchData()
       }
     })
