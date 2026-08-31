@@ -28,7 +28,7 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-70 animate-fade-in select-none">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-modal-confirm animate-fade-in select-none">
       <div
         ref={painelRef}
         role="dialog"

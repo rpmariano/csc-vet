@@ -4015,7 +4015,7 @@ const CalendarPage: React.FC = () => {
 
       {/* MODAL 5: CONFIRMAÇÃO DE REENVIO DE CONVOCATÓRIAS APÓS EDIÇÃO */}
       {isResendPromptOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-[80] animate-fade-in select-none">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-modal-confirm animate-fade-in select-none">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-scale-in">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
