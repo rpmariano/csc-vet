@@ -2284,7 +2284,7 @@ const EventsPage: React.FC = () => {
       {/* ====== MODAL DE EDIÇÃO DE EVENTO ====== */}
       {editingEvent && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal p-4"
           onMouseDown={e => {
             // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseEditModal()
@@ -2717,7 +2717,7 @@ const EventsPage: React.FC = () => {
       {/* MODAL: CRIAR NOVO CAMPO INLINE */}
       {isQuickFieldModalOpen && (
         <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fade-in"
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-modal-top animate-fade-in"
           onMouseDown={(e) => {
             // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseQuickFieldModal()
@@ -2792,7 +2792,7 @@ const EventsPage: React.FC = () => {
       {/* MODAL: CRIAR NOVO ADVERSÁRIO INLINE */}
       {isQuickOpponentModalOpen && (
         <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fade-in"
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-modal-top animate-fade-in"
           onMouseDown={(e) => {
             // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseQuickOppModal()

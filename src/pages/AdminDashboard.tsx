@@ -1713,7 +1713,7 @@ const AdminDashboard: React.FC = () => {
       {/* MODAL GLOBAL: CONFIRMAÇÃO DE ALTERAÇÕES NÃO GRAVADAS */}
       {/* ========================================================================= */}
       {unsavedModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+        <div className="fixed inset-0 z-modal-confirm flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-sm w-full p-6 text-center space-y-4 animate-scale-in">
             <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 mx-auto">
               <AlertTriangle size={28} />
