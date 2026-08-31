@@ -1,6 +1,9 @@
 -- Diagnóstico (só leitura): agrupa eventos que parecem a mesma marcação
 -- (mesmo tipo, data/hora, campo e adversário) e mostra o que cada cópia já tem
 -- associado, para decidires qual manter antes de apagar as outras.
+--
+-- Nota: `events.is_active` existe no código (com fallback para o caso de faltar) mas
+-- ainda não foi aplicada em produção — por isso não entra aqui. Ver Riscos no CLAUDE.md.
 SELECT
   e.id,
   e.title,
@@ -8,7 +11,6 @@ SELECT
   e.date_time,
   e.field_id,
   e.opponent_id,
-  e.is_active,
   e.home_score,
   e.away_score,
   e.created_at,
