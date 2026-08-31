@@ -68,6 +68,30 @@ const ensurePlayerIdsForSupabase = async (pIds: string[], _playerList: Profile[]
   return Array.from(new Set(pIds.filter((id): id is string => Boolean(id) && typeof id === 'string')))
 }
 
+// A tabela `callups` cresce sem parar (uma linha por atleta por evento, anos de jogos e
+// treinos). Um `.select(...)` sem paginação fica sujeito ao limite de linhas por omissão do
+// Postgrest — sem ordenação explícita, não há garantia de quais linhas ficam de fora — pelo
+// que convocatórias antigas desapareciam do mapa local mesmo continuando a existir na base
+// de dados: "Todos" reportava sucesso porque verifica a BD diretamente, mas os checkboxes
+// continuavam por marcar porque liam este cache. Percorre a tabela às páginas.
+const fetchAllCallups = async (selectClause: string): Promise<{ data: any[] | null; error: any }> => {
+  const PAGE_SIZE = 1000
+  const all: any[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('callups')
+      .select(selectClause)
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) return { data: null, error }
+    if (!data || data.length === 0) break
+    all.push(...data)
+    if (data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return { data: all, error: null }
+}
+
 export const TrainingIcon: React.FC<{ size?: number; className?: string }> = ({ size = 20, className = '' }) => (
   <svg 
     width={size} 
@@ -643,7 +667,7 @@ const EventsPage: React.FC = () => {
         supabase.from('opponents').select('id, name, home_field_id'),
         supabase.from('tournaments').select('id, name, season, rules'),
         supabase.from('profiles').select('*').order('name', { ascending: true }),
-        supabase.from('callups').select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)'),
+        fetchAllCallups('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)'),
         supabase.from('tournament_players').select('tournament_id, player_id'),
         supabase.from('tournament_suspensions').select('*').eq('status', 'active')
       ])
