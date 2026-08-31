@@ -110,6 +110,8 @@ interface Event {
   home_away?: 'home' | 'away' | 'neutral' | null
   max_players?: number | null
   related_gathering_id?: string | null
+  home_score?: number | null
+  away_score?: number | null
 }
 
 interface Field { id: string; name: string; address?: string | null }
@@ -2131,8 +2133,8 @@ const EventsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Botão Ficha de Jogo (quando Jogo) */}
-                {activeCallupModalEvent.type === 'match' && (
+                {/* Botão Ficha de Jogo (quando Jogo já realizado ou com resultado registado) */}
+                {activeCallupModalEvent.type === 'match' && (new Date(activeCallupModalEvent.date_time).getTime() <= Date.now() || (activeCallupModalEvent.home_score !== null && activeCallupModalEvent.home_score !== undefined)) && (
                   <button
                     type="button"
                     onClick={() => setIsMatchReportOpen(true)}
