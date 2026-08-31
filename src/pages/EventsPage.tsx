@@ -1916,26 +1916,26 @@ const EventsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-5 sm:p-6">
-              <div className="flex items-center justify-between pb-3 mb-5 border-b border-gray-200">
-                <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
-                  <CalendarRange size={20} className="text-csc-dark" />
+            <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-5 sm:p-6">
+              <div className="flex items-center justify-between pb-3 mb-5 border-b border-white/10">
+                <h3 className="text-lg font-black text-white flex items-center gap-2">
+                  <CalendarRange size={20} className="text-csc-gold" />
                   <span>Lista de Eventos & Quórum RSVP</span>
                 </h3>
-                <span className="text-xs font-bold text-gray-500">
+                <span className="text-xs font-bold text-white/50">
                   A apresentar {filteredScheduledEvents.length} de {events.length} registados
                 </span>
               </div>
 
               {loading ? (
                 <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
+                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold"></div>
                 </div>
               ) : filteredScheduledEvents.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-300 p-6">
-                  <Calendar size={40} className="mx-auto text-gray-300 mb-2" />
-                  <p className="font-bold text-gray-700">Nenhum evento encontrado com os filtros atuais.</p>
-                  <p className="text-xs text-gray-500 mt-1">Tente alterar os filtros ou o termo de pesquisa.</p>
+                <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6">
+                  <Calendar size={40} className="mx-auto text-white/20 mb-2" />
+                  <p className="font-bold text-white/70">Nenhum evento encontrado com os filtros atuais.</p>
+                  <p className="text-xs text-white/40 mt-1">Tente alterar os filtros ou o termo de pesquisa.</p>
                 </div>
               ) : (
                 <div className="space-y-3.5">
@@ -1954,14 +1954,14 @@ const EventsPage: React.FC = () => {
                       key={event.id} 
                       className={`p-4 rounded-2xl border-2 transition-all shadow-2xs space-y-3 ${
                         event.is_active === false 
-                          ? 'bg-amber-50/40 border-amber-300/80 hover:border-amber-400' 
-                          : 'bg-gray-50 hover:bg-amber-50/30 border-gray-200 hover:border-amber-300'
+                          ? 'bg-amber-500/10 border-amber-400/40 hover:border-amber-400/60' 
+                          : 'bg-white/5 hover:bg-amber-500/10 border-white/10 hover:border-amber-400/40'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-black text-gray-900 text-base leading-tight">
+                            <h4 className="font-black text-white text-base leading-tight">
                               {event.type === 'match' && event.opponent_id ? `CSC vs ${getOpponentName(event.opponent_id)} • ${event.title}` : event.title}
                             </h4>
                             {event.is_active === false && (
@@ -1976,14 +1976,14 @@ const EventsPage: React.FC = () => {
                           <div className="flex gap-1 shrink-0">
                             <button
                               onClick={() => openEditModal(event)}
-                              className="text-gray-400 hover:text-blue-600 p-1.5 rounded-xl hover:bg-blue-50 transition-colors cursor-pointer"
+                              className="text-white/40 hover:text-blue-300 p-1.5 rounded-xl hover:bg-blue-500/10 transition-colors cursor-pointer"
                               title="Editar evento"
                             >
                               <Edit size={16} />
                             </button>
                             <button
                               onClick={() => handleDeleteEvent(event.id)}
-                              className="text-gray-400 hover:text-red-600 p-1.5 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
+                              className="text-white/40 hover:text-red-300 p-1.5 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"
                               title="Eliminar evento"
                             >
                               <Trash2 size={16} />
@@ -1993,9 +1993,9 @@ const EventsPage: React.FC = () => {
                       </div>
 
                       {/* Event Meta Details */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-700 bg-white/70 p-2.5 rounded-xl border border-gray-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-white/70 bg-white/5 p-2.5 rounded-xl border border-white/10">
                         <div className="flex items-center gap-1.5">
-                          <Clock size={13} className="text-csc-dark shrink-0" />
+                          <Clock size={13} className="text-csc-gold shrink-0" />
                           <span className="font-bold">
                             {new Date(event.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' })}, {new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                           </span>
@@ -2028,7 +2028,7 @@ const EventsPage: React.FC = () => {
                       </div>
 
                       {/* RSVP Summary Bar & Action Button */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-gray-200">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-white/10">
                         <div className="flex items-center gap-2 text-xs">
                           <span className="flex items-center gap-1 font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-lg">
                             <CheckCircle2 size={12} className="text-emerald-700" />
@@ -2066,9 +2066,9 @@ const EventsPage: React.FC = () => {
                               setRsvpTabFilter('all')
                               setPlayerSearchTerm('')
                             }}
-                            className="w-full sm:w-auto px-4 py-2 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
+                            className="w-full sm:w-auto px-4 py-2 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
                           >
-                            <Users size={14} className="text-csc-gold" />
+                            <Users size={14} className="text-csc-dark" />
                             <span>Ver Detalhes & RSVP ({callups.length})</span>
                           </button>
                         </div>
@@ -2087,10 +2087,10 @@ const EventsPage: React.FC = () => {
       {/* ========================================================================= */}
       {activeCallupModalEvent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-300">
+          <div className="bg-csc-dark text-white rounded-3xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40">
             <button
               onClick={() => setActiveCallupModalEvent(null)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-100 cursor-pointer z-10 bg-white shadow-sm border border-gray-200 flex items-center justify-center"
+              className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-xl hover:bg-white/20 cursor-pointer z-10 bg-white/10 shadow-sm border border-white/10 flex items-center justify-center"
             >
               <X size={20} />
             </button>
@@ -2176,9 +2176,9 @@ const EventsPage: React.FC = () => {
 
             {/* Se o evento estiver inativo, alerta proeminente */}
             {activeCallupModalEvent.is_active === false && (
-              <div className="mb-4 p-3.5 bg-amber-50 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
-                  <AlertTriangle size={18} className="text-amber-600 shrink-0" />
+              <div className="mb-4 p-3.5 bg-amber-500/10 border-2 border-amber-400/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
+                  <AlertTriangle size={18} className="text-amber-400 shrink-0" />
                   <span>Este evento está em modo <strong>Rascunho (Inativo)</strong>. A convocatória não foi enviada e não está visível para os atletas.</span>
                 </div>
                 {isCoachOrAdmin && (
@@ -2216,16 +2216,16 @@ const EventsPage: React.FC = () => {
                       type="button"
                       onClick={() => setRsvpTabFilter(prev => prev === 'confirmed' ? 'all' : 'confirmed')}
                       className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
-                        rsvpTabFilter === 'confirmed' ? 'bg-emerald-100 border-emerald-500 shadow-md ring-2 ring-emerald-500/40' : 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/60'
+                        rsvpTabFilter === 'confirmed' ? 'bg-emerald-500/20 border-emerald-400 shadow-md ring-2 ring-emerald-400/40' : 'bg-emerald-500/10 border-emerald-400/20 hover:bg-emerald-500/15'
                       }`}
                       title="Filtrar por Confirmados"
                     >
-                      <p className="text-2xl font-black text-emerald-800">{confirmedList.length}</p>
-                      <p className="text-[11px] font-bold text-emerald-900 flex items-center justify-center gap-1 mt-0.5">
+                      <p className="text-2xl font-black text-emerald-300">{confirmedList.length}</p>
+                      <p className="text-[11px] font-bold text-emerald-200 flex items-center justify-center gap-1 mt-0.5">
                         <CheckCircle2 size={12} /> Confirmados
                       </p>
                       {rsvpTabFilter === 'confirmed' && (
-                        <span className="text-[9px] font-black uppercase text-emerald-900 bg-emerald-200/90 px-1.5 py-0.2 rounded-full mt-1">
+                        <span className="text-[9px] font-black uppercase text-emerald-200 bg-emerald-400/20 px-1.5 py-0.2 rounded-full mt-1">
                           Filtro Ativo
                         </span>
                       )}
@@ -2235,16 +2235,16 @@ const EventsPage: React.FC = () => {
                       type="button"
                       onClick={() => setRsvpTabFilter(prev => prev === 'called' ? 'all' : 'called')}
                       className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
-                        rsvpTabFilter === 'called' ? 'bg-amber-100 border-amber-500 shadow-md ring-2 ring-amber-500/40' : 'bg-amber-50/70 border-amber-200 hover:bg-amber-100/60'
+                        rsvpTabFilter === 'called' ? 'bg-amber-500/20 border-amber-400 shadow-md ring-2 ring-amber-400/40' : 'bg-amber-500/10 border-amber-400/20 hover:bg-amber-500/15'
                       }`}
                       title="Filtrar por Pendentes"
                     >
-                      <p className="text-2xl font-black text-amber-800">{pendingList.length}</p>
-                      <p className="text-[11px] font-bold text-amber-900 flex items-center justify-center gap-1 mt-0.5">
+                      <p className="text-2xl font-black text-amber-300">{pendingList.length}</p>
+                      <p className="text-[11px] font-bold text-amber-200 flex items-center justify-center gap-1 mt-0.5">
                         <HelpCircle size={12} /> Pendentes
                       </p>
                       {rsvpTabFilter === 'called' && (
-                        <span className="text-[9px] font-black uppercase text-amber-900 bg-amber-200/90 px-1.5 py-0.2 rounded-full mt-1">
+                        <span className="text-[9px] font-black uppercase text-amber-200 bg-amber-400/20 px-1.5 py-0.2 rounded-full mt-1">
                           Filtro Ativo
                         </span>
                       )}
@@ -2254,16 +2254,16 @@ const EventsPage: React.FC = () => {
                       type="button"
                       onClick={() => setRsvpTabFilter(prev => prev === 'declined' ? 'all' : 'declined')}
                       className={`p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
-                        rsvpTabFilter === 'declined' ? 'bg-red-100 border-red-500 shadow-md ring-2 ring-red-500/40' : 'bg-red-50/70 border-red-200 hover:bg-red-100/60'
+                        rsvpTabFilter === 'declined' ? 'bg-red-500/20 border-red-400 shadow-md ring-2 ring-red-400/40' : 'bg-red-500/10 border-red-400/20 hover:bg-red-500/15'
                       }`}
                       title="Filtrar por Recusados"
                     >
-                      <p className="text-2xl font-black text-red-800">{declinedList.length}</p>
-                      <p className="text-[11px] font-bold text-red-900 flex items-center justify-center gap-1 mt-0.5">
+                      <p className="text-2xl font-black text-red-300">{declinedList.length}</p>
+                      <p className="text-[11px] font-bold text-red-200 flex items-center justify-center gap-1 mt-0.5">
                         <XCircle size={12} /> Recusados
                       </p>
                       {rsvpTabFilter === 'declined' && (
-                        <span className="text-[9px] font-black uppercase text-red-900 bg-red-200/90 px-1.5 py-0.2 rounded-full mt-1">
+                        <span className="text-[9px] font-black uppercase text-red-200 bg-red-400/20 px-1.5 py-0.2 rounded-full mt-1">
                           Filtro Ativo
                         </span>
                       )}
@@ -2271,12 +2271,12 @@ const EventsPage: React.FC = () => {
                   </div>
 
                   {/* Filter Tabs */}
-                  <div className="flex items-center gap-1 border-b border-gray-200 pb-2 overflow-x-auto text-xs">
+                  <div className="flex items-center gap-1 border-b border-white/10 pb-2 overflow-x-auto text-xs">
                     <button
                       type="button"
                       onClick={() => setRsvpTabFilter('all')}
                       className={`px-3 py-1.5 rounded-xl font-black transition-colors ${
-                        rsvpTabFilter === 'all' ? 'bg-csc-dark text-white' : 'text-gray-600 hover:bg-gray-100'
+                        rsvpTabFilter === 'all' ? 'bg-csc-gold text-csc-dark' : 'text-white/60 hover:bg-white/10'
                       }`}
                     >
                       Todos ({callups.length})
@@ -2285,7 +2285,7 @@ const EventsPage: React.FC = () => {
                       type="button"
                       onClick={() => setRsvpTabFilter('confirmed')}
                       className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
-                        rsvpTabFilter === 'confirmed' ? 'bg-emerald-700 text-white' : 'text-emerald-800 hover:bg-emerald-50'
+                        rsvpTabFilter === 'confirmed' ? 'bg-emerald-700 text-white' : 'text-emerald-300 hover:bg-emerald-500/10'
                       }`}
                     >
                       ✓ Confirmados ({confirmedList.length})
@@ -2294,7 +2294,7 @@ const EventsPage: React.FC = () => {
                       type="button"
                       onClick={() => setRsvpTabFilter('called')}
                       className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
-                        rsvpTabFilter === 'called' ? 'bg-amber-700 text-white' : 'text-amber-800 hover:bg-amber-50'
+                        rsvpTabFilter === 'called' ? 'bg-amber-700 text-white' : 'text-amber-300 hover:bg-amber-500/10'
                       }`}
                     >
                       ⏳ Pendentes ({pendingList.length})
@@ -2303,7 +2303,7 @@ const EventsPage: React.FC = () => {
                       type="button"
                       onClick={() => setRsvpTabFilter('declined')}
                       className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
-                        rsvpTabFilter === 'declined' ? 'bg-red-700 text-white' : 'text-red-800 hover:bg-red-50'
+                        rsvpTabFilter === 'declined' ? 'bg-red-700 text-white' : 'text-red-300 hover:bg-red-500/10'
                       }`}
                     >
                       ✕ Recusados ({declinedList.length})
@@ -2312,9 +2312,9 @@ const EventsPage: React.FC = () => {
 
                   {/* Convidar mais elementos à convocatória */}
                   {isCoachOrAdmin && uncalledPlayers.length > 0 && (
-                    <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
-                      <p className="text-xs font-black text-gray-800 flex items-center gap-1.5">
-                        <UserPlus size={14} className="text-csc-dark" />
+                    <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+                      <p className="text-xs font-black text-white/80 flex items-center gap-1.5">
+                        <UserPlus size={14} className="text-csc-gold" />
                         <span>Adicionar mais membros ao evento:</span>
                       </p>
                       <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1">
@@ -2336,7 +2336,7 @@ const EventsPage: React.FC = () => {
                   {/* Lista de Membros e Gestão de Estado RSVP */}
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                     {displayList.length === 0 ? (
-                      <p className="text-center text-xs text-gray-500 py-6">
+                      <p className="text-center text-xs text-white/40 py-6">
                         Nenhum membro encontrado neste filtro.
                       </p>
                     ) : (
@@ -2346,7 +2346,7 @@ const EventsPage: React.FC = () => {
                         return (
                           <div 
                             key={c.id} 
-                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 hover:bg-white rounded-2xl border border-gray-200 transition-all gap-2"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all gap-2"
                           >
                             {/* Member Info */}
                             <div className="flex items-center gap-2.5 min-w-0">
@@ -2363,7 +2363,7 @@ const EventsPage: React.FC = () => {
                               )}
 
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs font-black text-gray-900 truncate">
+                                <p className="text-xs font-black text-white truncate">
                                   {c.player?.jersey_number ? `#${c.player.jersey_number} ` : ''}{getPlayerDisplayName(c.player)}
                                 </p>
                                 <div className="flex items-center gap-1 mt-0.5">
@@ -2384,7 +2384,7 @@ const EventsPage: React.FC = () => {
                             </div>
 
                             {/* RSVP Status Badge & Coach Action Buttons */}
-                            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-200">
+                            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-white/10">
                               <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1 ${
                                 c.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
                                 c.status === 'declined' ? 'bg-red-100 text-red-800 border border-red-200' :
@@ -2402,7 +2402,7 @@ const EventsPage: React.FC = () => {
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'confirmed')}
-                                    className={`p-1.5 rounded-lg transition-colors ${c.status === 'confirmed' ? 'bg-emerald-600 text-white' : 'bg-white hover:bg-emerald-50 text-emerald-700 border border-gray-200'}`}
+                                    className={`p-1.5 rounded-lg transition-colors ${c.status === 'confirmed' ? 'bg-emerald-600 text-white' : 'bg-white/10 hover:bg-emerald-500/20 text-emerald-300 border border-white/10'}`}
                                     title="Marcar como Confirmado"
                                   >
                                     <Check size={12} />
@@ -2411,7 +2411,7 @@ const EventsPage: React.FC = () => {
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'declined')}
-                                    className={`p-1.5 rounded-lg transition-colors ${c.status === 'declined' ? 'bg-red-600 text-white' : 'bg-white hover:bg-red-50 text-red-700 border border-gray-200'}`}
+                                    className={`p-1.5 rounded-lg transition-colors ${c.status === 'declined' ? 'bg-red-600 text-white' : 'bg-white/10 hover:bg-red-500/20 text-red-300 border border-white/10'}`}
                                     title="Marcar como Recusado"
                                   >
                                     <X size={12} />
@@ -2420,7 +2420,7 @@ const EventsPage: React.FC = () => {
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'called')}
-                                    className={`p-1.5 rounded-lg transition-colors ${c.status === 'called' ? 'bg-amber-600 text-white' : 'bg-white hover:bg-amber-50 text-amber-700 border border-gray-200'}`}
+                                    className={`p-1.5 rounded-lg transition-colors ${c.status === 'called' ? 'bg-amber-600 text-white' : 'bg-white/10 hover:bg-amber-500/20 text-amber-300 border border-white/10'}`}
                                     title="Colocar como Pendente"
                                   >
                                     <HelpCircle size={12} />
@@ -2429,7 +2429,7 @@ const EventsPage: React.FC = () => {
                                   <button
                                     type="button"
                                     onClick={() => handleRemovePlayerFromCallup(c.id, activeCallupModalEvent.id)}
-                                    className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                    className="p-1.5 text-white/40 hover:text-red-300 rounded-lg hover:bg-red-500/10 transition-colors"
                                     title="Remover da convocatória"
                                   >
                                     <Trash2 size={12} />
@@ -2452,21 +2452,21 @@ const EventsPage: React.FC = () => {
       {/* ====== MODAL DE EDIÇÃO DE EVENTO ====== */}
       {editingEvent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onClick={handleAttemptCloseEditModal}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-5 rounded-t-3xl flex justify-between items-center z-10">
-              <h3 className="text-lg font-black text-gray-900">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
-              <button onClick={handleAttemptCloseEditModal} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black flex items-center justify-center cursor-pointer transition-all active:scale-90"><X size={18} className="stroke-[2.5]" /></button>
+          <div className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-csc-dark border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
+              <h3 className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
+              <button onClick={handleAttemptCloseEditModal} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90"><X size={18} className="stroke-[2.5]" /></button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
               {/* Tipo */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Tipo de Evento</label>
-                <div className="w-full px-3 py-2.5 border border-gray-200 bg-gray-100/90 text-gray-800 rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
+                <label className="block text-xs font-bold text-white/70 mb-1">Tipo de Evento</label>
+                <div className="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-white rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
                   <span className="flex items-center gap-1.5">
                     <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
                   </span>
-                  <span className="text-[10px] font-bold text-gray-500 bg-gray-200/90 px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-md">
                     🔒 Tipo Bloqueado
                   </span>
                 </div>
@@ -2475,7 +2475,7 @@ const EventsPage: React.FC = () => {
               {/* Título (Apenas para Convívios) */}
               {editType === 'gathering' && (
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Título do Convívio *</label>
+                  <label className="block text-xs font-bold text-white/70 mb-1">Título do Convívio *</label>
                   <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} required={editType === 'gathering'} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" placeholder="Ex: Jantar de Natal / Reentré" />
                 </div>
               )}
@@ -2483,26 +2483,26 @@ const EventsPage: React.FC = () => {
               {/* Data e Hora */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Data</label>
+                  <label className="block text-xs font-bold text-white/70 mb-1">Data</label>
                   <input type="date" value={editEventDate} onChange={e => setEditEventDate(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Hora</label>
+                  <label className="block text-xs font-bold text-white/70 mb-1">Hora</label>
                   <input type="time" value={editEventTime} onChange={e => setEditEventTime(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" />
                 </div>
               </div>
 
               {/* Hora de Concentração */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Hora de Concentração (opcional)</label>
+                <label className="block text-xs font-bold text-white/70 mb-1">Hora de Concentração (opcional)</label>
                 <input type="time" value={editMeetingTime} onChange={e => setEditMeetingTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white" />
               </div>
 
               {/* Campos específicos para Jogos */}
               {editType === 'match' && (
-                <div className="space-y-3 border-t border-b border-gray-200 py-3 bg-amber-50/40 p-3 rounded-2xl">
+                <div className="space-y-3 border-t border-b border-white/10 py-3 bg-amber-500/10 p-3 rounded-2xl">
                   <div className="flex items-center gap-3">
-                    <label className="text-xs font-bold text-gray-700 cursor-pointer">Amigável?</label>
+                    <label className="text-xs font-bold text-white/70 cursor-pointer">Amigável?</label>
                     <input 
                       type="checkbox" 
                       checked={editIsFriendly} 
@@ -2516,7 +2516,7 @@ const EventsPage: React.FC = () => {
 
                   {!editIsFriendly && (
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Torneio/Competição</label>
+                      <label className="block text-xs font-bold text-white/70 mb-1">Torneio/Competição</label>
                       <select value={editTournamentId} onChange={e => setEditTournamentId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white">
                         <option value="">-- Selecionar --</option>
                         {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -2526,7 +2526,7 @@ const EventsPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Adversário</label>
+                      <label className="block text-xs font-bold text-white/70 mb-1">Adversário</label>
                       <select 
                         value={editOpponentId} 
                         onChange={e => {
@@ -2546,7 +2546,7 @@ const EventsPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Condição de Jogo</label>
+                      <label className="block text-xs font-bold text-white/70 mb-1">Condição de Jogo</label>
                       <select value={editHomeAway} onChange={e => setEditHomeAway(e.target.value as any)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium">
                         <option value="home">🏠 Casa</option>
                         <option value="away">✈️ Fora</option>
@@ -2559,13 +2559,13 @@ const EventsPage: React.FC = () => {
 
               {/* Local / Campo */}
               {editType === 'match' && editHomeAway === 'home' ? (
-                <div className="p-3.5 bg-emerald-50/80 border-2 border-emerald-300 rounded-2xl flex items-center justify-between shadow-2xs">
+                <div className="p-3.5 bg-emerald-500/10 border-2 border-emerald-400/40 rounded-2xl flex items-center justify-between shadow-2xs">
                   <div className="space-y-1 min-w-0 flex-1 pr-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-                      <MapPin size={13} className="text-emerald-700 shrink-0" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                      <MapPin size={13} className="text-emerald-400 shrink-0" />
                       <span>Campo do Jogo (Automático - Em Casa)</span>
                     </span>
-                    <p className="text-xs font-black text-gray-900 truncate">
+                    <p className="text-xs font-black text-white truncate">
                       🏟️ {(() => {
                         const cascais = getCascaisHomeField()
                         return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
@@ -2588,7 +2588,7 @@ const EventsPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <label className="block text-xs font-bold text-gray-700 flex items-center justify-between">
+                  <label className="block text-xs font-bold text-white/70 flex items-center justify-between">
                     <span>📍 Campo / Instalação</span>
                     {editLocationText && <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {editLocationText}</span>}
                   </label>
@@ -2622,12 +2622,12 @@ const EventsPage: React.FC = () => {
 
               {/* Gestão de Convocatórias */}
               {editType === 'practice' ? (
-                <div className="p-4 bg-emerald-50 border-2 border-emerald-200 rounded-2xl space-y-2 text-center">
+                <div className="p-4 bg-emerald-500/10 border-2 border-emerald-400/30 rounded-2xl space-y-2 text-center">
                   <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white mx-auto flex items-center justify-center font-black text-lg shadow-xs">
                     <Sparkles size={20} className="text-amber-300" />
                   </div>
-                  <p className="text-xs font-black text-emerald-950">Convocatória Automática de Treino</p>
-                  <p className="text-[11px] text-emerald-800 leading-snug">
+                  <p className="text-xs font-black text-emerald-200">Convocatória Automática de Treino</p>
+                  <p className="text-[11px] text-emerald-300/80 leading-snug">
                     Para os treinos todos os membros ativos do clube estão automaticamente convocados.
                   </p>
                 </div>
@@ -2725,13 +2725,13 @@ const EventsPage: React.FC = () => {
                 )
 
                 return (
-                  <div className="p-4 bg-gray-50 border-2 border-amber-200 rounded-2xl space-y-3">
+                  <div className="p-4 bg-white/5 border-2 border-amber-400/30 rounded-2xl space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-gray-900 flex items-center gap-1.5">
-                        <Users size={15} className="text-csc-dark" />
+                      <span className="text-xs font-black text-white flex items-center gap-1.5">
+                        <Users size={15} className="text-csc-gold" />
                         <span>Convocatória ({calledMembersCount} convocados)</span>
                       </span>
-                      <span className="text-[10px] bg-csc-dark text-csc-gold font-bold px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] bg-white/10 text-csc-gold font-bold px-2 py-0.5 rounded-full">
                         {eligibleMembers.length} Membros
                       </span>
                     </div>
@@ -2742,9 +2742,9 @@ const EventsPage: React.FC = () => {
                         type="button"
                         onClick={handleEditAddAll}
                         disabled={editUncalledPlayers.length === 0 || isBatchCalling}
-                        className="px-2.5 py-1.5 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 disabled:opacity-40"
+                        className="px-2.5 py-1.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 disabled:opacity-40"
                       >
-                        <Sparkles size={12} className="text-csc-gold" />
+                        <Sparkles size={12} className="text-csc-dark" />
                         <span>{isBatchCalling ? 'A processar...' : `✨ Convocar Todos (${editUncalledPlayers.length})`}</span>
                       </button>
 
@@ -2752,7 +2752,7 @@ const EventsPage: React.FC = () => {
                         type="button"
                         onClick={handleEditRemoveAll}
                         disabled={currentCallups.length === 0 || isBatchCalling}
-                        className="px-2.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
+                        className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
                       >
                         <span>✕ Remover Todos</span>
                       </button>
@@ -2823,13 +2823,13 @@ const EventsPage: React.FC = () => {
               })()}
 
               {/* Estado do Evento (Ativo vs Rascunho) */}
-              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between">
+              <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
                 <div>
-                  <label className="text-xs font-bold text-gray-900 flex items-center gap-1.5 cursor-pointer">
+                  <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
                     <Send size={14} className={editIsActive ? 'text-emerald-600' : 'text-amber-600'} />
                     <span>Estado: {editIsActive ? 'Ativo (Publicado)' : 'Rascunho (Inativo)'}</span>
                   </label>
-                  <p className="text-[10.5px] text-gray-500 mt-0.5">
+                  <p className="text-[10.5px] text-white/50 mt-0.5">
                     {editIsActive ? 'Visível a todos os atletas na agenda' : 'Oculto aos atletas até ser ativado'}
                   </p>
                 </div>
@@ -2840,22 +2840,22 @@ const EventsPage: React.FC = () => {
                     onChange={(e) => setEditIsActive(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white/20 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
                 </label>
               </div>
 
               {/* Descrição */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Descrição / Notas</label>
+                <label className="block text-xs font-bold text-white/70 mb-1">Descrição / Notas</label>
                 <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white resize-none" placeholder="Informações adicionais, ementa do convívio..." />
               </div>
 
               {/* Botões */}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={handleAttemptCloseEditModal} className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer">
+                <button type="button" onClick={handleAttemptCloseEditModal} className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer">
                   Cancelar
                 </button>
-                <button type="submit" disabled={isSavingEdit} className="flex-1 px-4 py-2.5 bg-csc-dark hover:bg-csc-dark/90 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50">
+                <button type="submit" disabled={isSavingEdit} className="flex-1 px-4 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50">
                   {isSavingEdit ? 'A guardar...' : '💾 Guardar Alterações'}
                 </button>
               </div>
