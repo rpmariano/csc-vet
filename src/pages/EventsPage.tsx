@@ -1929,7 +1929,7 @@ const EventsPage: React.FC = () => {
                   <CalendarRange size={20} className="text-csc-gold" />
                   <span>Lista de Eventos & Quórum RSVP</span>
                 </h3>
-                <span className="text-xs font-bold text-white/50">
+                <span className="text-xs font-bold text-white/70">
                   A apresentar {filteredScheduledEvents.length} de {events.length} registados
                 </span>
               </div>
@@ -1942,7 +1942,7 @@ const EventsPage: React.FC = () => {
                 <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6">
                   <Calendar size={40} className="mx-auto text-white/20 mb-2" />
                   <p className="font-bold text-white/70">Nenhum evento encontrado com os filtros atuais.</p>
-                  <p className="text-xs text-white/40 mt-1">Tente alterar os filtros ou o termo de pesquisa.</p>
+                  <p className="text-xs text-white/65 mt-1">Tente alterar os filtros ou o termo de pesquisa.</p>
                 </div>
               ) : (
                 <div className="space-y-3.5">
@@ -1983,14 +1983,14 @@ const EventsPage: React.FC = () => {
                           <div className="flex gap-1 shrink-0">
                             <button
                               onClick={() => openEditModal(event)}
-                              className="text-white/40 hover:text-blue-300 p-1.5 rounded-xl hover:bg-blue-500/10 transition-colors cursor-pointer"
+                              className="text-white/65 hover:text-blue-300 p-1.5 rounded-xl hover:bg-blue-500/10 transition-colors cursor-pointer"
                               title="Editar evento"
                             >
                               <Edit size={16} />
                             </button>
                             <button
                               onClick={() => handleDeleteEvent(event.id)}
-                              className="text-white/40 hover:text-red-300 p-1.5 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"
+                              className="text-white/65 hover:text-red-300 p-1.5 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"
                               title="Eliminar evento"
                             >
                               <Trash2 size={16} />
@@ -2254,7 +2254,7 @@ const EventsPage: React.FC = () => {
                   {/* Lista de Membros e Gestão de Estado RSVP */}
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                     {displayList.length === 0 ? (
-                      <p className="text-center text-xs text-white/40 py-6">
+                      <p className="text-center text-xs text-white/65 py-6">
                         Nenhum membro encontrado neste filtro.
                       </p>
                     ) : (
@@ -2304,7 +2304,7 @@ const EventsPage: React.FC = () => {
                   <span className="flex items-center gap-1.5">
                     <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
                   </span>
-                  <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-md">
                     🔒 Tipo Bloqueado
                   </span>
                 </div>
@@ -2679,7 +2679,7 @@ const EventsPage: React.FC = () => {
                     <Send size={14} className={editIsActive ? 'text-emerald-600' : 'text-amber-600'} />
                     <span>Estado: {editIsActive ? 'Ativo (Publicado)' : 'Rascunho (Inativo)'}</span>
                   </label>
-                  <p className="text-[10.5px] text-white/50 mt-0.5">
+                  <p className="text-[10.5px] text-white/70 mt-0.5">
                     {editIsActive ? 'Visível a todos os atletas na agenda' : 'Oculto aos atletas até ser ativado'}
                   </p>
                 </div>

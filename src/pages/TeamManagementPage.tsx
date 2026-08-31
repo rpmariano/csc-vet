@@ -857,7 +857,7 @@ const TeamManagementPage: React.FC = () => {
             {totalCount}
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-white/50 font-bold uppercase tracking-wider">Total Plantel</p>
+            <p className="text-[11px] text-white/70 font-bold uppercase tracking-wider">Total Plantel</p>
             <p className="text-sm font-black text-white leading-tight">Membros</p>
           </div>
         </button>
@@ -920,7 +920,7 @@ const TeamManagementPage: React.FC = () => {
             {inactiveCount}
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-white/50 font-bold uppercase tracking-wider">Indisponíveis</p>
+            <p className="text-[11px] text-white/70 font-bold uppercase tracking-wider">Indisponíveis</p>
             <p className="text-sm font-black text-white/80 leading-tight">Inativos</p>
           </div>
         </button>
@@ -935,7 +935,7 @@ const TeamManagementPage: React.FC = () => {
         <div className="bg-csc-dark text-white rounded-2xl border border-dashed border-white/15 p-12 text-center">
           <Users size={48} className="mx-auto text-white/20 mb-3" />
           <p className="font-bold text-white/70 text-lg">Nenhum atleta encontrado</p>
-          <p className="text-xs text-white/40 mt-1">Ajuste os filtros de pesquisa ou adicione um novo membro.</p>
+          <p className="text-xs text-white/65 mt-1">Ajuste os filtros de pesquisa ou adicione um novo membro.</p>
         </div>
       ) : viewMode === 'list' ? (
         /* VISTA 1: LISTA MODERNA & ELEGANTE (Mobile-first) */
@@ -1024,13 +1024,13 @@ const TeamManagementPage: React.FC = () => {
                       )}
 
                       {person.member_number && (
-                        <span className="text-[10px] text-white/40 font-medium hidden sm:inline">
+                        <span className="text-[10px] text-white/65 font-medium hidden sm:inline">
                           • Sócio nº {person.member_number}
                         </span>
                       )}
 
                       {age && (
-                        <span className="text-[10px] text-white/40 font-medium">
+                        <span className="text-[10px] text-white/65 font-medium">
                           • {age} anos
                         </span>
                       )}
@@ -1081,7 +1081,7 @@ const TeamManagementPage: React.FC = () => {
                             e.stopPropagation()
                             openEditModal(person)
                           }}
-                          className="p-1.5 text-white/50 hover:text-csc-gold rounded-lg hover:bg-white/10 transition-colors"
+                          className="p-1.5 text-white/70 hover:text-csc-gold rounded-lg hover:bg-white/10 transition-colors"
                           title="Editar Ficha"
                         >
                           <Edit2 size={15} />
@@ -1094,7 +1094,7 @@ const TeamManagementPage: React.FC = () => {
                               e.stopPropagation()
                               handleDeleteMember(person.id, person.name)
                             }}
-                            className="p-1.5 text-white/30 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+                            className="p-1.5 text-white/60 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
                             title="Eliminar Membro"
                           >
                             <Trash2 size={15} />
@@ -1208,7 +1208,7 @@ const TeamManagementPage: React.FC = () => {
                     </div>
 
                     {/* Member & Age Info */}
-                    <p className="text-[10px] text-white/40 font-semibold mt-1">
+                    <p className="text-[10px] text-white/65 font-semibold mt-1">
                       {person.kit_size ? `Tam: ${person.kit_size} • ` : ''}{person.member_number ? `Sócio nº ${person.member_number}` : ''} {age ? `• ${age} anos` : ''}
                     </p>
                   </div>
@@ -1242,7 +1242,7 @@ const TeamManagementPage: React.FC = () => {
                           e.stopPropagation()
                           openEditModal(person)
                         }}
-                        className="p-1.5 text-white/50 hover:text-csc-gold rounded-lg hover:bg-white/10 transition-colors"
+                        className="p-1.5 text-white/70 hover:text-csc-gold rounded-lg hover:bg-white/10 transition-colors"
                         title="Editar Ficha"
                       >
                         <Edit2 size={14} />
@@ -1255,7 +1255,7 @@ const TeamManagementPage: React.FC = () => {
                             e.stopPropagation()
                             handleDeleteMember(person.id, person.name)
                           }}
-                          className="p-1.5 text-white/30 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+                          className="p-1.5 text-white/60 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
                           title="Eliminar Membro"
                         >
                           <Trash2 size={14} />
@@ -1283,7 +1283,7 @@ const TeamManagementPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseFormModal}
-              className="absolute top-4 right-4 text-white/50 hover:text-white p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-colors"
+              className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-colors"
             >
               <X size={22} />
             </button>
@@ -1292,7 +1292,7 @@ const TeamManagementPage: React.FC = () => {
                 <h2 className="text-2xl font-black text-white mb-0.5">
                   {isEditing ? 'Editar Ficha do Membro' : 'Criar Ficha de Novo Membro'}
                 </h2>
-                <p className="text-xs text-white/50">
+                <p className="text-xs text-white/70">
                   Preencha os dados cadastrais, fiscais, morada, equipamento, contactos e anexe a documentação legal.
                 </p>
               </div>
@@ -1307,7 +1307,7 @@ const TeamManagementPage: React.FC = () => {
                     className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                       formStatus === 'active'
                         ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-white/50 hover:text-white'
+                        : 'text-white/70 hover:text-white'
                     }`}
                   >
                     🟢 Apto
@@ -1318,7 +1318,7 @@ const TeamManagementPage: React.FC = () => {
                     className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                       formStatus === 'injured'
                         ? 'bg-red-600 text-white shadow-xs animate-pulse'
-                        : 'text-white/50 hover:text-white'
+                        : 'text-white/70 hover:text-white'
                     }`}
                   >
                     🔴 Lesionado
@@ -1329,7 +1329,7 @@ const TeamManagementPage: React.FC = () => {
                     className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                       formStatus === 'inactive'
                         ? 'bg-white/25 text-white shadow-xs'
-                        : 'text-white/50 hover:text-white'
+                        : 'text-white/70 hover:text-white'
                     }`}
                   >
                     ⚪ Inativo
@@ -1507,7 +1507,7 @@ const TeamManagementPage: React.FC = () => {
                     <Shield size={14} className="text-csc-gold" />
                     <span>4. Dados Desportivos, Equipamento & Função</span>
                   </span>
-                  <span className="text-[10px] text-white/40 font-bold">Múltiplas posições e papéis permitidos</span>
+                  <span className="text-[10px] text-white/65 font-bold">Múltiplas posições e papéis permitidos</span>
                 </h3>
 
                 {/* 4.1 Campo de Futebol Interativo */}
@@ -1546,7 +1546,7 @@ const TeamManagementPage: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-xs font-extrabold text-white">Jogador</span>
-                      <span className="text-[10px] text-white/50 mt-0.5 leading-tight">Atleta nas convocatórias e estatísticas</span>
+                      <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Atleta nas convocatórias e estatísticas</span>
                     </button>
 
                     {/* Treinador */}
@@ -1568,7 +1568,7 @@ const TeamManagementPage: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-xs font-extrabold text-white">Treinador</span>
-                      <span className="text-[10px] text-white/50 mt-0.5 leading-tight">Equipa técnica, criação de treinos e jogos</span>
+                      <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Equipa técnica, criação de treinos e jogos</span>
                     </button>
 
                     {/* Administrador / Direção */}
@@ -1590,7 +1590,7 @@ const TeamManagementPage: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-xs font-extrabold text-white">Administrador / Direção</span>
-                      <span className="text-[10px] text-white/50 mt-0.5 leading-tight">Acesso total, finanças e administração app</span>
+                      <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Acesso total, finanças e administração app</span>
                     </button>
                   </div>
                 </div>
@@ -1834,7 +1834,7 @@ const TeamManagementPage: React.FC = () => {
                   {selectedProfile.jersey_number ? `#${selectedProfile.jersey_number}` : '⚽'}
                 </span>
                 <div>
-                  <span className="text-[10px] uppercase font-black tracking-widest text-white/40 block">
+                  <span className="text-[10px] uppercase font-black tracking-widest text-white/65 block">
                     Ficha Oficial de Atleta • Plantel CSC
                   </span>
                   <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">
@@ -1875,7 +1875,7 @@ const TeamManagementPage: React.FC = () => {
                 )}
                 <button
                   onClick={() => setIsDetailModalOpen(false)}
-                  className="text-white/50 hover:text-white p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-colors"
+                  className="text-white/70 hover:text-white p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-colors"
                   title="Fechar"
                 >
                   <X size={22} />
@@ -1963,11 +1963,11 @@ const TeamManagementPage: React.FC = () => {
                   {/* Quick Meta Pills */}
                   <div className="grid grid-cols-2 gap-2 w-full mt-4 pt-3 border-t border-white/10 text-xs">
                     <div className="bg-white/10 p-2 rounded-xl border border-white/10">
-                      <span className="text-white/40 block text-[9px] uppercase font-bold">Equipamento</span>
+                      <span className="text-white/65 block text-[9px] uppercase font-bold">Equipamento</span>
                       <span className="font-extrabold text-white">Tam: {selectedProfile.kit_size || '-'}</span>
                     </div>
                     <div className="bg-white/10 p-2 rounded-xl border border-white/10">
-                      <span className="text-white/40 block text-[9px] uppercase font-bold">Nº de Sócio</span>
+                      <span className="text-white/65 block text-[9px] uppercase font-bold">Nº de Sócio</span>
                       <span className="font-extrabold text-white">{selectedProfile.member_number ? `#${selectedProfile.member_number}` : '-'}</span>
                     </div>
                   </div>
@@ -2027,17 +2027,17 @@ const TeamManagementPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 text-xs">
                     <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Nome Completo</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Nome Completo</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.name}</p>
                     </div>
 
                     <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Nome na Camisola</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Nome na Camisola</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
                     </div>
 
                     <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.birth_date ? (
                           `${new Date(selectedProfile.birth_date).toLocaleDateString('pt-PT')} (${calculateAge(selectedProfile.birth_date)} anos)`
@@ -2046,29 +2046,29 @@ const TeamManagementPage: React.FC = () => {
                     </div>
 
                     <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
                       <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.nif || '-'}</p>
                     </div>
 
                     <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
                       <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.id_number || '-'}</p>
                     </div>
 
                     <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Validade do CC</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Validade do CC</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.id_card_expiry ? new Date(selectedProfile.id_card_expiry).toLocaleDateString('pt-PT') : '-'}
                       </p>
                     </div>
 
                     <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Nacionalidade</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Nacionalidade</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
                     </div>
 
                     <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
                     </div>
                   </div>
@@ -2083,12 +2083,12 @@ const TeamManagementPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.address || 'Não registada'}</p>
                     </div>
 
                     <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.postal_code || '-'} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
                       </p>
@@ -2105,7 +2105,7 @@ const TeamManagementPage: React.FC = () => {
 
                   <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-white/40 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
                       <p className="font-black text-white font-mono text-xs sm:text-sm mt-0.5">
                         {selectedProfile.iban || 'Nenhum IBAN registado'}
                       </p>
@@ -2127,7 +2127,7 @@ const TeamManagementPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div className="bg-white/10 p-3 rounded-xl border border-red-400/20">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Contacto de Emergência</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Contacto de Emergência</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.emergency_contact_name || 'Não registado'}
                       </p>
@@ -2139,7 +2139,7 @@ const TeamManagementPage: React.FC = () => {
                     </div>
 
                     <div className="bg-white/10 p-3 rounded-xl border border-red-400/20">
-                      <p className="text-white/40 font-bold uppercase text-[9px]">Notas Médicas / Alergias</p>
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Notas Médicas / Alergias</p>
                       <p className="font-medium text-white/80 mt-0.5">
                         {cleanNotesFromRolesTag(selectedProfile.medical_notes) || 'Nenhuma restrição médica registada'}
                       </p>
@@ -2172,7 +2172,7 @@ const TeamManagementPage: React.FC = () => {
                         <span className="text-[10px] underline flex items-center gap-0.5">Abrir Documento <ExternalLink size={10}/></span>
                       </a>
                     ) : (
-                      <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/30 text-center">
+                      <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/60 text-center">
                         <FileText size={18} />
                         <span>Sem CC Anexado</span>
                       </div>
@@ -2190,7 +2190,7 @@ const TeamManagementPage: React.FC = () => {
                         <span className="text-[10px] underline flex items-center gap-0.5">Abrir Apólice <ExternalLink size={10}/></span>
                       </a>
                     ) : (
-                      <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/30 text-center">
+                      <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/60 text-center">
                         <Shield size={18} />
                         <span>Sem Seguro Anexado</span>
                       </div>
@@ -2208,7 +2208,7 @@ const TeamManagementPage: React.FC = () => {
                         <span className="text-[10px] underline flex items-center gap-0.5">Abrir Exame <ExternalLink size={10}/></span>
                       </a>
                     ) : (
-                      <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/30 text-center">
+                      <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/60 text-center">
                         <HeartPulse size={18} />
                         <span>Sem Atestado Anexado</span>
                       </div>
@@ -2292,7 +2292,7 @@ const TeamManagementPage: React.FC = () => {
                   setAssociatingPlayer(null)
                   setSelectedUserToAssociate(null)
                 }}
-                className="absolute top-4 right-4 text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/10"
+                className="absolute top-4 right-4 text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10"
               >
                 <X size={20} />
               </button>
@@ -2306,7 +2306,7 @@ const TeamManagementPage: React.FC = () => {
                   <h3 className="text-lg font-black text-white">
                     Associar Utilizador a {associatingPlayer.name}
                   </h3>
-                  <p className="text-xs text-white/50 font-medium">
+                  <p className="text-xs text-white/70 font-medium">
                     Liga uma conta de utilizador registada na app à ficha deste jogador
                   </p>
                 </div>
@@ -2316,8 +2316,8 @@ const TeamManagementPage: React.FC = () => {
               <div className="mt-4 p-3.5 bg-white/5 rounded-xl border border-white/10 text-xs flex items-center justify-between">
                 <div>
                   <p className="font-bold text-white">{associatingPlayer.name} {associatingPlayer.nickname ? `("${associatingPlayer.nickname}")` : ''}</p>
-                  <p className="text-white/50 mt-0.5 font-medium">Email na ficha: <strong className="text-white/80">{associatingPlayer.email}</strong></p>
-                  {associatingPlayer.phone && <p className="text-white/50 font-medium">Tel: <strong className="text-white/80">{associatingPlayer.phone}</strong></p>}
+                  <p className="text-white/70 mt-0.5 font-medium">Email na ficha: <strong className="text-white/80">{associatingPlayer.email}</strong></p>
+                  {associatingPlayer.phone && <p className="text-white/70 font-medium">Tel: <strong className="text-white/80">{associatingPlayer.phone}</strong></p>}
                 </div>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-csc-gold text-csc-dark rounded">
                   Ficha de Jogador
@@ -2376,7 +2376,7 @@ const TeamManagementPage: React.FC = () => {
 
                 <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 border border-white/10 rounded-xl p-2 bg-white/5">
                   {otherUsers.length === 0 ? (
-                    <p className="text-center py-6 text-xs text-white/40 font-medium">
+                    <p className="text-center py-6 text-xs text-white/65 font-medium">
                       Nenhum outro utilizador encontrado.
                     </p>
                   ) : (
@@ -2395,7 +2395,7 @@ const TeamManagementPage: React.FC = () => {
                         >
                           <div>
                             <p className="font-bold text-white">{user.name}</p>
-                            <p className="text-white/50 text-[11px]">{user.email} {user.phone ? `• ${user.phone}` : ''}</p>
+                            <p className="text-white/70 text-[11px]">{user.email} {user.phone ? `• ${user.phone}` : ''}</p>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white/60 capitalize">

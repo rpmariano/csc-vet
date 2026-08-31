@@ -208,10 +208,10 @@ export const StandingsPage = () => {
       ) : groups.length === 0 ? (
         <div className="bg-csc-dark text-white rounded-3xl p-8 border border-white/10 text-center shadow-sm">
           <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Info size={30} className="text-white/40" />
+            <Info size={30} className="text-white/65" />
           </div>
           <h3 className="text-lg font-black text-white">Ainda não há grupos</h3>
-          <p className="text-white/50 text-sm mt-2 max-w-sm mx-auto">As tabelas classificativas ficarão disponíveis assim que a administração configurar os grupos desta prova.</p>
+          <p className="text-white/70 text-sm mt-2 max-w-sm mx-auto">As tabelas classificativas ficarão disponíveis assim que a administração configurar os grupos desta prova.</p>
         </div>
       ) : (
         <div className="space-y-6">

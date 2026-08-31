@@ -60,7 +60,7 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
         <div className="min-w-0">
           <p className="font-extrabold text-white truncate flex items-center gap-1">
             {player?.jersey_number && (
-              <span className="text-white/40 text-[10px] font-bold">#{player.jersey_number}</span>
+              <span className="text-white/65 text-[10px] font-bold">#{player.jersey_number}</span>
             )}
             <span className="truncate">{displayName}</span>
           </p>
@@ -104,7 +104,7 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
             type="button"
             onClick={onRemove}
             title="Remover da Convocatória"
-            className="p-1.5 text-white/40 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-white/65 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
           >
             <Trash2 size={13} />
           </button>

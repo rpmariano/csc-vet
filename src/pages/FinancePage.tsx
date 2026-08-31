@@ -134,7 +134,7 @@ const FinancePage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-csc-dark text-white rounded-xl shadow-sm border border-white/10 p-6 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-white/50">Saldo Disponível</p>
+            <p className="text-sm font-semibold text-white/70">Saldo Disponível</p>
             <p className="text-2xl font-black text-white mt-1">{netBalance.toFixed(2)}€</p>
           </div>
           <div className="w-12 h-12 bg-white/10 text-csc-gold rounded-full flex items-center justify-center">
@@ -144,7 +144,7 @@ const FinancePage: React.FC = () => {
 
         <div className="bg-csc-dark text-white rounded-xl shadow-sm border border-white/10 p-6 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-white/50">Total Receitas</p>
+            <p className="text-sm font-semibold text-white/70">Total Receitas</p>
             <p className="text-2xl font-black text-emerald-400 mt-1">+{totalIncome.toFixed(2)}€</p>
           </div>
           <div className="w-12 h-12 bg-emerald-500/15 text-emerald-400 rounded-full flex items-center justify-center">
@@ -154,7 +154,7 @@ const FinancePage: React.FC = () => {
 
         <div className="bg-csc-dark text-white rounded-xl shadow-sm border border-white/10 p-6 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-white/50">Total Despesas</p>
+            <p className="text-sm font-semibold text-white/70">Total Despesas</p>
             <p className="text-2xl font-black text-red-400 mt-1">-{totalExpense.toFixed(2)}€</p>
           </div>
           <div className="w-12 h-12 bg-red-500/15 text-red-400 rounded-full flex items-center justify-center">
@@ -275,7 +275,7 @@ const FinancePage: React.FC = () => {
                 <div key={t.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5">
                   <div>
                     <p className="font-semibold text-white text-sm">{t.description}</p>
-                    <p className="text-[10px] text-white/40">{t.date}</p>
+                    <p className="text-[10px] text-white/65">{t.date}</p>
                   </div>
                   <p className={`font-bold text-sm ${t.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>
                     {t.type === 'income' ? '+' : '-'}{t.amount.toFixed(2)}€

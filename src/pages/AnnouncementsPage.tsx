@@ -300,7 +300,7 @@ const AnnouncementsPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-sm font-black text-white">Novo Comunicado</h3>
-                <p className="text-[11px] text-white/50">Escreve e publica um aviso para todo o plantel.</p>
+                <p className="text-[11px] text-white/70">Escreve e publica um aviso para todo o plantel.</p>
               </div>
             </div>
 
@@ -337,7 +337,7 @@ const AnnouncementsPage: React.FC = () => {
               <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold text-white/80 block">Ativar de Imediato</span>
-                  <span className="text-[10.5px] text-white/50 block">Fica visível no carrossel de avisos da Homepage</span>
+                  <span className="text-[10.5px] text-white/70 block">Fica visível no carrossel de avisos da Homepage</span>
                 </div>
                 <button
                   type="button"
@@ -432,7 +432,7 @@ const AnnouncementsPage: React.FC = () => {
 
             {/* Listagem */}
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-12 text-white/40 space-y-2">
+              <div className="flex flex-col items-center justify-center py-12 text-white/65 space-y-2">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-csc-gold border-t-transparent"></div>
                 <span className="text-xs font-medium">A carregar comunicados...</span>
               </div>
@@ -440,7 +440,7 @@ const AnnouncementsPage: React.FC = () => {
               <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6 space-y-2">
                 <span className="text-3xl">📭</span>
                 <p className="text-xs font-bold text-white/70">Nenhum comunicado encontrado.</p>
-                <p className="text-[11px] text-white/40">
+                <p className="text-[11px] text-white/65">
                   {searchTerm
                     ? 'Experimenta ajustar o termo de pesquisa.'
                     : isCoachOrAdmin
@@ -471,7 +471,7 @@ const AnnouncementsPage: React.FC = () => {
                             </h4>
                           </div>
 
-                          <div className="flex items-center gap-2 text-[11px] text-white/40 font-medium">
+                          <div className="flex items-center gap-2 text-[11px] text-white/65 font-medium">
                             <span className="flex items-center gap-1">
                               <Calendar size={12} />
                               {new Date(ann.published_at).toLocaleDateString('pt-PT')}
@@ -578,7 +578,7 @@ const AnnouncementsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setEditingAnn(null)}
-              className="absolute top-4 right-4 text-white/50 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-white/70 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -589,7 +589,7 @@ const AnnouncementsPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-base font-black text-white">Editar Comunicado</h3>
-                <p className="text-[11px] text-white/50">Atualiza os dados e visibilidade deste aviso.</p>
+                <p className="text-[11px] text-white/70">Atualiza os dados e visibilidade deste aviso.</p>
               </div>
             </div>
 
@@ -624,7 +624,7 @@ const AnnouncementsPage: React.FC = () => {
               <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold text-white/80 block">Estado de Publicação</span>
-                  <span className="text-[10.5px] text-white/50 block">
+                  <span className="text-[10.5px] text-white/70 block">
                     {editIsActive ? '🟢 Ativo (Visível na Homepage)' : '⚪ Inativo (Oculto)'}
                   </span>
                 </div>
@@ -674,13 +674,13 @@ const AnnouncementsPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-base font-black text-white leading-tight">Apagar Comunicado?</h3>
-                <p className="text-xs text-white/50 mt-0.5">Esta ação não pode ser revertida.</p>
+                <p className="text-xs text-white/70 mt-0.5">Esta ação não pode ser revertida.</p>
               </div>
             </div>
 
             <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-xs text-white/70">
               <span className="font-bold text-white block truncate">{deletingAnn.title}</span>
-              <span className="text-[11px] text-white/50 line-clamp-2 mt-0.5">{deletingAnn.content}</span>
+              <span className="text-[11px] text-white/70 line-clamp-2 mt-0.5">{deletingAnn.content}</span>
             </div>
 
             <div className="flex gap-2.5 pt-1">

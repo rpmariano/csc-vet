@@ -544,7 +544,7 @@ const Home: React.FC = () => {
                     >
                       <ChevronLeft size={18} />
                     </button>
-                    <span className="text-xs font-bold text-white/50">{currentMatchIndex + 1} de {upcomingMatches.length}</span>
+                    <span className="text-xs font-bold text-white/70">{currentMatchIndex + 1} de {upcomingMatches.length}</span>
                     <button
                       type="button"
                       onClick={nextMatchSlide}
@@ -618,7 +618,7 @@ const Home: React.FC = () => {
                           type="button"
                           onClick={() => handleCallupResponse(callup.id, 'declined')}
                           aria-label="Recusar presença"
-                          className="w-11 h-11 rounded-full border border-white/15 hover:bg-white/10 text-white/50 flex items-center justify-center transition-colors cursor-pointer"
+                          className="w-11 h-11 rounded-full border border-white/15 hover:bg-white/10 text-white/70 flex items-center justify-center transition-colors cursor-pointer"
                         >
                           <X size={18} strokeWidth={2.5} />
                         </button>
@@ -676,11 +676,11 @@ const Home: React.FC = () => {
                           <span className="w-1.5 h-1.5 rounded-full bg-csc-gold shrink-0 mt-1.5" />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold text-white leading-snug">{a.title}</p>
-                            <p className="text-xs text-white/50 mt-0.5">{formatarTempoRelativo(a.published_at)}</p>
+                            <p className="text-xs text-white/70 mt-0.5">{formatarTempoRelativo(a.published_at)}</p>
                           </div>
                           <ChevronDown
                             size={16}
-                            className={`text-white/40 shrink-0 mt-0.5 transition-transform ${aberto ? 'rotate-180' : ''}`}
+                            className={`text-white/65 shrink-0 mt-0.5 transition-transform ${aberto ? 'rotate-180' : ''}`}
                           />
                         </button>
                         {aberto && (

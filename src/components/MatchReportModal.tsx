@@ -367,7 +367,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
               {leftSigla} Vs {rightSigla}
             </h2>
-            <p className="text-xs text-white/50 font-medium">
+            <p className="text-xs text-white/70 font-medium">
               {event?.date_time && new Date(event.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
             </p>
           </div>
@@ -399,7 +399,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-csc-gold mb-2"></div>
-            <p className="text-xs font-bold text-white/50">A carregar dados do jogo...</p>
+            <p className="text-xs font-bold text-white/70">A carregar dados do jogo...</p>
           </div>
         ) : isFutureMatch ? (
           <div className="p-6 sm:p-8 bg-white/5 border border-white/10 rounded-3xl text-center space-y-2">
@@ -407,7 +407,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               ⏳
             </div>
             <h3 className="text-sm font-black text-white">Este jogo ainda não se realizou</h3>
-            <p className="text-xs text-white/50 max-w-sm mx-auto leading-relaxed">
+            <p className="text-xs text-white/70 max-w-sm mx-auto leading-relaxed">
               A ficha oficial — resultado, esquema tático, golos, cartões e MVP — fica disponível
               para consulta e preenchimento depois do apito inicial.
             </p>
@@ -497,7 +497,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             {/* 2. ESQUEMA TÁTICO & RESUMO GERAL */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl">
-                <label className="block text-[11px] font-bold text-white/50 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
                   Esquema Tático
                 </label>
                 {isEditing ? (
@@ -518,7 +518,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               </div>
 
               <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl">
-                <label className="block text-[11px] font-bold text-white/50 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
                   Golos da Equipa
                 </label>
                 <p className="text-base font-black text-amber-700 flex items-center gap-1.5">
@@ -528,7 +528,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               </div>
 
               <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl">
-                <label className="block text-[11px] font-bold text-white/50 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
                   Ações Disciplinares
                 </label>
                 <div className="flex items-center gap-3 text-xs font-black mt-1">
@@ -561,7 +561,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                       <span className="text-[10px] bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-700">{(tacticalFormation || '4-3-3').replace(/^1-/, '')}</span>
                     </div>
                     {starters.length === 0 ? (
-                      <p className="p-4 text-xs text-white/50 font-semibold italic text-center">Nenhum titular registado.</p>
+                      <p className="p-4 text-xs text-white/70 font-semibold italic text-center">Nenhum titular registado.</p>
                     ) : (
                       <div className="divide-y divide-white/10">
                         {starters.map(p => {
@@ -685,7 +685,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-xs">
                   <div className="p-3 bg-white/10 border-b border-white/10 text-xs font-bold text-white/80 flex items-center justify-between">
                     <span>Seleciona titulares, suplentes, golos e cartões:</span>
-                    <span className="text-[10px] text-white/50 font-normal">Titulares: {starters.length} | Suplentes: {subs.length}</span>
+                    <span className="text-[10px] text-white/70 font-normal">Titulares: {starters.length} | Suplentes: {subs.length}</span>
                   </div>
 
                   <div className="divide-y divide-white/10 max-h-[45vh] overflow-y-auto">
@@ -737,7 +737,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                               type="button"
                               onClick={() => handleStatChange(p.player_id, 'lineup_status', 'none')}
                               className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                                p.lineup_status === 'none' ? 'bg-white/20 text-white' : 'text-white/30 hover:text-white/70'
+                                p.lineup_status === 'none' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white/70'
                               }`}
                             >
                               Não Jogou
@@ -799,7 +799,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                 ? 'bg-yellow-200 border-yellow-400 text-yellow-950 ring-1 ring-yellow-400'
                                 : p.yellow_cards === 2
                                 ? 'bg-yellow-300 border-yellow-500 text-yellow-950 font-extrabold ring-2 ring-yellow-500'
-                                : 'bg-white/10 border-white/10 text-white/30 hover:text-white/70'
+                                : 'bg-white/10 border-white/10 text-white/60 hover:text-white/70'
                             }`}
                             title="Alternar Cartões Amarelos (0 -> 1 -> 2)"
                           >
@@ -813,7 +813,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                             className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
                               p.red_cards === 1
                                 ? 'bg-red-500 text-white border-red-600 ring-2 ring-red-400'
-                                : 'bg-white/10 border-white/10 text-white/30 hover:text-white/70'
+                                : 'bg-white/10 border-white/10 text-white/60 hover:text-white/70'
                             }`}
                             title="Alternar Cartão Vermelho Direto"
                           >
@@ -873,7 +873,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                     {occurrences ? (
                       <p className="whitespace-pre-wrap">{occurrences}</p>
                     ) : (
-                      <p className="italic text-white/40">Sem ocorrências registadas para este jogo.</p>
+                      <p className="italic text-white/65">Sem ocorrências registadas para este jogo.</p>
                     )}
                   </div>
                 )}

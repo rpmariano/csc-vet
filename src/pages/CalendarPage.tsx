@@ -1742,7 +1742,7 @@ const CalendarPage: React.FC = () => {
                         onClick={() => handleCallupResponse(event.id, 'confirmed')}
                         className={`text-xs font-black px-3 py-1.5 rounded-full transition-all flex items-center gap-1 ${
                           myCallup.status === 'confirmed'
-                            ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                            ? 'bg-white/5 text-white/60 cursor-not-allowed'
                             : 'bg-csc-gold text-csc-dark hover:brightness-105 cursor-pointer active:scale-95'
                         }`}
                       >
@@ -1755,7 +1755,7 @@ const CalendarPage: React.FC = () => {
                         onClick={() => handleCallupResponse(event.id, 'declined')}
                         className={`text-xs font-black px-3 py-1.5 rounded-full transition-all flex items-center gap-1 ${
                           myCallup.status === 'declined'
-                            ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                            ? 'bg-white/5 text-white/60 cursor-not-allowed'
                             : 'border border-white/30 text-white hover:bg-white/10 cursor-pointer active:scale-95'
                         }`}
                       >
@@ -2560,7 +2560,7 @@ const CalendarPage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-xs font-bold text-white/50 group-hover:text-white hidden sm:inline">
+                        <span className="text-xs font-bold text-white/70 group-hover:text-white hidden sm:inline">
                           {isModalCallupsExpanded ? 'Recolher' : 'Expandir'}
                         </span>
                         <div className="p-2 rounded-xl bg-white/10 group-hover:bg-white/20 text-white transition-all">
@@ -2590,13 +2590,13 @@ const CalendarPage: React.FC = () => {
                           {/* Campo de Pesquisa e Limpeza de Filtros */}
                           <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
                             <div className="relative flex-1 w-full">
-                              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/65" />
                               <input
                                 type="text"
                                 value={playerSearchTerm}
                                 onChange={(e) => setPlayerSearchTerm(e.target.value)}
                                 placeholder="Pesquisar convocado por nome..."
-                                className="w-full pl-8 pr-3 py-1.5 bg-white/10 text-white placeholder:text-white/40 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-gold"
+                                className="w-full pl-8 pr-3 py-1.5 bg-white/10 text-white placeholder:text-white/65 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-gold"
                               />
                             </div>
 
@@ -2615,7 +2615,7 @@ const CalendarPage: React.FC = () => {
                         {/* Lista de Convocados Filtrada */}
                         {callups.length === 0 ? (
                           <div className="text-center py-8 bg-white/5 rounded-2xl border border-dashed border-white/15">
-                            <Users size={32} className="mx-auto text-white/40 mb-1" />
+                            <Users size={32} className="mx-auto text-white/65 mb-1" />
                             <p className="text-xs font-bold text-white/60">Nenhum jogador convocado ainda.</p>
                           </div>
                         ) : filteredCallups.length === 0 ? (
@@ -3025,7 +3025,7 @@ const CalendarPage: React.FC = () => {
                             Convocatória Inicial ({selectedPlayerIds.length}{maxPlayers !== '' ? ` / ${maxPlayers} máx` : ''})
                           </span>
                         </label>
-                        <p className="text-[11px] text-white/50 mt-0.5">Selecione os atletas a convocar para este evento.</p>
+                        <p className="text-[11px] text-white/70 mt-0.5">Selecione os atletas a convocar para este evento.</p>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <button
@@ -3245,7 +3245,7 @@ const CalendarPage: React.FC = () => {
                     <span className="flex items-center gap-1.5">
                       <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
                     </span>
-                    <span className="text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-md">
+                    <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-md">
                       🔒 Tipo Bloqueado
                     </span>
                   </div>
