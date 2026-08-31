@@ -207,7 +207,7 @@ const SettingsPage: React.FC = () => {
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       
       {/* CABEÇALHO DA FICHA DE MEMBRO */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-gray-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-csc-dark text-white rounded-3xl p-6 sm:p-7 border border-white/10 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           {photoUrl ? (
             <img src={photoUrl} alt="Avatar" className="w-16 h-16 rounded-2xl object-cover border-2 border-csc-gold shadow-sm" />
@@ -218,7 +218,7 @@ const SettingsPage: React.FC = () => {
           )}
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-csc-dark leading-tight">
+              <h1 className="text-xl sm:text-2xl font-black text-white leading-tight">
                 {formName || 'O Meu Perfil'}
               </h1>
               {formJerseyNumber && (
@@ -227,17 +227,17 @@ const SettingsPage: React.FC = () => {
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-white/50 mt-0.5">
               Ficha cadastral de atleta • Grupo Dramático e Sportivo de Cascais
             </p>
           </div>
         </div>
 
         {/* ESTADO DE ATIVIDADE & TOGGLE CLÍNICO */}
-        <div className="flex items-center flex-wrap gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+        <div className="flex items-center flex-wrap gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
           {/* Badge de Atividade (Apenas Leitura para o Jogador) */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 border border-gray-200" title="O estado de filiação/atividade é gerido pela direção do clube">
-            <span className="text-[11px] font-bold text-gray-500">Atividade:</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10" title="O estado de filiação/atividade é gerido pela direção do clube">
+            <span className="text-[11px] font-bold text-white/50">Atividade:</span>
             <span className={`text-xs font-black px-2 py-0.5 rounded-md ${
               isInactive ? 'bg-gray-300 text-gray-800' : 'bg-emerald-100 text-emerald-800'
             }`}>
@@ -279,31 +279,31 @@ const SettingsPage: React.FC = () => {
       <form onSubmit={handleSave} className="space-y-6">
         
         {/* 1. DADOS PESSOAIS & IDENTIFICAÇÃO FISCAL */}
-        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
-            <UserIcon size={16} className="text-csc-dark" />
+        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+            <UserIcon size={16} className="text-csc-gold" />
             <span>1. Identificação Pessoal & Fiscal</span>
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Nome Completo *</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Nome Completo *</label>
               <input
                 type="text"
                 required
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
                 placeholder="Ex: André Gomes Marques do Couto"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Nome na Camisola / Alcunha</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Nome na Camisola / Alcunha</label>
               <input
                 type="text"
                 value={formShirtName}
                 onChange={(e) => setFormShirtName(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
                 placeholder="Ex: A. COUTO"
               />
             </div>
@@ -311,31 +311,31 @@ const SettingsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Data de Nascimento</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Data de Nascimento</label>
               <input
                 type="date"
                 value={formBirthDate}
                 onChange={(e) => setFormBirthDate(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Nacionalidade</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Nacionalidade</label>
               <input
                 type="text"
                 value={formNationality}
                 onChange={(e) => setFormNationality(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
                 placeholder="Portuguesa"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Nº de Contribuinte (NIF)</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Nº de Contribuinte (NIF)</label>
               <input
                 type="text"
                 value={formNif}
                 onChange={(e) => setFormNif(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
                 placeholder="000 000 000"
               />
             </div>
@@ -343,63 +343,63 @@ const SettingsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Nº Cartão de Cidadão / Passaporte</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Nº Cartão de Cidadão / Passaporte</label>
               <input
                 type="text"
                 value={formIdNumber}
                 onChange={(e) => setFormIdNumber(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
                 placeholder="00000000"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Validade do Cartão de Cidadão</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Validade do Cartão de Cidadão</label>
               <input
                 type="date"
                 value={formIdCardExpiry}
                 onChange={(e) => setFormIdCardExpiry(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
               />
             </div>
           </div>
         </div>
 
         {/* 2. MORADA & RESIDÊNCIA */}
-        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
-            <FileText size={16} className="text-csc-dark" />
+        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+            <FileText size={16} className="text-csc-gold" />
             <span>2. Morada & Residência</span>
           </h3>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Morada (Rua, Nº e Andar)</label>
+            <label className="block text-xs font-bold text-white/70 mb-1">Morada (Rua, Nº e Andar)</label>
             <input
               type="text"
               value={formAddress}
               onChange={(e) => setFormAddress(e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
               placeholder="Rua e número da morada"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Código Postal</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Código Postal</label>
               <input
                 type="text"
                 value={formPostalCode}
                 onChange={(e) => setFormPostalCode(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
                 placeholder="0000-000"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Localidade</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Localidade</label>
               <input
                 type="text"
                 value={formCity}
                 onChange={(e) => setFormCity(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
                 placeholder="Cascais / Alcabideche"
               />
             </div>
@@ -407,27 +407,27 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* 3. CONTACTOS */}
-        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
-            <Phone size={16} className="text-csc-dark" />
+        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+            <Phone size={16} className="text-csc-gold" />
             <span>3. Contactos</span>
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Email de Acesso (Apenas Leitura)</label>
-              <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-gray-500 font-medium font-mono">
-                <Mail size={15} className="mr-2 text-gray-400" />
+              <label className="block text-xs font-bold text-white/70 mb-1">Email de Acesso (Apenas Leitura)</label>
+              <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white/50 font-medium font-mono">
+                <Mail size={15} className="mr-2 text-white/30" />
                 <span>{formEmail}</span>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Telemóvel</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Telemóvel</label>
               <input
                 type="tel"
                 value={formPhone}
                 onChange={(e) => setFormPhone(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
                 placeholder="912 345 678"
               />
             </div>
@@ -435,23 +435,23 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* 4. DADOS DESPORTIVOS, EQUIPAMENTO & FUNÇÃO (SÓ DE VISUALIZAÇÃO COM AVISO DO TREINADOR) */}
-        <div className="bg-amber-50/40 p-5 sm:p-6 rounded-3xl border-2 border-amber-200 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-amber-200/80 pb-3">
-            <h3 className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
-              <Shield size={16} className="text-amber-700" />
+        <div className="bg-csc-dark p-5 sm:p-6 rounded-3xl border-2 border-amber-400/40 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-amber-400/20 pb-3">
+            <h3 className="text-xs font-black text-amber-200 uppercase tracking-wider flex items-center gap-2">
+              <Shield size={16} className="text-amber-400" />
               <span>4. Dados Desportivos, Equipamento & Função</span>
             </h3>
-            <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+            <span className="text-[11px] font-bold text-amber-200 bg-amber-500/20 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
               <Lock size={12} />
               <span>Só de Visualização</span>
             </span>
           </div>
 
           {/* Banner explicativo obrigatório */}
-          <div className="p-3.5 bg-amber-100/90 border border-amber-300 rounded-2xl flex items-start gap-2.5 text-xs text-amber-950 font-medium">
-            <AlertCircle size={17} className="text-amber-800 shrink-0 mt-0.5" />
+          <div className="p-3.5 bg-amber-500/10 border border-amber-400/30 rounded-2xl flex items-start gap-2.5 text-xs text-amber-100 font-medium">
+            <AlertCircle size={17} className="text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-extrabold text-amber-900">Nota da Equipa Técnica:</p>
+              <p className="font-extrabold text-amber-200">Nota da Equipa Técnica:</p>
               <p className="mt-0.5">
                 Os dados desta secção (posições no campo, funções no clube, número de camisola e tamanho de equipamento) são atribuídos e geridos exclusivamente pelo <strong>treinador / equipa técnica</strong>.
               </p>
@@ -460,7 +460,7 @@ const SettingsPage: React.FC = () => {
 
           {/* Visualização de Posições no Campo */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold text-gray-700">
+            <label className="block text-xs font-bold text-white/70">
               Posições Táticas Atribuídas:
             </label>
             <div className="pointer-events-none opacity-95">
@@ -472,8 +472,8 @@ const SettingsPage: React.FC = () => {
           </div>
 
           {/* Funções e Atribuições */}
-          <div className="pt-3 border-t border-amber-200/60 space-y-2">
-            <label className="block text-xs font-bold text-gray-700">
+          <div className="pt-3 border-t border-amber-400/20 space-y-2">
+            <label className="block text-xs font-bold text-white/70">
               Funções Atribuídas no Clube:
             </label>
             <div className="flex flex-wrap gap-2">
@@ -495,16 +495,16 @@ const SettingsPage: React.FC = () => {
           </div>
 
           {/* Camisola e Equipamento (Read-only) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-3 border-t border-amber-200/60">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-3 border-t border-amber-400/20">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Nº da Camisola (Dorsal)</label>
-              <div className="px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-extrabold text-gray-800">
+              <label className="block text-xs font-bold text-white/70 mb-1">Nº da Camisola (Dorsal)</label>
+              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
                 {formJerseyNumber ? `#${formJerseyNumber}` : 'Não atribuído'}
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Tamanho de Equipamento</label>
-              <div className="px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-extrabold text-gray-800">
+              <label className="block text-xs font-bold text-white/70 mb-1">Tamanho de Equipamento</label>
+              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
                 {formKitSize || 'L'}
               </div>
             </div>
@@ -512,30 +512,30 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* 5. DADOS BANCÁRIOS & QUOTAS */}
-        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
-            <Shield size={16} className="text-csc-dark" />
+        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+            <Shield size={16} className="text-csc-gold" />
             <span>5. Dados Bancários & Quotas</span>
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">IBAN (Débito Direto / Quotas)</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">IBAN (Débito Direto / Quotas)</label>
               <input
                 type="text"
                 value={formIban}
                 onChange={(e) => setFormIban(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
                 placeholder="PT50 0000 0000 0000 0000 0"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Nº de Sócio do Clube</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Nº de Sócio do Clube</label>
               <input
                 type="text"
                 value={formMemberNumber}
                 onChange={(e) => setFormMemberNumber(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
                 placeholder="Ex: 1420"
               />
             </div>
@@ -543,58 +543,58 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* 6. SAÚDE & CONTACTO DE EMERGÊNCIA */}
-        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
+        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
             <HeartPulse size={16} className="text-red-600" />
             <span>6. Saúde & Contacto de Emergência</span>
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Contacto de Emergência (Nome / Relação)</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Contacto de Emergência (Nome / Relação)</label>
               <input
                 type="text"
                 value={formEmergencyName}
                 onChange={(e) => setFormEmergencyName(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
                 placeholder="Ex: Maria (Esposa)"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Telefone de Emergência</label>
+              <label className="block text-xs font-bold text-white/70 mb-1">Telefone de Emergência</label>
               <input
                 type="tel"
                 value={formEmergencyPhone}
                 onChange={(e) => setFormEmergencyPhone(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
                 placeholder="960 000 000"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Notas Médicas / Alergias / Grupo Sanguíneo</label>
+            <label className="block text-xs font-bold text-white/70 mb-1">Notas Médicas / Alergias / Grupo Sanguíneo</label>
             <textarea
               value={formMedicalNotes}
               onChange={(e) => setFormMedicalNotes(e.target.value)}
               rows={2}
-              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
               placeholder="Ex: Alergia a anti-inflamatórios, Tipo O+, histórico de lesão no joelho direito..."
             />
           </div>
         </div>
 
         {/* 7. UPLOAD DE DOCUMENTOS & RGPD */}
-        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-gray-200 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-3">
-            <FileText size={16} className="text-csc-dark" />
+        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
+          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+            <FileText size={16} className="text-csc-gold" />
             <span>7. Documentos & Proteção de Dados (RGPD)</span>
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Foto de Perfil */}
-            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
-              <label className="block text-xs font-bold text-gray-800">Fotografia de Perfil</label>
+            <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+              <label className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
               <input
                 type="file"
                 accept="image/*"
@@ -611,8 +611,8 @@ const SettingsPage: React.FC = () => {
             </div>
 
             {/* Documento de Identificação */}
-            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
-              <label className="block text-xs font-bold text-gray-800">Doc. Identificação (CC / Passaporte)</label>
+            <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+              <label className="block text-xs font-bold text-white/80">Doc. Identificação (CC / Passaporte)</label>
               <input
                 type="file"
                 accept="image/*,application/pdf"
@@ -628,8 +628,8 @@ const SettingsPage: React.FC = () => {
             </div>
 
             {/* Seguro Desportivo */}
-            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
-              <label className="block text-xs font-bold text-gray-800">Apólice de Seguro Desportivo</label>
+            <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+              <label className="block text-xs font-bold text-white/80">Apólice de Seguro Desportivo</label>
               <input
                 type="file"
                 accept="image/*,application/pdf"
@@ -645,8 +645,8 @@ const SettingsPage: React.FC = () => {
             </div>
 
             {/* Atestado Médico */}
-            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2">
-              <label className="block text-xs font-bold text-gray-800">Atestado / Exame Médico Desportivo</label>
+            <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+              <label className="block text-xs font-bold text-white/80">Atestado / Exame Médico Desportivo</label>
               <input
                 type="file"
                 accept="image/*,application/pdf"
@@ -663,7 +663,7 @@ const SettingsPage: React.FC = () => {
           </div>
 
           {/* Consentimento RGPD */}
-          <div className="p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-2xl">
+          <div className="p-3.5 bg-emerald-500/10 border border-emerald-400/30 rounded-2xl">
             <label className="flex items-start gap-2.5 cursor-pointer">
               <input
                 type="checkbox"
@@ -671,7 +671,7 @@ const SettingsPage: React.FC = () => {
                 onChange={(e) => setFormGdprConsent(e.target.checked)}
                 className="mt-0.5 w-4 h-4 rounded text-csc-dark border-gray-300 cursor-pointer"
               />
-              <span className="text-xs text-gray-700 leading-relaxed font-medium">
+              <span className="text-xs text-white/70 leading-relaxed font-medium">
                 Declaro que autorizo o <strong>Grupo Dramático e Sportivo de Cascais</strong> a tratar os meus dados pessoais, contactos, médicos e de imagem para efeitos desportivos, seguros e gestão associativa ao abrigo do RGPD.
               </span>
             </label>

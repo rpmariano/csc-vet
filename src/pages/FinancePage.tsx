@@ -122,7 +122,7 @@ const FinancePage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold"></div>
       </div>
     )
   }
@@ -132,32 +132,32 @@ const FinancePage: React.FC = () => {
 
       {/* Cartões de Balanço */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
+        <div className="bg-csc-dark text-white rounded-xl shadow-sm border border-white/10 p-6 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-gray-500">Saldo Disponível</p>
-            <p className="text-2xl font-black text-csc-dark mt-1">{netBalance.toFixed(2)}€</p>
+            <p className="text-sm font-semibold text-white/50">Saldo Disponível</p>
+            <p className="text-2xl font-black text-white mt-1">{netBalance.toFixed(2)}€</p>
           </div>
-          <div className="w-12 h-12 bg-gray-50 text-csc-dark rounded-full flex items-center justify-center">
+          <div className="w-12 h-12 bg-white/10 text-csc-gold rounded-full flex items-center justify-center">
             <Landmark size={24} />
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
+        <div className="bg-csc-dark text-white rounded-xl shadow-sm border border-white/10 p-6 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-gray-500">Total Receitas</p>
-            <p className="text-2xl font-black text-green-700 mt-1">+{totalIncome.toFixed(2)}€</p>
+            <p className="text-sm font-semibold text-white/50">Total Receitas</p>
+            <p className="text-2xl font-black text-emerald-400 mt-1">+{totalIncome.toFixed(2)}€</p>
           </div>
-          <div className="w-12 h-12 bg-green-50 text-green-700 rounded-full flex items-center justify-center">
+          <div className="w-12 h-12 bg-emerald-500/15 text-emerald-400 rounded-full flex items-center justify-center">
             <TrendingUp size={24} />
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
+        <div className="bg-csc-dark text-white rounded-xl shadow-sm border border-white/10 p-6 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-gray-500">Total Despesas</p>
-            <p className="text-2xl font-black text-red-700 mt-1">-{totalExpense.toFixed(2)}€</p>
+            <p className="text-sm font-semibold text-white/50">Total Despesas</p>
+            <p className="text-2xl font-black text-red-400 mt-1">-{totalExpense.toFixed(2)}€</p>
           </div>
-          <div className="w-12 h-12 bg-red-50 text-red-700 rounded-full flex items-center justify-center">
+          <div className="w-12 h-12 bg-red-500/15 text-red-400 rounded-full flex items-center justify-center">
             <TrendingDown size={24} />
           </div>
         </div>
@@ -166,44 +166,44 @@ const FinancePage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Adicionar Movimento e Registo Dues */}
         <div className="space-y-6 h-fit">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-805 mb-4 flex items-center space-x-2">
-              <DollarSign size={20} className="text-csc-dark" />
+          <div className="bg-csc-dark text-white rounded-xl shadow-sm border border-white/10 p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center space-x-2">
+              <DollarSign size={20} className="text-csc-gold" />
               <span>Registar Movimento</span>
             </h3>
             
             <form onSubmit={handleAddTransaction} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-705 mb-1">Descrição</label>
+                <label className="block text-sm font-semibold text-white/70 mb-1">Descrição</label>
                 <input
                   type="text"
                   required
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-gray-900"
                   placeholder="Ex: Pagamento Árbitro"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-705 mb-1">Valor (€)</label>
+                <label className="block text-sm font-semibold text-white/70 mb-1">Valor (€)</label>
                 <input
                   type="number"
                   step="0.01"
                   required
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-gray-900"
                   placeholder="0.00"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-705 mb-1">Tipo</label>
+                <label className="block text-sm font-semibold text-white/70 mb-1">Tipo</label>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                 >
                   <option value="income">Receita (Entrada)</option>
                   <option value="expense">Despesa (Saída)</option>
@@ -212,7 +212,7 @@ const FinancePage: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full flex items-center justify-center space-x-2 bg-csc-dark text-white py-2 rounded-lg font-bold hover:bg-csc-dark/80 transition-colors shadow"
+                className="w-full flex items-center justify-center space-x-2 bg-csc-gold text-csc-dark py-2 rounded-lg font-bold hover:brightness-95 transition-colors shadow"
               >
                 <Plus size={18} />
                 <span>Registar</span>
@@ -224,8 +224,8 @@ const FinancePage: React.FC = () => {
         {/* Tabelas de Quotas e Transações */}
         <div className="lg:col-span-2 space-y-6">
           {/* Tabela de Controlo de Quotas */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-805 mb-4">Controlo de Quotas (Jogadores)</h3>
+          <div className="bg-csc-dark text-white rounded-xl shadow-sm border border-white/10 p-6">
+            <h3 className="text-lg font-bold text-white mb-4">Controlo de Quotas (Jogadores)</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
@@ -241,7 +241,7 @@ const FinancePage: React.FC = () => {
                   {dues.map((due) => (
                     <tr key={due.id}>
                       <td className="px-4 py-3 font-semibold text-gray-800">{due.name}</td>
-                      <td className="px-4 py-3 text-gray-550">{due.month_year}</td>
+                      <td className="px-4 py-3 text-white/60">{due.month_year}</td>
                       <td className="px-4 py-3 text-gray-800">{due.amount.toFixed(2)}€</td>
                       <td className="px-4 py-3">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${due.status === 'paid' ? 'bg-green-100 text-green-800' : due.status === 'late' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
@@ -268,16 +268,16 @@ const FinancePage: React.FC = () => {
           </div>
 
           {/* Últimos Movimentos */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-805 mb-4">Últimos Movimentos</h3>
+          <div className="bg-csc-dark text-white rounded-xl shadow-sm border border-white/10 p-6">
+            <h3 className="text-lg font-bold text-white mb-4">Últimos Movimentos</h3>
             <div className="space-y-3">
               {transactions.map((t) => (
-                <div key={t.id} className="flex justify-between items-center p-3 rounded-lg bg-gray-50">
+                <div key={t.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5">
                   <div>
-                    <p className="font-semibold text-gray-800 text-sm">{t.description}</p>
-                    <p className="text-[10px] text-gray-400">{t.date}</p>
+                    <p className="font-semibold text-white text-sm">{t.description}</p>
+                    <p className="text-[10px] text-white/40">{t.date}</p>
                   </div>
-                  <p className={`font-bold text-sm ${t.type === 'income' ? 'text-green-700' : 'text-red-700'}`}>
+                  <p className={`font-bold text-sm ${t.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>
                     {t.type === 'income' ? '+' : '-'}{t.amount.toFixed(2)}€
                   </p>
                 </div>

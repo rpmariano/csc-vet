@@ -259,34 +259,34 @@ const StatsPage: React.FC = () => {
 
       {/* 3. Cards Resumo Rápidos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
-          <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Jogos Registados</p>
-          <p className="text-xl sm:text-2xl font-black text-csc-dark mt-1 flex items-center gap-1.5">
+        <div className="bg-csc-dark p-4 rounded-2xl border border-white/10 shadow-2xs">
+          <p className="text-[10px] font-black uppercase text-white/50 tracking-wider">Jogos Registados</p>
+          <p className="text-xl sm:text-2xl font-black text-white mt-1 flex items-center gap-1.5">
             <span>🏟️ {distinctMatches}</span>
           </p>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
-          <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Golos Marcados</p>
-          <p className="text-xl sm:text-2xl font-black text-amber-700 mt-1 flex items-center gap-1.5">
-            <Flame size={22} className="text-amber-500" />
+        <div className="bg-csc-dark p-4 rounded-2xl border border-white/10 shadow-2xs">
+          <p className="text-[10px] font-black uppercase text-white/50 tracking-wider">Golos Marcados</p>
+          <p className="text-xl sm:text-2xl font-black text-amber-400 mt-1 flex items-center gap-1.5">
+            <Flame size={22} className="text-amber-400" />
             <span>{totalGoals}</span>
           </p>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
-          <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Assistências</p>
-          <p className="text-xl sm:text-2xl font-black text-blue-700 mt-1 flex items-center gap-1.5">
-            <Footprints size={22} className="text-blue-500" />
+        <div className="bg-csc-dark p-4 rounded-2xl border border-white/10 shadow-2xs">
+          <p className="text-[10px] font-black uppercase text-white/50 tracking-wider">Assistências</p>
+          <p className="text-xl sm:text-2xl font-black text-blue-400 mt-1 flex items-center gap-1.5">
+            <Footprints size={22} className="text-blue-400" />
             <span>{totalAssists}</span>
           </p>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs">
-          <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Disciplina Total</p>
-          <p className="text-xl sm:text-2xl font-black text-gray-800 mt-1 flex items-center gap-2">
-            <span className="text-amber-700 text-sm sm:text-base bg-amber-100 px-2 py-0.5 rounded-lg border border-amber-300">🟨 {totalYellows}</span>
-            <span className="text-red-700 text-sm sm:text-base bg-red-100 px-2 py-0.5 rounded-lg border border-red-300">🟥 {totalReds}</span>
+        <div className="bg-csc-dark p-4 rounded-2xl border border-white/10 shadow-2xs">
+          <p className="text-[10px] font-black uppercase text-white/50 tracking-wider">Disciplina Total</p>
+          <p className="text-xl sm:text-2xl font-black text-white mt-1 flex items-center gap-2">
+            <span className="text-amber-200 text-sm sm:text-base bg-amber-500/20 px-2 py-0.5 rounded-lg border border-amber-400/30">🟨 {totalYellows}</span>
+            <span className="text-red-200 text-sm sm:text-base bg-red-500/20 px-2 py-0.5 rounded-lg border border-red-400/30">🟥 {totalReds}</span>
           </p>
         </div>
       </div>
@@ -294,26 +294,26 @@ const StatsPage: React.FC = () => {
       {/* 4. Destaques Top 3 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         {/* Melhores Marcadores */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-5 space-y-4">
-          <div className="flex items-center space-x-2 text-amber-700 font-black border-b border-gray-100 pb-3">
-            <Flame size={20} className="text-amber-500" />
+        <div className="bg-csc-dark rounded-3xl shadow-sm border border-white/10 p-5 space-y-4">
+          <div className="flex items-center space-x-2 text-amber-400 font-black border-b border-white/10 pb-3">
+            <Flame size={20} className="text-amber-400" />
             <h4 className="text-sm font-black uppercase tracking-wider">Melhores Marcadores</h4>
           </div>
           <div className="space-y-2.5">
             {topScorers.length === 0 ? (
-              <p className="text-xs text-gray-400 font-semibold italic py-2">Sem registo de golos neste contexto.</p>
+              <p className="text-xs text-white/40 font-semibold italic py-2">Sem registo de golos neste contexto.</p>
             ) : (
               topScorers.map((player, idx) => (
-                <div key={player.id} className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50 border border-gray-100 hover:border-amber-200 transition-all">
+                <div key={player.id} className="flex justify-between items-center p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-400/40 transition-all">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                      idx === 0 ? 'bg-amber-400 text-csc-dark shadow-xs' : idx === 1 ? 'bg-gray-300 text-gray-800' : 'bg-amber-100 text-amber-900'
+                      idx === 0 ? 'bg-amber-400 text-csc-dark shadow-xs' : idx === 1 ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-200'
                     }`}>
                       {idx + 1}
                     </span>
-                    <span className="text-xs sm:text-sm font-black text-gray-800 truncate">{player.name}</span>
+                    <span className="text-xs sm:text-sm font-black text-white truncate">{player.name}</span>
                   </div>
-                  <span className="text-xs font-black text-amber-950 bg-amber-200/90 border border-amber-300 px-2.5 py-0.5 rounded-xl shrink-0">
+                  <span className="text-xs font-black text-amber-100 bg-amber-500/20 border border-amber-400/30 px-2.5 py-0.5 rounded-xl shrink-0">
                     ⚽ {player.goals} {player.goals === 1 ? 'Golo' : 'Golos'}
                   </span>
                 </div>
@@ -323,26 +323,26 @@ const StatsPage: React.FC = () => {
         </div>
 
         {/* Melhores Assistentes */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-5 space-y-4">
-          <div className="flex items-center space-x-2 text-blue-700 font-black border-b border-gray-100 pb-3">
-            <Footprints size={20} className="text-blue-500" />
+        <div className="bg-csc-dark rounded-3xl shadow-sm border border-white/10 p-5 space-y-4">
+          <div className="flex items-center space-x-2 text-blue-400 font-black border-b border-white/10 pb-3">
+            <Footprints size={20} className="text-blue-400" />
             <h4 className="text-sm font-black uppercase tracking-wider">Líderes de Assistências</h4>
           </div>
           <div className="space-y-2.5">
             {topAssists.length === 0 ? (
-              <p className="text-xs text-gray-400 font-semibold italic py-2">Sem registo de assistências neste contexto.</p>
+              <p className="text-xs text-white/40 font-semibold italic py-2">Sem registo de assistências neste contexto.</p>
             ) : (
               topAssists.map((player, idx) => (
-                <div key={player.id} className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50 border border-gray-100 hover:border-blue-200 transition-all">
+                <div key={player.id} className="flex justify-between items-center p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:border-blue-400/40 transition-all">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                      idx === 0 ? 'bg-blue-500 text-white shadow-xs' : idx === 1 ? 'bg-blue-300 text-blue-950' : 'bg-blue-100 text-blue-900'
+                      idx === 0 ? 'bg-blue-500 text-white shadow-xs' : idx === 1 ? 'bg-blue-400/40 text-white' : 'bg-blue-500/20 text-blue-200'
                     }`}>
                       {idx + 1}
                     </span>
-                    <span className="text-xs sm:text-sm font-black text-gray-800 truncate">{player.name}</span>
+                    <span className="text-xs sm:text-sm font-black text-white truncate">{player.name}</span>
                   </div>
-                  <span className="text-xs font-black text-blue-900 bg-blue-100 border border-blue-200 px-2.5 py-0.5 rounded-xl shrink-0">
+                  <span className="text-xs font-black text-blue-100 bg-blue-500/20 border border-blue-400/30 px-2.5 py-0.5 rounded-xl shrink-0">
                     👟 {player.assists} Ass.
                   </span>
                 </div>
@@ -352,27 +352,27 @@ const StatsPage: React.FC = () => {
         </div>
 
         {/* Prémios MVP */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-5 space-y-4">
-          <div className="flex items-center space-x-2 text-indigo-700 font-black border-b border-gray-100 pb-3">
-            <Sparkles size={20} className="text-indigo-500" />
+        <div className="bg-csc-dark rounded-3xl shadow-sm border border-white/10 p-5 space-y-4">
+          <div className="flex items-center space-x-2 text-indigo-400 font-black border-b border-white/10 pb-3">
+            <Sparkles size={20} className="text-indigo-400" />
             <h4 className="text-sm font-black uppercase tracking-wider">Prémios MVP (Homem do Jogo)</h4>
           </div>
           <div className="space-y-2.5">
             {topMvps.length === 0 ? (
-              <p className="text-xs text-gray-400 font-semibold italic py-2">Sem registo de MVPs neste contexto.</p>
+              <p className="text-xs text-white/40 font-semibold italic py-2">Sem registo de MVPs neste contexto.</p>
             ) : (
               topMvps.map((player, idx) => (
-                <div key={player.id} className="flex justify-between items-center p-2.5 rounded-2xl bg-gray-50 border border-gray-100 hover:border-indigo-200 transition-all">
+                <div key={player.id} className="flex justify-between items-center p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:border-indigo-400/40 transition-all">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                      idx === 0 ? 'bg-amber-400 text-csc-dark shadow-xs' : idx === 1 ? 'bg-gray-300 text-gray-800' : 'bg-indigo-100 text-indigo-900'
+                      idx === 0 ? 'bg-amber-400 text-csc-dark shadow-xs' : idx === 1 ? 'bg-white/20 text-white' : 'bg-indigo-500/20 text-indigo-200'
                     }`}>
                       {idx + 1}
                     </span>
-                    <span className="text-xs sm:text-sm font-black text-gray-800 truncate">{player.shirt_name || player.name}</span>
+                    <span className="text-xs sm:text-sm font-black text-white truncate">{player.shirt_name || player.name}</span>
                   </div>
-                  <span className="text-xs font-black text-indigo-900 bg-indigo-100 border border-indigo-200 px-2.5 py-0.5 rounded-xl shrink-0 flex items-center gap-1">
-                    <Award size={13} className="text-indigo-600" />
+                  <span className="text-xs font-black text-indigo-100 bg-indigo-500/20 border border-indigo-400/30 px-2.5 py-0.5 rounded-xl shrink-0 flex items-center gap-1">
+                    <Award size={13} className="text-indigo-300" />
                     <span>{player.mvp_count} MVP</span>
                   </span>
                 </div>
@@ -441,13 +441,13 @@ function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats:
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-4 sm:p-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
-          <Users size={18} className="text-csc-dark" />
+      <div className="p-4 sm:p-5 bg-csc-dark text-white border-b-4 border-csc-gold flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h3 className="text-base font-black text-white flex items-center gap-2">
+          <Users size={18} className="text-csc-gold" />
           <span>Tabela Geral de Rendimento do Plantel ({aggregatedStats.length} Atletas)</span>
         </h3>
-        <span className="text-xs text-gray-500 font-bold">
-          Filtro ativo: <strong className="text-gray-900">{activeFilterLabel}</strong>
+        <span className="text-xs text-white/60 font-bold">
+          Filtro ativo: <strong className="text-white">{activeFilterLabel}</strong>
         </span>
       </div>
 

@@ -206,12 +206,12 @@ export const StandingsPage = () => {
       {loading ? (
         <div className="text-center py-12 text-gray-500 font-bold">A carregar classificações...</div>
       ) : groups.length === 0 ? (
-        <div className="bg-white rounded-3xl p-8 border border-gray-200 text-center shadow-sm">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Info size={30} className="text-gray-400" />
+        <div className="bg-csc-dark text-white rounded-3xl p-8 border border-white/10 text-center shadow-sm">
+          <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Info size={30} className="text-white/40" />
           </div>
-          <h3 className="text-lg font-black text-gray-800">Ainda não há grupos</h3>
-          <p className="text-gray-500 text-sm mt-2 max-w-sm mx-auto">As tabelas classificativas ficarão disponíveis assim que a administração configurar os grupos desta prova.</p>
+          <h3 className="text-lg font-black text-white">Ainda não há grupos</h3>
+          <p className="text-white/50 text-sm mt-2 max-w-sm mx-auto">As tabelas classificativas ficarão disponíveis assim que a administração configurar os grupos desta prova.</p>
         </div>
       ) : (
         <div className="space-y-6">

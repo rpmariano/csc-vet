@@ -310,15 +310,15 @@ export const MatchReportsPage: React.FC = () => {
 
       {/* Lista de Jogos Ocorridos */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center min-h-[35vh]">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark mb-3"></div>
-          <p className="text-xs font-bold text-gray-500">A carregar fichas de jogo...</p>
+        <div className="flex flex-col items-center justify-center min-h-[35vh] text-white">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold mb-3"></div>
+          <p className="text-xs font-bold text-white/50">A carregar fichas de jogo...</p>
         </div>
       ) : filteredMatches.length === 0 ? (
-        <div className="bg-white rounded-3xl p-10 text-center border border-dashed border-gray-300 space-y-3">
-          <Trophy size={42} className="mx-auto text-gray-300" />
-          <p className="font-black text-gray-800 text-sm sm:text-base">Nenhum jogo ocorrido encontrado</p>
-          <p className="text-xs text-gray-500 max-w-sm mx-auto">
+        <div className="bg-csc-dark text-white rounded-3xl p-10 text-center border border-dashed border-white/15 space-y-3">
+          <Trophy size={42} className="mx-auto text-white/20" />
+          <p className="font-black text-white text-sm sm:text-base">Nenhum jogo ocorrido encontrado</p>
+          <p className="text-xs text-white/50 max-w-sm mx-auto">
             Assim que os jogos da época forem realizados ou tiverem resultado registado, as suas fichas técnicas aparecerão aqui.
           </p>
         </div>
@@ -354,13 +354,13 @@ export const MatchReportsPage: React.FC = () => {
               <div
                 key={m.id}
                 onClick={() => handleOpenReport(m)}
-                className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 hover:border-csc-gold/80 shadow-sm p-4 sm:p-5 transition-all cursor-pointer hover:shadow-md active:scale-[0.99] space-y-3.5 group"
+                className="bg-csc-dark text-white rounded-2xl sm:rounded-3xl border border-white/10 hover:border-csc-gold/60 shadow-sm p-4 sm:p-5 transition-all cursor-pointer hover:shadow-md active:scale-[0.99] space-y-3.5 group"
               >
                 {/* Header do Card: Data, Competição e Condição */}
-                <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-2.5 flex-wrap">
+                <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-gray-900 capitalize flex items-center gap-1.5">
-                      <Calendar size={14} className="text-csc-dark" />
+                    <span className="text-xs font-black text-white capitalize flex items-center gap-1.5">
+                      <Calendar size={14} className="text-csc-gold" />
                       <span>{dateFormatted} • {timeFormatted}</span>
                     </span>
                     {m.is_active === false && (
@@ -382,7 +382,7 @@ export const MatchReportsPage: React.FC = () => {
                       </span>
                     ) : null}
 
-                    <span className="text-[10px] font-extrabold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-extrabold text-white/60 bg-white/10 px-2 py-0.5 rounded-full">
                       {isAway ? '✈️ Fora' : '🏠 Casa'}
                     </span>
                   </div>
@@ -392,10 +392,10 @@ export const MatchReportsPage: React.FC = () => {
                 <div className="grid grid-cols-11 items-center gap-2 py-1 text-center">
                   {/* Equipa Esquerda */}
                   <div className="col-span-4 flex items-center justify-end gap-2.5 min-w-0">
-                    <span className="text-sm sm:text-base font-black text-gray-900 uppercase truncate">
+                    <span className="text-sm sm:text-base font-black text-white uppercase truncate">
                       {leftSigla}
                     </span>
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-50 p-1 border border-gray-200 flex items-center justify-center shrink-0 shadow-xs">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white p-1 border border-white/20 flex items-center justify-center shrink-0 shadow-xs">
                       {leftLogo ? (
                         <img src={leftLogo} alt={leftSigla} className="w-full h-full object-contain rounded-full" />
                       ) : (
@@ -408,16 +408,16 @@ export const MatchReportsPage: React.FC = () => {
                   <div className="col-span-3 flex flex-col items-center justify-center">
                     {hasScore ? (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-2xl sm:text-3xl font-black text-csc-dark bg-gray-100 px-2.5 py-0.5 rounded-xl border border-gray-200 shadow-inner">
+                        <span className="text-2xl sm:text-3xl font-black text-white bg-white/10 px-2.5 py-0.5 rounded-xl border border-white/15 shadow-inner">
                           {m.home_score}
                         </span>
                         <span className="text-lg font-black text-csc-gold">:</span>
-                        <span className="text-2xl sm:text-3xl font-black text-csc-dark bg-gray-100 px-2.5 py-0.5 rounded-xl border border-gray-200 shadow-inner">
+                        <span className="text-2xl sm:text-3xl font-black text-white bg-white/10 px-2.5 py-0.5 rounded-xl border border-white/15 shadow-inner">
                           {m.away_score}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-xs font-black text-gray-400 uppercase tracking-widest px-2 py-1 bg-gray-100 rounded-lg">
+                      <span className="text-xs font-black text-white/40 uppercase tracking-widest px-2 py-1 bg-white/10 rounded-lg">
                         VS
                       </span>
                     )}
@@ -425,32 +425,32 @@ export const MatchReportsPage: React.FC = () => {
 
                   {/* Equipa Direita */}
                   <div className="col-span-4 flex items-center justify-start gap-2.5 min-w-0">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-50 p-1 border border-gray-200 flex items-center justify-center shrink-0 shadow-xs">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white p-1 border border-white/20 flex items-center justify-center shrink-0 shadow-xs">
                       {rightLogo ? (
                         <img src={rightLogo} alt={rightSigla} className="w-full h-full object-contain rounded-full" />
                       ) : (
                         <span className="font-black text-csc-dark text-xs">{rightSigla}</span>
                       )}
                     </div>
-                    <span className="text-sm sm:text-base font-black text-gray-900 uppercase truncate">
+                    <span className="text-sm sm:text-base font-black text-white uppercase truncate">
                       {rightSigla}
                     </span>
                   </div>
                 </div>
 
                 {/* Footer do Card: Local e Botão de Ação */}
-                <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-gray-100 text-xs">
-                  <div className="flex items-center gap-1.5 text-gray-500 font-semibold truncate min-w-0">
+                <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/10 text-xs">
+                  <div className="flex items-center gap-1.5 text-white/60 font-semibold truncate min-w-0">
                     <MapPin size={13} className="text-red-500 shrink-0" />
                     <span className="truncate">{locationStr}</span>
                     {formationDisplay && (
-                      <span className="hidden sm:inline-block text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md font-bold ml-1">
+                      <span className="hidden sm:inline-block text-[10px] bg-white/10 text-white/70 px-2 py-0.5 rounded-md font-bold ml-1">
                         Tática: {formationDisplay}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1 text-csc-dark group-hover:text-emerald-800 font-black shrink-0">
+                  <div className="flex items-center gap-1 text-csc-gold group-hover:text-emerald-300 font-black shrink-0">
                     <span>{isCoachOrAdmin ? 'Editar Ficha' : 'Ver Ficha'}</span>
                     <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                   </div>
