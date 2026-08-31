@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { 
   MapPin, 
   Clock, 
@@ -351,6 +351,11 @@ const CalendarPage: React.FC = () => {
   const [editIsFriendly, setEditIsFriendly] = useState(false)
   const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
   const [isEditBatchCalling, setIsEditBatchCalling] = useState(false)
+  // Guarda síncrona (não é estado) contra duplo-clique: entre o clique e o próximo repaint,
+  // `isEditBatchCalling` (estado) ainda não travou o botão, o que já causou convocações em
+  // duplicado — um segundo clique lia a mesma lista de "por convocar" antes de a primeira
+  // chamada terminar, e a segunda tentativa de inserção era ignorada por já existir.
+  const isEditBatchCallingRef = useRef(false)
 
   // Quick Field Modal states (Criação de campo inline a partir da janela de criação/edição)
   const [isQuickFieldModalOpen, setIsQuickFieldModalOpen] = useState(false)
@@ -3450,7 +3455,8 @@ const CalendarPage: React.FC = () => {
                   const editUncalledPlayers = eligibleMembers.filter(p => !isMemberCalled(p))
 
                   const handleEditAddAll = async () => {
-                    if (editUncalledPlayers.length === 0 || isEditBatchCalling) return
+                    if (editUncalledPlayers.length === 0 || isEditBatchCallingRef.current) return
+                    isEditBatchCallingRef.current = true
                     setIsEditBatchCalling(true)
                     try {
                       const validIds = await ensurePlayerIdsForSupabase(editUncalledPlayers.map(p => p.id), allPlayers)
@@ -3460,7 +3466,7 @@ const CalendarPage: React.FC = () => {
                           .from('callups')
                           .select('player_id')
                           .eq('event_id', selectedEvent.id)
-                        
+
                         const existingPlayerIds = new Set((existingDbCallups || []).map(c => c.player_id))
                         const toInsert = validIds.filter(pId => pId && !existingPlayerIds.has(pId))
 
@@ -3480,18 +3486,25 @@ const CalendarPage: React.FC = () => {
                           }
                         }
                         await fetchEventsAndData()
-                        toast.success('Todos os membros elegíveis foram convocados com sucesso!')
+                        // Mensagem com a contagem real inserida — ver nota em isEditBatchCallingRef.
+                        toast.success(
+                          toInsert.length > 0
+                            ? `${toInsert.length} membro(s) convocado(s) com sucesso!`
+                            : 'Já estavam todos convocados.'
+                        )
                       }
                     } catch (err: any) {
                       toast.error('Erro ao convocar todos: ' + err.message)
                     } finally {
+                      isEditBatchCallingRef.current = false
                       setIsEditBatchCalling(false)
                     }
                   }
 
                   const handleEditAddOnlyPlayers = async () => {
                     const uncalledAthletes = editUncalledPlayers.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role))
-                    if (uncalledAthletes.length === 0 || isEditBatchCalling) return
+                    if (uncalledAthletes.length === 0 || isEditBatchCallingRef.current) return
+                    isEditBatchCallingRef.current = true
                     setIsEditBatchCalling(true)
                     try {
                       const validIds = await ensurePlayerIdsForSupabase(uncalledAthletes.map(p => p.id), allPlayers)
@@ -3500,7 +3513,7 @@ const CalendarPage: React.FC = () => {
                           .from('callups')
                           .select('player_id')
                           .eq('event_id', selectedEvent.id)
-                        
+
                         const existingPlayerIds = new Set((existingDbCallups || []).map(c => c.player_id))
                         const toInsert = validIds.filter(pId => pId && !existingPlayerIds.has(pId))
 
@@ -3520,18 +3533,24 @@ const CalendarPage: React.FC = () => {
                           }
                         }
                         await fetchEventsAndData()
-                        toast.success('Jogadores elegíveis convocados com sucesso!')
+                        toast.success(
+                          toInsert.length > 0
+                            ? `${toInsert.length} jogador(es) convocado(s) com sucesso!`
+                            : 'Já estavam todos os jogadores convocados.'
+                        )
                       }
                     } catch (err: any) {
                       toast.error('Erro ao convocar jogadores: ' + err.message)
                     } finally {
+                      isEditBatchCallingRef.current = false
                       setIsEditBatchCalling(false)
                     }
                   }
 
                   const handleEditAddStaff = async () => {
                     const uncalledStaff = editUncalledPlayers.filter(p => ['coach', 'admin'].includes(p.role))
-                    if (uncalledStaff.length === 0 || isEditBatchCalling) return
+                    if (uncalledStaff.length === 0 || isEditBatchCallingRef.current) return
+                    isEditBatchCallingRef.current = true
                     setIsEditBatchCalling(true)
                     try {
                       const validIds = await ensurePlayerIdsForSupabase(uncalledStaff.map(p => p.id), allPlayers)
@@ -3540,7 +3559,7 @@ const CalendarPage: React.FC = () => {
                           .from('callups')
                           .select('player_id')
                           .eq('event_id', selectedEvent.id)
-                        
+
                         const existingPlayerIds = new Set((existingDbCallups || []).map(c => c.player_id))
                         const toInsert = validIds.filter(pId => pId && !existingPlayerIds.has(pId))
 
@@ -3560,17 +3579,22 @@ const CalendarPage: React.FC = () => {
                           }
                         }
                         await fetchEventsAndData()
-                        toast.success('Staff/Treinadores convocados com sucesso!')
+                        toast.success(
+                          toInsert.length > 0
+                            ? `${toInsert.length} membro(s) de staff convocado(s) com sucesso!`
+                            : 'Já estava todo o staff convocado.'
+                        )
                       }
                     } catch (err: any) {
                       toast.error('Erro ao convocar staff: ' + err.message)
                     } finally {
+                      isEditBatchCallingRef.current = false
                       setIsEditBatchCalling(false)
                     }
                   }
 
                   const handleEditRemoveAll = () => {
-                    if (currentCallups.length === 0 || isEditBatchCalling) return
+                    if (currentCallups.length === 0 || isEditBatchCallingRef.current) return
                     setConfirmModalConfig({
                       isOpen: true,
                       title: 'Limpar Todos os Convocados',
@@ -3579,6 +3603,8 @@ const CalendarPage: React.FC = () => {
                       cancelText: 'Cancelar',
                       variant: 'danger',
                       onConfirm: async () => {
+                        if (isEditBatchCallingRef.current) return
+                        isEditBatchCallingRef.current = true
                         setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
                         setIsEditBatchCalling(true)
                         try {
@@ -3589,6 +3615,7 @@ const CalendarPage: React.FC = () => {
                         } catch (err: any) {
                           toast.error('Erro ao remover todos: ' + err.message)
                         } finally {
+                          isEditBatchCallingRef.current = false
                           setIsEditBatchCalling(false)
                         }
                       }
