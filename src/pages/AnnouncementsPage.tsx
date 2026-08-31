@@ -665,7 +665,7 @@ const AnnouncementsPage: React.FC = () => {
 
       {/* MODAL: CONFIRMAÇÃO DE ELIMINAÇÃO */}
       {deletingAnn && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-60 animate-fade-in select-none">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-[80] animate-fade-in select-none">
           <div className="bg-csc-dark text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/10 space-y-4 animate-scale-in">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
