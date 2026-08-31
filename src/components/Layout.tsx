@@ -82,6 +82,47 @@ const SidebarLink: React.FC<{ item: NavItem; active: boolean }> = ({ item, activ
   </Link>
 )
 
+/**
+ * Grupo de navegação — mesmos 4 grupos (rótulo, ordem, composição) na gaveta
+ * mobile e na sidebar desktop: Geral / Gestão da Equipa / Administração &
+ * Clube / Comunicação. Um grupo sem itens (ex.: tudo já está na barra de
+ * baixo, no caso da gaveta) não se desenha — não fica um título pendurado
+ * sem nada por baixo.
+ */
+const DrawerSection: React.FC<{ label: string; items: NavItem[]; gold?: boolean; pathname: string; onNavigate: () => void }> = ({
+  label,
+  items,
+  gold,
+  pathname,
+  onNavigate,
+}) => {
+  if (items.length === 0) return null
+  return (
+    <div>
+      <p className={`text-[10px] uppercase font-black tracking-wider mb-1.5 px-2 ${gold ? 'text-csc-gold' : 'text-gray-400'}`}>{label}</p>
+      <div className="space-y-1">
+        {items.map(item => (
+          <DrawerLink key={item.to} item={item} active={pathname === item.to} onNavigate={onNavigate} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const SidebarSection: React.FC<{ label: string; items: NavItem[]; gold?: boolean; pathname: string }> = ({ label, items, gold, pathname }) => {
+  if (items.length === 0) return null
+  return (
+    <div>
+      <p className={`text-[10px] uppercase font-black tracking-wider mb-1.5 px-3 ${gold ? 'text-csc-gold' : 'text-gray-400'}`}>{label}</p>
+      <div className="space-y-1">
+        {items.map(item => (
+          <SidebarLink key={item.to} item={item} active={pathname === item.to} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const Layout: React.FC = () => {
   const { profile, actualRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
   const location = useLocation()
@@ -98,6 +139,19 @@ const Layout: React.FC = () => {
   const isCoach = profile?.role === 'coach'
   const isPlayer = !isAdmin && !isCoach
   const canSwitchRoles = (assignedRoles?.length ?? 1) > 1
+
+  // Os 4 grupos de navegação — mesma composição na gaveta e na sidebar.
+  const secaoGeral: NavItem[] = [NAV_HOME, NAV_CALENDAR, NAV_MATCH_REPORTS, NAV_STATS, NAV_STANDINGS]
+  const secaoGestaoEquipa: NavItem[] = (isAdmin || isCoach) ? [NAV_TEAM, NAV_EVENTS] : []
+  const secaoAdminClube: NavItem[] = (isAdmin || isCoach) ? [NAV_ADMIN, ...(isAdmin ? [NAV_FINANCE] : [])] : []
+  const secaoComunicacao: NavItem[] = (isAdmin || isCoach) ? [NAV_ANNOUNCEMENTS] : []
+
+  // A gaveta complementa a barra de baixo — omite o que já lá está, por perfil,
+  // para o mesmo link não aparecer duas vezes.
+  const caminhosBarraInferior = (isAdmin || isCoach)
+    ? ['/', '/calendar', '/events', '/team-management']
+    : ['/', '/calendar', '/match-reports', '/stats']
+  const paraGaveta = (items: NavItem[]) => items.filter(item => !caminhosBarraInferior.includes(item.to))
 
   const handleSelectRole = (role: UserRole) => {
     triggerHaptic('medium')
@@ -271,40 +325,33 @@ const Layout: React.FC = () => {
                 </div>
               )}
 
-              {/* Secções de Acessos Restantes */}
+              {/* Secções de Acessos Restantes — mesmos 4 grupos da sidebar desktop */}
               <div className="mt-4 space-y-4">
-                {/* 1. Administração & Clube (Apenas Admin/Treinador) */}
-                {(isAdmin || isCoach) && (
-                  <div>
-                    <p className="text-[10px] uppercase font-black text-csc-gold tracking-wider mb-1.5 px-2">
-                      Administração & Clube
-                    </p>
-                    <div className="space-y-1">
-                      <DrawerLink item={NAV_ADMIN} active={location.pathname === '/admin'} onNavigate={() => setIsMobileMenuOpen(false)} />
-                      {isAdmin && (
-                        <DrawerLink item={NAV_FINANCE} active={location.pathname === '/finance'} onNavigate={() => setIsMobileMenuOpen(false)} />
-                      )}
-                      <DrawerLink item={NAV_EVENTS} active={location.pathname === '/events'} onNavigate={() => setIsMobileMenuOpen(false)} />
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. Informação & Desporto (Acessível a Todos) */}
-                <div>
-                  <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-2">
-                    Desporto & Rendimento
-                  </p>
-                  <div className="space-y-1">
-                    <DrawerLink item={NAV_MATCH_REPORTS} active={location.pathname === '/match-reports'} onNavigate={() => setIsMobileMenuOpen(false)} />
-                    <DrawerLink item={NAV_STATS} active={location.pathname === '/stats'} onNavigate={() => setIsMobileMenuOpen(false)} />
-                    <DrawerLink item={NAV_STANDINGS} active={location.pathname === '/standings'} onNavigate={() => setIsMobileMenuOpen(false)} />
-                    {(isAdmin || isCoach) && (
-                      <DrawerLink item={NAV_ANNOUNCEMENTS} active={location.pathname === '/announcements'} onNavigate={() => setIsMobileMenuOpen(false)} />
-                    )}
-                  </div>
-                </div>
-
-
+                <DrawerSection
+                  label="Geral"
+                  items={paraGaveta(secaoGeral)}
+                  pathname={location.pathname}
+                  onNavigate={() => setIsMobileMenuOpen(false)}
+                />
+                <DrawerSection
+                  label="Gestão da Equipa"
+                  items={paraGaveta(secaoGestaoEquipa)}
+                  pathname={location.pathname}
+                  onNavigate={() => setIsMobileMenuOpen(false)}
+                />
+                <DrawerSection
+                  label="Administração & Clube"
+                  items={paraGaveta(secaoAdminClube)}
+                  gold
+                  pathname={location.pathname}
+                  onNavigate={() => setIsMobileMenuOpen(false)}
+                />
+                <DrawerSection
+                  label="Comunicação"
+                  items={paraGaveta(secaoComunicacao)}
+                  pathname={location.pathname}
+                  onNavigate={() => setIsMobileMenuOpen(false)}
+                />
               </div>
             </div>
 
@@ -385,54 +432,12 @@ const Layout: React.FC = () => {
             </div>
           )}
 
-          {/* Navegação Desktop Estruturada (Mesma Lógica da App) */}
+          {/* Navegação Desktop Estruturada — mesmos 4 grupos da gaveta mobile */}
           <nav className="space-y-4 overflow-y-auto pr-1">
-            {/* 1. SECÇÃO PRINCIPAL / SACOS */}
-            <div>
-              <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-3">
-                Principal
-              </p>
-              <div className="space-y-1">
-                <SidebarLink item={NAV_HOME} active={location.pathname === '/'} />
-                <SidebarLink item={NAV_CALENDAR} active={location.pathname === '/calendar'} />
-                <SidebarLink item={NAV_MATCH_REPORTS} active={location.pathname === '/match-reports'} />
-                <SidebarLink item={NAV_STATS} active={location.pathname === '/stats'} />
-                <SidebarLink item={NAV_STANDINGS} active={location.pathname === '/standings'} />
-
-                {(isAdmin || isCoach) && (
-                  <>
-                    <SidebarLink item={NAV_TEAM} active={location.pathname === '/team-management'} />
-                    <SidebarLink item={NAV_EVENTS} active={location.pathname === '/events'} />
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* 2. ADMINISTRAÇÃO & CLUBE (Apenas Admin/Treinador) */}
-            {(isAdmin || isCoach) && (
-              <div>
-                <p className="text-[10px] uppercase font-black text-csc-gold tracking-wider mb-1.5 px-3">
-                  Administração & Clube
-                </p>
-                <div className="space-y-1">
-                  <SidebarLink item={NAV_ADMIN} active={location.pathname === '/admin'} />
-                  {isAdmin && <SidebarLink item={NAV_FINANCE} active={location.pathname === '/finance'} />}
-                </div>
-              </div>
-            )}
-
-            {/* 3. COMUNICADOS & AVISOS (Apenas Admin/Treinador) */}
-            {(isAdmin || isCoach) && (
-              <div>
-                <p className="text-[10px] uppercase font-black text-gray-400 tracking-wider mb-1.5 px-3">
-                  Comunicação
-                </p>
-                <div className="space-y-1">
-                  <SidebarLink item={NAV_ANNOUNCEMENTS} active={location.pathname === '/announcements'} />
-                </div>
-              </div>
-            )}
-
+            <SidebarSection label="Geral" items={secaoGeral} pathname={location.pathname} />
+            <SidebarSection label="Gestão da Equipa" items={secaoGestaoEquipa} pathname={location.pathname} />
+            <SidebarSection label="Administração & Clube" items={secaoAdminClube} gold pathname={location.pathname} />
+            <SidebarSection label="Comunicação" items={secaoComunicacao} pathname={location.pathname} />
 
           </nav>
         </div>
@@ -528,7 +533,21 @@ const Layout: React.FC = () => {
           <span className="text-[10px] font-bold mt-0.5">Agenda</span>
         </Link>
 
-        {/* 3. Ação do Saco: "Criar Evento" (se Coach/Admin) OU "Estatísticas" (se Jogador) */}
+        {/* 3. Fichas de Jogo (Apenas Jogador — dá-lhe as mesmas 5 posições que Treinador/Admin têm) */}
+        {isPlayer && (
+          <Link
+            to="/match-reports"
+            onClick={() => triggerHaptic('selection')}
+            className={`flex flex-col items-center justify-center flex-1 min-h-[44px] py-1 rounded-xl transition-all
+              ${location.pathname === '/match-reports' ? 'text-csc-gold bg-csc-light/30 shadow-sm font-black' : 'text-gray-400 hover:text-gray-200'}
+            `}
+          >
+            <ClipboardList size={19} />
+            <span className="text-[10px] font-bold mt-0.5">Fichas</span>
+          </Link>
+        )}
+
+        {/* 4. Ação do Saco: "Criar Evento" (se Coach/Admin) OU "Estatísticas" (se Jogador) */}
         {(isAdmin || isCoach) ? (
           <Link 
             to="/events" 
@@ -553,7 +572,7 @@ const Layout: React.FC = () => {
           </Link>
         )}
 
-        {/* 4. Plantel (Apenas para Treinadores/Admins) */}
+        {/* 5. Plantel (Apenas para Treinadores/Admins) */}
         {(isAdmin || isCoach) && (
           <Link 
             to="/team-management" 
@@ -567,7 +586,7 @@ const Layout: React.FC = () => {
           </Link>
         )}
 
-        {/* 5. Menu dos Traços (☰ Menu) */}
+        {/* 6. Menu dos Traços (☰ Menu) */}
         <button
           onClick={() => {
             triggerHaptic('selection')
