@@ -1,4 +1,4 @@
-import { CheckCircle2, HelpCircle, Trash2, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock, Trash2, XCircle } from 'lucide-react'
 
 interface CallupRowPlayer {
   name?: string | null
@@ -20,7 +20,7 @@ interface CallupRowProps {
 }
 
 /**
- * Uma linha de convocado (avatar/nº, nome, papéis, estado de RSVP) com as ações rápidas de
+ * Uma linha de convocado (estado de RSVP, nº e nome, papéis) com as ações rápidas de
  * treinador/admin. Partilhado entre o modal de evento da Agenda e o modal de RSVP da Gestão
  * de Eventos, que reimplementavam a mesma linha de forma independente (mesmo
  * handleUpdateCallupStatus chamado nos dois sítios, HTML quase idêntico).
@@ -29,6 +29,10 @@ interface CallupRowProps {
  * botão "Confirmar" se já confirmado); a Gestão de Eventos mostrava sempre os três botões,
  * destacando o ativo. Ficou este segundo padrão para as duas páginas — mostra sempre as
  * ações disponíveis, é mais previsível.
+ *
+ * O nº de camisola aparece uma única vez, junto ao nome (não há avatar/quadrado separado
+ * com o número — era redundante). O círculo de estado à esquerda é sempre o estado de RSVP
+ * (confirmado/recusado/pendente), nunca o número do jogador.
  */
 export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, onConfirm, onDecline, onSetPending, onRemove }: CallupRowProps) {
   const isConfirmed = status === 'confirmed'
@@ -47,16 +51,10 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
               <XCircle size={13} />
             </div>
           ) : (
-            <div className="w-7 h-7 rounded-full bg-amber-400/25 text-amber-300 flex items-center justify-center" title="Pendente">
-              <HelpCircle size={13} />
+            <div className="w-7 h-7 rounded-full bg-amber-400/25 text-amber-300 flex items-center justify-center" title="Pendente — ainda não respondeu">
+              <Clock size={13} />
             </div>
           )}
-        </div>
-
-        <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center shrink-0 overflow-hidden">
-          <span className="text-[11px] font-black text-white">
-            {player?.jersey_number ? `#${player.jersey_number}` : (player?.name ? player.name.charAt(0).toUpperCase() : '?')}
-          </span>
         </div>
 
         <div className="min-w-0">
@@ -100,7 +98,7 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
             title="Colocar como Pendente"
             className={`p-1.5 rounded-lg transition-colors cursor-pointer ${status === 'called' ? 'bg-amber-600 text-white' : 'bg-white/10 hover:bg-amber-500/20 text-amber-300 border border-white/10'}`}
           >
-            <HelpCircle size={13} />
+            <Clock size={13} />
           </button>
           <button
             type="button"

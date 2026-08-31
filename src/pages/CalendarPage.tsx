@@ -2573,11 +2573,12 @@ const CalendarPage: React.FC = () => {
                         {/* Resumo de Quórum como Botões de Filtro Acionáveis */}
                         <div className="space-y-2">
                           <QuorumFilterCards
+                            totalCount={callups.length}
                             confirmedCount={confirmedList.length}
                             pendingCount={pendingList.length}
                             declinedCount={declinedList.length}
                             activeFilter={modalCallupStatusFilter}
-                            onSelect={(f) => setModalCallupStatusFilter(prev => prev === f ? 'all' : f)}
+                            onSelect={setModalCallupStatusFilter}
                           />
 
                           {/* Campo de Pesquisa e Limpeza de Filtros */}

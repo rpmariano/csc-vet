@@ -2094,9 +2094,10 @@ const EventsPage: React.FC = () => {
           <div className="bg-csc-dark text-white rounded-3xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40">
             <button
               onClick={() => setActiveCallupModalEvent(null)}
-              className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-xl hover:bg-white/20 cursor-pointer z-10 bg-white/10 shadow-sm border border-white/10 flex items-center justify-center"
+              title="Fechar"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
             >
-              <X size={20} />
+              <X size={20} className="stroke-[2.5]" />
             </button>
 
             {/* Topo Premium da Persiana/Modal de Dossier & RSVP */}
@@ -2214,54 +2215,15 @@ const EventsPage: React.FC = () => {
 
               return (
                 <div className="space-y-4">
-                  {/* Quorum Metric Cards */}
+                  {/* Cartões de Quórum, também usados como filtro (incluindo "Todos") */}
                   <QuorumFilterCards
+                    totalCount={callups.length}
                     confirmedCount={confirmedList.length}
                     pendingCount={pendingList.length}
                     declinedCount={declinedList.length}
                     activeFilter={rsvpTabFilter}
-                    onSelect={(f) => setRsvpTabFilter(prev => prev === f ? 'all' : f)}
+                    onSelect={setRsvpTabFilter}
                   />
-
-                  {/* Filter Tabs */}
-                  <div className="flex items-center gap-1 border-b border-white/10 pb-2 overflow-x-auto text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setRsvpTabFilter('all')}
-                      className={`px-3 py-1.5 rounded-xl font-black transition-colors ${
-                        rsvpTabFilter === 'all' ? 'bg-csc-gold text-csc-dark' : 'text-white/60 hover:bg-white/10'
-                      }`}
-                    >
-                      Todos ({callups.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRsvpTabFilter('confirmed')}
-                      className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
-                        rsvpTabFilter === 'confirmed' ? 'bg-emerald-700 text-white' : 'text-emerald-300 hover:bg-emerald-500/10'
-                      }`}
-                    >
-                      ✓ Confirmados ({confirmedList.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRsvpTabFilter('called')}
-                      className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
-                        rsvpTabFilter === 'called' ? 'bg-amber-700 text-white' : 'text-amber-300 hover:bg-amber-500/10'
-                      }`}
-                    >
-                      ⏳ Pendentes ({pendingList.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRsvpTabFilter('declined')}
-                      className={`px-3 py-1.5 rounded-xl font-bold transition-colors ${
-                        rsvpTabFilter === 'declined' ? 'bg-red-700 text-white' : 'text-red-300 hover:bg-red-500/10'
-                      }`}
-                    >
-                      ✕ Recusados ({declinedList.length})
-                    </button>
-                  </div>
 
                   {/* Convidar mais elementos à convocatória */}
                   {isCoachOrAdmin && uncalledPlayers.length > 0 && (
