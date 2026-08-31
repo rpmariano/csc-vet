@@ -34,6 +34,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useSearchParams } from 'react-router-dom'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
+import { BottomSheet } from '../components/BottomSheet'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
@@ -206,91 +207,44 @@ const CalendarPage: React.FC = () => {
     onConfirm: () => {}
   })
   
-  // Fluid Bottom Sheet Drag & Physics State
-  const [sheetTranslateY, setSheetTranslateY] = useState(0)
-  const [isDraggingSheet, setIsDraggingSheet] = useState(false)
-  const sheetDragStartRef = React.useRef<{
-    startX: number
-    startY: number
-    startTranslateY: number
-    isTopHandle: boolean
-    lastDeltaX: number
-    lastDeltaY: number
-  } | null>(null)
+  // O arrasto vertical para fechar (e o bloqueio de scroll do fundo) vivem agora
+  // no BottomSheet partilhado; aqui só fica o gesto horizontal específico deste
+  // modal — deslizar entre convocatórias pendentes no carrossel do topo.
   const modalScrollRef = React.useRef<HTMLDivElement>(null)
+  const carouselDragRef = React.useRef<{ startX: number; startY: number; lastDeltaX: number; lastDeltaY: number } | null>(null)
 
-  // Bloqueio rigoroso de scroll de fundo quando o modal esta aberto
   useEffect(() => {
     if (selectedEvent) {
-      const prevOverflow = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
-      setSheetTranslateY(0)
-      setIsDraggingSheet(false)
       setIsModalCallupsExpanded(typeof window !== 'undefined' ? window.innerWidth >= 640 : true)
-      return () => {
-        document.body.style.overflow = prevOverflow
-      }
     }
   }, [selectedEvent])
 
-  const handleSheetTouchStart = (e: React.TouchEvent, isTopHandle: boolean = false) => {
-    const touch = e.touches[0]
-    const scrollTop = modalScrollRef.current ? modalScrollRef.current.scrollTop : 0
-    sheetDragStartRef.current = {
-      startX: touch.clientX,
-      startY: touch.clientY,
-      startTranslateY: sheetTranslateY,
-      isTopHandle,
-      lastDeltaX: 0,
-      lastDeltaY: 0
-    }
-    if (isTopHandle || scrollTop <= 0) {
-      setIsDraggingSheet(true)
-    }
+  const handleCloseEventModal = () => {
+    setSelectedEvent(null)
+    setPlayerSearchTerm('')
+    setModalCallupStatusFilter('all')
   }
 
-  const handleSheetTouchMove = (e: React.TouchEvent) => {
-    if (!sheetDragStartRef.current) return
+  const handleCarouselTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const touch = e.touches[0]
-    const deltaX = touch.clientX - sheetDragStartRef.current.startX
-    const deltaY = touch.clientY - sheetDragStartRef.current.startY
-    sheetDragStartRef.current.lastDeltaX = deltaX
-    sheetDragStartRef.current.lastDeltaY = deltaY
-
-    // Se o movimento for vertical e no topo da persiana
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
-      if (deltaY > 0 && isDraggingSheet) {
-        e.stopPropagation()
-        setSheetTranslateY(deltaY)
-      } else if (sheetTranslateY > 0) {
-        e.stopPropagation()
-        setSheetTranslateY(Math.max(0, sheetDragStartRef.current.startTranslateY + deltaY))
-      }
-    }
+    carouselDragRef.current = { startX: touch.clientX, startY: touch.clientY, lastDeltaX: 0, lastDeltaY: 0 }
   }
 
-  const handleSheetTouchEnd = () => {
-    if (!sheetDragStartRef.current) return
-    const { lastDeltaX, lastDeltaY } = sheetDragStartRef.current
-    setIsDraggingSheet(false)
+  const handleCarouselTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!carouselDragRef.current) return
+    const touch = e.touches[0]
+    carouselDragRef.current.lastDeltaX = touch.clientX - carouselDragRef.current.startX
+    carouselDragRef.current.lastDeltaY = touch.clientY - carouselDragRef.current.startY
+  }
 
-    // 1. Fechar persiana se arrastou para baixo mais de 110px
-    if (sheetTranslateY > 110) {
-      setSheetTranslateY(window.innerHeight || 800)
-      setTimeout(() => {
-        setSelectedEvent(null)
-        setSheetTranslateY(0)
-        setPlayerSearchTerm('')
-        setModalCallupStatusFilter('all')
-      }, 220)
-      sheetDragStartRef.current = null
-      return
-    }
+  const handleCarouselTouchEnd = () => {
+    const drag = carouselDragRef.current
+    carouselDragRef.current = null
+    if (!drag || !selectedEvent) return
+    const { lastDeltaX, lastDeltaY } = drag
 
-    setSheetTranslateY(0)
-
-    // 2. Transição horizontal por Slide / Swipe no Carrossel (exclusivo para eventos pendentes no alerta de convocatória)
-    if (selectedEvent && Math.abs(lastDeltaX) > 40 && Math.abs(lastDeltaX) > Math.abs(lastDeltaY) * 1.1) {
+    // Slide / swipe horizontal no carrossel (exclusivo para eventos pendentes no alerta de convocatória)
+    if (Math.abs(lastDeltaX) > 40 && Math.abs(lastDeltaX) > Math.abs(lastDeltaY) * 1.1) {
       if (myPendingEvents.length > 1 && myPendingEvents.some(pe => pe.id === selectedEvent.id)) {
         const curIdx = myPendingEvents.findIndex(e => e.id === selectedEvent.id)
         const activeIdx = curIdx >= 0 ? curIdx : 0
@@ -298,20 +252,16 @@ const CalendarPage: React.FC = () => {
         if (lastDeltaX < -40) {
           // Slide para a Esquerda (Avançar para o Próximo Evento Pendente)
           const nextIdx = (activeIdx + 1) % myPendingEvents.length
-          const nextEv = myPendingEvents[nextIdx]
-          setSelectedEvent(nextEv)
+          setSelectedEvent(myPendingEvents[nextIdx])
           if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
         } else if (lastDeltaX > 40) {
           // Slide para a Direita (Retroceder para o Evento Pendente Anterior)
           const prevIdx = (activeIdx - 1 + myPendingEvents.length) % myPendingEvents.length
-          const prevEv = myPendingEvents[prevIdx]
-          setSelectedEvent(prevEv)
+          setSelectedEvent(myPendingEvents[prevIdx])
           if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
         }
       }
     }
-
-    sheetDragStartRef.current = null
   }
 
   // Form states
@@ -2091,56 +2041,25 @@ const CalendarPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Detalhes Evento & Convocatória (Estilo Bottom Sheet / Persiana com Física Fluida) */}
+      {/* Modal Detalhes Evento & Convocatória (persiana partilhada) */}
       {selectedEvent && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 z-50 overflow-hidden select-none animate-fade-in"
-          onMouseDown={(e) => {
-            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-            if (e.target === e.currentTarget) {
-              setSelectedEvent(null)
-              setSheetTranslateY(0)
-              setPlayerSearchTerm('')
-              setModalCallupStatusFilter('all')
-            }
-          }}
+        <BottomSheet
+          isOpen={!!selectedEvent}
+          onClose={handleCloseEventModal}
+          ref={modalScrollRef}
+          tone="dark"
+          size="7xl"
+          showCloseButton={false}
+          ariaLabel="Detalhe do evento"
+          onContentTouchStart={handleCarouselTouchStart}
+          onContentTouchMove={handleCarouselTouchMove}
+          onContentTouchEnd={handleCarouselTouchEnd}
         >
-          <div 
-            ref={modalScrollRef}
-            onTouchStart={(e) => handleSheetTouchStart(e, false)}
-            onTouchMove={handleSheetTouchMove}
-            onTouchEnd={handleSheetTouchEnd}
-            style={{
-              transform: typeof window !== 'undefined' && window.innerWidth < 640 ? `translateY(${sheetTranslateY}px)` : undefined,
-              transition: isDraggingSheet ? 'none' : 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)'
-            }}
-            className="bg-csc-dark text-white rounded-t-3xl sm:rounded-3xl max-w-6xl xl:max-w-7xl w-full p-4 sm:p-8 relative max-h-[90vh] sm:max-h-[88vh] overflow-y-auto shadow-2xl space-y-4 overscroll-contain"
-          >
-            {/* Persiana Top Drag Handle no Mobile (Zona de Toque Ampla e Fluida) */}
-            <div
-              className="sm:hidden flex items-center justify-center pt-1 pb-3 cursor-grab active:cursor-grabbing touch-none select-none"
-              onTouchStart={(e) => handleSheetTouchStart(e, true)}
-              onTouchMove={handleSheetTouchMove}
-              onTouchEnd={handleSheetTouchEnd}
-              onClick={() => {
-                setSelectedEvent(null)
-                setSheetTranslateY(0)
-                setPlayerSearchTerm('')
-                setModalCallupStatusFilter('all')
-              }}
-            >
-              <div className="w-12 h-1.5 bg-white/25 rounded-full hover:bg-white/40 active:bg-white/50 transition-colors" />
-            </div>
-
+          <div className="space-y-4 select-none">
             {/* Botão Fechar no Topo com Alto Contraste e Visibilidade */}
             <button
               type="button"
-              onClick={() => {
-                setSelectedEvent(null)
-                setSheetTranslateY(0)
-                setPlayerSearchTerm('')
-                setModalCallupStatusFilter('all')
-              }}
+              onClick={handleCloseEventModal}
               className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90"
               title="Fechar"
             >
@@ -2659,7 +2578,7 @@ const CalendarPage: React.FC = () => {
 
             </div>
           </div>
-        </div>
+        </BottomSheet>
       )}
 
       {/* Modal Criar Evento com Seleção de Convocatória (Versão Larga 2 Colunas) */}
