@@ -118,8 +118,11 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         setHomeScore(event?.home_score ?? null)
         setAwayScore(event?.away_score ?? null)
 
-        // If coach/admin and no score set yet, default to edit mode
-        if (isCoachOrAdmin && (event?.home_score === null || event?.home_score === undefined)) {
+        // Se coach/admin, sem resultado ainda, e o jogo já se realizou, entra logo em modo de edição.
+        // Jogos futuros nunca entram em modo de edição — ainda não há nada para reportar.
+        const hasScoreAlready = event?.home_score !== null && event?.home_score !== undefined
+        const alreadyPlayed = !event?.date_time || new Date(event.date_time).getTime() <= Date.now()
+        if (isCoachOrAdmin && !hasScoreAlready && alreadyPlayed) {
           setIsEditing(true)
         } else {
           setIsEditing(false)
@@ -326,6 +329,10 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const totalYellows = playerStats.reduce((sum, p) => sum + p.yellow_cards, 0)
   const totalReds = playerStats.reduce((sum, p) => sum + p.red_cards, 0)
 
+  // Um jogo ainda não realizado (e sem resultado já registado) não tem ficha para mostrar ou editar.
+  const hasScore = event?.home_score !== null && event?.home_score !== undefined
+  const isFutureMatch = !hasScore && !!event?.date_time && new Date(event.date_time).getTime() > Date.now()
+
   return (
     <div className="fixed inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 z-50 overflow-y-auto animate-fade-in">
       <div className="bg-csc-dark text-white rounded-3xl max-w-3xl w-full p-5 sm:p-7 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-csc-gold/60 space-y-5">
@@ -365,7 +372,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             </p>
           </div>
 
-          {isCoachOrAdmin && (
+          {isCoachOrAdmin && !isFutureMatch && (
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
@@ -393,6 +400,17 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           <div className="flex flex-col items-center justify-center py-16">
             <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-csc-gold mb-2"></div>
             <p className="text-xs font-bold text-white/50">A carregar dados do jogo...</p>
+          </div>
+        ) : isFutureMatch ? (
+          <div className="p-6 sm:p-8 bg-white/5 border border-white/10 rounded-3xl text-center space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center mx-auto text-2xl">
+              ⏳
+            </div>
+            <h3 className="text-sm font-black text-white">Este jogo ainda não se realizou</h3>
+            <p className="text-xs text-white/50 max-w-sm mx-auto leading-relaxed">
+              A ficha oficial — resultado, esquema tático, golos, cartões e MVP — fica disponível
+              para consulta e preenchimento depois do apito inicial.
+            </p>
           </div>
         ) : (
           <div className="space-y-6">

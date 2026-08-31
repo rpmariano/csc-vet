@@ -129,6 +129,8 @@ interface Event {
     initials: string
     logo_url: string
   }
+  home_score?: number | null
+  away_score?: number | null
 }
 
 interface CallupWithPlayer {
@@ -2239,8 +2241,8 @@ const CalendarPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Botão Ficha de Jogo (quando Jogo) */}
-                {selectedEvent.type === 'match' && (
+                {/* Botão Ficha de Jogo (quando Jogo já realizado ou com resultado registado) */}
+                {selectedEvent.type === 'match' && (new Date(selectedEvent.date_time).getTime() <= Date.now() || (selectedEvent.home_score !== null && selectedEvent.home_score !== undefined)) && (
                   <button
                     type="button"
                     onClick={() => setIsMatchReportOpen(true)}
@@ -2345,13 +2347,15 @@ const CalendarPage: React.FC = () => {
                         <span className="font-bold">
                           Condição: <strong className="text-white">{isAway ? 'Fora' : selectedEvent.home_away === 'neutral' ? 'Campo Neutro' : 'Casa'}</strong>
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => setIsMatchReportOpen(true)}
-                          className="px-2.5 py-1 bg-csc-gold hover:brightness-105 text-csc-dark rounded-full text-[11px] font-black flex items-center gap-1 cursor-pointer transition-all active:scale-95 shrink-0"
-                        >
-                          <span>Ficha de Jogo</span>
-                        </button>
+                        {(new Date(selectedEvent.date_time).getTime() <= Date.now() || (selectedEvent.home_score !== null && selectedEvent.home_score !== undefined)) && (
+                          <button
+                            type="button"
+                            onClick={() => setIsMatchReportOpen(true)}
+                            className="px-2.5 py-1 bg-csc-gold hover:brightness-105 text-csc-dark rounded-full text-[11px] font-black flex items-center gap-1 cursor-pointer transition-all active:scale-95 shrink-0"
+                          >
+                            <span>Ficha de Jogo</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
