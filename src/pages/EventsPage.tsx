@@ -36,7 +36,7 @@ import { MatchReportModal, parseMatchReportMetadata, buildDescriptionWithMatchRe
 import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
 import { toast } from '../context/ToastContext'
-import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
+import { formatClubSigla, formatOpponentSigla, hasMatchReport } from './CalendarPage'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -435,6 +435,10 @@ const EventsPage: React.FC = () => {
   }
 
   const openEditModal = (ev: Event) => {
+    if (hasMatchReport(ev)) {
+      toast.error('Este jogo já tem ficha de jogo lançada — o evento já não pode ser editado.')
+      return
+    }
     setEditingEvent(ev)
     setEditTitle(ev.title)
     setEditType(ev.type)
@@ -2045,13 +2049,15 @@ const EventsPage: React.FC = () => {
 
                         {isCoachOrAdmin && (
                           <div className="flex gap-1 shrink-0">
-                            <button
-                              onClick={() => openEditModal(event)}
-                              className="text-white/65 hover:text-blue-300 p-1.5 rounded-xl hover:bg-blue-500/10 transition-colors cursor-pointer"
-                              title="Editar evento"
-                            >
-                              <Edit size={16} />
-                            </button>
+                            {!hasMatchReport(event) && (
+                              <button
+                                onClick={() => openEditModal(event)}
+                                className="text-white/65 hover:text-blue-300 p-1.5 rounded-xl hover:bg-blue-500/10 transition-colors cursor-pointer"
+                                title="Editar evento"
+                              >
+                                <Edit size={16} />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleDeleteEvent(event.id)}
                               className="text-white/65 hover:text-red-300 p-1.5 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"

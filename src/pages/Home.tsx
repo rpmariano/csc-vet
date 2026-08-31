@@ -17,7 +17,7 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
-import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
+import { formatClubSigla, formatOpponentSigla, hasMatchReport } from './CalendarPage'
 import { triggerHaptic } from '../utils/haptics'
 
 interface Event {
@@ -32,6 +32,7 @@ interface Event {
   home_away?: 'home' | 'away' | 'neutral'
   is_friendly?: boolean
   is_active?: boolean
+  home_score?: number | null
   tournament_id?: string | null
   tournament?: {
     name: string
@@ -163,6 +164,12 @@ const Home: React.FC = () => {
       try {
         const nowStr = new Date().toISOString()
 
+        // Um jogo mostra-se na Home até ao fim do próprio dia — no dia seguinte desaparece,
+        // já teve o seu momento e passa a viver apenas no Calendário / Ficha de Jogo.
+        const startOfToday = new Date()
+        startOfToday.setHours(0, 0, 0, 0)
+        const startOfTodayStr = startOfToday.toISOString()
+
         // 0. Fetch fields
         const { data: fieldsData } = await supabase
           .from('fields')
@@ -171,25 +178,16 @@ const Home: React.FC = () => {
           setFields(fieldsData)
         }
 
-        // 1. Fetch upcoming matches
+        // 1. Fetch upcoming matches (inclui jogos de hoje, mesmo já a decorrer ou terminados;
+        // exclui jogos de dias anteriores)
         const { data: matches } = await supabase
           .from('events')
           .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
           .eq('type', 'match')
-          .gte('date_time', nowStr)
+          .gte('date_time', startOfTodayStr)
           .order('date_time', { ascending: true })
 
-        let resolvedMatches: Event[] = (matches && matches.length > 0) ? (matches as Event[]) : []
-        if (resolvedMatches.length === 0) {
-          const { data: allM } = await supabase
-            .from('events')
-            .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
-            .eq('type', 'match')
-            .order('date_time', { ascending: true })
-          if (allM && allM.length > 0) {
-            resolvedMatches = allM as Event[]
-          }
-        }
+        const resolvedMatches: Event[] = (matches as Event[]) || []
         // Filtrar apenas jogos ativos (publicados)
         setUpcomingMatches(resolvedMatches.filter(m => m.is_active !== false))
 
@@ -245,6 +243,11 @@ const Home: React.FC = () => {
   }, [profile])
 
   const handleCallupResponse = async (callupId: string, status: 'confirmed' | 'declined') => {
+    const callup = myCallups.find(c => c.id === callupId)
+    if (hasMatchReport(callup?.event)) {
+      toast.error('Este jogo já tem ficha de jogo lançada — a convocatória está fechada.')
+      return
+    }
     triggerHaptic(status === 'confirmed' ? 'success' : 'warning')
     try {
       const { error } = await supabase.from('callups').update({ status }).eq('id', callupId)
@@ -278,10 +281,11 @@ const Home: React.FC = () => {
   const isCallupPendingResponse = (callup: Callup) => {
     if (callup.status !== 'called') return false
     const ev = callup.event
+    if (hasMatchReport(ev)) return false
     if (!ev || !ev.date_time) return true
     const eventTime = new Date(ev.date_time).getTime()
     const now = new Date().getTime()
-    if (eventTime < now) return false 
+    if (eventTime < now) return false
 
     if (ev.type === 'practice') {
       const sixDaysMs = 6 * 24 * 60 * 60 * 1000
@@ -506,7 +510,23 @@ const Home: React.FC = () => {
 
                 {/* RSVP: existe uma vez na app, e é aqui — barra dourada de bordo a bordo */}
                 {currentMatchCallup && (
-                  currentMatchCallup.status === 'called' ? (
+                  hasMatchReport(currentMatch) ? (
+                    currentMatchCallup.status === 'called' ? (
+                      <div className="relative bg-white/10 px-5 py-3.5 flex items-center justify-center gap-3">
+                        <span className="text-sm text-white/80">Jogo com ficha lançada — convocatória fechada</span>
+                      </div>
+                    ) : (
+                      <div className="relative bg-white/10 px-5 py-3.5 flex items-center justify-center gap-3">
+                        <span className="text-sm text-white/80">A tua presença</span>
+                        <span className={`inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-full ${
+                          currentMatchCallup.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentMatchCallup.status === 'confirmed' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                          {currentMatchCallup.status === 'confirmed' ? 'Confirmada' : 'Recusada'}
+                        </span>
+                      </div>
+                    )
+                  ) : currentMatchCallup.status === 'called' ? (
                     <div className="relative bg-csc-gold px-5 py-3.5 flex items-center justify-center gap-3">
                       <span className="text-sm font-bold text-csc-dark">Vais estar presente?</span>
                       <button
