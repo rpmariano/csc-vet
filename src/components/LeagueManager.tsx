@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Trophy, Trash2, Shield, Plus, X } from 'lucide-react'
 import { toast } from '../context/ToastContext'
+import { ConfirmModal } from './ConfirmModal'
 
 interface LeagueManagerProps {
   tournamentId: string
@@ -32,6 +33,19 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   const [isNewGroupModalOpen, setIsNewGroupModalOpen] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupPhase, setNewGroupPhase] = useState('1')
+
+  // Modal genérico de confirmação — substitui os confirm() nativos do browser
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean
+    title: string
+    description?: string
+    onConfirm: () => void | Promise<void>
+  }>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {}
+  })
+  const closeConfirmModal = () => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
 
   useEffect(() => {
     fetchData()
@@ -90,10 +104,17 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     fetchData()
   }
 
-  const handleRemoveTeam = async (id: string) => {
-    if (!confirm('Remover esta equipa do grupo?')) return
-    await supabase.from('tournament_teams').delete().eq('id', id)
-    fetchData()
+  const handleRemoveTeam = (id: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Remover Equipa do Grupo',
+      description: 'Esta equipa deixa de fazer parte do grupo. Os resultados já registados não são apagados.',
+      onConfirm: async () => {
+        closeConfirmModal()
+        await supabase.from('tournament_teams').delete().eq('id', id)
+        fetchData()
+      }
+    })
   }
 
   const handleAddMatch = async () => {
@@ -122,10 +143,17 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     fetchData()
   }
 
-  const handleRemoveMatch = async (id: string) => {
-    if (!confirm('Apagar este resultado?')) return
-    await supabase.from('tournament_matches').delete().eq('id', id)
-    fetchData()
+  const handleRemoveMatch = (id: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Apagar Resultado',
+      description: 'Este resultado é apagado e deixa de contar para a classificação do grupo.',
+      onConfirm: async () => {
+        closeConfirmModal()
+        await supabase.from('tournament_matches').delete().eq('id', id)
+        fetchData()
+      }
+    })
   }
 
   return (
@@ -496,6 +524,14 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmModalConfig.isOpen}
+        title={confirmModalConfig.title}
+        description={confirmModalConfig.description}
+        onConfirm={confirmModalConfig.onConfirm}
+        onCancel={closeConfirmModal}
+      />
     </div>
   )
 }
