@@ -36,6 +36,7 @@ import { MatchReportModal, parseMatchReportMetadata, buildDescriptionWithMatchRe
 import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
 import { toast } from '../context/ToastContext'
+import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -664,7 +665,7 @@ const EventsPage: React.FC = () => {
       const [evRes, fRes, oRes, tRes, profRes, callRes, tpRes, suspRes] = await Promise.all([
         supabase.from('events').select('*').order('date_time', { ascending: false }),
         supabase.from('fields').select('id, name, address'),
-        supabase.from('opponents').select('id, name, home_field_id'),
+        supabase.from('opponents').select('id, name, initials, home_field_id'),
         supabase.from('tournaments').select('id, name, season, rules'),
         supabase.from('profiles').select('*').order('name', { ascending: true }),
         fetchAllCallups('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)'),
@@ -1290,6 +1291,24 @@ const EventsPage: React.FC = () => {
     if (!id) return ''
     const o = opponents.find(o => o.id === id)
     return o ? o.name : ''
+  }
+
+  // Título da lista de eventos. `event.title` de um jogo já vem como "Jogo vs <adversário>"
+  // (ver handleCreateEvent/handleConfirmSaveEdit) — juntar "CSC vs <adversário> • <title>"
+  // duplicava o nome do adversário duas vezes. Mostra antes as siglas (como na Home e na
+  // Agenda) seguidas da competição.
+  const getEventHeading = (ev: Event) => {
+    if (ev.type !== 'match' || !ev.opponent_id) return ev.title
+    const opponent = opponents.find(o => o.id === ev.opponent_id)
+    const cscSigla = formatClubSigla(clubSettings?.initials)
+    const oppSigla = formatOpponentSigla(opponent)
+    const isAway = ev.home_away === 'away'
+    const leftSigla = isAway ? oppSigla : cscSigla
+    const rightSigla = isAway ? cscSigla : oppSigla
+    const competitionLabel = ev.is_friendly
+      ? 'Jogo Amigável'
+      : (tournaments.find(t => t.id === ev.tournament_id)?.name || 'Jogo Oficial')
+    return `${leftSigla} vs ${rightSigla} • ${competitionLabel}`
   }
 
   const currentLocationStr = getActiveLocationString()
@@ -2012,7 +2031,7 @@ const EventsPage: React.FC = () => {
                         <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-black text-white text-base leading-tight">
-                              {event.type === 'match' && event.opponent_id ? `CSC vs ${getOpponentName(event.opponent_id)} • ${event.title}` : event.title}
+                              {getEventHeading(event)}
                             </h4>
                             {event.is_active === false && (
                               <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
