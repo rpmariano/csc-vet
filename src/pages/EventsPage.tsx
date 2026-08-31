@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { 
   Plus, 
   Trash2, 
@@ -249,6 +249,9 @@ const EventsPage: React.FC = () => {
   const [editHomeAway, setEditHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
   const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
   const [isBatchCalling, setIsBatchCalling] = useState(false)
+  // Guarda síncrona (não é estado) contra duplo-clique: entre o clique e o próximo repaint,
+  // `isBatchCalling` (estado) ainda não travou o botão, o que já causou convocações em duplicado.
+  const isBatchCallingRef = useRef(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
   const [unsavedModalTarget, setUnsavedModalTarget] = useState<'edit' | 'quickField' | 'quickOpp' | null>(null)
@@ -2484,7 +2487,8 @@ const EventsPage: React.FC = () => {
                 const editUncalledPlayers = eligibleMembers.filter(p => !isMemberCalled(p))
 
                 const handleEditAddAll = async () => {
-                  if (editUncalledPlayers.length === 0 || isBatchCalling) return
+                  if (editUncalledPlayers.length === 0 || isBatchCallingRef.current) return
+                  isBatchCallingRef.current = true
                   setIsBatchCalling(true)
                   try {
                     const validIds = await ensurePlayerIdsForSupabase(editUncalledPlayers.map(p => p.id), allPlayers)
@@ -2513,17 +2517,25 @@ const EventsPage: React.FC = () => {
                         }
                       }
                       await fetchData()
-                      toast.success('Todos os membros elegíveis foram convocados com sucesso!')
+                      // Mensagem com a contagem real inserida, não uma afirmação genérica de "todos" — se
+                      // um clique duplo ou uma corrida com outra ação já tinha adicionado alguns entretanto,
+                      // o toast até agora dizia sempre "sucesso total" mesmo quando só entrou 1.
+                      toast.success(
+                        toInsert.length > 0
+                          ? `${toInsert.length} membro(s) convocado(s) com sucesso!`
+                          : 'Já estavam todos convocados.'
+                      )
                     }
                   } catch (err: any) {
                     toast.error('Erro ao convocar todos: ' + err.message)
                   } finally {
+                    isBatchCallingRef.current = false
                     setIsBatchCalling(false)
                   }
                 }
 
                 const handleEditRemoveAll = () => {
-                  if (currentCallups.length === 0 || isBatchCalling) return
+                  if (currentCallups.length === 0 || isBatchCallingRef.current) return
                   setConfirmModalConfig({
                     isOpen: true,
                     title: 'Limpar Todos os Convocados',
@@ -2532,6 +2544,8 @@ const EventsPage: React.FC = () => {
                     cancelText: 'Cancelar',
                     variant: 'danger',
                     onConfirm: async () => {
+                      if (isBatchCallingRef.current) return
+                      isBatchCallingRef.current = true
                       setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
                       setIsBatchCalling(true)
                       try {
@@ -2542,6 +2556,7 @@ const EventsPage: React.FC = () => {
                       } catch (err: any) {
                         toast.error('Erro ao remover todos: ' + err.message)
                       } finally {
+                        isBatchCallingRef.current = false
                         setIsBatchCalling(false)
                       }
                     }
