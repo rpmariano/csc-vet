@@ -333,6 +333,14 @@ const CalendarPage: React.FC = () => {
   const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<number[]>([3]) // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
 
+  // Evita duplo-submit do formulário de criação de evento (duplo clique / duplo toque em
+  // ligação lenta insere o evento e as convocatórias duas vezes — ver handleAddEvent). O
+  // estado serve para desativar o botão na UI; o ref é a guarda síncrona real — entre o
+  // clique e o próximo repaint, o estado ainda não travou o botão (mesmo padrão já usado
+  // em isBatchCallingRef, noutro sítio desta página, para o mesmo tipo de bug).
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false)
+  const isCreatingEventRef = useRef(false)
+
   // Edit Event states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
@@ -961,6 +969,13 @@ const CalendarPage: React.FC = () => {
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Reentrância: um duplo clique/toque (ou o fluxo de "Guardar e Sair" do modal de alterações
+    // não guardadas) chamava esta função outra vez enquanto o primeiro pedido ainda estava em
+    // curso, criando o evento e as convocatórias duas vezes. O estado (isCreatingEvent) não
+    // chega sozinho — só atualiza no próximo render — por isso a guarda real é o ref.
+    if (isCreatingEventRef.current) return
+    isCreatingEventRef.current = true
+    setIsCreatingEvent(true)
     try {
       let createdEventsList: Event[] = []
 
@@ -1098,6 +1113,9 @@ const CalendarPage: React.FC = () => {
       fetchEventsAndData()
     } catch (err: any) {
       toast.error('Erro ao criar evento: ' + (err.message || 'Erro'))
+    } finally {
+      isCreatingEventRef.current = false
+      setIsCreatingEvent(false)
     }
   }
 
@@ -3183,10 +3201,11 @@ const CalendarPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95"
+                  disabled={isCreatingEvent}
+                  className="px-6 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus size={16} className="text-csc-dark" />
-                  <span>Criar Evento</span>
+                  <span>{isCreatingEvent ? 'A criar...' : 'Criar Evento'}</span>
                 </button>
               </div>
             </form>

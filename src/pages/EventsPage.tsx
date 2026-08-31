@@ -253,6 +253,11 @@ const EventsPage: React.FC = () => {
   // `isBatchCalling` (estado) ainda não travou o botão, o que já causou convocações em duplicado.
   const isBatchCallingRef = useRef(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
+  // Evita duplo-submit ao criar/publicar um evento (duplo clique/toque em ligação lenta
+  // criava o evento e enviava a convocatória duas vezes). Mesmo padrão do isBatchCallingRef
+  // acima: o estado só serve para desativar o botão na UI, a guarda real é o ref síncrono.
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false)
+  const isCreatingEventRef = useRef(false)
   const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
   const [unsavedModalTarget, setUnsavedModalTarget] = useState<'edit' | 'quickField' | 'quickOpp' | null>(null)
   // Ativação e Publicação de Convocatórias
@@ -917,9 +922,17 @@ const EventsPage: React.FC = () => {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Reentrância: sem esta guarda, um duplo clique/toque no botão "Publicar Evento e Enviar
+    // Convocatória" (sem `disabled` durante o pedido) chamava esta função duas vezes antes do
+    // primeiro pedido terminar, criando o evento e a convocatória duplicados.
+    if (isCreatingEventRef.current) return
+    isCreatingEventRef.current = true
+    setIsCreatingEvent(true)
     setSuccessMessage(null)
 
     if (!eventDate || !eventTime) {
+      isCreatingEventRef.current = false
+      setIsCreatingEvent(false)
       toast.warning('Por favor selecione a Data e a Hora do evento.')
       return
     }
@@ -1109,6 +1122,9 @@ const EventsPage: React.FC = () => {
     } catch (err: any) {
       console.error(err)
       toast.error("Erro ao criar evento: " + (err.message || 'Verifique a base de dados'))
+    } finally {
+      isCreatingEventRef.current = false
+      setIsCreatingEvent(false)
     }
   }
 
@@ -1759,13 +1775,16 @@ const EventsPage: React.FC = () => {
 
             <button
               type="submit"
-              className={`w-full py-3.5 text-white rounded-2xl font-black transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 text-sm ${
-                isActiveOnCreate 
-                  ? 'bg-csc-dark hover:bg-csc-dark/85' 
+              disabled={isCreatingEvent}
+              className={`w-full py-3.5 text-white rounded-2xl font-black transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                isActiveOnCreate
+                  ? 'bg-csc-dark hover:bg-csc-dark/85'
                   : 'bg-amber-700 hover:bg-amber-800'
               }`}
             >
-              {isActiveOnCreate ? (
+              {isCreatingEvent ? (
+                <span>A processar...</span>
+              ) : isActiveOnCreate ? (
                 <>
                   <Check size={18} className="text-csc-gold" />
                   <span>Publicar Evento e Enviar Convocatória</span>
