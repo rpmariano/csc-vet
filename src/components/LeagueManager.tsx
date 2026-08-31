@@ -189,14 +189,21 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         <div className="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between bg-gradient-to-r from-gray-50 to-white gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-csc-dark/10 text-csc-dark flex items-center justify-center">
-              <Trophy size={20} />
+            <div className="w-10 h-10 rounded-2xl bg-csc-dark/10 text-csc-dark flex items-center justify-center overflow-hidden shrink-0">
+              {tournament?.image_url ? (
+                <img src={tournament.image_url} alt="" className="w-full h-full object-contain" />
+              ) : (
+                <Trophy size={20} />
+              )}
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-black text-gray-900 leading-tight">
                 Gestão da Liga
               </h2>
               <p className="text-sm font-bold text-gray-500">{tournament?.name} {tournament?.season}</p>
+              {tournament?.organizer_name && (
+                <p className="text-xs font-semibold text-gray-400">Organização: {tournament.organizer_name}</p>
+              )}
             </div>
           </div>
           

@@ -81,6 +81,8 @@ interface Tournament {
   season: string
   status: 'agendado' | 'ativo' | 'terminado'
   rules?: TournamentRules
+  organizer_name?: string | null
+  image_url?: string | null
 }
 
 type TabType = 'club' | 'fields' | 'opponents' | 'tournaments'
@@ -141,12 +143,17 @@ const AdminDashboard: React.FC = () => {
   const [tourName, setTourName] = useState('')
   const [tourSeason, setTourSeason] = useState('')
   const [tourStatus, setTourStatus] = useState<'agendado' | 'ativo' | 'terminado'>('agendado')
+  const [tourOrganizerName, setTourOrganizerName] = useState('')
+  const [tourImage, setTourImage] = useState<File | null>(null)
+  const [existingTourImageUrl, setExistingTourImageUrl] = useState<string | null>(null)
+  const [uploadingTourImage, setUploadingTourImage] = useState(false)
   const [tourRules, setTourRules] = useState<TournamentRules>(DEFAULT_TOURNAMENT_RULES)
   const [tourPlayers, setTourPlayers] = useState<string[]>([])
   const [initialTourState, setInitialTourState] = useState({
     name: '',
     season: '',
     status: 'agendado' as 'agendado' | 'ativo' | 'terminado',
+    organizerName: '',
     rules: DEFAULT_TOURNAMENT_RULES,
     players: [] as string[]
   })
@@ -515,6 +522,8 @@ const AdminDashboard: React.FC = () => {
       tourName !== initialTourState.name ||
       tourSeason !== initialTourState.season ||
       tourStatus !== initialTourState.status ||
+      tourOrganizerName !== initialTourState.organizerName ||
+      tourImage !== null ||
       JSON.stringify(tourRules) !== JSON.stringify(initialTourState.rules) ||
       playersChanged
     )
@@ -525,9 +534,12 @@ const AdminDashboard: React.FC = () => {
     setTourName('')
     setTourSeason('')
     setTourStatus('agendado')
+    setTourOrganizerName('')
+    setTourImage(null)
+    setExistingTourImageUrl(null)
     setTourRules(DEFAULT_TOURNAMENT_RULES)
     setTourPlayers([])
-    setInitialTourState({ name: '', season: '', status: 'agendado', rules: DEFAULT_TOURNAMENT_RULES, players: [] })
+    setInitialTourState({ name: '', season: '', status: 'agendado', organizerName: '', rules: DEFAULT_TOURNAMENT_RULES, players: [] })
     setIsTourModalOpen(true)
   }
 
@@ -536,11 +548,14 @@ const AdminDashboard: React.FC = () => {
     setTourName(t.name)
     setTourSeason(t.season || '')
     setTourStatus(t.status)
+    setTourOrganizerName(t.organizer_name || '')
+    setTourImage(null)
+    setExistingTourImageUrl(t.image_url || null)
     const currentRules = t.rules || DEFAULT_TOURNAMENT_RULES
     setTourRules(currentRules)
 
     setTourPlayers([])
-    setInitialTourState({ name: t.name, season: t.season || '', status: t.status, rules: currentRules, players: [] })
+    setInitialTourState({ name: t.name, season: t.season || '', status: t.status, organizerName: t.organizer_name || '', rules: currentRules, players: [] })
     setIsTourModalOpen(true)
 
     // Fetch players
@@ -572,30 +587,51 @@ const AdminDashboard: React.FC = () => {
       return
     }
 
-    const payload = { name: tourName.trim(), season: tourSeason.trim(), status: tourStatus, rules: tourRules }
+    setUploadingTourImage(true)
+    let publicImageUrl: string | null = existingTourImageUrl
 
-    if (editingTourId) {
-      const { error } = await supabase.from('tournaments').update(payload).eq('id', editingTourId)
-      if (error) {
-        toast.error('Erro ao atualizar torneio: ' + error.message)
-        return
-      }
-      
-      // Update players: remove all and reinsert (simple approach) or diff
-      await supabase.from('tournament_players').delete().eq('tournament_id', editingTourId)
-      if (tourPlayers.length > 0) {
-        const inserts = tourPlayers.map(pid => ({ tournament_id: editingTourId, player_id: pid }))
-        await supabase.from('tournament_players').insert(inserts)
+    try {
+      if (tourImage) {
+        const fileExt = tourImage.name.split('.').pop()
+        const fileName = `tournament_${Math.random()}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('club_assets')
+          .upload(fileName, tourImage, { upsert: true })
+
+        if (uploadError) throw uploadError
+
+        const { data } = supabase.storage.from('club_assets').getPublicUrl(fileName)
+        publicImageUrl = data.publicUrl
       }
 
-      toast.success('Torneio atualizado com sucesso!')
-      setIsTourModalOpen(false)
-      fetchData()
-    } else {
-      const { data, error } = await supabase.from('tournaments').insert([payload]).select().single()
-      if (error) {
-        toast.error('Erro ao criar torneio: ' + error.message)
+      const payload = {
+        name: tourName.trim(),
+        season: tourSeason.trim(),
+        status: tourStatus,
+        organizer_name: tourOrganizerName.trim() || null,
+        image_url: publicImageUrl,
+        rules: tourRules
+      }
+
+      if (editingTourId) {
+        const { error } = await supabase.from('tournaments').update(payload).eq('id', editingTourId)
+        if (error) throw error
+
+        // Update players: remove all and reinsert (simple approach) or diff
+        await supabase.from('tournament_players').delete().eq('tournament_id', editingTourId)
+        if (tourPlayers.length > 0) {
+          const inserts = tourPlayers.map(pid => ({ tournament_id: editingTourId, player_id: pid }))
+          await supabase.from('tournament_players').insert(inserts)
+        }
+
+        toast.success('Torneio atualizado com sucesso!')
+        setIsTourModalOpen(false)
+        fetchData()
       } else {
+        const { data, error } = await supabase.from('tournaments').insert([payload]).select().single()
+        if (error) throw error
+
         if (data && tourPlayers.length > 0) {
           const inserts = tourPlayers.map(pid => ({ tournament_id: data.id, player_id: pid }))
           await supabase.from('tournament_players').insert(inserts)
@@ -604,6 +640,10 @@ const AdminDashboard: React.FC = () => {
         setIsTourModalOpen(false)
         fetchData()
       }
+    } catch (err: any) {
+      toast.error('Erro ao guardar torneio: ' + (err.message || 'Erro'))
+    } finally {
+      setUploadingTourImage(false)
     }
   }
 
@@ -1530,6 +1570,38 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                  Empresa Organizadora
+                </label>
+                <input
+                  type="text"
+                  value={tourOrganizerName}
+                  onChange={e => setTourOrganizerName(e.target.value)}
+                  placeholder="Ex: Associação de Futebol de Lisboa"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                  Imagem do Torneio
+                </label>
+                {existingTourImageUrl && !tourImage && (
+                  <div className="flex items-center gap-3 mb-2 p-2 bg-white/5 border border-white/10 rounded-xl">
+                    <img src={existingTourImageUrl} alt="Imagem Atual" className="w-10 h-10 object-contain p-1 bg-white rounded-lg border" />
+                    <span className="text-xs text-white/60 font-medium truncate flex-1">Imagem atualmente guardada</span>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => setTourImage(e.target.files ? e.target.files[0] : null)}
+                  className="w-full px-4 py-2 border border-white/15 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-dark"
+                />
+                <p className="text-[11px] text-white/50 font-medium mt-1">Acompanha os ecrãs desta competição (Gestão da Liga, Classificações, badges de jogo).</p>
+              </div>
+
               <details className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden group">
                 <summary className="px-4 py-3 text-sm font-bold text-white/80 cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors">
                   <span>⚙️ Configuração de Regras (Opcional)</span>
@@ -1704,10 +1776,11 @@ const AdminDashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-gold text-csc-dark rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
+                  disabled={uploadingTourImage}
+                  className="px-6 py-2.5 bg-csc-gold text-csc-dark rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98 disabled:opacity-60"
                 >
                   <Save size={16} className="text-csc-dark" />
-                  <span>{editingTourId ? 'Atualizar Torneio' : 'Guardar Torneio'}</span>
+                  <span>{uploadingTourImage ? 'A guardar...' : editingTourId ? 'Atualizar Torneio' : 'Guardar Torneio'}</span>
                 </button>
               </div>
             </form>

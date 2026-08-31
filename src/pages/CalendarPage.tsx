@@ -154,6 +154,8 @@ interface Event {
     id: string
     name: string
     season?: string | null
+    image_url?: string | null
+    organizer_name?: string | null
   } | null
   max_players?: number | null
   home_away?: 'home' | 'away' | 'neutral' | null
@@ -690,7 +692,7 @@ const CalendarPage: React.FC = () => {
       const [evRes, callupsRes, myCallupsRes, profilesRes, fieldsRes, tourRes, oppsRes] = await Promise.all([
         supabase
           .from('events')
-          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
+          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season, image_url, organizer_name), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
         fetchAllCallups('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
         myCallupsPromise,
@@ -1625,7 +1627,10 @@ const CalendarPage: React.FC = () => {
             )}
 
             {isMatch && event.tournament?.name && !event.is_friendly && (
-              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-white/10 text-white truncate max-w-[150px]">
+              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-white/10 text-white truncate max-w-[150px] flex items-center gap-1">
+                {event.tournament.image_url && (
+                  <img src={event.tournament.image_url} alt="" className="w-3.5 h-3.5 object-contain rounded-full shrink-0" />
+                )}
                 {event.tournament.name}
               </span>
             )}
@@ -2216,8 +2221,11 @@ const CalendarPage: React.FC = () => {
                         </span>
                       )}
                       {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-900/80 text-blue-200 border border-blue-400/30 truncate max-w-[150px]">
-                          🏆 {selectedEvent.tournament.name}
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-900/80 text-blue-200 border border-blue-400/30 truncate max-w-[150px] flex items-center gap-1">
+                          {selectedEvent.tournament.image_url ? (
+                            <img src={selectedEvent.tournament.image_url} alt="" className="w-3.5 h-3.5 object-contain rounded-full shrink-0" />
+                          ) : '🏆'}
+                          {selectedEvent.tournament.name}
                         </span>
                       )}
                     </div>
