@@ -3,6 +3,7 @@ import { X, ShieldAlert, Award, Footprints, Save, CheckCircle2, Lock, Flame, Use
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../pages/CalendarPage'
 import { toast } from '../context/ToastContext'
+import { BottomSheet } from './BottomSheet'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -335,9 +336,17 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const isFutureMatch = !hasScore && !!event?.date_time && new Date(event.date_time).getTime() > Date.now()
 
   return (
-    <div className="fixed inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 z-50 overflow-y-auto animate-fade-in">
-      <div className="bg-csc-dark text-white rounded-3xl max-w-3xl w-full p-5 sm:p-7 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-csc-gold/60 space-y-5">
-        
+    <BottomSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      tone="dark"
+      size="3xl"
+      showCloseButton={false}
+      ariaLabel={`Ficha de jogo: ${leftSigla} vs ${rightSigla}`}
+      className="border-2 border-csc-gold/60"
+    >
+      <div className="space-y-5">
+
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -907,6 +916,6 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         )}
 
       </div>
-    </div>
+    </BottomSheet>
   )
 }
