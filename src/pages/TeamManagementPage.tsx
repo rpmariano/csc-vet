@@ -783,7 +783,7 @@ const TeamManagementPage: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Pesquisar por nome, nome na camisola, posição ou nº camisola..."
-              className="w-full pl-9.5 pr-4 py-2 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium"
+              className="w-full pl-9.5 pr-4 py-2 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
             />
           </div>
 
@@ -846,18 +846,18 @@ const TeamManagementPage: React.FC = () => {
           onClick={() => setStatusFilter('all')}
           className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
             statusFilter === 'all'
-              ? 'bg-amber-50/80 border-csc-dark ring-2 ring-csc-dark shadow-md scale-102'
-              : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              ? 'bg-csc-dark border-csc-gold ring-2 ring-csc-gold shadow-md scale-102'
+              : 'bg-csc-dark border-white/10 hover:border-white/25 hover:bg-white/5'
           }`}
         >
           <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
-            statusFilter === 'all' ? 'bg-csc-dark text-csc-gold' : 'bg-gray-100 text-gray-700'
+            statusFilter === 'all' ? 'bg-white/15 text-csc-gold' : 'bg-white/10 text-white/70'
           }`}>
             {totalCount}
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Total Plantel</p>
-            <p className="text-sm font-black text-gray-900 leading-tight">Membros</p>
+            <p className="text-[11px] text-white/50 font-bold uppercase tracking-wider">Total Plantel</p>
+            <p className="text-sm font-black text-white leading-tight">Membros</p>
           </div>
         </button>
 
@@ -867,8 +867,8 @@ const TeamManagementPage: React.FC = () => {
           onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
           className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
             statusFilter === 'active'
-              ? 'bg-emerald-50 border-emerald-600 ring-2 ring-emerald-600 shadow-md scale-102'
-              : 'bg-white border-gray-200 hover:border-emerald-200 hover:bg-emerald-50/30'
+              ? 'bg-csc-dark border-emerald-400 ring-2 ring-emerald-400 shadow-md scale-102'
+              : 'bg-csc-dark border-white/10 hover:border-emerald-400/40 hover:bg-emerald-500/5'
           }`}
         >
           <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
@@ -877,8 +877,8 @@ const TeamManagementPage: React.FC = () => {
             {activeCount}
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-emerald-700 font-bold uppercase tracking-wider">Disponíveis</p>
-            <p className="text-sm font-black text-emerald-900 leading-tight">Ativos</p>
+            <p className="text-[11px] text-emerald-300 font-bold uppercase tracking-wider">Disponíveis</p>
+            <p className="text-sm font-black text-emerald-200 leading-tight">Ativos</p>
           </div>
         </button>
 
@@ -888,8 +888,8 @@ const TeamManagementPage: React.FC = () => {
           onClick={() => setStatusFilter(statusFilter === 'injured' ? 'all' : 'injured')}
           className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
             statusFilter === 'injured'
-              ? 'bg-red-50 border-red-600 ring-2 ring-red-600 shadow-md scale-102'
-              : 'bg-white border-gray-200 hover:border-red-200 hover:bg-red-50/30'
+              ? 'bg-csc-dark border-red-400 ring-2 ring-red-400 shadow-md scale-102'
+              : 'bg-csc-dark border-white/10 hover:border-red-400/40 hover:bg-red-500/5'
           }`}
         >
           <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
@@ -898,8 +898,8 @@ const TeamManagementPage: React.FC = () => {
             {injuredCount}
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-red-700 font-bold uppercase tracking-wider">Dpto. Médico</p>
-            <p className="text-sm font-black text-red-900 leading-tight">Lesionados</p>
+            <p className="text-[11px] text-red-300 font-bold uppercase tracking-wider">Dpto. Médico</p>
+            <p className="text-sm font-black text-red-200 leading-tight">Lesionados</p>
           </div>
         </button>
 
@@ -909,8 +909,8 @@ const TeamManagementPage: React.FC = () => {
           onClick={() => setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive')}
           className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
             statusFilter === 'inactive'
-              ? 'bg-gray-100 border-gray-600 ring-2 ring-gray-600 shadow-md scale-102'
-              : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              ? 'bg-csc-dark border-white/40 ring-2 ring-white/40 shadow-md scale-102'
+              : 'bg-csc-dark border-white/10 hover:border-white/25 hover:bg-white/5'
           }`}
         >
           <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
@@ -919,8 +919,8 @@ const TeamManagementPage: React.FC = () => {
             {inactiveCount}
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Indisponíveis</p>
-            <p className="text-sm font-black text-gray-700 leading-tight">Inativos</p>
+            <p className="text-[11px] text-white/50 font-bold uppercase tracking-wider">Indisponíveis</p>
+            <p className="text-sm font-black text-white/80 leading-tight">Inativos</p>
           </div>
         </button>
       </div>
@@ -928,13 +928,13 @@ const TeamManagementPage: React.FC = () => {
       {/* Profiles View */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold"></div>
         </div>
       ) : filteredProfiles.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center">
-          <Users size={48} className="mx-auto text-gray-300 mb-3" />
-          <p className="font-bold text-gray-700 text-lg">Nenhum atleta encontrado</p>
-          <p className="text-xs text-gray-500 mt-1">Ajuste os filtros de pesquisa ou adicione um novo membro.</p>
+        <div className="bg-csc-dark text-white rounded-2xl border border-dashed border-white/15 p-12 text-center">
+          <Users size={48} className="mx-auto text-white/20 mb-3" />
+          <p className="font-bold text-white/70 text-lg">Nenhum atleta encontrado</p>
+          <p className="text-xs text-white/40 mt-1">Ajuste os filtros de pesquisa ou adicione um novo membro.</p>
         </div>
       ) : viewMode === 'list' ? (
         /* VISTA 1: LISTA MODERNA & ELEGANTE (Mobile-first) */
@@ -948,7 +948,7 @@ const TeamManagementPage: React.FC = () => {
               <div
                 key={person.id}
                 onClick={() => openDetailModal(person)}
-                className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs hover:shadow-md hover:border-amber-300 transition-all p-3.5 sm:p-4 cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                className="bg-csc-dark text-white rounded-2xl border border-white/10 shadow-2xs hover:shadow-md hover:border-csc-gold/60 transition-all p-3.5 sm:p-4 cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-3"
               >
                 {/* Top/Main Section: Jersey Number + Photo + Name + Positions */}
                 <div className="flex items-center gap-3.5 min-w-0">
@@ -977,7 +977,7 @@ const TeamManagementPage: React.FC = () => {
                   {/* Name + Positions + Details */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-black text-gray-900 text-sm sm:text-base leading-tight group-hover:text-csc-dark transition-colors">
+                      <h3 className="font-black text-white text-sm sm:text-base leading-tight group-hover:text-csc-gold transition-colors">
                         {person.name}
                       </h3>
 
@@ -1017,19 +1017,19 @@ const TeamManagementPage: React.FC = () => {
                       ))}
 
                       {person.kit_size && (
-                        <span className="text-[10px] text-gray-500 font-semibold bg-gray-100 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] text-white/60 font-semibold bg-white/10 px-1.5 py-0.5 rounded">
                           Tam: {person.kit_size}
                         </span>
                       )}
 
                       {person.member_number && (
-                        <span className="text-[10px] text-gray-400 font-medium hidden sm:inline">
+                        <span className="text-[10px] text-white/40 font-medium hidden sm:inline">
                           • Sócio nº {person.member_number}
                         </span>
                       )}
 
                       {age && (
-                        <span className="text-[10px] text-gray-400 font-medium">
+                        <span className="text-[10px] text-white/40 font-medium">
                           • {age} anos
                         </span>
                       )}
@@ -1038,7 +1038,7 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* Right / Bottom Action Bar */}
-                <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
                   {/* Status Indicator Interativo */}
                   <button
                     type="button"
@@ -1067,7 +1067,7 @@ const TeamManagementPage: React.FC = () => {
                               e.stopPropagation()
                               openAssociateModal(person)
                             }}
-                            className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
+                            className="p-1.5 text-blue-300 hover:text-blue-200 rounded-lg hover:bg-blue-500/10 transition-colors"
                             title="Associar a Utilizador"
                           >
                             <Link2 size={15} />
@@ -1080,7 +1080,7 @@ const TeamManagementPage: React.FC = () => {
                             e.stopPropagation()
                             openEditModal(person)
                           }}
-                          className="p-1.5 text-gray-500 hover:text-csc-dark rounded-lg hover:bg-gray-100 transition-colors"
+                          className="p-1.5 text-white/50 hover:text-csc-gold rounded-lg hover:bg-white/10 transition-colors"
                           title="Editar Ficha"
                         >
                           <Edit2 size={15} />
@@ -1093,7 +1093,7 @@ const TeamManagementPage: React.FC = () => {
                               e.stopPropagation()
                               handleDeleteMember(person.id, person.name)
                             }}
-                            className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                            className="p-1.5 text-white/30 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
                             title="Eliminar Membro"
                           >
                             <Trash2 size={15} />
@@ -1102,7 +1102,7 @@ const TeamManagementPage: React.FC = () => {
                       </>
                     )}
 
-                    <ChevronRight size={16} className="text-gray-300 group-hover:text-csc-dark group-hover:translate-x-0.5 transition-all ml-1" />
+                    <ChevronRight size={16} className="text-white/25 group-hover:text-csc-gold group-hover:translate-x-0.5 transition-all ml-1" />
                   </div>
                 </div>
               </div>
@@ -1119,20 +1119,20 @@ const TeamManagementPage: React.FC = () => {
               <div
                 key={person.id}
                 onClick={() => openDetailModal(person)}
-                className={`bg-white rounded-2xl shadow-sm border-2 transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer flex flex-col justify-between overflow-hidden group relative ${
+                className={`bg-csc-dark text-white rounded-2xl shadow-sm border-2 transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer flex flex-col justify-between overflow-hidden group relative ${
                   person.status === 'injured'
-                    ? 'border-red-300 ring-2 ring-red-100'
-                    : 'border-amber-200 hover:border-csc-gold'
+                    ? 'border-red-400/50 ring-2 ring-red-400/20'
+                    : 'border-white/10 hover:border-csc-gold'
                 }`}
               >
                 {/* Top Card Gradient Background Accent */}
-                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-csc-dark/10 to-transparent pointer-events-none" />
+                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-csc-gold/10 to-transparent pointer-events-none" />
 
                 <div className="p-4 relative z-10 flex flex-col items-center text-center space-y-3">
                   {/* Top Bar: Number left, Status right */}
                   <div className="w-full flex justify-between items-center">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xl font-black text-csc-dark tracking-tighter">
+                      <span className="text-xl font-black text-csc-gold tracking-tighter">
                         {person.jersey_number ? `#${person.jersey_number}` : '-'}
                       </span>
                     </div>
@@ -1172,7 +1172,7 @@ const TeamManagementPage: React.FC = () => {
 
                   {/* Nome da Camisola como título da carta */}
                   <div className="w-full">
-                    <h3 className="font-black text-gray-900 text-base leading-tight uppercase tracking-wide truncate group-hover:text-csc-dark transition-colors" title={person.name}>
+                    <h3 className="font-black text-white text-base leading-tight uppercase tracking-wide truncate group-hover:text-csc-gold transition-colors" title={person.name}>
                       {person.shirt_name || person.nickname || person.name}
                     </h3>
 
@@ -1207,15 +1207,15 @@ const TeamManagementPage: React.FC = () => {
                     </div>
 
                     {/* Member & Age Info */}
-                    <p className="text-[10px] text-gray-400 font-semibold mt-1">
+                    <p className="text-[10px] text-white/40 font-semibold mt-1">
                       {person.kit_size ? `Tam: ${person.kit_size} • ` : ''}{person.member_number ? `Sócio nº ${person.member_number}` : ''} {age ? `• ${age} anos` : ''}
                     </p>
                   </div>
                 </div>
 
                 {/* Card Footer */}
-                <div className="bg-gray-50 px-3.5 py-2.5 border-t border-gray-200 flex items-center justify-between text-xs">
-                  <span className="text-xs font-black text-csc-dark group-hover:underline flex items-center gap-1">
+                <div className="bg-white/5 px-3.5 py-2.5 border-t border-white/10 flex items-center justify-between text-xs">
+                  <span className="text-xs font-black text-csc-gold group-hover:underline flex items-center gap-1">
                     Ver Ficha Completa
                   </span>
 
@@ -1228,7 +1228,7 @@ const TeamManagementPage: React.FC = () => {
                             e.stopPropagation()
                             openAssociateModal(person)
                           }}
-                          className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-colors"
+                          className="p-1.5 text-blue-300 hover:text-blue-200 rounded-lg hover:bg-blue-500/10 transition-colors"
                           title="Associar a Utilizador"
                         >
                           <Link2 size={14} />
@@ -1241,7 +1241,7 @@ const TeamManagementPage: React.FC = () => {
                           e.stopPropagation()
                           openEditModal(person)
                         }}
-                        className="p-1.5 text-gray-500 hover:text-csc-dark rounded-lg hover:bg-white transition-colors"
+                        className="p-1.5 text-white/50 hover:text-csc-gold rounded-lg hover:bg-white/10 transition-colors"
                         title="Editar Ficha"
                       >
                         <Edit2 size={14} />
@@ -1254,7 +1254,7 @@ const TeamManagementPage: React.FC = () => {
                             e.stopPropagation()
                             handleDeleteMember(person.id, person.name)
                           }}
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-white transition-colors"
+                          className="p-1.5 text-white/30 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
                           title="Eliminar Membro"
                         >
                           <Trash2 size={14} />
@@ -1277,35 +1277,35 @@ const TeamManagementPage: React.FC = () => {
             if (e.target === e.currentTarget) handleAttemptCloseFormModal()
           }}
         >
-          <div className="bg-white rounded-3xl max-w-4xl xl:max-w-5xl w-full p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-200">
+          <div className="bg-csc-dark text-white rounded-3xl max-w-4xl xl:max-w-5xl w-full p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40">
             <button
               type="button"
               onClick={handleAttemptCloseFormModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors"
+              className="absolute top-4 right-4 text-white/50 hover:text-white p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-colors"
             >
               <X size={22} />
             </button>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-4 mb-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4 mb-5">
               <div>
-                <h2 className="text-2xl font-black text-csc-dark mb-0.5">
+                <h2 className="text-2xl font-black text-white mb-0.5">
                   {isEditing ? 'Editar Ficha do Membro' : 'Criar Ficha de Novo Membro'}
                 </h2>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-white/50">
                   Preencha os dados cadastrais, fiscais, morada, equipamento, contactos e anexe a documentação legal.
                 </p>
               </div>
 
               {/* Estado de Aptidão & Atividade no Cabeçalho */}
-              <div className="flex items-center gap-2 bg-gray-100/90 p-1.5 rounded-2xl border border-gray-200 self-start sm:self-auto shrink-0">
-                <span className="text-xs font-bold text-gray-700 pl-1.5">Estado:</span>
-                <div className="flex rounded-xl p-0.5 bg-white border border-gray-200 gap-1">
+              <div className="flex items-center gap-2 bg-white/10 p-1.5 rounded-2xl border border-white/10 self-start sm:self-auto shrink-0">
+                <span className="text-xs font-bold text-white/70 pl-1.5">Estado:</span>
+                <div className="flex rounded-xl p-0.5 bg-white/10 border border-white/10 gap-1">
                   <button
                     type="button"
                     onClick={() => setFormStatus('active')}
                     className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                       formStatus === 'active'
                         ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-gray-500 hover:text-gray-900'
+                        : 'text-white/50 hover:text-white'
                     }`}
                   >
                     🟢 Apto
@@ -1316,7 +1316,7 @@ const TeamManagementPage: React.FC = () => {
                     className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                       formStatus === 'injured'
                         ? 'bg-red-600 text-white shadow-xs animate-pulse'
-                        : 'text-gray-500 hover:text-gray-900'
+                        : 'text-white/50 hover:text-white'
                     }`}
                   >
                     🔴 Lesionado
@@ -1326,8 +1326,8 @@ const TeamManagementPage: React.FC = () => {
                     onClick={() => setFormStatus('inactive')}
                     className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                       formStatus === 'inactive'
-                        ? 'bg-gray-700 text-white shadow-xs'
-                        : 'text-gray-500 hover:text-gray-900'
+                        ? 'bg-white/25 text-white shadow-xs'
+                        : 'text-white/50 hover:text-white'
                     }`}
                   >
                     ⚪ Inativo
@@ -1339,31 +1339,31 @@ const TeamManagementPage: React.FC = () => {
             <form onSubmit={handleSaveMember} className="space-y-6">
               
               {/* 1. DADOS PESSOAIS & IDENTIFICAÇÃO FISCAL */}
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Users size={14} className="text-csc-dark" />
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                  <Users size={14} className="text-csc-gold" />
                   <span>1. Identificação Pessoal & Fiscal</span>
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nome Completo *</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Nome Completo *</label>
                     <input
                       type="text"
                       required
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="Ex: André Gomes Marques do Couto"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nome na Camisola</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Nome na Camisola</label>
                     <input
                       type="text"
                       value={formShirtName}
                       onChange={(e) => setFormShirtName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="Ex: A. COUTO"
                     />
                   </div>
@@ -1371,31 +1371,31 @@ const TeamManagementPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Data de Nascimento</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Data de Nascimento</label>
                     <input
                       type="date"
                       value={formBirthDate}
                       onChange={(e) => setFormBirthDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nacionalidade</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Nacionalidade</label>
                     <input
                       type="text"
                       value={formNationality}
                       onChange={(e) => setFormNationality(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="Portuguesa"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nº de Contribuinte (NIF)</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Nº de Contribuinte (NIF)</label>
                     <input
                       type="text"
                       value={formNif}
                       onChange={(e) => setFormNif(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="000 000 000"
                     />
                   </div>
@@ -1403,63 +1403,63 @@ const TeamManagementPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nº Cartão de Cidadão / Passaporte</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Nº Cartão de Cidadão / Passaporte</label>
                     <input
                       type="text"
                       value={formIdNumber}
                       onChange={(e) => setFormIdNumber(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="00000000"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Validade do Cartão de Cidadão</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Validade do Cartão de Cidadão</label>
                     <input
                       type="date"
                       value={formIdCardExpiry}
                       onChange={(e) => setFormIdCardExpiry(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                     />
                   </div>
                 </div>
               </div>
 
               {/* 2. MORADA & RESIDÊNCIA */}
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileText size={14} className="text-csc-dark" />
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText size={14} className="text-csc-gold" />
                   <span>2. Morada & Residência</span>
                 </h3>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Morada (Rua, Nº e Andar)</label>
+                  <label className="block text-xs font-bold text-white/70 mb-1">Morada (Rua, Nº e Andar)</label>
                   <input
                     type="text"
                     value={formAddress}
                     onChange={(e) => setFormAddress(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                     placeholder="Rua e número da morada"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Código Postal</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Código Postal</label>
                     <input
                       type="text"
                       value={formPostalCode}
                       onChange={(e) => setFormPostalCode(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="0000-000"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Localidade</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Localidade</label>
                     <input
                       type="text"
                       value={formCity}
                       onChange={(e) => setFormCity(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="Cascais / Alcabideche"
                     />
                   </div>
@@ -1467,31 +1467,31 @@ const TeamManagementPage: React.FC = () => {
               </div>
 
               {/* 3. CONTACTOS */}
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Phone size={14} className="text-csc-dark" />
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                  <Phone size={14} className="text-csc-gold" />
                   <span>3. Contactos</span>
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Email *</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Email *</label>
                     <input
                       type="email"
                       required
                       value={formEmail}
                       onChange={(e) => setFormEmail(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="atleta@clube.pt"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Telemóvel</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Telemóvel</label>
                     <input
                       type="tel"
                       value={formPhone}
                       onChange={(e) => setFormPhone(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="912 345 678"
                     />
                   </div>
@@ -1499,18 +1499,18 @@ const TeamManagementPage: React.FC = () => {
               </div>
 
               {/* 4. DADOS DESPORTIVOS, EQUIPAMENTO & PAPEL */}
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center justify-between">
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <Shield size={14} className="text-csc-dark" />
+                    <Shield size={14} className="text-csc-gold" />
                     <span>4. Dados Desportivos, Equipamento & Função</span>
                   </span>
-                  <span className="text-[10px] text-gray-400 font-bold">Múltiplas posições e papéis permitidos</span>
+                  <span className="text-[10px] text-white/40 font-bold">Múltiplas posições e papéis permitidos</span>
                 </h3>
 
                 {/* 4.1 Campo de Futebol Interativo */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-2">
+                  <label className="block text-xs font-bold text-white/70 mb-2">
                     Posições no Campo:
                   </label>
                   <SoccerPitchSelector
@@ -1520,8 +1520,8 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 4.2 Papéis no Sistema (1, 2 ou 3 funções) */}
-                <div className="pt-2 border-t border-gray-200">
-                  <label className="block text-xs font-bold text-gray-700 mb-2">
+                <div className="pt-2 border-t border-white/10">
+                  <label className="block text-xs font-bold text-white/70 mb-2">
                     Papel / Funções no Sistema (Selecione 1, 2 ou 3):
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -1531,20 +1531,20 @@ const TeamManagementPage: React.FC = () => {
                       onClick={() => toggleRole('player')}
                       className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('player')
-                          ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-400/50 shadow-xs'
-                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                          ? 'bg-emerald-500/15 border-emerald-400 ring-2 ring-emerald-400/40 shadow-xs'
+                          : 'bg-white/5 border-white/10 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center justify-between w-full mb-1">
                         <span className="text-base">⚽</span>
                         <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                          formRoles.includes('player') ? 'bg-emerald-600 text-white' : 'border border-gray-300'
+                          formRoles.includes('player') ? 'bg-emerald-600 text-white' : 'border border-white/20'
                         }`}>
                           {formRoles.includes('player') && <Check size={12} className="stroke-[3]" />}
                         </div>
                       </div>
-                      <span className="text-xs font-extrabold text-gray-900">Jogador</span>
-                      <span className="text-[10px] text-gray-500 mt-0.5 leading-tight">Atleta nas convocatórias e estatísticas</span>
+                      <span className="text-xs font-extrabold text-white">Jogador</span>
+                      <span className="text-[10px] text-white/50 mt-0.5 leading-tight">Atleta nas convocatórias e estatísticas</span>
                     </button>
 
                     {/* Treinador */}
@@ -1553,20 +1553,20 @@ const TeamManagementPage: React.FC = () => {
                       onClick={() => toggleRole('coach')}
                       className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('coach')
-                          ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-400/50 shadow-xs'
-                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                          ? 'bg-blue-500/15 border-blue-400 ring-2 ring-blue-400/40 shadow-xs'
+                          : 'bg-white/5 border-white/10 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center justify-between w-full mb-1">
                         <span className="text-base">📋</span>
                         <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                          formRoles.includes('coach') ? 'bg-blue-600 text-white' : 'border border-gray-300'
+                          formRoles.includes('coach') ? 'bg-blue-600 text-white' : 'border border-white/20'
                         }`}>
                           {formRoles.includes('coach') && <Check size={12} className="stroke-[3]" />}
                         </div>
                       </div>
-                      <span className="text-xs font-extrabold text-gray-900">Treinador</span>
-                      <span className="text-[10px] text-gray-500 mt-0.5 leading-tight">Equipa técnica, criação de treinos e jogos</span>
+                      <span className="text-xs font-extrabold text-white">Treinador</span>
+                      <span className="text-[10px] text-white/50 mt-0.5 leading-tight">Equipa técnica, criação de treinos e jogos</span>
                     </button>
 
                     {/* Administrador / Direção */}
@@ -1575,45 +1575,45 @@ const TeamManagementPage: React.FC = () => {
                       onClick={() => toggleRole('admin')}
                       className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('admin')
-                          ? 'bg-amber-50 border-csc-gold ring-2 ring-csc-gold/50 shadow-xs'
-                          : 'bg-white border-gray-200 hover:bg-gray-50'
+                          ? 'bg-amber-500/15 border-csc-gold ring-2 ring-csc-gold/40 shadow-xs'
+                          : 'bg-white/5 border-white/10 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center justify-between w-full mb-1">
                         <span className="text-base">🛡️</span>
                         <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                          formRoles.includes('admin') ? 'bg-csc-dark text-csc-gold' : 'border border-gray-300'
+                          formRoles.includes('admin') ? 'bg-white/10 text-csc-gold' : 'border border-white/20'
                         }`}>
                           {formRoles.includes('admin') && <Check size={12} className="stroke-[3]" />}
                         </div>
                       </div>
-                      <span className="text-xs font-extrabold text-gray-900">Administrador / Direção</span>
-                      <span className="text-[10px] text-gray-500 mt-0.5 leading-tight">Acesso total, finanças e administração app</span>
+                      <span className="text-xs font-extrabold text-white">Administrador / Direção</span>
+                      <span className="text-[10px] text-white/50 mt-0.5 leading-tight">Acesso total, finanças e administração app</span>
                     </button>
                   </div>
                 </div>
 
                 {/* 4.3 Camisola & Tamanho de Equipamento */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/10">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nº da Camisola</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Nº da Camisola</label>
                     <input
                       type="number"
                       min="1"
                       max="99"
                       value={formJerseyNumber}
                       onChange={(e) => setFormJerseyNumber(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="Ex: 10"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Tamanho Equipamento</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Tamanho Equipamento</label>
                     <select
                       value={formKitSize}
                       onChange={(e) => setFormKitSize(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-bold"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-bold text-gray-900"
                     >
                       <option value="S">S</option>
                       <option value="M">M</option>
@@ -1626,30 +1626,30 @@ const TeamManagementPage: React.FC = () => {
               </div>
 
               {/* 5. DADOS BANCÁRIOS & QUOTAS */}
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Shield size={14} className="text-csc-dark" />
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                  <Shield size={14} className="text-csc-gold" />
                   <span>5. Dados Bancários & Quotas</span>
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">IBAN (Débito Direto / Quotas)</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">IBAN (Débito Direto / Quotas)</label>
                     <input
                       type="text"
                       value={formIban}
                       onChange={(e) => setFormIban(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-mono"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-mono text-gray-900"
                       placeholder="PT50 0000 0000 0000 0000 0"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nº de Sócio do Clube</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Nº de Sócio do Clube</label>
                     <input
                       type="text"
                       value={formMemberNumber}
                       onChange={(e) => setFormMemberNumber(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="Ex: 1420"
                     />
                   </div>
@@ -1657,58 +1657,58 @@ const TeamManagementPage: React.FC = () => {
               </div>
 
               {/* 6. SAÚDE & EMERGÊNCIA */}
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <HeartPulse size={14} className="text-red-600" />
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                  <HeartPulse size={14} className="text-red-400" />
                   <span>6. Saúde & Contacto de Emergência</span>
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Contacto de Emergência (Nome / Relação)</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Contacto de Emergência (Nome / Relação)</label>
                     <input
                       type="text"
                       value={formEmergencyName}
                       onChange={(e) => setFormEmergencyName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="Ex: Maria (Esposa)"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Telefone de Emergência</label>
+                    <label className="block text-xs font-bold text-white/70 mb-1">Telefone de Emergência</label>
                     <input
                       type="tel"
                       value={formEmergencyPhone}
                       onChange={(e) => setFormEmergencyPhone(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                       placeholder="960 000 000"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Notas Médicas / Alergias / Tipo Sanguíneo</label>
+                  <label className="block text-xs font-bold text-white/70 mb-1">Notas Médicas / Alergias / Tipo Sanguíneo</label>
                   <textarea
                     value={formMedicalNotes}
                     onChange={(e) => setFormMedicalNotes(e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                     placeholder="Ex: Alergia a anti-inflamatórios, Tipo O+, histórico de lesão no joelho direito..."
                   />
                 </div>
               </div>
 
               {/* 7. UPLOAD DE DOCUMENTOS & RGPD */}
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-4">
-                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileText size={14} className="text-csc-dark" />
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText size={14} className="text-csc-gold" />
                   <span>7. Documentos & Proteção de Dados (RGPD)</span>
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Foto de Perfil */}
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg space-y-2">
-                    <label className="block text-xs font-bold text-gray-800">Fotografia de Perfil</label>
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg space-y-2">
+                    <label className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
                     <input
                       type="file"
                       accept="image/*"
@@ -1725,8 +1725,8 @@ const TeamManagementPage: React.FC = () => {
                   </div>
 
                   {/* Documento de Identificação */}
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg space-y-2">
-                    <label className="block text-xs font-bold text-gray-800">Doc. Identificação (CC / Passaporte)</label>
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg space-y-2">
+                    <label className="block text-xs font-bold text-white/80">Doc. Identificação (CC / Passaporte)</label>
                     <input
                       type="file"
                       accept="image/*,application/pdf"
@@ -1742,8 +1742,8 @@ const TeamManagementPage: React.FC = () => {
                   </div>
 
                   {/* Seguro Desportivo */}
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg space-y-2">
-                    <label className="block text-xs font-bold text-gray-800">Apólice de Seguro Desportivo</label>
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg space-y-2">
+                    <label className="block text-xs font-bold text-white/80">Apólice de Seguro Desportivo</label>
                     <input
                       type="file"
                       accept="image/*,application/pdf"
@@ -1759,8 +1759,8 @@ const TeamManagementPage: React.FC = () => {
                   </div>
 
                   {/* Atestado Médico */}
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg space-y-2">
-                    <label className="block text-xs font-bold text-gray-800">Atestado / Exame Médico Desportivo</label>
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg space-y-2">
+                    <label className="block text-xs font-bold text-white/80">Atestado / Exame Médico Desportivo</label>
                     <input
                       type="file"
                       accept="image/*,application/pdf"
@@ -1777,7 +1777,7 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* Consentimento RGPD */}
-                <div className="p-3 bg-white border border-gray-200 rounded-lg flex items-start gap-2.5">
+                <div className="p-3 bg-white/5 border border-white/10 rounded-lg flex items-start gap-2.5">
                   <input
                     type="checkbox"
                     id="gdpr_consent"
@@ -1785,7 +1785,7 @@ const TeamManagementPage: React.FC = () => {
                     onChange={(e) => setFormGdprConsent(e.target.checked)}
                     className="mt-0.5 w-4 h-4 text-csc-dark rounded border-gray-300 focus:ring-csc-dark"
                   />
-                  <label htmlFor="gdpr_consent" className="text-xs text-gray-700 font-medium cursor-pointer">
+                  <label htmlFor="gdpr_consent" className="text-xs text-white/70 font-medium cursor-pointer">
                     Aceita que os seus dados sejam processados pela política de proteção de dados (RGPD) do Grupo Dramático e Sportivo de Cascais.
                   </label>
                 </div>
@@ -1795,16 +1795,16 @@ const TeamManagementPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleAttemptCloseFormModal}
-                  className="flex-1 py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 text-sm cursor-pointer"
+                  className="flex-1 py-3 rounded-xl font-bold text-white bg-white/10 hover:bg-white/20 text-sm cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={uploadingDoc !== null}
-                  className="flex-1 py-3 rounded-xl font-bold text-white bg-csc-dark hover:bg-csc-dark/80 transition-colors shadow-md text-sm flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 py-3 rounded-xl font-bold text-csc-dark bg-csc-gold hover:brightness-95 transition-colors shadow-md text-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Save size={16} />
+                  <Save size={16} className="text-csc-dark" />
                   <span>{isEditing ? 'Guardar Alterações' : 'Criar Membro'}</span>
                 </button>
               </div>
@@ -1816,19 +1816,19 @@ const TeamManagementPage: React.FC = () => {
       {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER PC & MOBILE) */}
       {isDetailModalOpen && selectedProfile && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 lg:p-6 z-50 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-4 sm:p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-200 space-y-6">
+          <div className="bg-csc-dark text-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-4 sm:p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40 space-y-6">
             
             {/* Top Bar Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-3">
                 <span className="w-10 h-10 rounded-2xl bg-csc-dark text-csc-gold font-black flex items-center justify-center text-lg shadow-sm border border-amber-300">
                   {selectedProfile.jersey_number ? `#${selectedProfile.jersey_number}` : '⚽'}
                 </span>
                 <div>
-                  <span className="text-[10px] uppercase font-black tracking-widest text-gray-400 block">
+                  <span className="text-[10px] uppercase font-black tracking-widest text-white/40 block">
                     Ficha Oficial de Atleta • Plantel CSC
                   </span>
-                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 leading-tight">
+                  <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">
                     {selectedProfile.name}
                   </h2>
                 </div>
@@ -1858,7 +1858,7 @@ const TeamManagementPage: React.FC = () => {
                       setIsDetailModalOpen(false)
                       openEditModal(selectedProfile)
                     }}
-                    className="px-3.5 py-1.5 bg-csc-dark text-white rounded-xl text-xs font-bold hover:bg-csc-dark/85 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    className="px-3.5 py-1.5 bg-csc-gold text-csc-dark rounded-xl text-xs font-bold hover:brightness-95 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                   >
                     <Edit2 size={13} />
                     <span className="hidden sm:inline">Editar Ficha</span>
@@ -1866,7 +1866,7 @@ const TeamManagementPage: React.FC = () => {
                 )}
                 <button
                   onClick={() => setIsDetailModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors"
+                  className="text-white/50 hover:text-white p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-colors"
                   title="Fechar"
                 >
                   <X size={22} />
@@ -1880,8 +1880,8 @@ const TeamManagementPage: React.FC = () => {
               {/* COLUNA ESQUERDA: Cartão de Identidade Desportiva + Campo Tático (lg:col-span-5 xl:col-span-4) */}
               <div className="lg:col-span-5 xl:col-span-4 space-y-4">
                 {/* Hero ID Card */}
-                <div className="bg-gradient-to-br from-amber-50/80 via-white to-gray-50 p-5 rounded-2xl border-2 border-amber-200 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-csc-dark/10 to-transparent pointer-events-none" />
+                <div className="bg-gradient-to-br from-csc-dark via-csc-dark to-emerald-950 p-5 rounded-2xl border-2 border-amber-400/40 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-csc-gold/10 to-transparent pointer-events-none" />
 
                   {/* Photo with Gold Ring */}
                   <div className="relative mb-3 z-10">
@@ -1904,12 +1904,12 @@ const TeamManagementPage: React.FC = () => {
                     )}
                   </div>
 
-                  <h3 className="font-black text-gray-900 text-lg leading-tight">
+                  <h3 className="font-black text-white text-lg leading-tight">
                     {selectedProfile.name}
                   </h3>
 
                   {selectedProfile.shirt_name && (
-                    <p className="text-xs font-bold text-amber-900 mt-0.5">
+                    <p className="text-xs font-bold text-amber-300 mt-0.5">
                       Nome na Camisola: "{selectedProfile.shirt_name}"
                     </p>
                   )}
@@ -1952,14 +1952,14 @@ const TeamManagementPage: React.FC = () => {
                   </div>
 
                   {/* Quick Meta Pills */}
-                  <div className="grid grid-cols-2 gap-2 w-full mt-4 pt-3 border-t border-gray-200 text-xs">
-                    <div className="bg-white p-2 rounded-xl border border-gray-200">
-                      <span className="text-gray-400 block text-[9px] uppercase font-bold">Equipamento</span>
-                      <span className="font-extrabold text-gray-800">Tam: {selectedProfile.kit_size || '-'}</span>
+                  <div className="grid grid-cols-2 gap-2 w-full mt-4 pt-3 border-t border-white/10 text-xs">
+                    <div className="bg-white/10 p-2 rounded-xl border border-white/10">
+                      <span className="text-white/40 block text-[9px] uppercase font-bold">Equipamento</span>
+                      <span className="font-extrabold text-white">Tam: {selectedProfile.kit_size || '-'}</span>
                     </div>
-                    <div className="bg-white p-2 rounded-xl border border-gray-200">
-                      <span className="text-gray-400 block text-[9px] uppercase font-bold">Nº de Sócio</span>
-                      <span className="font-extrabold text-gray-800">{selectedProfile.member_number ? `#${selectedProfile.member_number}` : '-'}</span>
+                    <div className="bg-white/10 p-2 rounded-xl border border-white/10">
+                      <span className="text-white/40 block text-[9px] uppercase font-bold">Nº de Sócio</span>
+                      <span className="font-extrabold text-white">{selectedProfile.member_number ? `#${selectedProfile.member_number}` : '-'}</span>
                     </div>
                   </div>
 
@@ -1968,18 +1968,18 @@ const TeamManagementPage: React.FC = () => {
                     {selectedProfile.phone && (
                       <a
                         href={`tel:${selectedProfile.phone}`}
-                        className="w-full py-2 px-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 flex items-center justify-center gap-2 transition-colors"
+                        className="w-full py-2 px-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-colors"
                       >
-                        <Phone size={13} className="text-csc-dark" />
+                        <Phone size={13} className="text-csc-gold" />
                         <span>{selectedProfile.phone}</span>
                       </a>
                     )}
                     {selectedProfile.email && (
                       <a
                         href={`mailto:${selectedProfile.email}`}
-                        className="w-full py-2 px-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 flex items-center justify-center gap-2 transition-colors truncate"
+                        className="w-full py-2 px-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-colors truncate"
                       >
-                        <Mail size={13} className="text-csc-dark" />
+                        <Mail size={13} className="text-csc-gold" />
                         <span className="truncate">{selectedProfile.email}</span>
                       </a>
                     )}
@@ -1987,10 +1987,10 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* Campo Tático */}
-                <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs space-y-2">
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 shadow-xs space-y-2">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <Shield size={14} className="text-csc-dark" />
+                    <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <Shield size={14} className="text-csc-gold" />
                       <span>Posicionamento Tático</span>
                     </h4>
                     <span className="text-[10px] font-extrabold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
@@ -2010,77 +2010,77 @@ const TeamManagementPage: React.FC = () => {
               <div className="lg:col-span-7 xl:col-span-8 space-y-4">
                 
                 {/* 1. Identificação & Dados Fiscais */}
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
-                  <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <Users size={14} className="text-csc-dark" />
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
+                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                    <Users size={14} className="text-csc-gold" />
                     <span>1. Identificação & Dados Fiscais</span>
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 text-xs">
-                    <div className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Nome Completo</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.name}</p>
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Nome Completo</p>
+                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.name}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Nome na Camisola</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Nome na Camisola</p>
+                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
+                      <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.birth_date ? (
                           `${new Date(selectedProfile.birth_date).toLocaleDateString('pt-PT')} (${calculateAge(selectedProfile.birth_date)} anos)`
                         ) : '-'}
                       </p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5 font-mono">{selectedProfile.nif || '-'}</p>
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
+                      <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.nif || '-'}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5 font-mono">{selectedProfile.id_number || '-'}</p>
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
+                      <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.id_number || '-'}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Validade do CC</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Validade do CC</p>
+                      <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.id_card_expiry ? new Date(selectedProfile.id_card_expiry).toLocaleDateString('pt-PT') : '-'}
                       </p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Nacionalidade</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Nacionalidade</p>
+                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
+                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* 2. Morada & Residência */}
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
-                  <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <FileText size={14} className="text-csc-dark" />
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
+                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText size={14} className="text-csc-gold" />
                     <span>2. Morada & Residência</span>
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5">{selectedProfile.address || 'Não registada'}</p>
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
+                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.address || 'Não registada'}</p>
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-gray-200">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
+                      <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.postal_code || '-'} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
                       </p>
                     </div>
@@ -2088,16 +2088,16 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 3. Dados Bancários (Débito Direto) */}
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
-                  <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <Shield size={14} className="text-csc-dark" />
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
+                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                    <Shield size={14} className="text-csc-gold" />
                     <span>3. Dados Bancários & Quotas</span>
                   </h4>
 
-                  <div className="bg-white p-3 rounded-xl border border-gray-200 flex items-center justify-between gap-3">
+                  <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
-                      <p className="font-black text-gray-900 font-mono text-xs sm:text-sm mt-0.5">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
+                      <p className="font-black text-white font-mono text-xs sm:text-sm mt-0.5">
                         {selectedProfile.iban || 'Nenhum IBAN registado'}
                       </p>
                     </div>
@@ -2110,28 +2110,28 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 4. Saúde & Contacto de Emergência */}
-                <div className="bg-red-50/50 p-4 rounded-2xl border border-red-200 space-y-3">
-                  <h4 className="text-xs font-black text-red-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <HeartPulse size={14} className="text-red-600" />
+                <div className="bg-red-500/10 p-4 rounded-2xl border border-red-400/30 space-y-3">
+                  <h4 className="text-xs font-black text-red-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <HeartPulse size={14} className="text-red-400" />
                     <span>4. Saúde & Contacto de Emergência</span>
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="bg-white p-3 rounded-xl border border-red-150">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Contacto de Emergência</p>
-                      <p className="font-extrabold text-gray-900 mt-0.5">
+                    <div className="bg-white/10 p-3 rounded-xl border border-red-400/20">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Contacto de Emergência</p>
+                      <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.emergency_contact_name || 'Não registado'}
                       </p>
                       {selectedProfile.emergency_contact_phone && (
-                        <p className="text-gray-600 font-semibold mt-0.5">
+                        <p className="text-white/60 font-semibold mt-0.5">
                           Tel: {selectedProfile.emergency_contact_phone}
                         </p>
                       )}
                     </div>
 
-                    <div className="bg-white p-3 rounded-xl border border-red-150">
-                      <p className="text-gray-400 font-bold uppercase text-[9px]">Notas Médicas / Alergias</p>
-                      <p className="font-medium text-gray-800 mt-0.5">
+                    <div className="bg-white/10 p-3 rounded-xl border border-red-400/20">
+                      <p className="text-white/40 font-bold uppercase text-[9px]">Notas Médicas / Alergias</p>
+                      <p className="font-medium text-white/80 mt-0.5">
                         {cleanNotesFromRolesTag(selectedProfile.medical_notes) || 'Nenhuma restrição médica registada'}
                       </p>
                     </div>
@@ -2139,10 +2139,10 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 5. Documentos Anexados & RGPD */}
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <FileText size={14} className="text-csc-dark" />
+                    <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText size={14} className="text-csc-gold" />
                       <span>5. Documentação Oficial & RGPD</span>
                     </h4>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-100 text-green-800 flex items-center gap-1">
@@ -2163,7 +2163,7 @@ const TeamManagementPage: React.FC = () => {
                         <span className="text-[10px] underline flex items-center gap-0.5">Abrir Documento <ExternalLink size={10}/></span>
                       </a>
                     ) : (
-                      <div className="p-3 bg-white border border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 text-center">
+                      <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/30 text-center">
                         <FileText size={18} />
                         <span>Sem CC Anexado</span>
                       </div>
@@ -2181,7 +2181,7 @@ const TeamManagementPage: React.FC = () => {
                         <span className="text-[10px] underline flex items-center gap-0.5">Abrir Apólice <ExternalLink size={10}/></span>
                       </a>
                     ) : (
-                      <div className="p-3 bg-white border border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 text-center">
+                      <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/30 text-center">
                         <Shield size={18} />
                         <span>Sem Seguro Anexado</span>
                       </div>
@@ -2199,7 +2199,7 @@ const TeamManagementPage: React.FC = () => {
                         <span className="text-[10px] underline flex items-center gap-0.5">Abrir Exame <ExternalLink size={10}/></span>
                       </a>
                     ) : (
-                      <div className="p-3 bg-white border border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-1 text-gray-400 text-center">
+                      <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/30 text-center">
                         <HeartPulse size={18} />
                         <span>Sem Atestado Anexado</span>
                       </div>
@@ -2211,7 +2211,7 @@ const TeamManagementPage: React.FC = () => {
             </div>
 
             {/* Bottom Actions Footer */}
-            <div className="pt-4 border-t border-gray-200 flex flex-wrap justify-between items-center gap-3">
+            <div className="pt-4 border-t border-white/10 flex flex-wrap justify-between items-center gap-3">
               {isCoachOrAdmin && selectedProfile?.id?.startsWith('seed-') && (
                 <button
                   type="button"
@@ -2231,7 +2231,7 @@ const TeamManagementPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsDetailModalOpen(false)}
-                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   Fechar
                 </button>
@@ -2242,7 +2242,7 @@ const TeamManagementPage: React.FC = () => {
                       setIsDetailModalOpen(false)
                       openEditModal(selectedProfile)
                     }}
-                    className="px-5 py-2.5 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
+                    className="px-5 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
                   >
                     <Edit2 size={14} />
                     <span>Editar Ficha</span>
@@ -2277,13 +2277,13 @@ const TeamManagementPage: React.FC = () => {
 
         return (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-            <div className="bg-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100">
+            <div className="bg-csc-dark text-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/10">
               <button
                 onClick={() => {
                   setAssociatingPlayer(null)
                   setSelectedUserToAssociate(null)
                 }}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100"
+                className="absolute top-4 right-4 text-white/50 hover:text-white p-1.5 rounded-lg hover:bg-white/10"
               >
                 <X size={20} />
               </button>
@@ -2294,21 +2294,21 @@ const TeamManagementPage: React.FC = () => {
                   <Link2 size={22} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-gray-900">
+                  <h3 className="text-lg font-black text-white">
                     Associar Utilizador a {associatingPlayer.name}
                   </h3>
-                  <p className="text-xs text-gray-500 font-medium">
+                  <p className="text-xs text-white/50 font-medium">
                     Liga uma conta de utilizador registada na app à ficha deste jogador
                   </p>
                 </div>
               </div>
 
               {/* Informação do Jogador Atual */}
-              <div className="mt-4 p-3.5 bg-gray-50 rounded-xl border border-gray-200 text-xs flex items-center justify-between">
+              <div className="mt-4 p-3.5 bg-white/5 rounded-xl border border-white/10 text-xs flex items-center justify-between">
                 <div>
-                  <p className="font-bold text-gray-850">{associatingPlayer.name} {associatingPlayer.nickname ? `("${associatingPlayer.nickname}")` : ''}</p>
-                  <p className="text-gray-500 mt-0.5 font-medium">Email na ficha: <strong className="text-gray-700">{associatingPlayer.email}</strong></p>
-                  {associatingPlayer.phone && <p className="text-gray-500 font-medium">Tel: <strong className="text-gray-700">{associatingPlayer.phone}</strong></p>}
+                  <p className="font-bold text-white">{associatingPlayer.name} {associatingPlayer.nickname ? `("${associatingPlayer.nickname}")` : ''}</p>
+                  <p className="text-white/50 mt-0.5 font-medium">Email na ficha: <strong className="text-white/80">{associatingPlayer.email}</strong></p>
+                  {associatingPlayer.phone && <p className="text-white/50 font-medium">Tel: <strong className="text-white/80">{associatingPlayer.phone}</strong></p>}
                 </div>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-csc-gold text-csc-dark rounded">
                   Ficha de Jogador
@@ -2318,8 +2318,8 @@ const TeamManagementPage: React.FC = () => {
               {/* 1. Sugestões Automáticas / Coincidências Encontradas */}
               {potentialMatches.length > 0 && (
                 <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-green-800">
-                    <Sparkles size={16} className="text-green-600" />
+                  <div className="flex items-center gap-1.5 text-xs font-black text-emerald-300">
+                    <Sparkles size={16} className="text-emerald-400" />
                     <span>Coincidência Automática Detetada por Email/Contacto!</span>
                   </div>
                   {potentialMatches.map(match => (
@@ -2349,7 +2349,7 @@ const TeamManagementPage: React.FC = () => {
               {/* 2. Pesquisa e Seleção de Outro Utilizador Registado */}
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider">
+                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider">
                     {potentialMatches.length > 0 ? 'Ou escolher outro utilizador registado' : 'Selecionar Utilizador Registado na App'}
                   </h4>
                 </div>
@@ -2361,13 +2361,13 @@ const TeamManagementPage: React.FC = () => {
                     value={associateSearchTerm}
                     onChange={(e) => setAssociateSearchTerm(e.target.value)}
                     placeholder="Pesquisar utilizador por nome, email ou telefone..."
-                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white"
+                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
                   />
                 </div>
 
-                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 border border-gray-200 rounded-xl p-2 bg-gray-50/50">
+                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 border border-white/10 rounded-xl p-2 bg-white/5">
                   {otherUsers.length === 0 ? (
-                    <p className="text-center py-6 text-xs text-gray-400 font-medium">
+                    <p className="text-center py-6 text-xs text-white/40 font-medium">
                       Nenhum outro utilizador encontrado.
                     </p>
                   ) : (
@@ -2381,18 +2381,18 @@ const TeamManagementPage: React.FC = () => {
                           className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between ${
                             isSelected 
                               ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50 shadow-xs' 
-                              : 'border-gray-200 hover:border-gray-300 hover:bg-white bg-white/70'
+                              : 'border-white/10 hover:border-white/20 hover:bg-white/10 bg-white/5'
                           }`}
                         >
                           <div>
-                            <p className="font-bold text-gray-900">{user.name}</p>
-                            <p className="text-gray-500 text-[11px]">{user.email} {user.phone ? `• ${user.phone}` : ''}</p>
+                            <p className="font-bold text-white">{user.name}</p>
+                            <p className="text-white/50 text-[11px]">{user.email} {user.phone ? `• ${user.phone}` : ''}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 capitalize">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white/60 capitalize">
                               {user.role}
                             </span>
-                            {isSelected && <Check size={16} className="text-csc-dark font-black" />}
+                            {isSelected && <Check size={16} className="text-csc-gold font-black" />}
                           </div>
                         </div>
                       )
@@ -2402,14 +2402,14 @@ const TeamManagementPage: React.FC = () => {
               </div>
 
               {/* Botões do Rodapé */}
-              <div className="mt-6 pt-4 border-t border-gray-200 flex items-center justify-between gap-2">
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     setAssociatingPlayer(null)
                     setSelectedUserToAssociate(null)
                   }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50"
+                  className="px-4 py-2 border border-white/15 rounded-lg text-xs font-bold text-white hover:bg-white/10"
                 >
                   Cancelar
                 </button>
@@ -2419,7 +2419,7 @@ const TeamManagementPage: React.FC = () => {
                     type="button"
                     disabled={associatingLoading}
                     onClick={() => handleConfirmAssociate(associatingPlayer, selectedUserToAssociate)}
-                    className="px-4 py-2 bg-csc-dark hover:bg-black text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                    className="px-4 py-2 bg-csc-gold hover:brightness-95 text-csc-dark rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
                   >
                     <UserCheck size={15} />
                     <span>{associatingLoading ? 'A associar...' : `Vincular a ${selectedUserToAssociate.name}`}</span>

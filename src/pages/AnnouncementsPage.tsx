@@ -293,20 +293,20 @@ const AnnouncementsPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Formulário de Criação — apenas coach/admin. Para jogadores a rota é só de leitura. */}
         {isCoachOrAdmin && (
-          <div className="lg:col-span-5 bg-white rounded-3xl shadow-sm border border-gray-200/80 p-5 sm:p-6 space-y-4 sticky top-6">
-            <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center text-sm font-bold">
+          <div className="lg:col-span-5 bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-5 sm:p-6 space-y-4 sticky top-6">
+            <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
+              <div className="w-8 h-8 rounded-xl bg-csc-gold text-csc-dark flex items-center justify-center text-sm font-bold">
                 <Megaphone size={16} />
               </div>
               <div>
-                <h3 className="text-sm font-black text-gray-900">Novo Comunicado</h3>
-                <p className="text-[11px] text-gray-500">Escreve e publica um aviso para todo o plantel.</p>
+                <h3 className="text-sm font-black text-white">Novo Comunicado</h3>
+                <p className="text-[11px] text-white/50">Escreve e publica um aviso para todo o plantel.</p>
               </div>
             </div>
 
             <form onSubmit={handlePublish} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
                   Título do Comunicado *
                 </label>
                 <input
@@ -314,13 +314,13 @@ const AnnouncementsPage: React.FC = () => {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold placeholder:font-normal placeholder:text-gray-400"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold placeholder:font-normal placeholder:text-gray-400 text-gray-900"
                   placeholder="Ex: Ponto de Encontro Alterado"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
                   Conteúdo da Mensagem *
                 </label>
                 <textarea
@@ -328,16 +328,16 @@ const AnnouncementsPage: React.FC = () => {
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={4}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white resize-none leading-relaxed placeholder:text-gray-400"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white resize-none leading-relaxed placeholder:text-gray-400 text-gray-900"
                   placeholder="Escreve aqui a mensagem completa para os atletas e equipa técnica..."
                 />
               </div>
 
               {/* Opção de Ativar de Imediato */}
-              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between">
+              <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-gray-800 block">Ativar de Imediato</span>
-                  <span className="text-[10.5px] text-gray-500 block">Fica visível no carrossel de avisos da Homepage</span>
+                  <span className="text-xs font-bold text-white/80 block">Ativar de Imediato</span>
+                  <span className="text-[10.5px] text-white/50 block">Fica visível no carrossel de avisos da Homepage</span>
                 </div>
                 <button
                   type="button"
@@ -357,9 +357,9 @@ const AnnouncementsPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isPublishing || !title.trim() || !content.trim()}
-                className="w-full flex items-center justify-center gap-2 bg-csc-dark hover:bg-black active:bg-csc-dark text-white py-3 rounded-2xl font-black text-xs transition-all shadow-md active:scale-98 disabled:opacity-50 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-csc-gold hover:brightness-95 text-csc-dark py-3 rounded-2xl font-black text-xs transition-all shadow-md active:scale-98 disabled:opacity-50 cursor-pointer"
               >
-                <Plus size={16} className="text-csc-gold" />
+                <Plus size={16} className="text-csc-dark" />
                 <span>{isPublishing ? 'A publicar...' : 'Publicar Comunicado'}</span>
               </button>
             </form>
@@ -368,20 +368,20 @@ const AnnouncementsPage: React.FC = () => {
 
         {/* Lista e Histórico de Comunicados */}
         <div className={isCoachOrAdmin ? 'lg:col-span-7 space-y-4' : 'lg:col-span-12 space-y-4'}>
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-200/80 p-5 sm:p-6 space-y-4">
+          <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-5 sm:p-6 space-y-4">
             
             {/* Barra de Filtros e Pesquisa */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
               {/* Separadores de Filtro — ver ativos/inativos é gestão, não faz sentido para quem só lê */}
               {isCoachOrAdmin && (
-                <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-2xl w-fit">
+                <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-2xl w-fit">
                   <button
                     type="button"
                     onClick={() => setStatusFilter('all')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                       statusFilter === 'all'
-                        ? 'bg-white text-csc-dark shadow-2xs'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'bg-csc-gold text-csc-dark shadow-2xs'
+                        : 'text-white/60 hover:text-white'
                     }`}
                   >
                     Todos ({announcements.length})
@@ -392,12 +392,12 @@ const AnnouncementsPage: React.FC = () => {
                     className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
                       statusFilter === 'active'
                         ? 'bg-emerald-600 text-white shadow-2xs'
-                        : 'text-gray-600 hover:text-gray-900'
+                        : 'text-white/60 hover:text-white'
                     }`}
                   >
                     <span>Ativos</span>
                     <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      statusFilter === 'active' ? 'bg-emerald-800 text-white' : 'bg-gray-200 text-gray-700'
+                      statusFilter === 'active' ? 'bg-emerald-800 text-white' : 'bg-white/10 text-white/60'
                     }`}>{activeCount}</span>
                   </button>
                   <button
@@ -405,13 +405,13 @@ const AnnouncementsPage: React.FC = () => {
                     onClick={() => setStatusFilter('inactive')}
                     className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
                       statusFilter === 'inactive'
-                        ? 'bg-gray-800 text-white shadow-2xs'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'bg-white/20 text-white shadow-2xs'
+                        : 'text-white/60 hover:text-white'
                     }`}
                   >
                     <span>Inativos</span>
                     <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      statusFilter === 'inactive' ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'
+                      statusFilter === 'inactive' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
                     }`}>{inactiveCount}</span>
                   </button>
                 </div>
@@ -425,22 +425,22 @@ const AnnouncementsPage: React.FC = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Pesquisar..."
-                  className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium placeholder:text-gray-400"
+                  className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium placeholder:text-gray-400 text-gray-900"
                 />
               </div>
             </div>
 
             {/* Listagem */}
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-400 space-y-2">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-csc-dark border-t-transparent"></div>
+              <div className="flex flex-col items-center justify-center py-12 text-white/40 space-y-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-csc-gold border-t-transparent"></div>
                 <span className="text-xs font-medium">A carregar comunicados...</span>
               </div>
             ) : filteredAnnouncements.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200 p-6 space-y-2">
+              <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6 space-y-2">
                 <span className="text-3xl">📭</span>
-                <p className="text-xs font-bold text-gray-700">Nenhum comunicado encontrado.</p>
-                <p className="text-[11px] text-gray-400">
+                <p className="text-xs font-bold text-white/70">Nenhum comunicado encontrado.</p>
+                <p className="text-[11px] text-white/40">
                   {searchTerm
                     ? 'Experimenta ajustar o termo de pesquisa.'
                     : isCoachOrAdmin
@@ -458,20 +458,20 @@ const AnnouncementsPage: React.FC = () => {
                       key={ann.id} 
                       className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-3 ${
                         isActive 
-                          ? 'bg-white border-emerald-200 shadow-xs hover:border-emerald-300' 
-                          : 'bg-gray-50/70 border-gray-200 opacity-80'
+                          ? 'bg-white/5 border-emerald-400/30 shadow-xs hover:border-emerald-400/50' 
+                          : 'bg-white/5 border-white/10 opacity-60'
                       }`}
                     >
                       {/* Topo do Card: Título + Badge de Estado */}
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="space-y-1 flex-1 min-w-[200px]">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-black text-sm text-gray-900 leading-snug">
+                            <h4 className="font-black text-sm text-white leading-snug">
                               {ann.title}
                             </h4>
                           </div>
 
-                          <div className="flex items-center gap-2 text-[11px] text-gray-400 font-medium">
+                          <div className="flex items-center gap-2 text-[11px] text-white/40 font-medium">
                             <span className="flex items-center gap-1">
                               <Calendar size={12} />
                               {new Date(ann.published_at).toLocaleDateString('pt-PT')}
@@ -493,8 +493,8 @@ const AnnouncementsPage: React.FC = () => {
                                 <span>Ativo na Home</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-gray-200 text-gray-700 border border-gray-300">
-                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-white/10 text-white/60 border border-white/15">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white/40"></span>
                                 <span>Desativado</span>
                               </span>
                             )}
@@ -503,13 +503,13 @@ const AnnouncementsPage: React.FC = () => {
                       </div>
 
                       {/* Conteúdo */}
-                      <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap bg-gray-50/60 p-3 rounded-xl border border-gray-100">
+                      <div className="text-xs text-white/70 leading-relaxed whitespace-pre-wrap bg-white/5 p-3 rounded-xl border border-white/10">
                         {ann.content}
                       </div>
 
                       {/* Barra de Ações: Ativar/Desativar, Editar, Apagar — gestão, não leitura */}
                       {isCoachOrAdmin && (
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/10">
                           <button
                             type="button"
                             onClick={() => handleToggleActive(ann)}
@@ -537,17 +537,17 @@ const AnnouncementsPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleStartEdit(ann)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
                               title="Editar comunicado"
                             >
-                              <Edit3 size={13} className="text-gray-600" />
+                              <Edit3 size={13} className="text-white/70" />
                               <span>Editar</span>
                             </button>
 
                             <button
                               type="button"
                               onClick={() => setDeletingAnn(ann)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-transparent hover:border-red-200"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-transparent hover:border-red-400/30"
                               title="Eliminar comunicado"
                             >
                               <Trash2 size={14} />
@@ -573,28 +573,28 @@ const AnnouncementsPage: React.FC = () => {
             if (e.target === e.currentTarget) setEditingAnn(null)
           }}
         >
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative shadow-2xl border border-gray-100 space-y-4 animate-scale-in">
+          <div className="bg-csc-dark text-white rounded-3xl max-w-lg w-full p-6 relative shadow-2xl border border-white/10 space-y-4 animate-scale-in">
             <button
               type="button"
               onClick={() => setEditingAnn(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-white/50 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
             >
               <X size={20} />
             </button>
 
-            <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
-              <div className="w-10 h-10 rounded-2xl bg-csc-dark text-csc-gold flex items-center justify-center text-lg font-black shadow-xs">
+            <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
+              <div className="w-10 h-10 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center text-lg font-black shadow-xs">
                 ✏️
               </div>
               <div>
-                <h3 className="text-base font-black text-csc-dark">Editar Comunicado</h3>
-                <p className="text-[11px] text-gray-500">Atualiza os dados e visibilidade deste aviso.</p>
+                <h3 className="text-base font-black text-white">Editar Comunicado</h3>
+                <p className="text-[11px] text-white/50">Atualiza os dados e visibilidade deste aviso.</p>
               </div>
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1">
                   Título do Comunicado *
                 </label>
                 <input
@@ -602,12 +602,12 @@ const AnnouncementsPage: React.FC = () => {
                   required
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold text-gray-900"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1">
                   Conteúdo da Mensagem *
                 </label>
                 <textarea
@@ -615,15 +615,15 @@ const AnnouncementsPage: React.FC = () => {
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
                   rows={5}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white resize-none leading-relaxed"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white resize-none leading-relaxed text-gray-900"
                 />
               </div>
 
               {/* Switch de Ativo no Modal de Edição */}
-              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between">
+              <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-gray-800 block">Estado de Publicação</span>
-                  <span className="text-[10.5px] text-gray-500 block">
+                  <span className="text-xs font-bold text-white/80 block">Estado de Publicação</span>
+                  <span className="text-[10.5px] text-white/50 block">
                     {editIsActive ? '🟢 Ativo (Visível na Homepage)' : '⚪ Inativo (Oculto)'}
                   </span>
                 </div>
@@ -642,18 +642,18 @@ const AnnouncementsPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex gap-2.5 pt-2 border-t border-gray-100">
+              <div className="flex gap-2.5 pt-2 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setEditingAnn(null)}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                  className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingEdit || !editTitle.trim() || !editContent.trim()}
-                  className="flex-1 px-4 py-2.5 bg-csc-dark hover:bg-black text-white font-black text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-md"
+                  className="flex-1 px-4 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark font-black text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-md"
                 >
                   {isSavingEdit ? 'A guardar...' : '💾 Guardar Alterações'}
                 </button>
@@ -666,27 +666,27 @@ const AnnouncementsPage: React.FC = () => {
       {/* MODAL: CONFIRMAÇÃO DE ELIMINAÇÃO */}
       {deletingAnn && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-60 animate-fade-in select-none">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 space-y-4 animate-scale-in">
+          <div className="bg-csc-dark text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/10 space-y-4 animate-scale-in">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
                 <Trash2 size={24} />
               </div>
               <div>
-                <h3 className="text-base font-black text-gray-900 leading-tight">Apagar Comunicado?</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Esta ação não pode ser revertida.</p>
+                <h3 className="text-base font-black text-white leading-tight">Apagar Comunicado?</h3>
+                <p className="text-xs text-white/50 mt-0.5">Esta ação não pode ser revertida.</p>
               </div>
             </div>
 
-            <div className="p-3 bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-700">
-              <span className="font-bold text-gray-900 block truncate">{deletingAnn.title}</span>
-              <span className="text-[11px] text-gray-500 line-clamp-2 mt-0.5">{deletingAnn.content}</span>
+            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-xs text-white/70">
+              <span className="font-bold text-white block truncate">{deletingAnn.title}</span>
+              <span className="text-[11px] text-white/50 line-clamp-2 mt-0.5">{deletingAnn.content}</span>
             </div>
 
             <div className="flex gap-2.5 pt-1">
               <button
                 type="button"
                 onClick={() => setDeletingAnn(null)}
-                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                className="flex-1 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
