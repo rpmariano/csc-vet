@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { X, ShieldAlert, Award, Footprints, Save, CheckCircle2, Lock, Flame, Users, Sparkles } from 'lucide-react'
+import { X, ShieldAlert, Award, Footprints, Save, CheckCircle2, Lock, Flame, Users } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../pages/CalendarPage'
 import { toast } from '../context/ToastContext'
@@ -693,7 +693,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                     {playerStats.map(p => {
                       const displayName = p.shirt_name || p.name
                       return (
-                      <div key={p.player_id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/10 transition-colors">
+                      <div key={p.player_id} className="p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 hover:bg-white/10 transition-colors">
                         
                         {/* Identificação e Seletor de Titularidade */}
                         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -821,18 +821,18 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                             🟥 {p.red_cards === 1 ? '✓' : '0'}
                           </button>
 
-                          {/* MVP (⭐) */}
+                          {/* MVP: pílula com texto, como os cartões ao lado — mais claro do que um ícone sozinho */}
                           <button
                             type="button"
                             onClick={() => handleToggleMvp(p.player_id)}
-                            className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+                            className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
                               p.is_mvp
-                                ? 'bg-amber-400 text-white border-amber-500 ring-2 ring-amber-300'
-                                : 'bg-gray-100 border-gray-200 text-gray-400 hover:text-amber-600'
+                                ? 'bg-amber-400 text-csc-dark border-amber-500 ring-2 ring-amber-300'
+                                : 'bg-white/10 border-white/10 text-white/60 hover:text-white/70'
                             }`}
                             title="Melhor em Campo (MVP)"
                           >
-                            <Sparkles size={14} className={p.is_mvp ? 'fill-white' : ''} />
+                            MVP
                           </button>
 
                         </div>
