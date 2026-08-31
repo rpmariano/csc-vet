@@ -19,7 +19,7 @@ import { useModalA11y } from '../hooks/useModalA11y'
  * partilhado por qualquer ecrã de detalhe.
  */
 
-export type BottomSheetSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
+export type BottomSheetSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl'
 
 const LARGURAS: Record<BottomSheetSize, string> = {
   sm: 'sm:max-w-sm',
@@ -28,6 +28,10 @@ const LARGURAS: Record<BottomSheetSize, string> = {
   xl: 'sm:max-w-xl',
   '2xl': 'sm:max-w-2xl',
   '3xl': 'sm:max-w-3xl',
+  // Tamanhos largos: dossiês/fichas de detalhe com layout de 2 colunas no desktop.
+  '4xl': 'sm:max-w-4xl',
+  '5xl': 'sm:max-w-5xl',
+  '6xl': 'sm:max-w-6xl',
 }
 
 /** Distância arrastada para baixo, em px, a partir da qual a persiana fecha. */
@@ -51,6 +55,8 @@ export interface BottomSheetProps {
   ariaLabel?: string
   /** 'light': cartão branco, como o `Modal`. 'dark': cartão csc-dark, como a persiana de eventos. */
   tone?: 'light' | 'dark'
+  /** Classes extra para o painel (ex.: um bordo distintivo num dossiê oficial). */
+  className?: string
   children?: React.ReactNode
 }
 
@@ -67,6 +73,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   showCloseButton = true,
   ariaLabel,
   tone = 'light',
+  className = '',
   children,
 }) => {
   const painelRef = useModalA11y({ isOpen, onClose, closeOnEscape })
@@ -143,7 +150,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           transform: ehMobile ? `translateY(${translateY}px)` : undefined,
           transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
         }}
-        className={`${corFundo} w-full ${LARGURAS[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl relative max-h-[90vh] sm:max-h-[88vh] flex flex-col outline-none overscroll-contain animate-scale-up`}
+        className={`${corFundo} w-full ${LARGURAS[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl relative max-h-[90vh] sm:max-h-[88vh] flex flex-col outline-none overscroll-contain animate-scale-up ${className}`}
       >
         {/* Alça de arrasto — só no telemóvel; também funciona como botão de fecho */}
         <button

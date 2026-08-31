@@ -27,6 +27,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth, extractRolesFromProfile, cleanNotesFromRolesTag } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../components/SoccerPitchSelector'
+import { BottomSheet } from '../components/BottomSheet'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
@@ -1815,9 +1816,16 @@ const TeamManagementPage: React.FC = () => {
 
       {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER PC & MOBILE) */}
       {isDetailModalOpen && selectedProfile && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 lg:p-6 z-50 overflow-y-auto">
-          <div className="bg-csc-dark text-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-4 sm:p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40 space-y-6">
-            
+        <BottomSheet
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
+          tone="dark"
+          size="6xl"
+          showCloseButton={false}
+          ariaLabel={`Ficha de ${selectedProfile.name}`}
+          className="border-2 border-amber-400/40"
+        >
+          <div className="space-y-6">
             {/* Top Bar Header */}
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-3">
@@ -2252,7 +2260,7 @@ const TeamManagementPage: React.FC = () => {
             </div>
 
           </div>
-        </div>
+        </BottomSheet>
       )}
 
       {/* MODAL 3: ASSOCIAR UTILIZADOR A JOGADOR */}
