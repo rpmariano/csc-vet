@@ -1274,7 +1274,8 @@ const TeamManagementPage: React.FC = () => {
       {isFormModalOpen && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 lg:p-6 z-50 overflow-y-auto"
-          onClick={(e) => {
+          onMouseDown={(e) => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseFormModal()
           }}
         >

@@ -569,7 +569,8 @@ const AnnouncementsPage: React.FC = () => {
       {editingAnn && (
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
-          onClick={(e) => {
+          onMouseDown={(e) => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) setEditingAnn(null)
           }}
         >

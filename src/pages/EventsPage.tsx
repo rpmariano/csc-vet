@@ -2283,8 +2283,14 @@ const EventsPage: React.FC = () => {
       )}
       {/* ====== MODAL DE EDIÇÃO DE EVENTO ====== */}
       {editingEvent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onClick={handleAttemptCloseEditModal}>
-          <div className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+          onMouseDown={e => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
+            if (e.target === e.currentTarget) handleAttemptCloseEditModal()
+          }}
+        >
+          <div className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10">
             <div className="sticky top-0 bg-csc-dark border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
               <h3 className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
               <button onClick={handleAttemptCloseEditModal} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90"><X size={18} className="stroke-[2.5]" /></button>
@@ -2712,7 +2718,8 @@ const EventsPage: React.FC = () => {
       {isQuickFieldModalOpen && (
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fade-in"
-          onClick={(e) => {
+          onMouseDown={(e) => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseQuickFieldModal()
           }}
         >
@@ -2786,7 +2793,8 @@ const EventsPage: React.FC = () => {
       {isQuickOpponentModalOpen && (
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-[70] animate-fade-in"
-          onClick={(e) => {
+          onMouseDown={(e) => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseQuickOppModal()
           }}
         >

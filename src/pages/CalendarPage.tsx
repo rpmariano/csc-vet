@@ -2095,7 +2095,8 @@ const CalendarPage: React.FC = () => {
       {selectedEvent && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-6 z-50 overflow-hidden select-none animate-fade-in"
-          onClick={(e) => {
+          onMouseDown={(e) => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) {
               setSelectedEvent(null)
               setSheetTranslateY(0)
@@ -2665,7 +2666,8 @@ const CalendarPage: React.FC = () => {
       {isAddModalOpen && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in"
-          onClick={(e) => {
+          onMouseDown={(e) => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseAddModal()
           }}
         >
@@ -3196,7 +3198,8 @@ const CalendarPage: React.FC = () => {
       {isEditModalOpen && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in"
-          onClick={(e) => {
+          onMouseDown={e => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseEditModal()
           }}
         >
@@ -3819,7 +3822,8 @@ const CalendarPage: React.FC = () => {
       {isQuickFieldModalOpen && (
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
-          onClick={(e) => {
+          onMouseDown={(e) => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseQuickFieldModal()
           }}
         >
@@ -3894,7 +3898,8 @@ const CalendarPage: React.FC = () => {
       {isQuickOpponentModalOpen && (
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
-          onClick={(e) => {
+          onMouseDown={(e) => {
+            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
             if (e.target === e.currentTarget) handleAttemptCloseQuickOppModal()
           }}
         >
