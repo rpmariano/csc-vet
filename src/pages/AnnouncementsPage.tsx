@@ -579,9 +579,9 @@ const AnnouncementsPage: React.FC = () => {
               type="button"
               onClick={() => setEditingAnn(null)}
               aria-label="Fechar"
-              className="absolute top-4 right-4 text-white/70 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
             >
-              <X size={20} />
+              <X size={18} className="stroke-[2.5]" />
             </button>
 
             <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">

@@ -62,6 +62,21 @@ export const getGoogleMapsUrl = (query: string) => query ? `https://www.google.c
 export const hasMatchReport = (ev?: { type?: string; home_score?: number | null } | null): boolean =>
   !!ev && ev.type === 'match' && ev.home_score !== null && ev.home_score !== undefined
 
+/**
+ * Prazo até ao qual o jogador pode responder — ou mudar de ideias sobre uma resposta já
+ * dada — à convocatória: a hora de concentração, ou o início do evento quando não há
+ * concentração definida. Depois disso a resposta fica fechada (só consulta).
+ */
+export const getRsvpDeadline = (ev?: { date_time?: string | null; meeting_time?: string | null } | null): number | null => {
+  if (!ev?.date_time) return null
+  const prazo = new Date(ev.date_time)
+  if (ev.meeting_time) {
+    const [hh, mm, ss] = ev.meeting_time.split(':').map(Number)
+    prazo.setHours(hh || 0, mm || 0, ss || 0, 0)
+  }
+  return prazo.getTime()
+}
+
 export const formatClubSigla = (initials?: string | null): string => {
   if (!initials) return 'CSC'
   const trimmed = initials.trim()
@@ -206,6 +221,9 @@ const CalendarPage: React.FC = () => {
   const [opponents, setOpponents] = useState<Opponent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  // Separado de `selectedEvent`: o evento fica retido (para a persiana poder deslizar
+  // suavemente para fora ao fechar) mesmo depois de a persiana deixar de estar aberta.
+  const [isEventSheetOpen, setIsEventSheetOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -255,7 +273,9 @@ const CalendarPage: React.FC = () => {
   }, [selectedEvent])
 
   const handleCloseEventModal = () => {
-    setSelectedEvent(null)
+    // Só fecha visualmente — `selectedEvent` fica retido para a persiana poder
+    // deslizar para fora antes de o conteúdo desaparecer (ver isEventSheetOpen).
+    setIsEventSheetOpen(false)
     setPlayerSearchTerm('')
     setModalCallupStatusFilter('all')
   }
@@ -842,6 +862,7 @@ const CalendarPage: React.FC = () => {
       const target = events.find(e => e.id === eventIdParam)
       if (target) {
         setSelectedEvent(target)
+        setIsEventSheetOpen(true)
         const d = new Date(target.date_time)
         setSelectedDate(d)
         setCurrentDate(d)
@@ -866,6 +887,7 @@ const CalendarPage: React.FC = () => {
 
         if (data) {
           setSelectedEvent(data as Event)
+          setIsEventSheetOpen(true)
           const d = new Date(data.date_time)
           setSelectedDate(d)
           setCurrentDate(d)
@@ -1216,7 +1238,7 @@ const CalendarPage: React.FC = () => {
         try {
           const { error } = await supabase.from('events').delete().eq('id', eventId)
           if (error) throw error
-          setSelectedEvent(null)
+          setIsEventSheetOpen(false)
           setIsEditModalOpen(false)
           fetchEventsAndData()
           toast.success('Evento eliminado com sucesso!')
@@ -1232,6 +1254,11 @@ const CalendarPage: React.FC = () => {
     const targetEvent = events.find(e => e.id === eventId)
     if (hasMatchReport(targetEvent)) {
       toast.error('Este jogo já tem ficha de jogo lançada — a convocatória está fechada.')
+      return
+    }
+    const deadline = getRsvpDeadline(targetEvent)
+    if (deadline !== null && Date.now() >= deadline) {
+      toast.error(`Já passou a hora de ${targetEvent?.meeting_time ? 'concentração' : 'início'} — a convocatória está fechada.`)
       return
     }
     try {
@@ -1609,7 +1636,7 @@ const CalendarPage: React.FC = () => {
     return (
       <div
         key={event.id}
-        onClick={() => setSelectedEvent(event)}
+        onClick={() => { setSelectedEvent(event); setIsEventSheetOpen(true) }}
         className="rounded-3xl transition-all cursor-pointer bg-csc-dark text-white overflow-hidden shadow-sm hover:shadow-lg flex flex-col justify-between"
       >
         {/* Cabeçalho: tipo de evento por ícone + rótulo, não por cor de fundo */}
@@ -1661,7 +1688,7 @@ const CalendarPage: React.FC = () => {
 
                 <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-white/60">
                   <span className="font-bold">
-                    Condição: <strong className="text-white">{isAway ? 'Fora de Casa' : event.home_away === 'neutral' ? 'Campo Neutro' : 'Em Casa'}</strong>
+                    Condição: <strong className="text-white">{event.home_away === 'neutral' ? 'Neutro' : isAway ? 'Visitante' : 'Visitado'}</strong>
                   </span>
                 </div>
               </div>
@@ -1737,7 +1764,9 @@ const CalendarPage: React.FC = () => {
               const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
               const isPractice = event.type === 'practice'
               const closedByReport = hasMatchReport(event)
-              const isRsvpOpen = !closedByReport && (!isPractice || diffDays <= 6)
+              const deadline = getRsvpDeadline(event)
+              const pastDeadline = deadline !== null && now >= deadline
+              const isRsvpOpen = !closedByReport && !pastDeadline && (!isPractice || diffDays <= 6)
 
               return (
                 <div
@@ -1748,6 +1777,10 @@ const CalendarPage: React.FC = () => {
                   {closedByReport ? (
                     <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
                       Jogo com ficha lançada — convocatória fechada
+                    </span>
+                  ) : pastDeadline ? (
+                    <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
+                      Convocatória fechada — já passou a hora de {event.meeting_time ? 'concentração' : 'início'}
                     </span>
                   ) : !isRsvpOpen ? (
                     <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
@@ -2038,6 +2071,7 @@ const CalendarPage: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation()
                               setSelectedEvent(ev)
+                              setIsEventSheetOpen(true)
                             }}
                             className={`text-[9px] px-1 py-0.2 rounded font-bold truncate flex items-center gap-0.5 shadow-2xs hover:opacity-85 ${
                               ev.type === 'match' 
@@ -2110,10 +2144,13 @@ const CalendarPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Detalhes Evento & Convocatória (persiana partilhada) */}
+      {/* Modal Detalhes Evento & Convocatória (persiana partilhada).
+          A condição usa só `selectedEvent` (nunca voltar a null ao fechar) — a persiana
+          controla a própria visibilidade por `isEventSheetOpen`, para poder deslizar
+          para fora suavemente em vez de desaparecer no instante em que se fecha. */}
       {selectedEvent && (
         <BottomSheet
-          isOpen={!!selectedEvent}
+          isOpen={isEventSheetOpen}
           onClose={handleCloseEventModal}
           ref={modalScrollRef}
           tone="dark"
@@ -2129,7 +2166,7 @@ const CalendarPage: React.FC = () => {
             <button
               type="button"
               onClick={handleCloseEventModal}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
@@ -2289,13 +2326,11 @@ const CalendarPage: React.FC = () => {
                   const oppSigla = formatOpponentSigla(selectedEvent.opponent)
                   const leftLogo = isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url
                   const leftSigla = isAway ? oppSigla : cscSigla
-                  const leftName = isAway ? selectedEvent.opponent?.name : (clubSettings?.name || 'Cascais')
                   const rightLogo = isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url
                   const rightSigla = isAway ? cscSigla : oppSigla
-                  const rightName = isAway ? (clubSettings?.name || 'Cascais') : selectedEvent.opponent?.name
 
                   return (
-                    <div className="bg-white/5 p-4 sm:p-5 rounded-2xl space-y-3">
+                    <div className="bg-white/[0.07] p-4 sm:p-5 rounded-2xl space-y-3 border border-white/10 border-t-2 border-t-csc-gold/50 shadow-lg shadow-black/20">
                       <div className="flex items-center justify-between gap-3 sm:gap-4">
                         {/* Left Team */}
                         <div className="flex-1 flex flex-col items-start text-left min-w-0">
@@ -2311,9 +2346,6 @@ const CalendarPage: React.FC = () => {
                               {leftSigla}
                             </span>
                           </div>
-                          <span className="text-[11px] sm:text-xs font-bold text-white/60 mt-1 truncate max-w-full">
-                            {leftName}
-                          </span>
                         </div>
 
                         {/* VS Badge */}
@@ -2337,15 +2369,12 @@ const CalendarPage: React.FC = () => {
                               {rightSigla}
                             </span>
                           </div>
-                          <span className="text-[11px] sm:text-xs font-bold text-white/60 mt-1 truncate max-w-full">
-                            {rightName}
-                          </span>
                         </div>
                       </div>
 
                       <div className="pt-2.5 border-t border-white/10 flex items-center justify-between text-xs text-white/60 gap-2">
                         <span className="font-bold">
-                          Condição: <strong className="text-white">{isAway ? 'Fora' : selectedEvent.home_away === 'neutral' ? 'Campo Neutro' : 'Casa'}</strong>
+                          Condição: <strong className="text-white">{selectedEvent.home_away === 'neutral' ? 'Neutro' : isAway ? 'Visitante' : 'Visitado'}</strong>
                         </span>
                         {(new Date(selectedEvent.date_time).getTime() <= Date.now() || (selectedEvent.home_score !== null && selectedEvent.home_score !== undefined)) && (
                           <button
@@ -2369,14 +2398,14 @@ const CalendarPage: React.FC = () => {
                 {/* Concentração Acima da Hora */}
                 {selectedEvent.meeting_time && (
                   <div className="flex items-center">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-csc-gold bg-white/10 px-3 py-1 rounded-full">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-csc-gold bg-white/10 px-3 py-1 rounded-full border border-csc-gold/30 shadow-sm shadow-black/20">
                       <span>Concentração: {selectedEvent.meeting_time.substring(0, 5)}</span>
                     </div>
                   </div>
                 )}
 
                 {/* Info Box (Data, Hora e Local) */}
-                <div className="space-y-2 bg-white/5 p-3.5 rounded-2xl text-xs">
+                <div className="space-y-2 bg-white/[0.07] p-3.5 rounded-2xl text-xs border border-white/10 border-t-white/20 shadow-md shadow-black/20">
                   <div className="flex items-center text-white space-x-2.5">
                     <Clock size={16} className="text-csc-gold shrink-0" />
                     <div>
@@ -2421,7 +2450,7 @@ const CalendarPage: React.FC = () => {
                   const clean = parseMatchReportMetadata(selectedEvent.description).cleanDescription
                   if (!clean) return null
                   return (
-                    <div className="p-3.5 bg-white/5 rounded-2xl text-xs text-white/70 space-y-1">
+                    <div className="p-3.5 bg-white/[0.07] rounded-2xl text-xs text-white/70 space-y-1 border border-white/10 border-t-white/20 shadow-md shadow-black/20">
                       <p className="font-black text-white">Observações & Informações:</p>
                       <p className="leading-relaxed">{clean}</p>
                     </div>
@@ -2449,28 +2478,49 @@ const CalendarPage: React.FC = () => {
                   const now = new Date().getTime()
                   const isPractice = selectedEvent.type === 'practice'
                   const closedByReport = hasMatchReport(selectedEvent)
-                  const isRsvpOpen = !closedByReport && (!isPractice || ((eventTime - now) <= 6 * 24 * 60 * 60 * 1000))
+                  const deadline = getRsvpDeadline(selectedEvent)
+                  const pastDeadline = deadline !== null && now >= deadline
+                  const isRsvpOpen = !closedByReport && !pastDeadline && (!isPractice || ((eventTime - now) <= 6 * 24 * 60 * 60 * 1000))
 
                   return (
-                    <div className={isRsvpOpen && myCallup.status === 'called' ? 'rounded-2xl overflow-hidden' : 'p-4 bg-white/5 rounded-2xl space-y-3'}>
-                      {isRsvpOpen && myCallup.status === 'called' ? (
-                        // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home
-                        <div className="bg-csc-gold px-4 py-3.5 flex items-center justify-center gap-3">
-                          <span className="text-sm font-bold text-csc-dark">Vais estar presente?</span>
-                          <button
-                            type="button"
-                            onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                            className="h-10 px-5 rounded-full bg-csc-dark text-white text-sm font-bold cursor-pointer active:scale-95 transition-transform"
-                          >
-                            Sim
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                            className="h-10 px-5 rounded-full border-2 border-csc-dark text-csc-dark hover:bg-csc-dark/10 text-sm font-bold cursor-pointer active:scale-95 transition-transform"
-                          >
-                            Não
-                          </button>
+                    <div className={isRsvpOpen ? 'rounded-2xl overflow-hidden shadow-lg shadow-black/20' : 'p-4 bg-white/[0.07] rounded-2xl space-y-3 border border-white/10 border-t-white/20 shadow-md shadow-black/20'}>
+                      {isRsvpOpen ? (
+                        // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home.
+                        // Mostra-se sempre que ainda dá para responder, mesmo que já tenha respondido antes —
+                        // até à hora de concentração o jogador pode sempre mudar de ideias.
+                        <div className="bg-csc-gold px-4 py-3.5 flex flex-col items-center justify-center gap-2">
+                          <span className="text-sm font-bold text-csc-dark">
+                            {myCallup.status === 'called' ? 'Vais estar presente?' : 'A tua presença'}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              disabled={myCallup.status === 'confirmed'}
+                              onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
+                              className={`h-10 px-5 rounded-full text-sm font-bold transition-transform ${
+                                myCallup.status === 'confirmed'
+                                  ? 'bg-csc-dark/40 text-white cursor-not-allowed'
+                                  : 'bg-csc-dark text-white cursor-pointer active:scale-95'
+                              }`}
+                            >
+                              Sim
+                            </button>
+                            <button
+                              type="button"
+                              disabled={myCallup.status === 'declined'}
+                              onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
+                              className={`h-10 px-5 rounded-full border-2 border-csc-dark text-sm font-bold transition-transform ${
+                                myCallup.status === 'declined'
+                                  ? 'text-csc-dark/50 cursor-not-allowed'
+                                  : 'text-csc-dark hover:bg-csc-dark/10 cursor-pointer active:scale-95'
+                              }`}
+                            >
+                              Não
+                            </button>
+                          </div>
+                          {myCallup.status !== 'called' && (
+                            <span className="text-[11px] font-bold text-csc-dark/70">Podes mudar de ideias até à hora de {selectedEvent.meeting_time ? 'concentração' : 'início'}.</span>
+                          )}
                         </div>
                       ) : (
                         <>
@@ -2489,6 +2539,10 @@ const CalendarPage: React.FC = () => {
                           {closedByReport ? (
                             <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
                               Este jogo já tem <strong className="text-white">ficha de jogo lançada</strong> — a convocatória está fechada e já não pode ser alterada.
+                            </div>
+                          ) : pastDeadline ? (
+                            <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
+                              Já passou a hora de <strong className="text-white">{selectedEvent.meeting_time ? 'concentração' : 'início'}</strong> — a convocatória está fechada e já não pode ser alterada.
                             </div>
                           ) : !isRsvpOpen && (
                             <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
@@ -2526,7 +2580,7 @@ const CalendarPage: React.FC = () => {
                 })
 
                 return (
-                  <div className="lg:col-span-7 bg-white/5 p-4 sm:p-5 rounded-3xl space-y-3.5 transition-all">
+                  <div className="lg:col-span-7 bg-white/[0.07] p-4 sm:p-5 rounded-3xl space-y-3.5 transition-all border border-white/10 border-t-white/20 shadow-lg shadow-black/20">
                     {/* Topo da Convocatória com Botão de Colapsar / Expandir */}
                     <div
                       onClick={() => setIsModalCallupsExpanded(prev => !prev)}
@@ -2637,7 +2691,6 @@ const CalendarPage: React.FC = () => {
                                   key={c.id}
                                   status={c.status}
                                   player={c.player}
-                                  roles={extractRolesFromProfile(c.player as any)}
                                   displayName={getPlayerDisplayName(c.player)}
                                   isCoachOrAdmin={isCoachOrAdmin}
                                   onConfirm={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'confirmed')}
@@ -2673,7 +2726,7 @@ const CalendarPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseAddModal}
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-2xs border border-white/10"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
@@ -3206,7 +3259,7 @@ const CalendarPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseEditModal}
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-2xs border border-white/10"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />

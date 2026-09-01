@@ -37,6 +37,9 @@ export interface Profile {
   id_document_url?: string | null
   insurance_doc_url?: string | null
   medical_exam_doc_url?: string | null
+  /** Janela em que o jogador deve pagar quota — ver src/lib/finance.ts. */
+  quota_start_date?: string | null
+  quota_end_date?: string | null
   created_at?: string
 }
 

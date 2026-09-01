@@ -1284,9 +1284,9 @@ const TeamManagementPage: React.FC = () => {
               type="button"
               onClick={handleAttemptCloseFormModal}
               aria-label="Fechar"
-              className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-colors"
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
             >
-              <X size={22} />
+              <X size={19} className="stroke-[2.5]" />
             </button>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4 mb-5">
               <div>
@@ -1816,8 +1816,11 @@ const TeamManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER PC & MOBILE) */}
-      {isDetailModalOpen && selectedProfile && (
+      {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER PC & MOBILE).
+          A condição usa só `selectedProfile` (nunca é limpo ao fechar) — a persiana
+          controla a própria visibilidade por `isDetailModalOpen`, para poder deslizar
+          para fora suavemente em vez de desaparecer no instante em que se fecha. */}
+      {selectedProfile && (
         <BottomSheet
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
@@ -1876,10 +1879,10 @@ const TeamManagementPage: React.FC = () => {
                 )}
                 <button
                   onClick={() => setIsDetailModalOpen(false)}
-                  className="text-white/70 hover:text-white p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-colors"
+                  className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40 shrink-0"
                   title="Fechar"
                 >
-                  <X size={22} />
+                  <X size={18} className="stroke-[2.5]" />
                 </button>
               </div>
             </div>
@@ -1997,7 +2000,7 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* Campo Tático */}
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 shadow-xs space-y-2">
+                <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-2">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                       <Shield size={14} className="text-csc-gold" />
@@ -2020,24 +2023,24 @@ const TeamManagementPage: React.FC = () => {
               <div className="lg:col-span-7 xl:col-span-8 space-y-4">
                 
                 {/* 1. Identificação & Dados Fiscais */}
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
+                <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-3">
                   <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                     <Users size={14} className="text-csc-gold" />
                     <span>1. Identificação & Dados Fiscais</span>
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 text-xs">
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nome Completo</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.name}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nome na Camisola</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.birth_date ? (
@@ -2046,29 +2049,29 @@ const TeamManagementPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
                       <p className="text-white/65 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
                       <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.nif || '-'}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
                       <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.id_number || '-'}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Validade do CC</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.id_card_expiry ? new Date(selectedProfile.id_card_expiry).toLocaleDateString('pt-PT') : '-'}
                       </p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nacionalidade</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
                     </div>
@@ -2076,19 +2079,19 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 2. Morada & Residência */}
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
+                <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-3">
                   <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                     <FileText size={14} className="text-csc-gold" />
                     <span>2. Morada & Residência</span>
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.address || 'Não registada'}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.postal_code || '-'} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
@@ -2098,13 +2101,13 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 3. Dados Bancários (Débito Direto) */}
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
+                <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-3">
                   <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                     <Shield size={14} className="text-csc-gold" />
                     <span>3. Dados Bancários & Quotas</span>
                   </h4>
 
-                  <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex items-center justify-between gap-3">
+                  <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-white/65 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
                       <p className="font-black text-white font-mono text-xs sm:text-sm mt-0.5">
@@ -2149,7 +2152,7 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 5. Documentos Anexados & RGPD */}
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-3">
+                <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                       <FileText size={14} className="text-csc-gold" />
@@ -2294,9 +2297,9 @@ const TeamManagementPage: React.FC = () => {
                   setSelectedUserToAssociate(null)
                 }}
                 aria-label="Fechar"
-                className="absolute top-4 right-4 text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10"
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               >
-                <X size={20} />
+                <X size={18} className="stroke-[2.5]" />
               </button>
 
               {/* Cabeçalho */}

@@ -55,6 +55,12 @@ export interface TournamentRules {
   walkover_score: string;
   max_walkovers_allowed: number;
   delay_tolerance_mins: number;
+  /** Inscrição na prova — valor total e, opcionalmente, um plano de tranches com prazo
+   * individual cada. Cada tranche liga-se à despesa (transactions) que a liquidou. */
+  registration_fee?: {
+    total: number
+    installments: { amount: number; due_date: string; paid: boolean; transaction_id?: string }[]
+  }
 }
 
 export const DEFAULT_TOURNAMENT_RULES: TournamentRules = {
@@ -1299,9 +1305,9 @@ const AdminDashboard: React.FC = () => {
               <button
                 onClick={handleRequestCloseFieldModal}
                 aria-label="Fechar"
-                className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               >
-                <X size={20} />
+                <X size={18} className="stroke-[2.5]" />
               </button>
             </div>
 
@@ -1371,9 +1377,9 @@ const AdminDashboard: React.FC = () => {
               <button
                 onClick={handleRequestCloseOppModal}
                 aria-label="Fechar"
-                className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               >
-                <X size={20} />
+                <X size={18} className="stroke-[2.5]" />
               </button>
             </div>
 
@@ -1520,9 +1526,9 @@ const AdminDashboard: React.FC = () => {
               <button
                 onClick={handleRequestCloseTourModal}
                 aria-label="Fechar"
-                className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               >
-                <X size={20} />
+                <X size={18} className="stroke-[2.5]" />
               </button>
             </div>
 
@@ -1672,6 +1678,105 @@ const AdminDashboard: React.FC = () => {
                     <label className="block text-[11px] font-bold text-gray-600 mb-1">Resultado p/ Falta Comp.</label>
                     <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({...tourRules, walkover_score: e.target.value})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" placeholder="Ex: 5-0" />
                   </div>
+                </div>
+              </details>
+
+              <details className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden group">
+                <summary className="px-4 py-3 text-sm font-bold text-white/80 cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors">
+                  <span>💶 Inscrição na Prova (Opcional)</span>
+                  <span className="text-white/65 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="p-4 border-t border-gray-200 bg-white space-y-3">
+                  <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!tourRules.registration_fee}
+                      onChange={e => setTourRules(prev => ({
+                        ...prev,
+                        registration_fee: e.target.checked
+                          ? { total: 0, installments: [{ amount: 0, due_date: '', paid: false }] }
+                          : undefined
+                      }))}
+                      className="w-4 h-4 text-csc-dark rounded"
+                    />
+                    Esta prova tem valor de inscrição a pagar
+                  </label>
+
+                  {tourRules.registration_fee && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Valor Total (€)</label>
+                          <input
+                            type="number" min="0" step="0.01"
+                            value={tourRules.registration_fee.total}
+                            onChange={e => setTourRules(prev => ({ ...prev, registration_fee: { ...prev.registration_fee!, total: Number(e.target.value) } }))}
+                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Nº de Tranches</label>
+                          <input
+                            type="number" min="1" max="6"
+                            value={tourRules.registration_fee.installments.length}
+                            onChange={e => setTourRules(prev => {
+                              const rf = prev.registration_fee!
+                              const n = Math.max(1, Math.min(6, Number(e.target.value) || 1))
+                              const perInstallment = Number((rf.total / n).toFixed(2))
+                              const installments = Array.from({ length: n }, (_, i) => rf.installments[i] || { amount: perInstallment, due_date: '', paid: false })
+                              return { ...prev, registration_fee: { ...rf, installments } }
+                            })}
+                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {tourRules.registration_fee.installments.map((inst, idx) => (
+                          <div key={idx} className="grid grid-cols-3 gap-2 items-end p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-500 mb-1">Tranche {idx + 1} — Valor (€)</label>
+                              <input
+                                type="number" min="0" step="0.01"
+                                value={inst.amount}
+                                disabled={inst.paid}
+                                onChange={e => setTourRules(prev => {
+                                  const rf = prev.registration_fee!
+                                  const installments = rf.installments.map((it, i) => i === idx ? { ...it, amount: Number(e.target.value) } : it)
+                                  return { ...prev, registration_fee: { ...rf, installments } }
+                                })}
+                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-900 disabled:bg-gray-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-gray-500 mb-1">Prazo</label>
+                              <input
+                                type="date"
+                                value={inst.due_date}
+                                disabled={inst.paid}
+                                onChange={e => setTourRules(prev => {
+                                  const rf = prev.registration_fee!
+                                  const installments = rf.installments.map((it, i) => i === idx ? { ...it, due_date: e.target.value } : it)
+                                  return { ...prev, registration_fee: { ...rf, installments } }
+                                })}
+                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-900 disabled:bg-gray-100"
+                              />
+                            </div>
+                            <div className="text-xs font-bold">
+                              {inst.paid ? (
+                                <span className="text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">✓ Paga</span>
+                              ) : (
+                                <span className="text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">Por pagar</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-gray-500">
+                        Depois de guardar o torneio, cada tranche pode ser paga na página Financeiro & Quotas — cria automaticamente uma despesa na categoria "Inscrições em Torneios".
+                      </p>
+                    </>
+                  )}
                 </div>
               </details>
 

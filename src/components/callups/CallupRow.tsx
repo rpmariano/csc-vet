@@ -3,13 +3,12 @@ import { CheckCircle2, Clock, Trash2, XCircle } from 'lucide-react'
 interface CallupRowPlayer {
   name?: string | null
   jersey_number?: number | null
+  position?: string | null
 }
 
 interface CallupRowProps {
   status: 'called' | 'confirmed' | 'declined' | 'pending'
   player: CallupRowPlayer | null | undefined
-  /** Já calculado no caller via extractRolesFromProfile(player) — evita acoplar este componente ao AuthContext. */
-  roles: string[]
   /** Já calculado no caller via getPlayerDisplayName(player). */
   displayName: string
   isCoachOrAdmin: boolean | null | undefined
@@ -34,9 +33,10 @@ interface CallupRowProps {
  * com o número — era redundante). O círculo de estado à esquerda é sempre o estado de RSVP
  * (confirmado/recusado/pendente), nunca o número do jogador.
  */
-export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, onConfirm, onDecline, onSetPending, onRemove }: CallupRowProps) {
+export function CallupRow({ status, player, displayName, isCoachOrAdmin, onConfirm, onDecline, onSetPending, onRemove }: CallupRowProps) {
   const isConfirmed = status === 'confirmed'
   const isDeclined = status === 'declined'
+  const positions = player?.position ? player.position.split(',').map(p => p.trim()).filter(Boolean) : []
 
   return (
     <div className="flex items-center justify-between gap-2.5 p-3 rounded-2xl bg-white hover:bg-gray-50 border border-gray-200 transition-all text-xs">
@@ -64,13 +64,15 @@ export function CallupRow({ status, player, roles, displayName, isCoachOrAdmin, 
             )}
             <span className="truncate">{displayName}</span>
           </p>
-          <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-            {roles.map(r => (
-              <span key={r} className="text-[8.5px] font-black px-1.5 py-0.2 rounded bg-gray-100 text-gray-600">
-                {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
-              </span>
-            ))}
-          </div>
+          {positions.length > 0 && (
+            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+              {positions.map((pos, idx) => (
+                <span key={idx} className="text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-700">
+                  {pos}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

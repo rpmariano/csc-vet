@@ -25,7 +25,7 @@ export function QuorumFilterCards({ totalCount, confirmedCount, pendingCount, de
         type="button"
         onClick={() => onSelect('all')}
         title="Ver Todos"
-        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
+        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center shadow-sm shadow-black/10 ${
           activeFilter === 'all' ? 'bg-csc-gold/20 border-csc-gold shadow-md ring-2 ring-csc-gold/40' : 'bg-white/5 border-white/15 hover:bg-white/10'
         }`}
       >
@@ -39,7 +39,7 @@ export function QuorumFilterCards({ totalCount, confirmedCount, pendingCount, de
         type="button"
         onClick={() => onSelect('confirmed')}
         title="Filtrar por Confirmados"
-        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
+        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center shadow-sm shadow-black/10 ${
           activeFilter === 'confirmed' ? 'bg-emerald-500/20 border-emerald-400 shadow-md ring-2 ring-emerald-400/40' : 'bg-emerald-500/10 border-emerald-400/20 hover:bg-emerald-500/15'
         }`}
       >
@@ -53,7 +53,7 @@ export function QuorumFilterCards({ totalCount, confirmedCount, pendingCount, de
         type="button"
         onClick={() => onSelect('called')}
         title="Filtrar por Pendentes"
-        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
+        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center shadow-sm shadow-black/10 ${
           activeFilter === 'called' ? 'bg-amber-500/20 border-amber-400 shadow-md ring-2 ring-amber-400/40' : 'bg-amber-500/10 border-amber-400/20 hover:bg-amber-500/15'
         }`}
       >
@@ -67,7 +67,7 @@ export function QuorumFilterCards({ totalCount, confirmedCount, pendingCount, de
         type="button"
         onClick={() => onSelect('declined')}
         title="Filtrar por Recusados"
-        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center ${
+        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center shadow-sm shadow-black/10 ${
           activeFilter === 'declined' ? 'bg-red-500/20 border-red-400 shadow-md ring-2 ring-red-400/40' : 'bg-red-500/10 border-red-400/20 hover:bg-red-500/15'
         }`}
       >

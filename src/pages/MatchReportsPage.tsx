@@ -462,14 +462,13 @@ export const MatchReportsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal da Ficha de Jogo */}
+      {/* Modal da Ficha de Jogo. A condição usa só `selectedEventForReport` (nunca é
+          limpo ao fechar) para a persiana poder deslizar para fora suavemente em vez de
+          desaparecer no instante em que `isReportModalOpen` passa a false. */}
       {selectedEventForReport && (
         <MatchReportModal
           isOpen={isReportModalOpen}
-          onClose={() => {
-            setIsReportModalOpen(false)
-            setSelectedEventForReport(null)
-          }}
+          onClose={() => setIsReportModalOpen(false)}
           eventId={selectedEventForReport.id}
           event={selectedEventForReport}
           isCoachOrAdmin={!!isCoachOrAdmin}
