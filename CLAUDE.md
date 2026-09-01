@@ -56,7 +56,8 @@ Três papéis: `player` · `coach` · `admin`.
 
 Vistas de reporting (`supabase_finance_reporting_migration.sql`, ambas `security_invoker`):
 `v_financial_movements` (facto único: quotas + encargos + despesas/receitas, com época,
-categoria e jogador) e `v_quota_status` (matriz jogador × mês com `paid`/`late`/`pending`).
+categoria e jogador) e `v_quota_status` (matriz jogador × mês; é o único sítio onde existe
+a quota **por pagar** — em `dues` só há linha para as pagas).
 A função `public.financial_season(date)` espelha `getSeasonLabel()` de `src/lib/finance.ts` —
 qualquer mudança à regra da época tem de ser feita **nos dois sítios**.
 Ver `docs/financeiro-campos-reporting.md`.

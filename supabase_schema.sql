@@ -129,23 +129,6 @@ CREATE TABLE IF NOT EXISTS public.tournament_teams (
 );
 ALTER TABLE public.tournament_teams ENABLE ROW LEVEL SECURITY;
 
--- Tabela de Jogos do Torneio (Liga Completa)
-CREATE TABLE IF NOT EXISTS public.tournament_matches (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tournament_id UUID REFERENCES public.tournaments(id) ON DELETE CASCADE,
-    group_id UUID REFERENCES public.tournament_groups(id) ON DELETE CASCADE,
-    matchday INTEGER NOT NULL,
-    home_team_id UUID REFERENCES public.tournament_teams(id) ON DELETE CASCADE,
-    away_team_id UUID REFERENCES public.tournament_teams(id) ON DELETE CASCADE,
-    home_score INTEGER,
-    away_score INTEGER,
-    status TEXT DEFAULT 'scheduled',
-    match_date TIMESTAMP WITH TIME ZONE,
-    csc_event_id UUID REFERENCES public.events(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-ALTER TABLE public.tournament_matches ENABLE ROW LEVEL SECURITY;
-
 -- 3. Tabela de Eventos
 CREATE TABLE IF NOT EXISTS public.events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -170,6 +153,23 @@ CREATE TABLE IF NOT EXISTS public.events (
 
 -- Habilitar RLS em events
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+
+-- Tabela de Jogos do Torneio (Liga Completa)
+CREATE TABLE IF NOT EXISTS public.tournament_matches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id UUID REFERENCES public.tournaments(id) ON DELETE CASCADE,
+    group_id UUID REFERENCES public.tournament_groups(id) ON DELETE CASCADE,
+    matchday INTEGER NOT NULL,
+    home_team_id UUID REFERENCES public.tournament_teams(id) ON DELETE CASCADE,
+    away_team_id UUID REFERENCES public.tournament_teams(id) ON DELETE CASCADE,
+    home_score INTEGER,
+    away_score INTEGER,
+    status TEXT DEFAULT 'scheduled',
+    match_date TIMESTAMP WITH TIME ZONE,
+    csc_event_id UUID REFERENCES public.events(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE public.tournament_matches ENABLE ROW LEVEL SECURITY;
 
 -- 4. Tabela de Convocatórias
 CREATE TABLE IF NOT EXISTS public.callups (

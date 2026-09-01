@@ -25,7 +25,7 @@ Só existe linha **quando a quota é paga** (o não-pago é ausência de linha, 
 | `player_id` | uuid → `profiles.id` | D | dimensão Jogador |
 | `month_year` | text `YYYY-MM` | D/F | mês de competência (≠ mês de pagamento) |
 | `amount` | numeric(10,2) | M | valor recebido; gravado com `financial_settings.quota_amount` do momento |
-| `status` | enum `pending\|paid\|late` | D | na prática sempre `paid` — o estado real é calculado (ver §4) |
+| `status` | enum `pending\|paid\|late` | D | sempre `paid` (garantido por CHECK) — uma linha em `dues` é uma quota paga |
 | `paid_at` | timestamptz | F | data de caixa |
 | `created_at` | timestamptz | F | auditoria |
 
@@ -169,7 +169,7 @@ Dimensões a cruzar: **Jogador**, **Categoria**, **Época**, **Mês/Ano**, **Pro
 | `category_id`, `category_key`, `category_label` | `key` inclui os baldes virtuais `quotas`, `income_other`, `no_category` |
 | `player_id`, `player_label` | nulos nos movimentos avulsos |
 | `tournament_id` | tranches de inscrição |
-| `payment_method`, `document_url`, `created_by`, `created_at` | |
+| `document_url`, `created_by`, `created_at` | |
 
 **`security_invoker = true`** — a vista respeita a RLS de cada tabela de origem: um jogador vê
 só as suas quotas e os seus pagamentos de encargos, e nenhuma transação; o admin vê tudo.
@@ -193,18 +193,21 @@ FROM public.v_financial_movements GROUP BY 1 ORDER BY 2;
 
 ### 3.2 `v_quota_status` — a matriz jogador × mês
 
-Gera a linha que **não existe** em `dues` quando a quota não foi paga, com o estado calculado
-(`paid` · `late` · `pending`), `due_date` e `owed_amount`. Espelha `getPlayerQuotaMonths` +
+Gera a linha que **não existe** em `dues` quando a quota não foi paga. É aqui — e só aqui —
+que existe a noção de quota **por pagar**. Duas colunas de estado, para os dois tipos de
+relatório: `status` (`paid` · `late` · `pending`, distingue o que já passou do prazo) e
+`payment_status` (`paid` · `unpaid`, para quem só quer pago/por pagar). Mais `due_date` e
+`owed_amount`. Espelha `getPlayerQuotaMonths` +
 `computeQuotaMonthStatus`, incluindo a janela de elegibilidade e o excluir de Agosto.
 Limitação: só a época corrente (`CURRENT_DATE`); para histórico, converter em função com
 parâmetro de época.
 
 ```sql
 SELECT player_label,
-       count(*) FILTER (WHERE status = 'paid')    AS pagos,
-       count(*) FILTER (WHERE status = 'late')    AS em_atraso,
-       count(*) FILTER (WHERE status = 'pending') AS pendentes,
-       sum(owed_amount)                           AS em_divida
+       count(*) FILTER (WHERE payment_status = 'paid')   AS pagos,
+       count(*) FILTER (WHERE payment_status = 'unpaid') AS por_pagar,
+       count(*) FILTER (WHERE status = 'late')           AS em_atraso,
+       sum(owed_amount)                                  AS em_divida
 FROM public.v_quota_status GROUP BY 1 ORDER BY em_divida DESC;
 ```
 
@@ -222,7 +225,7 @@ FROM public.v_quota_status GROUP BY 1 ORDER BY em_divida DESC;
 | meses devidos por jogador | `getPlayerQuotaMonths()` | recorta pela janela de elegibilidade do jogador |
 | prazo da quota | `getQuotaDueDate()` | `quota_due_day + 1` do próprio mês |
 | prazo do seguro | `getInsuranceDeadline()` | |
-| **estado do mês** | `computeQuotaMonthStatus()` | `paid` · `late` · `pending` — **a fonte de verdade**, não `dues.status` |
+| **estado do mês** | `computeQuotaMonthStatus()` | `paid` · `late` · `pending` — **a fonte de verdade** (em SQL, `v_quota_status`) |
 
 ### 4.2 Métricas por jogador (`quotaOverview`)
 
@@ -268,11 +271,11 @@ Jogador (expansão de linha) · Época (implícita, sempre a época atual).
 | # | Lacuna | Estado |
 |---|---|---|
 | 1 | Quota não paga **não tem linha** em `dues` | ✅ **resolvido** — vista `v_quota_status` (só época corrente) |
-| 2 | Sem **método de pagamento** | ✅ **resolvido** — `payment_method` em `dues`, `charge_payments`, `transactions` (TEXT + CHECK, nulo = não registado) |
+| 2 | Sem **método de pagamento** (MB Way, transferência, numerário) | ⛔ **fora de âmbito por decisão** — o clube não regista como o dinheiro entrou |
 | 3 | Sem **época** nos factos | ✅ **resolvido** — função `public.financial_season(date)` + coluna `season` na vista (derivada, não denormalizada) |
 | 4 | `dues` sem `created_by` | ✅ **resolvido** — coluna acrescentada e preenchida pela app |
 | 5 | Categoria proibida nas receitas | ✅ **resolvido** — restrição era da app; agora oferece as categorias com `allow_income` |
-| 6 | `dues.status` fora de sincronia com o estado real | ⬜ dashboards que leiam a coluna dão números errados; usar `v_quota_status.status` |
+| 6 | `dues.status` fora de sincronia com o estado real | ✅ **resolvido** — em `dues` uma linha é sempre uma quota paga: `DEFAULT 'paid'` + `CHECK (status = 'paid')`. O "por pagar" está em `v_quota_status` |
 | 7 | Plano de inscrição em JSONB (`tournaments.rules`) | ⬜ não é agregável em SQL sem *jsonb gymnastics*; tabela `tournament_installments` |
 | 8 | Sem soft-delete/histórico | ⬜ apagar um pagamento apaga a história; auditoria ou `deleted_at` |
 | 9 | Agregação 100 % client-side (9 tabelas completas por render) | ⬜ migrar a página para as vistas |
@@ -297,8 +300,8 @@ Jogador (expansão de linha) · Época (implícita, sempre a época atual).
 
 | Ficheiro | O que traz |
 |---|---|
-| `supabase_finance_reporting_migration.sql` | `payment_method` (3 tabelas) · `dues.created_by` · `financial_season()` · `v_financial_movements` · `v_quota_status` · índices |
-| `src/pages/FinancePage.tsx` | escreve `created_by` e `payment_method`; categoria também nas receitas; agrupamento de movimentos alinhado com a vista |
+| `supabase_finance_reporting_migration.sql` | `dues.created_by` · `dues.status` coerente · `financial_season()` · `v_financial_movements` · `v_quota_status` · índices |
+| `src/pages/FinancePage.tsx` | escreve `created_by` nas quotas; categoria também nas receitas; agrupamento de movimentos alinhado com a vista |
 
 A migração é idempotente e foi validada num PostgreSQL 16 local contra `supabase_schema.sql`,
 incluindo o teste de RLS com um utilizador `player` e um `admin`.

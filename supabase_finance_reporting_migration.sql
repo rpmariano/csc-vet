@@ -1,50 +1,25 @@
 -- ============================================================================
 -- Módulo Financeiro — camada de reporting.
 --
--- 1. Método de pagamento em todas as entradas de dinheiro (lacuna 2)
--- 2. Época derivada em SQL, sem denormalizar (lacuna 3)
--- 3. created_by nas quotas (lacuna 4)
+-- 1. Época derivada em SQL, sem denormalizar (lacuna 3)
+-- 2. created_by nas quotas (lacuna 4)
+-- 3. dues.status coerente: uma linha em dues é sempre uma quota paga (lacuna 6)
 -- 4. Categoria nas receitas — sem mudança de esquema, ver nota (lacuna 5)
 -- 5. Vista v_financial_movements: o facto único de movimentos, o mesmo grão
 --    que a página Financeira já constrói em memória (allMovements).
+-- 6. Vista v_quota_status: a matriz jogador × mês, com pago / por pagar.
 --
 -- Idempotente — pode ser corrido várias vezes em segurança.
 -- ============================================================================
 
 --------------------------------------------------------------------------------
--- 1. MÉTODO DE PAGAMENTO
---------------------------------------------------------------------------------
--- TEXT + CHECK (e não ENUM) para se poder acrescentar um método com um simples
--- ALTER ... DROP/ADD CONSTRAINT, sem mexer num tipo de que dependem 3 tabelas.
--- Nulo = método não registado (todo o histórico anterior a esta migração).
-
-DO $$
-DECLARE
-    t TEXT;
-BEGIN
-    FOREACH t IN ARRAY ARRAY['dues', 'charge_payments', 'transactions'] LOOP
-        EXECUTE format('ALTER TABLE public.%I ADD COLUMN IF NOT EXISTS payment_method TEXT', t);
-        EXECUTE format('ALTER TABLE public.%I DROP CONSTRAINT IF EXISTS %I', t, t || '_payment_method_check');
-        EXECUTE format(
-            'ALTER TABLE public.%I ADD CONSTRAINT %I CHECK (payment_method IS NULL OR payment_method IN '
-            || '(''numerario'', ''mbway'', ''transferencia'', ''multibanco'', ''cheque'', ''outro''))',
-            t, t || '_payment_method_check'
-        );
-    END LOOP;
-END $$;
-
-COMMENT ON COLUMN public.dues.payment_method IS 'Como foi pago: numerario|mbway|transferencia|multibanco|cheque|outro. NULL = não registado.';
-COMMENT ON COLUMN public.charge_payments.payment_method IS 'Como foi pago: numerario|mbway|transferencia|multibanco|cheque|outro. NULL = não registado.';
-COMMENT ON COLUMN public.transactions.payment_method IS 'Como foi pago/recebido: numerario|mbway|transferencia|multibanco|cheque|outro. NULL = não registado.';
-
---------------------------------------------------------------------------------
--- 2. RASTO DE QUEM REGISTOU A QUOTA
+-- 1. RASTO DE QUEM REGISTOU A QUOTA
 --------------------------------------------------------------------------------
 ALTER TABLE public.dues
     ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
 
 --------------------------------------------------------------------------------
--- 3. ÉPOCA EM SQL
+-- 2. ÉPOCA EM SQL
 --------------------------------------------------------------------------------
 -- Espelha getSeasonLabel() de src/lib/finance.ts: uma época que começa depois do
 -- mês em que acaba (o caso normal, Set→Jul) atravessa o ano civil, e Setembro de
@@ -71,6 +46,24 @@ $$;
 COMMENT ON FUNCTION public.financial_season(DATE) IS 'Época financeira ("AAAA/AAAA") em que uma data cai, segundo financial_settings. Espelha getSeasonLabel() em src/lib/finance.ts.';
 
 --------------------------------------------------------------------------------
+-- 3. dues.status COERENTE (lacuna 6)
+--------------------------------------------------------------------------------
+-- Em `dues` só existe linha quando a quota é paga: uma linha é, por definição,
+-- uma quota paga. A coluna ficava a 'pending' por omissão e podia contradizer
+-- isso. Passa a ter 'paid' por omissão e o histórico é corrigido.
+-- O "por pagar" não vive aqui (não há linha) — vive em v_quota_status, que
+-- gera a matriz jogador × mês e marca cada célula como pago ou por pagar.
+UPDATE public.dues SET status = 'paid' WHERE status <> 'paid';
+ALTER TABLE public.dues ALTER COLUMN status SET DEFAULT 'paid';
+-- E deixa de poder voltar a mentir. O único sítio da app que insere em `dues`
+-- é handlePayQuotas (FinancePage), que já grava sempre 'paid'; os restantes só
+-- mudam o player_id ao fundir perfis.
+ALTER TABLE public.dues DROP CONSTRAINT IF EXISTS dues_status_paid_check;
+ALTER TABLE public.dues ADD CONSTRAINT dues_status_paid_check CHECK (status = 'paid');
+
+COMMENT ON COLUMN public.dues.status IS 'Sempre ''paid'': em dues só há linha para quotas pagas. O estado das quotas por pagar está em public.v_quota_status.';
+
+--------------------------------------------------------------------------------
 -- 4. CATEGORIA NAS RECEITAS (lacuna 5) — sem alteração de esquema
 --------------------------------------------------------------------------------
 -- transactions.category_id já é nullable e sem restrição de tipo: era a app que
@@ -79,7 +72,7 @@ COMMENT ON FUNCTION public.financial_season(DATE) IS 'Época financeira ("AAAA/A
 -- do lado da aplicação, para não introduzir um trigger só por isto.
 
 --------------------------------------------------------------------------------
--- 5. ÍNDICES PARA A VISTA
+-- 5. ÍNDICES PARA AS VISTAS
 --------------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_dues_paid_at ON public.dues(paid_at);
 CREATE INDEX IF NOT EXISTS idx_dues_player ON public.dues(player_id);
@@ -123,7 +116,6 @@ SELECT
     d.player_id                                             AS player_id,
     COALESCE(p.shirt_name, p.name)                          AS player_label,
     NULL::UUID                                              AS tournament_id,
-    d.payment_method                                        AS payment_method,
     NULL::TEXT                                              AS document_url,
     d.created_by                                            AS created_by,
     d.created_at                                            AS created_at
@@ -154,7 +146,6 @@ SELECT
     cp.player_id,
     COALESCE(p.shirt_name, p.name),
     NULL::UUID,
-    cp.payment_method,
     NULL::TEXT,
     cp.created_by,
     cp.created_at
@@ -188,7 +179,6 @@ SELECT
     NULL::UUID,
     NULL::TEXT,
     t.tournament_id,
-    t.payment_method,
     t.document_url,
     t.created_by,
     t.created_at
@@ -271,7 +261,6 @@ SELECT
     d.id                                                    AS due_id,
     d.amount                                                AS paid_amount,
     d.paid_at,
-    d.payment_method,
     -- Último dia em que a quota ainda está em dia: o próprio quota_due_day
     -- (o dia 8, por omissão). O incumprimento começa no dia seguinte — mesma
     -- regra de getQuotaDueDate/computeQuotaMonthStatus em src/lib/finance.ts.
@@ -281,6 +270,9 @@ SELECT
         WHEN CURRENT_DATE > (qm.month_start + ((s.quota_due_day - 1) || ' day')::INTERVAL)::DATE THEN 'late'
         ELSE 'pending'
     END                                                     AS status,
+    -- Estado em dois valores, para relatórios que só querem "pago / por pagar"
+    -- sem distinguir o que já passou do prazo do que ainda não venceu.
+    CASE WHEN d.id IS NOT NULL THEN 'paid' ELSE 'unpaid' END AS payment_status,
     CASE WHEN d.id IS NULL THEN s.quota_amount ELSE 0 END   AS owed_amount
 FROM eligible e
 CROSS JOIN quota_months qm
@@ -293,6 +285,6 @@ WHERE (e.quota_start_date IS NULL OR (qm.month_start + INTERVAL '1 month - 1 day
   AND (e.quota_end_date IS NULL OR qm.month_start <= e.quota_end_date);
 
 COMMENT ON VIEW public.v_quota_status IS
-'Matriz jogador × mês da época corrente com o estado calculado da quota (paid|late|pending) e o valor em dívida. Espelha getPlayerQuotaMonths + computeQuotaMonthStatus de src/lib/finance.ts.';
+'Matriz jogador × mês da época corrente: status (paid|late|pending), payment_status (paid|unpaid) e o valor em dívida. É aqui que existe a quota por pagar — em dues só há linha para as pagas. Espelha getPlayerQuotaMonths + computeQuotaMonthStatus de src/lib/finance.ts.';
 
 GRANT SELECT ON public.v_quota_status TO authenticated;
