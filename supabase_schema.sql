@@ -307,6 +307,57 @@ CREATE TABLE IF NOT EXISTS public.insurance_payments (
 );
 ALTER TABLE public.insurance_payments ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_insurance_payments_player ON public.insurance_payments(player_id);
+-- Nota: mantida por compatibilidade histórica, mas já não é usada pela app —
+-- ver "9.3 Encargos" abaixo, o mecanismo genérico que a substitui.
+
+-- 9.3 Encargos (charges) — cobranças ad-hoc a um conjunto escolhido de
+-- jogadores (Seguro, equipamento, inscrição/viagem de torneio, etc.), ligadas
+-- a uma categoria que pode ser usada tanto para a receita (a cobrança) como
+-- para a despesa correspondente, para se poder ver o saldo dessa categoria
+-- tender para zero quando o valor recebido é todo gasto no mesmo fim.
+ALTER TABLE public.expense_categories ADD COLUMN IF NOT EXISTS allow_income BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS public.charges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    category_id UUID REFERENCES public.expense_categories(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    amount NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+    due_date DATE,
+    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+ALTER TABLE public.charges ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.charge_players (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    charge_id UUID REFERENCES public.charges(id) ON DELETE CASCADE NOT NULL,
+    player_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    UNIQUE(charge_id, player_id)
+);
+ALTER TABLE public.charge_players ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_charge_players_charge ON public.charge_players(charge_id);
+CREATE INDEX IF NOT EXISTS idx_charge_players_player ON public.charge_players(player_id);
+
+-- Pagamentos de um encargo — permite parciais e múltiplos registos por
+-- jogador (o valor em falta é sempre charges.amount menos a soma dos
+-- pagamentos), e cada registo pode ser corrigido/apagado depois.
+CREATE TABLE IF NOT EXISTS public.charge_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    charge_id UUID REFERENCES public.charges(id) ON DELETE CASCADE NOT NULL,
+    player_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    amount NUMERIC(10,2) NOT NULL CHECK (amount > 0),
+    paid_at DATE NOT NULL DEFAULT CURRENT_DATE,
+    notes TEXT,
+    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+ALTER TABLE public.charge_payments ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_charge_payments_charge ON public.charge_payments(charge_id);
+CREATE INDEX IF NOT EXISTS idx_charge_payments_player ON public.charge_payments(player_id);
+
+-- Seguro passa a ser só mais uma categoria (com receita permitida).
+INSERT INTO public.expense_categories (name, allow_income) VALUES ('Seguro Desportivo', true)
+ON CONFLICT (name) DO UPDATE SET allow_income = true;
 
 -- Nota: o plano de inscrição de um torneio (valor total, nº de tranches,
 -- valor e prazo de cada uma, e qual a transação que a liquidou) vive dentro
@@ -473,6 +524,17 @@ CREATE POLICY "Utilizador vê os seus próprios pagamentos de seguro"
 ON public.insurance_payments FOR SELECT TO authenticated USING (auth.uid() = player_id);
 CREATE POLICY "Admins gerem todos os pagamentos de seguro"
 ON public.insurance_payments FOR ALL TO authenticated USING (public.get_user_role() = 'admin');
+
+-- Encargos — mesmo padrão de insurance_payments/dues: leitura aberta a admin,
+-- e ao próprio jogador só a sua participação/pagamentos; escrita só de admin.
+CREATE POLICY "Encargos legíveis por todos" ON public.charges FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Apenas admin gere encargos" ON public.charges FOR ALL TO authenticated USING (public.get_user_role() = 'admin');
+
+CREATE POLICY "Jogador vê a sua participação em encargos" ON public.charge_players FOR SELECT TO authenticated USING (auth.uid() = player_id OR public.get_user_role() = 'admin');
+CREATE POLICY "Apenas admin gere participantes de encargos" ON public.charge_players FOR ALL TO authenticated USING (public.get_user_role() = 'admin');
+
+CREATE POLICY "Jogador vê os seus pagamentos de encargos" ON public.charge_payments FOR SELECT TO authenticated USING (auth.uid() = player_id OR public.get_user_role() = 'admin');
+CREATE POLICY "Apenas admin gere pagamentos de encargos" ON public.charge_payments FOR ALL TO authenticated USING (public.get_user_role() = 'admin');
 
 CREATE POLICY "Categorias de despesa legíveis por todos"
 ON public.expense_categories FOR SELECT TO authenticated USING (true);
