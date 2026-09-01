@@ -22,7 +22,7 @@ import { AutoAssociationModal } from './AutoAssociationModal'
 import { AnnouncementsInboxButton } from './AnnouncementsInbox'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
-import { ClinicalStatusChip, RoleChip } from './StatusChip'
+import { ClinicalStatusChip } from './StatusChip'
 
 /**
  * Nome a mostrar no widget de perfil: nome da camisola, depois alcunha, só
@@ -182,9 +182,6 @@ const Layout: React.FC = () => {
             </button>
           )}
 
-          {/* Pílula de Cargo — só informativa, sem alternância de perfil. */}
-          <RoleChip role={profile?.role ?? 'player'} size="sm" />
-
           {/* Inbox de Comunicados — junto à imagem do perfil */}
           {profile && <AnnouncementsInboxButton tone="light" size="sm" />}
 
@@ -258,9 +255,6 @@ const Layout: React.FC = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
-                        {/* Só informativo — não há alternância de perfil na aplicação. */}
-                        <RoleChip role={profile.role} size="sm" />
-
                         {/* Estado Clínico (Apenas Jogador) */}
                         {isPlayer && (
                           <button type="button" onClick={() => toggleClinicalStatus()} className="cursor-pointer">
@@ -379,10 +373,6 @@ const Layout: React.FC = () => {
                   <AnnouncementsInboxButton tone="dark" size="sm" className="shrink-0" />
                   <div className="overflow-hidden flex-1">
                     <p className="font-bold truncate text-xs text-white">{nomeWidgetPerfil(profile)}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      {/* Só informativo — não há alternância de perfil na aplicação. */}
-                      <RoleChip role={profile.role} size="sm" />
-                    </div>
                   </div>
                 </div>
 
@@ -449,9 +439,6 @@ const Layout: React.FC = () => {
                 <ClinicalStatusChip status={profile.status} />
               </button>
             )}
-
-            {/* Pílula de Cargo — só informativa, sem alternância de perfil. */}
-            <RoleChip role={profile?.role ?? 'player'} />
 
             {/* Inbox de Comunicados — junto à imagem do perfil */}
             {profile && <AnnouncementsInboxButton tone="light" />}
