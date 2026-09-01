@@ -869,16 +869,16 @@ const FinancePage: React.FC = () => {
       {activeTab === 'overview' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 flex items-center justify-between">
+            <div className={`bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 border-l-4 ${netBalance >= 0 ? 'border-l-csc-gold' : 'border-l-red-400'} p-4 flex items-center justify-between`}>
               <div>
                 <p className="text-xs font-bold text-white/70">Saldo Disponível</p>
-                <p className="text-2xl font-black text-white mt-1">{fmtEuro(netBalance)}</p>
+                <p className={`text-2xl font-black mt-1 ${netBalance >= 0 ? 'text-white' : 'text-red-400'}`}>{fmtEuro(netBalance)}</p>
               </div>
               <div className="w-11 h-11 bg-white/10 text-csc-gold rounded-full flex items-center justify-center shrink-0">
                 <Landmark size={22} />
               </div>
             </div>
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 flex items-center justify-between">
+            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 border-l-4 border-l-emerald-400 p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-white/70">Total Recebido</p>
                 <p className="text-2xl font-black text-emerald-400 mt-1">+{fmtEuro(totalReceived)}</p>
@@ -887,7 +887,7 @@ const FinancePage: React.FC = () => {
                 <TrendingUp size={22} />
               </div>
             </div>
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 flex items-center justify-between">
+            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 border-l-4 border-l-red-400 p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-white/70">Total Despesas</p>
                 <p className="text-2xl font-black text-red-400 mt-1">-{fmtEuro(totalExpenses)}</p>
@@ -898,121 +898,128 @@ const FinancePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Previsão da Época */}
-          <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
-            <h3 className="text-sm font-black text-white flex items-center gap-2">
-              <TrendingUp size={16} className="text-csc-gold" />
-              <span>Previsão da Época {seasonLabel}</span>
-            </h3>
-            <p className="text-xs text-white/60">
-              Considerando todas as quotas que cada jogador elegível vai pagar esta época e o seguro de todos os jogadores ativos.
-            </p>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Já Recebido (Quotas + Seguro)</p>
-                <p className="text-xl font-black text-emerald-400">{fmtEuro(receivedTowardsProjection)}</p>
+          {/* Previsão da Época + Situação de Quotas — lado a lado no desktop, para não
+              alongar o ecrã num scroll só vertical de cartões largos com pouco conteúdo cada. */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            <div className="lg:col-span-3 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <TrendingUp size={16} className="text-csc-gold" />
+                <span>Previsão da Época {seasonLabel}</span>
+              </h3>
+              <p className="text-xs text-white/60">
+                Considerando todas as quotas que cada jogador elegível vai pagar esta época e o seguro de todos os jogadores ativos.
+              </p>
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Já Recebido (Quotas + Seguro)</p>
+                  <p className="text-xl font-black text-emerald-400">{fmtEuro(receivedTowardsProjection)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Previsto até ao Fim da Época</p>
+                  <p className="text-xl font-black text-csc-gold">{fmtEuro(projectedSeasonTotal)}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Previsto até ao Fim da Época</p>
-                <p className="text-xl font-black text-csc-gold">{fmtEuro(projectedSeasonTotal)}</p>
+              <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-emerald-500 to-csc-gold rounded-full transition-all" style={{ width: `${projectionPct}%` }} />
+              </div>
+              <p className="text-[11px] text-white/60">{projectionPct}% do valor previsto já foi recebido — faltam {fmtEuro(Math.max(0, projectedSeasonTotal - receivedTowardsProjection))}.</p>
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/10 text-xs">
+                <div>
+                  <span className="text-white/60">Quotas previstas: </span>
+                  <span className="font-bold text-white">{fmtEuro(projectedQuotasTotal)}</span>
+                </div>
+                <div>
+                  <span className="text-white/60">Encargos por receber: </span>
+                  <span className="font-bold text-white">{fmtEuro(pendingChargesTotal)}</span>
+                </div>
               </div>
             </div>
-            <div className="h-3 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-emerald-500 to-csc-gold rounded-full transition-all" style={{ width: `${projectionPct}%` }} />
-            </div>
-            <p className="text-[11px] text-white/60">{projectionPct}% do valor previsto já foi recebido — faltam {fmtEuro(Math.max(0, projectedSeasonTotal - receivedTowardsProjection))}.</p>
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/10 text-xs">
-              <div>
-                <span className="text-white/60">Quotas previstas: </span>
-                <span className="font-bold text-white">{fmtEuro(projectedQuotasTotal)}</span>
-              </div>
-              <div>
-                <span className="text-white/60">Encargos por receber: </span>
-                <span className="font-bold text-white">{fmtEuro(pendingChargesTotal)}</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Gráfico: Receita por Categoria */}
-          <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
-            <h3 className="text-sm font-black text-white">Valor Recebido por Categoria</h3>
-            <div className="space-y-3">
-              {RECEITA_CATEGORIAS.map(cat => {
-                const valor = receitaPorCategoria[cat.key]
-                const pct = Math.round((valor / maxReceita) * 100)
-                return (
-                  <div key={cat.key}>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-bold text-white/80">{cat.label}</span>
-                      <span className={`font-black ${cat.corTexto}`}>{fmtEuro(valor)}</span>
-                    </div>
-                    <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
-                      <div className={`h-full rounded-full ${cat.corBarra}`} style={{ width: `${Math.max(2, pct)}%` }} />
-                    </div>
+            {/* Situação de Quotas — coluna estreita ao lado; estatísticas em linhas
+                empilhadas (não grelha 3-colunas) porque a coluna aqui é mais estreita. */}
+            <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-2.5">
+              <h3 className="text-sm font-black text-white">Situação de Quotas dos Atletas</h3>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-xl bg-emerald-500/10 border border-emerald-400/30 pl-3 pr-3.5 py-2 border-l-4 border-l-emerald-400">
+                  <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider">Meses Pagos</span>
+                  <span className="text-lg font-black text-emerald-300">{quotaOverview.reduce((s, q) => s + q.paidCount, 0)}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-amber-500/10 border border-amber-400/30 pl-3 pr-3.5 py-2 border-l-4 border-l-amber-400">
+                  <span className="text-[10px] font-bold text-amber-200 uppercase tracking-wider">Meses Pendentes</span>
+                  <span className="text-lg font-black text-amber-300">{quotaOverview.reduce((s, q) => s + q.pendingCount, 0)}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-red-500/10 border border-red-400/30 pl-3 pr-3.5 py-2 border-l-4 border-l-red-400">
+                  <span className="text-[10px] font-bold text-red-200 uppercase tracking-wider">Em Incumprimento</span>
+                  <span className="text-lg font-black text-red-300">{quotaOverview.reduce((s, q) => s + q.lateCount, 0)}</span>
+                </div>
+              </div>
+              {quotaOverview.filter(q => q.lateCount > 0).length > 0 && (
+                <div className="pt-2 border-t border-white/10">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-1.5">Atletas em Incumprimento</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {quotaOverview.filter(q => q.lateCount > 0).map(q => (
+                      <span key={q.player.id} className="text-[11px] font-bold px-2 py-1 rounded-full bg-red-500/15 text-red-200 border border-red-400/30">
+                        {q.player.shirt_name || q.player.name} ({q.lateCount})
+                      </span>
+                    ))}
                   </div>
-                )
-              })}
-            </div>
-            <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-              <span className="text-xs font-bold text-white/70">Total Recebido</span>
-              <span className="text-lg font-black text-white">{fmtEuro(totalReceived)}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Gráfico: Despesa por Categoria */}
-          {despesaPorCategoria.length > 0 && (
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
-              <h3 className="text-sm font-black text-white">Despesa por Categoria</h3>
+          {/* Receita e despesa por categoria — lado a lado no desktop; a receita ocupa a
+              largura toda quando ainda não há despesas com categoria para mostrar ao lado. */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className={`${despesaPorCategoria.length === 0 ? 'lg:col-span-2' : ''} bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3`}>
+              <h3 className="text-sm font-black text-white">Valor Recebido por Categoria</h3>
               <div className="space-y-3">
-                {despesaPorCategoria.map(([label, valor], idx) => {
-                  const pct = Math.round((valor / maxDespesa) * 100)
-                  const cor = label === 'Outras' ? DESPESA_COR_OUTRAS : (DESPESA_CORES[idx] || DESPESA_COR_OUTRAS)
+                {RECEITA_CATEGORIAS.map(cat => {
+                  const valor = receitaPorCategoria[cat.key]
+                  const pct = Math.round((valor / maxReceita) * 100)
                   return (
-                    <div key={label}>
+                    <div key={cat.key}>
                       <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-bold text-white/80">{label}</span>
-                        <span className="font-black text-white">{fmtEuro(valor)}</span>
+                        <span className="font-bold text-white/80">{cat.label}</span>
+                        <span className={`font-black ${cat.corTexto}`}>{fmtEuro(valor)}</span>
                       </div>
                       <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
-                        <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.max(2, pct)}%` }} />
+                        <div className={`h-full rounded-full ${cat.corBarra}`} style={{ width: `${Math.max(2, pct)}%` }} />
                       </div>
                     </div>
                   )
                 })}
               </div>
               <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-                <span className="text-xs font-bold text-white/70">Total de Despesas</span>
-                <span className="text-lg font-black text-white">{fmtEuro(totalExpenses)}</span>
+                <span className="text-xs font-bold text-white/70">Total Recebido</span>
+                <span className="text-lg font-black text-white">{fmtEuro(totalReceived)}</span>
               </div>
             </div>
-          )}
 
-          {/* Situações de incumprimento */}
-          <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
-            <h3 className="text-sm font-black text-white">Situação de Quotas dos Atletas</h3>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="bg-emerald-500/10 border border-emerald-400/30 rounded-xl p-3">
-                <p className="text-xl font-black text-emerald-300">{quotaOverview.reduce((s, q) => s + q.paidCount, 0)}</p>
-                <p className="text-[10px] font-bold text-emerald-200 uppercase">Meses Pagos</p>
-              </div>
-              <div className="bg-amber-500/10 border border-amber-400/30 rounded-xl p-3">
-                <p className="text-xl font-black text-amber-300">{quotaOverview.reduce((s, q) => s + q.pendingCount, 0)}</p>
-                <p className="text-[10px] font-bold text-amber-200 uppercase">Meses Pendentes</p>
-              </div>
-              <div className="bg-red-500/10 border border-red-400/30 rounded-xl p-3">
-                <p className="text-xl font-black text-red-300">{quotaOverview.reduce((s, q) => s + q.lateCount, 0)}</p>
-                <p className="text-[10px] font-bold text-red-200 uppercase">Em Incumprimento</p>
-              </div>
-            </div>
-            {quotaOverview.filter(q => q.lateCount > 0).length > 0 && (
-              <div className="pt-2 border-t border-white/10">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-1.5">Atletas em Incumprimento</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {quotaOverview.filter(q => q.lateCount > 0).map(q => (
-                    <span key={q.player.id} className="text-[11px] font-bold px-2 py-1 rounded-full bg-red-500/15 text-red-200 border border-red-400/30">
-                      {q.player.shirt_name || q.player.name} ({q.lateCount})
-                    </span>
-                  ))}
+            {/* Gráfico: Despesa por Categoria */}
+            {despesaPorCategoria.length > 0 && (
+              <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
+                <h3 className="text-sm font-black text-white">Despesa por Categoria</h3>
+                <div className="space-y-3">
+                  {despesaPorCategoria.map(([label, valor], idx) => {
+                    const pct = Math.round((valor / maxDespesa) * 100)
+                    const cor = label === 'Outras' ? DESPESA_COR_OUTRAS : (DESPESA_CORES[idx] || DESPESA_COR_OUTRAS)
+                    return (
+                      <div key={label}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-bold text-white/80">{label}</span>
+                          <span className="font-black text-white">{fmtEuro(valor)}</span>
+                        </div>
+                        <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+                          <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.max(2, pct)}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                  <span className="text-xs font-bold text-white/70">Total de Despesas</span>
+                  <span className="text-lg font-black text-white">{fmtEuro(totalExpenses)}</span>
                 </div>
               </div>
             )}
@@ -1022,33 +1029,29 @@ const FinancePage: React.FC = () => {
 
       {/* ================= QUOTAS ================= */}
       {activeTab === 'quotas' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {/* Cabeçalho escuro — sem ele o cartão fica demasiado branco sobre o fundo cinza claro da página. */}
+        <div className="rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="bg-csc-dark px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
             <h3 className="text-sm font-black text-white">Controlo de Quotas — Época {seasonLabel}</h3>
             <span className="text-[11px] text-white/70">{fmtEuro(settings.quota_amount)}/mês · incumprimento a partir do dia {settings.quota_due_day}</span>
           </div>
-          <div className="p-3 space-y-1.5">
-            {quotaOverview.map((q, idx) => {
+          {/* Fundo cinzento para as fichas de cada jogador se destacarem como cartões
+              elevados (sombra + faixa de cor do estado), em vez de linhas lisas sobre branco. */}
+          <div className="bg-gray-100 p-3 space-y-2">
+            {quotaOverview.map(q => {
               const expanded = expandedPlayerId === q.player.id
+              const accent = q.lateCount > 0 ? 'border-l-red-400' : q.pendingCount > 0 ? 'border-l-amber-400' : 'border-l-emerald-400'
               return (
                 <div
                   key={q.player.id}
-                  className={`rounded-xl border transition-colors ${
-                    expanded
-                      ? 'bg-csc-dark/[0.04] border-csc-dark/15'
-                      : idx % 2 === 0
-                        ? 'bg-gray-50 border-gray-100 hover:bg-gray-100'
-                        : 'bg-white border-gray-100 hover:bg-gray-50'
-                  }`}
+                  className={`bg-white rounded-xl border border-gray-200 border-l-4 ${accent} transition-shadow ${expanded ? 'shadow-md ring-1 ring-csc-dark/10' : 'shadow-sm hover:shadow-md'}`}
                 >
                   <button
                     type="button"
                     onClick={() => setExpandedPlayerId(expanded ? null : q.player.id)}
-                    className="w-full flex items-center justify-between gap-3 cursor-pointer px-3 py-2.5"
+                    className="w-full flex items-center justify-between gap-3 cursor-pointer px-3.5 py-3"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-8 h-8 rounded-full bg-csc-dark/10 text-csc-dark text-xs font-black flex items-center justify-center shrink-0">
+                      <span className="w-8 h-8 rounded-full bg-csc-dark text-white text-xs font-black flex items-center justify-center shrink-0">
                         {q.player.jersey_number || '—'}
                       </span>
                       <span className="font-bold text-sm text-gray-900 truncate">{q.player.shirt_name || q.player.name}</span>
@@ -1062,8 +1065,8 @@ const FinancePage: React.FC = () => {
                   </button>
 
                   {expanded && (
-                    <div className="px-3 pb-3 space-y-2">
-                      <p className="text-[10px] text-gray-400">Clique num mês para marcar como pago; clique outra vez para corrigir. Pode selecionar vários meses seguidos.</p>
+                    <div className="px-3.5 pb-3.5 pt-0.5 space-y-2 border-t border-gray-100 mt-0.5">
+                      <p className="text-[10px] text-gray-400 pt-2.5">Clique num mês para marcar como pago; clique outra vez para corrigir. Pode selecionar vários meses seguidos.</p>
                       <div className="flex flex-wrap gap-1.5">
                         {q.months.map(m => {
                           const isPaid = m.statusCalc === 'paid'
@@ -1080,7 +1083,7 @@ const FinancePage: React.FC = () => {
                                   ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700'
                                   : m.statusCalc === 'late'
                                     ? 'bg-red-50 border-red-300 text-red-700 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-dark'
-                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-dark'
+                                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-dark'
                               }`}
                             >
                               {nomeMes(m.month).slice(0, 3)}/{String(m.year).slice(2)} {isPaid ? '✓' : m.statusCalc === 'late' ? '⚠' : ''}
@@ -1141,7 +1144,7 @@ const FinancePage: React.FC = () => {
                 const expanded = expandedChargeId === c.id
                 const pct = c.totalExpected > 0 ? Math.min(100, Math.round((c.totalPaid / c.totalExpected) * 100)) : 0
                 return (
-                  <div key={c.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div key={c.id} className={`bg-white rounded-2xl shadow-sm border border-gray-100 border-l-4 ${pct >= 100 ? 'border-l-emerald-400' : pct > 0 ? 'border-l-csc-gold' : 'border-l-gray-300'} overflow-hidden`}>
                     <button
                       type="button"
                       onClick={() => setExpandedChargeId(expanded ? null : c.id)}
@@ -1189,16 +1192,17 @@ const FinancePage: React.FC = () => {
                     </button>
 
                     {expanded && (
-                      <div className="border-t border-gray-100 p-2 space-y-1">
-                        {c.participantIds.map((playerId, idx) => {
+                      <div className="border-t border-gray-200 bg-gray-100 p-2 space-y-1.5">
+                        {c.participantIds.map(playerId => {
                           const p = players.find(pl => pl.id === playerId)
                           const payments = c.payments.filter(pay => pay.player_id === playerId)
                           const paidTotal = payments.reduce((s, pay) => s + pay.amount, 0)
                           const remaining = Math.max(0, c.amount - paidTotal)
                           const isPastDeadline = c.due_date ? new Date() > new Date(c.due_date) : false
                           const isPayingHere = payFormKey === `${c.id}:${playerId}`
+                          const accent = remaining <= 0 ? 'border-l-emerald-400' : paidTotal > 0 ? 'border-l-amber-400' : isPastDeadline ? 'border-l-red-400' : 'border-l-gray-300'
                           return (
-                            <div key={playerId} className={`px-3 py-2.5 space-y-2 rounded-lg ${idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                            <div key={playerId} className={`bg-white shadow-sm rounded-lg border border-gray-200 border-l-4 ${accent} px-3 py-2.5 space-y-2`}>
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-sm font-bold text-gray-900 truncate">{p?.shirt_name || p?.name || 'Jogador'}</span>
                                 <div className="flex items-center gap-2 shrink-0">

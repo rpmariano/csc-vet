@@ -12,21 +12,17 @@ import {
   Menu,
   X,
   Shield,
-  ChevronDown,
-  Sparkles,
   ArrowRight,
-  Check,
   ClipboardList,
   Trophy,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import type { UserRole } from '../context/AuthContext'
 import { AutoAssociationModal } from './AutoAssociationModal'
 import { AnnouncementsInboxButton } from './AnnouncementsInbox'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
-import { ClinicalStatusChip, RoleChip, RoleAvatar } from './StatusChip'
+import { ClinicalStatusChip, RoleChip } from './StatusChip'
 
 /**
  * Nome a mostrar no widget de perfil: nome da camisola, depois alcunha, só
@@ -135,21 +131,17 @@ const SidebarSection: React.FC<{ label: string; items: NavItem[]; gold?: boolean
 }
 
 const Layout: React.FC = () => {
-  const { profile, actualRole, setSimulatedRole, assignedRoles, toggleClinicalStatus, signOut } = useAuth()
+  const { profile, toggleClinicalStatus, signOut } = useAuth()
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
 
-  // Escape, prisão de foco e bloqueio de scroll para a gaveta e para o seletor de perfil.
+  // Escape, prisão de foco e bloqueio de scroll para a gaveta.
   const gavetaRef = useModalA11y({ isOpen: isMobileMenuOpen, onClose: () => setIsMobileMenuOpen(false) })
-  const perfilRef = useModalA11y({ isOpen: isRoleModalOpen, onClose: () => setIsRoleModalOpen(false) })
-  const perfilTituloId = 'titulo-alternar-perfil'
   const gavetaTituloId = 'titulo-menu-principal'
 
   const isAdmin = profile?.role === 'admin'
   const isCoach = profile?.role === 'coach'
   const isPlayer = !isAdmin && !isCoach
-  const canSwitchRoles = (assignedRoles?.length ?? 1) > 1
 
   // Os 4 grupos de navegação — mesma composição na gaveta e na sidebar.
   const secaoGeral: NavItem[] = [NAV_HOME, NAV_CALENDAR, NAV_MATCH_REPORTS, NAV_STATS, NAV_STANDINGS]
@@ -163,16 +155,6 @@ const Layout: React.FC = () => {
     ? ['/', '/calendar', '/events', '/team-management']
     : ['/', '/calendar', '/match-reports', '/stats']
   const paraGaveta = (items: NavItem[]) => items.filter(item => !caminhosBarraInferior.includes(item.to))
-
-  const handleSelectRole = (role: UserRole) => {
-    triggerHaptic('medium')
-    if (role === actualRole) {
-      setSimulatedRole(null)
-    } else {
-      setSimulatedRole(role)
-    }
-    setIsRoleModalOpen(false)
-  }
 
   const handleToggleClinical = () => {
     triggerHaptic('medium')
@@ -200,15 +182,8 @@ const Layout: React.FC = () => {
             </button>
           )}
 
-          {/* Pílula de Cargo (Clicável se tiver múltiplos perfis) */}
-          <button
-            type="button"
-            onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-            className={`transition-all rounded-full ${canSwitchRoles ? 'cursor-pointer hover:ring-2 hover:ring-csc-gold/50 active:scale-95' : ''}`}
-            title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
-          >
-            <RoleChip role={profile?.role ?? 'player'} size="sm" className={canSwitchRoles ? 'pr-1.5' : ''} />
-          </button>
+          {/* Pílula de Cargo — só informativa, sem alternância de perfil. */}
+          <RoleChip role={profile?.role ?? 'player'} size="sm" />
 
           {/* Inbox de Comunicados — junto à imagem do perfil */}
           {profile && <AnnouncementsInboxButton tone="light" size="sm" />}
@@ -283,8 +258,7 @@ const Layout: React.FC = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
-                        {/* Sem alternância de perfil aqui — fica só informativo; para trocar
-                            de papel usa-se a pílula de cargo do cabeçalho. */}
+                        {/* Só informativo — não há alternância de perfil na aplicação. */}
                         <RoleChip role={profile.role} size="sm" />
 
                         {/* Estado Clínico (Apenas Jogador) */}
@@ -406,8 +380,7 @@ const Layout: React.FC = () => {
                   <div className="overflow-hidden flex-1">
                     <p className="font-bold truncate text-xs text-white">{nomeWidgetPerfil(profile)}</p>
                     <div className="flex items-center gap-1 mt-0.5">
-                      {/* Sem alternância de perfil aqui — fica só informativo; para trocar
-                          de papel usa-se a pílula de cargo do cabeçalho. */}
+                      {/* Só informativo — não há alternância de perfil na aplicação. */}
                       <RoleChip role={profile.role} size="sm" />
                     </div>
                   </div>
@@ -477,15 +450,8 @@ const Layout: React.FC = () => {
               </button>
             )}
 
-            {/* Pílula de Cargo */}
-            <button
-              type="button"
-              onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-              className={canSwitchRoles ? 'cursor-pointer active:scale-95' : ''}
-            >
-              <RoleChip role={profile?.role ?? 'player'} className={canSwitchRoles ? 'pr-1.5' : ''} />
-              {canSwitchRoles && <ChevronDown size={13} className="inline ml-0.5 opacity-70" />}
-            </button>
+            {/* Pílula de Cargo — só informativa, sem alternância de perfil. */}
+            <RoleChip role={profile?.role ?? 'player'} />
 
             {/* Inbox de Comunicados — junto à imagem do perfil */}
             {profile && <AnnouncementsInboxButton tone="light" />}
@@ -609,141 +575,6 @@ const Layout: React.FC = () => {
           <span className="text-[10px] font-bold mt-0.5">Menu</span>
         </button>
       </nav>
-
-      {/* Modal de Alternância de Papel / Role Switcher */}
-      {isRoleModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
-          onMouseDown={e => { if (e.target === e.currentTarget) setIsRoleModalOpen(false) }}
-        >
-          <div
-            ref={perfilRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={perfilTituloId}
-            tabIndex={-1}
-            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-scale-up border border-gray-100 outline-none"
-          >
-            <button
-              type="button"
-              onClick={() => setIsRoleModalOpen(false)}
-              aria-label="Fechar"
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-2.5 bg-csc-gold/20 rounded-xl text-csc-dark">
-                <Sparkles size={22} className="text-csc-dark" />
-              </div>
-              <div>
-                <h3 id={perfilTituloId} className="text-lg font-black text-gray-900">Alternar Perfil de Acesso</h3>
-                <p className="text-xs text-gray-500 font-medium">Selecione o perfil com o qual deseja utilizar a aplicação</p>
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-2.5">
-              {/* 1. Administrador */}
-              {assignedRoles?.includes('admin') && (
-                <button
-                  type="button"
-                  onClick={() => handleSelectRole('admin')}
-                  className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                    profile?.role === 'admin'
-                      ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-<RoleAvatar role="admin" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-gray-900">Administrador / Direção</p>
-                        {profile?.role === 'admin' && (
-                          <span className="text-[10px] bg-csc-gold text-csc-dark font-black px-1.5 py-0.5 rounded">
-                            Ativo
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500">Acesso total, finanças e administração app</p>
-                    </div>
-                  </div>
-                  {profile?.role === 'admin' && <Check size={18} className="text-csc-dark shrink-0 ml-2" />}
-                </button>
-              )}
-
-              {/* 2. Treinador */}
-              {assignedRoles?.includes('coach') && (
-                <button
-                  type="button"
-                  onClick={() => handleSelectRole('coach')}
-                  className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                    profile?.role === 'coach'
-                      ? 'border-blue-500 bg-blue-50/70 ring-2 ring-blue-400/50 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-<RoleAvatar role="coach" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-gray-900">Treinador</p>
-                        {profile?.role === 'coach' && (
-                          <span className="text-[10px] bg-blue-600 text-white font-black px-1.5 py-0.5 rounded">
-                            Ativo
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500">Equipa técnica, criação de treinos e jogos</p>
-                    </div>
-                  </div>
-                  {profile?.role === 'coach' && <Check size={18} className="text-blue-600 shrink-0 ml-2" />}
-                </button>
-              )}
-
-              {/* 3. Jogador */}
-              {assignedRoles?.includes('player') && (
-                <button
-                  type="button"
-                  onClick={() => handleSelectRole('player')}
-                  className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                    profile?.role === 'player'
-                      ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-400/50 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-<RoleAvatar role="player" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-gray-900">Jogador (Atleta)</p>
-                        {profile?.role === 'player' && (
-                          <span className="text-[10px] bg-emerald-700 text-white font-black px-1.5 py-0.5 rounded">
-                            Ativo
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500">Atleta nas convocatórias e estatísticas</p>
-                    </div>
-                  </div>
-                  {profile?.role === 'player' && <Check size={18} className="text-emerald-700 shrink-0 ml-2" />}
-                </button>
-              )}
-            </div>
-
-            <div className="mt-5 pt-3 border-t border-gray-100 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setIsRoleModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-gray-600 hover:text-gray-900"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Associação Inteligente Automática para novos atletas */}
       <AutoAssociationModal />
