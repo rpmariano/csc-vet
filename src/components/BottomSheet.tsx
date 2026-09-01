@@ -1,4 +1,4 @@
-import React, { forwardRef, useId, useImperativeHandle, useRef, useState } from 'react'
+import React, { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { useModalA11y } from '../hooks/useModalA11y'
 
@@ -14,6 +14,18 @@ import { useModalA11y } from '../hooks/useModalA11y'
  * continuar a usar `Modal` — pedem um contentor mais deliberado, sem um
  * gesto de arrastar que possa fechar o ecrã por engano com alterações por
  * guardar.
+ *
+ * Abrir e fechar deslizam sempre de forma suave, seja qual for o gatilho
+ * (arrastar, botão de fechar — incluindo um botão próprio do consumidor,
+ * clique no fundo, ou Escape): a persiana reage à transição de `isOpen` para
+ * `false` continuando montada e a animar a saída antes de desaparecer, em
+ * vez de desaparecer de imediato. Para isso resultar, quem usa `<BottomSheet>`
+ * não pode deixar de o renderizar no mesmo instante em que `isOpen` passa a
+ * `false` (ex.: `{condição && <BottomSheet isOpen={condição} />}` onde a
+ * condição é a mesma variável de `isOpen` — nesse caso o React desmonta tudo
+ * de imediato e não há tempo para animar). Os consumidores existentes usam
+ * antes uma condição independente (o dado a mostrar), deixando só `isOpen`
+ * controlar a visibilidade.
  *
  * A física de arrasto foi extraída do modal de detalhe de evento do
  * CalendarPage (persiana original da app) — mesmo comportamento, agora
@@ -40,6 +52,9 @@ const LARGURAS: Record<BottomSheetSize, string> = {
 
 /** Distância arrastada para baixo, em px, a partir da qual a persiana fecha. */
 const DISTANCIA_FECHO = 110
+
+/** Duração da transição de entrada/saída — usada tanto no CSS como no temporizador que desmonta no fim. */
+const DURACAO_TRANSICAO_MS = 280
 
 export interface BottomSheetProps {
   isOpen: boolean
@@ -103,15 +118,50 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
   const contentRef = useRef<HTMLDivElement>(null)
   useImperativeHandle(forwardedRef, () => contentRef.current as HTMLDivElement)
 
+  // Fases da animação: 'entering' → 'open' é o deslizar para dentro; ao `isOpen`
+  // passar a false entra-se em 'leaving' e só se desmonta ('closed', volta a null)
+  // depois da transição terminar — nunca desaparece a meio do gesto, seja qual for
+  // o botão (ou o próprio arrasto) que pediu o fecho.
+  const [phase, setPhase] = useState<'entering' | 'open' | 'leaving' | 'closed'>(isOpen ? 'entering' : 'closed')
   const [translateY, setTranslateY] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const dragRef = useRef<{ startY: number } | null>(null)
 
-  // Sem `isOpen`, o componente desmonta — o estado de arrasto acima já reinicia sozinho
-  // no próximo `mount`, não precisa de um efeito a repô-lo.
-  if (!isOpen) return null
+  useEffect(() => {
+    if (isOpen) {
+      setTranslateY(0)
+      setIsDragging(false)
+      setPhase(prev => (prev === 'open' ? 'open' : 'entering'))
+    } else {
+      setPhase(prev => (prev === 'closed' ? prev : 'leaving'))
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (phase === 'entering') {
+      // Duas frames: a primeira garante que o browser pinta a posição inicial (fora
+      // do ecrã) antes de passarmos a 'open', senão a transição não tem de onde animar.
+      let raf2 = 0
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setPhase(prev => (prev === 'entering' ? 'open' : prev)))
+      })
+      return () => {
+        cancelAnimationFrame(raf1)
+        if (raf2) cancelAnimationFrame(raf2)
+      }
+    }
+    if (phase === 'leaving') {
+      const t = window.setTimeout(() => {
+        setPhase(prev => (prev === 'leaving' ? 'closed' : prev))
+      }, DURACAO_TRANSICAO_MS)
+      return () => window.clearTimeout(t)
+    }
+  }, [phase])
+
+  if (phase === 'closed') return null
 
   const ehMobile = typeof window !== 'undefined' && window.innerWidth < 640
+  const aberto = phase === 'open'
 
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     // A alça e o cabeçalho não têm scroll próprio — arrastar a partir deles fecha sempre.
@@ -136,13 +186,15 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
 
   const onTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     if (dragRef.current) {
-      setIsDragging(false)
+      const deveFechar = translateY > DISTANCIA_FECHO
       dragRef.current = null
-
-      if (translateY > DISTANCIA_FECHO) {
-        // Desliza para fora do ecrã antes de desmontar, em vez de desaparecer a meio do gesto.
-        setTranslateY(window.innerHeight || 800)
-        window.setTimeout(onClose, 220)
+      setIsDragging(false)
+      if (deveFechar) {
+        // Não se toca em `phase` aqui: `isOpen` vai a false por via do `onClose` do
+        // consumidor, e o efeito acima trata de passar a 'leaving' — o painel
+        // continua a deslizar, suavemente, da posição onde o dedo o largou até
+        // sair do ecrã (a transição volta a ligar-se assim que `isDragging` é false).
+        onClose()
       } else {
         setTranslateY(0)
       }
@@ -161,9 +213,19 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
       ? 'bg-white/10 hover:bg-white/20 text-white'
       : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
 
+  // Transformação do painel: durante o arrasto segue o dedo em pixels; fora disso
+  // segue a fase — desliza verticalmente no telemóvel, esbate com um leve zoom no
+  // desktop (onde não há gesto de arrasto, só entrada/saída simétricas).
+  const transformPainel = isDragging
+    ? `translateY(${translateY}px)`
+    : ehMobile
+      ? `translateY(${aberto ? '0' : '100%'})`
+      : `scale(${aberto ? 1 : 0.96})`
+
   return (
     <div
-      className="fixed inset-0 z-modal flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/60 backdrop-blur-xs overflow-hidden animate-fade-in"
+      className="fixed inset-0 z-modal flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/60 backdrop-blur-xs overflow-hidden"
+      style={{ opacity: aberto ? 1 : 0, transition: 'opacity 200ms ease' }}
       onMouseDown={e => {
         if (closeOnOverlayClick && e.target === e.currentTarget) onClose()
       }}
@@ -179,10 +241,11 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         style={{
-          transform: ehMobile ? `translateY(${translateY}px)` : undefined,
-          transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
+          transform: transformPainel,
+          opacity: ehMobile || isDragging ? 1 : aberto ? 1 : 0,
+          transition: isDragging ? 'none' : `transform ${DURACAO_TRANSICAO_MS}ms cubic-bezier(0.32, 0.72, 0, 1), opacity ${DURACAO_TRANSICAO_MS}ms ease`,
         }}
-        className={`${corFundo} w-full ${LARGURAS[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl relative max-h-[90vh] sm:max-h-[88vh] flex flex-col outline-none overscroll-contain animate-scale-up ${className}`}
+        className={`${corFundo} w-full ${LARGURAS[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl relative max-h-[90vh] sm:max-h-[88vh] flex flex-col outline-none overscroll-contain ${className}`}
       >
         {/* Alça de arrasto — só no telemóvel; também funciona como botão de fecho */}
         <button

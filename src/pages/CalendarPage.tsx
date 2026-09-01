@@ -206,6 +206,9 @@ const CalendarPage: React.FC = () => {
   const [opponents, setOpponents] = useState<Opponent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  // Separado de `selectedEvent`: o evento fica retido (para a persiana poder deslizar
+  // suavemente para fora ao fechar) mesmo depois de a persiana deixar de estar aberta.
+  const [isEventSheetOpen, setIsEventSheetOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -255,7 +258,9 @@ const CalendarPage: React.FC = () => {
   }, [selectedEvent])
 
   const handleCloseEventModal = () => {
-    setSelectedEvent(null)
+    // Só fecha visualmente — `selectedEvent` fica retido para a persiana poder
+    // deslizar para fora antes de o conteúdo desaparecer (ver isEventSheetOpen).
+    setIsEventSheetOpen(false)
     setPlayerSearchTerm('')
     setModalCallupStatusFilter('all')
   }
@@ -842,6 +847,7 @@ const CalendarPage: React.FC = () => {
       const target = events.find(e => e.id === eventIdParam)
       if (target) {
         setSelectedEvent(target)
+        setIsEventSheetOpen(true)
         const d = new Date(target.date_time)
         setSelectedDate(d)
         setCurrentDate(d)
@@ -866,6 +872,7 @@ const CalendarPage: React.FC = () => {
 
         if (data) {
           setSelectedEvent(data as Event)
+          setIsEventSheetOpen(true)
           const d = new Date(data.date_time)
           setSelectedDate(d)
           setCurrentDate(d)
@@ -1216,7 +1223,7 @@ const CalendarPage: React.FC = () => {
         try {
           const { error } = await supabase.from('events').delete().eq('id', eventId)
           if (error) throw error
-          setSelectedEvent(null)
+          setIsEventSheetOpen(false)
           setIsEditModalOpen(false)
           fetchEventsAndData()
           toast.success('Evento eliminado com sucesso!')
@@ -1609,7 +1616,7 @@ const CalendarPage: React.FC = () => {
     return (
       <div
         key={event.id}
-        onClick={() => setSelectedEvent(event)}
+        onClick={() => { setSelectedEvent(event); setIsEventSheetOpen(true) }}
         className="rounded-3xl transition-all cursor-pointer bg-csc-dark text-white overflow-hidden shadow-sm hover:shadow-lg flex flex-col justify-between"
       >
         {/* Cabeçalho: tipo de evento por ícone + rótulo, não por cor de fundo */}
@@ -2038,6 +2045,7 @@ const CalendarPage: React.FC = () => {
                             onClick={(e) => {
                               e.stopPropagation()
                               setSelectedEvent(ev)
+                              setIsEventSheetOpen(true)
                             }}
                             className={`text-[9px] px-1 py-0.2 rounded font-bold truncate flex items-center gap-0.5 shadow-2xs hover:opacity-85 ${
                               ev.type === 'match' 
@@ -2110,10 +2118,13 @@ const CalendarPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Detalhes Evento & Convocatória (persiana partilhada) */}
+      {/* Modal Detalhes Evento & Convocatória (persiana partilhada).
+          A condição usa só `selectedEvent` (nunca voltar a null ao fechar) — a persiana
+          controla a própria visibilidade por `isEventSheetOpen`, para poder deslizar
+          para fora suavemente em vez de desaparecer no instante em que se fecha. */}
       {selectedEvent && (
         <BottomSheet
-          isOpen={!!selectedEvent}
+          isOpen={isEventSheetOpen}
           onClose={handleCloseEventModal}
           ref={modalScrollRef}
           tone="dark"

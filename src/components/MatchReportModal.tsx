@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { X, ShieldAlert, Award, Footprints, Save, CheckCircle2, Lock, Flame, Users } from 'lucide-react'
+import { X, ShieldAlert, Award, Footprints, Save, CheckCircle2, Lock, Flame, Users, Pencil } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../pages/CalendarPage'
 import { toast } from '../context/ToastContext'
 import { BottomSheet } from './BottomSheet'
+import { Modal } from './Modal'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -92,7 +93,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   // Scores
   const [homeScore, setHomeScore] = useState<number | null>(event?.home_score ?? null)
@@ -125,9 +126,9 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const hasScoreAlready = event?.home_score !== null && event?.home_score !== undefined
         const alreadyPlayed = !event?.date_time || new Date(event.date_time).getTime() <= Date.now()
         if (isCoachOrAdmin && !hasScoreAlready && alreadyPlayed) {
-          setIsEditing(true)
+          setIsEditModalOpen(true)
         } else {
-          setIsEditing(false)
+          setIsEditModalOpen(false)
         }
 
         // 2. Fetch all profiles & callups for this event
@@ -331,7 +332,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       }
 
       setSaveSuccess(true)
-      setIsEditing(false)
+      setIsEditModalOpen(false)
       if (onSaved) onSaved()
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {
@@ -364,6 +365,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const isFutureMatch = !hasScore && !!event?.date_time && new Date(event.date_time).getTime() > Date.now()
 
   return (
+    <>
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
@@ -410,18 +412,15 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             </p>
           </div>
 
-          {isCoachOrAdmin && !isFutureMatch && (
+          {isCoachOrAdmin && !isFutureMatch && !loading && (
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => setIsEditing(!isEditing)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs ${
-                  isEditing 
-                    ? 'bg-white/10 text-white hover:bg-white/20 border border-white/15' 
-                    : 'bg-csc-gold text-csc-dark hover:brightness-95 border border-csc-gold'
-                }`}
+                onClick={() => setIsEditModalOpen(true)}
+                className="px-4 py-2 rounded-xl text-xs font-black bg-csc-gold text-csc-dark border border-csc-gold hover:brightness-95 transition-all cursor-pointer shadow-xs flex items-center gap-1.5 active:scale-95"
               >
-                {isEditing ? 'Ver Modo Resumo' : '✏️ Editar Ficha'}
+                <Pencil size={14} className="text-csc-dark" />
+                <span>Editar Ficha</span>
               </button>
             </div>
           )}
@@ -476,37 +475,15 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
                 {/* Placar Central */}
                 <div className="col-span-3 flex flex-col items-center justify-center gap-1">
-                  {isEditing ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="0"
-                        value={homeScore ?? ''}
-                        onChange={e => setHomeScore(e.target.value === '' ? null : parseInt(e.target.value, 10))}
-                        placeholder="0"
-                        className="w-12 sm:w-14 text-center py-2 bg-white text-csc-dark text-xl sm:text-2xl font-black rounded-xl border-2 border-csc-gold outline-none shadow-inner"
-                      />
-                      <span className="text-xl font-black text-csc-gold">-</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={awayScore ?? ''}
-                        onChange={e => setAwayScore(e.target.value === '' ? null : parseInt(e.target.value, 10))}
-                        placeholder="0"
-                        className="w-12 sm:w-14 text-center py-2 bg-white text-csc-dark text-xl sm:text-2xl font-black rounded-xl border-2 border-csc-gold outline-none shadow-inner"
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-3xl sm:text-4xl font-black text-white px-3 py-1 bg-black/40 rounded-2xl border border-white/20">
-                        {homeScore !== null && homeScore !== undefined ? homeScore : '-'}
-                      </span>
-                      <span className="text-2xl font-black text-csc-gold">:</span>
-                      <span className="text-3xl sm:text-4xl font-black text-white px-3 py-1 bg-black/40 rounded-2xl border border-white/20">
-                        {awayScore !== null && awayScore !== undefined ? awayScore : '-'}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-3xl sm:text-4xl font-black text-white px-3 py-1 bg-black/40 rounded-2xl border border-white/20">
+                      {homeScore !== null && homeScore !== undefined ? homeScore : '-'}
+                    </span>
+                    <span className="text-2xl font-black text-csc-gold">:</span>
+                    <span className="text-3xl sm:text-4xl font-black text-white px-3 py-1 bg-black/40 rounded-2xl border border-white/20">
+                      {awayScore !== null && awayScore !== undefined ? awayScore : '-'}
+                    </span>
+                  </div>
                   <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-200">
                     {homeScore !== null ? 'Resultado Final' : 'Sem Resultado'}
                   </span>
@@ -538,21 +515,9 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
                   Esquema Tático
                 </label>
-                {isEditing ? (
-                  <select
-                    value={tacticalFormation}
-                    onChange={e => setTacticalFormation(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-black text-gray-900 outline-none focus:ring-2 focus:ring-csc-dark"
-                  >
-                    {TACTICAL_FORMATIONS.map(f => (
-                      <option key={f} value={f}>{f}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-base font-black text-white flex items-center gap-1.5">
-                    <span>⚡ {(tacticalFormation || '4-3-3').replace(/^1-/, '')}</span>
-                  </p>
-                )}
+                <p className="text-base font-black text-white flex items-center gap-1.5">
+                  <span>⚡ {(tacticalFormation || '4-3-3').replace(/^1-/, '')}</span>
+                </p>
               </div>
 
               <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl">
@@ -589,9 +554,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 </h3>
               </div>
 
-              {/* MODO VISUALIZAÇÃO (Para Jogadores ou Consulta) */}
-              {!isEditing && (
-                <div className="space-y-4">
+              <div className="space-y-4">
                   {/* Titulares */}
                   <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-xs">
                     <div className="bg-emerald-800 text-white px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center justify-between">
@@ -716,170 +679,6 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* MODO EDIÇÃO (Para Treinadores / Admins) */}
-              {isEditing && (
-                <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-xs">
-                  <div className="p-3 bg-white/10 border-b border-white/10 text-xs font-bold text-white/80 flex items-center justify-between">
-                    <span>Seleciona titulares, suplentes, golos e cartões:</span>
-                    <span className="text-[10px] text-white/70 font-normal">Titulares: {starters.length} | Suplentes: {subs.length}</span>
-                  </div>
-
-                  <div className="p-2.5 space-y-2 max-h-[45vh] overflow-y-auto">
-                    {playerStats.map(p => {
-                      const displayName = p.shirt_name || p.name
-                      return (
-                      <div key={p.player_id} className="p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-
-                        {/* Identificação e Seletor de Titularidade */}
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <span className="w-8 h-8 rounded-full bg-csc-dark text-csc-gold font-black text-sm flex items-center justify-center shrink-0 shadow-xs border border-csc-gold/40">
-                            {p.jersey_number || '—'}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-black text-gray-900 truncate">{displayName}</p>
-                            {p.position && (
-                              <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                                {p.position.split(',').map((pos: string, idx: number) => (
-                                  <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{pos.trim()}</span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Controlos de Estado, Golos e Cartões */}
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-                          {/* Seletor de Estado */}
-                          <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 text-[11px] font-black">
-                            <button
-                              type="button"
-                              onClick={() => handleSetStarter(p.player_id)}
-                              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                                p.lineup_status === 'starter' ? 'bg-emerald-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
-                              }`}
-                            >
-                              Titular
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleStatChange(p.player_id, 'lineup_status', 'sub')}
-                              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                                p.lineup_status === 'sub' ? 'bg-blue-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
-                              }`}
-                            >
-                              Suplente
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleStatChange(p.player_id, 'lineup_status', 'none')}
-                              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                                p.lineup_status === 'none' ? 'bg-gray-300 text-gray-900' : 'text-gray-500 hover:text-gray-700'
-                              }`}
-                            >
-                              Não Jogou
-                            </button>
-                          </div>
-
-                          {/* Contador de Golos (⚽) */}
-                          <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-xl px-2 py-1">
-                            <span className="text-xs font-bold text-amber-900">⚽</span>
-                            <button
-                              type="button"
-                              onClick={() => handleStatChange(p.player_id, 'goals', Math.max(0, p.goals - 1))}
-                              className="w-5 h-5 rounded-lg bg-amber-200 text-amber-900 text-xs font-black flex items-center justify-center hover:bg-amber-300 cursor-pointer"
-                            >
-                              -
-                            </button>
-                            <span className="text-xs font-black text-amber-950 w-4 text-center">{p.goals}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleStatChange(p.player_id, 'goals', p.goals + 1)
-                                if (p.lineup_status === 'none') handlePromoteIfNone(p.player_id)
-                              }}
-                              className="w-5 h-5 rounded-lg bg-amber-200 text-amber-900 text-xs font-black flex items-center justify-center hover:bg-amber-300 cursor-pointer"
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          {/* Contador de Assistências (👟) */}
-                          <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-xl px-2 py-1">
-                            <Footprints size={13} className="text-blue-600 shrink-0" />
-                            <button
-                              type="button"
-                              onClick={() => handleStatChange(p.player_id, 'assists', Math.max(0, p.assists - 1))}
-                              className="w-5 h-5 rounded-lg bg-blue-200 text-blue-900 text-xs font-black flex items-center justify-center hover:bg-blue-300 cursor-pointer"
-                            >
-                              -
-                            </button>
-                            <span className="text-xs font-black text-blue-950 w-4 text-center">{p.assists}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleStatChange(p.player_id, 'assists', p.assists + 1)
-                                if (p.lineup_status === 'none') handlePromoteIfNone(p.player_id)
-                              }}
-                              className="w-5 h-5 rounded-lg bg-blue-200 text-blue-900 text-xs font-black flex items-center justify-center hover:bg-blue-300 cursor-pointer"
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          {/* Cartões Amarelos (🟨) */}
-                          <button
-                            type="button"
-                            onClick={() => handleStatChange(p.player_id, 'yellow_cards', (p.yellow_cards + 1) % 3)}
-                            className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
-                              p.yellow_cards === 1
-                                ? 'bg-yellow-200 border-yellow-400 text-yellow-950 ring-1 ring-yellow-400'
-                                : p.yellow_cards === 2
-                                ? 'bg-yellow-300 border-yellow-500 text-yellow-950 font-extrabold ring-2 ring-yellow-500'
-                                : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
-                            }`}
-                            title="Alternar Cartões Amarelos (0 -> 1 -> 2)"
-                          >
-                            🟨 {p.yellow_cards > 0 ? (p.yellow_cards === 2 ? 'x2' : 'x1') : '0'}
-                          </button>
-
-                          {/* Cartão Vermelho (🟥) */}
-                          <button
-                            type="button"
-                            onClick={() => handleStatChange(p.player_id, 'red_cards', p.red_cards === 1 ? 0 : 1)}
-                            className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
-                              p.red_cards === 1
-                                ? 'bg-red-500 text-white border-red-600 ring-2 ring-red-400'
-                                : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
-                            }`}
-                            title="Alternar Cartão Vermelho Direto"
-                          >
-                            🟥 {p.red_cards === 1 ? '✓' : '0'}
-                          </button>
-
-                          {/* MVP: pílula com texto, como os cartões ao lado — mais claro do que um ícone sozinho */}
-                          <button
-                            type="button"
-                            onClick={() => handleToggleMvp(p.player_id)}
-                            className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
-                              p.is_mvp
-                                ? 'bg-amber-400 text-csc-dark border-amber-500 ring-2 ring-amber-300'
-                                : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
-                            }`}
-                            title="Melhor em Campo (MVP)"
-                          >
-                            MVP
-                          </button>
-
-                        </div>
-
-                      </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* 4. OCORRÊNCIAS & NOTAS TÉCNICAS (ÁREA PRIVADA: APENAS COACH / ADMIN) */}
@@ -898,45 +697,13 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                   Registo interno de lesões, comportamento, observações táticas ou incidências do jogo. <strong>Os jogadores não têm acesso a estas notas.</strong>
                 </p>
 
-                {isEditing ? (
-                  <textarea
-                    rows={3}
-                    value={occurrences}
-                    onChange={e => setOccurrences(e.target.value)}
-                    placeholder="Ex: O atleta #7 saiu lesionado aos 35 min (entorse tornozelo). Bom comportamento coletivo na segunda parte..."
-                    className="w-full p-3 bg-white/5 border border-amber-400/30 rounded-2xl text-xs font-semibold text-white outline-none focus:ring-2 focus:ring-amber-400 shadow-inner"
-                  />
-                ) : (
-                  <div className="p-3 bg-white/5 rounded-2xl border border-amber-400/20 text-xs font-semibold text-white/80">
-                    {occurrences ? (
-                      <p className="whitespace-pre-wrap">{occurrences}</p>
-                    ) : (
-                      <p className="italic text-white/65">Sem ocorrências registadas para este jogo.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Botões de Ação Final */}
-            {isCoachOrAdmin && isEditing && (
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2.5 text-xs font-bold text-white hover:text-white bg-white/10 hover:bg-white/20 rounded-xl cursor-pointer transition-all"
-                >
-                  Cancelar Edição
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveReport}
-                  disabled={saving}
-                  className="px-5 py-2.5 text-xs font-black text-csc-dark bg-csc-gold hover:brightness-95 rounded-xl cursor-pointer shadow-md flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <Save size={16} className="text-csc-dark" />
-                  <span>{saving ? 'A guardar...' : 'Guardar Ficha de Jogo'}</span>
-                </button>
+                <div className="p-3 bg-white/5 rounded-2xl border border-amber-400/20 text-xs font-semibold text-white/80">
+                  {occurrences ? (
+                    <p className="whitespace-pre-wrap">{occurrences}</p>
+                  ) : (
+                    <p className="italic text-white/65">Sem ocorrências registadas para este jogo.</p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -945,5 +712,262 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
       </div>
     </BottomSheet>
+
+    {/* Edição da Ficha de Jogo — formulário próprio, não a persiana de consulta:
+        pede um contentor mais deliberado, sem o gesto de arrastar que a fecharia
+        por engano com alterações por guardar. */}
+    <Modal
+      isOpen={isEditModalOpen && !loading && !isFutureMatch}
+      onClose={() => setIsEditModalOpen(false)}
+      tone="dark"
+      size="3xl"
+      stacked
+      title="Editar Ficha de Jogo"
+      description={`${leftSigla} vs ${rightSigla}`}
+      icon={<Pencil size={20} className="text-csc-gold" />}
+      closeOnOverlayClick={false}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={() => setIsEditModalOpen(false)}
+            className="px-4 py-2.5 text-xs font-bold text-white hover:text-white bg-white/10 hover:bg-white/20 rounded-xl cursor-pointer transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveReport}
+            disabled={saving}
+            className="px-5 py-2.5 text-xs font-black text-csc-dark bg-csc-gold hover:brightness-95 rounded-xl cursor-pointer shadow-md flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <Save size={16} className="text-csc-dark" />
+            <span>{saving ? 'A guardar...' : 'Guardar Ficha de Jogo'}</span>
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        {/* Resultado */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">{leftSigla}</label>
+            <input
+              type="number"
+              min="0"
+              value={homeScore ?? ''}
+              onChange={e => setHomeScore(e.target.value === '' ? null : parseInt(e.target.value, 10))}
+              placeholder="0"
+              className="w-full text-center py-2.5 bg-white text-csc-dark text-xl font-black rounded-xl border-2 border-csc-gold outline-none shadow-inner"
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">{rightSigla}</label>
+            <input
+              type="number"
+              min="0"
+              value={awayScore ?? ''}
+              onChange={e => setAwayScore(e.target.value === '' ? null : parseInt(e.target.value, 10))}
+              placeholder="0"
+              className="w-full text-center py-2.5 bg-white text-csc-dark text-xl font-black rounded-xl border-2 border-csc-gold outline-none shadow-inner"
+            />
+          </div>
+        </div>
+
+        {/* Esquema Tático */}
+        <div>
+          <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">Esquema Tático</label>
+          <select
+            value={tacticalFormation}
+            onChange={e => setTacticalFormation(e.target.value)}
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-black text-gray-900 outline-none focus:ring-2 focus:ring-csc-dark"
+          >
+            {TACTICAL_FORMATIONS.map(f => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Plantel: titulares, suplentes, golos e cartões */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider">Desempenho dos Atletas</label>
+            <span className="text-[10px] text-white/70 font-normal">Titulares: {starters.length} | Suplentes: {subs.length}</span>
+          </div>
+          <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-xs">
+            <div className="p-2.5 space-y-2 max-h-[45vh] overflow-y-auto">
+              {playerStats.map(p => {
+                const displayName = p.shirt_name || p.name
+                return (
+                <div key={p.player_id} className="p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+
+                  {/* Identificação e Seletor de Titularidade */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className="w-8 h-8 rounded-full bg-csc-dark text-csc-gold font-black text-sm flex items-center justify-center shrink-0 shadow-xs border border-csc-gold/40">
+                      {p.jersey_number || '—'}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-black text-gray-900 truncate">{displayName}</p>
+                      {p.position && (
+                        <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                          {p.position.split(',').map((pos: string, idx: number) => (
+                            <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{pos.trim()}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Controlos de Estado, Golos e Cartões */}
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+                    {/* Seletor de Estado */}
+                    <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 text-[11px] font-black">
+                      <button
+                        type="button"
+                        onClick={() => handleSetStarter(p.player_id)}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                          p.lineup_status === 'starter' ? 'bg-emerald-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                        }`}
+                      >
+                        Titular
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleStatChange(p.player_id, 'lineup_status', 'sub')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                          p.lineup_status === 'sub' ? 'bg-blue-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                        }`}
+                      >
+                        Suplente
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleStatChange(p.player_id, 'lineup_status', 'none')}
+                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                          p.lineup_status === 'none' ? 'bg-gray-300 text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        Não Jogou
+                      </button>
+                    </div>
+
+                    {/* Contador de Golos (⚽) */}
+                    <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-xl px-2 py-1">
+                      <span className="text-xs font-bold text-amber-900">⚽</span>
+                      <button
+                        type="button"
+                        onClick={() => handleStatChange(p.player_id, 'goals', Math.max(0, p.goals - 1))}
+                        className="w-5 h-5 rounded-lg bg-amber-200 text-amber-900 text-xs font-black flex items-center justify-center hover:bg-amber-300 cursor-pointer"
+                      >
+                        -
+                      </button>
+                      <span className="text-xs font-black text-amber-950 w-4 text-center">{p.goals}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleStatChange(p.player_id, 'goals', p.goals + 1)
+                          if (p.lineup_status === 'none') handlePromoteIfNone(p.player_id)
+                        }}
+                        className="w-5 h-5 rounded-lg bg-amber-200 text-amber-900 text-xs font-black flex items-center justify-center hover:bg-amber-300 cursor-pointer"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {/* Contador de Assistências (👟) */}
+                    <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-xl px-2 py-1">
+                      <Footprints size={13} className="text-blue-600 shrink-0" />
+                      <button
+                        type="button"
+                        onClick={() => handleStatChange(p.player_id, 'assists', Math.max(0, p.assists - 1))}
+                        className="w-5 h-5 rounded-lg bg-blue-200 text-blue-900 text-xs font-black flex items-center justify-center hover:bg-blue-300 cursor-pointer"
+                      >
+                        -
+                      </button>
+                      <span className="text-xs font-black text-blue-950 w-4 text-center">{p.assists}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleStatChange(p.player_id, 'assists', p.assists + 1)
+                          if (p.lineup_status === 'none') handlePromoteIfNone(p.player_id)
+                        }}
+                        className="w-5 h-5 rounded-lg bg-blue-200 text-blue-900 text-xs font-black flex items-center justify-center hover:bg-blue-300 cursor-pointer"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {/* Cartões Amarelos (🟨) */}
+                    <button
+                      type="button"
+                      onClick={() => handleStatChange(p.player_id, 'yellow_cards', (p.yellow_cards + 1) % 3)}
+                      className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
+                        p.yellow_cards === 1
+                          ? 'bg-yellow-200 border-yellow-400 text-yellow-950 ring-1 ring-yellow-400'
+                          : p.yellow_cards === 2
+                          ? 'bg-yellow-300 border-yellow-500 text-yellow-950 font-extrabold ring-2 ring-yellow-500'
+                          : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
+                      }`}
+                      title="Alternar Cartões Amarelos (0 -> 1 -> 2)"
+                    >
+                      🟨 {p.yellow_cards > 0 ? (p.yellow_cards === 2 ? 'x2' : 'x1') : '0'}
+                    </button>
+
+                    {/* Cartão Vermelho (🟥) */}
+                    <button
+                      type="button"
+                      onClick={() => handleStatChange(p.player_id, 'red_cards', p.red_cards === 1 ? 0 : 1)}
+                      className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
+                        p.red_cards === 1
+                          ? 'bg-red-500 text-white border-red-600 ring-2 ring-red-400'
+                          : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
+                      }`}
+                      title="Alternar Cartão Vermelho Direto"
+                    >
+                      🟥 {p.red_cards === 1 ? '✓' : '0'}
+                    </button>
+
+                    {/* MVP: pílula com texto, como os cartões ao lado — mais claro do que um ícone sozinho */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleMvp(p.player_id)}
+                      className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
+                        p.is_mvp
+                          ? 'bg-amber-400 text-csc-dark border-amber-500 ring-2 ring-amber-300'
+                          : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
+                      }`}
+                      title="Melhor em Campo (MVP)"
+                    >
+                      MVP
+                    </button>
+
+                  </div>
+
+                </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Ocorrências & Notas Técnicas (privado) */}
+        {isCoachOrAdmin && (
+          <div>
+            <div className="flex items-center gap-2 text-amber-200 font-black text-xs uppercase tracking-wider mb-1">
+              <Lock size={14} className="text-amber-400" />
+              <span>Ocorrências & Notas da Equipa Técnica (Confidencial)</span>
+            </div>
+            <textarea
+              rows={3}
+              value={occurrences}
+              onChange={e => setOccurrences(e.target.value)}
+              placeholder="Ex: O atleta #7 saiu lesionado aos 35 min (entorse tornozelo). Bom comportamento coletivo na segunda parte..."
+              className="w-full p-3 bg-white/5 border border-amber-400/30 rounded-2xl text-xs font-semibold text-white outline-none focus:ring-2 focus:ring-amber-400 shadow-inner"
+            />
+          </div>
+        )}
+      </div>
+    </Modal>
+    </>
   )
 }

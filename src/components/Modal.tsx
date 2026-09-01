@@ -40,6 +40,10 @@ export interface ModalProps {
   showCloseButton?: boolean
   /** Nome acessível quando não há título visível (ex.: um visualizador de fotos). */
   ariaLabel?: string
+  /** 'light': cartão branco (padrão). 'dark': cartão csc-dark, como a persiana de eventos. */
+  tone?: 'light' | 'dark'
+  /** Este modal abre a partir de dentro de outro (ex.: editar algo cujo detalhe já está numa persiana) — sobe para `z-modal-top` em vez do `z-modal` base. */
+  stacked?: boolean
   children?: React.ReactNode
 }
 
@@ -55,6 +59,8 @@ export const Modal: React.FC<ModalProps> = ({
   closeOnEscape = true,
   showCloseButton = true,
   ariaLabel,
+  tone = 'light',
+  stacked = false,
   children,
 }) => {
   const painelRef = useModalA11y({ isOpen, onClose, closeOnEscape })
@@ -63,10 +69,18 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null
 
   const temCabecalho = Boolean(title || description || icon || showCloseButton)
+  const corFundo = tone === 'dark' ? 'bg-csc-dark text-white' : 'bg-white'
+  const corBordo = tone === 'dark' ? 'border-white/10' : 'border-gray-100'
+  const corTitulo = tone === 'dark' ? 'text-white' : 'text-gray-900'
+  const corDescricao = tone === 'dark' ? 'text-white/60' : 'text-gray-500'
+  const corBotaoFechar =
+    tone === 'dark'
+      ? 'bg-white/10 hover:bg-white/20 text-white'
+      : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fade-in"
+      className={`fixed inset-0 ${stacked ? 'z-modal-top' : 'z-modal'} flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fade-in`}
       onMouseDown={e => {
         // mousedown no fundo, e não um arrasto que começou dentro do painel
         if (closeOnOverlayClick && e.target === e.currentTarget) onClose()
@@ -79,20 +93,20 @@ export const Modal: React.FC<ModalProps> = ({
         aria-label={!title ? ariaLabel : undefined}
         aria-labelledby={title ? tituloId : undefined}
         tabIndex={-1}
-        className={`bg-white rounded-2xl w-full ${LARGURAS[size]} shadow-2xl border border-gray-100 relative my-auto max-h-[90vh] flex flex-col animate-scale-up outline-none`}
+        className={`${corFundo} rounded-2xl w-full ${LARGURAS[size]} shadow-2xl border ${corBordo} relative my-auto max-h-[90vh] flex flex-col animate-scale-up outline-none`}
       >
         {temCabecalho && (
-          <div className="flex items-start gap-3 p-5 pb-3 border-b border-gray-100 shrink-0">
+          <div className={`flex items-start gap-3 p-5 pb-3 border-b ${corBordo} shrink-0`}>
             {icon && <div className="shrink-0 mt-0.5">{icon}</div>}
 
             <div className="flex-1 min-w-0">
               {title && (
-                <h2 id={tituloId} className="text-lg font-black text-gray-900 leading-tight">
+                <h2 id={tituloId} className={`text-lg font-black leading-tight ${corTitulo}`}>
                   {title}
                 </h2>
               )}
               {description && (
-                <p className="text-xs text-gray-500 font-medium mt-0.5">{description}</p>
+                <p className={`text-xs font-medium mt-0.5 ${corDescricao}`}>{description}</p>
               )}
             </div>
 
@@ -101,7 +115,7 @@ export const Modal: React.FC<ModalProps> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="shrink-0 -mt-1 -mr-1 p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-light"
+                className={`shrink-0 -mt-1 -mr-1 p-2 rounded-xl transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-light ${corBotaoFechar}`}
               >
                 <X size={20} />
               </button>
@@ -112,7 +126,7 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="p-5 overflow-y-auto flex-1">{children}</div>
 
         {footer && (
-          <div className="flex items-center justify-end gap-2.5 p-5 pt-3 border-t border-gray-100 shrink-0">
+          <div className={`flex items-center justify-end gap-2.5 p-5 pt-3 border-t ${corBordo} shrink-0`}>
             {footer}
           </div>
         )}

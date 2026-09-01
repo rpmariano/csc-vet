@@ -1816,8 +1816,11 @@ const TeamManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER PC & MOBILE) */}
-      {isDetailModalOpen && selectedProfile && (
+      {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER PC & MOBILE).
+          A condição usa só `selectedProfile` (nunca é limpo ao fechar) — a persiana
+          controla a própria visibilidade por `isDetailModalOpen`, para poder deslizar
+          para fora suavemente em vez de desaparecer no instante em que se fecha. */}
+      {selectedProfile && (
         <BottomSheet
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
