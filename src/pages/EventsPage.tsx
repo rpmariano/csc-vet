@@ -1300,8 +1300,9 @@ const EventsPage: React.FC = () => {
   // Título da lista de eventos. `event.title` de um jogo já vem como "Jogo vs <adversário>"
   // (ver handleCreateEvent/handleConfirmSaveEdit) — juntar "CSC vs <adversário> • <title>"
   // duplicava o nome do adversário duas vezes. Mostra antes as siglas (como na Home e na
-  // Agenda) seguidas da competição.
-  const getEventHeading = (ev: Event) => {
+  // Agenda) seguidas da competição — a competição em dourado, para não se confundir a
+  // olho com as siglas das equipas quando tudo estava na mesma cor.
+  const getEventHeading = (ev: Event): React.ReactNode => {
     if (ev.type !== 'match' || !ev.opponent_id) return ev.title
     const opponent = opponents.find(o => o.id === ev.opponent_id)
     const cscSigla = formatClubSigla(clubSettings?.initials)
@@ -1312,7 +1313,13 @@ const EventsPage: React.FC = () => {
     const competitionLabel = ev.is_friendly
       ? 'Jogo Amigável'
       : (tournaments.find(t => t.id === ev.tournament_id)?.name || 'Jogo Oficial')
-    return `${leftSigla} vs ${rightSigla} • ${competitionLabel}`
+    return (
+      <>
+        <span>{leftSigla} vs {rightSigla}</span>
+        <span className="text-white/40"> • </span>
+        <span className="text-csc-gold">{competitionLabel}</span>
+      </>
+    )
   }
 
   const currentLocationStr = getActiveLocationString()
