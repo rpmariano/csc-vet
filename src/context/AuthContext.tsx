@@ -56,7 +56,20 @@ export const cleanNotesFromRolesTag = (notes: string | null | undefined): string
 
 const VALID_ROLES: UserRole[] = ['player', 'coach', 'admin']
 
-export const extractRolesFromProfile = (profile: Profile | null | undefined): UserRole[] => {
+/**
+ * Forma mínima de que `extractRolesFromProfile` precisa — um `Profile` completo
+ * cumpre isto sempre, mas também permite passar-lhe projeções mais estreitas
+ * (ex.: a lista de jogadores da Página Financeira, que não busca o perfil
+ * inteiro) sem ter de simular um `Profile` completo só para o tipo bater certo.
+ */
+export interface RoleSource {
+  role: UserRole
+  roles?: UserRole[] | null
+  medical_notes?: string | null
+  position?: string | null
+}
+
+export const extractRolesFromProfile = (profile: RoleSource | null | undefined): UserRole[] => {
   if (!profile) return ['player']
 
   // 1. Coluna `roles` do Supabase — a fonte de verdade. É escrita apenas por

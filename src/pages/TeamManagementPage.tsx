@@ -393,7 +393,11 @@ const TeamManagementPage: React.FC = () => {
       ? 'coach' 
       : 'player'
 
-    const positionStr = formPositions.length > 0 ? formPositions.join(', ') : 'Médio Centro'
+    // Sem o papel de Jogador não há posição de campo a gravar — mesmo que a
+    // seleção tenha ficado por defeito de uma edição anterior, não se grava.
+    const positionStr = formRoles.includes('player')
+      ? (formPositions.length > 0 ? formPositions.join(', ') : 'Médio Centro')
+      : null
     // Os papéis passam a ir na coluna `roles`, protegida por RLS, em vez de uma
     // etiqueta <!--roles:--> escondida dentro do texto das notas médicas.
     const medicalNotesEncoded = formMedicalNotes && formMedicalNotes.trim() ? formMedicalNotes.trim() : null
@@ -942,8 +946,10 @@ const TeamManagementPage: React.FC = () => {
         <div className="space-y-2.5">
           {filteredProfiles.map((person) => {
             const age = calculateAge(person.birth_date)
-            const positions = parsePositions(person.position)
             const roles = extractRolesFromProfile(person)
+            // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
+            // omissão de parsePositions(null) mostrava sempre "Médio Defensivo".
+            const positions = roles.includes('player') ? parsePositions(person.position) : []
 
             return (
               <div
@@ -1115,6 +1121,9 @@ const TeamManagementPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredProfiles.map((person) => {
             const age = calculateAge(person.birth_date)
+            // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
+            // omissão de parsePositions(null) mostrava sempre "Médio Defensivo".
+            const positions = extractRolesFromProfile(person).includes('player') ? parsePositions(person.position) : []
 
             return (
               <div
@@ -1179,7 +1188,7 @@ const TeamManagementPage: React.FC = () => {
 
                     {/* Positions Ribbon */}
                     <div className="flex flex-wrap justify-center gap-1 mt-1.5">
-                      {parsePositions(person.position).map((pos, idx) => (
+                      {positions.map((pos, idx) => (
                         <span
                           key={idx}
                           className="bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-extrabold px-2 py-0.5 rounded-md shadow-2xs"
@@ -1511,16 +1520,19 @@ const TeamManagementPage: React.FC = () => {
                   <span className="text-[10px] text-white/65 font-bold">Múltiplas posições e papéis permitidos</span>
                 </h3>
 
-                {/* 4.1 Campo de Futebol Interativo */}
-                <div>
-                  <label className="block text-xs font-bold text-white/70 mb-2">
-                    Posições no Campo:
-                  </label>
-                  <SoccerPitchSelector
-                    selectedPositions={formPositions}
-                    onChange={setFormPositions}
-                  />
-                </div>
+                {/* 4.1 Campo de Futebol Interativo — só faz sentido para quem tem o papel
+                    de Jogador; treinadores/direção sem esse papel não jogam, não têm posição. */}
+                {formRoles.includes('player') && (
+                  <div>
+                    <label className="block text-xs font-bold text-white/70 mb-2">
+                      Posições no Campo:
+                    </label>
+                    <SoccerPitchSelector
+                      selectedPositions={formPositions}
+                      onChange={setFormPositions}
+                    />
+                  </div>
+                )}
 
                 {/* 4.2 Papéis no Sistema (1, 2 ou 3 funções) */}
                 <div className="pt-2 border-t border-white/10">
@@ -1999,24 +2011,26 @@ const TeamManagementPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Campo Tático */}
-                <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                      <Shield size={14} className="text-csc-gold" />
-                      <span>Posicionamento Tático</span>
-                    </h4>
-                    <span className="text-[10px] font-extrabold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
-                      {parsePositions(selectedProfile.position).join(', ') || 'Não definido'}
-                    </span>
-                  </div>
+                {/* Campo Tático — só para quem tem o papel de Jogador */}
+                {extractRolesFromProfile(selectedProfile).includes('player') && (
+                  <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                        <Shield size={14} className="text-csc-gold" />
+                        <span>Posicionamento Tático</span>
+                      </h4>
+                      <span className="text-[10px] font-extrabold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
+                        {parsePositions(selectedProfile.position).join(', ') || 'Não definido'}
+                      </span>
+                    </div>
 
-                  <SoccerPitchSelector
-                    selectedPositions={parsePositions(selectedProfile.position)}
-                    onChange={() => {}}
-                    readOnly={true}
-                  />
-                </div>
+                    <SoccerPitchSelector
+                      selectedPositions={parsePositions(selectedProfile.position)}
+                      onChange={() => {}}
+                      readOnly={true}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* COLUNA DIREITA: Dossier Completo Cadastral (lg:col-span-7 xl:col-span-8) */}

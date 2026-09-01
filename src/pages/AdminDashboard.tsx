@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { extractRolesFromProfile } from '../context/AuthContext'
 import { LeagueManager } from '../components/LeagueManager'
 import { 
   Shield, 
@@ -195,7 +196,7 @@ const AdminDashboard: React.FC = () => {
       supabase.from('fields').select('*').order('name'),
       supabase.from('opponents').select('*').order('name'),
       supabase.from('tournaments').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, name, shirt_name, jersey_number, birth_date, photo_url, position').order('name')
+      supabase.from('profiles').select('id, name, shirt_name, jersey_number, birth_date, photo_url, position, role, roles').order('name')
     ])
 
     if (resFields.data) setFields(resFields.data)
@@ -1799,7 +1800,9 @@ const AdminDashboard: React.FC = () => {
                         return pAge !== null && pAge < (tourRules.min_age || 0)
                       }).length
 
-                      return profiles.map(p => {
+                      // Só quem tem o papel de Jogador é elegível para inscrição em torneio —
+                      // membros só Treinador ou só Direção não entram nesta lista.
+                      return profiles.filter(p => extractRolesFromProfile(p).includes('player')).map(p => {
                         const age = p.birth_date ? Math.floor((new Date().getTime() - new Date(p.birth_date).getTime()) / 3.15576e+10) : null
                         const isTooYoung = age !== null && age < (tourRules.min_age || 0)
                         const isExceptionButValid = isTooYoung && tourRules.exceptions_allowed && age >= tourRules.exceptions_min_age

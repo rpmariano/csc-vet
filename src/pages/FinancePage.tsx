@@ -4,7 +4,8 @@ import {
   ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
+import type { UserRole } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -27,6 +28,8 @@ interface PlayerRow {
   status?: string | null
   quota_start_date?: string | null
   quota_end_date?: string | null
+  role: UserRole
+  roles?: UserRole[] | null
 }
 
 interface Due {
@@ -152,7 +155,7 @@ const FinancePage: React.FC = () => {
         { data: tourData },
       ] = await Promise.all([
         supabase.from('financial_settings').select('*').eq('id', 1).maybeSingle(),
-        supabase.from('profiles').select('id, name, shirt_name, jersey_number, status, quota_start_date, quota_end_date').order('jersey_number', { ascending: true, nullsFirst: false }),
+        supabase.from('profiles').select('id, name, shirt_name, jersey_number, status, quota_start_date, quota_end_date, role, roles').order('jersey_number', { ascending: true, nullsFirst: false }),
         supabase.from('dues').select('*'),
         supabase.from('charges').select('*').order('created_at', { ascending: false }),
         supabase.from('charge_players').select('*'),
@@ -205,9 +208,13 @@ const FinancePage: React.FC = () => {
     totalPaid: number
   }
 
+  // Só quem tem o papel de Jogador paga quota — membros só Treinador ou só
+  // Direção ficam de fora (continuam elegíveis para Encargos, à parte).
+  const quotaEligiblePlayers = useMemo(() => players.filter(p => extractRolesFromProfile(p).includes('player')), [players])
+
   const quotaOverview: PlayerQuotaOverview[] = useMemo(() => {
     const today = new Date()
-    return players.map(p => {
+    return quotaEligiblePlayers.map(p => {
       const eligibleMonths = getPlayerQuotaMonths(p, settings, seasonLabel, today)
       const playerDues = duesByPlayer.get(p.id) || []
       const duesByMonth = new Map(playerDues.map(d => [d.month_year, d]))
@@ -222,7 +229,7 @@ const FinancePage: React.FC = () => {
       const totalOwed = months.filter(m => m.statusCalc !== 'paid').reduce((sum) => sum + settings.quota_amount, 0)
       return { player: p, months, paidCount, lateCount, pendingCount, totalOwed, totalPaid }
     })
-  }, [players, duesByPlayer, settings, seasonLabel])
+  }, [quotaEligiblePlayers, duesByPlayer, settings, seasonLabel])
 
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null)
   const [savingMonth, setSavingMonth] = useState<string | null>(null)
