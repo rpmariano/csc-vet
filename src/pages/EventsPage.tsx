@@ -779,6 +779,9 @@ const EventsPage: React.FC = () => {
     }
 
     if (eventType === 'gathering') return true
+    // Jogos e treinos são só para quem tem o papel de Jogador — membros só
+    // Treinador ou só Direção ficam disponíveis apenas nos convívios.
+    if (!extractRolesFromProfile(player).includes('player')) return false
     return player.status === 'active'
   }
 
