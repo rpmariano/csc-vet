@@ -31,6 +31,7 @@ import { BottomSheet } from '../components/BottomSheet'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 const POSITIONS = [
   'Guarda-redes',
@@ -717,6 +718,16 @@ const TeamManagementPage: React.FC = () => {
   const injuredCount = profiles.filter(p => p.status === 'injured').length
   const inactiveCount = profiles.filter(p => p.status === 'inactive').length
 
+  // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
+  const painelFichaRef = useModalA11y({ isOpen: isFormModalOpen, onClose: handleAttemptCloseFormModal })
+  const painelAssociarRef = useModalA11y({
+    isOpen: !!associatingPlayer,
+    onClose: () => {
+      setAssociatingPlayer(null)
+      setSelectedUserToAssociate(null)
+    },
+  })
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header com título removido a pedido do utilizador */}
@@ -1279,7 +1290,14 @@ const TeamManagementPage: React.FC = () => {
             if (e.target === e.currentTarget) handleAttemptCloseFormModal()
           }}
         >
-          <div className="bg-csc-dark text-white rounded-3xl max-w-4xl xl:max-w-5xl w-full p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40">
+          <div
+            ref={painelFichaRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ficha-membro-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white rounded-3xl max-w-4xl xl:max-w-5xl w-full p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40 outline-none"
+          >
             <button
               type="button"
               onClick={handleAttemptCloseFormModal}
@@ -1290,7 +1308,7 @@ const TeamManagementPage: React.FC = () => {
             </button>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4 mb-5">
               <div>
-                <h2 className="text-2xl font-black text-white mb-0.5">
+                <h2 id="ficha-membro-titulo" className="text-2xl font-black text-white mb-0.5">
                   {isEditing ? 'Editar Ficha do Membro' : 'Criar Ficha de Novo Membro'}
                 </h2>
                 <p className="text-xs text-white/70">
@@ -2290,7 +2308,14 @@ const TeamManagementPage: React.FC = () => {
 
         return (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-            <div className="bg-csc-dark text-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/10">
+            <div
+              ref={painelAssociarRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="associar-utilizador-titulo"
+              tabIndex={-1}
+              className="bg-csc-dark text-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/10 outline-none"
+            >
               <button
                 onClick={() => {
                   setAssociatingPlayer(null)
@@ -2308,7 +2333,7 @@ const TeamManagementPage: React.FC = () => {
                   <Link2 size={22} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-white">
+                  <h3 id="associar-utilizador-titulo" className="text-lg font-black text-white">
                     Associar Utilizador a {associatingPlayer.name}
                   </h3>
                   <p className="text-xs text-white/70 font-medium">

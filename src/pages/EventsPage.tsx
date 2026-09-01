@@ -38,6 +38,7 @@ import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla, hasMatchReport } from './CalendarPage'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -1332,6 +1333,11 @@ const EventsPage: React.FC = () => {
     return (roles.includes('coach') || roles.includes('admin')) && isPlayerEligible(p, type, tournamentId)
   }).length
 
+  // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
+  const painelCriarEventoRef = useModalA11y({ isOpen: viewModeTab === 'create', onClose: () => setViewModeTab('list') })
+  const painelConvocatoriaRef = useModalA11y({ isOpen: !!activeCallupModalEvent, onClose: () => setActiveCallupModalEvent(null) })
+  const painelEditarEventoRef = useModalA11y({ isOpen: !!editingEvent, onClose: handleAttemptCloseEditModal })
+
   return (
     <div className="space-y-6 pb-12">
       {/* Page Header removido a pedido do utilizador */}
@@ -1358,10 +1364,17 @@ const EventsPage: React.FC = () => {
       {/* MODAL DE CRIAÇÃO DE EVENTO (OVERLAY) */}
       {viewModeTab === 'create' && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in overflow-y-auto">
-          <div className="bg-white w-full sm:rounded-3xl sm:max-w-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto shadow-2xl border-0 sm:border-2 sm:border-csc-gold/60 flex flex-col">
+          <div
+            ref={painelCriarEventoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="criar-evento-titulo"
+            tabIndex={-1}
+            className="bg-white w-full sm:rounded-3xl sm:max-w-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto shadow-2xl border-0 sm:border-2 sm:border-csc-gold/60 flex flex-col outline-none"
+          >
             {/* Header fixo do modal */}
             <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-5 sm:px-7 py-4 border-b border-gray-200 rounded-t-3xl">
-              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+              <h3 id="criar-evento-titulo" className="text-lg font-black text-gray-900 flex items-center gap-2">
                 <Plus size={20} className="text-csc-dark" />
                 <span>Novo Evento / Atividade</span>
               </h3>
@@ -2172,9 +2185,17 @@ const EventsPage: React.FC = () => {
       {/* ========================================================================= */}
       {activeCallupModalEvent && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-          <div className="bg-csc-dark text-white rounded-3xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40">
+          <div
+            ref={painelConvocatoriaRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Convocatória: ${activeCallupModalEvent.title}`}
+            tabIndex={-1}
+            className="bg-csc-dark text-white rounded-3xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40 outline-none"
+          >
             <button
               onClick={() => setActiveCallupModalEvent(null)}
+              aria-label="Fechar"
               title="Fechar"
               className="absolute top-3 right-3 sm:top-4 sm:right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
             >
@@ -2367,9 +2388,16 @@ const EventsPage: React.FC = () => {
             if (e.target === e.currentTarget) handleAttemptCloseEditModal()
           }}
         >
-          <div className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10">
+          <div
+            ref={painelEditarEventoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editar-evento-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10 outline-none"
+          >
             <div className="sticky top-0 bg-csc-dark border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
-              <h3 className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
+              <h3 id="editar-evento-titulo" className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
               <button onClick={handleAttemptCloseEditModal} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 shadow-md border-2 border-white/40 shrink-0"><X size={16} className="stroke-[2.5]" /></button>
             </div>
 

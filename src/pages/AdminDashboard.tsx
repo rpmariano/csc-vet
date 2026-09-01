@@ -21,6 +21,7 @@ import {
 import { useClub } from '../context/ClubContext'
 import { toast } from '../context/ToastContext'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 // Interfaces
 interface Field {
@@ -709,6 +710,11 @@ const AdminDashboard: React.FC = () => {
     return matchesQuery && matchesStatus
   })
 
+  // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
+  const painelCampoRef = useModalA11y({ isOpen: isFieldModalOpen, onClose: handleRequestCloseFieldModal })
+  const painelAdversarioRef = useModalA11y({ isOpen: isOppModalOpen, onClose: handleRequestCloseOppModal })
+  const painelTorneioRef = useModalA11y({ isOpen: isTourModalOpen, onClose: handleRequestCloseTourModal })
+
   return (
     <div className="space-y-4 pb-12">
 
@@ -1294,11 +1300,18 @@ const AdminDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {isFieldModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in">
+          <div
+            ref={painelCampoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-campo-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in outline-none"
+          >
             <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2.5">
                 <MapPin size={22} className="text-csc-gold" />
-                <h3 className="font-black text-lg">
+                <h3 id="admin-campo-titulo" className="font-black text-lg">
                   {editingFieldId ? 'Editar Campo' : 'Criar Novo Campo'}
                 </h3>
               </div>
@@ -1366,11 +1379,18 @@ const AdminDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {isOppModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
-          <div className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in my-8">
+          <div
+            ref={painelAdversarioRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-adversario-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in my-8 outline-none"
+          >
             <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2.5">
                 <Shield size={22} className="text-csc-gold" />
-                <h3 className="font-black text-lg">
+                <h3 id="admin-adversario-titulo" className="font-black text-lg">
                   {editingOppId ? 'Editar Adversário' : 'Criar Novo Adversário'}
                 </h3>
               </div>
@@ -1515,11 +1535,18 @@ const AdminDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {isTourModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-csc-dark text-white w-full max-w-3xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
+          <div
+            ref={painelTorneioRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-torneio-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white w-full max-w-3xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in flex flex-col max-h-[90vh] outline-none"
+          >
             <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2.5">
                 <Trophy size={22} className="text-csc-gold" />
-                <h3 className="font-black text-lg">
+                <h3 id="admin-torneio-titulo" className="font-black text-lg">
                   {editingTourId ? 'Editar Torneio' : 'Criar Novo Torneio'}
                 </h3>
               </div>

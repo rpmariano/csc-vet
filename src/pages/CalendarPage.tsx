@@ -43,6 +43,7 @@ import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -1824,6 +1825,10 @@ const CalendarPage: React.FC = () => {
     )
   }
 
+  // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
+  const painelCriarEventoRef = useModalA11y({ isOpen: isAddModalOpen, onClose: handleAttemptCloseAddModal })
+  const painelEditarEventoRef = useModalA11y({ isOpen: isEditModalOpen, onClose: handleAttemptCloseEditModal })
+
   return (
     <div className="space-y-6">
 
@@ -2722,16 +2727,24 @@ const CalendarPage: React.FC = () => {
             if (e.target === e.currentTarget) handleAttemptCloseAddModal()
           }}
         >
-          <div className="bg-csc-dark text-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/10">
+          <div
+            ref={painelCriarEventoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="criar-evento-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/10 outline-none"
+          >
             <button
               type="button"
               onClick={handleAttemptCloseAddModal}
+              aria-label="Fechar"
               className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
             </button>
-            <h2 className="text-2xl font-black text-white mb-6">Criar Novo Evento</h2>
+            <h2 id="criar-evento-titulo" className="text-2xl font-black text-white mb-6">Criar Novo Evento</h2>
             
             <form onSubmit={handleAddEvent} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               
@@ -3255,10 +3268,18 @@ const CalendarPage: React.FC = () => {
             if (e.target === e.currentTarget) handleAttemptCloseEditModal()
           }}
         >
-          <div className="bg-csc-dark text-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/10">
+          <div
+            ref={painelEditarEventoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editar-evento-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/10 outline-none"
+          >
             <button
               type="button"
               onClick={handleAttemptCloseEditModal}
+              aria-label="Fechar"
               className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               title="Fechar"
             >
@@ -3267,7 +3288,7 @@ const CalendarPage: React.FC = () => {
 
             <div className="flex items-center gap-2 mb-1">
               <Edit size={22} className="text-csc-gold" />
-              <h2 className="text-2xl font-black text-white">Editar Dados do Evento</h2>
+              <h2 id="editar-evento-titulo" className="text-2xl font-black text-white">Editar Dados do Evento</h2>
             </div>
             <p className="text-xs text-white/60 mb-6">
               Altera a data, horário, localização, notas ou gere a convocatória deste evento na agenda.
