@@ -42,6 +42,12 @@ export interface ModalProps {
   ariaLabel?: string
   /** 'light': cartão branco (padrão). 'dark': cartão csc-dark, como a persiana de eventos. */
   tone?: 'light' | 'dark'
+  /**
+   * Cabeçalho: 'plain' é o título sobre o próprio cartão; 'brand' é a barra
+   * csc-dark com ícone dourado e botão de fechar redondo — a moldura usada nos
+   * formulários do clube (torneios, encargos, jornadas).
+   */
+  headerStyle?: 'plain' | 'brand'
   /** Este modal abre a partir de dentro de outro (ex.: editar algo cujo detalhe já está numa persiana) — sobe para `z-modal-top` em vez do `z-modal` base. */
   stacked?: boolean
   children?: React.ReactNode
@@ -60,6 +66,7 @@ export const Modal: React.FC<ModalProps> = ({
   showCloseButton = true,
   ariaLabel,
   tone = 'light',
+  headerStyle = 'plain',
   stacked = false,
   children,
 }) => {
@@ -69,6 +76,7 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null
 
   const temCabecalho = Boolean(title || description || icon || showCloseButton)
+  const cabecalhoBranded = headerStyle === 'brand'
   const corFundo = tone === 'dark' ? 'bg-csc-dark text-white' : 'bg-white'
   const corBordo = tone === 'dark' ? 'border-white/10' : 'border-gray-100'
   const corTitulo = tone === 'dark' ? 'text-white' : 'text-gray-900'
@@ -93,9 +101,38 @@ export const Modal: React.FC<ModalProps> = ({
         aria-label={!title ? ariaLabel : undefined}
         aria-labelledby={title ? tituloId : undefined}
         tabIndex={-1}
-        className={`${corFundo} rounded-2xl w-full ${LARGURAS[size]} shadow-2xl border ${corBordo} relative my-auto max-h-[90vh] flex flex-col animate-scale-up outline-none`}
+        className={`${corFundo} rounded-2xl w-full ${LARGURAS[size]} shadow-2xl border ${corBordo} relative my-auto max-h-[90vh] flex flex-col animate-scale-up outline-none ${cabecalhoBranded ? 'overflow-hidden' : ''}`}
       >
-        {temCabecalho && (
+        {temCabecalho && cabecalhoBranded && (
+          <div className="flex items-center justify-between gap-3 p-4 bg-csc-dark text-white border-b border-black/10 shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              {icon && <div className="shrink-0">{icon}</div>}
+              <div className="min-w-0">
+                {title && (
+                  <h2 id={tituloId} className="font-black text-sm leading-tight truncate">
+                    {title}
+                  </h2>
+                )}
+                {description && (
+                  <p className="text-[11px] font-medium text-white/60 mt-0.5 truncate">{description}</p>
+                )}
+              </div>
+            </div>
+
+            {showCloseButton && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Fechar"
+                className="shrink-0 w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+              >
+                <X size={16} className="stroke-[2.5]" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {temCabecalho && !cabecalhoBranded && (
           <div className={`flex items-start gap-3 p-5 pb-3 border-b ${corBordo} shrink-0`}>
             {icon && <div className="shrink-0 mt-0.5">{icon}</div>}
 
@@ -126,7 +163,7 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="p-5 overflow-y-auto flex-1">{children}</div>
 
         {footer && (
-          <div className={`flex items-center justify-end gap-2.5 p-5 pt-3 border-t ${corBordo} shrink-0`}>
+          <div className={`flex items-center justify-end gap-2.5 border-t ${corBordo} shrink-0 ${cabecalhoBranded ? 'p-4' : 'p-5 pt-3'} ${cabecalhoBranded && tone === 'light' ? 'bg-gray-50' : ''}`}>
             {footer}
           </div>
         )}
