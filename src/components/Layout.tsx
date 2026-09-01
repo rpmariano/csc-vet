@@ -29,6 +29,16 @@ import { useModalA11y } from '../hooks/useModalA11y'
 import { ClinicalStatusChip, RoleChip, RoleAvatar } from './StatusChip'
 
 /**
+ * Nome a mostrar no widget de perfil: nome da camisola, depois alcunha, só
+ * caindo no nome legal se não houver nenhum dos dois. Mesma prioridade do
+ * `getPlayerDisplayName` de CalendarPage/EventsPage — duplicado aqui (em vez
+ * de importado) para o Layout, que carrega logo no arranque, não puxar o
+ * bundle inteiro dessas páginas (React.lazy em App.tsx).
+ */
+const nomeWidgetPerfil = (profile: { name: string; shirt_name?: string | null; nickname?: string | null }): string =>
+  profile.shirt_name?.trim() || profile.nickname?.trim() || profile.name
+
+/**
  * Itens de navegação — fonte única para a gaveta do telemóvel e para a sidebar
  * do desktop. As duas superfícies mostram conjuntos diferentes (a gaveta
  * complementa a barra de baixo, a sidebar mostra tudo), por isso não há uma
@@ -265,7 +275,7 @@ const Layout: React.FC = () => {
                     <AnnouncementsInboxButton tone="dark" size="sm" className="shrink-0" />
                     <div className="overflow-hidden flex-1">
                       <div className="flex items-center gap-1.5">
-                        <p className="font-extrabold text-sm truncate text-white">{profile.name}</p>
+                        <p className="font-extrabold text-sm truncate text-white">{nomeWidgetPerfil(profile)}</p>
                         {isPlayer && profile.jersey_number && (
                           <span className="bg-csc-gold text-csc-dark font-black text-[10px] px-1.5 py-0.2 rounded">
                             #{profile.jersey_number}
@@ -394,7 +404,7 @@ const Layout: React.FC = () => {
                   {/* Inbox de Comunicados — junto à imagem do perfil */}
                   <AnnouncementsInboxButton tone="dark" size="sm" className="shrink-0" />
                   <div className="overflow-hidden flex-1">
-                    <p className="font-bold truncate text-xs text-white">{profile.name}</p>
+                    <p className="font-bold truncate text-xs text-white">{nomeWidgetPerfil(profile)}</p>
                     <div className="flex items-center gap-1 mt-0.5">
                       <button
                         type="button"
