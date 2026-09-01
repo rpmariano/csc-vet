@@ -1559,8 +1559,8 @@ const FinancePage: React.FC = () => {
 
       {/* ================= DEFINIÇÕES ================= */}
       {activeTab === 'settings' && isAdmin && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-w-4xl items-start">
-        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 max-w-5xl items-start">
+        <div className="lg:col-span-7 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-5">
           <div>
             <h3 className="text-sm font-black text-white mb-3">Época Desportiva</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -1642,7 +1642,7 @@ const FinancePage: React.FC = () => {
 
         {/* Categorias — bloco à parte, ao lado no desktop; gravam logo ao criar/apagar,
             sem passar pelo botão "Guardar Definições" do bloco anterior. */}
-        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
+        <div className="lg:col-span-5 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
           <h3 className="text-sm font-black text-white mb-3">Categorias</h3>
           <div className="flex gap-2 mb-2">
             <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nova categoria" className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
