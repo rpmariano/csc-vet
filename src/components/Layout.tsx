@@ -261,6 +261,8 @@ const Layout: React.FC = () => {
                         {profile.name.charAt(0).toUpperCase()}
                       </div>
                     )}
+                    {/* Inbox de Comunicados — junto à imagem do perfil */}
+                    <AnnouncementsInboxButton tone="dark" size="sm" className="shrink-0" />
                     <div className="overflow-hidden flex-1">
                       <div className="flex items-center gap-1.5">
                         <p className="font-extrabold text-sm truncate text-white">{profile.name}</p>
