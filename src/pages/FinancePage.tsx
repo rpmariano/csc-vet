@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { Modal } from '../components/Modal'
 import {
   DEFAULT_FINANCIAL_SETTINGS,
   getSeasonLabel, getPlayerQuotaMonths,
@@ -323,6 +324,11 @@ const FinancePage: React.FC = () => {
     setIsNewChargeModalOpen(true)
   }
 
+  const fecharModalEncargo = () => {
+    setIsNewChargeModalOpen(false)
+    setEditingChargeId(null)
+  }
+
   const openEditChargeModal = (c: (typeof chargesWithStats)[number]) => {
     setEditingChargeId(c.id)
     setNewChargeCategoryId(c.category_id || '')
@@ -414,8 +420,7 @@ const FinancePage: React.FC = () => {
         triggerHaptic('success')
         toast.success('Encargo criado!')
       }
-      setIsNewChargeModalOpen(false)
-      setEditingChargeId(null)
+      fecharModalEncargo()
       fetchAll()
     } catch (err: any) {
       toast.error('Erro ao guardar encargo: ' + (err.message || 'Erro'))
@@ -1275,75 +1280,81 @@ const FinancePage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: Novo Encargo / Editar Encargo */}
-      {isNewChargeModalOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white shrink-0">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={18} className="text-csc-gold" />
-                <h3 className="font-black text-sm">{editingChargeId ? 'Editar Encargo' : 'Novo Encargo'}</h3>
-              </div>
-              <button onClick={() => { setIsNewChargeModalOpen(false); setEditingChargeId(null) }} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40">
-                <X size={16} className="stroke-[2.5]" />
-              </button>
+      {/* MODAL: Novo Encargo / Editar Encargo — moldura partilhada (Escape, prisão de foco, rodapé fixo) */}
+      <Modal
+        isOpen={isNewChargeModalOpen}
+        onClose={fecharModalEncargo}
+        size="lg"
+        headerStyle="brand"
+        icon={<ShieldCheck size={18} className="text-csc-gold" />}
+        title={editingChargeId ? 'Editar Encargo' : 'Novo Encargo'}
+        closeOnOverlayClick={false}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={fecharModalEncargo}
+              className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveCharge}
+              disabled={savingCharge}
+              className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer"
+            >
+              {savingCharge ? 'A guardar...' : editingChargeId ? 'Guardar Alterações' : 'Criar Encargo'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="encargo-titulo">Título *</label>
+            <input id="encargo-titulo" type="text" value={newChargeTitle} onChange={e => setNewChargeTitle(e.target.value)} placeholder="Ex: Equipamento Inverno 2026, Viagem Torneio Faro" className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none" autoFocus />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="encargo-categoria">Categoria</label>
+              <select id="encargo-categoria" value={newChargeCategoryId} onChange={e => handleChargeCategoryChange(e.target.value)} className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none">
+                {incomeCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
-            <div className="p-4 space-y-4 overflow-y-auto">
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Título *</label>
-                <input type="text" value={newChargeTitle} onChange={e => setNewChargeTitle(e.target.value)} placeholder="Ex: Equipamento Inverno 2026, Viagem Torneio Faro" className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900" autoFocus />
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="encargo-valor">Valor por jogador (€) *</label>
+              <input id="encargo-valor" type="number" step="0.01" value={newChargeAmount} onChange={e => setNewChargeAmount(e.target.value)} placeholder="0.00" className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="encargo-prazo">Prazo (opcional)</label>
+            <input id="encargo-prazo" type="date" value={newChargeDueDate} onChange={e => setNewChargeDueDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none" />
+          </div>
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="block text-xs font-bold text-gray-600">Jogadores participantes * ({newChargePlayerIds.size})</span>
+              <div className="flex items-center gap-2 shrink-0">
+                <button type="button" onClick={() => setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))} className="text-[11px] font-bold text-csc-dark hover:text-csc-light cursor-pointer">Todos os ativos</button>
+                <button type="button" onClick={() => setNewChargePlayerIds(new Set())} className="text-[11px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer">Limpar</button>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">Categoria</label>
-                  <select value={newChargeCategoryId} onChange={e => handleChargeCategoryChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
-                    {incomeCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">Valor por jogador (€) *</label>
-                  <input type="number" step="0.01" value={newChargeAmount} onChange={e => setNewChargeAmount(e.target.value)} placeholder="0.00" className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1">Prazo (opcional)</label>
-                <input type="date" value={newChargeDueDate} onChange={e => setNewChargeDueDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-gray-600">Jogadores participantes * ({newChargePlayerIds.size})</label>
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))} className="text-[11px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer">Todos os ativos</button>
-                    <button type="button" onClick={() => setNewChargePlayerIds(new Set())} className="text-[11px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer">Limpar</button>
-                  </div>
-                </div>
-                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
-                  {players.map(p => {
-                    const editingCharge = editingChargeId ? chargesWithStats.find(c => c.id === editingChargeId) : undefined
-                    const lockedIn = editingChargeId ? newChargePlayerIds.has(p.id) && chargeParticipantHasPayments(editingCharge, p.id) : false
-                    return (
-                      <label key={p.id} className={`flex items-center gap-2 px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50 ${lockedIn ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
-                        <input type="checkbox" checked={newChargePlayerIds.has(p.id)} disabled={lockedIn} onChange={() => toggleNewChargePlayer(p.id)} className={lockedIn ? '' : 'cursor-pointer'} />
-                        <span className="truncate">{p.shirt_name || p.name}</span>
-                        {lockedIn && <span className="text-[9px] text-gray-400 ml-auto shrink-0" title="Já tem pagamentos registados — não pode ser removido">tem pagamentos</span>}
-                        {!lockedIn && p.status === 'inactive' && <span className="text-[9px] text-gray-400 ml-auto shrink-0">inativo</span>}
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end pt-2">
-                <button type="button" onClick={() => { setIsNewChargeModalOpen(false); setEditingChargeId(null) }} className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer">
-                  Cancelar
-                </button>
-                <button type="button" onClick={handleSaveCharge} disabled={savingCharge} className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer">
-                  {savingCharge ? 'A guardar...' : editingChargeId ? 'Guardar Alterações' : 'Criar Encargo'}
-                </button>
-              </div>
+            </div>
+            <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
+              {players.map(p => {
+                const editingCharge = editingChargeId ? chargesWithStats.find(c => c.id === editingChargeId) : undefined
+                const lockedIn = editingChargeId ? newChargePlayerIds.has(p.id) && chargeParticipantHasPayments(editingCharge, p.id) : false
+                return (
+                  <label key={p.id} className={`flex items-center gap-2 px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50 ${lockedIn ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
+                    <input type="checkbox" checked={newChargePlayerIds.has(p.id)} disabled={lockedIn} onChange={() => toggleNewChargePlayer(p.id)} className={lockedIn ? '' : 'cursor-pointer'} />
+                    <span className="truncate">{p.shirt_name || p.name}</span>
+                    {lockedIn && <span className="text-[9px] text-gray-400 ml-auto shrink-0" title="Já tem pagamentos registados — não pode ser removido">tem pagamentos</span>}
+                    {!lockedIn && p.status === 'inactive' && <span className="text-[9px] text-gray-400 ml-auto shrink-0">inativo</span>}
+                  </label>
+                )
+              })}
             </div>
           </div>
         </div>
-      )}
+      </Modal>
 
       <ConfirmModal
         isOpen={!!chargeToDelete}

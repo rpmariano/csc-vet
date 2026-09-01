@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { LeagueManager } from '../components/LeagueManager'
+import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { 
   Shield, 
   MapPin, 
@@ -15,8 +16,7 @@ import {
   Plus,
   Search,
   Phone,
-  User,
-  AlertTriangle
+  User
 } from 'lucide-react'
 import { useClub } from '../context/ClubContext'
 import { toast } from '../context/ToastContext'
@@ -1893,54 +1893,19 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL GLOBAL: CONFIRMAÇÃO DE ALTERAÇÕES NÃO GRAVADAS */}
-      {/* ========================================================================= */}
-      {unsavedModalOpen && (
-        <div className="fixed inset-0 z-modal-confirm flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-sm w-full p-6 text-center space-y-4 animate-scale-in">
-            <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 mx-auto">
-              <AlertTriangle size={28} />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-gray-900">Alterações Não Gravadas</h3>
-              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-                Tem alterações por guardar. O que pretende fazer?
-              </p>
-            </div>
-            <div className="space-y-2 pt-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  setUnsavedModalOpen(false)
-                  if (pendingSaveAction) await pendingSaveAction()
-                }}
-                className="w-full py-2.5 px-4 bg-csc-dark text-white font-black text-xs rounded-xl hover:bg-csc-dark/90 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Save size={15} className="text-csc-gold" />
-                <span>Gravar e Sair</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUnsavedModalOpen(false)
-                  if (pendingCloseAction) pendingCloseAction()
-                }}
-                className="w-full py-2.5 px-4 bg-red-50 border border-red-200 text-red-700 font-black text-xs rounded-xl hover:bg-red-100 transition-all cursor-pointer"
-              >
-                Sair sem Gravar
-              </button>
-              <button
-                type="button"
-                onClick={() => setUnsavedModalOpen(false)}
-                className="w-full py-2 px-4 text-gray-500 font-bold text-xs hover:text-gray-800 transition-colors cursor-pointer"
-              >
-                Continuar a Editar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Alterações por guardar — o mesmo diálogo das restantes páginas do painel */}
+      <UnsavedChangesModal
+        isOpen={unsavedModalOpen}
+        onSaveAndExit={async () => {
+          setUnsavedModalOpen(false)
+          if (pendingSaveAction) await pendingSaveAction()
+        }}
+        onExitWithoutSaving={() => {
+          setUnsavedModalOpen(false)
+          if (pendingCloseAction) pendingCloseAction()
+        }}
+        onCancel={() => setUnsavedModalOpen(false)}
+      />
 
       {/* Modal Genérico de Confirmação (Estilo Unificado e Elegante) */}
       <ConfirmModal
