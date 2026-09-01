@@ -843,7 +843,7 @@ const FinancePage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-5 pb-12">
+    <div className="space-y-4 pb-12">
       {/* Cabeçalho + Separadores */}
       <div className="bg-white rounded-2xl p-2 shadow-sm border border-gray-200 flex flex-wrap gap-1">
         {TABS.map(tab => (
@@ -867,9 +867,9 @@ const FinancePage: React.FC = () => {
 
       {/* ================= VISÃO GERAL ================= */}
       {activeTab === 'overview' && (
-        <div className="space-y-5">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 flex items-center justify-between">
+            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-white/70">Saldo Disponível</p>
                 <p className="text-2xl font-black text-white mt-1">{fmtEuro(netBalance)}</p>
@@ -878,7 +878,7 @@ const FinancePage: React.FC = () => {
                 <Landmark size={22} />
               </div>
             </div>
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 flex items-center justify-between">
+            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-white/70">Total Recebido</p>
                 <p className="text-2xl font-black text-emerald-400 mt-1">+{fmtEuro(totalReceived)}</p>
@@ -887,7 +887,7 @@ const FinancePage: React.FC = () => {
                 <TrendingUp size={22} />
               </div>
             </div>
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 flex items-center justify-between">
+            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-white/70">Total Despesas</p>
                 <p className="text-2xl font-black text-red-400 mt-1">-{fmtEuro(totalExpenses)}</p>
@@ -899,7 +899,7 @@ const FinancePage: React.FC = () => {
           </div>
 
           {/* Previsão da Época */}
-          <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-3">
+          <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
             <h3 className="text-sm font-black text-white flex items-center gap-2">
               <TrendingUp size={16} className="text-csc-gold" />
               <span>Previsão da Época {seasonLabel}</span>
@@ -934,7 +934,7 @@ const FinancePage: React.FC = () => {
           </div>
 
           {/* Gráfico: Receita por Categoria */}
-          <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-3">
+          <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
             <h3 className="text-sm font-black text-white">Valor Recebido por Categoria</h3>
             <div className="space-y-3">
               {RECEITA_CATEGORIAS.map(cat => {
@@ -961,7 +961,7 @@ const FinancePage: React.FC = () => {
 
           {/* Gráfico: Despesa por Categoria */}
           {despesaPorCategoria.length > 0 && (
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-3">
+            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
               <h3 className="text-sm font-black text-white">Despesa por Categoria</h3>
               <div className="space-y-3">
                 {despesaPorCategoria.map(([label, valor], idx) => {
@@ -988,7 +988,7 @@ const FinancePage: React.FC = () => {
           )}
 
           {/* Situações de incumprimento */}
-          <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-3">
+          <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
             <h3 className="text-sm font-black text-white">Situação de Quotas dos Atletas</h3>
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="bg-emerald-500/10 border border-emerald-400/30 rounded-xl p-3">
@@ -1028,18 +1028,27 @@ const FinancePage: React.FC = () => {
             <h3 className="text-sm font-black text-white">Controlo de Quotas — Época {seasonLabel}</h3>
             <span className="text-[11px] text-white/70">{fmtEuro(settings.quota_amount)}/mês · incumprimento a partir do dia {settings.quota_due_day}</span>
           </div>
-          <div className="p-5 divide-y divide-gray-100">
-            {quotaOverview.map(q => {
+          <div className="p-3 space-y-1.5">
+            {quotaOverview.map((q, idx) => {
               const expanded = expandedPlayerId === q.player.id
               return (
-                <div key={q.player.id} className="py-2.5">
+                <div
+                  key={q.player.id}
+                  className={`rounded-xl border transition-colors ${
+                    expanded
+                      ? 'bg-csc-dark/[0.04] border-csc-dark/15'
+                      : idx % 2 === 0
+                        ? 'bg-gray-50 border-gray-100 hover:bg-gray-100'
+                        : 'bg-white border-gray-100 hover:bg-gray-50'
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={() => setExpandedPlayerId(expanded ? null : q.player.id)}
-                    className="w-full flex items-center justify-between gap-3 cursor-pointer"
+                    className="w-full flex items-center justify-between gap-3 cursor-pointer px-3 py-2.5"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-8 h-8 rounded-full bg-csc-dark/5 text-csc-dark text-xs font-black flex items-center justify-center shrink-0">
+                      <span className="w-8 h-8 rounded-full bg-csc-dark/10 text-csc-dark text-xs font-black flex items-center justify-center shrink-0">
                         {q.player.jersey_number || '—'}
                       </span>
                       <span className="font-bold text-sm text-gray-900 truncate">{q.player.shirt_name || q.player.name}</span>
@@ -1053,7 +1062,7 @@ const FinancePage: React.FC = () => {
                   </button>
 
                   {expanded && (
-                    <div className="mt-3 space-y-2.5">
+                    <div className="px-3 pb-3 space-y-2">
                       <p className="text-[10px] text-gray-400">Clique num mês para marcar como pago; clique outra vez para corrigir. Pode selecionar vários meses seguidos.</p>
                       <div className="flex flex-wrap gap-1.5">
                         {q.months.map(m => {
@@ -1071,7 +1080,7 @@ const FinancePage: React.FC = () => {
                                   ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700'
                                   : m.statusCalc === 'late'
                                     ? 'bg-red-50 border-red-300 text-red-700 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-dark'
-                                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-dark'
+                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-dark'
                               }`}
                             >
                               {nomeMes(m.month).slice(0, 3)}/{String(m.year).slice(2)} {isPaid ? '✓' : m.statusCalc === 'late' ? '⚠' : ''}
@@ -1180,8 +1189,8 @@ const FinancePage: React.FC = () => {
                     </button>
 
                     {expanded && (
-                      <div className="border-t border-gray-100 divide-y divide-gray-100">
-                        {c.participantIds.map(playerId => {
+                      <div className="border-t border-gray-100 p-2 space-y-1">
+                        {c.participantIds.map((playerId, idx) => {
                           const p = players.find(pl => pl.id === playerId)
                           const payments = c.payments.filter(pay => pay.player_id === playerId)
                           const paidTotal = payments.reduce((s, pay) => s + pay.amount, 0)
@@ -1189,7 +1198,7 @@ const FinancePage: React.FC = () => {
                           const isPastDeadline = c.due_date ? new Date() > new Date(c.due_date) : false
                           const isPayingHere = payFormKey === `${c.id}:${playerId}`
                           return (
-                            <div key={playerId} className="px-5 py-3 space-y-2">
+                            <div key={playerId} className={`px-3 py-2.5 space-y-2 rounded-lg ${idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-sm font-bold text-gray-900 truncate">{p?.shirt_name || p?.name || 'Jogador'}</span>
                                 <div className="flex items-center gap-2 shrink-0">
@@ -1275,7 +1284,7 @@ const FinancePage: React.FC = () => {
                 <X size={16} className="stroke-[2.5]" />
               </button>
             </div>
-            <div className="p-5 space-y-4 overflow-y-auto">
+            <div className="p-4 space-y-4 overflow-y-auto">
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1">Título *</label>
                 <input type="text" value={newChargeTitle} onChange={e => setNewChargeTitle(e.target.value)} placeholder="Ex: Equipamento Inverno 2026, Viagem Torneio Faro" className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900" autoFocus />
@@ -1349,9 +1358,9 @@ const FinancePage: React.FC = () => {
 
       {/* ================= DESPESAS ================= */}
       {activeTab === 'expenses' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="space-y-5 h-fit">
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="space-y-4 h-fit">
+            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4">
               <h3 className="text-sm font-black text-white mb-3 flex items-center gap-2">
                 <Receipt size={16} className="text-csc-gold" />
                 <span>Registar Despesa/Receita</span>
@@ -1405,7 +1414,7 @@ const FinancePage: React.FC = () => {
           </div>
 
           {pendingInstallments.length > 0 && (
-            <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-amber-400/30 p-5">
+            <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-amber-400/30 p-4">
               <h3 className="text-sm font-black text-white mb-3">Tranches de Inscrição em Torneios por Pagar</h3>
               <div className="space-y-2">
                 {pendingInstallments.map(inst => (
@@ -1430,7 +1439,7 @@ const FinancePage: React.FC = () => {
             </div>
           )}
 
-          <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
+          <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4">
             <h3 className="text-sm font-black text-white mb-3">Últimas Despesas e Receitas</h3>
             <div className="space-y-2">
               {transactions.map(t => {
@@ -1468,7 +1477,7 @@ const FinancePage: React.FC = () => {
 
       {/* ================= MOVIMENTOS (relatório) ================= */}
       {activeTab === 'movements' && (
-        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-4">
+        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h3 className="text-sm font-black text-white">Relatório de Movimentos</h3>
             <div className="flex items-center gap-2">
@@ -1559,8 +1568,8 @@ const FinancePage: React.FC = () => {
 
       {/* ================= DEFINIÇÕES ================= */}
       {activeTab === 'settings' && isAdmin && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 max-w-5xl items-start">
-        <div className="lg:col-span-7 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-5xl items-start">
+        <div className="lg:col-span-7 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-4">
           <div>
             <h3 className="text-sm font-black text-white mb-3">Época Desportiva</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -1642,7 +1651,7 @@ const FinancePage: React.FC = () => {
 
         {/* Categorias — bloco à parte, ao lado no desktop; gravam logo ao criar/apagar,
             sem passar pelo botão "Guardar Definições" do bloco anterior. */}
-        <div className="lg:col-span-5 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
+        <div className="lg:col-span-5 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4">
           <h3 className="text-sm font-black text-white mb-3">Categorias</h3>
           <div className="flex gap-2 mb-2">
             <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nova categoria" className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
