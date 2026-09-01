@@ -2330,7 +2330,7 @@ const CalendarPage: React.FC = () => {
                   const rightSigla = isAway ? cscSigla : oppSigla
 
                   return (
-                    <div className="bg-white/5 p-4 sm:p-5 rounded-2xl space-y-3">
+                    <div className="bg-white/[0.07] p-4 sm:p-5 rounded-2xl space-y-3 border border-white/10 border-t-2 border-t-csc-gold/50 shadow-lg shadow-black/20">
                       <div className="flex items-center justify-between gap-3 sm:gap-4">
                         {/* Left Team */}
                         <div className="flex-1 flex flex-col items-start text-left min-w-0">
@@ -2398,14 +2398,14 @@ const CalendarPage: React.FC = () => {
                 {/* Concentração Acima da Hora */}
                 {selectedEvent.meeting_time && (
                   <div className="flex items-center">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-csc-gold bg-white/10 px-3 py-1 rounded-full">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-csc-gold bg-white/10 px-3 py-1 rounded-full border border-csc-gold/30 shadow-sm shadow-black/20">
                       <span>Concentração: {selectedEvent.meeting_time.substring(0, 5)}</span>
                     </div>
                   </div>
                 )}
 
                 {/* Info Box (Data, Hora e Local) */}
-                <div className="space-y-2 bg-white/5 p-3.5 rounded-2xl text-xs">
+                <div className="space-y-2 bg-white/[0.07] p-3.5 rounded-2xl text-xs border border-white/10 border-t-white/20 shadow-md shadow-black/20">
                   <div className="flex items-center text-white space-x-2.5">
                     <Clock size={16} className="text-csc-gold shrink-0" />
                     <div>
@@ -2450,7 +2450,7 @@ const CalendarPage: React.FC = () => {
                   const clean = parseMatchReportMetadata(selectedEvent.description).cleanDescription
                   if (!clean) return null
                   return (
-                    <div className="p-3.5 bg-white/5 rounded-2xl text-xs text-white/70 space-y-1">
+                    <div className="p-3.5 bg-white/[0.07] rounded-2xl text-xs text-white/70 space-y-1 border border-white/10 border-t-white/20 shadow-md shadow-black/20">
                       <p className="font-black text-white">Observações & Informações:</p>
                       <p className="leading-relaxed">{clean}</p>
                     </div>
@@ -2483,7 +2483,7 @@ const CalendarPage: React.FC = () => {
                   const isRsvpOpen = !closedByReport && !pastDeadline && (!isPractice || ((eventTime - now) <= 6 * 24 * 60 * 60 * 1000))
 
                   return (
-                    <div className={isRsvpOpen ? 'rounded-2xl overflow-hidden' : 'p-4 bg-white/5 rounded-2xl space-y-3'}>
+                    <div className={isRsvpOpen ? 'rounded-2xl overflow-hidden shadow-lg shadow-black/20' : 'p-4 bg-white/[0.07] rounded-2xl space-y-3 border border-white/10 border-t-white/20 shadow-md shadow-black/20'}>
                       {isRsvpOpen ? (
                         // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home.
                         // Mostra-se sempre que ainda dá para responder, mesmo que já tenha respondido antes —
@@ -2580,7 +2580,7 @@ const CalendarPage: React.FC = () => {
                 })
 
                 return (
-                  <div className="lg:col-span-7 bg-white/5 p-4 sm:p-5 rounded-3xl space-y-3.5 transition-all">
+                  <div className="lg:col-span-7 bg-white/[0.07] p-4 sm:p-5 rounded-3xl space-y-3.5 transition-all border border-white/10 border-t-white/20 shadow-lg shadow-black/20">
                     {/* Topo da Convocatória com Botão de Colapsar / Expandir */}
                     <div
                       onClick={() => setIsModalCallupsExpanded(prev => !prev)}

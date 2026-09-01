@@ -511,7 +511,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
             {/* 2. ESQUEMA TÁTICO & RESUMO GERAL */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl">
+              <div className="bg-white/[0.07] border border-white/10 border-t-white/20 p-3.5 rounded-2xl shadow-md shadow-black/20">
                 <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
                   Esquema Tático
                 </label>
@@ -520,7 +520,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 </p>
               </div>
 
-              <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl">
+              <div className="bg-white/[0.07] border border-white/10 border-t-white/20 p-3.5 rounded-2xl shadow-md shadow-black/20">
                 <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
                   Golos da Equipa
                 </label>
@@ -530,7 +530,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 </p>
               </div>
 
-              <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl">
+              <div className="bg-white/[0.07] border border-white/10 border-t-white/20 p-3.5 rounded-2xl shadow-md shadow-black/20">
                 <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
                   Ações Disciplinares
                 </label>
@@ -556,7 +556,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
               <div className="space-y-4">
                   {/* Titulares */}
-                  <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-xs">
+                  <div className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 overflow-hidden shadow-lg shadow-black/20">
                     <div className="bg-emerald-800 text-white px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center justify-between">
                       <span>⭐ Titulares ({starters.length})</span>
                       <span className="text-[10px] bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-700">{(tacticalFormation || '4-3-3').replace(/^1-/, '')}</span>
@@ -623,7 +623,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
                   {/* Suplentes Utilizados */}
                   {subs.length > 0 && (
-                    <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-xs">
+                    <div className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 overflow-hidden shadow-lg shadow-black/20">
                       <div className="bg-blue-900 text-white px-4 py-2 text-xs font-black uppercase tracking-wider">
                         <span>🔄 Suplentes Utilizados ({subs.length})</span>
                       </div>
@@ -683,7 +683,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
             {/* 4. OCORRÊNCIAS & NOTAS TÉCNICAS (ÁREA PRIVADA: APENAS COACH / ADMIN) */}
             {isCoachOrAdmin && (
-              <div className="p-4 sm:p-5 bg-amber-500/10 border-2 border-amber-400/40 rounded-3xl space-y-2.5">
+              <div className="p-4 sm:p-5 bg-amber-500/10 border-2 border-amber-400/40 rounded-3xl space-y-2.5 shadow-lg shadow-black/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-amber-200 font-black text-xs uppercase tracking-wider">
                     <Lock size={15} className="text-amber-400" />
@@ -794,7 +794,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider">Desempenho dos Atletas</label>
             <span className="text-[10px] text-white/70 font-normal">Titulares: {starters.length} | Suplentes: {subs.length}</span>
           </div>
-          <div className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden shadow-xs">
+          <div className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 overflow-hidden shadow-lg shadow-black/20">
             <div className="p-2.5 space-y-2 max-h-[45vh] overflow-y-auto">
               {playerStats.map(p => {
                 const displayName = p.shirt_name || p.name
