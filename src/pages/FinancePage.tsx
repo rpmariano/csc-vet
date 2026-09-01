@@ -1559,7 +1559,8 @@ const FinancePage: React.FC = () => {
 
       {/* ================= DEFINIÇÕES ================= */}
       {activeTab === 'settings' && isAdmin && (
-        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-5 max-w-2xl">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-w-4xl items-start">
+        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-5">
           <div>
             <h3 className="text-sm font-black text-white mb-3">Época Desportiva</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -1637,33 +1638,35 @@ const FinancePage: React.FC = () => {
           <button type="button" onClick={handleSaveSettings} disabled={savingSettings} className="px-5 py-2.5 bg-csc-gold text-csc-dark rounded-xl text-xs font-black hover:brightness-95 transition-all cursor-pointer disabled:opacity-60">
             {savingSettings ? 'A guardar...' : 'Guardar Definições'}
           </button>
+        </div>
 
-          {/* Categorias — gravam logo ao criar/apagar, sem passar pelo botão "Guardar Definições" acima. */}
-          <div className="pt-5 border-t border-white/10">
-            <h3 className="text-sm font-black text-white mb-3">Categorias</h3>
-            <div className="flex gap-2 mb-2">
-              <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nova categoria" className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
-              <button type="button" onClick={handleAddCategory} className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors">
-                <Plus size={14} />
-              </button>
-            </div>
-            <label className="flex items-center gap-2 text-[11px] text-white/70 mb-3 cursor-pointer">
-              <input type="checkbox" checked={newCategoryAllowIncome} onChange={e => setNewCategoryAllowIncome(e.target.checked)} className="cursor-pointer" />
-              Também pode ser usada para receitas (ex.: Seguro, equipamento pago pelos jogadores)
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {categories.map(c => (
-                <span key={c.id} className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${c.allow_income ? 'bg-sky-400/20 text-sky-200' : 'bg-white/10 text-white/80'}`}>
-                  {c.name}
-                  {c.allow_income && <span className="text-[9px] font-black uppercase text-sky-300">receita</span>}
-                  <button type="button" onClick={() => handleDeleteCategory(c.id)} className="text-white/50 hover:text-red-400 cursor-pointer" title="Eliminar categoria">
-                    <X size={11} />
-                  </button>
-                </span>
-              ))}
-            </div>
+        {/* Categorias — bloco à parte, ao lado no desktop; gravam logo ao criar/apagar,
+            sem passar pelo botão "Guardar Definições" do bloco anterior. */}
+        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
+          <h3 className="text-sm font-black text-white mb-3">Categorias</h3>
+          <div className="flex gap-2 mb-2">
+            <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nova categoria" className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
+            <button type="button" onClick={handleAddCategory} className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors">
+              <Plus size={14} />
+            </button>
+          </div>
+          <label className="flex items-center gap-2 text-[11px] text-white/70 mb-3 cursor-pointer">
+            <input type="checkbox" checked={newCategoryAllowIncome} onChange={e => setNewCategoryAllowIncome(e.target.checked)} className="cursor-pointer" />
+            Também pode ser usada para receitas (ex.: Seguro, equipamento pago pelos jogadores)
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {categories.map(c => (
+              <span key={c.id} className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${c.allow_income ? 'bg-sky-400/20 text-sky-200' : 'bg-white/10 text-white/80'}`}>
+                {c.name}
+                {c.allow_income && <span className="text-[9px] font-black uppercase text-sky-300">receita</span>}
+                <button type="button" onClick={() => handleDeleteCategory(c.id)} className="text-white/50 hover:text-red-400 cursor-pointer" title="Eliminar categoria">
+                  <X size={11} />
+                </button>
+              </span>
+            ))}
           </div>
         </div>
+      </div>
       )}
     </div>
   )
