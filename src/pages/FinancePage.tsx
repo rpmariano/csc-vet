@@ -294,6 +294,7 @@ const FinancePage: React.FC = () => {
 
   const [expandedChargeId, setExpandedChargeId] = useState<string | null>(null)
   const [isNewChargeModalOpen, setIsNewChargeModalOpen] = useState(false)
+  const [editingChargeId, setEditingChargeId] = useState<string | null>(null)
   const [newChargeCategoryId, setNewChargeCategoryId] = useState('')
   const [newChargeTitle, setNewChargeTitle] = useState('')
   const [newChargeAmount, setNewChargeAmount] = useState('')
@@ -313,6 +314,7 @@ const FinancePage: React.FC = () => {
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null)
 
   const openNewChargeModal = () => {
+    setEditingChargeId(null)
     setNewChargeCategoryId(incomeCategories[0]?.id || '')
     setNewChargeTitle('')
     setNewChargeAmount('')
@@ -320,6 +322,21 @@ const FinancePage: React.FC = () => {
     setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))
     setIsNewChargeModalOpen(true)
   }
+
+  const openEditChargeModal = (c: (typeof chargesWithStats)[number]) => {
+    setEditingChargeId(c.id)
+    setNewChargeCategoryId(c.category_id || '')
+    setNewChargeTitle(c.title)
+    setNewChargeAmount(String(c.amount))
+    setNewChargeDueDate(c.due_date ? c.due_date.slice(0, 10) : '')
+    setNewChargePlayerIds(new Set(c.participantIds))
+    setIsNewChargeModalOpen(true)
+  }
+
+  // Um participante que já tenha algum pagamento não pode ser removido do
+  // encargo ao editar — perderia-se a ligação ao seu histórico de pagamentos.
+  const chargeParticipantHasPayments = (charge: (typeof chargesWithStats)[number] | undefined, playerId: string) =>
+    !!charge?.payments.some(p => p.player_id === playerId)
 
   const toggleNewChargePlayer = (id: string) => setNewChargePlayerIds(prev => {
     const next = new Set(prev)
@@ -340,7 +357,7 @@ const FinancePage: React.FC = () => {
     }
   }
 
-  const handleCreateCharge = async () => {
+  const handleSaveCharge = async () => {
     if (!newChargeTitle.trim()) {
       toast.warning('Indica um título para o encargo.')
       return
@@ -356,24 +373,52 @@ const FinancePage: React.FC = () => {
     }
     setSavingCharge(true)
     try {
-      const { data: chargeRow, error } = await supabase.from('charges').insert([{
-        category_id: newChargeCategoryId || null,
-        title: newChargeTitle.trim(),
-        amount: amt,
-        due_date: newChargeDueDate || null,
-        created_by: profile?.id || null,
-      }]).select().single()
-      if (error) throw error
-      const { error: e2 } = await supabase.from('charge_players').insert(
-        Array.from(newChargePlayerIds).map(pid => ({ charge_id: chargeRow.id, player_id: pid }))
-      )
-      if (e2) throw e2
-      triggerHaptic('success')
-      toast.success('Encargo criado!')
+      if (editingChargeId) {
+        const { error } = await supabase.from('charges').update({
+          category_id: newChargeCategoryId || null,
+          title: newChargeTitle.trim(),
+          amount: amt,
+          due_date: newChargeDueDate || null,
+        }).eq('id', editingChargeId)
+        if (error) throw error
+
+        const original = chargesWithStats.find(c => c.id === editingChargeId)
+        const originalIds = new Set(original?.participantIds || [])
+        const toAdd = Array.from(newChargePlayerIds).filter(pid => !originalIds.has(pid))
+        // Nunca remove quem já tem pagamentos, mesmo que tenha ficado desmarcado.
+        const toRemove = Array.from(originalIds).filter(pid => !newChargePlayerIds.has(pid) && !chargeParticipantHasPayments(original, pid))
+
+        if (toAdd.length > 0) {
+          const { error: eAdd } = await supabase.from('charge_players').insert(toAdd.map(pid => ({ charge_id: editingChargeId, player_id: pid })))
+          if (eAdd) throw eAdd
+        }
+        if (toRemove.length > 0) {
+          const { error: eRemove } = await supabase.from('charge_players').delete().eq('charge_id', editingChargeId).in('player_id', toRemove)
+          if (eRemove) throw eRemove
+        }
+        triggerHaptic('success')
+        toast.success('Encargo atualizado!')
+      } else {
+        const { data: chargeRow, error } = await supabase.from('charges').insert([{
+          category_id: newChargeCategoryId || null,
+          title: newChargeTitle.trim(),
+          amount: amt,
+          due_date: newChargeDueDate || null,
+          created_by: profile?.id || null,
+        }]).select().single()
+        if (error) throw error
+        const { error: e2 } = await supabase.from('charge_players').insert(
+          Array.from(newChargePlayerIds).map(pid => ({ charge_id: chargeRow.id, player_id: pid }))
+        )
+        if (e2) throw e2
+        triggerHaptic('success')
+        toast.success('Encargo criado!')
+      }
       setIsNewChargeModalOpen(false)
+      setEditingChargeId(null)
       fetchAll()
     } catch (err: any) {
-      toast.error('Erro ao criar encargo: ' + (err.message || 'Erro'))
+      toast.error('Erro ao guardar encargo: ' + (err.message || 'Erro'))
     } finally {
       setSavingCharge(false)
     }
@@ -1112,14 +1157,24 @@ const FinancePage: React.FC = () => {
                           </div>
                         </div>
                         {isAdmin && (
-                          <span
-                            role="button"
-                            onClick={(e) => { e.stopPropagation(); setChargeToDelete(c.id) }}
-                            className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg cursor-pointer"
-                            title="Apagar encargo"
-                          >
-                            <Trash2 size={14} />
-                          </span>
+                          <>
+                            <span
+                              role="button"
+                              onClick={(e) => { e.stopPropagation(); openEditChargeModal(c) }}
+                              className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg cursor-pointer"
+                              title="Editar encargo"
+                            >
+                              <Pencil size={14} />
+                            </span>
+                            <span
+                              role="button"
+                              onClick={(e) => { e.stopPropagation(); setChargeToDelete(c.id) }}
+                              className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg cursor-pointer"
+                              title="Apagar encargo"
+                            >
+                              <Trash2 size={14} />
+                            </span>
+                          </>
                         )}
                       </div>
                     </button>
@@ -1207,16 +1262,16 @@ const FinancePage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: Novo Encargo */}
+      {/* MODAL: Novo Encargo / Editar Encargo */}
       {isNewChargeModalOpen && (
         <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] flex flex-col">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white shrink-0">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={18} className="text-csc-gold" />
-                <h3 className="font-black text-sm">Novo Encargo</h3>
+                <h3 className="font-black text-sm">{editingChargeId ? 'Editar Encargo' : 'Novo Encargo'}</h3>
               </div>
-              <button onClick={() => setIsNewChargeModalOpen(false)} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40">
+              <button onClick={() => { setIsNewChargeModalOpen(false); setEditingChargeId(null) }} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40">
                 <X size={16} className="stroke-[2.5]" />
               </button>
             </div>
@@ -1250,21 +1305,26 @@ const FinancePage: React.FC = () => {
                   </div>
                 </div>
                 <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
-                  {players.map(p => (
-                    <label key={p.id} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-800 cursor-pointer hover:bg-gray-50">
-                      <input type="checkbox" checked={newChargePlayerIds.has(p.id)} onChange={() => toggleNewChargePlayer(p.id)} className="cursor-pointer" />
-                      <span className="truncate">{p.shirt_name || p.name}</span>
-                      {p.status === 'inactive' && <span className="text-[9px] text-gray-400 ml-auto shrink-0">inativo</span>}
-                    </label>
-                  ))}
+                  {players.map(p => {
+                    const editingCharge = editingChargeId ? chargesWithStats.find(c => c.id === editingChargeId) : undefined
+                    const lockedIn = editingChargeId ? newChargePlayerIds.has(p.id) && chargeParticipantHasPayments(editingCharge, p.id) : false
+                    return (
+                      <label key={p.id} className={`flex items-center gap-2 px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50 ${lockedIn ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
+                        <input type="checkbox" checked={newChargePlayerIds.has(p.id)} disabled={lockedIn} onChange={() => toggleNewChargePlayer(p.id)} className={lockedIn ? '' : 'cursor-pointer'} />
+                        <span className="truncate">{p.shirt_name || p.name}</span>
+                        {lockedIn && <span className="text-[9px] text-gray-400 ml-auto shrink-0" title="Já tem pagamentos registados — não pode ser removido">tem pagamentos</span>}
+                        {!lockedIn && p.status === 'inactive' && <span className="text-[9px] text-gray-400 ml-auto shrink-0">inativo</span>}
+                      </label>
+                    )
+                  })}
                 </div>
               </div>
               <div className="flex gap-2 justify-end pt-2">
-                <button type="button" onClick={() => setIsNewChargeModalOpen(false)} className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer">
+                <button type="button" onClick={() => { setIsNewChargeModalOpen(false); setEditingChargeId(null) }} className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer">
                   Cancelar
                 </button>
-                <button type="button" onClick={handleCreateCharge} disabled={savingCharge} className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer">
-                  {savingCharge ? 'A criar...' : 'Criar Encargo'}
+                <button type="button" onClick={handleSaveCharge} disabled={savingCharge} className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer">
+                  {savingCharge ? 'A guardar...' : editingChargeId ? 'Guardar Alterações' : 'Criar Encargo'}
                 </button>
               </div>
             </div>
