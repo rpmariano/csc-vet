@@ -10,7 +10,7 @@ import { triggerHaptic } from '../utils/haptics'
 import {
   DEFAULT_FINANCIAL_SETTINGS,
   getSeasonLabel, getPlayerQuotaMonths,
-  computeQuotaMonthStatus, getInsuranceDeadline, nomeMes,
+  computeQuotaMonthStatus, getInsuranceDeadline, nomeMes, formatMonthYear,
 } from '../lib/finance'
 import type { FinancialSettings, SeasonMonth, QuotaMonthStatus } from '../lib/finance'
 
@@ -76,7 +76,7 @@ const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: numbe
   { id: 'overview', label: 'Visão Geral', Icon: Landmark },
   { id: 'quotas', label: 'Quotas', Icon: ListChecks },
   { id: 'insurance', label: 'Seguro', Icon: ShieldCheck },
-  { id: 'expenses', label: 'Despesas', Icon: Receipt },
+  { id: 'expenses', label: 'Despesas/Receitas', Icon: Receipt },
   { id: 'movements', label: 'Movimentos', Icon: Wallet },
   { id: 'settings', label: 'Definições', Icon: Settings },
 ]
@@ -288,6 +288,95 @@ const FinancePage: React.FC = () => {
   // -------------------------------------------------------------------------
   // Despesas / Movimentos
   // -------------------------------------------------------------------------
+  const [movFilterMonth, setMovFilterMonth] = useState<string>('all')
+  const [movFilterYear, setMovFilterYear] = useState<string>('all')
+
+  // Movimentos: junta as três fontes de dinheiro (quotas, seguro, despesas/receitas
+  // avulsas) numa só lista — antes o relatório só mostrava as despesas/receitas
+  // avulsas (tabela transactions), deixando de fora as quotas e o seguro.
+  const allMovements = useMemo(() => {
+    type Movimento = {
+      id: string
+      date: string
+      description: string
+      amount: number
+      type: 'income' | 'expense'
+      documentUrl?: string | null
+      categoryKey: string
+      categoryLabel: string
+    }
+    const rows: Movimento[] = []
+
+    dues.forEach(d => {
+      const p = players.find(pl => pl.id === d.player_id)
+      rows.push({
+        id: `due-${d.id}`,
+        date: d.paid_at || `${d.month_year}-01`,
+        description: `Quota de ${formatMonthYear(d.month_year)} — ${p?.shirt_name || p?.name || 'Jogador'}`,
+        amount: d.amount,
+        type: 'income',
+        categoryKey: 'quotas',
+        categoryLabel: 'Quotas',
+      })
+    })
+
+    insurancePayments.forEach(ip => {
+      const p = players.find(pl => pl.id === ip.player_id)
+      rows.push({
+        id: `ins-${ip.id}`,
+        date: ip.paid_at,
+        description: `Seguro ${ip.season} — ${p?.shirt_name || p?.name || 'Jogador'}${ip.notes ? ` (${ip.notes})` : ''}`,
+        amount: ip.amount,
+        type: 'income',
+        categoryKey: 'insurance',
+        categoryLabel: 'Seguro',
+      })
+    })
+
+    transactions.forEach(t => {
+      const cat = categories.find(c => c.id === t.category_id)
+      rows.push({
+        id: `tx-${t.id}`,
+        date: t.date,
+        description: t.description,
+        amount: t.amount,
+        type: t.type,
+        documentUrl: t.document_url,
+        categoryKey: t.type === 'income' ? 'income_other' : (cat?.id || 'no_category'),
+        categoryLabel: t.type === 'income' ? 'Outras Receitas' : (cat?.name || 'Sem Categoria'),
+      })
+    })
+
+    return rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [dues, insurancePayments, transactions, players, categories])
+
+  const movementYears = useMemo(() => {
+    const years = new Set(allMovements.map(m => new Date(m.date).getFullYear()))
+    return Array.from(years).sort((a, b) => b - a)
+  }, [allMovements])
+
+  const filteredMovements = useMemo(() => allMovements.filter(m => {
+    const d = new Date(m.date)
+    if (movFilterYear !== 'all' && d.getFullYear() !== parseInt(movFilterYear)) return false
+    if (movFilterMonth !== 'all' && (d.getMonth() + 1) !== parseInt(movFilterMonth)) return false
+    return true
+  }), [allMovements, movFilterMonth, movFilterYear])
+
+  // Ordem fixa: Quotas, Seguro e Outras Receitas primeiro, depois cada categoria de
+  // despesa (pela ordem em que foram criadas), e por fim os movimentos sem categoria.
+  const groupedMovements = useMemo(() => {
+    const order = ['quotas', 'insurance', 'income_other', ...categories.map(c => c.id), 'no_category']
+    const byKey = new Map<string, { label: string; rows: typeof filteredMovements }>()
+    filteredMovements.forEach(m => {
+      if (!byKey.has(m.categoryKey)) byKey.set(m.categoryKey, { label: m.categoryLabel, rows: [] })
+      byKey.get(m.categoryKey)!.rows.push(m)
+    })
+    return order.filter(k => byKey.has(k)).map(k => ({ key: k, ...byKey.get(k)! }))
+  }, [filteredMovements, categories])
+
+  const filteredIncomeTotal = filteredMovements.filter(m => m.type === 'income').reduce((s, m) => s + m.amount, 0)
+  const filteredExpenseTotal = filteredMovements.filter(m => m.type === 'expense').reduce((s, m) => s + m.amount, 0)
+
   const [txType, setTxType] = useState<'income' | 'expense'>('expense')
   const [txDesc, setTxDesc] = useState('')
   const [txAmount, setTxAmount] = useState('')
@@ -855,7 +944,7 @@ const FinancePage: React.FC = () => {
             <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
               <h3 className="text-sm font-black text-white mb-3 flex items-center gap-2">
                 <Receipt size={16} className="text-csc-gold" />
-                <span>Registar Despesa</span>
+                <span>Registar Despesa/Receita</span>
               </h3>
               <form onSubmit={handleAddTransaction} className="space-y-3">
                 <div>
@@ -952,9 +1041,9 @@ const FinancePage: React.FC = () => {
           )}
 
           <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
-            <h3 className="text-sm font-black text-white mb-3">Últimas Despesas</h3>
+            <h3 className="text-sm font-black text-white mb-3">Últimas Despesas e Receitas</h3>
             <div className="space-y-2">
-              {transactions.filter(t => t.type === 'expense').map(t => {
+              {transactions.map(t => {
                 const cat = categories.find(c => c.id === t.category_id)
                 return (
                   <div key={t.id} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-white/5">
@@ -962,11 +1051,11 @@ const FinancePage: React.FC = () => {
                       <p className="font-bold text-white text-sm truncate">{t.description}</p>
                       <p className="text-[10px] text-white/60 flex items-center gap-1.5 flex-wrap">
                         <span>{new Date(t.date).toLocaleDateString('pt-PT')}</span>
-                        {cat && <span className="px-1.5 py-0.5 rounded bg-white/10">{cat.name}</span>}
+                        {cat ? <span className="px-1.5 py-0.5 rounded bg-white/10">{cat.name}</span> : t.type === 'income' && <span className="px-1.5 py-0.5 rounded bg-white/10">Receita</span>}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <p className="font-black text-sm text-red-400">-{fmtEuro(t.amount)}</p>
+                      <p className={`font-black text-sm ${t.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>{t.type === 'income' ? '+' : '-'}{fmtEuro(t.amount)}</p>
                       {t.document_url && (
                         <button type="button" onClick={() => handleOpenDocument(t.document_url!)} title="Ver documento" className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 cursor-pointer transition-colors">
                           <Paperclip size={13} />
@@ -979,8 +1068,8 @@ const FinancePage: React.FC = () => {
                   </div>
                 )
               })}
-              {transactions.filter(t => t.type === 'expense').length === 0 && (
-                <p className="text-xs text-white/60 py-6 text-center">Sem despesas registadas.</p>
+              {transactions.length === 0 && (
+                <p className="text-xs text-white/60 py-6 text-center">Sem despesas ou receitas registadas.</p>
               )}
             </div>
           </div>
@@ -989,56 +1078,79 @@ const FinancePage: React.FC = () => {
 
       {/* ================= MOVIMENTOS (relatório) ================= */}
       {activeTab === 'movements' && (
-        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
-          <h3 className="text-sm font-black text-white mb-3">Relatório de Movimentos</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="text-white/60 border-b border-white/10">
-                  <th className="px-3 py-2">Data</th>
-                  <th className="px-3 py-2">Descrição</th>
-                  <th className="px-3 py-2">Categoria</th>
-                  <th className="px-3 py-2 text-right">Valor</th>
-                  <th className="px-3 py-2 text-right">Doc.</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10">
-                {transactions.map(t => {
-                  const cat = categories.find(c => c.id === t.category_id)
-                  return (
-                    <tr key={t.id}>
-                      <td className="px-3 py-2.5 text-white/70">{new Date(t.date).toLocaleDateString('pt-PT')}</td>
-                      <td className="px-3 py-2.5 font-bold text-white">{t.description}</td>
-                      <td className="px-3 py-2.5 text-white/60">{cat?.name || (t.type === 'income' ? 'Receita' : '—')}</td>
-                      <td className={`px-3 py-2.5 text-right font-black ${t.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {t.type === 'income' ? '+' : '-'}{fmtEuro(t.amount)}
-                      </td>
-                      <td className="px-3 py-2.5 text-right">
-                        {t.document_url && (
-                          <button type="button" onClick={() => handleOpenDocument(t.document_url!)} className="text-csc-gold hover:brightness-110 cursor-pointer inline-flex items-center gap-1">
-                            <ExternalLink size={12} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            {transactions.length === 0 && <p className="text-xs text-white/60 py-6 text-center">Sem movimentos registados.</p>}
+        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h3 className="text-sm font-black text-white">Relatório de Movimentos</h3>
+            <div className="flex items-center gap-2">
+              <select value={movFilterMonth} onChange={e => setMovFilterMonth(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white font-bold text-gray-900">
+                <option value="all">Todos os meses</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                  <option key={m} value={m}>{nomeMes(m)}</option>
+                ))}
+              </select>
+              <select value={movFilterYear} onChange={e => setMovFilterYear(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white font-bold text-gray-900">
+                <option value="all">Todos os anos</option>
+                {movementYears.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-3 gap-3 text-center">
+
+          {groupedMovements.length === 0 ? (
+            <p className="text-xs text-white/60 py-6 text-center">Sem movimentos registados{movFilterMonth !== 'all' || movFilterYear !== 'all' ? ' neste período' : ''}.</p>
+          ) : (
+            <div className="space-y-4">
+              {groupedMovements.map(group => {
+                const groupTotal = group.rows.reduce((s, m) => s + (m.type === 'income' ? m.amount : -m.amount), 0)
+                return (
+                  <div key={group.key} className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 overflow-hidden">
+                    <div className="px-4 py-2.5 bg-white/5 flex items-center justify-between">
+                      <h4 className="text-xs font-black text-white uppercase tracking-wider">{group.label}</h4>
+                      <span className={`text-xs font-black ${groupTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {groupTotal >= 0 ? '+' : ''}{fmtEuro(groupTotal)}
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <tbody className="divide-y divide-white/10">
+                          {group.rows.map(m => (
+                            <tr key={m.id}>
+                              <td className="px-4 py-2 text-white/60 whitespace-nowrap">{new Date(m.date).toLocaleDateString('pt-PT')}</td>
+                              <td className="px-4 py-2 font-bold text-white">{m.description}</td>
+                              <td className={`px-4 py-2 text-right font-black whitespace-nowrap ${m.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {m.type === 'income' ? '+' : '-'}{fmtEuro(m.amount)}
+                              </td>
+                              <td className="px-4 py-2 text-right w-8">
+                                {m.documentUrl && (
+                                  <button type="button" onClick={() => handleOpenDocument(m.documentUrl!)} className="text-csc-gold hover:brightness-110 cursor-pointer inline-flex items-center gap-1">
+                                    <ExternalLink size={12} />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="pt-4 border-t border-white/10 grid grid-cols-3 gap-3 text-center">
             <div>
               <p className="text-[10px] font-bold uppercase text-white/60">Total Receitas</p>
-              <p className="text-base font-black text-emerald-400">+{fmtEuro(totalReceived)}</p>
+              <p className="text-base font-black text-emerald-400">+{fmtEuro(filteredIncomeTotal)}</p>
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase text-white/60">Total Despesas</p>
-              <p className="text-base font-black text-red-400">-{fmtEuro(totalExpenses)}</p>
+              <p className="text-base font-black text-red-400">-{fmtEuro(filteredExpenseTotal)}</p>
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase text-white/60">Saldo</p>
-              <p className="text-base font-black text-white">{fmtEuro(netBalance)}</p>
+              <p className="text-base font-black text-white">{fmtEuro(filteredIncomeTotal - filteredExpenseTotal)}</p>
             </div>
           </div>
         </div>

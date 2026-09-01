@@ -14,6 +14,8 @@ export const StandingsPage = () => {
 
   const [tournaments, setTournaments] = useState<any[]>([])
   const [selectedTourId, setSelectedTourId] = useState<string>('')
+  // Agendados e ativos ficam juntos em "Em Curso"; terminados passam para o Histórico.
+  const [tourViewFilter, setTourViewFilter] = useState<'current' | 'history'>('current')
 
   const [groups, setGroups] = useState<any[]>([])
   const [teams, setTeams] = useState<any[]>([])
@@ -37,6 +39,8 @@ export const StandingsPage = () => {
 
   const [matchToDelete, setMatchToDelete] = useState<string | null>(null)
 
+  const visibleTournaments = tournaments.filter(t => tourViewFilter === 'history' ? t.status === 'terminado' : t.status !== 'terminado')
+
   useEffect(() => {
     fetchTournaments()
   }, [])
@@ -47,13 +51,25 @@ export const StandingsPage = () => {
     }
   }, [selectedTourId])
 
+  // Ao trocar de filtro, se o torneio selecionado não pertence à lista visível, escolhe o primeiro dela.
+  useEffect(() => {
+    if (visibleTournaments.length > 0 && !visibleTournaments.some(t => t.id === selectedTourId)) {
+      setSelectedTourId(visibleTournaments[0].id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tourViewFilter, tournaments])
+
   const fetchTournaments = async () => {
     const { data } = await supabase.from('tournaments').select('*').order('created_at', { ascending: false })
     if (data) {
       setTournaments(data)
       const active = data.find(t => t.status === 'ativo')
       if (active) setSelectedTourId(active.id)
-      else if (data.length > 0) setSelectedTourId(data[0].id)
+      else {
+        const firstCurrent = data.find(t => t.status !== 'terminado')
+        if (firstCurrent) setSelectedTourId(firstCurrent.id)
+        else if (data.length > 0) { setTourViewFilter('history'); setSelectedTourId(data[0].id) }
+      }
     }
   }
 
@@ -308,20 +324,48 @@ export const StandingsPage = () => {
         </div>
 
         {tournaments.length > 0 && (
-          <select
-            value={selectedTourId}
-            onChange={e => setSelectedTourId(e.target.value)}
-            className="w-full sm:w-64 px-4 py-2.5 bg-white border border-gray-200 rounded-xl font-black text-sm text-gray-800 shadow-sm focus:ring-2 focus:ring-csc-dark outline-none"
-          >
-            {tournaments.map(t => (
-              <option key={t.id} value={t.id}>{t.name} {t.season}</option>
-            ))}
-          </select>
+          <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto">
+            <div className="flex bg-white p-1 rounded-xl shadow-sm border border-gray-200 w-full sm:w-fit">
+              <button
+                type="button"
+                onClick={() => setTourViewFilter('current')}
+                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${tourViewFilter === 'current' ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+              >
+                Agendados e Ativos
+              </button>
+              <button
+                type="button"
+                onClick={() => setTourViewFilter('history')}
+                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${tourViewFilter === 'history' ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+              >
+                Histórico
+              </button>
+            </div>
+            {visibleTournaments.length > 0 ? (
+              <select
+                value={selectedTourId}
+                onChange={e => setSelectedTourId(e.target.value)}
+                className="w-full sm:w-64 px-4 py-2.5 bg-white border border-gray-200 rounded-xl font-black text-sm text-gray-800 shadow-sm focus:ring-2 focus:ring-csc-dark outline-none"
+              >
+                {visibleTournaments.map(t => (
+                  <option key={t.id} value={t.id}>{t.name} {t.season}</option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-xs font-bold text-gray-400">
+                {tourViewFilter === 'history' ? 'Sem torneios terminados.' : 'Sem torneios agendados ou ativos.'}
+              </p>
+            )}
+          </div>
         )}
       </div>
 
       {loading ? (
         <div className="text-center py-12 text-gray-500 font-bold">A carregar classificações...</div>
+      ) : !visibleTournaments.some(t => t.id === selectedTourId) ? (
+        <div className="text-center py-12 text-gray-400 font-bold text-sm">
+          {tourViewFilter === 'history' ? 'Ainda não há torneios terminados.' : 'Não há torneios agendados ou ativos de momento.'}
+        </div>
       ) : groups.length === 0 ? (
         <div className="bg-csc-dark text-white rounded-3xl p-8 border border-white/10 text-center shadow-sm">
           <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
