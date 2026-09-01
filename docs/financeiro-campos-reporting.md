@@ -278,8 +278,8 @@ Jogador (expansão de linha) · Época (implícita, sempre a época atual).
 | 6 | `dues.status` fora de sincronia com o estado real | ✅ **resolvido** — em `dues` uma linha é sempre uma quota paga: `DEFAULT 'paid'` + `CHECK (status = 'paid')`. O "por pagar" está em `v_quota_status` |
 | 7 | Plano de inscrição em JSONB (`tournaments.rules`) | ⬜ não é agregável em SQL sem *jsonb gymnastics*; tabela `tournament_installments` |
 | 8 | Sem soft-delete/histórico | ⬜ apagar um pagamento apaga a história; auditoria ou `deleted_at` |
-| 9 | Agregação 100 % client-side (9 tabelas completas por render) | ⬜ migrar a página para as vistas |
-| 10 | `profiles` legível por qualquer autenticado (IBAN/NIF) | ⬜ vista `v_players_public` só com campos de reporting |
+| 9 | Agregação 100 % client-side | ✅ **resolvido** — a página lê `v_quota_status` e `v_financial_movements`; deixou de carregar `dues` inteira e de somar em JS |
+| 10 | `profiles` legível por qualquer autenticado (IBAN/NIF) | ✅ **resolvido** — `v_players_public` + RLS fechada (`supabase_profiles_pii_migration.sql`) |
 
 ---
 
@@ -300,8 +300,10 @@ Jogador (expansão de linha) · Época (implícita, sempre a época atual).
 
 | Ficheiro | O que traz |
 |---|---|
-| `supabase_finance_reporting_migration.sql` | `dues.created_by` · `dues.status` coerente · `financial_season()` · `v_financial_movements` · `v_quota_status` · índices |
-| `src/pages/FinancePage.tsx` | escreve `created_by` nas quotas; categoria também nas receitas; agrupamento de movimentos alinhado com a vista |
+| `supabase_finance_reporting_migration.sql` | `dues.created_by` · `dues.status` coerente · `financial_season()` · `nome_mes_ano()` · `v_financial_movements` · `v_quota_status` · índices |
+| `supabase_profiles_pii_migration.sql` | `v_players_public` · RLS de `profiles` fechada · `find_my_profile_match()` · `associate_my_profile()` |
+| `src/pages/FinancePage.tsx` | consome as duas vistas em vez de agregar em JS; escreve `created_by` nas quotas; categoria também nas receitas |
+| `CalendarPage` · `EventsPage` · `StatsPage` · `AdminDashboard` · `MatchReportModal` · `AutoAssociationModal` · `AuthContext` | passam a ler o plantel por `v_players_public`; a associação de conta usa as duas funções |
 
 A migração é idempotente e foi validada num PostgreSQL 16 local contra `supabase_schema.sql`,
 incluindo o teste de RLS com um utilizador `player` e um `admin`.

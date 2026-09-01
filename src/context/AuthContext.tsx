@@ -156,66 +156,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .maybeSingle()
 
-      // 2. Se temos o email do utilizador autenticado, procurar ficha de atleta existente no plantel (DB ou Seed)
-      if (userEmail) {
-        const cleanEmail = userEmail.trim().toLowerCase()
+      // 2. Se o utilizador ainda não tem dados de atleta, procurar a ficha do
+      // plantel que lhe corresponde e reclamá-la.
+      //
+      // Isto era feito aqui: lia-se a tabela `profiles` inteira à procura do
+      // email, copiavam-se os dados no cliente e apagava-se a ficha órfã. Com a
+      // RLS fechada o cliente já não lê as fichas dos outros — e ainda bem, que
+      // elas têm NIF e IBAN. As duas operações passaram para o servidor:
+      // find_my_profile_match (só campos não sensíveis) e associate_my_profile,
+      // que faz a cópia, transfere as referências e apaga a ficha numa
+      // transação só. Aqui a correspondência é estritamente por email
+      // (p_email_only), porque é automática e sem confirmação de ninguém; o
+      // modal de associação é que oferece também telefone e nome.
+      const jaTemDadosDeAtleta = Boolean(data?.jersey_number || data?.shirt_name)
+      if (userEmail && !jaTemDadosDeAtleta) {
+        const { data: matches } = await supabase.rpc('find_my_profile_match', { p_email_only: true })
+        const alvo = Array.isArray(matches) ? matches[0] : matches
 
-        // A. Procurar todas as fichas no Supabase com este email
-        const { data: matchingProfiles } = await supabase
-          .from('profiles')
-          .select('*')
-          .ilike('email', cleanEmail)
-
-        // Encontrar ficha que tenha dados de atleta (número, posição, camisola ou ID diferente)
-        const targetCard = (matchingProfiles || []).find(p => p.jersey_number != null || p.shirt_name || (p.id !== userId && p.position))
-
-        if (targetCard) {
-          // PRESERVAR 100% dos dados da ficha de atleta (nome, número, posição, alcunha, camisola, notas, foto do atleta)
-          // NUNCA substituir o nome ou a foto do atleta pelos metadados do Google
-          const athletePhoto = targetCard.photo_url || null
-
-          // `role` e `roles` ficam de fora de propósito: são geridos por
-          // administradores e a RLS rejeita a escrita, o que faria falhar o update.
-          const { role: _role, roles: _roles, ...cardWithoutRoles } = targetCard as Profile
-
-          const mergedData: Partial<Profile> = {
-            ...cardWithoutRoles,
-            id: userId,
-            email: cleanEmail,
-            name: targetCard.name, // MANTER O NOME DO ATLETA (ex: Bruno Raul / Tochê)
-            shirt_name: targetCard.shirt_name || targetCard.nickname || null,
-            nickname: targetCard.nickname || null,
-            photo_url: athletePhoto, // Preservar foto do atleta se existir
-          }
-
-          if (data) {
-            // Atualizar o perfil do utilizador na BD com os dados completos do atleta
-            const { data: updated } = await supabase
-              .from('profiles')
-              .update(mergedData)
-              .eq('id', userId)
-              .select()
-              .single()
-            if (updated) data = updated
-          } else {
-            // Criar o registo com o ID do auth contendo os dados do atleta
-            const { data: inserted } = await supabase
-              .from('profiles')
-              .insert([mergedData])
-              .select()
-              .single()
-            if (inserted) data = inserted
-          }
-
-          // Se existiam registos placeholder anteriores no Supabase, migrar referências e eliminar
-          const oldProfiles = (matchingProfiles || []).filter(p => p.id !== userId)
-          for (const oldP of oldProfiles) {
-            await Promise.allSettled([
-              supabase.from('callups').update({ player_id: userId }).eq('player_id', oldP.id),
-              supabase.from('dues').update({ player_id: userId }).eq('player_id', oldP.id),
-              supabase.from('stats').update({ player_id: userId }).eq('player_id', oldP.id),
-              supabase.from('profiles').delete().eq('id', oldP.id)
-            ])
+        if (alvo?.id) {
+          const { data: associado, error: assocErr } = await supabase.rpc('associate_my_profile', { target_id: alvo.id })
+          if (assocErr) {
+            console.error('Erro ao associar a ficha de atleta:', assocErr.message)
+          } else if (associado) {
+            data = (Array.isArray(associado) ? associado[0] : associado) as Profile
           }
         }
       }

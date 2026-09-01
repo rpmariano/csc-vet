@@ -72,7 +72,24 @@ COMMENT ON COLUMN public.dues.status IS 'Sempre ''paid'': em dues só há linha 
 -- do lado da aplicação, para não introduzir um trigger só por isto.
 
 --------------------------------------------------------------------------------
--- 5. ÍNDICES PARA AS VISTAS
+-- 5. NOME DO MÊS EM PORTUGUÊS
+--------------------------------------------------------------------------------
+-- A descrição dos movimentos é texto de UI ("Quota de Setembro 2026 — RUI") e
+-- tem de ler igual venha ela da vista ou da página. Não se usa to_char, que
+-- depende do locale do servidor.
+CREATE OR REPLACE FUNCTION public.nome_mes_ano(d DATE)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT (ARRAY['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'])
+           [EXTRACT(MONTH FROM d)::INT]
+           || ' ' || EXTRACT(YEAR FROM d)::INT;
+$$;
+
+--------------------------------------------------------------------------------
+-- 6. ÍNDICES PARA AS VISTAS
 --------------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_dues_paid_at ON public.dues(paid_at);
 CREATE INDEX IF NOT EXISTS idx_dues_player ON public.dues(player_id);
@@ -81,7 +98,7 @@ CREATE INDEX IF NOT EXISTS idx_transactions_date ON public.transactions(date);
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON public.transactions(category_id);
 
 --------------------------------------------------------------------------------
--- 6. VISTA v_financial_movements — o facto único
+-- 7. VISTA v_financial_movements — o facto único
 --------------------------------------------------------------------------------
 -- Junta as três fontes de dinheiro (quotas, encargos, despesas/receitas avulsas)
 -- no grão de um movimento, com as dimensões todas resolvidas. É o mesmo grão que
@@ -109,7 +126,8 @@ SELECT
     'income'::TEXT                                          AS type,
     d.amount                                                AS amount,
     d.amount                                                AS signed_amount,
-    'Quota de ' || d.month_year || ' — ' || COALESCE(p.shirt_name, p.name, 'Jogador') AS description,
+    'Quota de ' || public.nome_mes_ano((d.month_year || '-01')::DATE)
+        || ' — ' || COALESCE(p.shirt_name, p.name, 'Jogador')   AS description,
     'quotas'::TEXT                                          AS category_key,
     'Quotas'::TEXT                                          AS category_label,
     NULL::UUID                                              AS category_id,
@@ -191,7 +209,7 @@ COMMENT ON VIEW public.v_financial_movements IS
 GRANT SELECT ON public.v_financial_movements TO authenticated;
 
 --------------------------------------------------------------------------------
--- 7. VISTA v_quota_status — a matriz jogador × mês da época
+-- 8. VISTA v_quota_status — a matriz jogador × mês da época
 --------------------------------------------------------------------------------
 -- Resolve a lacuna 1: uma quota por pagar não tem linha em `dues`, por isso a
 -- dívida não existe em SQL. Aqui geram-se todos os meses de quota da época

@@ -195,7 +195,7 @@ const AdminDashboard: React.FC = () => {
       supabase.from('fields').select('*').order('name'),
       supabase.from('opponents').select('*').order('name'),
       supabase.from('tournaments').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, name, shirt_name, jersey_number, birth_date, photo_url, position').order('name')
+      supabase.from('v_players_public').select('id, name, shirt_name, jersey_number, birth_date, photo_url, position').order('name')
     ])
 
     if (resFields.data) setFields(resFields.data)
