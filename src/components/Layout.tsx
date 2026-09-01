@@ -406,15 +406,9 @@ const Layout: React.FC = () => {
                   <div className="overflow-hidden flex-1">
                     <p className="font-bold truncate text-xs text-white">{nomeWidgetPerfil(profile)}</p>
                     <div className="flex items-center gap-1 mt-0.5">
-                      <button
-                        type="button"
-                        onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-                        className={canSwitchRoles ? 'cursor-pointer active:scale-95' : ''}
-                        title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
-                      >
-                        <RoleChip role={profile.role} size="sm" className={canSwitchRoles ? 'pr-1' : ''} />
-                        {canSwitchRoles && <ChevronDown size={10} className="inline ml-0.5 opacity-70" />}
-                      </button>
+                      {/* Sem alternância de perfil aqui — fica só informativo; para trocar
+                          de papel usa-se a pílula de cargo do cabeçalho. */}
+                      <RoleChip role={profile.role} size="sm" />
                     </div>
                   </div>
                 </div>
