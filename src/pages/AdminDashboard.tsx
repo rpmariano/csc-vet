@@ -1260,7 +1260,7 @@ const AdminDashboard: React.FC = () => {
                           <button
                             onClick={() => setLeagueManagerTournamentId(t.id)}
                             className="p-2 bg-white/10 border border-white/10 hover:border-blue-400 text-blue-300 hover:bg-blue-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
-                            title="Gerir Liga (Grupos e Calendário)"
+                            title="Gerir Grupos e Equipas"
                           >
                             <Shield size={14} />
                           </button>
