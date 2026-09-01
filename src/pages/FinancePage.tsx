@@ -1,16 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   Landmark, TrendingUp, TrendingDown, Plus, Settings, Wallet,
-  ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown
+  ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
+import { ConfirmModal } from '../components/ConfirmModal'
 import {
   DEFAULT_FINANCIAL_SETTINGS,
   getSeasonLabel, getPlayerQuotaMonths,
-  computeQuotaMonthStatus, getInsuranceDeadline, nomeMes, formatMonthYear,
+  computeQuotaMonthStatus, nomeMes, formatMonthYear, getInsuranceDeadline,
 } from '../lib/finance'
 import type { FinancialSettings, SeasonMonth, QuotaMonthStatus } from '../lib/finance'
 
@@ -37,18 +38,39 @@ interface Due {
   paid_at?: string | null
 }
 
-interface InsurancePayment {
-  id: string
-  player_id: string
-  season: string
-  amount: number
-  paid_at: string
-  notes?: string | null
-}
-
 interface ExpenseCategory {
   id: string
   name: string
+  allow_income?: boolean
+}
+
+// Encargos (charges) — cobranças ad-hoc a um conjunto escolhido de jogadores
+// (Seguro, equipamento, inscrição/viagem de torneio, etc.), ligadas a uma
+// categoria que pode ser usada tanto para a receita como para a despesa
+// correspondente. Substitui o antigo insurance_payments (só seguro, sempre a
+// todos, sem correção possível).
+interface Charge {
+  id: string
+  category_id: string | null
+  title: string
+  amount: number
+  due_date?: string | null
+  created_at?: string
+}
+
+interface ChargePlayer {
+  id: string
+  charge_id: string
+  player_id: string
+}
+
+interface ChargePayment {
+  id: string
+  charge_id: string
+  player_id: string
+  amount: number
+  paid_at: string
+  notes?: string | null
 }
 
 interface Transaction {
@@ -70,22 +92,25 @@ interface TournamentRow {
   rules?: any
 }
 
-type TabId = 'overview' | 'quotas' | 'insurance' | 'expenses' | 'movements' | 'settings'
+type TabId = 'overview' | 'quotas' | 'charges' | 'expenses' | 'movements' | 'settings'
 
 const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { id: 'overview', label: 'Visão Geral', Icon: Landmark },
   { id: 'quotas', label: 'Quotas', Icon: ListChecks },
-  { id: 'insurance', label: 'Seguro', Icon: ShieldCheck },
+  { id: 'charges', label: 'Encargos', Icon: ShieldCheck },
   { id: 'expenses', label: 'Despesas/Receitas', Icon: Receipt },
   { id: 'movements', label: 'Movimentos', Icon: Wallet },
   { id: 'settings', label: 'Definições', Icon: Settings },
 ]
 
-// Ordem categórica fixa — nunca ciclada — para as receitas por categoria.
-const RECEITA_CATEGORIAS: { key: 'quotas' | 'insurance' | 'other'; label: string; corBarra: string; corTexto: string }[] = [
+// Ordem categórica fixa — nunca ciclada — para as receitas por categoria. "Encargos"
+// junta tudo o que é cobrado a jogadores fora das quotas (Seguro, equipamento,
+// viagens, ...) — a repartição por encargo específico vê-se no separador Encargos
+// e nos Movimentos, agrupados pela sua própria categoria.
+const RECEITA_CATEGORIAS: { key: 'quotas' | 'charges' | 'other'; label: string; corBarra: string; corTexto: string }[] = [
   { key: 'quotas', label: 'Quotas', corBarra: 'bg-csc-light', corTexto: 'text-csc-light' },
   // csc-blue é escuro de mais para se distinguir do fundo verde-escuro do cartão — usa-se um azul mais claro só aqui.
-  { key: 'insurance', label: 'Seguro', corBarra: 'bg-sky-400', corTexto: 'text-sky-300' },
+  { key: 'charges', label: 'Encargos', corBarra: 'bg-sky-400', corTexto: 'text-sky-300' },
   { key: 'other', label: 'Outras Receitas', corBarra: 'bg-csc-gold', corTexto: 'text-csc-gold' },
 ]
 
@@ -105,7 +130,9 @@ const FinancePage: React.FC = () => {
   const [settings, setSettings] = useState<FinancialSettings>(DEFAULT_FINANCIAL_SETTINGS)
   const [players, setPlayers] = useState<PlayerRow[]>([])
   const [dues, setDues] = useState<Due[]>([])
-  const [insurancePayments, setInsurancePayments] = useState<InsurancePayment[]>([])
+  const [charges, setCharges] = useState<Charge[]>([])
+  const [chargePlayers, setChargePlayers] = useState<ChargePlayer[]>([])
+  const [chargePayments, setChargePayments] = useState<ChargePayment[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [categories, setCategories] = useState<ExpenseCategory[]>([])
   const [tournaments, setTournaments] = useState<TournamentRow[]>([])
@@ -117,7 +144,9 @@ const FinancePage: React.FC = () => {
         { data: settingsData },
         { data: playersData },
         { data: duesData },
-        { data: insuranceData },
+        { data: chargesData },
+        { data: chargePlayersData },
+        { data: chargePaymentsData },
         { data: transData },
         { data: catData },
         { data: tourData },
@@ -125,7 +154,9 @@ const FinancePage: React.FC = () => {
         supabase.from('financial_settings').select('*').eq('id', 1).maybeSingle(),
         supabase.from('profiles').select('id, name, shirt_name, jersey_number, status, quota_start_date, quota_end_date').order('jersey_number', { ascending: true, nullsFirst: false }),
         supabase.from('dues').select('*'),
-        supabase.from('insurance_payments').select('*'),
+        supabase.from('charges').select('*').order('created_at', { ascending: false }),
+        supabase.from('charge_players').select('*'),
+        supabase.from('charge_payments').select('*'),
         supabase.from('transactions').select('*').order('date', { ascending: false }),
         supabase.from('expense_categories').select('*').order('name'),
         supabase.from('tournaments').select('id, name, season, rules'),
@@ -134,7 +165,9 @@ const FinancePage: React.FC = () => {
       if (settingsData) setSettings(settingsData as FinancialSettings)
       setPlayers((playersData || []) as PlayerRow[])
       setDues((duesData || []) as Due[])
-      setInsurancePayments((insuranceData || []) as InsurancePayment[])
+      setCharges((chargesData || []) as Charge[])
+      setChargePlayers((chargePlayersData || []) as ChargePlayer[])
+      setChargePayments((chargePaymentsData || []) as ChargePayment[])
       setTransactions((transData || []) as Transaction[])
       setCategories((catData || []) as ExpenseCategory[])
       setTournaments((tourData || []) as TournamentRow[])
@@ -239,50 +272,190 @@ const FinancePage: React.FC = () => {
   }
 
   // -------------------------------------------------------------------------
-  // Seguro — pagamentos por jogador nesta época
+  // Encargos — cobranças ad-hoc a jogadores escolhidos (Seguro, equipamento,
+  // inscrição/viagem de torneio, ...). Cada encargo tem um valor por jogador e
+  // uma lista explícita de participantes; os pagamentos suportam parciais e,
+  // ao contrário do antigo insurance_payments, podem ser corrigidos depois.
   // -------------------------------------------------------------------------
-  const insuranceByPlayer = useMemo(() => {
-    const map = new Map<string, InsurancePayment[]>()
-    for (const ip of insurancePayments) {
-      if (ip.season !== seasonLabel) continue
-      if (!map.has(ip.player_id)) map.set(ip.player_id, [])
-      map.get(ip.player_id)!.push(ip)
+  const incomeCategories = categories.filter(c => c.allow_income)
+  const activePlayers = players.filter(p => p.status !== 'inactive')
+
+  const chargesWithStats = useMemo(() => charges.map(c => {
+    const participantIds = chargePlayers.filter(cp => cp.charge_id === c.id).map(cp => cp.player_id)
+    const payments = chargePayments.filter(p => p.charge_id === c.id)
+    const totalExpected = c.amount * participantIds.length
+    const totalPaid = payments.reduce((s, p) => s + p.amount, 0)
+    const category = categories.find(cat => cat.id === c.category_id)
+    return { ...c, participantIds, payments, totalExpected, totalPaid, categoryName: category?.name || null }
+  }), [charges, chargePlayers, chargePayments, categories])
+
+  const totalChargesReceived = chargePayments.reduce((s, p) => s + p.amount, 0)
+  const pendingChargesTotal = chargesWithStats.reduce((s, c) => s + Math.max(0, c.totalExpected - c.totalPaid), 0)
+
+  const [expandedChargeId, setExpandedChargeId] = useState<string | null>(null)
+  const [isNewChargeModalOpen, setIsNewChargeModalOpen] = useState(false)
+  const [newChargeCategoryId, setNewChargeCategoryId] = useState('')
+  const [newChargeTitle, setNewChargeTitle] = useState('')
+  const [newChargeAmount, setNewChargeAmount] = useState('')
+  const [newChargeDueDate, setNewChargeDueDate] = useState('')
+  const [newChargePlayerIds, setNewChargePlayerIds] = useState<Set<string>>(new Set())
+  const [savingCharge, setSavingCharge] = useState(false)
+  const [chargeToDelete, setChargeToDelete] = useState<string | null>(null)
+
+  const [payFormKey, setPayFormKey] = useState<string | null>(null) // `${chargeId}:${playerId}`
+  const [payFormAmount, setPayFormAmount] = useState('')
+  const [payFormDate, setPayFormDate] = useState(new Date().toISOString().split('T')[0])
+  const [payFormNotes, setPayFormNotes] = useState('')
+
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
+  const [editPaymentAmount, setEditPaymentAmount] = useState('')
+  const [editPaymentDate, setEditPaymentDate] = useState('')
+  const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null)
+
+  const openNewChargeModal = () => {
+    setNewChargeCategoryId(incomeCategories[0]?.id || '')
+    setNewChargeTitle('')
+    setNewChargeAmount('')
+    setNewChargeDueDate('')
+    setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))
+    setIsNewChargeModalOpen(true)
+  }
+
+  const toggleNewChargePlayer = (id: string) => setNewChargePlayerIds(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
+
+  // Ao escolher a categoria "Seguro Desportivo" pré-preenche valor e prazo a
+  // partir das Definições — só sugestões, não obrigam a nada.
+  const handleChargeCategoryChange = (categoryId: string) => {
+    setNewChargeCategoryId(categoryId)
+    const cat = categories.find(c => c.id === categoryId)
+    if (cat?.name === 'Seguro Desportivo') {
+      if (!newChargeTitle.trim()) setNewChargeTitle(`Seguro Desportivo ${seasonLabel}`)
+      if (!newChargeAmount) setNewChargeAmount(String(settings.insurance_amount))
+      if (!newChargeDueDate) setNewChargeDueDate(getInsuranceDeadline(settings, seasonLabel).toISOString().split('T')[0])
     }
-    return map
-  }, [insurancePayments, seasonLabel])
+  }
 
-  const insuranceDeadline = useMemo(() => getInsuranceDeadline(settings, seasonLabel), [settings, seasonLabel])
+  const handleCreateCharge = async () => {
+    if (!newChargeTitle.trim()) {
+      toast.warning('Indica um título para o encargo.')
+      return
+    }
+    const amt = parseFloat(newChargeAmount)
+    if (isNaN(amt) || amt <= 0) {
+      toast.warning('Indica um valor válido.')
+      return
+    }
+    if (newChargePlayerIds.size === 0) {
+      toast.warning('Escolhe pelo menos um jogador.')
+      return
+    }
+    setSavingCharge(true)
+    try {
+      const { data: chargeRow, error } = await supabase.from('charges').insert([{
+        category_id: newChargeCategoryId || null,
+        title: newChargeTitle.trim(),
+        amount: amt,
+        due_date: newChargeDueDate || null,
+        created_by: profile?.id || null,
+      }]).select().single()
+      if (error) throw error
+      const { error: e2 } = await supabase.from('charge_players').insert(
+        Array.from(newChargePlayerIds).map(pid => ({ charge_id: chargeRow.id, player_id: pid }))
+      )
+      if (e2) throw e2
+      triggerHaptic('success')
+      toast.success('Encargo criado!')
+      setIsNewChargeModalOpen(false)
+      fetchAll()
+    } catch (err: any) {
+      toast.error('Erro ao criar encargo: ' + (err.message || 'Erro'))
+    } finally {
+      setSavingCharge(false)
+    }
+  }
 
-  const [insuranceFormPlayerId, setInsuranceFormPlayerId] = useState<string | null>(null)
-  const [insuranceFormAmount, setInsuranceFormAmount] = useState('')
-  const [insuranceFormDate, setInsuranceFormDate] = useState(new Date().toISOString().split('T')[0])
-  const [insuranceFormNotes, setInsuranceFormNotes] = useState('')
+  const handleDeleteCharge = async () => {
+    if (!chargeToDelete) return
+    const { error } = await supabase.from('charges').delete().eq('id', chargeToDelete)
+    setChargeToDelete(null)
+    if (error) {
+      toast.error('Erro ao apagar encargo: ' + error.message)
+      return
+    }
+    toast.success('Encargo apagado.')
+    fetchAll()
+  }
 
-  const handleAddInsurancePayment = async () => {
-    if (!insuranceFormPlayerId) return
-    const val = parseFloat(insuranceFormAmount)
+  const openPayForm = (chargeId: string, playerId: string) => {
+    setPayFormKey(`${chargeId}:${playerId}`)
+    setPayFormAmount('')
+    setPayFormDate(new Date().toISOString().split('T')[0])
+    setPayFormNotes('')
+  }
+
+  const handleAddChargePayment = async (chargeId: string, playerId: string) => {
+    const val = parseFloat(payFormAmount)
     if (isNaN(val) || val <= 0) {
       toast.warning('Indica um valor válido.')
       return
     }
     try {
-      const { error } = await supabase.from('insurance_payments').insert([{
-        player_id: insuranceFormPlayerId,
-        season: seasonLabel,
+      const { error } = await supabase.from('charge_payments').insert([{
+        charge_id: chargeId,
+        player_id: playerId,
         amount: val,
-        paid_at: insuranceFormDate,
-        notes: insuranceFormNotes.trim() || null,
+        paid_at: payFormDate,
+        notes: payFormNotes.trim() || null,
         created_by: profile?.id || null,
       }])
       if (error) throw error
-      toast.success('Pagamento de seguro registado!')
-      setInsuranceFormAmount('')
-      setInsuranceFormNotes('')
-      setInsuranceFormPlayerId(null)
+      triggerHaptic('success')
+      toast.success('Pagamento registado!')
+      setPayFormKey(null)
       fetchAll()
     } catch (err: any) {
-      toast.error('Erro ao registar pagamento de seguro: ' + (err.message || 'Erro'))
+      toast.error('Erro ao registar pagamento: ' + (err.message || 'Erro'))
     }
+  }
+
+  const startEditPayment = (p: ChargePayment) => {
+    setEditingPaymentId(p.id)
+    setEditPaymentAmount(String(p.amount))
+    setEditPaymentDate(p.paid_at)
+  }
+
+  const handleSaveEditedPayment = async () => {
+    if (!editingPaymentId) return
+    const val = parseFloat(editPaymentAmount)
+    if (isNaN(val) || val <= 0) {
+      toast.warning('Indica um valor válido.')
+      return
+    }
+    const { error } = await supabase.from('charge_payments').update({ amount: val, paid_at: editPaymentDate }).eq('id', editingPaymentId)
+    if (error) {
+      toast.error('Erro ao corrigir pagamento: ' + error.message)
+      return
+    }
+    toast.success('Pagamento corrigido!')
+    setEditingPaymentId(null)
+    fetchAll()
+  }
+
+  const handleDeletePayment = async () => {
+    if (!paymentToDelete) return
+    const { error } = await supabase.from('charge_payments').delete().eq('id', paymentToDelete)
+    setPaymentToDelete(null)
+    if (error) {
+      toast.error('Erro ao apagar pagamento: ' + error.message)
+      return
+    }
+    toast.success('Pagamento apagado.')
+    fetchAll()
   }
 
   // -------------------------------------------------------------------------
@@ -298,9 +471,13 @@ const FinancePage: React.FC = () => {
     return next
   })
 
-  // Movimentos: junta as três fontes de dinheiro (quotas, seguro, despesas/receitas
+  // Movimentos: junta as três fontes de dinheiro (quotas, encargos, despesas/receitas
   // avulsas) numa só lista — antes o relatório só mostrava as despesas/receitas
-  // avulsas (tabela transactions), deixando de fora as quotas e o seguro.
+  // avulsas (tabela transactions), deixando de fora as quotas e os encargos.
+  // Os pagamentos de encargos usam a categoria do próprio encargo (não um balde
+  // fixo "Encargos"), para se juntarem no mesmo grupo à despesa correspondente
+  // (ex.: o que se recebeu de Seguro e o que se pagou à seguradora) e dar para
+  // ver se o saldo dessa categoria fecha a zero.
   const allMovements = useMemo(() => {
     type Movimento = {
       id: string
@@ -327,16 +504,18 @@ const FinancePage: React.FC = () => {
       })
     })
 
-    insurancePayments.forEach(ip => {
-      const p = players.find(pl => pl.id === ip.player_id)
+    chargePayments.forEach(cp => {
+      const p = players.find(pl => pl.id === cp.player_id)
+      const charge = charges.find(c => c.id === cp.charge_id)
+      const cat = categories.find(c => c.id === charge?.category_id)
       rows.push({
-        id: `ins-${ip.id}`,
-        date: ip.paid_at,
-        description: `Seguro ${ip.season} — ${p?.shirt_name || p?.name || 'Jogador'}${ip.notes ? ` (${ip.notes})` : ''}`,
-        amount: ip.amount,
+        id: `charge-${cp.id}`,
+        date: cp.paid_at,
+        description: `${charge?.title || 'Encargo'} — ${p?.shirt_name || p?.name || 'Jogador'}${cp.notes ? ` (${cp.notes})` : ''}`,
+        amount: cp.amount,
         type: 'income',
-        categoryKey: 'insurance',
-        categoryLabel: 'Seguro',
+        categoryKey: cat?.id || 'no_category',
+        categoryLabel: cat?.name || 'Encargos',
       })
     })
 
@@ -355,7 +534,7 @@ const FinancePage: React.FC = () => {
     })
 
     return rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [dues, insurancePayments, transactions, players, categories])
+  }, [dues, chargePayments, charges, transactions, players, categories])
 
   const movementYears = useMemo(() => {
     const years = new Set(allMovements.map(m => new Date(m.date).getFullYear()))
@@ -369,10 +548,10 @@ const FinancePage: React.FC = () => {
     return true
   }), [allMovements, movFilterMonth, movFilterYear])
 
-  // Ordem fixa: Quotas, Seguro e Outras Receitas primeiro, depois cada categoria de
-  // despesa (pela ordem em que foram criadas), e por fim os movimentos sem categoria.
+  // Ordem fixa: Quotas e Outras Receitas primeiro, depois cada categoria (de despesa
+  // e/ou encargo) pela ordem em que foram criadas, e por fim os movimentos sem categoria.
   const groupedMovements = useMemo(() => {
-    const order = ['quotas', 'insurance', 'income_other', ...categories.map(c => c.id), 'no_category']
+    const order = ['quotas', 'income_other', ...categories.map(c => c.id), 'no_category']
     const byKey = new Map<string, { label: string; rows: typeof filteredMovements }>()
     filteredMovements.forEach(m => {
       if (!byKey.has(m.categoryKey)) byKey.set(m.categoryKey, { label: m.categoryLabel, rows: [] })
@@ -392,15 +571,17 @@ const FinancePage: React.FC = () => {
   const [txFile, setTxFile] = useState<File | null>(null)
   const [txSaving, setTxSaving] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryAllowIncome, setNewCategoryAllowIncome] = useState(false)
 
   const handleAddCategory = async () => {
     const name = newCategoryName.trim()
     if (!name) return
     try {
-      const { error } = await supabase.from('expense_categories').insert([{ name }])
+      const { error } = await supabase.from('expense_categories').insert([{ name, allow_income: newCategoryAllowIncome }])
       if (error) throw error
       toast.success('Categoria criada!')
       setNewCategoryName('')
+      setNewCategoryAllowIncome(false)
       fetchAll()
     } catch (err: any) {
       toast.error('Erro ao criar categoria: ' + (err.message || 'Já existe uma categoria com esse nome?'))
@@ -572,13 +753,12 @@ const FinancePage: React.FC = () => {
   const totalIncomeOther = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   const totalQuotasReceived = dues.reduce((s, d) => s + (d.amount || 0), 0)
-  const totalInsuranceReceived = insurancePayments.reduce((s, ip) => s + ip.amount, 0)
-  const totalReceived = totalQuotasReceived + totalInsuranceReceived + totalIncomeOther
+  const totalReceived = totalQuotasReceived + totalChargesReceived + totalIncomeOther
   const netBalance = totalReceived - totalExpenses
 
   const receitaPorCategoria = {
     quotas: totalQuotasReceived,
-    insurance: totalInsuranceReceived,
+    charges: totalChargesReceived,
     other: totalIncomeOther,
   }
   const maxReceita = Math.max(1, ...Object.values(receitaPorCategoria))
@@ -600,13 +780,13 @@ const FinancePage: React.FC = () => {
   const maxDespesa = Math.max(1, ...despesaPorCategoria.map(([, v]) => v))
 
   // Previsão: total de quotas que TODOS os jogadores elegíveis vão pagar esta
-  // época (passadas + futuras) + seguro esperado de todos os jogadores ativos,
-  // quer já tenham pago quer não — é o valor que se espera encaixar no total.
+  // época (passadas + futuras) + o que falta receber dos encargos já criados
+  // (valor por participante menos o que cada um já pagou) — ao contrário do
+  // antigo seguro (uma estimativa às cegas para todos os ativos), isto é um
+  // valor real, baseado nos encargos que já existem.
   const projectedQuotasTotal = quotaOverview.reduce((sum, q) => sum + q.months.length * settings.quota_amount, 0)
-  const activePlayers = players.filter(p => p.status !== 'inactive')
-  const projectedInsuranceTotal = activePlayers.length * settings.insurance_amount
-  const projectedSeasonTotal = projectedQuotasTotal + projectedInsuranceTotal
-  const receivedTowardsProjection = totalQuotasReceived + totalInsuranceReceived
+  const projectedSeasonTotal = projectedQuotasTotal + totalChargesReceived + pendingChargesTotal
+  const receivedTowardsProjection = totalQuotasReceived + totalChargesReceived
   const projectionPct = projectedSeasonTotal > 0 ? Math.min(100, Math.round((receivedTowardsProjection / projectedSeasonTotal) * 100)) : 0
 
   if (loading) {
@@ -702,8 +882,8 @@ const FinancePage: React.FC = () => {
                 <span className="font-bold text-white">{fmtEuro(projectedQuotasTotal)}</span>
               </div>
               <div>
-                <span className="text-white/60">Seguro previsto ({activePlayers.length} atletas): </span>
-                <span className="font-bold text-white">{fmtEuro(projectedInsuranceTotal)}</span>
+                <span className="text-white/60">Encargos por receber: </span>
+                <span className="font-bold text-white">{fmtEuro(pendingChargesTotal)}</span>
               </div>
             </div>
           </div>
@@ -866,83 +1046,246 @@ const FinancePage: React.FC = () => {
         </div>
       )}
 
-      {/* ================= SEGURO ================= */}
-      {activeTab === 'insurance' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-3 h-fit">
-            <h3 className="text-sm font-black text-white flex items-center gap-2">
-              <ShieldCheck size={16} className="text-csc-gold" />
-              <span>Registar Pagamento de Seguro</span>
-            </h3>
-            <p className="text-[11px] text-white/60">
-              Valor da época: <strong className="text-white">{fmtEuro(settings.insurance_amount)}</strong> · prazo: <strong className="text-white">{insuranceDeadline.toLocaleDateString('pt-PT')}</strong>
-            </p>
+      {/* ================= ENCARGOS ================= */}
+      {activeTab === 'charges' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Jogador</label>
-              <select
-                value={insuranceFormPlayerId || ''}
-                onChange={e => setInsuranceFormPlayerId(e.target.value || null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
+              <h3 className="text-sm font-black text-gray-900 flex items-center gap-2">
+                <ShieldCheck size={16} className="text-csc-dark" />
+                Encargos
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">Cobranças a jogadores escolhidos — Seguro, equipamento, inscrição/viagem de torneio, etc.</p>
+            </div>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={openNewChargeModal}
+                disabled={incomeCategories.length === 0}
+                title={incomeCategories.length === 0 ? 'Cria primeiro uma categoria que possa ser usada para receitas (aba Despesas/Receitas)' : undefined}
+                className="flex items-center gap-1.5 px-4 py-2 bg-csc-dark text-white rounded-xl text-xs font-black hover:bg-csc-dark/90 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <option value="">-- Seleciona um jogador --</option>
-                {players.map(p => <option key={p.id} value={p.id}>{p.shirt_name || p.name}</option>)}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Valor (€)</label>
-                <input type="number" step="0.01" value={insuranceFormAmount} onChange={e => setInsuranceFormAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" placeholder="0.00" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Data</label>
-                <input type="date" value={insuranceFormDate} onChange={e => setInsuranceFormDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Notas (opcional)</label>
-              <input type="text" value={insuranceFormNotes} onChange={e => setInsuranceFormNotes(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" placeholder="Ex: 1ª tranche" />
-            </div>
-            <button
-              type="button"
-              onClick={handleAddInsurancePayment}
-              className="w-full flex items-center justify-center gap-2 bg-csc-gold text-csc-dark py-2.5 rounded-xl text-xs font-black hover:brightness-95 transition-colors cursor-pointer"
-            >
-              <Plus size={16} />
-              <span>Registar Pagamento</span>
-            </button>
+                <Plus size={14} />
+                Novo Encargo
+              </button>
+            )}
           </div>
 
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-csc-dark px-5 py-3">
-              <h3 className="text-sm font-black text-white">Estado do Seguro por Jogador — Época {seasonLabel}</h3>
+          {isAdmin && incomeCategories.length === 0 && (
+            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+              Ainda não há nenhuma categoria marcada para receitas. Cria ou edita uma em Despesas/Receitas → Categorias, assinalando "Também pode ser usada para receitas".
+            </p>
+          )}
+
+          {chargesWithStats.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-400">
+              Ainda não há encargos criados.
             </div>
-            <div className="p-5 divide-y divide-gray-100">
-              {players.map(p => {
-                const payments = insuranceByPlayer.get(p.id) || []
-                const paidTotal = payments.reduce((s, ip) => s + ip.amount, 0)
-                const remaining = Math.max(0, settings.insurance_amount - paidTotal)
-                const isPastDeadline = new Date() > insuranceDeadline
+          ) : (
+            <div className="space-y-3">
+              {chargesWithStats.map(c => {
+                const expanded = expandedChargeId === c.id
+                const pct = c.totalExpected > 0 ? Math.min(100, Math.round((c.totalPaid / c.totalExpected) * 100)) : 0
                 return (
-                  <div key={p.id} className="py-2.5 flex items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-gray-900 truncate">{p.shirt_name || p.name}</span>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {remaining <= 0 ? (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Pago ({fmtEuro(paidTotal)})</span>
-                      ) : paidTotal > 0 ? (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Falta {fmtEuro(remaining)} (pagou {fmtEuro(paidTotal)})</span>
-                      ) : (
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isPastDeadline ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>
-                          {isPastDeadline ? `Em atraso — deve ${fmtEuro(remaining)}` : `Por pagar (${fmtEuro(remaining)})`}
-                        </span>
-                      )}
-                    </div>
+                  <div key={c.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedChargeId(expanded ? null : c.id)}
+                      className="w-full px-5 py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <ChevronDown size={16} className={`text-gray-400 transition-transform shrink-0 ${expanded ? 'rotate-180' : ''}`} />
+                        <div className="min-w-0 text-left">
+                          <p className="font-black text-sm text-gray-900 truncate">{c.title}</p>
+                          <p className="text-[10px] text-gray-400 flex items-center gap-1.5 flex-wrap">
+                            {c.categoryName && <span className="px-1.5 py-0.5 rounded bg-gray-100">{c.categoryName}</span>}
+                            <span>{fmtEuro(c.amount)}/jogador · {c.participantIds.length} {c.participantIds.length === 1 ? 'participante' : 'participantes'}</span>
+                            {c.due_date && <span>· prazo {new Date(c.due_date).toLocaleDateString('pt-PT')}</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right hidden sm:block">
+                          <p className="text-xs font-black text-gray-900">{fmtEuro(c.totalPaid)} / {fmtEuro(c.totalExpected)}</p>
+                          <div className="w-24 h-1.5 rounded-full bg-gray-100 overflow-hidden mt-1">
+                            <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-csc-gold'}`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                        {isAdmin && (
+                          <span
+                            role="button"
+                            onClick={(e) => { e.stopPropagation(); setChargeToDelete(c.id) }}
+                            className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg cursor-pointer"
+                            title="Apagar encargo"
+                          >
+                            <Trash2 size={14} />
+                          </span>
+                        )}
+                      </div>
+                    </button>
+
+                    {expanded && (
+                      <div className="border-t border-gray-100 divide-y divide-gray-100">
+                        {c.participantIds.map(playerId => {
+                          const p = players.find(pl => pl.id === playerId)
+                          const payments = c.payments.filter(pay => pay.player_id === playerId)
+                          const paidTotal = payments.reduce((s, pay) => s + pay.amount, 0)
+                          const remaining = Math.max(0, c.amount - paidTotal)
+                          const isPastDeadline = c.due_date ? new Date() > new Date(c.due_date) : false
+                          const isPayingHere = payFormKey === `${c.id}:${playerId}`
+                          return (
+                            <div key={playerId} className="px-5 py-3 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-bold text-gray-900 truncate">{p?.shirt_name || p?.name || 'Jogador'}</span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {remaining <= 0 ? (
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Pago ({fmtEuro(paidTotal)})</span>
+                                  ) : paidTotal > 0 ? (
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Falta {fmtEuro(remaining)}</span>
+                                  ) : (
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isPastDeadline ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>
+                                      {isPastDeadline ? `Em atraso — deve ${fmtEuro(remaining)}` : `Por pagar (${fmtEuro(remaining)})`}
+                                    </span>
+                                  )}
+                                  {isAdmin && (
+                                    <button type="button" onClick={() => isPayingHere ? setPayFormKey(null) : openPayForm(c.id, playerId)} className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer">
+                                      {isPayingHere ? 'Cancelar' : '+ Pagamento'}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {payments.length > 0 && (
+                                <div className="space-y-1 pl-1">
+                                  {payments.map(pay => (
+                                    <div key={pay.id} className="flex items-center gap-2 text-[11px] text-gray-500">
+                                      {editingPaymentId === pay.id ? (
+                                        <>
+                                          <input type="number" step="0.01" value={editPaymentAmount} onChange={e => setEditPaymentAmount(e.target.value)} className="w-16 px-1.5 py-1 border border-gray-300 rounded-md text-xs bg-white text-gray-900" />
+                                          <input type="date" value={editPaymentDate} onChange={e => setEditPaymentDate(e.target.value)} className="px-1.5 py-1 border border-gray-300 rounded-md text-xs bg-white text-gray-900" />
+                                          <button type="button" onClick={handleSaveEditedPayment} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer"><Check size={12} /></button>
+                                          <button type="button" onClick={() => setEditingPaymentId(null)} className="p-1 text-gray-400 hover:bg-gray-100 rounded cursor-pointer"><X size={12} /></button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span className="font-bold text-gray-700">{fmtEuro(pay.amount)}</span>
+                                          <span>{new Date(pay.paid_at).toLocaleDateString('pt-PT')}</span>
+                                          {pay.notes && <span className="italic truncate">({pay.notes})</span>}
+                                          {isAdmin && (
+                                            <span className="ml-auto flex items-center gap-1">
+                                              <button type="button" onClick={() => startEditPayment(pay)} className="p-1 text-blue-500 hover:bg-blue-50 rounded cursor-pointer" title="Corrigir valor"><Pencil size={11} /></button>
+                                              <button type="button" onClick={() => setPaymentToDelete(pay.id)} className="p-1 text-red-400 hover:bg-red-50 rounded cursor-pointer" title="Apagar"><Trash2 size={11} /></button>
+                                            </span>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {isPayingHere && (
+                                <div className="flex items-center gap-1.5 pt-1">
+                                  <input type="number" step="0.01" placeholder="Valor (€)" value={payFormAmount} onChange={e => setPayFormAmount(e.target.value)} className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
+                                  <input type="date" value={payFormDate} onChange={e => setPayFormDate(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
+                                  <input type="text" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
+                                  <button type="button" onClick={() => handleAddChargePayment(c.id, playerId)} className="px-3 py-1.5 bg-csc-gold text-csc-dark rounded-lg text-xs font-black hover:brightness-95 cursor-pointer shrink-0">
+                                    Guardar
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )
               })}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL: Novo Encargo */}
+      {isNewChargeModalOpen && (
+        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white shrink-0">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-csc-gold" />
+                <h3 className="font-black text-sm">Novo Encargo</h3>
+              </div>
+              <button onClick={() => setIsNewChargeModalOpen(false)} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40">
+                <X size={16} className="stroke-[2.5]" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">Título *</label>
+                <input type="text" value={newChargeTitle} onChange={e => setNewChargeTitle(e.target.value)} placeholder="Ex: Equipamento Inverno 2026, Viagem Torneio Faro" className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900" autoFocus />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Categoria</label>
+                  <select value={newChargeCategoryId} onChange={e => handleChargeCategoryChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                    {incomeCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">Valor por jogador (€) *</label>
+                  <input type="number" step="0.01" value={newChargeAmount} onChange={e => setNewChargeAmount(e.target.value)} placeholder="0.00" className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">Prazo (opcional)</label>
+                <input type="date" value={newChargeDueDate} onChange={e => setNewChargeDueDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-gray-600">Jogadores participantes * ({newChargePlayerIds.size})</label>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))} className="text-[11px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer">Todos os ativos</button>
+                    <button type="button" onClick={() => setNewChargePlayerIds(new Set())} className="text-[11px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer">Limpar</button>
+                  </div>
+                </div>
+                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
+                  {players.map(p => (
+                    <label key={p.id} className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-800 cursor-pointer hover:bg-gray-50">
+                      <input type="checkbox" checked={newChargePlayerIds.has(p.id)} onChange={() => toggleNewChargePlayer(p.id)} className="cursor-pointer" />
+                      <span className="truncate">{p.shirt_name || p.name}</span>
+                      {p.status === 'inactive' && <span className="text-[9px] text-gray-400 ml-auto shrink-0">inativo</span>}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <button type="button" onClick={() => setIsNewChargeModalOpen(false)} className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer">
+                  Cancelar
+                </button>
+                <button type="button" onClick={handleCreateCharge} disabled={savingCharge} className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer">
+                  {savingCharge ? 'A criar...' : 'Criar Encargo'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!chargeToDelete}
+        title="Apagar Encargo"
+        description="O encargo e todos os pagamentos já registados para ele são apagados."
+        onConfirm={handleDeleteCharge}
+        onCancel={() => setChargeToDelete(null)}
+      />
+      <ConfirmModal
+        isOpen={!!paymentToDelete}
+        title="Apagar Pagamento"
+        description="Este pagamento é apagado e deixa de contar para o valor recebido deste encargo."
+        onConfirm={handleDeletePayment}
+        onCancel={() => setPaymentToDelete(null)}
+      />
 
       {/* ================= DESPESAS ================= */}
       {activeTab === 'expenses' && (
@@ -1001,17 +1344,22 @@ const FinancePage: React.FC = () => {
             </div>
 
             <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
-              <h3 className="text-sm font-black text-white mb-3">Categorias de Despesa</h3>
-              <div className="flex gap-2 mb-3">
+              <h3 className="text-sm font-black text-white mb-3">Categorias</h3>
+              <div className="flex gap-2 mb-2">
                 <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nova categoria" className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
                 <button type="button" onClick={handleAddCategory} className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors">
                   <Plus size={14} />
                 </button>
               </div>
+              <label className="flex items-center gap-2 text-[11px] text-white/70 mb-3 cursor-pointer">
+                <input type="checkbox" checked={newCategoryAllowIncome} onChange={e => setNewCategoryAllowIncome(e.target.checked)} className="cursor-pointer" />
+                Também pode ser usada para receitas (ex.: Seguro, equipamento pago pelos jogadores)
+              </label>
               <div className="flex flex-wrap gap-1.5">
                 {categories.map(c => (
-                  <span key={c.id} className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/10 text-white/80 flex items-center gap-1.5">
+                  <span key={c.id} className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${c.allow_income ? 'bg-sky-400/20 text-sky-200' : 'bg-white/10 text-white/80'}`}>
                     {c.name}
+                    {c.allow_income && <span className="text-[9px] font-black uppercase text-sky-300">receita</span>}
                     <button type="button" onClick={() => handleDeleteCategory(c.id)} className="text-white/50 hover:text-red-400 cursor-pointer" title="Eliminar categoria">
                       <X size={11} />
                     </button>
@@ -1231,7 +1579,8 @@ const FinancePage: React.FC = () => {
           </div>
 
           <div>
-            <h3 className="text-sm font-black text-white mb-3">Seguro Desportivo</h3>
+            <h3 className="text-sm font-black text-white mb-1">Seguro Desportivo</h3>
+            <p className="text-[11px] text-white/50 mb-3">Valores só de referência — pré-preenchem o encargo "Seguro Desportivo" quando o criares, em Encargos. Não cobram nada automaticamente.</p>
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold text-white/70 mb-1">Valor (€)</label>
