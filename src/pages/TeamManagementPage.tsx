@@ -1284,9 +1284,9 @@ const TeamManagementPage: React.FC = () => {
               type="button"
               onClick={handleAttemptCloseFormModal}
               aria-label="Fechar"
-              className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-colors"
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
             >
-              <X size={22} />
+              <X size={19} className="stroke-[2.5]" />
             </button>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4 mb-5">
               <div>
@@ -1879,10 +1879,10 @@ const TeamManagementPage: React.FC = () => {
                 )}
                 <button
                   onClick={() => setIsDetailModalOpen(false)}
-                  className="text-white/70 hover:text-white p-2 rounded-xl hover:bg-white/10 cursor-pointer transition-colors"
+                  className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40 shrink-0"
                   title="Fechar"
                 >
-                  <X size={22} />
+                  <X size={18} className="stroke-[2.5]" />
                 </button>
               </div>
             </div>
@@ -2297,9 +2297,9 @@ const TeamManagementPage: React.FC = () => {
                   setSelectedUserToAssociate(null)
                 }}
                 aria-label="Fechar"
-                className="absolute top-4 right-4 text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10"
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               >
-                <X size={20} />
+                <X size={18} className="stroke-[2.5]" />
               </button>
 
               {/* Cabeçalho */}

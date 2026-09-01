@@ -2362,7 +2362,7 @@ const EventsPage: React.FC = () => {
           <div className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10">
             <div className="sticky top-0 bg-csc-dark border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
               <h3 className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
-              <button onClick={handleAttemptCloseEditModal} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90"><X size={18} className="stroke-[2.5]" /></button>
+              <button onClick={handleAttemptCloseEditModal} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 shadow-md border-2 border-white/40 shrink-0"><X size={16} className="stroke-[2.5]" /></button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="p-5 space-y-4">

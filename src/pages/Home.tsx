@@ -17,7 +17,7 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
-import { formatClubSigla, formatOpponentSigla, hasMatchReport } from './CalendarPage'
+import { formatClubSigla, formatOpponentSigla, hasMatchReport, getRsvpDeadline } from './CalendarPage'
 import { triggerHaptic } from '../utils/haptics'
 
 interface Event {
@@ -246,6 +246,11 @@ const Home: React.FC = () => {
     const callup = myCallups.find(c => c.id === callupId)
     if (hasMatchReport(callup?.event)) {
       toast.error('Este jogo já tem ficha de jogo lançada — a convocatória está fechada.')
+      return
+    }
+    const deadline = getRsvpDeadline(callup?.event)
+    if (deadline !== null && Date.now() >= deadline) {
+      toast.error(`Já passou a hora de ${callup?.event?.meeting_time ? 'concentração' : 'início'} — a convocatória está fechada.`)
       return
     }
     triggerHaptic(status === 'confirmed' ? 'success' : 'warning')
@@ -508,54 +513,75 @@ const Home: React.FC = () => {
                   </div>
                 </div>
 
-                {/* RSVP: existe uma vez na app, e é aqui — barra dourada de bordo a bordo */}
-                {currentMatchCallup && (
-                  hasMatchReport(currentMatch) ? (
-                    currentMatchCallup.status === 'called' ? (
+                {/* RSVP: existe uma vez na app, e é aqui — barra dourada de bordo a bordo.
+                    Mostra-se sempre que ainda dá para responder — mesmo que já tenha respondido
+                    antes, até à hora de concentração o jogador pode sempre mudar de ideias. */}
+                {currentMatchCallup && (() => {
+                  const closedByReport = hasMatchReport(currentMatch)
+                  const deadline = getRsvpDeadline(currentMatch)
+                  const pastDeadline = deadline !== null && Date.now() >= deadline
+                  const canRespond = !closedByReport && !pastDeadline
+
+                  if (closedByReport) {
+                    return (
                       <div className="relative bg-white/10 px-5 py-3.5 flex items-center justify-center gap-3">
                         <span className="text-sm text-white/80">Jogo com ficha lançada — convocatória fechada</span>
                       </div>
-                    ) : (
-                      <div className="relative bg-white/10 px-5 py-3.5 flex items-center justify-center gap-3">
-                        <span className="text-sm text-white/80">A tua presença</span>
+                    )
+                  }
+
+                  if (canRespond) {
+                    return (
+                      <div className="relative bg-csc-gold px-5 py-3.5 flex flex-col items-center justify-center gap-2">
+                        <span className="text-sm font-bold text-csc-dark">
+                          {currentMatchCallup.status === 'called' ? 'Vais estar presente?' : 'A tua presença'}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            disabled={currentMatchCallup.status === 'confirmed'}
+                            onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
+                            className={`h-10 px-5 rounded-full text-sm font-bold transition-transform ${
+                              currentMatchCallup.status === 'confirmed'
+                                ? 'bg-csc-dark/40 text-white cursor-not-allowed'
+                                : 'bg-csc-dark text-white cursor-pointer active:scale-95'
+                            }`}
+                          >
+                            Sim
+                          </button>
+                          <button
+                            type="button"
+                            disabled={currentMatchCallup.status === 'declined'}
+                            onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
+                            className={`h-10 px-5 rounded-full border-2 border-csc-dark text-sm font-bold transition-transform ${
+                              currentMatchCallup.status === 'declined'
+                                ? 'text-csc-dark/50 cursor-not-allowed'
+                                : 'text-csc-dark hover:bg-csc-dark/10 cursor-pointer active:scale-95'
+                            }`}
+                          >
+                            Não
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="relative bg-white/10 px-5 py-3.5 flex items-center justify-center gap-3">
+                      <span className="text-sm text-white/80">A tua presença</span>
+                      {currentMatchCallup.status === 'called' ? (
+                        <span className="text-sm font-bold text-white/60">Sem resposta</span>
+                      ) : (
                         <span className={`inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-full ${
                           currentMatchCallup.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
                         }`}>
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentMatchCallup.status === 'confirmed' ? 'bg-emerald-400' : 'bg-red-400'}`} />
                           {currentMatchCallup.status === 'confirmed' ? 'Confirmada' : 'Recusada'}
                         </span>
-                      </div>
-                    )
-                  ) : currentMatchCallup.status === 'called' ? (
-                    <div className="relative bg-csc-gold px-5 py-3.5 flex items-center justify-center gap-3">
-                      <span className="text-sm font-bold text-csc-dark">Vais estar presente?</span>
-                      <button
-                        type="button"
-                        onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
-                        className="h-10 px-5 rounded-full bg-csc-dark text-white text-sm font-bold cursor-pointer active:scale-95 transition-transform"
-                      >
-                        Sim
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
-                        className="h-10 px-5 rounded-full border-2 border-csc-dark text-csc-dark hover:bg-csc-dark/10 text-sm font-bold cursor-pointer active:scale-95 transition-transform"
-                      >
-                        Não
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="relative bg-white/10 px-5 py-3.5 flex items-center justify-center gap-3">
-                      <span className="text-sm text-white/80">A tua presença</span>
-                      <span className={`inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-full ${
-                        currentMatchCallup.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentMatchCallup.status === 'confirmed' ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                        {currentMatchCallup.status === 'confirmed' ? 'Confirmada' : 'Recusada'}
-                      </span>
+                      )}
                     </div>
                   )
-                )}
+                })()}
 
                 {upcomingMatches.length > 1 && (
                   <div className="relative flex items-center justify-center gap-4 px-5 py-2.5 border-t border-white/10">

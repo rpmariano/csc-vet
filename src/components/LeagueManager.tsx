@@ -513,8 +513,8 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                 <Plus size={18} className="text-csc-gold" />
                 <h3 className="font-black text-sm">Novo Grupo</h3>
               </div>
-              <button onClick={() => setIsNewGroupModalOpen(false)} aria-label="Fechar" className="p-1 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer">
-                <X size={18} />
+              <button onClick={() => setIsNewGroupModalOpen(false)} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40">
+                <X size={16} className="stroke-[2.5]" />
               </button>
             </div>
             <div className="p-5 space-y-4">

@@ -62,6 +62,21 @@ export const getGoogleMapsUrl = (query: string) => query ? `https://www.google.c
 export const hasMatchReport = (ev?: { type?: string; home_score?: number | null } | null): boolean =>
   !!ev && ev.type === 'match' && ev.home_score !== null && ev.home_score !== undefined
 
+/**
+ * Prazo até ao qual o jogador pode responder — ou mudar de ideias sobre uma resposta já
+ * dada — à convocatória: a hora de concentração, ou o início do evento quando não há
+ * concentração definida. Depois disso a resposta fica fechada (só consulta).
+ */
+export const getRsvpDeadline = (ev?: { date_time?: string | null; meeting_time?: string | null } | null): number | null => {
+  if (!ev?.date_time) return null
+  const prazo = new Date(ev.date_time)
+  if (ev.meeting_time) {
+    const [hh, mm, ss] = ev.meeting_time.split(':').map(Number)
+    prazo.setHours(hh || 0, mm || 0, ss || 0, 0)
+  }
+  return prazo.getTime()
+}
+
 export const formatClubSigla = (initials?: string | null): string => {
   if (!initials) return 'CSC'
   const trimmed = initials.trim()
@@ -1241,6 +1256,11 @@ const CalendarPage: React.FC = () => {
       toast.error('Este jogo já tem ficha de jogo lançada — a convocatória está fechada.')
       return
     }
+    const deadline = getRsvpDeadline(targetEvent)
+    if (deadline !== null && Date.now() >= deadline) {
+      toast.error(`Já passou a hora de ${targetEvent?.meeting_time ? 'concentração' : 'início'} — a convocatória está fechada.`)
+      return
+    }
     try {
       const list = eventCallups[eventId] || []
       const existingCallup = list.find(c => c.player_id === profile.id || c.player?.id === profile.id)
@@ -1668,7 +1688,7 @@ const CalendarPage: React.FC = () => {
 
                 <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-white/60">
                   <span className="font-bold">
-                    Condição: <strong className="text-white">{isAway ? 'Fora de Casa' : event.home_away === 'neutral' ? 'Campo Neutro' : 'Em Casa'}</strong>
+                    Condição: <strong className="text-white">{event.home_away === 'neutral' ? 'Neutro' : isAway ? 'Visitante' : 'Visitado'}</strong>
                   </span>
                 </div>
               </div>
@@ -1744,7 +1764,9 @@ const CalendarPage: React.FC = () => {
               const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
               const isPractice = event.type === 'practice'
               const closedByReport = hasMatchReport(event)
-              const isRsvpOpen = !closedByReport && (!isPractice || diffDays <= 6)
+              const deadline = getRsvpDeadline(event)
+              const pastDeadline = deadline !== null && now >= deadline
+              const isRsvpOpen = !closedByReport && !pastDeadline && (!isPractice || diffDays <= 6)
 
               return (
                 <div
@@ -1755,6 +1777,10 @@ const CalendarPage: React.FC = () => {
                   {closedByReport ? (
                     <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
                       Jogo com ficha lançada — convocatória fechada
+                    </span>
+                  ) : pastDeadline ? (
+                    <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
+                      Convocatória fechada — já passou a hora de {event.meeting_time ? 'concentração' : 'início'}
                     </span>
                   ) : !isRsvpOpen ? (
                     <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
@@ -2140,7 +2166,7 @@ const CalendarPage: React.FC = () => {
             <button
               type="button"
               onClick={handleCloseEventModal}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
@@ -2300,10 +2326,8 @@ const CalendarPage: React.FC = () => {
                   const oppSigla = formatOpponentSigla(selectedEvent.opponent)
                   const leftLogo = isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url
                   const leftSigla = isAway ? oppSigla : cscSigla
-                  const leftName = isAway ? selectedEvent.opponent?.name : (clubSettings?.name || 'Cascais')
                   const rightLogo = isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url
                   const rightSigla = isAway ? cscSigla : oppSigla
-                  const rightName = isAway ? (clubSettings?.name || 'Cascais') : selectedEvent.opponent?.name
 
                   return (
                     <div className="bg-white/5 p-4 sm:p-5 rounded-2xl space-y-3">
@@ -2322,9 +2346,6 @@ const CalendarPage: React.FC = () => {
                               {leftSigla}
                             </span>
                           </div>
-                          <span className="text-[11px] sm:text-xs font-bold text-white/60 mt-1 truncate max-w-full">
-                            {leftName}
-                          </span>
                         </div>
 
                         {/* VS Badge */}
@@ -2348,15 +2369,12 @@ const CalendarPage: React.FC = () => {
                               {rightSigla}
                             </span>
                           </div>
-                          <span className="text-[11px] sm:text-xs font-bold text-white/60 mt-1 truncate max-w-full">
-                            {rightName}
-                          </span>
                         </div>
                       </div>
 
                       <div className="pt-2.5 border-t border-white/10 flex items-center justify-between text-xs text-white/60 gap-2">
                         <span className="font-bold">
-                          Condição: <strong className="text-white">{isAway ? 'Fora' : selectedEvent.home_away === 'neutral' ? 'Campo Neutro' : 'Casa'}</strong>
+                          Condição: <strong className="text-white">{selectedEvent.home_away === 'neutral' ? 'Neutro' : isAway ? 'Visitante' : 'Visitado'}</strong>
                         </span>
                         {(new Date(selectedEvent.date_time).getTime() <= Date.now() || (selectedEvent.home_score !== null && selectedEvent.home_score !== undefined)) && (
                           <button
@@ -2460,28 +2478,49 @@ const CalendarPage: React.FC = () => {
                   const now = new Date().getTime()
                   const isPractice = selectedEvent.type === 'practice'
                   const closedByReport = hasMatchReport(selectedEvent)
-                  const isRsvpOpen = !closedByReport && (!isPractice || ((eventTime - now) <= 6 * 24 * 60 * 60 * 1000))
+                  const deadline = getRsvpDeadline(selectedEvent)
+                  const pastDeadline = deadline !== null && now >= deadline
+                  const isRsvpOpen = !closedByReport && !pastDeadline && (!isPractice || ((eventTime - now) <= 6 * 24 * 60 * 60 * 1000))
 
                   return (
-                    <div className={isRsvpOpen && myCallup.status === 'called' ? 'rounded-2xl overflow-hidden' : 'p-4 bg-white/5 rounded-2xl space-y-3'}>
-                      {isRsvpOpen && myCallup.status === 'called' ? (
-                        // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home
-                        <div className="bg-csc-gold px-4 py-3.5 flex items-center justify-center gap-3">
-                          <span className="text-sm font-bold text-csc-dark">Vais estar presente?</span>
-                          <button
-                            type="button"
-                            onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                            className="h-10 px-5 rounded-full bg-csc-dark text-white text-sm font-bold cursor-pointer active:scale-95 transition-transform"
-                          >
-                            Sim
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                            className="h-10 px-5 rounded-full border-2 border-csc-dark text-csc-dark hover:bg-csc-dark/10 text-sm font-bold cursor-pointer active:scale-95 transition-transform"
-                          >
-                            Não
-                          </button>
+                    <div className={isRsvpOpen ? 'rounded-2xl overflow-hidden' : 'p-4 bg-white/5 rounded-2xl space-y-3'}>
+                      {isRsvpOpen ? (
+                        // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home.
+                        // Mostra-se sempre que ainda dá para responder, mesmo que já tenha respondido antes —
+                        // até à hora de concentração o jogador pode sempre mudar de ideias.
+                        <div className="bg-csc-gold px-4 py-3.5 flex flex-col items-center justify-center gap-2">
+                          <span className="text-sm font-bold text-csc-dark">
+                            {myCallup.status === 'called' ? 'Vais estar presente?' : 'A tua presença'}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              disabled={myCallup.status === 'confirmed'}
+                              onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
+                              className={`h-10 px-5 rounded-full text-sm font-bold transition-transform ${
+                                myCallup.status === 'confirmed'
+                                  ? 'bg-csc-dark/40 text-white cursor-not-allowed'
+                                  : 'bg-csc-dark text-white cursor-pointer active:scale-95'
+                              }`}
+                            >
+                              Sim
+                            </button>
+                            <button
+                              type="button"
+                              disabled={myCallup.status === 'declined'}
+                              onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
+                              className={`h-10 px-5 rounded-full border-2 border-csc-dark text-sm font-bold transition-transform ${
+                                myCallup.status === 'declined'
+                                  ? 'text-csc-dark/50 cursor-not-allowed'
+                                  : 'text-csc-dark hover:bg-csc-dark/10 cursor-pointer active:scale-95'
+                              }`}
+                            >
+                              Não
+                            </button>
+                          </div>
+                          {myCallup.status !== 'called' && (
+                            <span className="text-[11px] font-bold text-csc-dark/70">Podes mudar de ideias até à hora de {selectedEvent.meeting_time ? 'concentração' : 'início'}.</span>
+                          )}
                         </div>
                       ) : (
                         <>
@@ -2500,6 +2539,10 @@ const CalendarPage: React.FC = () => {
                           {closedByReport ? (
                             <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
                               Este jogo já tem <strong className="text-white">ficha de jogo lançada</strong> — a convocatória está fechada e já não pode ser alterada.
+                            </div>
+                          ) : pastDeadline ? (
+                            <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
+                              Já passou a hora de <strong className="text-white">{selectedEvent.meeting_time ? 'concentração' : 'início'}</strong> — a convocatória está fechada e já não pode ser alterada.
                             </div>
                           ) : !isRsvpOpen && (
                             <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
@@ -2683,7 +2726,7 @@ const CalendarPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseAddModal}
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-2xs border border-white/10"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
@@ -3216,7 +3259,7 @@ const CalendarPage: React.FC = () => {
             <button
               type="button"
               onClick={handleAttemptCloseEditModal}
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-2xs border border-white/10"
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />

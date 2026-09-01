@@ -1299,9 +1299,9 @@ const AdminDashboard: React.FC = () => {
               <button
                 onClick={handleRequestCloseFieldModal}
                 aria-label="Fechar"
-                className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               >
-                <X size={20} />
+                <X size={18} className="stroke-[2.5]" />
               </button>
             </div>
 
@@ -1371,9 +1371,9 @@ const AdminDashboard: React.FC = () => {
               <button
                 onClick={handleRequestCloseOppModal}
                 aria-label="Fechar"
-                className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               >
-                <X size={20} />
+                <X size={18} className="stroke-[2.5]" />
               </button>
             </div>
 
@@ -1520,9 +1520,9 @@ const AdminDashboard: React.FC = () => {
               <button
                 onClick={handleRequestCloseTourModal}
                 aria-label="Fechar"
-                className="p-1.5 text-gray-300 hover:text-white rounded-lg transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               >
-                <X size={20} />
+                <X size={18} className="stroke-[2.5]" />
               </button>
             </div>
 
