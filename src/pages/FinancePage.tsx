@@ -290,6 +290,13 @@ const FinancePage: React.FC = () => {
   // -------------------------------------------------------------------------
   const [movFilterMonth, setMovFilterMonth] = useState<string>('all')
   const [movFilterYear, setMovFilterYear] = useState<string>('all')
+  const [collapsedMovCategories, setCollapsedMovCategories] = useState<Set<string>>(new Set())
+  const toggleMovCategory = (key: string) => setCollapsedMovCategories(prev => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    return next
+  })
 
   // Movimentos: junta as três fontes de dinheiro (quotas, seguro, despesas/receitas
   // avulsas) numa só lista — antes o relatório só mostrava as despesas/receitas
@@ -1103,36 +1110,47 @@ const FinancePage: React.FC = () => {
             <div className="space-y-4">
               {groupedMovements.map(group => {
                 const groupTotal = group.rows.reduce((s, m) => s + (m.type === 'income' ? m.amount : -m.amount), 0)
+                const isCollapsed = collapsedMovCategories.has(group.key)
                 return (
                   <div key={group.key} className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 overflow-hidden">
-                    <div className="px-4 py-2.5 bg-white/5 flex items-center justify-between">
-                      <h4 className="text-xs font-black text-white uppercase tracking-wider">{group.label}</h4>
+                    <button
+                      type="button"
+                      onClick={() => toggleMovCategory(group.key)}
+                      className="w-full px-4 py-2.5 bg-white/5 hover:bg-white/10 flex items-center justify-between gap-3 cursor-pointer transition-colors"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <ChevronDown size={14} className={`text-white/60 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
+                        <h4 className="text-xs font-black text-white uppercase tracking-wider">{group.label}</h4>
+                        <span className="text-[10px] font-bold text-white/40">({group.rows.length})</span>
+                      </span>
                       <span className={`text-xs font-black ${groupTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {groupTotal >= 0 ? '+' : ''}{fmtEuro(groupTotal)}
                       </span>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <tbody className="divide-y divide-white/10">
-                          {group.rows.map(m => (
-                            <tr key={m.id}>
-                              <td className="px-4 py-2 text-white/60 whitespace-nowrap">{new Date(m.date).toLocaleDateString('pt-PT')}</td>
-                              <td className="px-4 py-2 font-bold text-white">{m.description}</td>
-                              <td className={`px-4 py-2 text-right font-black whitespace-nowrap ${m.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {m.type === 'income' ? '+' : '-'}{fmtEuro(m.amount)}
-                              </td>
-                              <td className="px-4 py-2 text-right w-8">
-                                {m.documentUrl && (
-                                  <button type="button" onClick={() => handleOpenDocument(m.documentUrl!)} className="text-csc-gold hover:brightness-110 cursor-pointer inline-flex items-center gap-1">
-                                    <ExternalLink size={12} />
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    </button>
+                    {!isCollapsed && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <tbody className="divide-y divide-white/10">
+                            {group.rows.map(m => (
+                              <tr key={m.id}>
+                                <td className="px-4 py-2 text-white/60 whitespace-nowrap">{new Date(m.date).toLocaleDateString('pt-PT')}</td>
+                                <td className="px-4 py-2 font-bold text-white">{m.description}</td>
+                                <td className={`px-4 py-2 text-right font-black whitespace-nowrap ${m.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                  {m.type === 'income' ? '+' : '-'}{fmtEuro(m.amount)}
+                                </td>
+                                <td className="px-4 py-2 text-right w-8">
+                                  {m.documentUrl && (
+                                    <button type="button" onClick={() => handleOpenDocument(m.documentUrl!)} className="text-csc-gold hover:brightness-110 cursor-pointer inline-flex items-center gap-1">
+                                      <ExternalLink size={12} />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )
               })}
