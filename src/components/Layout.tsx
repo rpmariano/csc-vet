@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
 import { AutoAssociationModal } from './AutoAssociationModal'
+import { AnnouncementsInboxButton } from './AnnouncementsInbox'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { ClinicalStatusChip, RoleChip, RoleAvatar } from './StatusChip'
@@ -198,6 +199,9 @@ const Layout: React.FC = () => {
           >
             <RoleChip role={profile?.role ?? 'player'} size="sm" className={canSwitchRoles ? 'pr-1.5' : ''} />
           </button>
+
+          {/* Inbox de Comunicados — junto à imagem do perfil */}
+          {profile && <AnnouncementsInboxButton tone="light" size="sm" />}
 
           <Link to="/settings" title="Ver Perfil">
             {profile?.photo_url ? (
@@ -391,6 +395,8 @@ const Layout: React.FC = () => {
                       {profile.name.charAt(0).toUpperCase()}
                     </div>
                   )}
+                  {/* Inbox de Comunicados — junto à imagem do perfil */}
+                  <AnnouncementsInboxButton tone="dark" size="sm" className="shrink-0" />
                   <div className="overflow-hidden flex-1">
                     <p className="font-bold truncate text-xs text-white">{profile.name}</p>
                     <div className="flex items-center gap-1 mt-0.5">
@@ -480,6 +486,9 @@ const Layout: React.FC = () => {
               <RoleChip role={profile?.role ?? 'player'} className={canSwitchRoles ? 'pr-1.5' : ''} />
               {canSwitchRoles && <ChevronDown size={13} className="inline ml-0.5 opacity-70" />}
             </button>
+
+            {/* Inbox de Comunicados — junto à imagem do perfil */}
+            {profile && <AnnouncementsInboxButton tone="light" />}
 
             {/* Link para Perfil / Settings */}
             <Link
