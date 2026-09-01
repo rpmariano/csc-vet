@@ -653,27 +653,29 @@ const Home: React.FC = () => {
             </div>
           )}
 
-          {/* Nível 3: referência consultada de raro — texto sobre o fundo, sem cartão. */}
           <div className="space-y-5">
             {proximoTreino && !treinoJaNaLista && (
-              <div className="space-y-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Próximo treino</span>
-                <div
+              <div className="space-y-2.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Próximo treino</span>
+                <button
+                  type="button"
                   onClick={() => navigate(`/calendar?event=${proximoTreino.id}`)}
-                  className="flex items-baseline gap-2 cursor-pointer"
+                  className="w-full flex items-center gap-3 bg-csc-dark rounded-3xl px-4 py-3.5 text-left cursor-pointer"
                 >
-                  <p className="text-sm font-bold text-gray-900 capitalize">
-                    {new Date(proximoTreino.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
-                  </p>
-                  <span className="text-xs text-gray-400">·</span>
-                  <p className="text-sm text-gray-500 truncate">
-                    {new Date(proximoTreino.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-                <p className="text-xs text-gray-500 flex items-center gap-1">
-                  <MapPin size={12} className="shrink-0" />
-                  <span className="truncate">{getEventLocation(proximoTreino) || 'Local a definir'}</span>
-                </p>
+                  <div className="w-10 h-10 rounded-2xl bg-white/10 text-emerald-300 flex items-center justify-center shrink-0">
+                    <Dumbbell size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white capitalize truncate">
+                      {new Date(proximoTreino.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
+                      <span className="text-white/60 font-medium"> · {new Date(proximoTreino.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </p>
+                    <p className="text-xs text-white/60 flex items-center gap-1 mt-0.5">
+                      <MapPin size={12} className="shrink-0" />
+                      <span className="truncate">{getEventLocation(proximoTreino) || 'Local a definir'}</span>
+                    </p>
+                  </div>
+                </button>
               </div>
             )}
 
