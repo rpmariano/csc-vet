@@ -531,37 +531,43 @@ const Home: React.FC = () => {
                   }
 
                   if (canRespond) {
+                    const respondido = currentMatchCallup.status !== 'called'
                     return (
                       <div className="relative bg-csc-gold px-5 py-3.5 flex flex-col items-center justify-center gap-2">
                         <span className="text-sm font-bold text-csc-dark">
-                          {currentMatchCallup.status === 'called' ? 'Vais estar presente?' : 'A tua presença'}
+                          {respondido ? (
+                            currentMatchCallup.status === 'confirmed' ? '✓ Confirmaste presença' : '✕ Recusaste presença'
+                          ) : 'Vais estar presente?'}
                         </span>
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
-                            disabled={currentMatchCallup.status === 'confirmed'}
                             onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
-                            className={`h-10 px-5 rounded-full text-sm font-bold transition-transform ${
+                            className={`h-10 px-5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
                               currentMatchCallup.status === 'confirmed'
-                                ? 'bg-csc-dark/40 text-white cursor-not-allowed'
-                                : 'bg-csc-dark text-white cursor-pointer active:scale-95'
+                                ? 'bg-csc-dark text-white ring-2 ring-white shadow-md'
+                                : 'bg-csc-dark/15 text-csc-dark/70 hover:bg-csc-dark/25'
                             }`}
                           >
+                            {currentMatchCallup.status === 'confirmed' && <Check size={15} strokeWidth={3} />}
                             Sim
                           </button>
                           <button
                             type="button"
-                            disabled={currentMatchCallup.status === 'declined'}
                             onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
-                            className={`h-10 px-5 rounded-full border-2 border-csc-dark text-sm font-bold transition-transform ${
+                            className={`h-10 px-5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
                               currentMatchCallup.status === 'declined'
-                                ? 'text-csc-dark/50 cursor-not-allowed'
-                                : 'text-csc-dark hover:bg-csc-dark/10 cursor-pointer active:scale-95'
+                                ? 'bg-csc-dark text-white ring-2 ring-white shadow-md'
+                                : 'bg-csc-dark/15 text-csc-dark/70 hover:bg-csc-dark/25'
                             }`}
                           >
+                            {currentMatchCallup.status === 'declined' && <X size={15} strokeWidth={3} />}
                             Não
                           </button>
                         </div>
+                        {respondido && (
+                          <span className="text-[11px] font-bold text-csc-dark/70">Toca no outro botão para mudar de resposta.</span>
+                        )}
                       </div>
                     )
                   }

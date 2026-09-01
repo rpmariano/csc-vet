@@ -1790,12 +1790,11 @@ const CalendarPage: React.FC = () => {
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <button
                         type="button"
-                        disabled={myCallup.status === 'confirmed'}
                         onClick={() => handleCallupResponse(event.id, 'confirmed')}
-                        className={`text-xs font-black px-3 py-1.5 rounded-full transition-all flex items-center gap-1 ${
+                        className={`text-xs font-black px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
                           myCallup.status === 'confirmed'
-                            ? 'bg-white/5 text-white/60 cursor-not-allowed'
-                            : 'bg-csc-gold text-csc-dark hover:brightness-105 cursor-pointer active:scale-95'
+                            ? 'bg-csc-gold text-csc-dark ring-2 ring-csc-gold/40'
+                            : 'bg-white/10 text-white/60 hover:bg-white/20'
                         }`}
                       >
                         <CheckCircle2 size={13} />
@@ -1803,12 +1802,11 @@ const CalendarPage: React.FC = () => {
                       </button>
                       <button
                         type="button"
-                        disabled={myCallup.status === 'declined'}
                         onClick={() => handleCallupResponse(event.id, 'declined')}
-                        className={`text-xs font-black px-3 py-1.5 rounded-full transition-all flex items-center gap-1 ${
+                        className={`text-xs font-black px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
                           myCallup.status === 'declined'
-                            ? 'bg-white/5 text-white/60 cursor-not-allowed'
-                            : 'border border-white/30 text-white hover:bg-white/10 cursor-pointer active:scale-95'
+                            ? 'bg-white text-csc-dark ring-2 ring-white/40'
+                            : 'border border-white/30 text-white/60 hover:bg-white/10'
                         }`}
                       >
                         <XCircle size={13} />
@@ -2490,36 +2488,37 @@ const CalendarPage: React.FC = () => {
                         // até à hora de concentração o jogador pode sempre mudar de ideias.
                         <div className="bg-csc-gold px-4 py-3.5 flex flex-col items-center justify-center gap-2">
                           <span className="text-sm font-bold text-csc-dark">
-                            {myCallup.status === 'called' ? 'Vais estar presente?' : 'A tua presença'}
+                            {myCallup.status === 'called' ? 'Vais estar presente?' :
+                              myCallup.status === 'confirmed' ? '✓ Confirmaste presença' : '✕ Recusaste presença'}
                           </span>
                           <div className="flex items-center gap-3">
                             <button
                               type="button"
-                              disabled={myCallup.status === 'confirmed'}
                               onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                              className={`h-10 px-5 rounded-full text-sm font-bold transition-transform ${
+                              className={`h-10 px-5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
                                 myCallup.status === 'confirmed'
-                                  ? 'bg-csc-dark/40 text-white cursor-not-allowed'
-                                  : 'bg-csc-dark text-white cursor-pointer active:scale-95'
+                                  ? 'bg-csc-dark text-white ring-2 ring-white shadow-md'
+                                  : 'bg-csc-dark/15 text-csc-dark/70 hover:bg-csc-dark/25'
                               }`}
                             >
+                              {myCallup.status === 'confirmed' && <CheckCircle2 size={15} />}
                               Sim
                             </button>
                             <button
                               type="button"
-                              disabled={myCallup.status === 'declined'}
                               onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                              className={`h-10 px-5 rounded-full border-2 border-csc-dark text-sm font-bold transition-transform ${
+                              className={`h-10 px-5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
                                 myCallup.status === 'declined'
-                                  ? 'text-csc-dark/50 cursor-not-allowed'
-                                  : 'text-csc-dark hover:bg-csc-dark/10 cursor-pointer active:scale-95'
+                                  ? 'bg-csc-dark text-white ring-2 ring-white shadow-md'
+                                  : 'bg-csc-dark/15 text-csc-dark/70 hover:bg-csc-dark/25'
                               }`}
                             >
+                              {myCallup.status === 'declined' && <XCircle size={15} />}
                               Não
                             </button>
                           </div>
                           {myCallup.status !== 'called' && (
-                            <span className="text-[11px] font-bold text-csc-dark/70">Podes mudar de ideias até à hora de {selectedEvent.meeting_time ? 'concentração' : 'início'}.</span>
+                            <span className="text-[11px] font-bold text-csc-dark/70">Toca no outro botão para mudar de resposta.</span>
                           )}
                         </div>
                       ) : (
