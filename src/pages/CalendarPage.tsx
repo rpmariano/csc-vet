@@ -2648,7 +2648,6 @@ const CalendarPage: React.FC = () => {
                                   key={c.id}
                                   status={c.status}
                                   player={c.player}
-                                  roles={extractRolesFromProfile(c.player as any)}
                                   displayName={getPlayerDisplayName(c.player)}
                                   isCoachOrAdmin={isCoachOrAdmin}
                                   onConfirm={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'confirmed')}

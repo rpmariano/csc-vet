@@ -672,7 +672,7 @@ const EventsPage: React.FC = () => {
         supabase.from('opponents').select('id, name, initials, home_field_id'),
         supabase.from('tournaments').select('id, name, season, rules'),
         supabase.from('profiles').select('*').order('name', { ascending: true }),
-        fetchAllCallups('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)'),
+        fetchAllCallups('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes, position)'),
         supabase.from('tournament_players').select('tournament_id, player_id'),
         supabase.from('tournament_suspensions').select('*').eq('status', 'active')
       ])
@@ -1248,7 +1248,7 @@ const EventsPage: React.FC = () => {
         event_id: eventId,
         player_id: targetId,
         status: 'called'
-      }], { onConflict: 'event_id, player_id' }).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes)').single()
+      }], { onConflict: 'event_id, player_id' }).select('id, event_id, player_id, status, player:profiles(id, name, photo_url, jersey_number, role, roles, medical_notes, position)').single()
 
       if (error) throw error
 
@@ -2333,7 +2333,6 @@ const EventsPage: React.FC = () => {
                           key={c.id}
                           status={c.status}
                           player={c.player}
-                          roles={extractRolesFromProfile(c.player as any)}
                           displayName={getPlayerDisplayName(c.player)}
                           isCoachOrAdmin={isCoachOrAdmin}
                           onConfirm={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'confirmed')}
