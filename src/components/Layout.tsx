@@ -16,6 +16,7 @@ import {
   Sparkles,
   ArrowRight,
   Check,
+  AlertTriangle,
   ClipboardList,
   Trophy,
   type LucideIcon,
@@ -26,6 +27,7 @@ import { AutoAssociationModal } from './AutoAssociationModal'
 import { AnnouncementsInboxButton } from './AnnouncementsInbox'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { usePlayerQuotaDebt } from '../hooks/usePlayerQuotaDebt'
 import { ClinicalStatusChip, RoleChip, RoleAvatar } from './StatusChip'
 
 /**
@@ -37,6 +39,8 @@ import { ClinicalStatusChip, RoleChip, RoleAvatar } from './StatusChip'
  */
 const nomeWidgetPerfil = (profile: { name: string; shirt_name?: string | null; nickname?: string | null }): string =>
   profile.shirt_name?.trim() || profile.nickname?.trim() || profile.name
+
+const fmtEuro = (n: number) => `${n.toFixed(2)}€`
 
 /**
  * Itens de navegação — fonte única para a gaveta do telemóvel e para a sidebar
@@ -139,12 +143,16 @@ const Layout: React.FC = () => {
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
+  const [isQuotaDebtModalOpen, setIsQuotaDebtModalOpen] = useState(false)
 
-  // Escape, prisão de foco e bloqueio de scroll para a gaveta e para o seletor de perfil.
+  // Escape, prisão de foco e bloqueio de scroll para a gaveta, o seletor de perfil
+  // e o resumo de dívida de quotas.
   const gavetaRef = useModalA11y({ isOpen: isMobileMenuOpen, onClose: () => setIsMobileMenuOpen(false) })
   const perfilRef = useModalA11y({ isOpen: isRoleModalOpen, onClose: () => setIsRoleModalOpen(false) })
+  const quotaDebtRef = useModalA11y({ isOpen: isQuotaDebtModalOpen, onClose: () => setIsQuotaDebtModalOpen(false) })
   const perfilTituloId = 'titulo-alternar-perfil'
   const gavetaTituloId = 'titulo-menu-principal'
+  const quotaDebtTituloId = 'titulo-dividas-quotas'
 
   const isAdmin = profile?.role === 'admin'
   const isCoach = profile?.role === 'coach'
@@ -152,6 +160,11 @@ const Layout: React.FC = () => {
   // O comutador de perfil só vive na pílula de cargo do cabeçalho (topo da página) —
   // a sidebar e a gaveta mobile mostram só o nome, sem alternância de papel.
   const canSwitchRoles = (assignedRoles?.length ?? 1) > 1
+
+  // Estado real de dívida de quotas — o widget de Quotas (sidebar/gaveta) mostrava
+  // sempre "Regularizadas" sem olhar aos dados; agora reflete os meses em atraso
+  // (dia de hoje já passou o `quota_due_day` das definições e não há pagamento).
+  const quotaDebt = usePlayerQuotaDebt(profile, isPlayer)
 
   // Os 4 grupos de navegação — mesma composição na gaveta e na sidebar.
   const secaoGeral: NavItem[] = [NAV_HOME, NAV_CALENDAR, NAV_MATCH_REPORTS, NAV_STATS, NAV_STANDINGS]
@@ -309,18 +322,38 @@ const Layout: React.FC = () => {
               {/* 2. CARD DAS QUOTAS (APENAS PARA PERFIL JOGADOR NO TOPO DO MENU EXPANDIDO) */}
               {profile && isPlayer && (
                 <div className="mt-3 p-3.5 bg-black/40 rounded-2xl border border-csc-light/30 shadow-xs">
-                  <div className="flex items-center justify-between mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!quotaDebt.hasDebt) return
+                      triggerHaptic('medium')
+                      setIsMobileMenuOpen(false)
+                      setIsQuotaDebtModalOpen(true)
+                    }}
+                    className={`w-full flex items-center justify-between mb-2 ${quotaDebt.hasDebt ? 'cursor-pointer' : ''}`}
+                  >
                     <div className="flex items-center space-x-2">
                       <Landmark size={15} className="text-emerald-400" />
                       <span className="text-xs font-black uppercase tracking-wider text-white">Quotas & Mensalidades</span>
                     </div>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                      Regularizadas
-                    </span>
-                  </div>
+                    {quotaDebt.loading ? (
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white/10 text-gray-300">A verificar…</span>
+                    ) : quotaDebt.hasDebt ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
+                        <AlertTriangle size={11} />
+                        {quotaDebt.overdueMonths.length} em atraso
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                        Regularizadas
+                      </span>
+                    )}
+                  </button>
                   <p className="text-[11px] text-gray-300 leading-snug">
-                    {profile.iban ? 'Débito direto ativo na conta do clube.' : 'Consulte os dados bancários para regularização.'}
+                    {quotaDebt.hasDebt
+                      ? `Total em dívida: ${fmtEuro(quotaDebt.totalDebt)}. Toque acima para ver o detalhe por mês.`
+                      : profile.iban ? 'Débito direto ativo na conta do clube.' : 'Consulte os dados bancários para regularização.'}
                   </p>
                   <Link
                     to="/settings"
@@ -417,16 +450,35 @@ const Layout: React.FC = () => {
 
               {/* Card Quotas Sidebar (Apenas para Jogador) */}
               {isPlayer && (
-                <div className="bg-black/20 p-2.5 rounded-xl border border-csc-light/20 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!quotaDebt.hasDebt) return
+                    triggerHaptic('medium')
+                    setIsQuotaDebtModalOpen(true)
+                  }}
+                  className={`w-full bg-black/20 p-2.5 rounded-xl border flex items-center justify-between transition-colors ${
+                    quotaDebt.hasDebt ? 'border-red-500/30 cursor-pointer hover:bg-black/30' : 'border-csc-light/20'
+                  }`}
+                >
                   <div className="flex items-center gap-1.5">
                     <Landmark size={13} className="text-emerald-400" />
                     <span className="text-[11px] font-bold text-gray-200">Quotas</span>
                   </div>
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                    Regularizadas
-                  </span>
-                </div>
+                  {quotaDebt.loading ? (
+                    <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded bg-white/10 text-gray-300">A verificar…</span>
+                  ) : quotaDebt.hasDebt ? (
+                    <span className="inline-flex items-center gap-1 text-[9.5px] font-black px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">
+                      <AlertTriangle size={10} />
+                      {fmtEuro(quotaDebt.totalDebt)} em atraso
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[9.5px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      Regularizadas
+                    </span>
+                  )}
+                </button>
               )}
             </div>
           )}
@@ -734,6 +786,69 @@ const Layout: React.FC = () => {
               >
                 Fechar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Persiana (mobile) / popup (desktop) com o detalhe da dívida de quotas — o
+          mesmo componente responsivo em ambos: encosta ao fundo do ecrã em mobile
+          (persiana), fica centrado a partir do breakpoint md (popup). */}
+      {isQuotaDebtModalOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end md:items-center justify-center animate-fade-in"
+          onMouseDown={e => { if (e.target === e.currentTarget) setIsQuotaDebtModalOpen(false) }}
+        >
+          <div
+            ref={quotaDebtRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={quotaDebtTituloId}
+            tabIndex={-1}
+            className="bg-white w-full md:max-w-sm rounded-t-2xl md:rounded-2xl shadow-2xl border border-gray-100 outline-none max-h-[85vh] overflow-y-auto animate-slide-up md:animate-scale-up pb-safe"
+          >
+            <div className="p-5 border-b border-gray-100 flex items-start justify-between gap-3 sticky top-0 bg-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-red-50 text-red-500 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={18} />
+                </div>
+                <div>
+                  <h3 id={quotaDebtTituloId} className="text-sm font-black text-gray-900">Quotas em Atraso</h3>
+                  <p className="text-xs text-gray-500">{quotaDebt.overdueMonths.length} {quotaDebt.overdueMonths.length === 1 ? 'mês por regularizar' : 'meses por regularizar'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsQuotaDebtModalOpen(false)}
+                aria-label="Fechar"
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0"
+              >
+                <X size={16} className="stroke-[2.5]" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-1.5">
+              {quotaDebt.overdueMonths.map(m => (
+                <div key={m.monthYear} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-red-50 border border-red-100">
+                  <span className="text-sm font-bold text-gray-800 capitalize">{m.label}</span>
+                  <span className="text-sm font-black text-red-600">{fmtEuro(m.amount)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="px-5 pb-5 pt-2 space-y-3">
+              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total em Dívida</span>
+                <span className="text-xl font-black text-red-600">{fmtEuro(quotaDebt.totalDebt)}</span>
+              </div>
+              <Link
+                to="/settings"
+                onClick={() => setIsQuotaDebtModalOpen(false)}
+                className="w-full py-2.5 px-4 bg-csc-dark hover:bg-csc-dark/90 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Consultar IBAN & Regularizar</span>
+                <ArrowRight size={14} />
+              </Link>
             </div>
           </div>
         </div>
