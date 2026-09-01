@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  Landmark, TrendingUp, TrendingDown, Plus, Check, Settings, Wallet,
+  Landmark, TrendingUp, TrendingDown, Plus, Settings, Wallet,
   ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -12,7 +12,7 @@ import {
   getSeasonLabel, getPlayerQuotaMonths,
   computeQuotaMonthStatus, getInsuranceDeadline, nomeMes,
 } from '../lib/finance'
-import type { FinancialSettings, SeasonMonth } from '../lib/finance'
+import type { FinancialSettings, SeasonMonth, QuotaMonthStatus } from '../lib/finance'
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -191,17 +191,10 @@ const FinancePage: React.FC = () => {
   }, [players, duesByPlayer, settings, seasonLabel])
 
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null)
-  const [selectedMonthsToPay, setSelectedMonthsToPay] = useState<Set<string>>(new Set())
+  const [savingMonth, setSavingMonth] = useState<string | null>(null)
 
-  const toggleMonthSelection = (monthYear: string) => {
-    setSelectedMonthsToPay(prev => {
-      const next = new Set(prev)
-      if (next.has(monthYear)) next.delete(monthYear)
-      else next.add(monthYear)
-      return next
-    })
-  }
-
+  // Cada clique num mês grava/anula logo o pagamento — sem passo de confirmação à parte.
+  // Para pagar vários meses de uma vez, basta clicar em cada um sequencialmente.
   const handlePayQuotas = async (playerId: string, monthYears: string[]) => {
     if (monthYears.length === 0) return
     triggerHaptic('success')
@@ -216,7 +209,6 @@ const FinancePage: React.FC = () => {
       const { error } = await supabase.from('dues').upsert(rows, { onConflict: 'player_id,month_year' })
       if (error) throw error
       toast.success(`${monthYears.length === 1 ? 'Quota registada' : `${monthYears.length} quotas registadas`} com sucesso!`)
-      setSelectedMonthsToPay(new Set())
       fetchAll()
     } catch (err: any) {
       toast.error('Erro ao registar quota: ' + (err.message || 'Erro'))
@@ -224,6 +216,7 @@ const FinancePage: React.FC = () => {
   }
 
   const handleUnpayQuota = async (dueId: string) => {
+    triggerHaptic('light')
     try {
       const { error } = await supabase.from('dues').delete().eq('id', dueId)
       if (error) throw error
@@ -232,6 +225,16 @@ const FinancePage: React.FC = () => {
     } catch (err: any) {
       toast.error('Erro ao remover pagamento: ' + (err.message || 'Erro'))
     }
+  }
+
+  const handleToggleQuotaMonth = async (playerId: string, m: { monthYear: string; statusCalc: QuotaMonthStatus; due?: { id: string } | null }) => {
+    setSavingMonth(m.monthYear)
+    if (m.statusCalc === 'paid' && m.due) {
+      await handleUnpayQuota(m.due.id)
+    } else {
+      await handlePayQuotas(playerId, [m.monthYear])
+    }
+    setSavingMonth(null)
   }
 
   // -------------------------------------------------------------------------
@@ -697,54 +700,55 @@ const FinancePage: React.FC = () => {
 
       {/* ================= QUOTAS ================= */}
       {activeTab === 'quotas' && (
-        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5 space-y-2">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-2">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-black text-white">Controlo de Quotas — Época {seasonLabel}</h3>
-            <span className="text-[11px] text-white/60">{fmtEuro(settings.quota_amount)}/mês · incumprimento a partir do dia {settings.quota_due_day}</span>
+            <h3 className="text-sm font-black text-gray-900">Controlo de Quotas — Época {seasonLabel}</h3>
+            <span className="text-[11px] text-gray-500">{fmtEuro(settings.quota_amount)}/mês · incumprimento a partir do dia {settings.quota_due_day}</span>
           </div>
-          <div className="divide-y divide-white/10">
+          <div className="divide-y divide-gray-100">
             {quotaOverview.map(q => {
               const expanded = expandedPlayerId === q.player.id
               return (
                 <div key={q.player.id} className="py-2.5">
                   <button
                     type="button"
-                    onClick={() => { setExpandedPlayerId(expanded ? null : q.player.id); setSelectedMonthsToPay(new Set()) }}
+                    onClick={() => setExpandedPlayerId(expanded ? null : q.player.id)}
                     className="w-full flex items-center justify-between gap-3 cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-8 h-8 rounded-full bg-white/10 text-csc-gold text-xs font-black flex items-center justify-center shrink-0">
+                      <span className="w-8 h-8 rounded-full bg-csc-dark/5 text-csc-dark text-xs font-black flex items-center justify-center shrink-0">
                         {q.player.jersey_number || '—'}
                       </span>
-                      <span className="font-bold text-sm text-white truncate">{q.player.shirt_name || q.player.name}</span>
+                      <span className="font-bold text-sm text-gray-900 truncate">{q.player.shirt_name || q.player.name}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {q.lateCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-500/20 text-red-300">{q.lateCount} em atraso</span>}
-                      {q.pendingCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">{q.pendingCount} pendentes</span>}
-                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">{q.paidCount} pagos</span>
-                      <ChevronDown size={16} className={`text-white/60 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                      {q.lateCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-700">{q.lateCount} em atraso</span>}
+                      {q.pendingCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{q.pendingCount} pendentes</span>}
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{q.paidCount} pagos</span>
+                      <ChevronDown size={16} className={`text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
                     </div>
                   </button>
 
                   {expanded && (
                     <div className="mt-3 space-y-2.5">
+                      <p className="text-[10px] text-gray-400">Clique num mês para marcar como pago; clique outra vez para corrigir. Pode selecionar vários meses seguidos.</p>
                       <div className="flex flex-wrap gap-1.5">
                         {q.months.map(m => {
-                          const isSelected = selectedMonthsToPay.has(m.monthYear)
                           const isPaid = m.statusCalc === 'paid'
+                          const isSaving = savingMonth === m.monthYear
                           return (
                             <button
                               key={m.monthYear}
                               type="button"
-                              disabled={isPaid}
-                              onClick={() => isPaid ? handleUnpayQuota(m.due!.id) : toggleMonthSelection(m.monthYear)}
-                              title={isPaid ? 'Clique para remover o pagamento' : (isSelected ? 'Selecionado para pagar' : 'Clique para selecionar')}
-                              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                              disabled={isSaving}
+                              onClick={() => handleToggleQuotaMonth(q.player.id, m)}
+                              title={isPaid ? 'Clique para remover o pagamento' : 'Clique para marcar como pago'}
+                              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
                                 isPaid
-                                  ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-300 hover:bg-red-500/20 hover:border-red-400/40 hover:text-red-300'
+                                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700'
                                   : m.statusCalc === 'late'
-                                    ? (isSelected ? 'bg-csc-gold border-csc-gold text-csc-dark' : 'bg-red-500/15 border-red-400/30 text-red-300 hover:bg-red-500/25')
-                                    : (isSelected ? 'bg-csc-gold border-csc-gold text-csc-dark' : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/10')
+                                    ? 'bg-red-50 border-red-300 text-red-700 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-dark'
+                                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-dark'
                               }`}
                             >
                               {nomeMes(m.month).slice(0, 3)}/{String(m.year).slice(2)} {isPaid ? '✓' : m.statusCalc === 'late' ? '⚠' : ''}
@@ -752,23 +756,13 @@ const FinancePage: React.FC = () => {
                           )
                         })}
                       </div>
-                      {selectedMonthsToPay.size > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => handlePayQuotas(q.player.id, Array.from(selectedMonthsToPay))}
-                          className="px-4 py-2 bg-csc-gold text-csc-dark rounded-xl text-xs font-black hover:brightness-95 transition-all cursor-pointer flex items-center gap-1.5"
-                        >
-                          <Check size={14} />
-                          <span>Registar pagamento de {selectedMonthsToPay.size} {selectedMonthsToPay.size === 1 ? 'mês' : 'meses'} ({fmtEuro(selectedMonthsToPay.size * settings.quota_amount)})</span>
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
               )
             })}
             {quotaOverview.length === 0 && (
-              <p className="text-xs text-white/60 py-6 text-center">Sem jogadores elegíveis para quota nesta época.</p>
+              <p className="text-xs text-gray-400 py-6 text-center">Sem jogadores elegíveis para quota nesta época.</p>
             )}
           </div>
         </div>
@@ -820,9 +814,9 @@ const FinancePage: React.FC = () => {
             </button>
           </div>
 
-          <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
-            <h3 className="text-sm font-black text-white mb-3">Estado do Seguro por Jogador — Época {seasonLabel}</h3>
-            <div className="divide-y divide-white/10">
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <h3 className="text-sm font-black text-gray-900 mb-3">Estado do Seguro por Jogador — Época {seasonLabel}</h3>
+            <div className="divide-y divide-gray-100">
               {players.map(p => {
                 const payments = insuranceByPlayer.get(p.id) || []
                 const paidTotal = payments.reduce((s, ip) => s + ip.amount, 0)
@@ -830,14 +824,14 @@ const FinancePage: React.FC = () => {
                 const isPastDeadline = new Date() > insuranceDeadline
                 return (
                   <div key={p.id} className="py-2.5 flex items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-white truncate">{p.shirt_name || p.name}</span>
+                    <span className="text-sm font-bold text-gray-900 truncate">{p.shirt_name || p.name}</span>
                     <div className="flex items-center gap-2 shrink-0">
                       {remaining <= 0 ? (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">Pago ({fmtEuro(paidTotal)})</span>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Pago ({fmtEuro(paidTotal)})</span>
                       ) : paidTotal > 0 ? (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">Falta {fmtEuro(remaining)} (pagou {fmtEuro(paidTotal)})</span>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Falta {fmtEuro(remaining)} (pagou {fmtEuro(paidTotal)})</span>
                       ) : (
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isPastDeadline ? 'bg-red-500/20 text-red-300' : 'bg-white/10 text-white/60'}`}>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isPastDeadline ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>
                           {isPastDeadline ? `Em atraso — deve ${fmtEuro(remaining)}` : `Por pagar (${fmtEuro(remaining)})`}
                         </span>
                       )}
