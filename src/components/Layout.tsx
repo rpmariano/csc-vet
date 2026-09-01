@@ -273,15 +273,9 @@ const Layout: React.FC = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
-                        <button
-                          type="button"
-                          onClick={() => canSwitchRoles && setIsRoleModalOpen(true)}
-                          className={canSwitchRoles ? 'cursor-pointer active:scale-95' : ''}
-                          title={canSwitchRoles ? "Clique para alternar entre os seus perfis" : undefined}
-                        >
-                          <RoleChip role={profile.role} size="sm" className={canSwitchRoles ? 'pr-1' : ''} />
-                          {canSwitchRoles && <ChevronDown size={10} className="inline ml-0.5 opacity-70" />}
-                        </button>
+                        {/* Sem alternância de perfil aqui — fica só informativo; para trocar
+                            de papel usa-se a pílula de cargo do cabeçalho. */}
+                        <RoleChip role={profile.role} size="sm" />
 
                         {/* Estado Clínico (Apenas Jogador) */}
                         {isPlayer && (
