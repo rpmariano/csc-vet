@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext'
 import { ClubProvider } from './context/ClubContext'
 import { ToastProvider } from './context/ToastContext'
+import { AnnouncementsProvider } from './context/AnnouncementsContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
@@ -42,6 +43,7 @@ const App: React.FC = () => {
     <AuthProvider>
       <ClubProvider>
         <ToastProvider>
+        <AnnouncementsProvider>
           <Router basename={import.meta.env.BASE_URL}>
           <React.Suspense fallback={<EcraACarregar />}>
           <Routes>
@@ -80,6 +82,7 @@ const App: React.FC = () => {
           </Routes>
           </React.Suspense>
         </Router>
+        </AnnouncementsProvider>
         </ToastProvider>
       </ClubProvider>
     </AuthProvider>

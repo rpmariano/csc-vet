@@ -5,14 +5,12 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
-  ChevronDown,
   ShieldAlert,
-  Megaphone,
   Trophy,
   Dumbbell,
   Users,
 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
@@ -47,14 +45,6 @@ interface Event {
     initials: string
     logo_url: string
   }
-}
-
-interface Announcement {
-  id: string
-  title: string
-  content: string
-  published_at: string
-  is_active?: boolean
 }
 
 interface Callup {
@@ -124,13 +114,9 @@ const Home: React.FC = () => {
   // Practices State
   const [upcomingPractices, setUpcomingPractices] = useState<Event[]>([])
 
-  const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [myCallups, setMyCallups] = useState<Callup[]>([])
   const [fields, setFields] = useState<{ id: string; name: string; address?: string | null }[]>([])
   const [loading, setLoading] = useState(true)
-  // Comunicado atualmente aberto na Home (acordeão: um de cada vez, clicar
-  // outra vez fecha). Evita ter de sair da Home para ler a mensagem toda.
-  const [comunicadoAberto, setComunicadoAberto] = useState<string | null>(null)
 
   const getEventLocation = (ev?: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null) => {
     if (!ev) return ''
@@ -205,20 +191,7 @@ const Home: React.FC = () => {
           setUpcomingPractices([])
         }
 
-        // 3. Fetch announcements (apenas ativos)
-        const { data: anns } = await supabase
-          .from('announcements')
-          .select('*')
-          .order('published_at', { ascending: false })
-
-        if (anns && anns.length > 0) {
-          const activeAnns = (anns as Announcement[]).filter(a => a.is_active !== false)
-          setAnnouncements(activeAnns)
-        } else {
-          setAnnouncements([])
-        }
-
-        // 4. Fetch callups (apenas para eventos ativos)
+        // 3. Fetch callups (apenas para eventos ativos)
         const { data: calls } = await supabase
           .from('callups')
           .select('*, event:events(*, field:fields(id, name, address), opponent:opponents(name, initials, logo_url))')
@@ -334,13 +307,6 @@ const Home: React.FC = () => {
     }
     if (ev.type === 'practice') return 'Treino'
     return ev.title || 'Convívio'
-  }
-
-  const formatarTempoRelativo = (dateStr: string) => {
-    const dias = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24))
-    if (dias <= 0) return 'hoje'
-    if (dias === 1) return 'há 1 dia'
-    return `há ${dias} dias`
   }
 
   // Aparência por tipo de evento — para os diferentes compromissos da lista
@@ -685,79 +651,30 @@ const Home: React.FC = () => {
             </div>
           )}
 
-          <div className="space-y-5">
-            {proximoTreino && !treinoJaNaLista && (
-              <div className="space-y-2.5">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Próximo treino</span>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/calendar?event=${proximoTreino.id}`)}
-                  className="w-full flex items-center gap-3 bg-csc-dark rounded-3xl px-4 py-3.5 text-left cursor-pointer"
-                >
-                  <div className="w-10 h-10 rounded-2xl bg-white/10 text-emerald-300 flex items-center justify-center shrink-0">
-                    <Dumbbell size={18} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-white capitalize truncate">
-                      {new Date(proximoTreino.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
-                      <span className="text-white/60 font-medium"> · {new Date(proximoTreino.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </p>
-                    <p className="text-xs text-white/60 flex items-center gap-1 mt-0.5">
-                      <MapPin size={12} className="shrink-0" />
-                      <span className="truncate">{getEventLocation(proximoTreino) || 'Local a definir'}</span>
-                    </p>
-                  </div>
-                </button>
-              </div>
-            )}
-
+          {proximoTreino && !treinoJaNaLista && (
             <div className="space-y-2.5">
-              <div className="flex items-baseline justify-between px-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Comunicados</span>
-                <Link to="/announcements" className="text-sm font-bold text-csc-light hover:text-csc-dark transition-colors">
-                  Ver todos
-                </Link>
-              </div>
-              {announcements.length > 0 ? (
-                <div className="bg-csc-dark rounded-3xl overflow-hidden">
-                  {announcements.slice(0, 3).map((a, idx) => {
-                    const aberto = comunicadoAberto === a.id
-                    return (
-                      <div key={a.id} className={idx > 0 ? 'border-t border-white/10' : ''}>
-                        <button
-                          type="button"
-                          onClick={() => setComunicadoAberto(aberto ? null : a.id)}
-                          aria-expanded={aberto}
-                          className="w-full flex items-start gap-3 px-4 py-3.5 text-left cursor-pointer"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-csc-gold shrink-0 mt-1.5" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-white leading-snug">{a.title}</p>
-                            <p className="text-xs text-white/70 mt-0.5">{formatarTempoRelativo(a.published_at)}</p>
-                          </div>
-                          <ChevronDown
-                            size={16}
-                            className={`text-white/65 shrink-0 mt-0.5 transition-transform ${aberto ? 'rotate-180' : ''}`}
-                          />
-                        </button>
-                        {aberto && (
-                          <div className="px-4 pb-4 pl-[26px]">
-                            <p className="text-sm text-white/80 leading-relaxed whitespace-pre-line">{a.content}</p>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Próximo treino</span>
+              <button
+                type="button"
+                onClick={() => navigate(`/calendar?event=${proximoTreino.id}`)}
+                className="w-full flex items-center gap-3 bg-csc-dark rounded-3xl px-4 py-3.5 text-left cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-white/10 text-emerald-300 flex items-center justify-center shrink-0">
+                  <Dumbbell size={18} />
                 </div>
-              ) : (
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <Megaphone size={14} className="shrink-0" />
-                  <span>Sem comunicados recentes.</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white capitalize truncate">
+                    {new Date(proximoTreino.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
+                    <span className="text-white/60 font-medium"> · {new Date(proximoTreino.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </p>
+                  <p className="text-xs text-white/60 flex items-center gap-1 mt-0.5">
+                    <MapPin size={12} className="shrink-0" />
+                    <span className="truncate">{getEventLocation(proximoTreino) || 'Local a definir'}</span>
+                  </p>
                 </div>
-              )}
+              </button>
             </div>
-          </div>
-
+          )}
         </div>
       </div>
     </div>
