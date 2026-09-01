@@ -479,18 +479,27 @@ export const StandingsPage = () => {
                         <CalendarDays size={14} className="text-gray-400" />
                         Jornadas
                       </h4>
-                      {canManage && (
-                        <button
-                          onClick={() => openJornadaModal(g.id)}
-                          disabled={teams.filter(t => t.group_id === g.id).length < 2}
-                          title={teams.filter(t => t.group_id === g.id).length < 2 ? 'Adiciona pelo menos duas equipas ao grupo primeiro' : undefined}
-                          className="text-[11px] px-2.5 py-1.5 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
-                        >
-                          <Plus size={12} />
-                          Nova Jornada
-                        </button>
-                      )}
+                      {canManage && (() => {
+                        const groupTeamCount = teams.filter(t => t.group_id === g.id).length
+                        return (
+                          <button
+                            onClick={() => openJornadaModal(g.id)}
+                            disabled={groupTeamCount < 2}
+                            title={groupTeamCount < 2 ? 'Adiciona pelo menos duas equipas ao grupo primeiro' : undefined}
+                            className="text-[11px] px-2.5 py-1.5 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                          >
+                            <Plus size={12} />
+                            Nova Jornada
+                          </button>
+                        )
+                      })()}
                     </div>
+
+                    {canManage && teams.filter(t => t.group_id === g.id).length < 2 && (
+                      <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                        Este grupo tem {teams.filter(t => t.group_id === g.id).length === 0 ? 'nenhuma equipa' : 'só uma equipa'} — para criar jornadas, adiciona pelo menos mais uma em Backoffice → Torneios → Gerir Grupos e Equipas.
+                      </p>
+                    )}
 
                     {matchdays.length === 0 ? (
                       <p className="text-xs text-gray-400 italic py-2">Ainda não há jornadas criadas para este grupo.</p>
