@@ -152,9 +152,61 @@ dinheiro (`allMovements`, `FinancePage.tsx`). É esse o grão a materializar num
 Dimensões a cruzar: **Jogador**, **Categoria**, **Época**, **Mês/Ano**, **Prova**, **Tipo**,
 **Origem** (quota/encargo/avulso), **Autor do lançamento**.
 
-> Sugestão: criar uma vista `public.v_financial_movements` com este grão. Hoje a agregação é
-> toda client-side (a página carrega 9 tabelas inteiras e soma em JS); uma vista torna os KPIs
-> reutilizáveis pelo `AdminDashboard` e pelo `Home` sem duplicar lógica.
+### 3.1 `v_financial_movements` — implementada
+
+`supabase_finance_reporting_migration.sql` cria a vista com exatamente este grão:
+
+| Coluna | Notas |
+|---|---|
+| `movement_id` | `due-<id>` · `charge-<id>` · `tx-<id>` — estável, serve de chave |
+| `source_id`, `source` | id na tabela de origem; `quota` · `encargo` · `avulso` |
+| `entry_date` | data de **caixa** |
+| `accrual_date` | data de **competência** (nas quotas, o 1º dia do `month_year`) |
+| `season` | `financial_season(accrual_date)` → `"2026/2027"` |
+| `reference_month` | `YYYY-MM` (só quotas) |
+| `type` | `income` · `expense` |
+| `amount` / `signed_amount` | valor absoluto / com sinal (despesa negativa) — soma `signed_amount` para saldo |
+| `category_id`, `category_key`, `category_label` | `key` inclui os baldes virtuais `quotas`, `income_other`, `no_category` |
+| `player_id`, `player_label` | nulos nos movimentos avulsos |
+| `tournament_id` | tranches de inscrição |
+| `payment_method`, `document_url`, `created_by`, `created_at` | |
+
+**`security_invoker = true`** — a vista respeita a RLS de cada tabela de origem: um jogador vê
+só as suas quotas e os seus pagamentos de encargos, e nenhuma transação; o admin vê tudo.
+Sem isto a vista corria como o dono e furava a RLS.
+
+```sql
+-- KPIs da Visão Geral, em SQL
+SELECT
+  sum(signed_amount) FILTER (WHERE source = 'quota')                      AS quotas,
+  sum(signed_amount) FILTER (WHERE source = 'encargo')                    AS encargos,
+  sum(signed_amount) FILTER (WHERE source = 'avulso' AND type = 'income') AS outras_receitas,
+  sum(signed_amount) FILTER (WHERE type = 'expense')                      AS despesas,
+  sum(signed_amount)                                                      AS saldo
+FROM public.v_financial_movements
+WHERE season = public.financial_season(CURRENT_DATE);
+
+-- Saldo por categoria (o "Seguro fecha a zero?")
+SELECT category_label, sum(signed_amount) AS saldo
+FROM public.v_financial_movements GROUP BY 1 ORDER BY 2;
+```
+
+### 3.2 `v_quota_status` — a matriz jogador × mês
+
+Gera a linha que **não existe** em `dues` quando a quota não foi paga, com o estado calculado
+(`paid` · `late` · `pending`), `due_date` e `owed_amount`. Espelha `getPlayerQuotaMonths` +
+`computeQuotaMonthStatus`, incluindo a janela de elegibilidade e o excluir de Agosto.
+Limitação: só a época corrente (`CURRENT_DATE`); para histórico, converter em função com
+parâmetro de época.
+
+```sql
+SELECT player_label,
+       count(*) FILTER (WHERE status = 'paid')    AS pagos,
+       count(*) FILTER (WHERE status = 'late')    AS em_atraso,
+       count(*) FILTER (WHERE status = 'pending') AS pendentes,
+       sum(owed_amount)                           AS em_divida
+FROM public.v_quota_status GROUP BY 1 ORDER BY em_divida DESC;
+```
 
 ---
 
@@ -211,20 +263,20 @@ Jogador (expansão de linha) · Época (implícita, sempre a época atual).
 
 ---
 
-## 6. Lacunas — o que falta para reporting sério
+## 6. Lacunas — estado
 
-| # | Lacuna | Impacto | Correção sugerida |
-|---|---|---|---|
-| 1 | Quota não paga **não tem linha** em `dues` | dívida e aging só existem em JS; impossível em SQL puro | vista que gera a matriz jogador × mês da época |
-| 2 | Sem **método de pagamento** (MB Way, transferência, numerário) | não dá para reconciliar com o banco | `payment_method` em `dues`, `charge_payments`, `transactions` |
-| 3 | Sem **época** materializada nos factos | agrupar por época obriga a recalcular do lado do cliente | coluna `season` (ou vista com `getSeasonLabel` em SQL) |
-| 4 | `dues` sem `created_by` | sem rasto de quem registou a quota | acrescentar coluna |
-| 5 | `transactions.category_id` forçado a `null` nas receitas | receita avulsa cai toda em "Outras Receitas" | permitir categoria nas receitas com `allow_income` |
-| 6 | `dues.status` fora de sincronia com o estado real | dashboards que leiam a coluna dão números errados | usar sempre `computeQuotaMonthStatus`; ou coluna gerada |
-| 7 | Plano de inscrição em JSONB (`tournaments.rules`) | não é agregável em SQL sem `jsonb` gymnastics | tabela `tournament_installments` |
-| 8 | Sem soft-delete/histórico | apagar um pagamento apaga a história | tabela de auditoria ou `deleted_at` |
-| 9 | Agregação 100 % client-side (9 tabelas completas por render) | não escala e duplica lógica entre páginas | vistas + RPC |
-| 10 | `profiles` legível por qualquer autenticado (IBAN/NIF) | um dashboard que junte `profiles` expõe PII | vista `v_players_public` só com campos de reporting |
+| # | Lacuna | Estado |
+|---|---|---|
+| 1 | Quota não paga **não tem linha** em `dues` | ✅ **resolvido** — vista `v_quota_status` (só época corrente) |
+| 2 | Sem **método de pagamento** | ✅ **resolvido** — `payment_method` em `dues`, `charge_payments`, `transactions` (TEXT + CHECK, nulo = não registado) |
+| 3 | Sem **época** nos factos | ✅ **resolvido** — função `public.financial_season(date)` + coluna `season` na vista (derivada, não denormalizada) |
+| 4 | `dues` sem `created_by` | ✅ **resolvido** — coluna acrescentada e preenchida pela app |
+| 5 | Categoria proibida nas receitas | ✅ **resolvido** — restrição era da app; agora oferece as categorias com `allow_income` |
+| 6 | `dues.status` fora de sincronia com o estado real | ⬜ dashboards que leiam a coluna dão números errados; usar `v_quota_status.status` |
+| 7 | Plano de inscrição em JSONB (`tournaments.rules`) | ⬜ não é agregável em SQL sem *jsonb gymnastics*; tabela `tournament_installments` |
+| 8 | Sem soft-delete/histórico | ⬜ apagar um pagamento apaga a história; auditoria ou `deleted_at` |
+| 9 | Agregação 100 % client-side (9 tabelas completas por render) | ⬜ migrar a página para as vistas |
+| 10 | `profiles` legível por qualquer autenticado (IBAN/NIF) | ⬜ vista `v_players_public` só com campos de reporting |
 
 ---
 
@@ -237,3 +289,16 @@ Jogador (expansão de linha) · Época (implícita, sempre a época atual).
 5. **Provas** — custo de inscrição por torneio, tranches por pagar e vencidas.
 6. **Compliance** — % de despesas com `document_url`, despesas sem categoria.
 7. **Previsão da época** — realizado vs. previsto (`projectionPct`) e valor em falta até ao fim da época.
+
+
+---
+
+## 8. Ficheiros
+
+| Ficheiro | O que traz |
+|---|---|
+| `supabase_finance_reporting_migration.sql` | `payment_method` (3 tabelas) · `dues.created_by` · `financial_season()` · `v_financial_movements` · `v_quota_status` · índices |
+| `src/pages/FinancePage.tsx` | escreve `created_by` e `payment_method`; categoria também nas receitas; agrupamento de movimentos alinhado com a vista |
+
+A migração é idempotente e foi validada num PostgreSQL 16 local contra `supabase_schema.sql`,
+incluindo o teste de RLS com um utilizador `player` e um `admin`.

@@ -54,6 +54,13 @@ Três papéis: `player` · `coach` · `admin`.
 `events`, `callups`, `attendances`, `stats`, `announcements`, `dues`, `transactions`,
 `club_settings`.
 
+Vistas de reporting (`supabase_finance_reporting_migration.sql`, ambas `security_invoker`):
+`v_financial_movements` (facto único: quotas + encargos + despesas/receitas, com época,
+categoria e jogador) e `v_quota_status` (matriz jogador × mês com `paid`/`late`/`pending`).
+A função `public.financial_season(date)` espelha `getSeasonLabel()` de `src/lib/finance.ts` —
+qualquer mudança à regra da época tem de ser feita **nos dois sítios**.
+Ver `docs/financeiro-campos-reporting.md`.
+
 RLS: leitura aberta a qualquer autenticado; escrita restrita a `coach`/`admin` via
 `public.get_user_role()` (`SECURITY DEFINER`). Esquema em `supabase_schema.sql` e
 `supabase_players_migration.sql`.

@@ -36,6 +36,7 @@ interface Due {
   amount: number
   status: string
   paid_at?: string | null
+  payment_method?: string | null
 }
 
 interface ExpenseCategory {
@@ -71,6 +72,7 @@ interface ChargePayment {
   amount: number
   paid_at: string
   notes?: string | null
+  payment_method?: string | null
 }
 
 interface Transaction {
@@ -83,6 +85,7 @@ interface Transaction {
   document_url?: string | null
   tournament_id?: string | null
   installment_index?: number | null
+  payment_method?: string | null
 }
 
 interface TournamentRow {
@@ -117,6 +120,20 @@ const RECEITA_CATEGORIAS: { key: 'quotas' | 'charges' | 'other'; label: string; 
 // Ordem categórica fixa para despesas — a 6ª categoria em diante recolhe-se em "Outras".
 const DESPESA_CORES = ['bg-red-500', 'bg-purple-500', 'bg-amber-500', 'bg-blue-500', 'bg-emerald-500']
 const DESPESA_COR_OUTRAS = 'bg-gray-400'
+
+// Métodos de pagamento — os mesmos valores do CHECK em dues.payment_method,
+// charge_payments.payment_method e transactions.payment_method
+// (supabase_finance_reporting_migration.sql). Vazio = não registado.
+const METODOS_PAGAMENTO: { value: string; label: string }[] = [
+  { value: 'numerario', label: 'Numerário' },
+  { value: 'mbway', label: 'MB Way' },
+  { value: 'transferencia', label: 'Transferência' },
+  { value: 'multibanco', label: 'Multibanco' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'outro', label: 'Outro' },
+]
+
+const nomeMetodo = (v?: string | null) => METODOS_PAGAMENTO.find(m => m.value === v)?.label || null
 
 const fmtEuro = (n: number) => `${n.toFixed(2)}€`
 
@@ -239,6 +256,7 @@ const FinancePage: React.FC = () => {
         amount: settings.quota_amount,
         status: 'paid',
         paid_at: new Date().toISOString(),
+        created_by: profile?.id || null,
       }))
       const { error } = await supabase.from('dues').upsert(rows, { onConflict: 'player_id,month_year' })
       if (error) throw error
@@ -307,6 +325,7 @@ const FinancePage: React.FC = () => {
   const [payFormAmount, setPayFormAmount] = useState('')
   const [payFormDate, setPayFormDate] = useState(new Date().toISOString().split('T')[0])
   const [payFormNotes, setPayFormNotes] = useState('')
+  const [payFormMethod, setPayFormMethod] = useState('')
 
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null)
   const [editPaymentAmount, setEditPaymentAmount] = useState('')
@@ -441,6 +460,7 @@ const FinancePage: React.FC = () => {
     setPayFormAmount('')
     setPayFormDate(new Date().toISOString().split('T')[0])
     setPayFormNotes('')
+    setPayFormMethod('')
   }
 
   const handleAddChargePayment = async (chargeId: string, playerId: string) => {
@@ -456,6 +476,7 @@ const FinancePage: React.FC = () => {
         amount: val,
         paid_at: payFormDate,
         notes: payFormNotes.trim() || null,
+        payment_method: payFormMethod || null,
         created_by: profile?.id || null,
       }])
       if (error) throw error
@@ -573,8 +594,11 @@ const FinancePage: React.FC = () => {
         amount: t.amount,
         type: t.type,
         documentUrl: t.document_url,
-        categoryKey: t.type === 'income' ? 'income_other' : (cat?.id || 'no_category'),
-        categoryLabel: t.type === 'income' ? 'Outras Receitas' : (cat?.name || 'Sem Categoria'),
+        // Uma receita categorizada agrupa-se com a despesa da mesma categoria
+        // (ex.: o que se recebeu de Seguro e o que se pagou à seguradora);
+        // só as receitas sem categoria caem em "Outras Receitas".
+        categoryKey: cat?.id || (t.type === 'income' ? 'income_other' : 'no_category'),
+        categoryLabel: cat?.name || (t.type === 'income' ? 'Outras Receitas' : 'Sem Categoria'),
       })
     })
 
@@ -613,10 +637,16 @@ const FinancePage: React.FC = () => {
   const [txAmount, setTxAmount] = useState('')
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0])
   const [txCategoryId, setTxCategoryId] = useState('')
+  const [txMethod, setTxMethod] = useState('')
   const [txFile, setTxFile] = useState<File | null>(null)
   const [txSaving, setTxSaving] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryAllowIncome, setNewCategoryAllowIncome] = useState(false)
+
+  const handleTxTypeChange = (type: 'income' | 'expense') => {
+    setTxType(type)
+    setTxCategoryId(prev => (type === 'income' && !categories.find(c => c.id === prev)?.allow_income) ? '' : prev)
+  }
 
   const handleAddCategory = async () => {
     const name = newCategoryName.trim()
@@ -667,8 +697,9 @@ const FinancePage: React.FC = () => {
         amount: val,
         description: txDesc.trim(),
         date: txDate,
-        category_id: txType === 'expense' ? (txCategoryId || null) : null,
+        category_id: txCategoryId || null,
         document_url,
+        payment_method: txMethod || null,
         created_by: profile?.id || null,
       }])
       if (error) throw error
@@ -677,6 +708,7 @@ const FinancePage: React.FC = () => {
       setTxDesc('')
       setTxAmount('')
       setTxCategoryId('')
+      setTxMethod('')
       setTxFile(null)
       fetchAll()
     } catch (err: any) {
@@ -1234,6 +1266,7 @@ const FinancePage: React.FC = () => {
                                         <>
                                           <span className="font-bold text-gray-700">{fmtEuro(pay.amount)}</span>
                                           <span>{new Date(pay.paid_at).toLocaleDateString('pt-PT')}</span>
+                                          {nomeMetodo(pay.payment_method) && <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{nomeMetodo(pay.payment_method)}</span>}
                                           {pay.notes && <span className="italic truncate">({pay.notes})</span>}
                                           {isAdmin && (
                                             <span className="ml-auto flex items-center gap-1">
@@ -1249,10 +1282,14 @@ const FinancePage: React.FC = () => {
                               )}
 
                               {isPayingHere && (
-                                <div className="flex items-center gap-1.5 pt-1">
+                                <div className="flex flex-wrap items-center gap-1.5 pt-1">
                                   <input type="number" step="0.01" placeholder="Valor (€)" value={payFormAmount} onChange={e => setPayFormAmount(e.target.value)} className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
                                   <input type="date" value={payFormDate} onChange={e => setPayFormDate(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
-                                  <input type="text" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
+                                  <select value={payFormMethod} onChange={e => setPayFormMethod(e.target.value)} title="Método de pagamento" className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900">
+                                    <option value="">Método…</option>
+                                    {METODOS_PAGAMENTO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                  </select>
+                                  <input type="text" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className="flex-1 min-w-[80px] px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
                                   <button type="button" onClick={() => handleAddChargePayment(c.id, playerId)} className="px-3 py-1.5 bg-csc-gold text-csc-dark rounded-lg text-xs font-black hover:brightness-95 cursor-pointer shrink-0">
                                     Guardar
                                   </button>
@@ -1382,20 +1419,31 @@ const FinancePage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-white/70 mb-1">Tipo</label>
-                  <select value={txType} onChange={e => setTxType(e.target.value as any)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                  <select value={txType} onChange={e => handleTxTypeChange(e.target.value as 'income' | 'expense')} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
                     <option value="expense">Despesa (Saída)</option>
                     <option value="income">Receita (Entrada)</option>
                   </select>
                 </div>
-                {txType === 'expense' && (
-                  <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Categoria</label>
-                    <select value={txCategoryId} onChange={e => setTxCategoryId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
-                      <option value="">-- Sem categoria --</option>
-                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                )}
+                <div>
+                  {/* Numa receita só se oferecem as categorias marcadas com
+                      "também pode ser usada para receitas" — é o que permite ver
+                      o saldo de uma categoria (recebido − gasto) tender para zero. */}
+                  <label className="block text-xs font-bold text-white/70 mb-1">Categoria</label>
+                  <select value={txCategoryId} onChange={e => setTxCategoryId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                    <option value="">-- Sem categoria --</option>
+                    {(txType === 'income' ? incomeCategories : categories).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  {txType === 'income' && incomeCategories.length === 0 && (
+                    <p className="text-[10px] text-white/50 mt-1">Nenhuma categoria aceita receitas — assinala "Também pode ser usada para receitas" numa categoria, abaixo.</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-white/70 mb-1">Método de pagamento</label>
+                  <select value={txMethod} onChange={e => setTxMethod(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                    <option value="">-- Não registado --</option>
+                    {METODOS_PAGAMENTO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-bold text-white/70 mb-1">Documento comprovativo (opcional)</label>
                   <input
@@ -1451,6 +1499,7 @@ const FinancePage: React.FC = () => {
                       <p className="text-[10px] text-white/60 flex items-center gap-1.5 flex-wrap">
                         <span>{new Date(t.date).toLocaleDateString('pt-PT')}</span>
                         {cat ? <span className="px-1.5 py-0.5 rounded bg-white/10">{cat.name}</span> : t.type === 'income' && <span className="px-1.5 py-0.5 rounded bg-white/10">Receita</span>}
+                        {nomeMetodo(t.payment_method) && <span className="px-1.5 py-0.5 rounded bg-white/10">{nomeMetodo(t.payment_method)}</span>}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
