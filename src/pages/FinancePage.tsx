@@ -84,7 +84,8 @@ const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: numbe
 // Ordem categórica fixa — nunca ciclada — para as receitas por categoria.
 const RECEITA_CATEGORIAS: { key: 'quotas' | 'insurance' | 'other'; label: string; corBarra: string; corTexto: string }[] = [
   { key: 'quotas', label: 'Quotas', corBarra: 'bg-csc-light', corTexto: 'text-csc-light' },
-  { key: 'insurance', label: 'Seguro', corBarra: 'bg-csc-blue', corTexto: 'text-csc-blue' },
+  // csc-blue é escuro de mais para se distinguir do fundo verde-escuro do cartão — usa-se um azul mais claro só aqui.
+  { key: 'insurance', label: 'Seguro', corBarra: 'bg-sky-400', corTexto: 'text-sky-300' },
   { key: 'other', label: 'Outras Receitas', corBarra: 'bg-csc-gold', corTexto: 'text-csc-gold' },
 ]
 
@@ -700,12 +701,13 @@ const FinancePage: React.FC = () => {
 
       {/* ================= QUOTAS ================= */}
       {activeTab === 'quotas' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-black text-gray-900">Controlo de Quotas — Época {seasonLabel}</h3>
-            <span className="text-[11px] text-gray-500">{fmtEuro(settings.quota_amount)}/mês · incumprimento a partir do dia {settings.quota_due_day}</span>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Cabeçalho escuro — sem ele o cartão fica demasiado branco sobre o fundo cinza claro da página. */}
+          <div className="bg-csc-dark px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
+            <h3 className="text-sm font-black text-white">Controlo de Quotas — Época {seasonLabel}</h3>
+            <span className="text-[11px] text-white/70">{fmtEuro(settings.quota_amount)}/mês · incumprimento a partir do dia {settings.quota_due_day}</span>
           </div>
-          <div className="divide-y divide-gray-100">
+          <div className="p-5 divide-y divide-gray-100">
             {quotaOverview.map(q => {
               const expanded = expandedPlayerId === q.player.id
               return (
@@ -793,16 +795,16 @@ const FinancePage: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-bold text-white/70 mb-1">Valor (€)</label>
-                <input type="number" step="0.01" value={insuranceFormAmount} onChange={e => setInsuranceFormAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" placeholder="0.00" />
+                <input type="number" step="0.01" value={insuranceFormAmount} onChange={e => setInsuranceFormAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" placeholder="0.00" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-white/70 mb-1">Data</label>
-                <input type="date" value={insuranceFormDate} onChange={e => setInsuranceFormDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" />
+                <input type="date" value={insuranceFormDate} onChange={e => setInsuranceFormDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-bold text-white/70 mb-1">Notas (opcional)</label>
-              <input type="text" value={insuranceFormNotes} onChange={e => setInsuranceFormNotes(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" placeholder="Ex: 1ª tranche" />
+              <input type="text" value={insuranceFormNotes} onChange={e => setInsuranceFormNotes(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" placeholder="Ex: 1ª tranche" />
             </div>
             <button
               type="button"
@@ -814,9 +816,11 @@ const FinancePage: React.FC = () => {
             </button>
           </div>
 
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <h3 className="text-sm font-black text-gray-900 mb-3">Estado do Seguro por Jogador — Época {seasonLabel}</h3>
-            <div className="divide-y divide-gray-100">
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-csc-dark px-5 py-3">
+              <h3 className="text-sm font-black text-white">Estado do Seguro por Jogador — Época {seasonLabel}</h3>
+            </div>
+            <div className="p-5 divide-y divide-gray-100">
               {players.map(p => {
                 const payments = insuranceByPlayer.get(p.id) || []
                 const paidTotal = payments.reduce((s, ip) => s + ip.amount, 0)
@@ -856,16 +860,16 @@ const FinancePage: React.FC = () => {
               <form onSubmit={handleAddTransaction} className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-white/70 mb-1">Descrição</label>
-                  <input type="text" required value={txDesc} onChange={e => setTxDesc(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" placeholder="Ex: Bolas novas" />
+                  <input type="text" required value={txDesc} onChange={e => setTxDesc(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" placeholder="Ex: Bolas novas" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-xs font-bold text-white/70 mb-1">Valor (€)</label>
-                    <input type="number" step="0.01" required value={txAmount} onChange={e => setTxAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" placeholder="0.00" />
+                    <input type="number" step="0.01" required value={txAmount} onChange={e => setTxAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" placeholder="0.00" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-white/70 mb-1">Data</label>
-                    <input type="date" required value={txDate} onChange={e => setTxDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" />
+                    <input type="date" required value={txDate} onChange={e => setTxDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
                   </div>
                 </div>
                 <div>
@@ -903,7 +907,7 @@ const FinancePage: React.FC = () => {
             <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-5">
               <h3 className="text-sm font-black text-white mb-3">Categorias de Despesa</h3>
               <div className="flex gap-2 mb-3">
-                <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nova categoria" className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" />
+                <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nova categoria" className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
                 <button type="button" onClick={handleAddCategory} className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors">
                   <Plus size={14} />
                 </button>
@@ -1066,11 +1070,11 @@ const FinancePage: React.FC = () => {
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-xs font-bold text-white/70 mb-1">Valor da Quota (€)</label>
-                <input type="number" step="0.01" value={settingsForm.quota_amount} onChange={e => setSettingsForm(s => ({ ...s, quota_amount: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" />
+                <input type="number" step="0.01" value={settingsForm.quota_amount} onChange={e => setSettingsForm(s => ({ ...s, quota_amount: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-white/70 mb-1">Incumprimento a partir do dia</label>
-                <input type="number" min={1} max={28} value={settingsForm.quota_due_day} onChange={e => setSettingsForm(s => ({ ...s, quota_due_day: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" />
+                <input type="number" min={1} max={28} value={settingsForm.quota_due_day} onChange={e => setSettingsForm(s => ({ ...s, quota_due_day: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
               </div>
             </div>
             <label className="block text-xs font-bold text-white/70 mb-1.5">Meses sem quota</label>
@@ -1101,7 +1105,7 @@ const FinancePage: React.FC = () => {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold text-white/70 mb-1">Valor (€)</label>
-                <input type="number" step="0.01" value={settingsForm.insurance_amount} onChange={e => setSettingsForm(s => ({ ...s, insurance_amount: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" />
+                <input type="number" step="0.01" value={settingsForm.insurance_amount} onChange={e => setSettingsForm(s => ({ ...s, insurance_amount: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-white/70 mb-1">Prazo — Mês</label>
@@ -1111,7 +1115,7 @@ const FinancePage: React.FC = () => {
               </div>
               <div>
                 <label className="block text-xs font-bold text-white/70 mb-1">Prazo — Dia</label>
-                <input type="number" min={1} max={31} value={settingsForm.insurance_deadline_day} onChange={e => setSettingsForm(s => ({ ...s, insurance_deadline_day: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900" />
+                <input type="number" min={1} max={31} value={settingsForm.insurance_deadline_day} onChange={e => setSettingsForm(s => ({ ...s, insurance_deadline_day: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
               </div>
             </div>
           </div>

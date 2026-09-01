@@ -67,7 +67,7 @@ export function CallupRow({ status, player, displayName, isCoachOrAdmin, onConfi
           {positions.length > 0 && (
             <div className="flex items-center gap-1 mt-0.5 flex-wrap">
               {positions.map((pos, idx) => (
-                <span key={idx} className="text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-700">
+                <span key={idx} className="text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
                   {pos}
                 </span>
               ))}
