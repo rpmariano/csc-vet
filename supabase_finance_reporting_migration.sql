@@ -266,6 +266,17 @@ eligible AS (
         -- partir de hoje; ativo/lesionado continua elegível até ao fim da época.
         COALESCE(p.quota_end_date, CASE WHEN p.status = 'inactive' THEN CURRENT_DATE END) AS quota_end_date
     FROM public.profiles p
+    -- Só quem tem o papel de Jogador paga quota: membros só Treinador ou só
+    -- Direção ficam de fora (continuam elegíveis para Encargos, à parte).
+    -- Espelha extractRolesFromProfile() de src/context/AuthContext.tsx: com a
+    -- coluna `roles` preenchida decide ela — mais o papel real, que essa função
+    -- acrescenta sempre à lista; com a coluna vazia, os papéis derivam de `role`
+    -- e aí player, coach e admin incluem todos 'player'.
+    WHERE CASE
+        WHEN p.roles IS NOT NULL AND COALESCE(array_length(p.roles, 1), 0) > 0
+            THEN ('player' = ANY (p.roles)) OR p.role = 'player'
+        ELSE TRUE
+    END
 )
 SELECT
     e.player_id,
@@ -303,6 +314,6 @@ WHERE (e.quota_start_date IS NULL OR (qm.month_start + INTERVAL '1 month - 1 day
   AND (e.quota_end_date IS NULL OR qm.month_start <= e.quota_end_date);
 
 COMMENT ON VIEW public.v_quota_status IS
-'Matriz jogador × mês da época corrente: status (paid|late|pending), payment_status (paid|unpaid) e o valor em dívida. É aqui que existe a quota por pagar — em dues só há linha para as pagas. Espelha getPlayerQuotaMonths + computeQuotaMonthStatus de src/lib/finance.ts.';
+'Matriz jogador × mês da época corrente: status (paid|late|pending), payment_status (paid|unpaid) e o valor em dívida. Só inclui quem tem o papel de Jogador. É aqui que existe a quota por pagar — em dues só há linha para as pagas. Espelha getPlayerQuotaMonths + computeQuotaMonthStatus de src/lib/finance.ts e a regra de papéis de extractRolesFromProfile.';
 
 GRANT SELECT ON public.v_quota_status TO authenticated;

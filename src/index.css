@@ -101,10 +101,16 @@ body {
   50%      { transform: translateY(-15%); }
 }
 
+@keyframes csc-slide-up {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .animate-fade-in     { animation: csc-fade-in 180ms ease-out both; }
 .animate-scale-in    { animation: csc-scale-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-scale-up    { animation: csc-scale-up 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-bounce-short{ animation: csc-bounce-short 900ms ease-in-out 3; }
+.animate-slide-up    { animation: csc-slide-up 240ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 /* Respeitar quem pediu ao sistema para reduzir movimento */
 @media (prefers-reduced-motion: reduce) {
@@ -112,6 +118,7 @@ body {
   .animate-scale-in,
   .animate-scale-up,
   .animate-bounce-short,
+  .animate-slide-up,
   .animate-pulse,
   .animate-spin {
     animation-duration: 0.01ms !important;
