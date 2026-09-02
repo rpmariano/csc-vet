@@ -90,11 +90,16 @@ RLS: leitura aberta a qualquer autenticado; escrita restrita a `coach`/`admin` v
 
 ## Riscos conhecidos (revisto em 2026-09)
 
-1. **P1 — Qualquer autenticado lê a ficha completa de toda a gente.** A política de
-   SELECT em `profiles` é `USING (true)` para `authenticated`, e a tabela guarda IBAN,
-   NIF, nº de cartão de cidadão, morada e telefone. Basta uma conta no clube para
-   descarregar tudo. É o risco real de exposição de dados pessoais — não a chave anónima
-   (ver nota abaixo). A correção é restringir a política por coluna ou por papel.
+1. **~~P1 — Qualquer autenticado lê a ficha completa de toda a gente.~~ Corrigido em
+   2026-09-02** (`supabase_rls_profiles_migration.sql`, aplicada). Havia uma política
+   `FOR ALL ... USING (true)` que, por serem as permissivas somadas por OR, dava leitura
+   *e escrita* de todas as fichas a qualquer conta. Hoje: a própria ficha e a equipa
+   técnica. Verificado na base — admin vê 27, jogador vê 1.
+   **Falta a contrapartida no cliente:** a app lê `profiles` diretamente para montar o
+   plantel, portanto um jogador deixaria de ver os nomes dos colegas nas convocatórias.
+   A base já tem `public.v_players_public` (colunas de plantel, sem dados sensíveis);
+   falta apontar-lhe essas leituras. Não afeta ninguém hoje — as contas existentes são
+   todas admin.
 2. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
    `medical_notes` e injetar `<!--roles:admin-->`, ganhando a UI de admin. A RLS trava as
    escritas, mas combina-se com o ponto 1 na leitura.

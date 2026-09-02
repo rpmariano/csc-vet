@@ -31,6 +31,18 @@
 -- `profiles` sem passar pela RLS: não há recursão.
 --
 -- Idempotente: pode correr mais do que uma vez.
+--
+-- APLICADA em 2026-09-02 ao projeto vwvsfrzwcwdvbuaxftoh (migração
+-- `restringir_leitura_e_escrita_de_profiles`). Verificado na base, a simular
+-- sessões: um admin continua a ver as 27 fichas; um jogador passa a ver 1 (a
+-- sua). Fica aqui para historial e para poder correr num projeto novo.
+--
+-- FALTA (do lado do cliente): com esta política, um jogador deixa de ver os
+-- nomes dos colegas nas convocatórias, porque a app lê `profiles` diretamente.
+-- A base já tem a vista `public.v_players_public` com as colunas de plantel
+-- (sem IBAN, NIF, morada, contactos nem notas médicas); falta apontar-lhe as
+-- leituras de plantel da app. Não afeta ninguém hoje: as duas contas
+-- existentes são admin.
 -- ============================================================================
 
 BEGIN;
