@@ -34,8 +34,20 @@ const PERFIL_ADMIN = {
   phone: null,
 }
 
+/** Colunas que a vista de plantel expõe — sem IBAN, NIF, morada nem contactos. */
+const COLUNAS_PLANTEL = [
+  'id', 'name', 'nickname', 'shirt_name', 'jersey_number', 'photo_url', 'position',
+  'status', 'role', 'roles', 'kit_size', 'birth_date', 'nationality',
+  'quota_start_date', 'quota_end_date', 'created_at',
+] as const
+
+const soColunasDePlantel = (perfil: Record<string, unknown>) =>
+  Object.fromEntries(COLUNAS_PLANTEL.filter(c => c in perfil).map(c => [c, perfil[c]]))
+
 export const FIXTURES_BASE: Fixtures = {
   profiles: [PERFIL_ADMIN],
+  // A app lê o plantel por aqui; espelha `profiles` sem os campos sensíveis.
+  v_players_public: [soColunasDePlantel(PERFIL_ADMIN)],
   club_settings: [{ id: 1, home_field_id: null, club_name: 'GDS Cascais' }],
   fields: [],
   opponents: [],

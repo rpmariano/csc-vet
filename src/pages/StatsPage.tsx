@@ -66,7 +66,7 @@ const StatsPage: React.FC = () => {
         const [{ data: statsData }, { data: tourData }] = await Promise.all([
           supabase
             .from('stats')
-            .select('*, events(id, title, date_time, type, is_friendly, tournament_id, home_score, away_score), profiles(id, name, shirt_name, jersey_number, photo_url)'),
+            .select('*, events(id, title, date_time, type, is_friendly, tournament_id, home_score, away_score), v_players_public(id, name, shirt_name, jersey_number, photo_url)'),
           supabase
             .from('tournaments')
             .select('id, name, season')

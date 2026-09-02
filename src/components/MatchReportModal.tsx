@@ -133,7 +133,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
         // 2. Fetch all profiles & callups for this event
         const [{ data: profilesData }, { data: callupsData }, { data: statsData }] = await Promise.all([
-          supabase.from('profiles').select('id, name, shirt_name, jersey_number, photo_url, position, role, roles').order('jersey_number', { ascending: true, nullsFirst: false }),
+          supabase.from('v_players_public').select('id, name, shirt_name, jersey_number, photo_url, position, role, roles').order('jersey_number', { ascending: true, nullsFirst: false }),
           supabase.from('callups').select('player_id, status, notes').eq('event_id', eventId),
           supabase.from('stats').select('*').eq('event_id', eventId)
         ])

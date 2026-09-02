@@ -76,6 +76,10 @@ RLS: leitura aberta a qualquer autenticado; escrita restrita a `coach`/`admin` v
 - Tipografia densa e pesada: `font-black`, tamanhos `text-[9px]`–`text-sm`, `rounded-xl`/`2xl`.
 - Cartões: `bg-white rounded-2xl shadow-sm border border-gray-100`.
 - Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
+- **O plantel lê-se de `v_players_public`, não de `profiles`.** Tudo o que mostre
+  colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a
+  vista, que só tem colunas de equipa. `profiles` fica para a própria ficha e para o
+  Plantel (treinador/admin), onde os dados pessoais são o assunto.
 - **Detalhe é página no desktop, persiana no telemóvel.** Ver um evento ou uma ficha
   de atleta não abre janela nenhuma no desktop: o `<VistaDetalhe>` decide a moldura
   pelo `useEhDesktop()` e o endereço leva o item (`?event=`, `?atleta=`), portanto há
@@ -95,11 +99,12 @@ RLS: leitura aberta a qualquer autenticado; escrita restrita a `coach`/`admin` v
    `FOR ALL ... USING (true)` que, por serem as permissivas somadas por OR, dava leitura
    *e escrita* de todas as fichas a qualquer conta. Hoje: a própria ficha e a equipa
    técnica. Verificado na base — admin vê 27, jogador vê 1.
-   **Falta a contrapartida no cliente:** a app lê `profiles` diretamente para montar o
-   plantel, portanto um jogador deixaria de ver os nomes dos colegas nas convocatórias.
-   A base já tem `public.v_players_public` (colunas de plantel, sem dados sensíveis);
-   falta apontar-lhe essas leituras. Não afeta ninguém hoje — as contas existentes são
-   todas admin.
+   A contrapartida no cliente está feita: as leituras de plantel passaram para a vista
+   `public.v_players_public` (nome, alcunha, camisola, número, foto, posição, estado,
+   papéis — sem IBAN, NIF, morada, contactos ou notas médicas), incluindo as
+   convocatórias e estatísticas que trazem o jogador aninhado. A tabela `profiles` fica
+   para a própria ficha (AuthContext, Definições), para a associação de conta e para o
+   Plantel, que é de treinador/admin.
 2. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
    `medical_notes` e injetar `<!--roles:admin-->`, ganhando a UI de admin. A RLS trava as
    escritas, mas combina-se com o ponto 1 na leitura.

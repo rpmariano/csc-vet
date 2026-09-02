@@ -153,7 +153,7 @@ const FinancePage: React.FC = () => {
         { data: tourData },
       ] = await Promise.all([
         supabase.from('financial_settings').select('*').eq('id', 1).maybeSingle(),
-        supabase.from('profiles').select('id, name, shirt_name, jersey_number, status, quota_start_date, quota_end_date').order('jersey_number', { ascending: true, nullsFirst: false }),
+        supabase.from('v_players_public').select('id, name, shirt_name, jersey_number, status, quota_start_date, quota_end_date').order('jersey_number', { ascending: true, nullsFirst: false }),
         supabase.from('dues').select('*'),
         supabase.from('charges').select('*').order('created_at', { ascending: false }),
         supabase.from('charge_players').select('*'),

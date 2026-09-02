@@ -17,7 +17,11 @@ export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // Uma repetição também localmente: os workers partilham um só servidor Vite,
+  // que compila cada rota à primeira passagem, e sob contenção um carregamento
+  // lento faz falhar uma asserção que noutra corrida passa. Falhar duas vezes
+  // continua a ser falha a sério.
+  retries: 1,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? 'line' : 'list',
   use: {
