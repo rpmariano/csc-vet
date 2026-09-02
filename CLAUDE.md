@@ -50,8 +50,8 @@ Três papéis: `player` · `coach` · `admin`.
 
 `profiles`, `fields`, `opponents`, `tournaments`, `tournament_players`,
 `tournament_suspensions`, `tournament_groups`, `tournament_teams`, `tournament_matches`,
-`events`, `callups`, `attendances`, `stats`, `announcements`, `dues`, `transactions`,
-`club_settings`.
+`events`, `callups`, `attendances`, `stats`, `announcements`, `announcement_reads`,
+`dues`, `transactions`, `club_settings`.
 
 `v_players_public` (`supabase_profiles_pii_migration.sql`) é a vista por onde a app lê os
 colegas de equipa — sem email, telefone, morada, NIF, cartão de cidadão nem IBAN. A tabela
@@ -66,7 +66,13 @@ A função `public.financial_season(date)` espelha `getSeasonLabel()` de `src/li
 qualquer mudança à regra da época tem de ser feita **nos dois sítios**.
 Ver `docs/financeiro-campos-reporting.md`.
 
-RLS: leitura aberta a qualquer autenticado — **exceto `profiles`**, ver acima; escrita
+`announcement_reads` (`supabase_announcement_reads_migration.sql`) guarda que comunicados
+cada pessoa já leu. Estava em `localStorage`, que é por dispositivo — o badge de por ler
+não sincronizava entre o telemóvel e o desktop. Cada um só vê e escreve as suas linhas,
+nem a equipa técnica lê as dos outros.
+
+RLS: leitura aberta a qualquer autenticado — **exceto `profiles` e `announcement_reads`**,
+ver acima; escrita
 restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Esquema em `supabase_schema.sql` e
 `supabase_players_migration.sql`.
 
