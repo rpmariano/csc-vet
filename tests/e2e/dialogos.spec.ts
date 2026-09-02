@@ -1,18 +1,18 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import { montarSupabaseFalso } from './supabase-mock'
 
 /**
  * Teste de fumo dos diálogos: cada um tem de se anunciar como diálogo, ter um
- * nome acessível, receber o foco ao abrir, fechar com Escape e devolver o foco
- * a quem o abriu. É a rede de segurança do useModalA11y — sem ela, um modal
- * escrito à mão volta a passar despercebido.
+ * nome acessível, receber o foco ao abrir e reagir ao Escape. É a rede de
+ * segurança do useModalA11y — sem ela, um modal escrito à mão volta a passar
+ * despercebido.
  */
 
-const dialogo = (page: Page) => page.locator('[role="dialog"]')
+const dialogos = (page: Page) => page.locator('[role="dialog"]')
 
 /** Nome acessível: `aria-label`, ou o texto do elemento apontado por `aria-labelledby`. */
-async function nomeAcessivel(page: Page) {
-  return dialogo(page).first().evaluate(el => {
+function nomeAcessivel(painel: Locator) {
+  return painel.evaluate(el => {
     const rotulo = el.getAttribute('aria-label')
     if (rotulo) return rotulo
     const id = el.getAttribute('aria-labelledby')
@@ -23,23 +23,23 @@ async function nomeAcessivel(page: Page) {
 const focoDentroDoDialogo = (page: Page) =>
   page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))
 
-/**
- * Abre um diálogo pelo seu botão, verifica-o e fecha-o com Escape.
- */
-async function verificaDialogo(page: Page, abrir: () => Promise<void>) {
-  await expect(dialogo(page)).toHaveCount(0)
-
-  await abrir()
-  const painel = dialogo(page).first()
+/** O contrato que todos partilham, sem assumir o que o Escape faz a seguir. */
+async function verificaContrato(page: Page, painel: Locator) {
   await expect(painel).toBeVisible()
   await expect(painel).toHaveAttribute('aria-modal', 'true')
-  expect(await nomeAcessivel(page), 'o diálogo tem de ter nome acessível').not.toBe('')
-
+  expect(await nomeAcessivel(painel), 'o diálogo tem de ter nome acessível').not.toBe('')
   // O foco entra no diálogo: sem isto o teclado continuava na página por baixo.
   await expect.poll(() => focoDentroDoDialogo(page), { timeout: 2000 }).toBe(true)
+}
 
+/** Diálogo simples: abre, cumpre o contrato e fecha com Escape. */
+async function verificaDialogo(page: Page, abrir: () => Promise<void>) {
+  const antes = await dialogos(page).count()
+  await abrir()
+  await expect(dialogos(page)).toHaveCount(antes + 1)
+  await verificaContrato(page, dialogos(page).last())
   await page.keyboard.press('Escape')
-  await expect(dialogo(page)).toHaveCount(0)
+  await expect(dialogos(page)).toHaveCount(antes)
 }
 
 async function abrePagina(page: Page, caminho: string, fixtures = {}) {
@@ -67,7 +67,7 @@ test.describe('Painel de administração', () => {
     await abrePagina(page, 'admin')
 
     await page.getByRole('button', { name: 'Novo Campo' }).first().click()
-    const painelCampo = dialogo(page).first()
+    const painelCampo = dialogos(page).first()
     await expect(painelCampo).toBeVisible()
 
     // Sujar o formulário: agora o fecho tem de ser deliberado.
@@ -75,11 +75,11 @@ test.describe('Painel de administração', () => {
 
     await page.keyboard.press('Escape')
     // Dois diálogos: o formulário continua aberto, com a confirmação por cima.
-    await expect(dialogo(page)).toHaveCount(2)
+    await expect(dialogos(page)).toHaveCount(2)
 
     // O segundo Escape fecha só a confirmação — não os dois de uma vez.
     await page.keyboard.press('Escape')
-    await expect(dialogo(page)).toHaveCount(1)
+    await expect(dialogos(page)).toHaveCount(1)
     await expect(painelCampo).toBeVisible()
   })
 })
@@ -114,5 +114,66 @@ test.describe('Eventos', () => {
   test('criar evento', async ({ page }) => {
     await abrePagina(page, 'events')
     await verificaDialogo(page, () => page.getByRole('button', { name: 'Novo Evento' }).first().click())
+  })
+})
+
+test.describe('Calendário', () => {
+  const treino = {
+    id: 'e1',
+    title: 'Treino de teste',
+    type: 'practice',
+    date_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    location: 'Campo de Teste',
+    description: null,
+    field_id: null,
+    opponent_id: null,
+    tournament_id: null,
+    home_away: 'home',
+    is_friendly: false,
+    max_players: null,
+    meeting_time: null,
+    home_score: null,
+    away_score: null,
+  }
+
+  /** Lista → cartão do evento (abre a persiana) → botão Modificar. */
+  async function abreEdicaoDoEvento(page: Page) {
+    await page.getByRole('button', { name: /^Lista/ }).click()
+    await page.locator('div.cursor-pointer.bg-csc-dark').first().click()
+    await page.getByTitle('Modificar evento').click()
+  }
+
+  test('editar evento, com a persiana por baixo', async ({ page }) => {
+    await abrePagina(page, 'calendar', { events: [treino] })
+    await abreEdicaoDoEvento(page)
+
+    // Persiana do evento + formulário de edição por cima.
+    await expect(dialogos(page)).toHaveCount(2)
+    await verificaContrato(page, dialogos(page).last())
+
+    // A edição fecha-se sempre de forma deliberada: o Escape pede confirmação.
+    await page.keyboard.press('Escape')
+    await expect(dialogos(page)).toHaveCount(3)
+
+    // E o Escape seguinte fecha só essa confirmação.
+    await page.keyboard.press('Escape')
+    await expect(dialogos(page)).toHaveCount(2)
+  })
+
+  test('criar campo a partir da edição do evento', async ({ page }) => {
+    await abrePagina(page, 'calendar', { events: [treino] })
+    await abreEdicaoDoEvento(page)
+    await expect(dialogos(page)).toHaveCount(2)
+
+    // O select do campo abre a janela de criação rápida por cima da edição.
+    await page.locator('select').filter({ hasText: 'Criar Novo Campo' }).first().selectOption('__new__')
+    await expect(dialogos(page)).toHaveCount(3)
+    const painelCampo = dialogos(page).last()
+    await verificaContrato(page, painelCampo)
+    await expect(painelCampo).toContainText('Criar Novo Campo / Instalação')
+
+    // Escape fecha só a janela de cima; a edição continua aberta por baixo.
+    await page.keyboard.press('Escape')
+    await expect(dialogos(page)).toHaveCount(2)
   })
 })

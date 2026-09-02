@@ -2,15 +2,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { 
   MapPin, 
   Clock, 
-  Plus, 
   X, 
   Users, 
   CheckCircle2,
   XCircle,
   Trash2,
   Search, 
-  RotateCcw, 
-  AlertTriangle, 
   ExternalLink,
   ChevronLeft,
   ChevronRight,
@@ -18,7 +15,6 @@ import {
   Calendar as CalendarIcon,
   CalendarDays as CalendarDaysIcon,
   List as ListIcon,
-  Repeat,
   Edit,
   Save,
   CalendarRange,
@@ -226,7 +222,6 @@ const CalendarPage: React.FC = () => {
   // Separado de `selectedEvent`: o evento fica retido (para a persiana poder deslizar
   // suavemente para fora ao fechar) mesmo depois de a persiana deixar de estar aberta.
   const [isEventSheetOpen, setIsEventSheetOpen] = useState(false)
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
   // Calendar View States
@@ -240,7 +235,6 @@ const CalendarPage: React.FC = () => {
   // Callups state
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [modalCallupStatusFilter, setModalCallupStatusFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
   const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 640 : true)
@@ -321,33 +315,6 @@ const CalendarPage: React.FC = () => {
     }
   }
 
-  // Form states
-  const [title, setTitle] = useState('')
-  const [type, setType] = useState<'practice' | 'match' | 'gathering'>('practice')
-  const [dateTime, setDateTime] = useState('')
-  const [meetingTime, setMeetingTime] = useState('')
-  const [fieldId, setFieldId] = useState('')
-  const [location, setLocation] = useState('')
-  const [description, setDescription] = useState('')
-  const [isFriendly, setIsFriendly] = useState(false)
-  const [tournamentId, setTournamentId] = useState('')
-  const [opponentId, setOpponentId] = useState('')
-  const [homeAway, setHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
-  const [maxPlayers, setMaxPlayers] = useState<number | ''>('')
-
-  // Recurrence states
-  const [isRecurring, setIsRecurring] = useState(false)
-  const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<number[]>([3]) // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
-
-  // Evita duplo-submit do formulário de criação de evento (duplo clique / duplo toque em
-  // ligação lenta insere o evento e as convocatórias duas vezes — ver handleAddEvent). O
-  // estado serve para desativar o botão na UI; o ref é a guarda síncrona real — entre o
-  // clique e o próximo repaint, o estado ainda não travou o botão (mesmo padrão já usado
-  // em isBatchCallingRef, noutro sítio desta página, para o mesmo tipo de bug).
-  const [isCreatingEvent, setIsCreatingEvent] = useState(false)
-  const isCreatingEventRef = useRef(false)
-
   // Edit Event states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
@@ -376,7 +343,6 @@ const CalendarPage: React.FC = () => {
   const [isQuickFieldModalOpen, setIsQuickFieldModalOpen] = useState(false)
   const [quickFieldName, setQuickFieldName] = useState('')
   const [quickFieldAddress, setQuickFieldAddress] = useState('')
-  const [quickFieldTarget, setQuickFieldTarget] = useState<'create' | 'edit'>('create')
   const [isSavingQuickField, setIsSavingQuickField] = useState(false)
 
   // Quick Opponent Modal states (Criação de adversário inline a partir da janela de criação/edição)
@@ -386,32 +352,11 @@ const CalendarPage: React.FC = () => {
   const [quickOppHomeFieldId, setQuickOppHomeFieldId] = useState('')
   const [quickOppContactName, setQuickOppContactName] = useState('')
   const [quickOppContactPhone, setQuickOppContactPhone] = useState('')
-  const [quickOppTarget, setQuickOppTarget] = useState<'create' | 'edit'>('create')
   const [isSavingQuickOpp, setIsSavingQuickOpp] = useState(false)
 
   // Unsaved changes prompt state
-  const [unsavedModalTarget, setUnsavedModalTarget] = useState<'add' | 'edit' | 'quickField' | 'quickOpp' | null>(null)
+  const [unsavedModalTarget, setUnsavedModalTarget] = useState<'edit' | 'quickField' | 'quickOpp' | null>(null)
 
-  const isAddFormDirty = () => {
-    return Boolean(
-      title.trim() ||
-      location.trim() ||
-      description.trim() ||
-      tournamentId ||
-      opponentId ||
-      maxPlayers !== '' ||
-      selectedPlayerIds.length > 0 ||
-      isRecurring
-    )
-  }
-
-  const handleAttemptCloseAddModal = () => {
-    if (isAddFormDirty()) {
-      setUnsavedModalTarget('add')
-    } else {
-      setIsAddModalOpen(false)
-    }
-  }
 
   const handleAttemptCloseEditModal = () => {
     setUnsavedModalTarget('edit')
@@ -440,16 +385,6 @@ const CalendarPage: React.FC = () => {
     }
   }
 
-  // Pre-select weekday when dateTime changes
-  useEffect(() => {
-    if (dateTime) {
-      const d = new Date(dateTime)
-      const day = d.getDay()
-      if (!isNaN(day)) {
-        setRecurrenceWeekdays([day])
-      }
-    }
-  }, [dateTime])
 
   const getCascaisHomeField = () => {
     if (clubSettings?.home_field_id) {
@@ -470,33 +405,6 @@ const CalendarPage: React.FC = () => {
     return fields[0] || null
   }
 
-  // Auto-selecionar o campo nos jogos e treinos ao criar
-  useEffect(() => {
-    if (isAddModalOpen) {
-      if (type === 'match') {
-        if (homeAway === 'home') {
-          const cascais = getCascaisHomeField()
-          if (cascais) {
-            setFieldId(cascais.id)
-            setLocation(cascais.address ? `${cascais.name} (${cascais.address})` : cascais.name)
-          }
-        } else if (homeAway === 'away' && opponentId) {
-          const opp = opponents.find(o => o.id === opponentId)
-          if (opp?.home_field_id) {
-            setFieldId(opp.home_field_id)
-            const f = fields.find(item => item.id === opp.home_field_id)
-            if (f) setLocation(f.address ? `${f.name} (${f.address})` : f.name)
-          }
-        }
-      } else if (type === 'practice' && !fieldId) {
-        const cascais = getCascaisHomeField()
-        if (cascais) {
-          setFieldId(cascais.id)
-          setLocation(cascais.address ? `${cascais.name} (${cascais.address})` : cascais.name)
-        }
-      }
-    }
-  }, [isAddModalOpen, type, homeAway, opponentId, opponents, fields, clubSettings])
 
   // Auto-selecionar o campo nos jogos ao editar
   useEffect(() => {
@@ -518,12 +426,6 @@ const CalendarPage: React.FC = () => {
     }
   }, [isEditModalOpen, editType, editHomeAway, editOpponentId, opponents, fields, clubSettings])
 
-  // Desativar recorrência em eventos que não sejam treino
-  useEffect(() => {
-    if (type !== 'practice') {
-      setIsRecurring(false)
-    }
-  }, [type])
 
   const handleSaveQuickField = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -550,13 +452,8 @@ const CalendarPage: React.FC = () => {
 
       const formattedLoc = resolvedField.address ? `${resolvedField.name} (${resolvedField.address})` : resolvedField.name
 
-      if (quickFieldTarget === 'create') {
-        setFieldId(resolvedField.id)
-        setLocation(formattedLoc)
-      } else {
-        setEditFieldId(resolvedField.id)
-        setEditLocation(formattedLoc)
-      }
+      setEditFieldId(resolvedField.id)
+      setEditLocation(formattedLoc)
 
       setQuickFieldName('')
       setQuickFieldAddress('')
@@ -571,13 +468,8 @@ const CalendarPage: React.FC = () => {
       }
       setFields(prev => [...prev, newFieldObj].sort((a, b) => a.name.localeCompare(b.name)))
       const formattedLoc = newFieldObj.address ? `${newFieldObj.name} (${newFieldObj.address})` : newFieldObj.name
-      if (quickFieldTarget === 'create') {
-        setFieldId(fallbackId)
-        setLocation(formattedLoc)
-      } else {
-        setEditFieldId(fallbackId)
-        setEditLocation(formattedLoc)
-      }
+      setEditFieldId(fallbackId)
+      setEditLocation(formattedLoc)
       setQuickFieldName('')
       setQuickFieldAddress('')
       setIsQuickFieldModalOpen(false)
@@ -617,20 +509,11 @@ const CalendarPage: React.FC = () => {
       const resolvedOpp = (data as Opponent) || newOppPayload
       setOpponents(prev => [...prev.filter(o => o.id !== resolvedOpp.id), resolvedOpp].sort((a, b) => a.name.localeCompare(b.name)))
 
-      if (quickOppTarget === 'create') {
-        setOpponentId(resolvedOpp.id)
-        if (homeAway === 'away' && resolvedOpp.home_field_id) {
-          setFieldId(resolvedOpp.home_field_id)
-          const f = fields.find(item => item.id === resolvedOpp.home_field_id)
-          if (f) setLocation(f.address ? `${f.name} (${f.address})` : f.name)
-        }
-      } else {
-        setEditOpponentId(resolvedOpp.id)
-        if (editHomeAway === 'away' && resolvedOpp.home_field_id) {
-          setEditFieldId(resolvedOpp.home_field_id)
-          const f = fields.find(item => item.id === resolvedOpp.home_field_id)
-          if (f) setEditLocation(f.address ? `${f.name} (${f.address})` : f.name)
-        }
+      setEditOpponentId(resolvedOpp.id)
+      if (editHomeAway === 'away' && resolvedOpp.home_field_id) {
+        setEditFieldId(resolvedOpp.home_field_id)
+        const f = fields.find(item => item.id === resolvedOpp.home_field_id)
+        if (f) setEditLocation(f.address ? `${f.name} (${f.address})` : f.name)
       }
 
       setIsQuickOpponentModalOpen(false)
@@ -649,11 +532,7 @@ const CalendarPage: React.FC = () => {
         home_field_id: quickOppHomeFieldId || null
       }
       setOpponents(prev => [...prev, newOppObj].sort((a, b) => a.name.localeCompare(b.name)))
-      if (quickOppTarget === 'create') {
-        setOpponentId(fallbackId)
-      } else {
-        setEditOpponentId(fallbackId)
-      }
+      setEditOpponentId(fallbackId)
       setIsQuickOpponentModalOpen(false)
       setQuickOppName('')
       setQuickOppInitials('')
@@ -665,28 +544,6 @@ const CalendarPage: React.FC = () => {
     }
   }
 
-  const calculateRecurringDates = (startIsoString: string, endDayString: string, weekdays: number[]) => {
-    if (!startIsoString || !endDayString || weekdays.length === 0) return []
-    const start = new Date(startIsoString)
-    const end = new Date(endDayString + 'T23:59:59')
-    const result: Date[] = []
-
-    if (start > end) return []
-
-    const hours = start.getHours()
-    const minutes = start.getMinutes()
-    const current = new Date(start)
-
-    while (current <= end) {
-      if (weekdays.includes(current.getDay())) {
-        const d = new Date(current)
-        d.setHours(hours, minutes, 0, 0)
-        result.push(d)
-      }
-      current.setDate(current.getDate() + 1)
-    }
-    return result
-  }
 
   const getEventLocation = (ev: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null | undefined) => {
     if (!ev) return ''
@@ -910,220 +767,11 @@ const CalendarPage: React.FC = () => {
     return player.status === 'active'
   }
 
-  // Ao mudar o tipo de evento, desmarca automaticamente jogadores inelegíveis (ex: lesionados em jogos/treinos)
-  useEffect(() => {
-    setSelectedPlayerIds(prev => prev.filter(id => {
-      const p = allPlayers.find(pl => pl.id === id)
-      return p ? isPlayerEligible(p, type) : false
-    }))
-  }, [type, allPlayers])
 
-  const handleSelectAllPlayers = () => {
-    const eligible = allPlayers.filter(p => isPlayerEligible(p, type))
-    setSelectedPlayerIds(eligible.map(p => p.id))
-  }
 
-  const handleClearPlayers = () => {
-    setSelectedPlayerIds([])
-  }
 
-  const handleRepeatLastCallup = () => {
-    const sortedEvents = [...events].sort((a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime())
-    const lastEventWithCallups = sortedEvents.find(e => (eventCallups[e.id] || []).length > 0)
-    
-    if (lastEventWithCallups && eventCallups[lastEventWithCallups.id]) {
-      const lastPlayerIds = eventCallups[lastEventWithCallups.id].map(c => c.player_id)
-      const validLastIds = lastPlayerIds.filter(id => {
-        const p = allPlayers.find(pl => pl.id === id)
-        return p ? isPlayerEligible(p, type) : false
-      })
-      setSelectedPlayerIds(validLastIds)
-      toast.success('Convocatória anterior repetida com sucesso!')
-    } else {
-      toast.info('Ainda não existem convocatórias anteriores para repetir.')
-    }
-  }
 
-  const togglePlayerSelection = (playerId: string) => {
-    const p = allPlayers.find(pl => pl.id === playerId)
-    if (p && !isPlayerEligible(p, type)) {
-      toast.warning('Este jogador está lesionado e não pode ser convocado para jogos ou treinos (apenas convívios).')
-      return
-    }
 
-    const willSelect = !selectedPlayerIds.includes(playerId)
-    if (willSelect && maxPlayers !== '' && selectedPlayerIds.length >= Number(maxPlayers)) {
-      setConfirmModalConfig({
-        isOpen: true,
-        title: 'Limite de Convocatória Atingido',
-        description: `A convocatória já atingiu o limite definido de ${maxPlayers} jogadores (${selectedPlayerIds.length} selecionados). Desejas selecionar este atleta mesmo assim?`,
-        confirmText: 'Sim, Convocar Atleta',
-        cancelText: 'Cancelar',
-        variant: 'warning',
-        onConfirm: () => {
-          setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
-          setSelectedPlayerIds(prev => [...prev, playerId])
-        }
-      })
-      return
-    }
-
-    setSelectedPlayerIds(prev => 
-      prev.includes(playerId) ? prev.filter(id => id !== playerId) : [...prev, playerId]
-    )
-  }
-
-  const handleAddEvent = async (e: React.FormEvent) => {
-    e.preventDefault()
-    // Reentrância: um duplo clique/toque (ou o fluxo de "Guardar e Sair" do modal de alterações
-    // não guardadas) chamava esta função outra vez enquanto o primeiro pedido ainda estava em
-    // curso, criando o evento e as convocatórias duas vezes. O estado (isCreatingEvent) não
-    // chega sozinho — só atualiza no próximo render — por isso a guarda real é o ref.
-    if (isCreatingEventRef.current) return
-    isCreatingEventRef.current = true
-    setIsCreatingEvent(true)
-    try {
-      let createdEventsList: Event[] = []
-
-      const selTour = tournaments.find(t => t.id === tournamentId)
-      const computedTitle = type === 'match'
-        ? (isFriendly ? 'Jogo Amigável' : (selTour ? `Jogo ${selTour.name}` : 'Jogo'))
-        : type === 'practice'
-        ? 'Treino'
-        : (title.trim() || 'Convívio')
-
-      let finalLocation = location.trim()
-      if (!finalLocation && fieldId) {
-        const f = fields.find(item => item.id === fieldId)
-        if (f) finalLocation = f.address ? `${f.name} (${f.address})` : f.name
-      }
-
-      if (isRecurring && recurrenceEndDate && recurrenceWeekdays.length > 0) {
-        const dates = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
-        if (dates.length === 0) {
-          toast.warning('Nenhuma data encontrada para os dias da semana e intervalo escolhidos.')
-          return
-        }
-
-        const eventsToInsert = dates.map(d => ({
-          title: computedTitle,
-          type,
-          date_time: d.toISOString(),
-          field_id: fieldId || null,
-          location: finalLocation || null,
-          description,
-          max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
-          is_friendly: type === 'match' ? isFriendly : undefined,
-          tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
-          opponent_id: type === 'match' ? (opponentId || null) : null,
-          home_away: type === 'match' ? homeAway : null,
-          created_by: profile?.id
-        }))
-
-        const { data: createdBatch, error } = await supabase
-          .from('events')
-          .insert(eventsToInsert)
-          .select()
-
-        if (error) throw error
-        if (createdBatch) createdEventsList = createdBatch as Event[]
-
-        const effectivePlayerIds = type === 'practice'
-          ? allPlayers.filter(p => isPlayerEligible(p, 'practice')).map(p => p.id)
-          : selectedPlayerIds
-
-        // Inserir convocatórias para todos os eventos criados
-        if (createdEventsList.length > 0 && effectivePlayerIds.length > 0) {
-          const validIds = await ensurePlayerIdsForSupabase(effectivePlayerIds, allPlayers)
-          const allCallups: any[] = []
-          createdEventsList.forEach(ev => {
-            validIds.forEach(pId => {
-              allCallups.push({
-                event_id: ev.id,
-                player_id: pId,
-                status: 'called'
-              })
-            })
-          })
-          if (allCallups.length > 0) {
-            await supabase.from('callups').upsert(allCallups, {
-              onConflict: 'event_id, player_id',
-              ignoreDuplicates: true
-            })
-          }
-        }
-
-        toast.success(`✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`)
-      } else {
-        const newEvent = {
-          title: computedTitle,
-          type,
-          date_time: new Date(dateTime).toISOString(),
-          meeting_time: meetingTime ? `${meetingTime}:00` : null,
-          field_id: fieldId || null,
-          location: finalLocation || null,
-          description,
-          max_players: maxPlayers !== '' ? Number(maxPlayers) : null,
-          is_friendly: type === 'match' ? isFriendly : false,
-          tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
-          opponent_id: type === 'match' ? (opponentId || null) : null,
-          home_away: type === 'match' ? homeAway : null,
-          created_by: profile?.id
-        }
-
-        const { data: createdEvent, error } = await supabase
-          .from('events')
-          .insert([newEvent])
-          .select()
-          .single()
-
-        if (error) throw error
-
-        const effectivePlayerIds = type === 'practice'
-          ? allPlayers.filter(p => isPlayerEligible(p, 'practice')).map(p => p.id)
-          : selectedPlayerIds
-
-        // Se houver jogadores a convocar (automático em treinos ou selecionados em jogos/convívios)
-        if (createdEvent && effectivePlayerIds.length > 0) {
-          const validIds = await ensurePlayerIdsForSupabase(effectivePlayerIds, allPlayers)
-          const callupsToInsert = validIds.map(pId => ({
-            event_id: createdEvent.id,
-            player_id: pId,
-            status: 'called'
-          }))
-          if (callupsToInsert.length > 0) {
-            await supabase.from('callups').upsert(callupsToInsert, {
-              onConflict: 'event_id, player_id',
-              ignoreDuplicates: true
-            })
-          }
-        }
-        toast.success('✨ Evento criado com sucesso!')
-      }
-
-      setIsAddModalOpen(false)
-      // Reset form
-      setTitle('')
-      setFieldId('')
-      setLocation('')
-      setDescription('')
-      setMaxPlayers('')
-      setTournamentId('')
-      setOpponentId('')
-      setHomeAway('home')
-      setIsFriendly(true)
-      setIsRecurring(false)
-      setRecurrenceEndDate('')
-      setRecurrenceWeekdays([])
-      setSelectedPlayerIds([])
-      fetchEventsAndData()
-    } catch (err: any) {
-      toast.error('Erro ao criar evento: ' + (err.message || 'Erro'))
-    } finally {
-      isCreatingEventRef.current = false
-      setIsCreatingEvent(false)
-    }
-  }
 
   // --- EDIT EVENT SPECIFIC HANDLERS ---
   const handleStartEditEvent = (ev: Event) => {
@@ -1826,7 +1474,6 @@ const CalendarPage: React.FC = () => {
   }
 
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
-  const painelCriarEventoRef = useModalA11y({ isOpen: isAddModalOpen, onClose: handleAttemptCloseAddModal })
   const painelEditarEventoRef = useModalA11y({ isOpen: isEditModalOpen, onClose: handleAttemptCloseEditModal })
 
   return (
@@ -2718,547 +2365,6 @@ const CalendarPage: React.FC = () => {
         </BottomSheet>
       )}
 
-      {/* Modal Criar Evento com Seleção de Convocatória (Versão Larga 2 Colunas) */}
-      {isAddModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in"
-          onMouseDown={(e) => {
-            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-            if (e.target === e.currentTarget) handleAttemptCloseAddModal()
-          }}
-        >
-          <div
-            ref={painelCriarEventoRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="criar-evento-titulo"
-            tabIndex={-1}
-            className="bg-csc-dark text-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/10 outline-none"
-          >
-            <button
-              type="button"
-              onClick={handleAttemptCloseAddModal}
-              aria-label="Fechar"
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
-              title="Fechar"
-            >
-              <X size={20} className="stroke-[2.5]" />
-            </button>
-            <h2 id="criar-evento-titulo" className="text-2xl font-black text-white mb-6">Criar Novo Evento</h2>
-            
-            <form onSubmit={handleAddEvent} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              
-              {/* COLUNA ESQUERDA: Dados do Evento (6 Colunas) */}
-              <div className="lg:col-span-6 space-y-4">
-                {type === 'gathering' && (
-                  <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Título do Convívio *</label>
-                    <input
-                      type="text"
-                      required={type === 'gathering'}
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
-                      placeholder="Ex: Jantar de Natal / Reentré"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Tipo de Evento</label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
-                  >
-                    <option value="match">Jogo</option>
-                    <option value="practice">Treino</option>
-                    <option value="gathering">Convívio</option>
-                  </select>
-                </div>
-
-                {type === 'match' && (
-                  <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl space-y-3">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="isFriendly"
-                        checked={isFriendly}
-                        onChange={(e) => {
-                          setIsFriendly(e.target.checked)
-                          if (e.target.checked) setTournamentId('')
-                        }}
-                        className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
-                      />
-                      <label htmlFor="isFriendly" className="ml-2 text-sm font-semibold text-white/80 cursor-pointer">
-                        Jogo Amigável
-                      </label>
-                    </div>
-                    {!isFriendly && (
-                      <div className="animate-fade-in">
-                        <label className="block text-xs font-semibold text-white/60 mb-1">Torneio / Competição</label>
-                        <select
-                          value={tournamentId}
-                          onChange={(e) => setTournamentId(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
-                        >
-                          <option value="">-- Selecionar Torneio --</option>
-                          {tournaments.map(t => (
-                            <option key={t.id} value={t.id}>
-                              🏆 {t.name} {t.season ? `(${t.season})` : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      <div>
-                        <label className="block text-xs font-semibold text-white/60 mb-1">Adversário</label>
-                        <select
-                          value={opponentId}
-                          onChange={(e) => {
-                            if (e.target.value === '__new__') {
-                              setQuickOppTarget('create')
-                              setIsQuickOpponentModalOpen(true)
-                            } else {
-                              setOpponentId(e.target.value)
-                            }
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
-                        >
-                          <option value="">-- Selecionar Adversário --</option>
-                          <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
-                          {opponents.map(o => (
-                            <option key={o.id} value={o.id}>{o.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-white/60 mb-1">Condição de Jogo</label>
-                        <select
-                          value={homeAway}
-                          onChange={(e) => setHomeAway(e.target.value as any)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
-                        >
-                          <option value="home">🏠 Casa</option>
-                          <option value="away">✈️ Fora</option>
-                          <option value="neutral">⚖️ Campo Neutro</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Data e Hora *</label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={dateTime}
-                      onChange={(e) => setDateTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Concentração (opcional)</label>
-                    <input
-                      type="time"
-                      value={meetingTime}
-                      onChange={(e) => setMeetingTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
-                      placeholder="Ex: 19:30"
-                    />
-                  </div>
-                </div>
-
-                {/* Campo / Instalação do Evento */}
-                {type === 'match' && homeAway === 'home' ? (
-                  <div className="p-3.5 bg-emerald-500/10 border-2 border-emerald-400/40 rounded-2xl flex items-center justify-between shadow-2xs">
-                    <div className="space-y-1 min-w-0 flex-1 pr-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
-                        <MapPin size={13} className="text-emerald-400 shrink-0" />
-                        <span>Campo do Jogo (Automático - Em Casa)</span>
-                      </span>
-                      <p className="text-xs font-black text-white truncate">
-                        🏟️ {(() => {
-                          const cascais = getCascaisHomeField()
-                          return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
-                        })()}
-                      </p>
-                    </div>
-                    {location && (
-                      <a
-                        href={getGoogleMapsUrl(location)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-black text-csc-dark bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-xl shadow-2xs shrink-0"
-                        title="Ver no Google Maps"
-                      >
-                        <MapPin size={12} className="text-red-500" />
-                        <span>Maps</span>
-                        <ExternalLink size={11} />
-                      </a>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <label className="font-bold text-white/80 flex items-center gap-1.5">
-                        <span>🏟️ Campo / Instalação *</span>
-                        {location && (
-                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                            ✓ {location}
-                          </span>
-                        )}
-                      </label>
-                    </div>
-                    <select
-                      required
-                      value={fieldId}
-                      onChange={(e) => {
-                        if (e.target.value === '__new__') {
-                          setQuickFieldTarget('create')
-                          setIsQuickFieldModalOpen(true)
-                        } else {
-                          setFieldId(e.target.value)
-                          const sel = fields.find(f => f.id === e.target.value)
-                          if (sel) {
-                            setLocation(sel.address ? `${sel.name} (${sel.address})` : sel.name)
-                          } else {
-                            setLocation('')
-                          }
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
-                    >
-                      <option value="">-- Escolher Campo / Instalação do Clube --</option>
-                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
-                      {fields.map(f => (
-                        <option key={f.id} value={f.id}>
-                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Descrição / Notas</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
-                    placeholder="Informações adicionais, indicações para atletas..."
-                  />
-                </div>
-
-                {/* SELEÇÃO DE RECORRÊNCIA (Apenas para Treinos) */}
-                {type === 'practice' && (
-                  <div className="p-4 bg-amber-500/10 border border-amber-400/30 rounded-xl space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={isRecurring}
-                          onChange={(e) => setIsRecurring(e.target.checked)}
-                          className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
-                        />
-                        <span className="text-sm font-bold text-white flex items-center gap-1.5">
-                          <Repeat size={16} className="text-csc-gold" />
-                          <span>Marcar Treino com Recorrência Semanal</span>
-                        </span>
-                      </label>
-                      {isRecurring && (
-                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-csc-gold text-csc-dark shadow-2xs">
-                          Recorrência Ativa
-                        </span>
-                      )}
-                    </div>
-
-                    {isRecurring && (
-                      <div className="pt-2 space-y-3 border-t border-amber-400/20 text-xs">
-                        {/* Dias da Semana */}
-                        <div>
-                          <label className="block font-bold text-white/70 mb-1.5">
-                            Dias da semana em que se realiza o evento:
-                          </label>
-                          <div className="flex flex-wrap gap-1.5">
-                            {[
-                              { label: 'Seg', val: 1 },
-                              { label: 'Ter', val: 2 },
-                              { label: 'Qua', val: 3 },
-                              { label: 'Qui', val: 4 },
-                              { label: 'Sex', val: 5 },
-                              { label: 'Sáb', val: 6 },
-                              { label: 'Dom', val: 0 }
-                            ].map(d => {
-                              const isChecked = recurrenceWeekdays.includes(d.val)
-                              return (
-                                <button
-                                  key={d.val}
-                                  type="button"
-                                  onClick={() => {
-                                    setRecurrenceWeekdays(prev => 
-                                      prev.includes(d.val) 
-                                        ? prev.filter(v => v !== d.val) 
-                                        : [...prev, d.val]
-                                    )
-                                  }}
-                                  className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
-                                    isChecked 
-                                      ? 'bg-csc-dark text-white shadow-xs font-black' 
-                                      : 'bg-white/5 text-white/70 border border-white/15 hover:bg-white/10'
-                                  }`}
-                                >
-                                  {d.label}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Data Limite da Recorrência */}
-                        <div>
-                          <label className="block font-bold text-white/70 mb-1">
-                            Repetir até à data (Data Final) *
-                          </label>
-                          <input
-                            type="date"
-                            required={isRecurring}
-                            value={recurrenceEndDate}
-                            min={dateTime ? dateTime.split('T')[0] : undefined}
-                            onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                            className="w-full sm:w-60 px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
-                          />
-                        </div>
-
-                        {/* Contador e Pré-visualização em tempo real */}
-                        {dateTime && recurrenceEndDate && recurrenceWeekdays.length > 0 && (() => {
-                          const generated = calculateRecurringDates(dateTime, recurrenceEndDate, recurrenceWeekdays)
-                          return (
-                            <div className="p-2.5 bg-white/5 border border-amber-400/30 rounded-lg font-medium text-amber-100 flex items-center gap-2">
-                              <CalendarRange size={16} className="text-csc-gold shrink-0" />
-                              <span>
-                                ✨ Serão criados <strong>{generated.length} eventos</strong> entre {new Date(dateTime).toLocaleDateString('pt-PT')} e {new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}.
-                              </span>
-                            </div>
-                          )
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* COLUNA DIREITA: SELEÇÃO DE JOGADORES (CONVOCATÓRIA) (6 Colunas) */}
-              <div className="lg:col-span-6 bg-white/5 p-5 rounded-2xl border border-white/10 space-y-3.5">
-                {type === 'practice' ? (
-                  <div className="p-6 bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-2 border-amber-400/30 rounded-3xl space-y-4 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-csc-dark text-csc-gold mx-auto flex items-center justify-center font-black text-2xl shadow-md">
-                      <TrainingIcon className="w-8 h-8" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-black text-white">Convocatória Automática de Treino</h3>
-                      <p className="text-xs text-white/60 mt-1.5 max-w-sm mx-auto leading-relaxed">
-                        Nos treinos, não é necessário fazer convocatória manual. Todos os <strong>{allPlayers.filter(p => isPlayerEligible(p, 'practice')).length} atletas disponíveis</strong> ficam automaticamente convocados.
-                      </p>
-                    </div>
-                    <div className="p-3.5 bg-white/5 border border-amber-400/20 rounded-2xl text-left space-y-2 shadow-2xs">
-                      <p className="text-xs font-black text-amber-200 flex items-center gap-1.5">
-                        <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
-                        <span>Gestão de Presenças no Treino:</span>
-                      </p>
-                      <ul className="text-xs text-white/60 space-y-1.5 list-disc list-inside">
-                        <li>O treino fica imediatamente visível na agenda e na página principal.</li>
-                        <li>Cada jogador poderá marcar <strong>Confirmar</strong> ou <strong>Recusar</strong>.</li>
-                        <li>O quórum de confirmados/recusados é atualizado em tempo real.</li>
-                      </ul>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2.5">
-                      <div>
-                        <label className="text-sm font-bold text-white flex items-center gap-1.5">
-                          <Users size={16} className="text-csc-gold" />
-                          <span>
-                            Convocatória Inicial ({selectedPlayerIds.length}{maxPlayers !== '' ? ` / ${maxPlayers} máx` : ''})
-                          </span>
-                        </label>
-                        <p className="text-[11px] text-white/70 mt-0.5">Selecione os atletas a convocar para este evento.</p>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <button
-                          type="button"
-                          onClick={handleRepeatLastCallup}
-                          className="font-bold text-white bg-white/10 border border-white/15 px-2.5 py-1 rounded-lg hover:bg-white/20 flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
-                          title="Repetir a lista de convocados do jogo anterior"
-                        >
-                          <RotateCcw size={12} /> Repetir Última
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSelectAllPlayers}
-                          className="font-bold text-white bg-white/10 border border-white/15 px-2 py-1 rounded-lg hover:bg-white/20 cursor-pointer shadow-2xs"
-                        >
-                          Todos
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleClearPlayers}
-                          className="font-bold text-red-300 bg-red-500/10 border border-red-400/20 px-2 py-1 rounded-lg hover:bg-red-500/20 cursor-pointer shadow-2xs"
-                        >
-                          Limpar
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Banner de Aviso de Limite */}
-                    {maxPlayers !== '' && selectedPlayerIds.length > Number(maxPlayers) && (
-                      <div className="p-2.5 bg-red-500/10 border border-red-400/30 rounded-xl text-xs text-red-300 font-bold flex items-center gap-2 animate-pulse">
-                        <AlertTriangle size={16} className="shrink-0 text-red-600" />
-                        <span>Aviso: O número de atletas convocados ({selectedPlayerIds.length}) ultrapassa o limite definido de {maxPlayers} jogadores!</span>
-                      </div>
-                    )}
-                    {maxPlayers !== '' && selectedPlayerIds.length === Number(maxPlayers) && (
-                      <div className="p-2 bg-emerald-500/10 border border-emerald-400/30 rounded-xl text-xs text-emerald-300 font-bold flex items-center gap-2">
-                        <CheckCircle2 size={15} className="shrink-0 text-green-600" />
-                        <span>Limite máximo de {maxPlayers} convocados preenchido a 100%.</span>
-                      </div>
-                    )}
-
-                    {/* Barra de Pesquisa de Jogadores */}
-                    <div className="relative">
-                      <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
-                      <input
-                        type="text"
-                        value={playerSearchTerm}
-                        onChange={(e) => setPlayerSearchTerm(e.target.value)}
-                        placeholder="Pesquisar jogador por nome..."
-                        className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-gray-900"
-                      />
-                      {playerSearchTerm && (
-                        <button
-                          type="button"
-                          onClick={() => setPlayerSearchTerm('')}
-                          className="absolute right-2.5 top-2 text-xs text-gray-400 hover:text-gray-600"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[380px] overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-xl">
-                      {allPlayers
-                        .filter(p => {
-                          if (!playerSearchTerm) return true
-                          const q = playerSearchTerm.toLowerCase()
-                          return p.name.toLowerCase().includes(q) ||
-                            p.shirt_name?.toLowerCase().includes(q) ||
-                            p.nickname?.toLowerCase().includes(q) ||
-                            (p.jersey_number && p.jersey_number.toString().includes(q))
-                        })
-                        .map(p => {
-                          const isSelected = selectedPlayerIds.includes(p.id)
-                          const isEligible = isPlayerEligible(p, type)
-                          const isInjured = p.status === 'injured'
-                          const roles = extractRolesFromProfile(p)
-
-                          return (
-                            <div
-                              key={p.id}
-                              onClick={() => togglePlayerSelection(p.id)}
-                              className={`flex items-center justify-between p-2.5 rounded-xl text-xs border transition-colors ${
-                                !isEligible 
-                                  ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
-                                  : isSelected 
-                                    ? 'bg-amber-50/80 font-black text-gray-900 border-amber-300 shadow-2xs cursor-pointer' 
-                                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  disabled={!isEligible}
-                                  onChange={() => {}} // controlado pelo onClick pai
-                                  className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none shrink-0"
-                                />
-
-                                <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
-                                  {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
-                                </div>
-
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-xs font-bold leading-tight">{getPlayerDisplayName(p)}</p>
-                                  <div className="flex items-center gap-1 mt-0.5">
-                                    {roles.map(r => (
-                                      <span
-                                        key={r}
-                                        className={`text-[8.5px] font-black px-1 rounded ${
-                                          r === 'admin' ? 'bg-amber-100 text-amber-900' :
-                                          r === 'coach' ? 'bg-blue-100 text-blue-900' :
-                                          'bg-emerald-100 text-emerald-900'
-                                        }`}
-                                      >
-                                        {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                              {isInjured && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
-                                  {type === 'gathering' ? 'Lesionado (Disponível)' : 'Lesionado'}
-                                </span>
-                              )}
-                            </div>
-                          )
-                        })}
-                      {allPlayers.filter(p => {
-                        if (!playerSearchTerm) return true
-                        const q = playerSearchTerm.toLowerCase()
-                        return p.name.toLowerCase().includes(q) ||
-                          p.shirt_name?.toLowerCase().includes(q) ||
-                          p.nickname?.toLowerCase().includes(q) ||
-                          (p.jersey_number && p.jersey_number.toString().includes(q))
-                      }).length === 0 && (
-                        <div className="col-span-2 text-center py-6 text-xs text-gray-500">
-                          Nenhum jogador encontrado com "{playerSearchTerm}".
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* FOOTER */}
-              <div className="col-span-full pt-5 border-t border-white/10 flex items-center justify-end gap-3 mt-2">
-                <button
-                  type="button"
-                  onClick={handleAttemptCloseAddModal}
-                  className="px-5 py-2.5 border border-white/15 hover:border-white/25 bg-white/5 hover:bg-white/10 rounded-xl text-xs sm:text-sm font-bold text-white transition-colors cursor-pointer shadow-2xs"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingEvent}
-                  className="px-6 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus size={16} className="text-csc-dark" />
-                  <span>{isCreatingEvent ? 'A criar...' : 'Criar Evento'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* MODAL 3: EDITAR EVENTO ESPECÍFICO (Versão Larga 2 Colunas) */}
       {isEditModalOpen && (
         <div 
@@ -3366,7 +2472,6 @@ const CalendarPage: React.FC = () => {
                           value={editOpponentId}
                           onChange={(e) => {
                             if (e.target.value === '__new__') {
-                              setQuickOppTarget('edit')
                               setIsQuickOpponentModalOpen(true)
                             } else {
                               setEditOpponentId(e.target.value)
@@ -3468,7 +2573,6 @@ const CalendarPage: React.FC = () => {
                       value={editFieldId}
                       onChange={(e) => {
                         if (e.target.value === '__new__') {
-                          setQuickFieldTarget('edit')
                           setIsQuickFieldModalOpen(true)
                         } else {
                           setEditFieldId(e.target.value)
@@ -3934,11 +3038,7 @@ const CalendarPage: React.FC = () => {
       <UnsavedChangesModal
         isOpen={unsavedModalTarget !== null}
         onSaveAndExit={async () => {
-          if (unsavedModalTarget === 'add') {
-            setUnsavedModalTarget(null)
-            const fakeEvent = { preventDefault: () => {} } as React.FormEvent
-            await handleAddEvent(fakeEvent)
-          } else if (unsavedModalTarget === 'edit') {
+          if (unsavedModalTarget === 'edit') {
             setUnsavedModalTarget(null)
             setIsResendPromptOpen(true)
           } else if (unsavedModalTarget === 'quickField') {
@@ -3952,20 +3052,7 @@ const CalendarPage: React.FC = () => {
           }
         }}
         onExitWithoutSaving={() => {
-          if (unsavedModalTarget === 'add') {
-            setIsAddModalOpen(false)
-            setTitle('')
-            setLocation('')
-            setDescription('')
-            setMaxPlayers('')
-            setTournamentId('')
-            setOpponentId('')
-            setIsFriendly(true)
-            setIsRecurring(false)
-            setRecurrenceEndDate('')
-            setRecurrenceWeekdays([])
-            setSelectedPlayerIds([])
-          } else if (unsavedModalTarget === 'edit') {
+          if (unsavedModalTarget === 'edit') {
             setIsEditModalOpen(false)
           } else if (unsavedModalTarget === 'quickField') {
             setIsQuickFieldModalOpen(false)
