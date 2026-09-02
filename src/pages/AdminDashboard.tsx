@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { extractRolesFromProfile } from '../context/AuthContext'
 import { LeagueManager } from '../components/LeagueManager'
+import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { 
   Shield, 
   MapPin, 
@@ -16,12 +17,12 @@ import {
   Plus,
   Search,
   Phone,
-  User,
-  AlertTriangle
+  User
 } from 'lucide-react'
 import { useClub } from '../context/ClubContext'
 import { toast } from '../context/ToastContext'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 // Interfaces
 interface Field {
@@ -710,6 +711,11 @@ const AdminDashboard: React.FC = () => {
     return matchesQuery && matchesStatus
   })
 
+  // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
+  const painelCampoRef = useModalA11y({ isOpen: isFieldModalOpen, onClose: handleRequestCloseFieldModal })
+  const painelAdversarioRef = useModalA11y({ isOpen: isOppModalOpen, onClose: handleRequestCloseOppModal })
+  const painelTorneioRef = useModalA11y({ isOpen: isTourModalOpen, onClose: handleRequestCloseTourModal })
+
   return (
     <div className="space-y-4 pb-12">
 
@@ -1295,11 +1301,18 @@ const AdminDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {isFieldModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in">
+          <div
+            ref={painelCampoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-campo-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in outline-none"
+          >
             <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2.5">
                 <MapPin size={22} className="text-csc-gold" />
-                <h3 className="font-black text-lg">
+                <h3 id="admin-campo-titulo" className="font-black text-lg">
                   {editingFieldId ? 'Editar Campo' : 'Criar Novo Campo'}
                 </h3>
               </div>
@@ -1367,11 +1380,18 @@ const AdminDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {isOppModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
-          <div className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in my-8">
+          <div
+            ref={painelAdversarioRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-adversario-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in my-8 outline-none"
+          >
             <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2.5">
                 <Shield size={22} className="text-csc-gold" />
-                <h3 className="font-black text-lg">
+                <h3 id="admin-adversario-titulo" className="font-black text-lg">
                   {editingOppId ? 'Editar Adversário' : 'Criar Novo Adversário'}
                 </h3>
               </div>
@@ -1516,11 +1536,18 @@ const AdminDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {isTourModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-csc-dark text-white w-full max-w-3xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
+          <div
+            ref={painelTorneioRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-torneio-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white w-full max-w-3xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in flex flex-col max-h-[90vh] outline-none"
+          >
             <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
               <div className="flex items-center gap-2.5">
                 <Trophy size={22} className="text-csc-gold" />
-                <h3 className="font-black text-lg">
+                <h3 id="admin-torneio-titulo" className="font-black text-lg">
                   {editingTourId ? 'Editar Torneio' : 'Criar Novo Torneio'}
                 </h3>
               </div>
@@ -1896,54 +1923,19 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL GLOBAL: CONFIRMAÇÃO DE ALTERAÇÕES NÃO GRAVADAS */}
-      {/* ========================================================================= */}
-      {unsavedModalOpen && (
-        <div className="fixed inset-0 z-modal-confirm flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 max-w-sm w-full p-6 text-center space-y-4 animate-scale-in">
-            <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 mx-auto">
-              <AlertTriangle size={28} />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-gray-900">Alterações Não Gravadas</h3>
-              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-                Tem alterações por guardar. O que pretende fazer?
-              </p>
-            </div>
-            <div className="space-y-2 pt-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  setUnsavedModalOpen(false)
-                  if (pendingSaveAction) await pendingSaveAction()
-                }}
-                className="w-full py-2.5 px-4 bg-csc-dark text-white font-black text-xs rounded-xl hover:bg-csc-dark/90 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Save size={15} className="text-csc-gold" />
-                <span>Gravar e Sair</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUnsavedModalOpen(false)
-                  if (pendingCloseAction) pendingCloseAction()
-                }}
-                className="w-full py-2.5 px-4 bg-red-50 border border-red-200 text-red-700 font-black text-xs rounded-xl hover:bg-red-100 transition-all cursor-pointer"
-              >
-                Sair sem Gravar
-              </button>
-              <button
-                type="button"
-                onClick={() => setUnsavedModalOpen(false)}
-                className="w-full py-2 px-4 text-gray-500 font-bold text-xs hover:text-gray-800 transition-colors cursor-pointer"
-              >
-                Continuar a Editar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Alterações por guardar — o mesmo diálogo das restantes páginas do painel */}
+      <UnsavedChangesModal
+        isOpen={unsavedModalOpen}
+        onSaveAndExit={async () => {
+          setUnsavedModalOpen(false)
+          if (pendingSaveAction) await pendingSaveAction()
+        }}
+        onExitWithoutSaving={() => {
+          setUnsavedModalOpen(false)
+          if (pendingCloseAction) pendingCloseAction()
+        }}
+        onCancel={() => setUnsavedModalOpen(false)}
+      />
 
       {/* Modal Genérico de Confirmação (Estilo Unificado e Elegante) */}
       <ConfirmModal

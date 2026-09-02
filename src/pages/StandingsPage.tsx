@@ -5,6 +5,7 @@ import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays } from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { Modal } from '../components/Modal'
 
 const nomeEquipa = (team: any) => team?.opponent_id ? (team.opponent?.name || 'Desconhecida') : 'GDS Cascais'
 
@@ -581,75 +582,117 @@ export const StandingsPage = () => {
         </div>
       )}
 
-      {/* MODAL: Nova Jornada */}
-      {jornadaModalGroupId && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-csc-dark text-white shrink-0">
-              <div className="flex items-center gap-2">
-                <CalendarDays size={18} className="text-csc-gold" />
-                <h3 className="font-black text-sm">Nova Jornada — {jornadaModalGroup?.name}</h3>
-              </div>
-              <button onClick={() => setJornadaModalGroupId(null)} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40">
-                <X size={16} className="stroke-[2.5]" />
-              </button>
+      {/* MODAL: Nova Jornada — moldura partilhada (Escape, prisão de foco, rodapé fixo) */}
+      <Modal
+        isOpen={!!jornadaModalGroupId}
+        onClose={() => setJornadaModalGroupId(null)}
+        size="lg"
+        headerStyle="brand"
+        icon={<CalendarDays size={18} className="text-csc-gold" />}
+        title="Nova Jornada"
+        description={jornadaModalGroup?.name}
+        closeOnOverlayClick={false}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setJornadaModalGroupId(null)}
+              className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateJornada}
+              disabled={savingJornada}
+              className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer"
+            >
+              {savingJornada ? 'A criar...' : 'Criar Jornada'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="jornada-numero">Jornada nº</label>
+              <input
+                id="jornada-numero"
+                type="number"
+                min="1"
+                value={jornadaMatchday}
+                onChange={e => setJornadaMatchday(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-black text-center text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none"
+              />
             </div>
-            <div className="p-5 space-y-4 overflow-y-auto">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">Jornada nº</label>
-                  <input type="number" min="1" value={jornadaMatchday} onChange={e => setJornadaMatchday(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-black text-center text-gray-900" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">Data (opcional)</label>
-                  <input type="date" value={jornadaDate} onChange={e => setJornadaDate(e.target.value)} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-bold text-gray-900" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-gray-600">Jogos desta jornada</label>
-                {jornadaFixtures.map((f, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <select value={f.home} onChange={e => updateFixtureRow(idx, 'home', e.target.value)} className="flex-1 px-2 py-2 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-gray-900">
-                      <option value="">Casa...</option>
-                      {teams.filter(t => t.group_id === jornadaModalGroupId).map(t => (
-                        <option key={t.id} value={t.id}>{nomeEquipa(t)}</option>
-                      ))}
-                    </select>
-                    <span className="text-gray-300 font-black text-xs shrink-0">vs</span>
-                    <select value={f.away} onChange={e => updateFixtureRow(idx, 'away', e.target.value)} className="flex-1 px-2 py-2 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-gray-900">
-                      <option value="">Fora...</option>
-                      {teams.filter(t => t.group_id === jornadaModalGroupId).map(t => (
-                        <option key={t.id} value={t.id}>{nomeEquipa(t)}</option>
-                      ))}
-                    </select>
-                    {jornadaFixtures.length > 1 && (
-                      <button onClick={() => removeFixtureRow(idx)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg cursor-pointer shrink-0">
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button onClick={addFixtureRow} className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer">
-                  <Plus size={13} />
-                  Adicionar outro jogo à jornada
-                </button>
-              </div>
-
-              <p className="text-[11px] text-gray-400">Os resultados registam-se depois, à medida que os jogos vão acontecendo — não é preciso saber já o resultado.</p>
-
-              <div className="flex gap-2 justify-end pt-2">
-                <button onClick={() => setJornadaModalGroupId(null)} className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer">
-                  Cancelar
-                </button>
-                <button onClick={handleCreateJornada} disabled={savingJornada} className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer">
-                  {savingJornada ? 'A criar...' : 'Criar Jornada'}
-                </button>
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="jornada-data">Data (opcional)</label>
+              <input
+                id="jornada-data"
+                type="date"
+                value={jornadaDate}
+                onChange={e => setJornadaDate(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-bold text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none"
+              />
             </div>
           </div>
+
+          <div className="space-y-2">
+            <span className="block text-xs font-bold text-gray-600">Jogos desta jornada</span>
+            {jornadaFixtures.map((f, idx) => (
+              // grid com colunas de 0 mínimo: os nomes longos das equipas truncam
+              // dentro do select em vez de esticarem o modal na horizontal.
+              <div key={idx} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2">
+                <select
+                  value={f.home}
+                  onChange={e => updateFixtureRow(idx, 'home', e.target.value)}
+                  aria-label={`Jogo ${idx + 1} — equipa de casa`}
+                  className="w-full min-w-0 px-2 py-2 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none"
+                >
+                  <option value="">Casa...</option>
+                  {teams.filter(t => t.group_id === jornadaModalGroupId).map(t => (
+                    <option key={t.id} value={t.id}>{nomeEquipa(t)}</option>
+                  ))}
+                </select>
+                <span className="text-gray-300 font-black text-xs">vs</span>
+                <select
+                  value={f.away}
+                  onChange={e => updateFixtureRow(idx, 'away', e.target.value)}
+                  aria-label={`Jogo ${idx + 1} — equipa visitante`}
+                  className="w-full min-w-0 px-2 py-2 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none"
+                >
+                  <option value="">Fora...</option>
+                  {teams.filter(t => t.group_id === jornadaModalGroupId).map(t => (
+                    <option key={t.id} value={t.id}>{nomeEquipa(t)}</option>
+                  ))}
+                </select>
+                {jornadaFixtures.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeFixtureRow(idx)}
+                    aria-label={`Remover o jogo ${idx + 1}`}
+                    className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg cursor-pointer"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                ) : (
+                  <span className="w-7" aria-hidden="true" />
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addFixtureRow}
+              className="text-xs font-bold text-csc-dark hover:text-csc-light flex items-center gap-1 cursor-pointer"
+            >
+              <Plus size={13} />
+              Adicionar outro jogo à jornada
+            </button>
+          </div>
+
+          <p className="text-[11px] text-gray-400">Os resultados registam-se depois, à medida que os jogos vão acontecendo — não é preciso saber já o resultado.</p>
         </div>
-      )}
+      </Modal>
 
       <ConfirmModal
         isOpen={!!matchToDelete}

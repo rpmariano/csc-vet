@@ -21,9 +21,7 @@ import {
   PartyPopper,
   Trophy,
   Edit,
-  Save,
   Send,
-  RefreshCw,
   AlertTriangle
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
@@ -31,12 +29,19 @@ import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
+import { QuickFieldModal } from '../components/QuickFieldModal'
+import { QuickOpponentModal } from '../components/QuickOpponentModal'
+import { ResendCallupsModal } from '../components/ResendCallupsModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal, parseMatchReportMetadata, buildDescriptionWithMatchReport } from '../components/MatchReportModal'
 import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla, hasMatchReport } from './CalendarPage'
+import { useModalA11y } from '../hooks/useModalA11y'
+import { useEhDesktop } from '../hooks/useEhDesktop'
+import { VistaDetalhe } from '../components/VistaDetalhe'
+import { useSearchParams } from 'react-router-dom'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -193,6 +198,8 @@ const EventsPage: React.FC = () => {
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
+  const [searchParams, setSearchParams] = useSearchParams()
+  const ehDesktop = useEhDesktop()
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [rsvpTabFilter, setRsvpTabFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
@@ -671,6 +678,8 @@ const EventsPage: React.FC = () => {
         supabase.from('fields').select('id, name, address'),
         supabase.from('opponents').select('id, name, initials, home_field_id'),
         supabase.from('tournaments').select('id, name, season, rules'),
+        // Plantel: a vista traz só as colunas de equipa (sem IBAN, NIF, morada,
+        // contactos ou notas médicas), por isso qualquer membro a pode ler.
         supabase.from('v_players_public').select('*').order('name', { ascending: true }),
         fetchAllCallups('id, event_id, player_id, status, player:v_players_public(id, name, photo_url, jersey_number, role, roles, position)'),
         supabase.from('tournament_players').select('tournament_id, player_id'),
@@ -1334,8 +1343,42 @@ const EventsPage: React.FC = () => {
     return (roles.includes('coach') || roles.includes('admin')) && isPlayerEligible(p, type, tournamentId)
   }).length
 
+  // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
+  const painelCriarEventoRef = useModalA11y({ isOpen: viewModeTab === 'create', onClose: () => setViewModeTab('list') })
+  const painelEditarEventoRef = useModalA11y({ isOpen: !!editingEvent, onClose: handleAttemptCloseEditModal })
+
+  // Ver a convocatória de um evento é navegar: o endereço passa a ter
+  // ?convocatoria=<id>, portanto o dossier tem link próprio e o retroceder do
+  // browser fecha-o. No desktop deixa de ser janela e passa a ser a página.
+  const abrirDossier = (ev: Event) => {
+    setActiveCallupModalEvent(ev)
+    setSearchParams({ convocatoria: ev.id })
+  }
+
+  const fecharDossier = () => {
+    setActiveCallupModalEvent(null)
+    if (searchParams.get('convocatoria')) {
+      const restantes = new URLSearchParams(searchParams)
+      restantes.delete('convocatoria')
+      setSearchParams(restantes, { replace: true })
+    }
+  }
+
+  useEffect(() => {
+    const idEvento = searchParams.get('convocatoria')
+    if (!idEvento) {
+      setActiveCallupModalEvent(null)
+      return
+    }
+    const alvo = events.find(e => e.id === idEvento)
+    if (alvo) setActiveCallupModalEvent(alvo)
+  }, [searchParams, events])
+
   return (
     <div className="space-y-6 pb-12">
+      {/* No desktop, abrir o dossier de convocatória é mudar de página: a lista
+          de eventos sai da frente em vez de ficar por baixo de uma janela. */}
+      <div className={ehDesktop && !!activeCallupModalEvent ? 'hidden' : 'space-y-6'}>
       {/* Page Header removido a pedido do utilizador */}
 
       {successMessage && (
@@ -1360,10 +1403,17 @@ const EventsPage: React.FC = () => {
       {/* MODAL DE CRIAÇÃO DE EVENTO (OVERLAY) */}
       {viewModeTab === 'create' && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in overflow-y-auto">
-          <div className="bg-white w-full sm:rounded-3xl sm:max-w-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto shadow-2xl border-0 sm:border-2 sm:border-csc-gold/60 flex flex-col">
+          <div
+            ref={painelCriarEventoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="criar-evento-titulo"
+            tabIndex={-1}
+            className="bg-white w-full sm:rounded-3xl sm:max-w-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto shadow-2xl border-0 sm:border-2 sm:border-csc-gold/60 flex flex-col outline-none"
+          >
             {/* Header fixo do modal */}
             <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-5 sm:px-7 py-4 border-b border-gray-200 rounded-t-3xl">
-              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+              <h3 id="criar-evento-titulo" className="text-lg font-black text-gray-900 flex items-center gap-2">
                 <Plus size={20} className="text-csc-dark" />
                 <span>Novo Evento / Atividade</span>
               </h3>
@@ -2149,7 +2199,7 @@ const EventsPage: React.FC = () => {
                           )}
                           <button
                             onClick={() => {
-                              setActiveCallupModalEvent(event)
+                              abrirDossier(event)
                               setRsvpTabFilter('all')
                               setPlayerSearchTerm('')
                             }}
@@ -2168,17 +2218,33 @@ const EventsPage: React.FC = () => {
           </div>
         </div>
       )})()}
+      </div>
 
       {/* ========================================================================= */}
       {/* MODAL DETALHADO DE CONVOCATÓRIA & GESTÃO COMPLETA DE RSVP                */}
       {/* ========================================================================= */}
+      {/* A ficha de jogo abre a partir daqui: no desktop substitui este dossier,
+          como um nível abaixo na navegação, em vez de se sobrepor. */}
+      <div className={ehDesktop && isMatchReportOpen ? 'hidden' : ''}>
       {activeCallupModalEvent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-          <div className="bg-csc-dark text-white rounded-3xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40">
+        <VistaDetalhe
+          isOpen={!!activeCallupModalEvent}
+          onClose={fecharDossier}
+          tone="dark"
+          size="2xl"
+          showCloseButton={false}
+          ariaLabel={`Convocatória: ${activeCallupModalEvent.title}`}
+          voltarTexto="Voltar aos eventos"
+          className="border-2 border-amber-400/40"
+        >
+          <div className="relative">
+            {/* Fechar — só no telemóvel: no desktop isto é uma página, e quem
+                volta atrás é a barra "Voltar aos eventos" da VistaDetalhe. */}
             <button
-              onClick={() => setActiveCallupModalEvent(null)}
+              onClick={fecharDossier}
+              aria-label="Fechar"
               title="Fechar"
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="md:hidden absolute -top-1 right-0 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
             >
               <X size={20} className="stroke-[2.5]" />
             </button>
@@ -2237,7 +2303,7 @@ const EventsPage: React.FC = () => {
                       type="button"
                       onClick={() => {
                         const ev = activeCallupModalEvent
-                        setActiveCallupModalEvent(null)
+                        fecharDossier()
                         openEditModal(ev)
                       }}
                       className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
@@ -2249,7 +2315,7 @@ const EventsPage: React.FC = () => {
                       type="button"
                       onClick={() => {
                         const evId = activeCallupModalEvent.id
-                        setActiveCallupModalEvent(null)
+                        fecharDossier()
                         handleDeleteEvent(evId)
                       }}
                       className="p-2 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
@@ -2358,8 +2424,9 @@ const EventsPage: React.FC = () => {
             })()}
 
           </div>
-        </div>
+        </VistaDetalhe>
       )}
+      </div>
       {/* ====== MODAL DE EDIÇÃO DE EVENTO ====== */}
       {editingEvent && (
         <div
@@ -2369,9 +2436,16 @@ const EventsPage: React.FC = () => {
             if (e.target === e.currentTarget) handleAttemptCloseEditModal()
           }}
         >
-          <div className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10">
+          <div
+            ref={painelEditarEventoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editar-evento-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10 outline-none"
+          >
             <div className="sticky top-0 bg-csc-dark border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
-              <h3 className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
+              <h3 id="editar-evento-titulo" className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
               <button onClick={handleAttemptCloseEditModal} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 shadow-md border-2 border-white/40 shrink-0"><X size={16} className="stroke-[2.5]" /></button>
             </div>
 
@@ -2793,271 +2867,45 @@ const EventsPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: CRIAR NOVO CAMPO INLINE */}
-      {isQuickFieldModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-modal-top animate-fade-in"
-          onMouseDown={(e) => {
-            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-            if (e.target === e.currentTarget) handleAttemptCloseQuickFieldModal()
-          }}
-        >
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-gray-100 space-y-4">
-            <button
-              type="button"
-              onClick={handleAttemptCloseQuickFieldModal}
-              aria-label="Fechar"
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
-            >
-              <X size={20} />
-            </button>
+      {/* Criação rápida de campo e de adversário, a partir do formulário de evento */}
+      <QuickFieldModal
+        isOpen={isQuickFieldModalOpen}
+        name={quickFieldName}
+        address={quickFieldAddress}
+        onNameChange={setQuickFieldName}
+        onAddressChange={setQuickFieldAddress}
+        onSubmit={handleSaveQuickField}
+        onClose={handleAttemptCloseQuickFieldModal}
+        isSaving={isSavingQuickField}
+      />
 
-            <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
-              <div className="w-10 h-10 rounded-xl bg-csc-dark text-csc-gold flex items-center justify-center text-lg font-black shadow-xs">
-                🏟️
-              </div>
-              <div>
-                <h3 className="text-base font-black text-csc-dark">Criar Novo Campo / Instalação</h3>
-                <p className="text-[11px] text-gray-500">Regista um novo campo para ser imediatamente selecionado.</p>
-              </div>
-            </div>
+      <QuickOpponentModal
+        isOpen={isQuickOpponentModalOpen}
+        name={quickOppName}
+        initials={quickOppInitials}
+        homeFieldId={quickOppHomeFieldId}
+        contactName={quickOppContactName}
+        contactPhone={quickOppContactPhone}
+        fields={fields}
+        onNameChange={setQuickOppName}
+        onInitialsChange={setQuickOppInitials}
+        onHomeFieldIdChange={setQuickOppHomeFieldId}
+        onContactNameChange={setQuickOppContactName}
+        onContactPhoneChange={setQuickOppContactPhone}
+        onSubmit={handleSaveQuickOpponent}
+        onClose={handleAttemptCloseQuickOppModal}
+        isSaving={isSavingQuickOpp}
+      />
 
-            <form onSubmit={handleSaveQuickField} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Nome do Campo / Estádio *</label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  value={quickFieldName}
-                  onChange={(e) => setQuickFieldName(e.target.value)}
-                  placeholder="Ex: Campo Municipal de Tires"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
-                />
-              </div>
+      {/* Guardar a edição de um evento já convocado: reenviar pedidos ou manter respostas */}
+      <ResendCallupsModal
+        isOpen={isResendPromptOpen}
+        onResend={() => handleConfirmSaveEdit(true)}
+        onKeepAnswers={() => handleConfirmSaveEdit(false)}
+        onBack={() => setIsResendPromptOpen(false)}
+        isSaving={isSavingEdit}
+      />
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Morada / Localização Completa</label>
-                <input
-                  type="text"
-                  value={quickFieldAddress}
-                  onChange={(e) => setQuickFieldAddress(e.target.value)}
-                  placeholder="Ex: Av. Amadeu Duarte, Tires, Cascais"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
-                />
-                <p className="text-[10.5px] text-gray-500 mt-1">Usada para navegação e rotas com Google Maps.</p>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={handleAttemptCloseQuickFieldModal}
-                  className="px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingQuickField || !quickFieldName.trim()}
-                  className="px-5 py-2 bg-csc-dark hover:bg-black text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
-                >
-                  {isSavingQuickField ? 'A criar...' : 'Guardar Campo'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: CRIAR NOVO ADVERSÁRIO INLINE */}
-      {isQuickOpponentModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-modal-top animate-fade-in"
-          onMouseDown={(e) => {
-            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-            if (e.target === e.currentTarget) handleAttemptCloseQuickOppModal()
-          }}
-        >
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-gray-100 space-y-4">
-            <button
-              type="button"
-              onClick={handleAttemptCloseQuickOppModal}
-              aria-label="Fechar"
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-900 flex items-center justify-center text-lg font-black shadow-xs">
-                🛡️
-              </div>
-              <div>
-                <h3 className="text-base font-black text-csc-dark">Criar Novo Adversário</h3>
-                <p className="text-[11px] text-gray-500">Regista uma nova equipa/clube adversário para seleção imediata.</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleSaveQuickOpponent} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Nome do Clube / Equipa *</label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  value={quickOppName}
-                  onChange={(e) => setQuickOppName(e.target.value)}
-                  placeholder="Ex: G.D. Estoril Praia"
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold text-gray-900"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Sigla (opcional)</label>
-                  <input
-                    type="text"
-                    value={quickOppInitials}
-                    onChange={(e) => setQuickOppInitials(e.target.value)}
-                    placeholder="Ex: GDEP"
-                    maxLength={6}
-                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white uppercase font-bold text-gray-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Campo Habitual</label>
-                  <select
-                    value={quickOppHomeFieldId}
-                    onChange={(e) => setQuickOppHomeFieldId(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
-                  >
-                    <option value="">-- Sem Campo --</option>
-                    {fields.map(f => (
-                      <option key={f.id} value={f.id}>🏟️ {f.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Nome do Contacto</label>
-                  <input
-                    type="text"
-                    value={quickOppContactName}
-                    onChange={(e) => setQuickOppContactName(e.target.value)}
-                    placeholder="Ex: Diretor desportivo"
-                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Telefone Contacto</label>
-                  <input
-                    type="tel"
-                    value={quickOppContactPhone}
-                    onChange={(e) => setQuickOppContactPhone(e.target.value)}
-                    placeholder="Ex: 912 345 678"
-                    className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={handleAttemptCloseQuickOppModal}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingQuickOpp || !quickOppName.trim()}
-                  className="flex-1 px-4 py-2.5 bg-csc-dark hover:bg-csc-dark/90 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
-                >
-                  {isSavingQuickOpp ? (
-                    <span>A registar...</span>
-                  ) : (
-                    <span>➕ Criar Adversário</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: CONFIRMAÇÃO DE REENVIO DE CONVOCATÓRIAS APÓS EDIÇÃO */}
-      {isResendPromptOpen && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-modal-confirm animate-fade-in select-none">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-scale-in">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs">
-                <RefreshCw size={24} className={isSavingEdit ? 'animate-spin' : ''} />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-gray-900 leading-tight">
-                  Reenviar Pedidos de Presença?
-                </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Edição de dados do evento
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-4 text-xs text-amber-950 space-y-2">
-              <p className="font-bold text-gray-900">
-                Foram alterados os detalhes deste evento. Desejas reenviar o pedido de confirmação a todos os atletas convocados?
-              </p>
-              <ul className="space-y-1.5 text-gray-700 text-[11.5px]">
-                <li className="flex items-start gap-1.5">
-                  <span className="text-emerald-600 font-bold shrink-0">✓</span>
-                  <span><strong className="text-emerald-950">Reenviar Pedidos:</strong> Repõe todas as presenças como <em>Pendente</em> para que os atletas respondam novamente.</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-gray-500 font-bold shrink-0">✓</span>
-                  <span><strong className="text-gray-900">Manter Respostas:</strong> Guarda as alterações do evento mantendo as confirmações já registadas.</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="space-y-2.5 pt-1">
-              <button
-                type="button"
-                disabled={isSavingEdit}
-                onClick={() => handleConfirmSaveEdit(true)}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-xs sm:text-sm rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
-              >
-                <Send size={16} />
-                <span>{isSavingEdit ? 'A processar...' : 'Sim, Reenviar Pedidos aos Atletas'}</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={isSavingEdit}
-                onClick={() => handleConfirmSaveEdit(false)}
-                className="w-full py-3 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-800 font-bold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 border border-gray-200 disabled:opacity-50"
-              >
-                <Save size={16} />
-                <span>Não, Apenas Gravar (Manter Respostas)</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={isSavingEdit}
-                onClick={() => setIsResendPromptOpen(false)}
-                className="w-full py-2 text-gray-500 hover:text-gray-800 font-semibold text-xs transition-colors cursor-pointer text-center"
-              >
-                Voltar ao formulário de edição
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: CONFIRMAÇÃO DE SAÍDA COM ALTERAÇÕES NÃO GUARDADAS */}
       <UnsavedChangesModal
         isOpen={unsavedModalTarget !== null}
         onSaveAndExit={async () => {
