@@ -1829,6 +1829,9 @@ const CalendarPage: React.FC = () => {
           A condição usa só `selectedEvent` (nunca voltar a null ao fechar) — a persiana
           controla a própria visibilidade por `isEventSheetOpen`, para poder deslizar
           para fora suavemente em vez de desaparecer no instante em que se fecha. */}
+      {/* A ficha de jogo abre a partir daqui: no desktop substitui este detalhe,
+          como um nível abaixo na navegação, em vez de se sobrepor. */}
+      <div className={ehDesktop && isMatchReportOpen ? 'hidden' : ''}>
       {selectedEvent && (
         <VistaDetalhe
           isOpen={isEventSheetOpen}
@@ -2397,6 +2400,7 @@ const CalendarPage: React.FC = () => {
           </div>
         </VistaDetalhe>
       )}
+      </div>
 
       {/* MODAL 3: EDITAR EVENTO ESPECÍFICO (Versão Larga 2 Colunas) */}
       {isEditModalOpen && (

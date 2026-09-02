@@ -3,7 +3,7 @@ import { X, ShieldAlert, Award, Footprints, Save, CheckCircle2, Lock, Flame, Use
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../pages/CalendarPage'
 import { toast } from '../context/ToastContext'
-import { BottomSheet } from './BottomSheet'
+import { VistaDetalhe } from './VistaDetalhe'
 import { Modal } from './Modal'
 
 interface MatchReportModalProps {
@@ -366,21 +366,24 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
   return (
     <>
-    <BottomSheet
+    <VistaDetalhe
       isOpen={isOpen}
       onClose={onClose}
       tone="dark"
       size="3xl"
       showCloseButton={false}
       ariaLabel={`Ficha de jogo: ${leftSigla} vs ${rightSigla}`}
+      voltarTexto="Voltar"
       className="border-2 border-csc-gold/60"
     >
       <div className="space-y-5">
 
-        {/* Close Button */}
+        {/* Fechar — só no telemóvel: no desktop isto é uma página, e quem volta
+            atrás é a barra "Voltar" da VistaDetalhe. */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer z-20 active:scale-90 shadow-md border-2 border-white/40"
+          aria-label="Fechar"
+          className="md:hidden absolute top-4 right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer z-20 active:scale-90 shadow-md border-2 border-white/40"
           title="Fechar"
         >
           <X size={19} className="stroke-[2.5]" />
@@ -711,7 +714,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         )}
 
       </div>
-    </BottomSheet>
+    </VistaDetalhe>
 
     {/* Edição da Ficha de Jogo — formulário próprio, não a persiana de consulta:
         pede um contentor mais deliberado, sem o gesto de arrastar que a fecharia

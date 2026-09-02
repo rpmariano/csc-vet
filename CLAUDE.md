@@ -80,7 +80,10 @@ RLS: leitura aberta a qualquer autenticado; escrita restrita a `coach`/`admin` v
   de atleta não abre janela nenhuma no desktop: o `<VistaDetalhe>` decide a moldura
   pelo `useEhDesktop()` e o endereço leva o item (`?event=`, `?atleta=`), portanto há
   link próprio e o retroceder do browser fecha. Modais ficam para inserções curtas
-  (criar um campo, confirmar) — não para consultar uma entidade.
+  (criar um campo, confirmar) — não para consultar uma entidade. Já assim estão o
+  detalhe do evento, a ficha de atleta, o dossier de convocatória e a ficha de jogo;
+  quando um detalhe abre outro (ficha de jogo a partir do evento), o de baixo sai da
+  frente em vez de se sobreporem.
 - Comentários e strings de UI em português.
 - Assets públicos são referenciados com o prefixo literal `/csc-vet/` (não com
   `import.meta.env.BASE_URL`).

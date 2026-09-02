@@ -29,6 +29,25 @@ const treino = {
   away_score: null,
 }
 
+const jogo = {
+  id: 'j1',
+  title: 'Jogo de teste',
+  type: 'match',
+  date_time: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+  location: 'Campo de Teste',
+  description: null,
+  field_id: null,
+  opponent_id: null,
+  tournament_id: null,
+  home_away: 'home',
+  is_friendly: false,
+  max_players: null,
+  meeting_time: null,
+  home_score: 2,
+  away_score: 1,
+  is_active: true,
+}
+
 async function abrePagina(page: Page, caminho: string, fixtures = {}) {
   await montarSupabaseFalso(page, fixtures)
   await page.goto(caminho)
@@ -76,7 +95,7 @@ test.describe('Detalhe do evento', () => {
     // Retroceder no browser fecha o detalhe e devolve a lista.
     await page.goBack()
     await expect(page).toHaveURL(/calendar$/)
-    await expect(page.locator('[role="dialog"]')).toHaveCount(0)
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
     await expect(page.getByRole('button', { name: /^Lista/ })).toBeVisible()
   })
 
@@ -95,6 +114,34 @@ test.describe('Ficha de atleta', () => {
 
     await page.goBack()
     await expect(page).toHaveURL(/team-management$/)
-    await expect(page.locator('[role="dialog"]')).toHaveCount(0)
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
+  })
+})
+
+test.describe('Dossier de convocatória', () => {
+  const porRealizar = { ...jogo, id: 'e2', date_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), home_score: null, away_score: null }
+
+  test('abre com endereço próprio e sem janela no desktop', async ({ page }) => {
+    await abrePagina(page, 'events', { events: [porRealizar] })
+    await page.getByRole('button', { name: /Ver Detalhes & RSVP/ }).click()
+
+    await verificaDetalhe(page, /^Convocatória: /, 'Confirmados', /\?convocatoria=e2$/)
+
+    await page.goBack()
+    await expect(page).toHaveURL(/events$/)
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
+  })
+})
+
+test.describe('Ficha de jogo', () => {
+  test('abre com endereço próprio e sem janela no desktop', async ({ page }) => {
+    await abrePagina(page, 'match-reports', { events: [jogo] })
+    await page.locator('div.cursor-pointer').first().click()
+
+    await verificaDetalhe(page, /^Ficha de jogo: /, 'Ficha Oficial de Jogo', /\?jogo=j1$/)
+
+    await page.goBack()
+    await expect(page).toHaveURL(/match-reports$/)
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
   })
 })

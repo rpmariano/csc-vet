@@ -39,6 +39,9 @@ import { CallupRow } from '../components/callups/CallupRow'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla, hasMatchReport } from './CalendarPage'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { useEhDesktop } from '../hooks/useEhDesktop'
+import { VistaDetalhe } from '../components/VistaDetalhe'
+import { useSearchParams } from 'react-router-dom'
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -195,6 +198,8 @@ const EventsPage: React.FC = () => {
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
+  const [searchParams, setSearchParams] = useSearchParams()
+  const ehDesktop = useEhDesktop()
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [rsvpTabFilter, setRsvpTabFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
@@ -1335,11 +1340,40 @@ const EventsPage: React.FC = () => {
 
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
   const painelCriarEventoRef = useModalA11y({ isOpen: viewModeTab === 'create', onClose: () => setViewModeTab('list') })
-  const painelConvocatoriaRef = useModalA11y({ isOpen: !!activeCallupModalEvent, onClose: () => setActiveCallupModalEvent(null) })
   const painelEditarEventoRef = useModalA11y({ isOpen: !!editingEvent, onClose: handleAttemptCloseEditModal })
+
+  // Ver a convocatória de um evento é navegar: o endereço passa a ter
+  // ?convocatoria=<id>, portanto o dossier tem link próprio e o retroceder do
+  // browser fecha-o. No desktop deixa de ser janela e passa a ser a página.
+  const abrirDossier = (ev: Event) => {
+    setActiveCallupModalEvent(ev)
+    setSearchParams({ convocatoria: ev.id })
+  }
+
+  const fecharDossier = () => {
+    setActiveCallupModalEvent(null)
+    if (searchParams.get('convocatoria')) {
+      const restantes = new URLSearchParams(searchParams)
+      restantes.delete('convocatoria')
+      setSearchParams(restantes, { replace: true })
+    }
+  }
+
+  useEffect(() => {
+    const idEvento = searchParams.get('convocatoria')
+    if (!idEvento) {
+      setActiveCallupModalEvent(null)
+      return
+    }
+    const alvo = events.find(e => e.id === idEvento)
+    if (alvo) setActiveCallupModalEvent(alvo)
+  }, [searchParams, events])
 
   return (
     <div className="space-y-6 pb-12">
+      {/* No desktop, abrir o dossier de convocatória é mudar de página: a lista
+          de eventos sai da frente em vez de ficar por baixo de uma janela. */}
+      <div className={ehDesktop && !!activeCallupModalEvent ? 'hidden' : 'space-y-6'}>
       {/* Page Header removido a pedido do utilizador */}
 
       {successMessage && (
@@ -2160,7 +2194,7 @@ const EventsPage: React.FC = () => {
                           )}
                           <button
                             onClick={() => {
-                              setActiveCallupModalEvent(event)
+                              abrirDossier(event)
                               setRsvpTabFilter('all')
                               setPlayerSearchTerm('')
                             }}
@@ -2179,25 +2213,33 @@ const EventsPage: React.FC = () => {
           </div>
         </div>
       )})()}
+      </div>
 
       {/* ========================================================================= */}
       {/* MODAL DETALHADO DE CONVOCATÓRIA & GESTÃO COMPLETA DE RSVP                */}
       {/* ========================================================================= */}
+      {/* A ficha de jogo abre a partir daqui: no desktop substitui este dossier,
+          como um nível abaixo na navegação, em vez de se sobrepor. */}
+      <div className={ehDesktop && isMatchReportOpen ? 'hidden' : ''}>
       {activeCallupModalEvent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-          <div
-            ref={painelConvocatoriaRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Convocatória: ${activeCallupModalEvent.title}`}
-            tabIndex={-1}
-            className="bg-csc-dark text-white rounded-3xl max-w-2xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40 outline-none"
-          >
+        <VistaDetalhe
+          isOpen={!!activeCallupModalEvent}
+          onClose={fecharDossier}
+          tone="dark"
+          size="2xl"
+          showCloseButton={false}
+          ariaLabel={`Convocatória: ${activeCallupModalEvent.title}`}
+          voltarTexto="Voltar aos eventos"
+          className="border-2 border-amber-400/40"
+        >
+          <div className="relative">
+            {/* Fechar — só no telemóvel: no desktop isto é uma página, e quem
+                volta atrás é a barra "Voltar aos eventos" da VistaDetalhe. */}
             <button
-              onClick={() => setActiveCallupModalEvent(null)}
+              onClick={fecharDossier}
               aria-label="Fechar"
               title="Fechar"
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="md:hidden absolute -top-1 right-0 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
             >
               <X size={20} className="stroke-[2.5]" />
             </button>
@@ -2256,7 +2298,7 @@ const EventsPage: React.FC = () => {
                       type="button"
                       onClick={() => {
                         const ev = activeCallupModalEvent
-                        setActiveCallupModalEvent(null)
+                        fecharDossier()
                         openEditModal(ev)
                       }}
                       className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
@@ -2268,7 +2310,7 @@ const EventsPage: React.FC = () => {
                       type="button"
                       onClick={() => {
                         const evId = activeCallupModalEvent.id
-                        setActiveCallupModalEvent(null)
+                        fecharDossier()
                         handleDeleteEvent(evId)
                       }}
                       className="p-2 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
@@ -2377,8 +2419,9 @@ const EventsPage: React.FC = () => {
             })()}
 
           </div>
-        </div>
+        </VistaDetalhe>
       )}
+      </div>
       {/* ====== MODAL DE EDIÇÃO DE EVENTO ====== */}
       {editingEvent && (
         <div
