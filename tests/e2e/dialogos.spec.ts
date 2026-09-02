@@ -143,37 +143,39 @@ test.describe('Calendário', () => {
     await page.getByTitle('Modificar evento').click()
   }
 
-  test('editar evento, com a persiana por baixo', async ({ page }) => {
+  // O detalhe do evento é diálogo no telemóvel e página no desktop, por isso a
+  // contagem de partida difere; o que se verifica é sempre o que se empilha
+  // por cima dela.
+  test('editar evento', async ({ page }) => {
     await abrePagina(page, 'calendar', { events: [treino] })
     await abreEdicaoDoEvento(page)
 
-    // Persiana do evento + formulário de edição por cima.
-    await expect(dialogos(page)).toHaveCount(2)
+    const base = await dialogos(page).count()
     await verificaContrato(page, dialogos(page).last())
 
     // A edição fecha-se sempre de forma deliberada: o Escape pede confirmação.
     await page.keyboard.press('Escape')
-    await expect(dialogos(page)).toHaveCount(3)
+    await expect(dialogos(page)).toHaveCount(base + 1)
 
     // E o Escape seguinte fecha só essa confirmação.
     await page.keyboard.press('Escape')
-    await expect(dialogos(page)).toHaveCount(2)
+    await expect(dialogos(page)).toHaveCount(base)
   })
 
   test('criar campo a partir da edição do evento', async ({ page }) => {
     await abrePagina(page, 'calendar', { events: [treino] })
     await abreEdicaoDoEvento(page)
-    await expect(dialogos(page)).toHaveCount(2)
+    const base = await dialogos(page).count()
 
     // O select do campo abre a janela de criação rápida por cima da edição.
     await page.locator('select').filter({ hasText: 'Criar Novo Campo' }).first().selectOption('__new__')
-    await expect(dialogos(page)).toHaveCount(3)
+    await expect(dialogos(page)).toHaveCount(base + 1)
     const painelCampo = dialogos(page).last()
     await verificaContrato(page, painelCampo)
     await expect(painelCampo).toContainText('Criar Novo Campo / Instalação')
 
     // Escape fecha só a janela de cima; a edição continua aberta por baixo.
     await page.keyboard.press('Escape')
-    await expect(dialogos(page)).toHaveCount(2)
+    await expect(dialogos(page)).toHaveCount(base)
   })
 })

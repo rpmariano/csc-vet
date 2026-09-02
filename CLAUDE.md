@@ -35,7 +35,9 @@ src/
 │   ├── ClubContext      club_settings (id=1), campo de casa
 │   └── ToastContext     toasts + singleton global `toast.success(...)`
 ├── components/          Layout (nav desktop+mobile), modais partilhados, PWA prompt
-├── hooks/useModalA11y   Escape, prisão de foco e pilha de diálogos empilhados
+├── hooks/
+│   ├── useModalA11y     Escape, prisão de foco e pilha de diálogos empilhados
+│   └── useEhDesktop     ponto de corte `md:` em JS, para o que muda de estrutura
 ├── pages/               uma página por rota
 ├── lib/supabaseClient   cliente único
 └── utils/haptics        vibração (navigator.vibrate)
@@ -74,6 +76,11 @@ RLS: leitura aberta a qualquer autenticado; escrita restrita a `coach`/`admin` v
 - Tipografia densa e pesada: `font-black`, tamanhos `text-[9px]`–`text-sm`, `rounded-xl`/`2xl`.
 - Cartões: `bg-white rounded-2xl shadow-sm border border-gray-100`.
 - Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
+- **Detalhe é página no desktop, persiana no telemóvel.** Ver um evento ou uma ficha
+  de atleta não abre janela nenhuma no desktop: o `<VistaDetalhe>` decide a moldura
+  pelo `useEhDesktop()` e o endereço leva o item (`?event=`, `?atleta=`), portanto há
+  link próprio e o retroceder do browser fecha. Modais ficam para inserções curtas
+  (criar um campo, confirmar) — não para consultar uma entidade.
 - Comentários e strings de UI em português.
 - Assets públicos são referenciados com o prefixo literal `/csc-vet/` (não com
   `import.meta.env.BASE_URL`).

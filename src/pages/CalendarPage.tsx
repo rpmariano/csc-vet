@@ -28,7 +28,8 @@ import { supabase } from '../lib/supabaseClient'
 import { useSearchParams } from 'react-router-dom'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
-import { BottomSheet } from '../components/BottomSheet'
+import { VistaDetalhe } from '../components/VistaDetalhe'
+import { useEhDesktop } from '../hooks/useEhDesktop'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { QuickFieldModal } from '../components/QuickFieldModal'
 import { QuickOpponentModal } from '../components/QuickOpponentModal'
@@ -218,6 +219,8 @@ const CalendarPage: React.FC = () => {
   const [fields, setFields] = useState<Field[]>([])
   const [opponents, setOpponents] = useState<Opponent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
+  const [searchParams, setSearchParams] = useSearchParams()
+  const ehDesktop = useEhDesktop()
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   // Separado de `selectedEvent`: o evento fica retido (para a persiana poder deslizar
   // suavemente para fora ao fechar) mesmo depois de a persiana deixar de estar aberta.
@@ -268,12 +271,35 @@ const CalendarPage: React.FC = () => {
     }
   }, [selectedEvent])
 
+  // Retroceder no browser (ou qualquer coisa que tire o ?event= do endereço)
+  // fecha o detalhe — sem isto o botão de voltar mudava o endereço e deixava a
+  // persiana aberta.
+  useEffect(() => {
+    if (!searchParams.get('event')) {
+      setIsEventSheetOpen(false)
+    }
+  }, [searchParams])
+
+  // Ver um evento é navegar: o endereço passa a ter ?event=<id>, portanto o
+  // detalhe tem link próprio e o botão de retroceder do browser fecha-o. No
+  // desktop deixa de ser uma persiana e passa a ser a página (ver VistaDetalhe).
+  const abrirEvento = (ev: Event) => {
+    setSelectedEvent(ev)
+    setIsEventSheetOpen(true)
+    setSearchParams({ event: ev.id })
+  }
+
   const handleCloseEventModal = () => {
     // Só fecha visualmente — `selectedEvent` fica retido para a persiana poder
     // deslizar para fora antes de o conteúdo desaparecer (ver isEventSheetOpen).
     setIsEventSheetOpen(false)
     setPlayerSearchTerm('')
     setModalCallupStatusFilter('all')
+    if (searchParams.get('event')) {
+      const restantes = new URLSearchParams(searchParams)
+      restantes.delete('event')
+      setSearchParams(restantes, { replace: true })
+    }
   }
 
   const handleCarouselTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -688,7 +714,6 @@ const CalendarPage: React.FC = () => {
     }
   }
 
-  const [searchParams] = useSearchParams()
 
   useEffect(() => {
     fetchEventsAndData()
@@ -1286,7 +1311,7 @@ const CalendarPage: React.FC = () => {
     return (
       <div
         key={event.id}
-        onClick={() => { setSelectedEvent(event); setIsEventSheetOpen(true) }}
+        onClick={() => abrirEvento(event)}
         className="rounded-3xl transition-all cursor-pointer bg-csc-dark text-white overflow-hidden shadow-sm hover:shadow-lg flex flex-col justify-between"
       >
         {/* Cabeçalho: tipo de evento por ícone + rótulo, não por cor de fundo */}
@@ -1478,6 +1503,10 @@ const CalendarPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* No desktop, abrir um evento é mudar de página: a agenda sai da frente
+          em vez de ficar por baixo de uma janela. No telemóvel a persiana sobe
+          por cima e a lista continua onde estava. */}
+      <div className={ehDesktop && isEventSheetOpen ? 'hidden' : 'space-y-6'}>
 
       {/* Barra de Navegação & Filtros de Calendário */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 space-y-3.5">
@@ -1794,13 +1823,14 @@ const CalendarPage: React.FC = () => {
           )}
         </div>
       )}
+      </div>
 
       {/* Modal Detalhes Evento & Convocatória (persiana partilhada).
           A condição usa só `selectedEvent` (nunca voltar a null ao fechar) — a persiana
           controla a própria visibilidade por `isEventSheetOpen`, para poder deslizar
           para fora suavemente em vez de desaparecer no instante em que se fecha. */}
       {selectedEvent && (
-        <BottomSheet
+        <VistaDetalhe
           isOpen={isEventSheetOpen}
           onClose={handleCloseEventModal}
           ref={modalScrollRef}
@@ -1808,16 +1838,19 @@ const CalendarPage: React.FC = () => {
           size="7xl"
           showCloseButton={false}
           ariaLabel="Detalhe do evento"
+          voltarTexto="Voltar à agenda"
           onContentTouchStart={handleCarouselTouchStart}
           onContentTouchMove={handleCarouselTouchMove}
           onContentTouchEnd={handleCarouselTouchEnd}
         >
           <div className="space-y-4 select-none">
-            {/* Botão Fechar no Topo com Alto Contraste e Visibilidade */}
+            {/* Fechar a persiana — só no telemóvel: no desktop isto é uma página, e
+                quem volta atrás é a barra "Voltar à agenda" da VistaDetalhe. */}
             <button
               type="button"
               onClick={handleCloseEventModal}
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              aria-label="Fechar"
+              className="md:hidden absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
@@ -2362,7 +2395,7 @@ const CalendarPage: React.FC = () => {
 
             </div>
           </div>
-        </BottomSheet>
+        </VistaDetalhe>
       )}
 
       {/* MODAL 3: EDITAR EVENTO ESPECÍFICO (Versão Larga 2 Colunas) */}
