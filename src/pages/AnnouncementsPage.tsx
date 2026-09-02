@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 interface Announcement {
   id: string
@@ -286,6 +287,10 @@ const AnnouncementsPage: React.FC = () => {
 
   const activeCount = announcements.filter(a => a.is_active !== false).length
   const inactiveCount = announcements.filter(a => a.is_active === false).length
+
+  // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
+  const painelEdicaoRef = useModalA11y({ isOpen: !!editingAnn, onClose: () => setEditingAnn(null) })
+  const painelApagarRef = useModalA11y({ isOpen: !!deletingAnn, onClose: () => setDeletingAnn(null) })
 
   return (
     <div className="space-y-4 pb-12">
@@ -574,7 +579,14 @@ const AnnouncementsPage: React.FC = () => {
             if (e.target === e.currentTarget) setEditingAnn(null)
           }}
         >
-          <div className="bg-csc-dark text-white rounded-3xl max-w-lg w-full p-6 relative shadow-2xl border border-white/10 space-y-4 animate-scale-in">
+          <div
+            ref={painelEdicaoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editar-comunicado-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white rounded-3xl max-w-lg w-full p-6 relative shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
+          >
             <button
               type="button"
               onClick={() => setEditingAnn(null)}
@@ -589,7 +601,7 @@ const AnnouncementsPage: React.FC = () => {
                 ✏️
               </div>
               <div>
-                <h3 className="text-base font-black text-white">Editar Comunicado</h3>
+                <h3 id="editar-comunicado-titulo" className="text-base font-black text-white">Editar Comunicado</h3>
                 <p className="text-[11px] text-white/70">Atualiza os dados e visibilidade deste aviso.</p>
               </div>
             </div>
@@ -668,13 +680,20 @@ const AnnouncementsPage: React.FC = () => {
       {/* MODAL: CONFIRMAÇÃO DE ELIMINAÇÃO */}
       {deletingAnn && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-modal-confirm animate-fade-in select-none">
-          <div className="bg-csc-dark text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/10 space-y-4 animate-scale-in">
+          <div
+            ref={painelApagarRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="apagar-comunicado-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
+          >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
                 <Trash2 size={24} />
               </div>
               <div>
-                <h3 className="text-base font-black text-white leading-tight">Apagar Comunicado?</h3>
+                <h3 id="apagar-comunicado-titulo" className="text-base font-black text-white leading-tight">Apagar Comunicado?</h3>
                 <p className="text-xs text-white/70 mt-0.5">Esta ação não pode ser revertida.</p>
               </div>
             </div>

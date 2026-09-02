@@ -12,6 +12,8 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
 import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
+import { useEhDesktop } from '../hooks/useEhDesktop'
+import { useSearchParams } from 'react-router-dom'
 
 interface Opponent {
   id: string
@@ -71,6 +73,8 @@ export const MatchReportsPage: React.FC = () => {
 
   // Modal de Ficha de Jogo
   const [selectedEventForReport, setSelectedEventForReport] = useState<MatchEvent | null>(null)
+  const ehDesktop = useEhDesktop()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
@@ -187,10 +191,35 @@ export const MatchReportsPage: React.FC = () => {
       .sort((a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime())
   }, [matches, searchTerm, filterType, selectedTournamentId, selectedYear, selectedMonth])
 
+  // Ver uma ficha é navegar: o endereço passa a ter ?jogo=<id>, portanto tem
+  // link próprio e o retroceder do browser fecha-a.
   const handleOpenReport = (ev: MatchEvent) => {
     setSelectedEventForReport(ev)
     setIsReportModalOpen(true)
+    setSearchParams({ jogo: ev.id })
   }
+
+  const fecharFicha = () => {
+    setIsReportModalOpen(false)
+    if (searchParams.get('jogo')) {
+      const restantes = new URLSearchParams(searchParams)
+      restantes.delete('jogo')
+      setSearchParams(restantes, { replace: true })
+    }
+  }
+
+  useEffect(() => {
+    const idJogo = searchParams.get('jogo')
+    if (!idJogo) {
+      setIsReportModalOpen(false)
+      return
+    }
+    const alvo = matches.find(m => m.id === idJogo)
+    if (alvo) {
+      setSelectedEventForReport(alvo)
+      setIsReportModalOpen(true)
+    }
+  }, [searchParams, matches])
 
   const handleSavedReport = () => {
     fetchMatches()
@@ -198,6 +227,9 @@ export const MatchReportsPage: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-12">
+      {/* No desktop, abrir uma ficha de jogo é mudar de página: a lista sai da
+          frente em vez de ficar por baixo de uma janela. */}
+      <div className={ehDesktop && isReportModalOpen ? 'hidden' : 'space-y-4'}>
       
       {/* Barra de Pesquisa e Filtros */}
       <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-200 space-y-3">
@@ -461,6 +493,7 @@ export const MatchReportsPage: React.FC = () => {
           })}
         </div>
       )}
+      </div>
 
       {/* Modal da Ficha de Jogo. A condição usa só `selectedEventForReport` (nunca é
           limpo ao fechar) para a persiana poder deslizar para fora suavemente em vez de
@@ -468,7 +501,7 @@ export const MatchReportsPage: React.FC = () => {
       {selectedEventForReport && (
         <MatchReportModal
           isOpen={isReportModalOpen}
-          onClose={() => setIsReportModalOpen(false)}
+          onClose={fecharFicha}
           eventId={selectedEventForReport.id}
           event={selectedEventForReport}
           isCoachOrAdmin={!!isCoachOrAdmin}

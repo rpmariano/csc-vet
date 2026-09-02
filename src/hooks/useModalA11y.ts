@@ -21,6 +21,15 @@ let modaisAbertos = 0
 let overflowGuardado = ''
 let paddingGuardado = ''
 
+/**
+ * Pilha dos diálogos abertos, do mais antigo ao mais recente. Com modais
+ * empilhados (uma confirmação por cima de um formulário, por exemplo) os
+ * listeners são todos no `document`: sem isto, um Escape chegava ao de cima e
+ * ao de baixo ao mesmo tempo e o Tab era disputado por dois traps. Só o
+ * diálogo no topo reage ao teclado.
+ */
+const pilhaModais: object[] = []
+
 const SELETOR_FOCAVEL = [
   'a[href]',
   'button:not([disabled])',
@@ -47,6 +56,8 @@ export function useModalA11y({
 }: OpcoesModalA11y) {
   const painelRef = useRef<HTMLDivElement>(null)
   const focoAnterior = useRef<HTMLElement | null>(null)
+  // Identidade estável deste diálogo dentro da pilha.
+  const identidade = useRef({})
 
   // Manter o onClose mais recente sem reinstalar o listener a cada render do pai.
   const onCloseRef = useRef(onClose)
@@ -77,9 +88,25 @@ export function useModalA11y({
     }
   }, [isOpen])
 
+  // --- Manter a pilha de diálogos abertos ---
+  useEffect(() => {
+    if (!isOpen) return
+
+    const id = identidade.current
+    pilhaModais.push(id)
+
+    return () => {
+      const i = pilhaModais.lastIndexOf(id)
+      if (i !== -1) pilhaModais.splice(i, 1)
+    }
+  }, [isOpen])
+
   // --- Escape e prisão do foco dentro do diálogo ---
   const aoPremirTecla = useCallback(
     (e: KeyboardEvent) => {
+      // Só o diálogo no topo da pilha responde ao teclado.
+      if (pilhaModais[pilhaModais.length - 1] !== identidade.current) return
+
       if (e.key === 'Escape' && closeOnEscape) {
         e.stopPropagation()
         onCloseRef.current()

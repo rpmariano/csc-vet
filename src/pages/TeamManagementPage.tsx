@@ -27,10 +27,13 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth, extractRolesFromProfile, cleanNotesFromRolesTag } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../components/SoccerPitchSelector'
-import { BottomSheet } from '../components/BottomSheet'
+import { VistaDetalhe } from '../components/VistaDetalhe'
+import { useSearchParams } from 'react-router-dom'
+import { useEhDesktop } from '../hooks/useEhDesktop'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
+import { useModalA11y } from '../hooks/useModalA11y'
 
 const POSITIONS = [
   'Guarda-redes',
@@ -61,6 +64,8 @@ const TeamManagementPage: React.FC = () => {
 
   // Modals
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const ehDesktop = useEhDesktop()
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -254,9 +259,35 @@ const TeamManagementPage: React.FC = () => {
     setIsFormModalOpen(true)
   }
 
+  // Ver uma ficha é navegar: o endereço passa a ter ?atleta=<id>, portanto a
+  // ficha tem link próprio e o botão de retroceder do browser fecha-a. No
+  // desktop deixa de ser uma persiana e passa a ser a página (ver VistaDetalhe).
   const openDetailModal = (p: Profile) => {
     setSelectedProfile(p)
     setIsDetailModalOpen(true)
+    setSearchParams({ atleta: p.id })
+  }
+
+  useEffect(() => {
+    const idAtleta = searchParams.get('atleta')
+    if (!idAtleta) {
+      setIsDetailModalOpen(false)
+      return
+    }
+    const alvo = profiles.find(p => p.id === idAtleta)
+    if (alvo) {
+      setSelectedProfile(alvo)
+      setIsDetailModalOpen(true)
+    }
+  }, [searchParams, profiles])
+
+  const fecharFicha = () => {
+    setIsDetailModalOpen(false)
+    if (searchParams.get('atleta')) {
+      const restantes = new URLSearchParams(searchParams)
+      restantes.delete('atleta')
+      setSearchParams(restantes, { replace: true })
+    }
   }
 
   // Upload handler for document/photo fields
@@ -555,7 +586,7 @@ const TeamManagementPage: React.FC = () => {
             if (error) throw error
             setProfiles(prev => prev.filter(p => p.id !== id))
           }
-          if (selectedProfile?.id === id) setIsDetailModalOpen(false)
+          if (selectedProfile?.id === id) fecharFicha()
           toast.success('Membro eliminado com sucesso!')
         } catch (err: any) {
           toast.error('Erro ao eliminar membro: ' + err.message)
@@ -639,7 +670,7 @@ const TeamManagementPage: React.FC = () => {
       setAssociatingPlayer(null)
       setSelectedUserToAssociate(null)
       if (selectedProfile?.id === sourcePlayerId) {
-        setIsDetailModalOpen(false)
+        fecharFicha()
       }
       fetchProfiles()
         } catch (err: any) {
@@ -721,8 +752,22 @@ const TeamManagementPage: React.FC = () => {
   const injuredCount = profiles.filter(p => p.status === 'injured').length
   const inactiveCount = profiles.filter(p => p.status === 'inactive').length
 
+  // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
+  const painelFichaRef = useModalA11y({ isOpen: isFormModalOpen, onClose: handleAttemptCloseFormModal })
+  const painelAssociarRef = useModalA11y({
+    isOpen: !!associatingPlayer,
+    onClose: () => {
+      setAssociatingPlayer(null)
+      setSelectedUserToAssociate(null)
+    },
+  })
+
   return (
     <div className="space-y-6 pb-12">
+      {/* No desktop, abrir uma ficha é mudar de página: a lista sai da frente
+          em vez de ficar por baixo de uma janela. No telemóvel a persiana sobe
+          por cima e a lista continua onde estava. */}
+      <div className={ehDesktop && isDetailModalOpen ? 'hidden' : 'space-y-6'}>
       {/* Header com título removido a pedido do utilizador */}
       {isCoachOrAdmin && (
         <div className="flex items-center justify-end">
@@ -1288,7 +1333,14 @@ const TeamManagementPage: React.FC = () => {
             if (e.target === e.currentTarget) handleAttemptCloseFormModal()
           }}
         >
-          <div className="bg-csc-dark text-white rounded-3xl max-w-4xl xl:max-w-5xl w-full p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40">
+          <div
+            ref={painelFichaRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ficha-membro-titulo"
+            tabIndex={-1}
+            className="bg-csc-dark text-white rounded-3xl max-w-4xl xl:max-w-5xl w-full p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40 outline-none"
+          >
             <button
               type="button"
               onClick={handleAttemptCloseFormModal}
@@ -1299,7 +1351,7 @@ const TeamManagementPage: React.FC = () => {
             </button>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4 mb-5">
               <div>
-                <h2 className="text-2xl font-black text-white mb-0.5">
+                <h2 id="ficha-membro-titulo" className="text-2xl font-black text-white mb-0.5">
                   {isEditing ? 'Editar Ficha do Membro' : 'Criar Ficha de Novo Membro'}
                 </h2>
                 <p className="text-xs text-white/70">
@@ -1827,19 +1879,21 @@ const TeamManagementPage: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
 
       {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER PC & MOBILE).
           A condição usa só `selectedProfile` (nunca é limpo ao fechar) — a persiana
           controla a própria visibilidade por `isDetailModalOpen`, para poder deslizar
           para fora suavemente em vez de desaparecer no instante em que se fecha. */}
       {selectedProfile && (
-        <BottomSheet
+        <VistaDetalhe
           isOpen={isDetailModalOpen}
-          onClose={() => setIsDetailModalOpen(false)}
+          onClose={() => fecharFicha()}
           tone="dark"
           size="6xl"
           showCloseButton={false}
           ariaLabel={`Ficha de ${selectedProfile.name}`}
+          voltarTexto="Voltar ao plantel"
           className="border-2 border-amber-400/40"
         >
           <div className="space-y-6">
@@ -1880,7 +1934,7 @@ const TeamManagementPage: React.FC = () => {
                 {isCoachOrAdmin && (
                   <button
                     onClick={() => {
-                      setIsDetailModalOpen(false)
+                      fecharFicha()
                       openEditModal(selectedProfile)
                     }}
                     className="px-3.5 py-1.5 bg-csc-gold text-csc-dark rounded-xl text-xs font-bold hover:brightness-95 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
@@ -1889,9 +1943,12 @@ const TeamManagementPage: React.FC = () => {
                     <span className="hidden sm:inline">Editar Ficha</span>
                   </button>
                 )}
+                {/* Fechar a persiana — só no telemóvel: no desktop isto é uma página,
+                    e quem volta atrás é a barra "Voltar ao plantel" da VistaDetalhe. */}
                 <button
-                  onClick={() => setIsDetailModalOpen(false)}
-                  className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40 shrink-0"
+                  onClick={() => fecharFicha()}
+                  aria-label="Fechar"
+                  className="md:hidden w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40 shrink-0"
                   title="Fechar"
                 >
                   <X size={18} className="stroke-[2.5]" />
@@ -2244,7 +2301,7 @@ const TeamManagementPage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     const profileToAssociate = selectedProfile
-                    setIsDetailModalOpen(false)
+                    fecharFicha()
                     openAssociateModal(profileToAssociate)
                   }}
                   className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
@@ -2257,7 +2314,7 @@ const TeamManagementPage: React.FC = () => {
               <div className="flex items-center gap-2 ml-auto">
                 <button
                   type="button"
-                  onClick={() => setIsDetailModalOpen(false)}
+                  onClick={() => fecharFicha()}
                   className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   Fechar
@@ -2266,7 +2323,7 @@ const TeamManagementPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setIsDetailModalOpen(false)
+                      fecharFicha()
                       openEditModal(selectedProfile)
                     }}
                     className="px-5 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
@@ -2279,7 +2336,7 @@ const TeamManagementPage: React.FC = () => {
             </div>
 
           </div>
-        </BottomSheet>
+        </VistaDetalhe>
       )}
 
       {/* MODAL 3: ASSOCIAR UTILIZADOR A JOGADOR */}
@@ -2304,7 +2361,14 @@ const TeamManagementPage: React.FC = () => {
 
         return (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-            <div className="bg-csc-dark text-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/10">
+            <div
+              ref={painelAssociarRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="associar-utilizador-titulo"
+              tabIndex={-1}
+              className="bg-csc-dark text-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/10 outline-none"
+            >
               <button
                 onClick={() => {
                   setAssociatingPlayer(null)
@@ -2322,7 +2386,7 @@ const TeamManagementPage: React.FC = () => {
                   <Link2 size={22} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-white">
+                  <h3 id="associar-utilizador-titulo" className="text-lg font-black text-white">
                     Associar Utilizador a {associatingPlayer.name}
                   </h3>
                   <p className="text-xs text-white/70 font-medium">
