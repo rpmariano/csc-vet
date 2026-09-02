@@ -105,10 +105,19 @@ RLS: leitura aberta a qualquer autenticado; escrita restrita a `coach`/`admin` v
    convocatórias e estatísticas que trazem o jogador aninhado. A tabela `profiles` fica
    para a própria ficha (AuthContext, Definições), para a associação de conta e para o
    Plantel, que é de treinador/admin.
-2. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
+2. **~~Crítico — escrita anónima em `profiles` pela vista do plantel.~~ Corrigido em
+   2026-09-02** (`supabase_rls_v_players_public_migration.sql`, aplicada).
+   `v_players_public` é SECURITY DEFINER (é o que lhe permite servir o plantel depois
+   de `profiles` estar fechada) e, sendo uma vista simples, é automaticamente
+   atualizável — e os privilégios por omissão davam INSERT/UPDATE/DELETE a `anon`. Ou
+   seja, a chave anónima do bundle público dava escrita direta em `profiles` sem
+   sessão, incluindo `role = 'admin'`. Hoje: só `SELECT`, e só a `authenticated`.
+   **Lição para vistas novas:** uma vista SECURITY DEFINER sobre uma tabela protegida
+   precisa sempre de `REVOKE ALL` + `GRANT SELECT` — a RLS da tabela base não a cobre.
+3. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
    `medical_notes` e injetar `<!--roles:admin-->`, ganhando a UI de admin. A RLS trava as
    escritas, mas combina-se com o ponto 1 na leitura.
-3. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
+4. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
    Não há modais escritos à mão sem acessibilidade — todos passaram pelo `<Modal>`,
    `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`.
 
