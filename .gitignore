@@ -27,3 +27,8 @@ dist-ssr
 # Output do canvas de design (regenerável a partir dos .dc.html)
 design/*.html
 !design/*.dc.html
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/

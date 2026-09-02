@@ -16,7 +16,14 @@ Tailwind `md:`.
 | Lint | oxlint (`.oxlintrc.json`) |
 | Deploy | GitHub Actions → GitHub Pages, em push para `main` |
 
-Comandos: `npm run dev` · `npm run build` (`tsc -b && vite build`) · `npm run lint`
+Comandos: `npm run dev` · `npm run build` (`tsc -b && vite build`) · `npm run lint` ·
+`npm run test:e2e` (Playwright)
+
+Os testes de fumo em `tests/e2e/` correm contra um Vite apontado a um Supabase
+inventado, com todos os pedidos intercetados no browser (`tests/e2e/supabase-mock.ts`):
+não tocam na base de dados real nem precisam de credenciais. Cobrem o contrato de
+acessibilidade dos diálogos — `role="dialog"`, nome acessível, foco ao abrir, Escape a
+fechar e empilhamento.
 
 ## Arquitetura
 
