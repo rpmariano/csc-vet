@@ -34,9 +34,9 @@ src/
 │   ├── AuthContext      sessão, perfil, papéis, simulação de papel, estado clínico
 │   ├── ClubContext      club_settings (id=1), campo de casa
 │   └── ToastContext     toasts + singleton global `toast.success(...)`
-├── components/          Layout (nav desktop+mobile), modais, PWA prompt
+├── components/          Layout (nav desktop+mobile), modais partilhados, PWA prompt
+├── hooks/useModalA11y   Escape, prisão de foco e pilha de diálogos empilhados
 ├── pages/               uma página por rota
-├── data/initialPlayers  seed do plantel  ⚠️ ver Riscos
 ├── lib/supabaseClient   cliente único
 └── utils/haptics        vibração (navigator.vibrate)
 ```
@@ -78,20 +78,26 @@ RLS: leitura aberta a qualquer autenticado; escrita restrita a `coach`/`admin` v
 - Assets públicos são referenciados com o prefixo literal `/csc-vet/` (não com
   `import.meta.env.BASE_URL`).
 
-## Riscos conhecidos (auditoria de 2026-08)
+## Riscos conhecidos (revisto em 2026-09)
 
-1. **P0 — PII real no bundle público.** `src/data/initialPlayers.ts` contém morada, NIF,
-   nº de cartão de cidadão, IBAN, telefone e data de nascimento de ~31 pessoas reais, e é
-   importado por `AuthContext` → vai para dentro do JS servido publicamente. Não adicionar
-   mais dados aqui; mover para a base de dados.
-2. **P0 — `.env` com credenciais Supabase está versionado em git.**
-3. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
-   `medical_notes` e injetar `<!--roles:admin-->`, ganhando a UI de admin (a RLS continua a
-   travar as escritas, mas a leitura de `profiles` já expõe IBAN/NIF de todos).
-4. **P1 — `ProtectedRoute` deixa passar** quando `profile` é `null` e há `allowedRoles`.
-5. **P2 —** Bundle único de ~1 MB, sem code-splitting; `CalendarPage` tem 4400 linhas e
-   `EventsPage` 3300; 33 modais escritos à mão sem `Escape`, sem *focus trap* e sem
-   `role="dialog"`.
+1. **P1 — Qualquer autenticado lê a ficha completa de toda a gente.** A política de
+   SELECT em `profiles` é `USING (true)` para `authenticated`, e a tabela guarda IBAN,
+   NIF, nº de cartão de cidadão, morada e telefone. Basta uma conta no clube para
+   descarregar tudo. É o risco real de exposição de dados pessoais — não a chave anónima
+   (ver nota abaixo). A correção é restringir a política por coluna ou por papel.
+2. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
+   `medical_notes` e injetar `<!--roles:admin-->`, ganhando a UI de admin. A RLS trava as
+   escritas, mas combina-se com o ponto 1 na leitura.
+3. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
+   Não há modais escritos à mão sem acessibilidade — todos passaram pelo `<Modal>`,
+   `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`.
+
+**Sobre o `.env` e a chave anónima.** O `.env` deixou de ser versionado (`cdf2187`) mas
+continua no histórico, e a chave que lá está tem `role: anon` — é pública por desenho:
+o Vite injeta-a no bundle que qualquer visitante do site descarrega. Rodá-la não muda
+nada, porque a nova volta para o mesmo sítio público. O que protege os dados é a RLS,
+ou seja, o ponto 1. Nunca foi versionada uma `service_role` — essa sim seria crítica e
+teria de ser rodada de imediato.
 
 ## Regras de trabalho
 
