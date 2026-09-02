@@ -10,7 +10,9 @@
 --
 -- Como o cliente deixa de poder ler as fichas dos outros, a associação de uma
 -- conta à sua ficha de atleta passa para o servidor (secção 2), onde também
--- fica melhor guardada: só se pode reclamar uma ficha que não tenha conta.
+-- fica melhor guardada: só se pode reclamar uma ficha que não tenha conta, e
+-- só se corresponder (email, telefone ou nome) a quem está a chamar — o
+-- servidor repete a verificação, nunca confia no id que o cliente escolheu.
 --
 -- Idempotente — pode ser corrido várias vezes em segurança.
 -- ============================================================================
@@ -130,7 +132,11 @@ RETURNS public.profiles
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth
 AS $$
 DECLARE
+    me public.profiles%ROWTYPE;
     me_id UUID := auth.uid();
+    me_email TEXT;
+    me_phone TEXT;
+    me_words TEXT[];
     alvo public.profiles%ROWTYPE;
     resultado public.profiles%ROWTYPE;
 BEGIN
@@ -147,6 +153,38 @@ BEGIN
     END IF;
     IF EXISTS (SELECT 1 FROM auth.users u WHERE u.id = alvo.id) THEN
         RAISE EXCEPTION 'Essa ficha já pertence a uma conta.';
+    END IF;
+
+    -- O target_id vem do cliente — não pode ser a única prova de identidade.
+    -- find_my_profile_match só sugere; sem esta repetição aqui, qualquer conta
+    -- autenticada podia reclamar a ficha de outra pessoa (todos os ids do
+    -- plantel são públicos via v_players_public) só por saber ou escolher o
+    -- id certo, ficando com a morada, o NIF, o cartão de cidadão e o IBAN de
+    -- quem ainda não tem conta. Mesmas três regras e mesma ordem de
+    -- find_my_profile_match, mas em modo completo — cobre também a
+    -- correspondência automática por email só, que é o subconjunto mais
+    -- restrito.
+    SELECT * INTO me FROM public.profiles p WHERE p.id = me_id;
+    SELECT lower(btrim(coalesce(me.email, u.email, ''))) INTO me_email
+    FROM auth.users u WHERE u.id = me_id;
+    me_email := coalesce(me_email, '');
+    me_phone := regexp_replace(coalesce(me.phone, ''), '\D', '', 'g');
+    me_words := public.nome_palavras(me.name);
+
+    IF NOT (
+        (me_email <> '' AND lower(btrim(coalesce(alvo.email, ''))) = me_email)
+        OR (length(me_phone) >= 9
+            AND length(regexp_replace(coalesce(alvo.phone, ''), '\D', '', 'g')) >= 9
+            AND regexp_replace(coalesce(alvo.phone, ''), '\D', '', 'g') = me_phone)
+        OR (coalesce(array_length(me_words, 1), 0) >= 2
+            AND lower(btrim(coalesce(me.name, ''))) NOT IN ('novo atleta', 'novo jogador')
+            AND (me_email = '' OR coalesce(lower(btrim(alvo.email)), '') IN ('', me_email))
+            AND coalesce(array_length(public.nome_palavras(alvo.name), 1), 0) >= 2
+            AND (public.nome_palavras(alvo.name))[1] = me_words[1]
+            AND (public.nome_palavras(alvo.name))[array_length(public.nome_palavras(alvo.name), 1)]
+                = me_words[array_length(me_words, 1)])
+    ) THEN
+        RAISE EXCEPTION 'Essa ficha não corresponde aos seus dados.';
     END IF;
 
     -- O perfil de quem chama pode ainda não existir (primeiro início de sessão).
@@ -228,7 +266,7 @@ BEGIN
 END $$;
 
 COMMENT ON FUNCTION public.associate_my_profile(UUID) IS
-'Reclama uma ficha de atleta sem conta associada: copia os dados para o perfil de quem chama, transfere as referências e apaga a ficha órfã.';
+'Reclama uma ficha de atleta sem conta associada e que corresponda (email, telefone ou nome) a quem chama: copia os dados para o perfil de quem chama, transfere as referências e apaga a ficha órfã. Repete a verificação de correspondência de find_my_profile_match — nunca confia no target_id isolado.';
 
 REVOKE ALL ON FUNCTION public.find_my_profile_match(BOOLEAN) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.associate_my_profile(UUID) FROM PUBLIC;
