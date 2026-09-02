@@ -1923,7 +1923,7 @@ const TeamManagementPage: React.FC = () => {
                       ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
                       : selectedProfile.status === 'inactive'
                       ? 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                      : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-150'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-200'
                   }`}
                   title="Clique para alternar o estado de aptidão física (Apto / Lesionado)"
                 >

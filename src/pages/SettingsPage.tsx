@@ -252,7 +252,7 @@ const SettingsPage: React.FC = () => {
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-xs cursor-pointer border active:scale-95 ${
               isInjured
                 ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
-                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-150'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-200'
             }`}
             title="Clique para alternar o seu estado físico entre Apto e Lesionado"
           >
