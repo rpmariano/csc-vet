@@ -23,9 +23,12 @@ export const AutoAssociationModal: React.FC = () => {
     if (!user || !profile || dismissed) return
     let cancelado = false
 
+    // A lista serve só para o utilizador escolher a sua ficha à mão, por isso
+    // vem da vista pública: nome, alcunha, número e posição, sem NIF, IBAN,
+    // morada nem telefone de ninguém.
     supabase
-      .from('profiles')
-      .select('id, name, nickname, shirt_name, email, phone, jersey_number, kit_size, birth_date, nationality, position, address, postal_code, city, nif, id_number, id_card_expiry, iban, gdpr_consent, member_number, status')
+      .from('v_players_public')
+      .select('id, name, nickname, shirt_name, jersey_number, position, status')
       .not('jersey_number', 'is', null)
       .then(({ data, error }) => {
         if (cancelado) return
@@ -40,68 +43,36 @@ export const AutoAssociationModal: React.FC = () => {
   }, [user, profile, dismissed])
 
   useEffect(() => {
-    if (!user || !profile || dismissed || squad.length === 0) return
+    if (!user || !profile || dismissed) return
+    let cancelado = false
 
-    // Verificar se o perfil atual já tem dados desportivos atribuídos (ex: camisola, posição ou morada)
+    // Verificar se o perfil atual já tem dados desportivos atribuídos
     const isAlreadyLinked = Boolean(
-      profile.jersey_number || 
+      profile.jersey_number ||
       (profile.position && profile.position !== 'Médio Centro') ||
       profile.shirt_name ||
       profile.nif
     )
-
     if (isAlreadyLinked) return
 
-    // Procurar correspondência nos dados do plantel por email, telefone ou nome estrito
-    const userEmail = (user.email || profile.email || '').toLowerCase().trim()
-    const userPhone = (profile.phone || '').trim().replace(/\D/g, '')
-    const userName = (profile.name || '').toLowerCase().trim()
+    // A correspondência (email exato, telefone com 9+ dígitos, primeiro e
+    // último nome) é feita no servidor: com a RLS fechada o cliente já não lê
+    // as fichas dos outros, e a função só devolve campos não sensíveis.
+    supabase.rpc('find_my_profile_match').then(({ data, error }) => {
+      if (cancelado) return
+      if (error) {
+        console.error('Erro ao procurar a ficha de atleta:', error.message)
+        return
+      }
+      const alvo = Array.isArray(data) ? data[0] : data
+      if (alvo?.id) {
+        setMatchedPlayer(alvo as Partial<Profile>)
+        setIsOpen(true)
+      }
+    })
 
-    let match: Partial<Profile> | undefined
-
-    // 1. Correspondência exata por Email
-    if (userEmail) {
-      match = squad.find(p => p.email && p.email.toLowerCase().trim() === userEmail)
-    }
-
-    // 2. Correspondência exata por Telefone (se tiver pelo menos 9 dígitos)
-    if (!match && userPhone && userPhone.length >= 9) {
-      match = squad.find(p => {
-        const pPhone = (p.phone || '').trim().replace(/\D/g, '')
-        return pPhone.length >= 9 && pPhone === userPhone
-      })
-    }
-
-    // 3. Correspondência estrita por Nome Completo (Primeiro + Último Nome)
-    // Apenas se a ficha não pertencer explicitamente a outro email
-    if (!match && userName && userName !== 'novo atleta' && userName !== 'novo jogador') {
-      const uWords = userName.split(' ').filter(w => w.length > 2)
-
-      match = squad.find(p => {
-        const pEmail = (p.email || '').toLowerCase().trim()
-        // Se a ficha já tiver outro email oficial atribuído, não associar por nome
-        if (pEmail && userEmail && pEmail !== userEmail) return false
-
-        const pName = (p.name || '').toLowerCase().trim()
-        if (!pName) return false
-
-        if (pName === userName) return true
-
-        const pWords = pName.split(' ').filter(w => w.length > 2)
-        if (uWords.length >= 2 && pWords.length >= 2) {
-          const firstMatch = uWords[0] === pWords[0]
-          const lastMatch = uWords[uWords.length - 1] === pWords[pWords.length - 1]
-          return firstMatch && lastMatch
-        }
-        return false
-      })
-    }
-
-    if (match) {
-      setMatchedPlayer(match)
-      setIsOpen(true)
-    }
-  }, [user, profile, dismissed, squad])
+    return () => { cancelado = true }
+  }, [user, profile, dismissed])
 
   const handleDismiss = () => {
     setIsOpen(false)
@@ -114,55 +85,14 @@ export const AutoAssociationModal: React.FC = () => {
     setLoading(true)
 
     try {
-      const payload = {
-        name: selectedTarget.name || profile.name,
-        nickname: selectedTarget.nickname || profile.nickname,
-        shirt_name: selectedTarget.shirt_name || selectedTarget.nickname || profile.shirt_name,
-        phone: selectedTarget.phone || profile.phone,
-        status: selectedTarget.status || profile.status || 'active',
-        jersey_number: selectedTarget.jersey_number !== undefined ? selectedTarget.jersey_number : profile.jersey_number,
-        kit_size: selectedTarget.kit_size || profile.kit_size,
-        birth_date: selectedTarget.birth_date || profile.birth_date,
-        nationality: selectedTarget.nationality || profile.nationality || 'Portuguesa',
-        position: selectedTarget.position || profile.position || 'Médio Centro',
-        address: selectedTarget.address || profile.address,
-        postal_code: selectedTarget.postal_code || profile.postal_code,
-        city: selectedTarget.city || profile.city,
-        nif: selectedTarget.nif || profile.nif,
-        id_number: selectedTarget.id_number || profile.id_number,
-        id_card_expiry: selectedTarget.id_card_expiry || profile.id_card_expiry,
-        iban: selectedTarget.iban || profile.iban,
-        gdpr_consent: selectedTarget.gdpr_consent !== undefined ? selectedTarget.gdpr_consent : true,
-        member_number: selectedTarget.member_number || profile.member_number,
-      }
-
-      // 1. Atualizar o perfil do utilizador autenticado
-      const { error: updateErr } = await supabase
-        .from('profiles')
-        .update(payload)
-        .eq('id', user.id)
-
-      if (updateErr) throw updateErr
-
-      // 2. Se existia uma ficha placeholder separada na BD com este email, transferir e limpar
-      if (selectedTarget.email) {
-        const { data: placeholder } = await supabase
-          .from('profiles')
-          .select('id')
-          .ilike('email', selectedTarget.email)
-          .neq('id', user.id)
-          .maybeSingle()
-
-        // A ficha do plantel é uma linha real da tabela `profiles`. Passar as
-        // referências para a conta autenticada e remover a ficha órfã.
-        if (placeholder?.id) {
-          await Promise.allSettled([
-            supabase.from('callups').update({ player_id: user.id }).eq('player_id', placeholder.id),
-            supabase.from('dues').update({ player_id: user.id }).eq('player_id', placeholder.id),
-            supabase.from('profiles').delete().eq('id', placeholder.id),
-          ])
-        }
-      }
+      // Toda a associação corre no servidor, numa transação só: copia os dados
+      // da ficha para o perfil de quem está autenticado, transfere as
+      // referências (convocatórias, presenças, estatísticas, quotas, encargos,
+      // torneios) e apaga a ficha órfã. O cliente já não lê nem escreve os
+      // dados sensíveis de outra ficha — e a função recusa qualquer ficha que
+      // já tenha uma conta associada.
+      const { error: assocErr } = await supabase.rpc('associate_my_profile', { target_id: selectedTarget.id })
+      if (assocErr) throw assocErr
 
       toast.success(`Conta associada com sucesso à ficha de ${selectedTarget.name}!`)
       setIsOpen(false)

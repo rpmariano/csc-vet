@@ -4,17 +4,18 @@ import {
   ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { ConfirmModal } from '../components/ConfirmModal'
+// O cálculo dos meses de quota e do seu estado deixou de ser feito aqui: vem
+// das vistas v_quota_status e v_financial_movements. De finance.ts só sobra o
+// que é regra de negócio pura — a época e o prazo do seguro.
 import {
-  DEFAULT_FINANCIAL_SETTINGS,
-  getSeasonLabel, getPlayerQuotaMonths,
-  computeQuotaMonthStatus, nomeMes, formatMonthYear, getInsuranceDeadline,
+  DEFAULT_FINANCIAL_SETTINGS, getSeasonLabel, nomeMes, getInsuranceDeadline,
 } from '../lib/finance'
-import type { FinancialSettings, SeasonMonth, QuotaMonthStatus } from '../lib/finance'
+import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -32,13 +33,34 @@ interface PlayerRow {
   roles?: UserRole[] | null
 }
 
-interface Due {
-  id: string
+// Linhas de public.v_quota_status — a matriz jogador × mês da época corrente.
+// É aqui que existe a quota POR PAGAR: na tabela `dues` só há linha para as pagas.
+interface QuotaStatusRow {
   player_id: string
   month_year: string
+  expected_amount: number
+  due_id: string | null
+  paid_amount: number | null
+  due_date: string
+  status: 'paid' | 'late' | 'pending'
+  owed_amount: number
+}
+
+// Linhas de public.v_financial_movements — o facto único do módulo: quotas,
+// pagamentos de encargos e despesas/receitas avulsas, já com época, categoria
+// e jogador resolvidos.
+interface MovementRow {
+  movement_id: string
+  source: 'quota' | 'encargo' | 'avulso'
+  entry_date: string
+  season: string | null
+  type: 'income' | 'expense'
   amount: number
-  status: string
-  paid_at?: string | null
+  signed_amount: number
+  description: string
+  category_key: string
+  category_label: string
+  document_url: string | null
 }
 
 interface ExpenseCategory {
@@ -132,7 +154,8 @@ const FinancePage: React.FC = () => {
 
   const [settings, setSettings] = useState<FinancialSettings>(DEFAULT_FINANCIAL_SETTINGS)
   const [players, setPlayers] = useState<PlayerRow[]>([])
-  const [dues, setDues] = useState<Due[]>([])
+  const [quotaRows, setQuotaRows] = useState<QuotaStatusRow[]>([])
+  const [movements, setMovements] = useState<MovementRow[]>([])
   const [charges, setCharges] = useState<Charge[]>([])
   const [chargePlayers, setChargePlayers] = useState<ChargePlayer[]>([])
   const [chargePayments, setChargePayments] = useState<ChargePayment[]>([])
@@ -146,7 +169,8 @@ const FinancePage: React.FC = () => {
       const [
         { data: settingsData },
         { data: playersData },
-        { data: duesData },
+        { data: quotaData },
+        { data: movementsData },
         { data: chargesData },
         { data: chargePlayersData },
         { data: chargePaymentsData },
@@ -155,8 +179,9 @@ const FinancePage: React.FC = () => {
         { data: tourData },
       ] = await Promise.all([
         supabase.from('financial_settings').select('*').eq('id', 1).maybeSingle(),
-        supabase.from('profiles').select('id, name, shirt_name, jersey_number, status, quota_start_date, quota_end_date, role, roles').order('jersey_number', { ascending: true, nullsFirst: false }),
-        supabase.from('dues').select('*'),
+        supabase.from('v_players_public').select('id, name, shirt_name, jersey_number, status, quota_start_date, quota_end_date, role, roles').order('jersey_number', { ascending: true, nullsFirst: false }),
+        supabase.from('v_quota_status').select('player_id, month_year, expected_amount, due_id, paid_amount, due_date, status, owed_amount').order('month_year'),
+        supabase.from('v_financial_movements').select('*').order('entry_date', { ascending: false }),
         supabase.from('charges').select('*').order('created_at', { ascending: false }),
         supabase.from('charge_players').select('*'),
         supabase.from('charge_payments').select('*'),
@@ -167,7 +192,8 @@ const FinancePage: React.FC = () => {
 
       if (settingsData) setSettings(settingsData as FinancialSettings)
       setPlayers((playersData || []) as PlayerRow[])
-      setDues((duesData || []) as Due[])
+      setQuotaRows((quotaData || []) as QuotaStatusRow[])
+      setMovements((movementsData || []) as MovementRow[])
       setCharges((chargesData || []) as Charge[])
       setChargePlayers((chargePlayersData || []) as ChargePlayer[])
       setChargePayments((chargePaymentsData || []) as ChargePayment[])
@@ -189,18 +215,17 @@ const FinancePage: React.FC = () => {
   // -------------------------------------------------------------------------
   // Quotas — meses devidos por jogador nesta época, com estado calculado
   // -------------------------------------------------------------------------
-  const duesByPlayer = useMemo(() => {
-    const map = new Map<string, Due[]>()
-    for (const d of dues) {
-      if (!map.has(d.player_id)) map.set(d.player_id, [])
-      map.get(d.player_id)!.push(d)
-    }
-    return map
-  }, [dues])
+  interface QuotaMonth {
+    monthYear: string
+    year: number
+    month: number
+    statusCalc: 'paid' | 'late' | 'pending'
+    dueId: string | null
+  }
 
   interface PlayerQuotaOverview {
     player: PlayerRow
-    months: (SeasonMonth & { statusCalc: 'paid' | 'late' | 'pending'; due?: Due })[]
+    months: QuotaMonth[]
     paidCount: number
     lateCount: number
     pendingCount: number
@@ -208,28 +233,41 @@ const FinancePage: React.FC = () => {
     totalPaid: number
   }
 
-  // Só quem tem o papel de Jogador paga quota — membros só Treinador ou só
-  // Direção ficam de fora (continuam elegíveis para Encargos, à parte).
-  const quotaEligiblePlayers = useMemo(() => players.filter(p => extractRolesFromProfile(p).includes('player')), [players])
-
+  // Os meses elegíveis, o prazo e o estado de cada um vêm todos da vista — a
+  // mesma regra que src/lib/finance.ts aplica, mas calculada uma vez no
+  // servidor. A ordem dos jogadores continua a ser a do plantel (camisola).
+  //
+  // A regra "só quem tem o papel de Jogador paga quota" (membros só Treinador
+  // ou só Direção ficam de fora, e continuam elegíveis para Encargos) vive
+  // agora dentro de v_quota_status: não há linhas para essas pessoas, por isso
+  // não é preciso filtrá-las aqui. Mantê-la nos dois sítios era arriscar que
+  // divergissem — a vista é a fonte de verdade das quotas.
   const quotaOverview: PlayerQuotaOverview[] = useMemo(() => {
-    const today = new Date()
-    return quotaEligiblePlayers.map(p => {
-      const eligibleMonths = getPlayerQuotaMonths(p, settings, seasonLabel, today)
-      const playerDues = duesByPlayer.get(p.id) || []
-      const duesByMonth = new Map(playerDues.map(d => [d.month_year, d]))
-      const months = eligibleMonths.map(m => {
-        const due = duesByMonth.get(m.monthYear)
-        return { ...m, due, statusCalc: computeQuotaMonthStatus(m, !!due, settings, today) }
+    const porJogador = new Map<string, QuotaStatusRow[]>()
+    for (const r of quotaRows) {
+      if (!porJogador.has(r.player_id)) porJogador.set(r.player_id, [])
+      porJogador.get(r.player_id)!.push(r)
+    }
+    // Só entram jogadores com meses de quota nesta época. Não é cosmética: a
+    // vista respeita a RLS, por isso um jogador só recebe as SUAS linhas — sem
+    // este filtro veria o plantel todo listado com "0 pagos", que é falso.
+    return players.filter(p => porJogador.has(p.id)).map(p => {
+      const linhas = porJogador.get(p.id) || []
+      const months: QuotaMonth[] = linhas.map(r => {
+        const [year, month] = r.month_year.split('-').map(Number)
+        return { monthYear: r.month_year, year, month, statusCalc: r.status, dueId: r.due_id }
       })
-      const paidCount = months.filter(m => m.statusCalc === 'paid').length
-      const lateCount = months.filter(m => m.statusCalc === 'late').length
-      const pendingCount = months.filter(m => m.statusCalc === 'pending').length
-      const totalPaid = months.reduce((sum, m) => sum + (m.due?.amount || 0), 0)
-      const totalOwed = months.filter(m => m.statusCalc !== 'paid').reduce((sum) => sum + settings.quota_amount, 0)
-      return { player: p, months, paidCount, lateCount, pendingCount, totalOwed, totalPaid }
+      return {
+        player: p,
+        months,
+        paidCount: linhas.filter(r => r.status === 'paid').length,
+        lateCount: linhas.filter(r => r.status === 'late').length,
+        pendingCount: linhas.filter(r => r.status === 'pending').length,
+        totalPaid: linhas.reduce((sum, r) => sum + (r.paid_amount || 0), 0),
+        totalOwed: linhas.reduce((sum, r) => sum + Number(r.owed_amount || 0), 0),
+      }
     })
-  }, [quotaEligiblePlayers, duesByPlayer, settings, seasonLabel])
+  }, [players, quotaRows])
 
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null)
   const [savingMonth, setSavingMonth] = useState<string | null>(null)
@@ -246,6 +284,7 @@ const FinancePage: React.FC = () => {
         amount: settings.quota_amount,
         status: 'paid',
         paid_at: new Date().toISOString(),
+        created_by: profile?.id || null,
       }))
       const { error } = await supabase.from('dues').upsert(rows, { onConflict: 'player_id,month_year' })
       if (error) throw error
@@ -268,10 +307,10 @@ const FinancePage: React.FC = () => {
     }
   }
 
-  const handleToggleQuotaMonth = async (playerId: string, m: { monthYear: string; statusCalc: QuotaMonthStatus; due?: { id: string } | null }) => {
+  const handleToggleQuotaMonth = async (playerId: string, m: { monthYear: string; statusCalc: QuotaMonthStatus; dueId: string | null }) => {
     setSavingMonth(m.monthYear)
-    if (m.statusCalc === 'paid' && m.due) {
-      await handleUnpayQuota(m.due.id)
+    if (m.statusCalc === 'paid' && m.dueId) {
+      await handleUnpayQuota(m.dueId)
     } else {
       await handlePayQuotas(playerId, [m.monthYear])
     }
@@ -296,7 +335,6 @@ const FinancePage: React.FC = () => {
     return { ...c, participantIds, payments, totalExpected, totalPaid, categoryName: category?.name || null }
   }), [charges, chargePlayers, chargePayments, categories])
 
-  const totalChargesReceived = chargePayments.reduce((s, p) => s + p.amount, 0)
   const pendingChargesTotal = chargesWithStats.reduce((s, c) => s + Math.max(0, c.totalExpected - c.totalPaid), 0)
 
   const [expandedChargeId, setExpandedChargeId] = useState<string | null>(null)
@@ -523,70 +561,23 @@ const FinancePage: React.FC = () => {
     return next
   })
 
-  // Movimentos: junta as três fontes de dinheiro (quotas, encargos, despesas/receitas
-  // avulsas) numa só lista — antes o relatório só mostrava as despesas/receitas
-  // avulsas (tabela transactions), deixando de fora as quotas e os encargos.
-  // Os pagamentos de encargos usam a categoria do próprio encargo (não um balde
-  // fixo "Encargos"), para se juntarem no mesmo grupo à despesa correspondente
-  // (ex.: o que se recebeu de Seguro e o que se pagou à seguradora) e dar para
-  // ver se o saldo dessa categoria fecha a zero.
-  const allMovements = useMemo(() => {
-    type Movimento = {
-      id: string
-      date: string
-      description: string
-      amount: number
-      type: 'income' | 'expense'
-      documentUrl?: string | null
-      categoryKey: string
-      categoryLabel: string
-    }
-    const rows: Movimento[] = []
-
-    dues.forEach(d => {
-      const p = players.find(pl => pl.id === d.player_id)
-      rows.push({
-        id: `due-${d.id}`,
-        date: d.paid_at || `${d.month_year}-01`,
-        description: `Quota de ${formatMonthYear(d.month_year)} — ${p?.shirt_name || p?.name || 'Jogador'}`,
-        amount: d.amount,
-        type: 'income',
-        categoryKey: 'quotas',
-        categoryLabel: 'Quotas',
-      })
-    })
-
-    chargePayments.forEach(cp => {
-      const p = players.find(pl => pl.id === cp.player_id)
-      const charge = charges.find(c => c.id === cp.charge_id)
-      const cat = categories.find(c => c.id === charge?.category_id)
-      rows.push({
-        id: `charge-${cp.id}`,
-        date: cp.paid_at,
-        description: `${charge?.title || 'Encargo'} — ${p?.shirt_name || p?.name || 'Jogador'}${cp.notes ? ` (${cp.notes})` : ''}`,
-        amount: cp.amount,
-        type: 'income',
-        categoryKey: cat?.id || 'no_category',
-        categoryLabel: cat?.name || 'Encargos',
-      })
-    })
-
-    transactions.forEach(t => {
-      const cat = categories.find(c => c.id === t.category_id)
-      rows.push({
-        id: `tx-${t.id}`,
-        date: t.date,
-        description: t.description,
-        amount: t.amount,
-        type: t.type,
-        documentUrl: t.document_url,
-        categoryKey: t.type === 'income' ? 'income_other' : (cat?.id || 'no_category'),
-        categoryLabel: t.type === 'income' ? 'Outras Receitas' : (cat?.name || 'Sem Categoria'),
-      })
-    })
-
-    return rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [dues, chargePayments, charges, transactions, players, categories])
+  // Movimentos: as três fontes de dinheiro (quotas, encargos, despesas/receitas
+  // avulsas) já vêm unificadas de public.v_financial_movements — a vista faz o
+  // que esta página fazia em memória, e com as mesmas regras: os pagamentos de
+  // encargos usam a categoria do próprio encargo (não um balde fixo "Encargos"),
+  // para se juntarem no mesmo grupo à despesa correspondente (ex.: o que se
+  // recebeu de Seguro e o que se pagou à seguradora) e dar para ver se o saldo
+  // dessa categoria fecha a zero.
+  const allMovements = useMemo(() => movements.map(m => ({
+    id: m.movement_id,
+    date: m.entry_date,
+    description: m.description,
+    amount: Number(m.amount),
+    type: m.type,
+    documentUrl: m.document_url,
+    categoryKey: m.category_key,
+    categoryLabel: m.category_label,
+  })), [movements])
 
   const movementYears = useMemo(() => {
     const years = new Set(allMovements.map(m => new Date(m.date).getFullYear()))
@@ -624,6 +615,11 @@ const FinancePage: React.FC = () => {
   const [txSaving, setTxSaving] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryAllowIncome, setNewCategoryAllowIncome] = useState(false)
+
+  const handleTxTypeChange = (type: 'income' | 'expense') => {
+    setTxType(type)
+    setTxCategoryId(prev => (type === 'income' && !categories.find(c => c.id === prev)?.allow_income) ? '' : prev)
+  }
 
   const handleAddCategory = async () => {
     const name = newCategoryName.trim()
@@ -674,7 +670,7 @@ const FinancePage: React.FC = () => {
         amount: val,
         description: txDesc.trim(),
         date: txDate,
-        category_id: txType === 'expense' ? (txCategoryId || null) : null,
+        category_id: txCategoryId || null,
         document_url,
         created_by: profile?.id || null,
       }])
@@ -802,9 +798,17 @@ const FinancePage: React.FC = () => {
   // -------------------------------------------------------------------------
   // Dashboard: receita por categoria + previsão da época
   // -------------------------------------------------------------------------
-  const totalIncomeOther = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-  const totalQuotasReceived = dues.reduce((s, d) => s + (d.amount || 0), 0)
+  // Todo o dinheiro já recebido ou gasto sai do mesmo facto — a vista de
+  // movimentos — para não haver duas contas do mesmo número a divergir. Só o
+  // que ainda está por receber (pendingChargesTotal) vem do detalhe dos
+  // encargos, porque um valor em falta não é um movimento.
+  const somaMovimentos = (filtro: (m: MovementRow) => boolean) =>
+    movements.filter(filtro).reduce((s, m) => s + Number(m.amount), 0)
+
+  const totalQuotasReceived = somaMovimentos(m => m.source === 'quota')
+  const totalChargesReceived = somaMovimentos(m => m.source === 'encargo')
+  const totalIncomeOther = somaMovimentos(m => m.source === 'avulso' && m.type === 'income')
+  const totalExpenses = somaMovimentos(m => m.type === 'expense')
   const totalReceived = totalQuotasReceived + totalChargesReceived + totalIncomeOther
   const netBalance = totalReceived - totalExpenses
 
@@ -816,19 +820,17 @@ const FinancePage: React.FC = () => {
   const maxReceita = Math.max(1, ...Object.values(receitaPorCategoria))
 
   const despesaPorCategoria = useMemo(() => {
-    const catNameById = new Map(categories.map(c => [c.id, c.name]))
     const totals = new Map<string, number>()
-    for (const t of transactions) {
-      if (t.type !== 'expense') continue
-      const label = (t.category_id && catNameById.get(t.category_id)) || 'Sem categoria'
-      totals.set(label, (totals.get(label) || 0) + t.amount)
+    for (const m of movements) {
+      if (m.type !== 'expense') continue
+      totals.set(m.category_label, (totals.get(m.category_label) || 0) + Number(m.amount))
     }
     const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1])
     const top = sorted.slice(0, 5)
     const restante = sorted.slice(5).reduce((s, [, v]) => s + v, 0)
     if (restante > 0) top.push(['Outras', restante])
     return top
-  }, [transactions, categories])
+  }, [movements])
   const maxDespesa = Math.max(1, ...despesaPorCategoria.map(([, v]) => v))
 
   // Previsão: total de quotas que TODOS os jogadores elegíveis vão pagar esta
@@ -836,7 +838,7 @@ const FinancePage: React.FC = () => {
   // (valor por participante menos o que cada um já pagou) — ao contrário do
   // antigo seguro (uma estimativa às cegas para todos os ativos), isto é um
   // valor real, baseado nos encargos que já existem.
-  const projectedQuotasTotal = quotaOverview.reduce((sum, q) => sum + q.months.length * settings.quota_amount, 0)
+  const projectedQuotasTotal = quotaRows.reduce((sum, r) => sum + Number(r.expected_amount || 0), 0)
   const projectedSeasonTotal = projectedQuotasTotal + totalChargesReceived + pendingChargesTotal
   const receivedTowardsProjection = totalQuotasReceived + totalChargesReceived
   const projectionPct = projectedSeasonTotal > 0 ? Math.min(100, Math.round((receivedTowardsProjection / projectedSeasonTotal) * 100)) : 0
@@ -1393,20 +1395,24 @@ const FinancePage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-white/70 mb-1">Tipo</label>
-                  <select value={txType} onChange={e => setTxType(e.target.value as any)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                  <select value={txType} onChange={e => handleTxTypeChange(e.target.value as 'income' | 'expense')} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
                     <option value="expense">Despesa (Saída)</option>
                     <option value="income">Receita (Entrada)</option>
                   </select>
                 </div>
-                {txType === 'expense' && (
-                  <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Categoria</label>
-                    <select value={txCategoryId} onChange={e => setTxCategoryId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
-                      <option value="">-- Sem categoria --</option>
-                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                )}
+                <div>
+                  {/* Numa receita só se oferecem as categorias marcadas com
+                      "também pode ser usada para receitas" — é o que permite ver
+                      o saldo de uma categoria (recebido − gasto) tender para zero. */}
+                  <label className="block text-xs font-bold text-white/70 mb-1">Categoria</label>
+                  <select value={txCategoryId} onChange={e => setTxCategoryId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                    <option value="">-- Sem categoria --</option>
+                    {(txType === 'income' ? incomeCategories : categories).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  {txType === 'income' && incomeCategories.length === 0 && (
+                    <p className="text-[10px] text-white/50 mt-1">Nenhuma categoria aceita receitas — assinala "Também pode ser usada para receitas" numa categoria, abaixo.</p>
+                  )}
+                </div>
                 <div>
                   <label className="block text-xs font-bold text-white/70 mb-1">Documento comprovativo (opcional)</label>
                   <input

@@ -705,7 +705,7 @@ const CalendarPage: React.FC = () => {
       const myCallupsPromise = profile?.id
         ? supabase
             .from('callups')
-            .select('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)')
+            .select('id, event_id, player_id, status, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)')
             .eq('player_id', profile.id)
         : Promise.resolve({ data: [] } as any)
 
@@ -714,10 +714,10 @@ const CalendarPage: React.FC = () => {
           .from('events')
           .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season, image_url, organizer_name), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
-        fetchAllCallups('id, event_id, player_id, status, player:profiles(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
+        fetchAllCallups('id, event_id, player_id, status, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
         myCallupsPromise,
         supabase
-          .from('profiles')
+          .from('v_players_public')
           .select('*')
           .neq('status', 'inactive')
           .order('name', { ascending: true }),
@@ -844,7 +844,7 @@ const CalendarPage: React.FC = () => {
       try {
         const { data: cData } = await supabase
           .from('callups')
-          .select('*, player:profiles(*)')
+          .select('*, player:v_players_public(*)')
           .eq('event_id', evId)
 
         if (cData && cData.length > 0) {

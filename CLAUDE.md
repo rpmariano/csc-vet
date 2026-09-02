@@ -29,7 +29,6 @@ src/
 │   └── ToastContext     toasts + singleton global `toast.success(...)`
 ├── components/          Layout (nav desktop+mobile), modais, PWA prompt
 ├── pages/               uma página por rota
-├── data/initialPlayers  seed do plantel  ⚠️ ver Riscos
 ├── lib/supabaseClient   cliente único
 └── utils/haptics        vibração (navigator.vibrate)
 ```
@@ -54,8 +53,21 @@ Três papéis: `player` · `coach` · `admin`.
 `events`, `callups`, `attendances`, `stats`, `announcements`, `dues`, `transactions`,
 `club_settings`.
 
-RLS: leitura aberta a qualquer autenticado; escrita restrita a `coach`/`admin` via
-`public.get_user_role()` (`SECURITY DEFINER`). Esquema em `supabase_schema.sql` e
+`v_players_public` (`supabase_profiles_pii_migration.sql`) é a vista por onde a app lê os
+colegas de equipa — sem email, telefone, morada, NIF, cartão de cidadão nem IBAN. A tabela
+`profiles` só é legível pelo próprio e por `coach`/`admin`. A associação de uma conta à sua
+ficha de atleta é feita pelas funções `find_my_profile_match()` e `associate_my_profile()`.
+
+Vistas de reporting (`supabase_finance_reporting_migration.sql`, ambas `security_invoker`):
+`v_financial_movements` (facto único: quotas + encargos + despesas/receitas, com época,
+categoria e jogador) e `v_quota_status` (matriz jogador × mês; é o único sítio onde existe
+a quota **por pagar** — em `dues` só há linha para as pagas).
+A função `public.financial_season(date)` espelha `getSeasonLabel()` de `src/lib/finance.ts` —
+qualquer mudança à regra da época tem de ser feita **nos dois sítios**.
+Ver `docs/financeiro-campos-reporting.md`.
+
+RLS: leitura aberta a qualquer autenticado — **exceto `profiles`**, ver acima; escrita
+restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Esquema em `supabase_schema.sql` e
 `supabase_players_migration.sql`.
 
 ## Convenções
@@ -73,14 +85,15 @@ RLS: leitura aberta a qualquer autenticado; escrita restrita a `coach`/`admin` v
 
 ## Riscos conhecidos (auditoria de 2026-08)
 
-1. **P0 — PII real no bundle público.** `src/data/initialPlayers.ts` contém morada, NIF,
-   nº de cartão de cidadão, IBAN, telefone e data de nascimento de ~31 pessoas reais, e é
-   importado por `AuthContext` → vai para dentro do JS servido publicamente. Não adicionar
-   mais dados aqui; mover para a base de dados.
+1. ~~**P0 — PII real no bundle público** (`src/data/initialPlayers.ts`)~~ — **resolvido**:
+   o ficheiro já não existe e o plantel vem todo da base de dados.
 2. **P0 — `.env` com credenciais Supabase está versionado em git.**
-3. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
-   `medical_notes` e injetar `<!--roles:admin-->`, ganhando a UI de admin (a RLS continua a
-   travar as escritas, mas a leitura de `profiles` já expõe IBAN/NIF de todos).
+3. ~~**P1 — leitura de `profiles` expõe IBAN/NIF de todos**~~ — **resolvido** por
+   `supabase_profiles_pii_migration.sql`: a ficha completa só é legível pelo próprio e
+   pela equipa técnica, e o resto da app lê o plantel por `v_players_public`. **Qualquer
+   leitura nova de dados de colegas de equipa tem de ir à vista, não à tabela.** A
+   escalada de privilégios pela etiqueta `<!--roles:admin-->` deixou de dar acesso a
+   dados de outros — dá, quando muito, UI de admin sobre o que já se podia ler.
 4. **P1 — `ProtectedRoute` deixa passar** quando `profile` é `null` e há `allowedRoles`.
 5. **P2 —** Bundle único de ~1 MB, sem code-splitting; `CalendarPage` tem 4400 linhas e
    `EventsPage` 3300; 33 modais escritos à mão sem `Escape`, sem *focus trap* e sem
