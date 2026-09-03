@@ -218,6 +218,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (!createErr && created) {
           data = created
+        } else if (createErr) {
+          console.error('Erro ao criar perfil base:', createErr.message)
         }
       }
 

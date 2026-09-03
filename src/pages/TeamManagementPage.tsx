@@ -173,6 +173,20 @@ const TeamManagementPage: React.FC = () => {
     fetchProfiles()
   }, [])
 
+  // Quais fichas têm conta de login associada — só o admin precisa de saber,
+  // para o merge de fichas nunca poder apagar o lado que tem sessão.
+  const [linkedProfileIds, setLinkedProfileIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    if (!isAdmin) return
+    supabase.rpc('admin_linked_profile_ids').then(({ data, error }) => {
+      if (error) {
+        console.error('Erro ao verificar fichas com conta associada:', error.message)
+        return
+      }
+      setLinkedProfileIds(new Set((data as string[]) || []))
+    })
+  }, [isAdmin])
+
   const calculateAge = (birthDateString?: string | null) => {
     if (!birthDateString) return null
     const birth = new Date(birthDateString)
@@ -595,86 +609,62 @@ const TeamManagementPage: React.FC = () => {
     })
   }
 
-  // --- USER ACCOUNT ASSOCIATION STATES & LOGIC ---
+  // --- FUSÃO DE FICHAS (admin) ---
+  // Antes disto era "Associar Conta de Utilizador": copiava campos à mão no
+  // cliente (só convocatórias e quotas — estatísticas, presenças, encargos,
+  // seguros e comunicados ficavam para trás e eram apagados em cascata com a
+  // ficha antiga) e presumia que a ficha órfã tinha um id "seed-…", convenção
+  // de quando o plantel vinha embutido no código. Desde a migração para o
+  // Supabase nenhuma ficha tem esse prefixo, por isso o botão nunca aparecia
+  // — a fusão real ficava por fazer, tal como aconteceu com o André Couto.
+  // Agora é a RPC `admin_merge_profiles`, numa transação só no servidor.
   const [associatingPlayer, setAssociatingPlayer] = useState<Profile | null>(null)
   const [associateSearchTerm, setAssociateSearchTerm] = useState('')
   const [selectedUserToAssociate, setSelectedUserToAssociate] = useState<Profile | null>(null)
+  const [survivorSide, setSurvivorSide] = useState<'ficha' | 'selecionado'>('ficha')
   const [associatingLoading, setAssociatingLoading] = useState(false)
 
   const openAssociateModal = (p: Profile) => {
     setAssociatingPlayer(p)
     setAssociateSearchTerm('')
     setSelectedUserToAssociate(null)
+    setSurvivorSide('ficha')
   }
 
-  const handleConfirmAssociate = (sourcePlayer: Profile, targetUser: Profile) => {
-    if (sourcePlayer.id === targetUser.id) {
-      toast.warning('Este jogador já está associado a esta conta.')
+  const handleConfirmAssociate = (fichaA: Profile, fichaB: Profile, manterA: boolean) => {
+    if (fichaA.id === fichaB.id) {
+      toast.warning('Escolhe duas fichas diferentes.')
       return
     }
+    const manter = manterA ? fichaA : fichaB
+    const apagar = manterA ? fichaB : fichaA
 
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Associar Conta de Utilizador',
-      description: `Tens a certeza que desejas associar a conta "${targetUser.email}" (${targetUser.name}) à ficha do jogador "${sourcePlayer.name}"?`,
-      confirmText: 'Sim, Associar Conta',
+      title: 'Fundir Fichas',
+      description: `Vais fundir "${apagar.name}" em "${manter.name}": os dados em falta em "${manter.name}" são preenchidos a partir de "${apagar.name}", todo o histórico (convocatórias, presenças, estatísticas, quotas, encargos, seguros) passa para "${manter.name}", e a ficha "${apagar.name}" é apagada. Tens a certeza?`,
+      confirmText: 'Sim, Fundir Fichas',
       cancelText: 'Cancelar',
       variant: 'warning',
       onConfirm: async () => {
         setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
         setAssociatingLoading(true)
         try {
-          const targetUserId = targetUser.id
-          const sourcePlayerId = sourcePlayer.id
+          const { error } = await supabase.rpc('admin_merge_profiles', {
+            id_manter: manter.id,
+            id_apagar: apagar.id
+          })
+          if (error) throw error
 
-          // 1. Atualizar referências de convocatórias e quotas para a conta destino
-          await Promise.allSettled([
-        supabase.from('callups').update({ player_id: targetUserId }).eq('player_id', sourcePlayerId),
-        supabase.from('dues').update({ player_id: targetUserId }).eq('player_id', sourcePlayerId)
-      ])
-
-      // 2. Unificar campos no perfil de destino preservando dados da ficha
-      const mergedPayload = {
-        name: sourcePlayer.name || targetUser.name,
-        nickname: sourcePlayer.nickname || targetUser.nickname,
-        phone: sourcePlayer.phone || targetUser.phone,
-        role: sourcePlayer.role || targetUser.role || 'player',
-        status: sourcePlayer.status || targetUser.status || 'active',
-        jersey_number: sourcePlayer.jersey_number !== undefined && sourcePlayer.jersey_number !== null ? sourcePlayer.jersey_number : targetUser.jersey_number,
-        birth_date: sourcePlayer.birth_date || targetUser.birth_date,
-        nationality: sourcePlayer.nationality || targetUser.nationality || 'Portuguesa',
-        position: sourcePlayer.position || targetUser.position || 'Médio Centro',
-        id_number: sourcePlayer.id_number || targetUser.id_number,
-        member_number: sourcePlayer.member_number || targetUser.member_number,
-        emergency_contact_name: sourcePlayer.emergency_contact_name || targetUser.emergency_contact_name,
-        emergency_contact_phone: sourcePlayer.emergency_contact_phone || targetUser.emergency_contact_phone,
-        medical_notes: sourcePlayer.medical_notes || targetUser.medical_notes,
-        photo_url: sourcePlayer.photo_url || targetUser.photo_url,
-        id_document_url: sourcePlayer.id_document_url || targetUser.id_document_url,
-        insurance_doc_url: sourcePlayer.insurance_doc_url || targetUser.insurance_doc_url,
-        medical_exam_doc_url: sourcePlayer.medical_exam_doc_url || targetUser.medical_exam_doc_url
-      }
-
-      // 3. Atualizar o perfil de destino
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(mergedPayload)
-        .eq('id', targetUserId)
-
-      if (updateError) throw updateError
-
-      // 4. Eliminar o registo placeholder original se for um perfil separado
-      await supabase.from('profiles').delete().eq('id', sourcePlayerId)
-
-      toast.success(`Jogador "${sourcePlayer.name}" associado com sucesso à conta "${targetUser.email}"!`)
-      setAssociatingPlayer(null)
-      setSelectedUserToAssociate(null)
-      if (selectedProfile?.id === sourcePlayerId) {
-        fecharFicha()
-      }
-      fetchProfiles()
+          toast.success(`Fichas fundidas: "${apagar.name}" passou para "${manter.name}".`)
+          setAssociatingPlayer(null)
+          setSelectedUserToAssociate(null)
+          if (selectedProfile?.id === apagar.id) {
+            fecharFicha()
+          }
+          fetchProfiles()
         } catch (err: any) {
-          toast.error('Erro ao associar utilizador: ' + (err.message || 'Verifique a base de dados'))
+          toast.error('Erro ao fundir fichas: ' + (err.message || 'Verifique a base de dados'))
         } finally {
           setAssociatingLoading(false)
         }
@@ -684,8 +674,9 @@ const TeamManagementPage: React.FC = () => {
 
   // Procura de sugestões inteligentes de associação
   const associationSuggestions = React.useMemo(() => {
-    const registeredUsersWithoutKit = profiles.filter(p => !p.id.startsWith('seed-') && (!p.jersey_number || !p.kit_size))
-    const unlinkedSquadProfiles = profiles.filter(p => p.id.startsWith('seed-'))
+    if (!isAdmin) return []
+    const registeredUsersWithoutKit = profiles.filter(p => linkedProfileIds.has(p.id) && (!p.jersey_number || !p.kit_size))
+    const unlinkedSquadProfiles = profiles.filter(p => !linkedProfileIds.has(p.id))
 
     const suggestions: { user: Profile; player: Profile }[] = []
 
@@ -725,7 +716,7 @@ const TeamManagementPage: React.FC = () => {
     })
 
     return suggestions
-  }, [profiles])
+  }, [profiles, isAdmin, linkedProfileIds])
 
   // Filtered list
   const filteredProfiles = profiles.filter(p => {
@@ -781,8 +772,9 @@ const TeamManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Banner de Sugestões Inteligentes de Associação para Treinadores/Admins */}
-      {isCoachOrAdmin && associationSuggestions.length > 0 && (
+      {/* Banner de Sugestões Inteligentes de Fusão de Fichas — só admin, que é
+          quem pode chamar admin_merge_profiles */}
+      {isAdmin && associationSuggestions.length > 0 && (
         <div className="bg-gradient-to-r from-amber-500/10 via-amber-50 to-emerald-500/10 border-2 border-amber-300 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
@@ -810,11 +802,11 @@ const TeamManagementPage: React.FC = () => {
                 <button
                   type="button"
                   disabled={associatingLoading}
-                  onClick={() => handleConfirmAssociate(pl, u)}
+                  onClick={() => handleConfirmAssociate(pl, u, false)}
                   className="px-3 py-1.5 bg-csc-dark hover:bg-csc-dark/85 text-white text-xs font-black rounded-lg shrink-0 shadow-xs cursor-pointer active:scale-95 flex items-center gap-1"
                 >
                   <Link2 size={13} />
-                  <span>Associar</span>
+                  <span>Fundir</span>
                 </button>
               </div>
             ))}
@@ -1055,6 +1047,25 @@ const TeamManagementPage: React.FC = () => {
                           {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
                         </span>
                       ))}
+
+                      {/* Conta de login associada — só o admin precisa de ver isto */}
+                      {isAdmin && (
+                        linkedProfileIds.has(person.id) ? (
+                          <span
+                            className="text-[9px] font-black px-1.5 py-0.2 rounded border bg-sky-100 text-sky-800 border-sky-200 flex items-center gap-0.5"
+                            title="Esta ficha tem conta de login associada"
+                          >
+                            <UserCheck size={9} /> Conta
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[9px] font-black px-1.5 py-0.2 rounded border bg-gray-100 text-gray-500 border-gray-200"
+                            title="Ninguém fez login associado a esta ficha ainda"
+                          >
+                            Sem Conta
+                          </span>
+                        )
+                      )}
                     </div>
 
                     {/* Subtitle: Positions + Info */}
@@ -1112,7 +1123,7 @@ const TeamManagementPage: React.FC = () => {
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     {isCoachOrAdmin && (
                       <>
-                        {person.id.startsWith('seed-') && (
+                        {isAdmin && !linkedProfileIds.has(person.id) && (
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1120,7 +1131,7 @@ const TeamManagementPage: React.FC = () => {
                               openAssociateModal(person)
                             }}
                             className="p-1.5 text-blue-300 hover:text-blue-200 rounded-lg hover:bg-blue-500/10 transition-colors"
-                            title="Associar a Utilizador"
+                            title="Fundir com outra ficha"
                           >
                             <Link2 size={15} />
                           </button>
@@ -1259,6 +1270,25 @@ const TeamManagementPage: React.FC = () => {
                           {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
                         </span>
                       ))}
+
+                      {/* Conta de login associada — só o admin precisa de ver isto */}
+                      {isAdmin && (
+                        linkedProfileIds.has(person.id) ? (
+                          <span
+                            className="text-[9px] font-black px-2 py-0.5 rounded border bg-sky-100 text-sky-800 border-sky-200 flex items-center gap-0.5"
+                            title="Esta ficha tem conta de login associada"
+                          >
+                            <UserCheck size={9} /> Conta
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[9px] font-black px-2 py-0.5 rounded border bg-white/10 text-white/50 border-white/15"
+                            title="Ninguém fez login associado a esta ficha ainda"
+                          >
+                            Sem Conta
+                          </span>
+                        )
+                      )}
                     </div>
 
                     {/* Member & Age Info */}
@@ -1276,7 +1306,7 @@ const TeamManagementPage: React.FC = () => {
 
                   {isCoachOrAdmin && (
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      {person.id.startsWith('seed-') && (
+                      {isAdmin && !linkedProfileIds.has(person.id) && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1284,7 +1314,7 @@ const TeamManagementPage: React.FC = () => {
                             openAssociateModal(person)
                           }}
                           className="p-1.5 text-blue-300 hover:text-blue-200 rounded-lg hover:bg-blue-500/10 transition-colors"
-                          title="Associar a Utilizador"
+                          title="Fundir com outra ficha"
                         >
                           <Link2 size={14} />
                         </button>
@@ -2296,19 +2326,26 @@ const TeamManagementPage: React.FC = () => {
 
             {/* Bottom Actions Footer */}
             <div className="pt-4 border-t border-white/10 flex flex-wrap justify-between items-center gap-3">
-              {isCoachOrAdmin && selectedProfile?.id?.startsWith('seed-') && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const profileToAssociate = selectedProfile
-                    fecharFicha()
-                    openAssociateModal(profileToAssociate)
-                  }}
-                  className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <Link2 size={15} />
-                  <span>Associar a Conta de Utilizador</span>
-                </button>
+              {isAdmin && selectedProfile?.id && (
+                linkedProfileIds.has(selectedProfile.id) ? (
+                  <span className="px-4 py-2.5 bg-sky-50 text-sky-800 border border-sky-200 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                    <UserCheck size={15} />
+                    <span>Tem Conta de Login Associada</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const profileToAssociate = selectedProfile
+                      fecharFicha()
+                      openAssociateModal(profileToAssociate)
+                    }}
+                    className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Link2 size={15} />
+                    <span>Fundir com Outra Ficha</span>
+                  </button>
+                )
               )}
 
               <div className="flex items-center gap-2 ml-auto">
@@ -2387,10 +2424,10 @@ const TeamManagementPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 id="associar-utilizador-titulo" className="text-lg font-black text-white">
-                    Associar Utilizador a {associatingPlayer.name}
+                    Fundir Ficha de {associatingPlayer.name}
                   </h3>
                   <p className="text-xs text-white/70 font-medium">
-                    Liga uma conta de utilizador registada na app à ficha deste jogador
+                    Junta esta ficha a outra — os dados em falta na que ficar são preenchidos a partir da outra, e a que sobra é apagada
                   </p>
                 </div>
               </div>
@@ -2403,7 +2440,7 @@ const TeamManagementPage: React.FC = () => {
                   {associatingPlayer.phone && <p className="text-white/70 font-medium">Tel: <strong className="text-white/80">{associatingPlayer.phone}</strong></p>}
                 </div>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-csc-gold text-csc-dark rounded">
-                  Ficha de Jogador
+                  Sem Conta de Login
                 </span>
               </div>
 
@@ -2414,27 +2451,33 @@ const TeamManagementPage: React.FC = () => {
                     <Sparkles size={16} className="text-emerald-400" />
                     <span>Coincidência Automática Detetada por Email/Contacto!</span>
                   </div>
-                  {potentialMatches.map(match => (
-                    <div
-                      key={match.id}
-                      className="p-3.5 bg-green-50/80 border-2 border-green-400 rounded-xl flex items-center justify-between gap-3 shadow-xs"
-                    >
-                      <div className="text-xs">
-                        <p className="font-bold text-green-950 text-sm">{match.name}</p>
-                        <p className="text-green-800 font-medium">{match.email}</p>
-                        {match.phone && <p className="text-green-700 text-[11px]">Tel: {match.phone}</p>}
-                      </div>
-                      <button
-                        type="button"
-                        disabled={associatingLoading}
-                        onClick={() => handleConfirmAssociate(associatingPlayer, match)}
-                        className="px-3.5 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-xs font-bold transition-colors shadow-xs shrink-0 flex items-center gap-1"
+                  {potentialMatches.map(match => {
+                    const matchTemConta = linkedProfileIds.has(match.id)
+                    return (
+                      <div
+                        key={match.id}
+                        className="p-3.5 bg-green-50/80 border-2 border-green-400 rounded-xl flex items-center justify-between gap-3 shadow-xs"
                       >
-                        <UserCheck size={14} />
-                        <span>Associar Imediatamente</span>
-                      </button>
-                    </div>
-                  ))}
+                        <div className="text-xs">
+                          <p className="font-bold text-green-950 text-sm">{match.name}</p>
+                          <p className="text-green-800 font-medium">{match.email}</p>
+                          {match.phone && <p className="text-green-700 text-[11px]">Tel: {match.phone}</p>}
+                          <p className="text-green-700 text-[10px] font-bold mt-0.5">
+                            {matchTemConta ? '✓ Tem conta de login — vai ser a ficha que fica' : 'Sem conta de login'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={associatingLoading}
+                          onClick={() => handleConfirmAssociate(associatingPlayer, match, !matchTemConta)}
+                          className="px-3.5 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-xs font-bold transition-colors shadow-xs shrink-0 flex items-center gap-1"
+                        >
+                          <UserCheck size={14} />
+                          <span>Fundir Imediatamente</span>
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
 
@@ -2493,31 +2536,91 @@ const TeamManagementPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Botões do Rodapé */}
-              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAssociatingPlayer(null)
-                    setSelectedUserToAssociate(null)
-                  }}
-                  className="px-4 py-2 border border-white/15 rounded-lg text-xs font-bold text-white hover:bg-white/10"
-                >
-                  Cancelar
-                </button>
+              {/* 3. Qual ficha deve prevalecer — só há escolha real quando a
+                  ficha selecionada também não tem conta: se tiver, é sempre
+                  ela que fica (é a única com sessão iniciada). */}
+              {selectedUserToAssociate && (() => {
+                const alvoTemConta = linkedProfileIds.has(selectedUserToAssociate.id)
+                const manterA = alvoTemConta ? false : survivorSide === 'ficha'
+                return (
+                  <div className="mt-4 space-y-2">
+                    <h4 className="text-xs font-black text-white/80 uppercase tracking-wider">
+                      Qual ficha deve prevalecer?
+                    </h4>
+                    {alvoTemConta ? (
+                      <p className="text-[11px] text-white/70 bg-white/5 border border-white/10 rounded-lg p-2.5">
+                        "{selectedUserToAssociate.name}" tem conta de login própria — vai ser sempre essa a ficha que fica; "{associatingPlayer.name}" fecha e os dados em falta em "{selectedUserToAssociate.name}" são preenchidos a partir dela.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSurvivorSide('ficha')}
+                          className={`p-2.5 rounded-lg border text-left text-xs transition-all cursor-pointer ${
+                            survivorSide === 'ficha'
+                              ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50'
+                              : 'border-white/10 bg-white/5 hover:border-white/30'
+                          }`}
+                        >
+                          <p className="font-bold text-white truncate">{associatingPlayer.name}</p>
+                          <p className="text-white/60 text-[10px]">Sem conta de login</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSurvivorSide('selecionado')}
+                          className={`p-2.5 rounded-lg border text-left text-xs transition-all cursor-pointer ${
+                            survivorSide === 'selecionado'
+                              ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50'
+                              : 'border-white/10 bg-white/5 hover:border-white/30'
+                          }`}
+                        >
+                          <p className="font-bold text-white truncate">{selectedUserToAssociate.name}</p>
+                          <p className="text-white/60 text-[10px]">Sem conta de login</p>
+                        </button>
+                      </div>
+                    )}
 
-                {selectedUserToAssociate && (
+                    {/* Botões do Rodapé */}
+                    <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAssociatingPlayer(null)
+                          setSelectedUserToAssociate(null)
+                        }}
+                        className="px-4 py-2 border border-white/15 rounded-lg text-xs font-bold text-white hover:bg-white/10"
+                      >
+                        Cancelar
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={associatingLoading}
+                        onClick={() => handleConfirmAssociate(associatingPlayer, selectedUserToAssociate, manterA)}
+                        className="px-4 py-2 bg-csc-gold hover:brightness-95 text-csc-dark rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                      >
+                        <UserCheck size={15} />
+                        <span>{associatingLoading ? 'A fundir...' : `Fundir — fica "${manterA ? associatingPlayer.name : selectedUserToAssociate.name}"`}</span>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {!selectedUserToAssociate && (
+                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between gap-2">
                   <button
                     type="button"
-                    disabled={associatingLoading}
-                    onClick={() => handleConfirmAssociate(associatingPlayer, selectedUserToAssociate)}
-                    className="px-4 py-2 bg-csc-gold hover:brightness-95 text-csc-dark rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                    onClick={() => {
+                      setAssociatingPlayer(null)
+                      setSelectedUserToAssociate(null)
+                    }}
+                    className="px-4 py-2 border border-white/15 rounded-lg text-xs font-bold text-white hover:bg-white/10"
                   >
-                    <UserCheck size={15} />
-                    <span>{associatingLoading ? 'A associar...' : `Vincular a ${selectedUserToAssociate.name}`}</span>
+                    Cancelar
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         )

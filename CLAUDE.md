@@ -133,10 +133,33 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    sessão, incluindo `role = 'admin'`. Hoje: só `SELECT`, e só a `authenticated`.
    **Lição para vistas novas:** uma vista SECURITY DEFINER sobre uma tabela protegida
    precisa sempre de `REVOKE ALL` + `GRANT SELECT` — a RLS da tabela base não a cobre.
-3. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
+   **A mesma lição vale para funções:** `REVOKE ALL ... FROM PUBLIC` não chega — este
+   projeto tem *default privileges* no schema `public` que concedem `EXECUTE` a `anon`
+   e `authenticated` diretamente em toda função nova, não via `PUBLIC`. Uma função
+   interna (não pensada para RPC) precisa de `REVOKE ALL ... FROM anon, authenticated`
+   explícito. Apanhado em 2026-09-02 no `_merge_profile_references` do ponto 3 — ver
+   `get_advisors(security)` do Supabase, que sinaliza isto.
+3. **~~P1 — Associação de conta a jogador partida.~~ Corrigido em 2026-09-02**
+   (`supabase_profile_merge_migration.sql` +
+   `supabase_profile_merge_security_fix_migration.sql`, aplicadas). `associate_my_profile()`
+   referia `public.tournament_players`, tabela que nunca existiu neste esquema — a função
+   rebentava a meio sempre que a associação automática (por email, telefone ou nome)
+   chegava a esse ponto, desfazendo os passos já feitos (é uma transação implícita só).
+   Confirmado nos logs: o login do André Couto às 20:56:13 gerou o erro
+   `relation "public.tournament_players" does not exist` um segundo depois. Corrigida a
+   lista de tabelas (com `insurance_payments` e `announcement_reads`, que a função
+   original não cobria e por isso perdiam-se em CASCADE DELETE ao apagar a ficha antiga).
+   De caminho, criado `admin_merge_profiles()` para o admin fundir duas fichas à mão —
+   ver Plantel, "Fundir com Outra Ficha" — e corrigida (na segunda migração) uma falha de
+   autorização introduzida nessa própria função: `IF get_user_role() <> 'admin'` não
+   dispara quando `get_user_role()` é `NULL` (chamada anon, ou conta sem perfil ainda) —
+   `<>` com `NULL` dá `NULL`, e um `IF` com condição `NULL` em plpgsql conta como `FALSE`.
+   **Lição:** uma guarda de autorização em plpgsql tem de usar `IS DISTINCT FROM`, nunca
+   `<>`/`=`, quando o valor comparado pode ser `NULL`.
+4. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
    `medical_notes` e injetar `<!--roles:admin-->`, ganhando a UI de admin. A RLS trava as
    escritas, mas combina-se com o ponto 1 na leitura.
-4. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
+5. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
    Não há modais escritos à mão sem acessibilidade — todos passaram pelo `<Modal>`,
    `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`.
 
