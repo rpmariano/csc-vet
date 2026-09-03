@@ -1047,6 +1047,25 @@ const TeamManagementPage: React.FC = () => {
                           {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
                         </span>
                       ))}
+
+                      {/* Conta de login associada — só o admin precisa de ver isto */}
+                      {isAdmin && (
+                        linkedProfileIds.has(person.id) ? (
+                          <span
+                            className="text-[9px] font-black px-1.5 py-0.2 rounded border bg-sky-100 text-sky-800 border-sky-200 flex items-center gap-0.5"
+                            title="Esta ficha tem conta de login associada"
+                          >
+                            <UserCheck size={9} /> Conta
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[9px] font-black px-1.5 py-0.2 rounded border bg-gray-100 text-gray-500 border-gray-200"
+                            title="Ninguém fez login associado a esta ficha ainda"
+                          >
+                            Sem Conta
+                          </span>
+                        )
+                      )}
                     </div>
 
                     {/* Subtitle: Positions + Info */}
@@ -1251,6 +1270,25 @@ const TeamManagementPage: React.FC = () => {
                           {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
                         </span>
                       ))}
+
+                      {/* Conta de login associada — só o admin precisa de ver isto */}
+                      {isAdmin && (
+                        linkedProfileIds.has(person.id) ? (
+                          <span
+                            className="text-[9px] font-black px-2 py-0.5 rounded border bg-sky-100 text-sky-800 border-sky-200 flex items-center gap-0.5"
+                            title="Esta ficha tem conta de login associada"
+                          >
+                            <UserCheck size={9} /> Conta
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[9px] font-black px-2 py-0.5 rounded border bg-white/10 text-white/50 border-white/15"
+                            title="Ninguém fez login associado a esta ficha ainda"
+                          >
+                            Sem Conta
+                          </span>
+                        )
+                      )}
                     </div>
 
                     {/* Member & Age Info */}
@@ -2288,19 +2326,26 @@ const TeamManagementPage: React.FC = () => {
 
             {/* Bottom Actions Footer */}
             <div className="pt-4 border-t border-white/10 flex flex-wrap justify-between items-center gap-3">
-              {isAdmin && selectedProfile?.id && !linkedProfileIds.has(selectedProfile.id) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const profileToAssociate = selectedProfile
-                    fecharFicha()
-                    openAssociateModal(profileToAssociate)
-                  }}
-                  className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <Link2 size={15} />
-                  <span>Fundir com Outra Ficha</span>
-                </button>
+              {isAdmin && selectedProfile?.id && (
+                linkedProfileIds.has(selectedProfile.id) ? (
+                  <span className="px-4 py-2.5 bg-sky-50 text-sky-800 border border-sky-200 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                    <UserCheck size={15} />
+                    <span>Tem Conta de Login Associada</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const profileToAssociate = selectedProfile
+                      fecharFicha()
+                      openAssociateModal(profileToAssociate)
+                    }}
+                    className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Link2 size={15} />
+                    <span>Fundir com Outra Ficha</span>
+                  </button>
+                )
               )}
 
               <div className="flex items-center gap-2 ml-auto">
