@@ -785,19 +785,28 @@ const FinancePage: React.FC = () => {
     return list.sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
   }, [tournaments])
 
+  // Total ainda por pagar em inscrições já agendadas — conta como despesa
+  // conhecida na previsão financeira mesmo antes de a tranche ser paga (ver
+  // "Saldo Previsto" em Visão Geral), e a parte em atraso serve de alerta.
+  const pendingRegistrationFeeTotal = pendingInstallments.reduce((s, i) => s + i.amount, 0)
+  const overdueInstallments = pendingInstallments.filter(i => i.due_date && new Date(i.due_date) < new Date())
+
   const handlePayInstallment = async (tournamentId: string, index: number, amount: number, tournamentName: string) => {
     try {
       const tournament = tournaments.find(t => t.id === tournamentId)
       const rf = tournament?.rules?.registration_fee
       if (!tournament || !rf) return
 
-      const inscricoesCategory = categories.find(c => c.name === 'Inscrições em Torneios')
+      // rf.category_id: categoria própria deste torneio, criada ao guardar o torneio
+      // (ver ensureRegistrationFeeCategory em AdminDashboard.tsx). O fallback pelo
+      // nome cobre só torneios guardados antes desta categoria por torneio existir.
+      const categoryId = rf.category_id || categories.find(c => c.name === 'Inscrições em Torneios')?.id || null
       const { data: txData, error: txError } = await supabase.from('transactions').insert([{
         type: 'expense',
         amount,
         description: `Inscrição ${tournamentName} — Tranche ${index + 1}`,
         date: new Date().toISOString().split('T')[0],
-        category_id: inscricoesCategory?.id || null,
+        category_id: categoryId,
         tournament_id: tournamentId,
         installment_index: index,
         created_by: profile?.id || null,
@@ -900,6 +909,13 @@ const FinancePage: React.FC = () => {
   const receivedTowardsProjection = totalQuotasReceived + totalChargesReceived
   const projectionPct = projectedSeasonTotal > 0 ? Math.min(100, Math.round((receivedTowardsProjection / projectedSeasonTotal) * 100)) : 0
 
+  // Saldo previsto no fim da época: à previsão de receita (quotas + encargos)
+  // descontam-se as despesas já feitas e as que já se sabe que vêm aí — hoje
+  // só as inscrições em torneios agendadas mas ainda por pagar. Assim que se
+  // define o valor de uma inscrição isto desce logo, sem esperar que a
+  // tranche seja paga.
+  const projectedNetBalance = projectedSeasonTotal - totalExpenses - pendingRegistrationFeeTotal
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -964,6 +980,40 @@ const FinancePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Alerta de pagamentos programados — inscrições em torneios já agendadas
+              (tournaments.rules.registration_fee) mas ainda por pagar. Fica logo no
+              topo, antes da Previsão, para o admin ver ao abrir a página; a ação de
+              pagar continua só em Despesas/Receitas. */}
+          {pendingInstallments.length > 0 && (
+            <div className={`bg-csc-dark text-white rounded-2xl shadow-sm border p-4 space-y-2.5 ${overdueInstallments.length > 0 ? 'border-red-400/40' : 'border-amber-400/30'}`}>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h3 className="text-sm font-black text-white flex items-center gap-2">
+                  <Receipt size={16} className={overdueInstallments.length > 0 ? 'text-red-400' : 'text-amber-400'} />
+                  <span>Pagamentos Programados — Inscrições em Torneios</span>
+                </h3>
+                <button type="button" onClick={() => setActiveTab('expenses')} className="text-[11px] font-black text-csc-gold hover:brightness-110 cursor-pointer">
+                  Ver e registar pagamento →
+                </button>
+              </div>
+              <p className="text-xs text-white/70">
+                <span className="font-black text-white">{pendingInstallments.length}</span> tranche{pendingInstallments.length === 1 ? '' : 's'} por pagar · <span className="font-black text-white">{fmtEuro(pendingRegistrationFeeTotal)}</span>
+                {overdueInstallments.length > 0 && (
+                  <span className="ml-2 text-red-300 font-black">{overdueInstallments.length} em atraso</span>
+                )}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {pendingInstallments.map(inst => {
+                  const isOverdue = inst.due_date ? new Date(inst.due_date) < new Date() : false
+                  return (
+                    <span key={`${inst.tournamentId}-${inst.index}`} className={`text-[11px] font-bold px-2 py-1 rounded-full border ${isOverdue ? 'bg-red-500/15 text-red-200 border-red-400/30' : 'bg-amber-500/15 text-amber-200 border-amber-400/30'}`}>
+                      {inst.tournamentName} · T{inst.index + 1} · {fmtEuro(inst.amount)}{inst.due_date ? ` · ${new Date(inst.due_date).toLocaleDateString('pt-PT')}` : ''}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Previsão da Época + Situação de Quotas — lado a lado no desktop, para não
               alongar o ecrã num scroll só vertical de cartões largos com pouco conteúdo cada. */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -973,11 +1023,11 @@ const FinancePage: React.FC = () => {
                 <span>Previsão da Época {seasonLabel}</span>
               </h3>
               <p className="text-xs text-white/60">
-                Considerando todas as quotas que cada jogador elegível vai pagar esta época e o seguro de todos os jogadores ativos.
+                Considerando as quotas e encargos por receber, e as inscrições em torneios já agendadas mas ainda por pagar.
               </p>
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Já Recebido (Quotas + Seguro)</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Já Recebido (Quotas + Encargos)</p>
                   <p className="text-xl font-black text-emerald-400">{fmtEuro(receivedTowardsProjection)}</p>
                 </div>
                 <div className="text-right">
@@ -989,7 +1039,7 @@ const FinancePage: React.FC = () => {
                 <div className="h-full bg-gradient-to-r from-emerald-500 to-csc-gold rounded-full transition-all" style={{ width: `${projectionPct}%` }} />
               </div>
               <p className="text-[11px] text-white/60">{projectionPct}% do valor previsto já foi recebido — faltam {fmtEuro(Math.max(0, projectedSeasonTotal - receivedTowardsProjection))}.</p>
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/10 text-xs">
+              <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/10 text-xs">
                 <div>
                   <span className="text-white/60">Quotas previstas: </span>
                   <span className="font-bold text-white">{fmtEuro(projectedQuotasTotal)}</span>
@@ -998,6 +1048,16 @@ const FinancePage: React.FC = () => {
                   <span className="text-white/60">Encargos por receber: </span>
                   <span className="font-bold text-white">{fmtEuro(pendingChargesTotal)}</span>
                 </div>
+                <div>
+                  <span className="text-white/60">Inscrições por pagar: </span>
+                  <span className="font-bold text-red-300">{fmtEuro(pendingRegistrationFeeTotal)}</span>
+                </div>
+              </div>
+              {/* Saldo previsto: receita prevista menos despesas já feitas e por pagar —
+                  desce assim que se agenda uma inscrição, mesmo antes de ser paga. */}
+              <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-white/70">Saldo Previsto no Fim da Época</span>
+                <span className={`text-lg font-black ${projectedNetBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtEuro(projectedNetBalance)}</span>
               </div>
             </div>
 

@@ -58,10 +58,15 @@ export interface TournamentRules {
   max_walkovers_allowed: number;
   delay_tolerance_mins: number;
   /** Inscrição na prova — valor total e, opcionalmente, um plano de tranches com prazo
-   * individual cada. Cada tranche liga-se à despesa (transactions) que a liquidou. */
+   * individual cada. Cada tranche liga-se à despesa (transactions) que a liquidou.
+   * category_id: categoria de despesa própria deste torneio (ex.: "Inscrição — Torneio
+   * X"), criada automaticamente ao guardar — ver ensureRegistrationFeeCategory. Fica
+   * marcada allow_income para também se poder cobrar aos jogadores um Encargo na mesma
+   * categoria (ex.: inscrição/viagem), e o saldo dela tender a zero. */
   registration_fee?: {
     total: number
     installments: { amount: number; due_date: string; paid: boolean; transaction_id?: string }[]
+    category_id?: string
   }
 }
 
@@ -589,6 +594,25 @@ const AdminDashboard: React.FC = () => {
     }
   }
 
+  // Garante uma categoria de despesa própria para a inscrição deste torneio —
+  // criada uma única vez (reaproveita se já existir com o mesmo nome, já que
+  // expense_categories.name é único: cobre reabrir o form sem gravar, ou
+  // torneios com nomes repetidos). allow_income fica true para também se
+  // poder criar um Encargo nesta categoria e cobrar aos jogadores.
+  const ensureRegistrationFeeCategory = async (tournamentName: string): Promise<string | null> => {
+    const catName = `Inscrição — ${tournamentName}`
+    try {
+      const { data: existing } = await supabase.from('expense_categories').select('id').eq('name', catName).maybeSingle()
+      if (existing) return existing.id
+      const { data, error } = await supabase.from('expense_categories').insert([{ name: catName, allow_income: true }]).select('id').single()
+      if (error) throw error
+      return data.id
+    } catch (err) {
+      console.error('Erro ao criar categoria de inscrição do torneio:', err)
+      return null
+    }
+  }
+
   const executeSaveTournament = async () => {
     if (!tourName.trim()) {
       toast.warning('O nome da competição é obrigatório.')
@@ -599,6 +623,14 @@ const AdminDashboard: React.FC = () => {
     let publicImageUrl: string | null = existingTourImageUrl
 
     try {
+      let rulesToSave = tourRules
+      if (tourRules.registration_fee && !tourRules.registration_fee.category_id) {
+        const categoryId = await ensureRegistrationFeeCategory(tourName.trim())
+        if (categoryId) {
+          rulesToSave = { ...tourRules, registration_fee: { ...tourRules.registration_fee, category_id: categoryId } }
+        }
+      }
+
       if (tourImage) {
         const fileExt = tourImage.name.split('.').pop()
         const fileName = `tournament_${Math.random()}.${fileExt}`
@@ -619,7 +651,7 @@ const AdminDashboard: React.FC = () => {
         status: tourStatus,
         organizer_name: tourOrganizerName.trim() || null,
         image_url: publicImageUrl,
-        rules: tourRules
+        rules: rulesToSave
       }
 
       if (editingTourId) {
@@ -1801,7 +1833,7 @@ const AdminDashboard: React.FC = () => {
                         ))}
                       </div>
                       <p className="text-[10px] text-gray-500">
-                        Depois de guardar o torneio, cada tranche pode ser paga na página Financeiro & Quotas — cria automaticamente uma despesa na categoria "Inscrições em Torneios".
+                        Ao guardar, cria-se automaticamente a categoria de despesa "Inscrição — {tourName.trim() || 'nome do torneio'}". O valor total já entra na previsão financeira antes de ser pago, e cada tranche pode ser paga depois na página Financeiro & Quotas.
                       </p>
                     </>
                   )}
