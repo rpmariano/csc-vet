@@ -129,22 +129,33 @@ const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: numbe
   { id: 'settings', label: 'Definições', Icon: Settings },
 ]
 
-// Ordem categórica fixa — nunca ciclada — para as receitas por categoria. "Encargos"
-// junta tudo o que é cobrado a jogadores fora das quotas (Seguro, equipamento,
-// viagens, ...) — a repartição por encargo específico vê-se no separador Encargos
-// e nos Movimentos, agrupados pela sua própria categoria.
-const RECEITA_CATEGORIAS: { key: 'quotas' | 'charges' | 'other'; label: string; corBarra: string; corTexto: string }[] = [
-  { key: 'quotas', label: 'Quotas', corBarra: 'bg-csc-light', corTexto: 'text-csc-light' },
-  // csc-blue é escuro de mais para se distinguir do fundo verde-escuro do cartão — usa-se um azul mais claro só aqui.
-  { key: 'charges', label: 'Encargos', corBarra: 'bg-sky-400', corTexto: 'text-sky-300' },
-  { key: 'other', label: 'Outras Receitas', corBarra: 'bg-csc-gold', corTexto: 'text-csc-gold' },
-]
-
-// Ordem categórica fixa para despesas — a 6ª categoria em diante recolhe-se em "Outras".
+// Cores por categoria, tanto para receitas como despesas — a 6ª categoria em
+// diante recolhe-se em "Outras", para o gráfico não crescer sem limite.
+const RECEITA_CORES = ['bg-csc-light', 'bg-sky-400', 'bg-csc-gold', 'bg-emerald-400', 'bg-indigo-400']
+const RECEITA_COR_OUTRAS = 'bg-gray-400'
 const DESPESA_CORES = ['bg-red-500', 'bg-purple-500', 'bg-amber-500', 'bg-blue-500', 'bg-emerald-500']
 const DESPESA_COR_OUTRAS = 'bg-gray-400'
 
 const fmtEuro = (n: number) => `${n.toFixed(2)}€`
+
+// Agrupa os movimentos pela categoria já resolvida na vista (v_financial_movements
+// dá a categoria específica de cada um — Quotas, Seguro Desportivo, Material
+// Desportivo, ... — não um balde genérico "Encargos"), e colapsa a partir da 6ª
+// em "Outras". Fora do componente (recebe `movements` por parâmetro) para o
+// useMemo que a chama poder depender só de `movements`, sem recriar a função a
+// cada render.
+const agruparPorCategoria = (tipo: 'income' | 'expense', movements: MovementRow[]): [string, number][] => {
+  const totals = new Map<string, number>()
+  for (const m of movements) {
+    if (m.type !== tipo) continue
+    totals.set(m.category_label, (totals.get(m.category_label) || 0) + Number(m.amount))
+  }
+  const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1])
+  const top = sorted.slice(0, 5)
+  const restante = sorted.slice(5).reduce((s, [, v]) => s + v, 0)
+  if (restante > 0) top.push(['Outras', restante])
+  return top
+}
 
 const FinancePage: React.FC = () => {
   const { profile } = useAuth()
@@ -332,8 +343,11 @@ const FinancePage: React.FC = () => {
     const payments = chargePayments.filter(p => p.charge_id === c.id)
     const totalExpected = c.amount * participantIds.length
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0)
+    const paidByPlayer = new Map<string, number>()
+    for (const p of payments) paidByPlayer.set(p.player_id, (paidByPlayer.get(p.player_id) || 0) + p.amount)
+    const pendingCount = participantIds.filter(pid => (paidByPlayer.get(pid) || 0) < c.amount).length
     const category = categories.find(cat => cat.id === c.category_id)
-    return { ...c, participantIds, payments, totalExpected, totalPaid, categoryName: category?.name || null }
+    return { ...c, participantIds, payments, totalExpected, totalPaid, pendingCount, categoryName: category?.name || null }
   }), [charges, chargePlayers, chargePayments, categories])
 
   const pendingChargesTotal = chargesWithStats.reduce((s, c) => s + Math.max(0, c.totalExpected - c.totalPaid), 0)
@@ -832,25 +846,10 @@ const FinancePage: React.FC = () => {
   const totalReceived = totalQuotasReceived + totalChargesReceived + totalIncomeOther
   const netBalance = totalReceived - totalExpenses
 
-  const receitaPorCategoria = {
-    quotas: totalQuotasReceived,
-    charges: totalChargesReceived,
-    other: totalIncomeOther,
-  }
-  const maxReceita = Math.max(1, ...Object.values(receitaPorCategoria))
+  const receitaPorCategoria = useMemo(() => agruparPorCategoria('income', movements), [movements])
+  const maxReceita = Math.max(1, ...receitaPorCategoria.map(([, v]) => v))
 
-  const despesaPorCategoria = useMemo(() => {
-    const totals = new Map<string, number>()
-    for (const m of movements) {
-      if (m.type !== 'expense') continue
-      totals.set(m.category_label, (totals.get(m.category_label) || 0) + Number(m.amount))
-    }
-    const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1])
-    const top = sorted.slice(0, 5)
-    const restante = sorted.slice(5).reduce((s, [, v]) => s + v, 0)
-    if (restante > 0) top.push(['Outras', restante])
-    return top
-  }, [movements])
+  const despesaPorCategoria = useMemo(() => agruparPorCategoria('expense', movements), [movements])
   const maxDespesa = Math.max(1, ...despesaPorCategoria.map(([, v]) => v))
 
   // Previsão: total de quotas que TODOS os jogadores elegíveis vão pagar esta
@@ -1003,17 +1002,17 @@ const FinancePage: React.FC = () => {
             <div className={`${despesaPorCategoria.length === 0 ? 'lg:col-span-2' : ''} bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3`}>
               <h3 className="text-sm font-black text-white">Valor Recebido por Categoria</h3>
               <div className="space-y-3">
-                {RECEITA_CATEGORIAS.map(cat => {
-                  const valor = receitaPorCategoria[cat.key]
+                {receitaPorCategoria.map(([label, valor], idx) => {
                   const pct = Math.round((valor / maxReceita) * 100)
+                  const cor = label === 'Outras' ? RECEITA_COR_OUTRAS : (RECEITA_CORES[idx] || RECEITA_COR_OUTRAS)
                   return (
-                    <div key={cat.key}>
+                    <div key={label}>
                       <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-bold text-white/80">{cat.label}</span>
-                        <span className={`font-black ${cat.corTexto}`}>{fmtEuro(valor)}</span>
+                        <span className="font-bold text-white/80">{label}</span>
+                        <span className="font-black text-white">{fmtEuro(valor)}</span>
                       </div>
                       <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
-                        <div className={`h-full rounded-full ${cat.corBarra}`} style={{ width: `${Math.max(2, pct)}%` }} />
+                        <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.max(2, pct)}%` }} />
                       </div>
                     </div>
                   )
@@ -1186,14 +1185,15 @@ const FinancePage: React.FC = () => {
                           <p className="text-[10px] text-gray-400 flex items-center gap-1.5 flex-wrap">
                             {c.categoryName && <span className="px-1.5 py-0.5 rounded bg-gray-100">{c.categoryName}</span>}
                             <span>{fmtEuro(c.amount)}/jogador · {c.participantIds.length} {c.participantIds.length === 1 ? 'participante' : 'participantes'}</span>
+                            {c.pendingCount > 0 && <span className="text-amber-600 font-bold">· {c.pendingCount} por pagar</span>}
                             {c.due_date && <span>· prazo {new Date(c.due_date).toLocaleDateString('pt-PT')}</span>}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <div className="text-right hidden sm:block">
+                        <div className="text-right">
                           <p className="text-xs font-black text-gray-900">{fmtEuro(c.totalPaid)} / {fmtEuro(c.totalExpected)}</p>
-                          <div className="w-24 h-1.5 rounded-full bg-gray-100 overflow-hidden mt-1">
+                          <div className="w-16 sm:w-24 h-1.5 rounded-full bg-gray-100 overflow-hidden mt-1">
                             <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-csc-gold'}`} style={{ width: `${pct}%` }} />
                           </div>
                         </div>
@@ -1236,7 +1236,9 @@ const FinancePage: React.FC = () => {
                                 <span className="text-sm font-bold text-gray-900 truncate">{p?.shirt_name || p?.name || 'Jogador'}</span>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {remaining <= 0 ? (
-                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Pago ({fmtEuro(paidTotal)})</span>
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                                      Pago ({fmtEuro(paidTotal)}{paidTotal > c.amount ? ` · +${fmtEuro(paidTotal - c.amount)}` : ''})
+                                    </span>
                                   ) : paidTotal > 0 ? (
                                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Falta {fmtEuro(remaining)}</span>
                                   ) : (
@@ -1282,10 +1284,14 @@ const FinancePage: React.FC = () => {
                               )}
 
                               {isPayingHere && (
-                                <div className="flex items-center gap-1.5 pt-1">
-                                  <input type="number" step="0.01" placeholder="Valor (€)" value={payFormAmount} onChange={e => setPayFormAmount(e.target.value)} className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
-                                  <input type="date" value={payFormDate} onChange={e => setPayFormDate(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
-                                  <input type="text" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
+                                // flex-wrap + min-w-0 nas Notas: sem isto, num ecrã estreito o
+                                // input flex-1 não encolhia (min-width:auto por omissão) e o
+                                // botão Guardar saía do cartão, escondido pelo overflow-hidden
+                                // do cartão do encargo — a linha passa a quebrar antes disso.
+                                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                  <input type="number" step="0.01" placeholder="Valor (€)" value={payFormAmount} onChange={e => setPayFormAmount(e.target.value)} className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900 shrink-0" />
+                                  <input type="date" value={payFormDate} onChange={e => setPayFormDate(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900 shrink-0" />
+                                  <input type="text" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className="flex-1 min-w-[100px] px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
                                   <button type="button" onClick={() => handleAddChargePayment(c.id, playerId)} className="px-3 py-1.5 bg-csc-gold text-csc-dark rounded-lg text-xs font-black hover:brightness-95 cursor-pointer shrink-0">
                                     Guardar
                                   </button>
