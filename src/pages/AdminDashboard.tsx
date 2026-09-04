@@ -98,6 +98,34 @@ interface Tournament {
   image_url?: string | null
 }
 
+type RegistrationInstallment = { amount: number; due_date: string; paid: boolean; transaction_id?: string }
+
+// Reparte `total` em partes iguais pelas `n` tranches ainda por pagar — as já
+// pagas mantêm o valor histórico (estão ligadas a uma transação real, não se
+// mexe). Chamada sempre que o Valor Total ou o Nº de Tranches mudam, para as
+// tranches somarem sempre ao total, em vez de só as tranches novas
+// receberem uma parte igual e as que já existiam ficarem com valores
+// avulsos de um total/nº de tranches anterior (ex.: 1ª tranche corrigida à
+// mão para 1000€ ficava intocada, e as tranches novas dividiam o total
+// inteiro entre si — 1000 + 833 + 833 já não somava ao total de 2500).
+// A última tranche por pagar absorve o cêntimo de arredondamento, para a
+// soma bater sempre certo com o total.
+const redistributeInstallments = (current: RegistrationInstallment[], total: number, n: number): RegistrationInstallment[] => {
+  const next = Array.from({ length: n }, (_, i) => current[i] || { amount: 0, due_date: '', paid: false })
+  const paidTotal = next.filter(it => it.paid).reduce((s, it) => s + it.amount, 0)
+  const unpaidIdx = next.reduce<number[]>((acc, it, i) => { if (!it.paid) acc.push(i); return acc }, [])
+  const remaining = Math.max(0, Number((total - paidTotal).toFixed(2)))
+  const each = unpaidIdx.length > 0 ? Math.floor((remaining / unpaidIdx.length) * 100) / 100 : 0
+  let distributed = 0
+  unpaidIdx.forEach((idx, pos) => {
+    const isLast = pos === unpaidIdx.length - 1
+    const amount = isLast ? Number((remaining - distributed).toFixed(2)) : each
+    distributed += amount
+    next[idx] = { ...next[idx], amount }
+  })
+  return next
+}
+
 type TabType = 'club' | 'fields' | 'opponents' | 'tournaments'
 
 const AdminDashboard: React.FC = () => {
@@ -1780,7 +1808,15 @@ const AdminDashboard: React.FC = () => {
                             onBlur={e => {
                               const val = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value))
                               e.target.value = String(val)
-                              setTourRules(prev => ({ ...prev, registration_fee: { ...prev.registration_fee!, total: val } }))
+                              setTourRules(prev => {
+                                const rf = prev.registration_fee!
+                                // Só reparte se o total mudou mesmo — sem isto, tocar no campo
+                                // sem alterar o valor (ex.: só para confirmar) apagava ajustes
+                                // manuais já feitos em tranches individuais.
+                                if (val === rf.total) return prev
+                                const installments = redistributeInstallments(rf.installments, val, rf.installments.length)
+                                return { ...prev, registration_fee: { ...rf, total: val, installments } }
+                              })
                             }}
                             className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900"
                           />
@@ -1796,14 +1832,16 @@ const AdminDashboard: React.FC = () => {
                               const n = e.target.value === '' ? rf.installments.length : Math.max(1, Math.min(6, Number(e.target.value)))
                               e.target.value = String(n) // corrige visualmente se escreveu fora de 1–6
                               if (n === rf.installments.length) return prev
-                              const perInstallment = Number((rf.total / n).toFixed(2))
-                              const installments = Array.from({ length: n }, (_, i) => rf.installments[i] || { amount: perInstallment, due_date: '', paid: false })
+                              const installments = redistributeInstallments(rf.installments, rf.total, n)
                               return { ...prev, registration_fee: { ...rf, installments } }
                             })}
                             className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900"
                           />
                         </div>
                       </div>
+                      <p className="text-[10px] text-gray-500 -mt-1">
+                        Mudar o Valor Total ou o Nº de Tranches reparte o valor em partes iguais pelas tranches ainda por pagar. Depois disso, cada tranche pode ser ajustada à mão abaixo.
+                      </p>
 
                       <div className="space-y-2">
                         {tourRules.registration_fee.installments.map((inst, idx) => (
@@ -1811,7 +1849,12 @@ const AdminDashboard: React.FC = () => {
                             <div>
                               <label className="block text-[10px] font-bold text-gray-500 mb-1">Tranche {idx + 1} — Valor (€)</label>
                               <input
-                                key={`${editingTourId || 'new'}-${idx}`}
+                                // O valor entra na key: como o campo não é controlado (ver nota
+                                // no Valor Total), sem isto o input não mostrava o valor
+                                // recalculado quando o Total ou o Nº de Tranches mudavam — só
+                                // remonta (e por isso só atualiza o que se vê) quando o valor
+                                // desta tranche muda por essa via ou por edição própria.
+                                key={`${editingTourId || 'new'}-${idx}-${inst.amount}`}
                                 type="number" min="0" step="0.01"
                                 defaultValue={inst.amount}
                                 disabled={inst.paid}
