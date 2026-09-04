@@ -141,11 +141,14 @@ const fmtEuro = (n: number) => `${n.toFixed(2)}€`
 // Agrupa os movimentos pela categoria já resolvida na vista (v_financial_movements
 // dá a categoria específica de cada um — Quotas, Seguro Desportivo, Material
 // Desportivo, ... — não um balde genérico "Encargos"), e colapsa a partir da 6ª
-// em "Outras". Fora do componente (recebe `movements` por parâmetro) para o
+// em "Outras". `seedLabels` garante que uma categoria com objetivo mas ainda
+// sem nenhum movimento aparece já a 0€, em vez de só surgir no primeiro
+// pagamento. Fora do componente (recebe `movements` por parâmetro) para o
 // useMemo que a chama poder depender só de `movements`, sem recriar a função a
 // cada render.
-const agruparPorCategoria = (tipo: 'income' | 'expense', movements: MovementRow[]): [string, number][] => {
+const agruparPorCategoria = (tipo: 'income' | 'expense', movements: MovementRow[], seedLabels: string[] = []): [string, number][] => {
   const totals = new Map<string, number>()
+  for (const label of seedLabels) totals.set(label, totals.get(label) || 0)
   for (const m of movements) {
     if (m.type !== tipo) continue
     totals.set(m.category_label, (totals.get(m.category_label) || 0) + Number(m.amount))
@@ -846,18 +849,38 @@ const FinancePage: React.FC = () => {
   const totalReceived = totalQuotasReceived + totalChargesReceived + totalIncomeOther
   const netBalance = totalReceived - totalExpenses
 
-  const receitaPorCategoria = useMemo(() => agruparPorCategoria('income', movements), [movements])
-  const maxReceita = Math.max(1, ...receitaPorCategoria.map(([, v]) => v))
-
-  const despesaPorCategoria = useMemo(() => agruparPorCategoria('expense', movements), [movements])
-  const maxDespesa = Math.max(1, ...despesaPorCategoria.map(([, v]) => v))
-
   // Previsão: total de quotas que TODOS os jogadores elegíveis vão pagar esta
   // época (passadas + futuras) + o que falta receber dos encargos já criados
   // (valor por participante menos o que cada um já pagou) — ao contrário do
   // antigo seguro (uma estimativa às cegas para todos os ativos), isto é um
   // valor real, baseado nos encargos que já existem.
   const projectedQuotasTotal = quotaRows.reduce((sum, r) => sum + Number(r.expected_amount || 0), 0)
+
+  // Objetivo por categoria de receita, para comparar com o valor recebido em
+  // "Valor Recebido por Categoria": Quotas usa a previsão da época; cada
+  // categoria de Encargos usa a soma do valor esperado (valor × participantes)
+  // dos encargos dessa categoria. Também serve de "seed" para a categoria já
+  // aparecer no gráfico a 0€ antes do primeiro pagamento, em vez de só surgir
+  // depois de alguém pagar.
+  const objetivoPorCategoria = useMemo(() => {
+    const totals = new Map<string, number>()
+    totals.set('Quotas', projectedQuotasTotal)
+    for (const c of chargesWithStats) {
+      if (!c.categoryName) continue
+      totals.set(c.categoryName, (totals.get(c.categoryName) || 0) + c.totalExpected)
+    }
+    return totals
+  }, [projectedQuotasTotal, chargesWithStats])
+
+  const receitaPorCategoria = useMemo(
+    () => agruparPorCategoria('income', movements, Array.from(objetivoPorCategoria.keys())),
+    [movements, objetivoPorCategoria]
+  )
+  const maxReceita = Math.max(1, ...receitaPorCategoria.map(([, v]) => v))
+
+  const despesaPorCategoria = useMemo(() => agruparPorCategoria('expense', movements), [movements])
+  const maxDespesa = Math.max(1, ...despesaPorCategoria.map(([, v]) => v))
+
   const projectedSeasonTotal = projectedQuotasTotal + totalChargesReceived + pendingChargesTotal
   const receivedTowardsProjection = totalQuotasReceived + totalChargesReceived
   const projectionPct = projectedSeasonTotal > 0 ? Math.min(100, Math.round((receivedTowardsProjection / projectedSeasonTotal) * 100)) : 0
@@ -1003,16 +1026,27 @@ const FinancePage: React.FC = () => {
               <h3 className="text-sm font-black text-white">Valor Recebido por Categoria</h3>
               <div className="space-y-3">
                 {receitaPorCategoria.map(([label, valor], idx) => {
-                  const pct = Math.round((valor / maxReceita) * 100)
-                  const cor = label === 'Outras' ? RECEITA_COR_OUTRAS : (RECEITA_CORES[idx] || RECEITA_COR_OUTRAS)
+                  const objetivo = objetivoPorCategoria.get(label)
+                  const temObjetivo = objetivo !== undefined && objetivo > 0
+                  const excedeu = temObjetivo && valor > objetivo!
+                  const pct = temObjetivo ? Math.round((valor / objetivo!) * 100) : Math.round((valor / maxReceita) * 100)
+                  const corBase = label === 'Outras' ? RECEITA_COR_OUTRAS : (RECEITA_CORES[idx] || RECEITA_COR_OUTRAS)
+                  const cor = temObjetivo && pct >= 100 ? 'bg-emerald-500' : corBase
                   return (
                     <div key={label}>
-                      <div className="flex items-center justify-between text-xs mb-1">
+                      <div className="flex items-center justify-between text-xs mb-1 gap-2">
                         <span className="font-bold text-white/80">{label}</span>
-                        <span className="font-black text-white">{fmtEuro(valor)}</span>
+                        <span className="font-black text-white text-right">
+                          {temObjetivo ? `${fmtEuro(valor)} / ${fmtEuro(objetivo!)}` : fmtEuro(valor)}
+                          {excedeu && (
+                            <span className="ml-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 align-middle">
+                              +{fmtEuro(valor - objetivo!)}
+                            </span>
+                          )}
+                        </span>
                       </div>
                       <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
-                        <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.max(2, pct)}%` }} />
+                        <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
                       </div>
                     </div>
                   )
