@@ -348,12 +348,27 @@ const FinancePage: React.FC = () => {
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0)
     const paidByPlayer = new Map<string, number>()
     for (const p of payments) paidByPlayer.set(p.player_id, (paidByPlayer.get(p.player_id) || 0) + p.amount)
+    // Por participante, não pelo total do encargo: quem paga a mais não pode
+    // "tapar" o que falta aos outros. Ex.: encargo de 25€ com 28 participantes
+    // (700€ no total) em que só um pagou 30€ — o valor em falta é 27 × 25€ =
+    // 675€ (e não 700-30 = 670€, que deixaria o excedente do primeiro a
+    // reduzir artificialmente o que os restantes ainda devem).
+    let pendingAmount = 0
+    let surplusAmount = 0
+    for (const pid of participantIds) {
+      const paid = paidByPlayer.get(pid) || 0
+      if (paid < c.amount) pendingAmount += c.amount - paid
+      else if (paid > c.amount) surplusAmount += paid - c.amount
+    }
     const pendingCount = participantIds.filter(pid => (paidByPlayer.get(pid) || 0) < c.amount).length
     const category = categories.find(cat => cat.id === c.category_id)
-    return { ...c, participantIds, payments, totalExpected, totalPaid, pendingCount, categoryName: category?.name || null }
+    return { ...c, participantIds, payments, totalExpected, totalPaid, pendingAmount, surplusAmount, pendingCount, categoryName: category?.name || null }
   }), [charges, chargePlayers, chargePayments, categories])
 
-  const pendingChargesTotal = chargesWithStats.reduce((s, c) => s + Math.max(0, c.totalExpected - c.totalPaid), 0)
+  // Soma o que falta receber pela dívida real de cada participante (ver nota
+  // acima) — não pelo total bruto do encargo, para o excedente de alguém não
+  // reduzir o que os outros ainda devem.
+  const pendingChargesTotal = chargesWithStats.reduce((s, c) => s + c.pendingAmount, 0)
 
   const [expandedChargeId, setExpandedChargeId] = useState<string | null>(null)
   const [isNewChargeModalOpen, setIsNewChargeModalOpen] = useState(false)
@@ -1226,7 +1241,12 @@ const FinancePage: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <div className="text-right">
-                          <p className="text-xs font-black text-gray-900">{fmtEuro(c.totalPaid)} / {fmtEuro(c.totalExpected)}</p>
+                          <p className="text-xs font-black text-gray-900">
+                            {fmtEuro(c.totalPaid)} / {fmtEuro(c.totalExpected)}
+                            {c.surplusAmount > 0 && (
+                              <span className="ml-1 text-[10px] font-black text-emerald-600">+{fmtEuro(c.surplusAmount)}</span>
+                            )}
+                          </p>
                           <div className="w-16 sm:w-24 h-1.5 rounded-full bg-gray-100 overflow-hidden mt-1">
                             <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-csc-gold'}`} style={{ width: `${pct}%` }} />
                           </div>
