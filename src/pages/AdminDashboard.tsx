@@ -1770,7 +1770,14 @@ const AdminDashboard: React.FC = () => {
                           <input
                             type="number" min="0" step="0.01"
                             value={tourRules.registration_fee.total}
-                            onChange={e => setTourRules(prev => ({ ...prev, registration_fee: { ...prev.registration_fee!, total: Number(e.target.value) } }))}
+                            onChange={e => setTourRules(prev => {
+                              // Campo vazio (a apagar para escrever de novo) devolve prev
+                              // inalterado — se se gravasse já 0, o valor controlado
+                              // "saltava" logo de volta para "0" e o 0 ficava sempre
+                              // colado à esquerda do que se tentasse escrever a seguir.
+                              if (e.target.value === '') return prev
+                              return { ...prev, registration_fee: { ...prev.registration_fee!, total: Number(e.target.value) } }
+                            })}
                             className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900"
                           />
                         </div>
@@ -1780,8 +1787,13 @@ const AdminDashboard: React.FC = () => {
                             type="number" min="1" max="6"
                             value={tourRules.registration_fee.installments.length}
                             onChange={e => setTourRules(prev => {
+                              // Mesma razão que no Valor Total: sem isto, apagar o "1" para
+                              // escrever outro número caía no `|| 1` e saltava logo de volta
+                              // para 1 — impossível chegar a 2, 3, 4 ou 5 (só a 1 ou, somando
+                              // o dígito a seguir ao "1" que nunca desaparecia, a 6).
+                              if (e.target.value === '') return prev
                               const rf = prev.registration_fee!
-                              const n = Math.max(1, Math.min(6, Number(e.target.value) || 1))
+                              const n = Math.max(1, Math.min(6, Number(e.target.value)))
                               const perInstallment = Number((rf.total / n).toFixed(2))
                               const installments = Array.from({ length: n }, (_, i) => rf.installments[i] || { amount: perInstallment, due_date: '', paid: false })
                               return { ...prev, registration_fee: { ...rf, installments } }
@@ -1801,6 +1813,7 @@ const AdminDashboard: React.FC = () => {
                                 value={inst.amount}
                                 disabled={inst.paid}
                                 onChange={e => setTourRules(prev => {
+                                  if (e.target.value === '') return prev
                                   const rf = prev.registration_fee!
                                   const installments = rf.installments.map((it, i) => i === idx ? { ...it, amount: Number(e.target.value) } : it)
                                   return { ...prev, registration_fee: { ...rf, installments } }
