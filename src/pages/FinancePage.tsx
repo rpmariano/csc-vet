@@ -652,6 +652,21 @@ const FinancePage: React.FC = () => {
     }
   }
 
+  // Alterna se uma categoria já criada também pode ser usada para receitas —
+  // sem isto, uma categoria só marcada depois de criada (ou criada antes desta
+  // opção existir) ficava presa para sempre como despesa, e nunca aparecia
+  // para escolher num Encargo novo.
+  const handleToggleCategoryIncome = async (cat: ExpenseCategory) => {
+    try {
+      const { error } = await supabase.from('expense_categories').update({ allow_income: !cat.allow_income }).eq('id', cat.id)
+      if (error) throw error
+      toast.success(cat.allow_income ? 'Categoria deixou de poder ser usada para receitas.' : 'Categoria já pode ser usada para receitas (ex.: Encargos).')
+      fetchAll()
+    } catch (err: any) {
+      toast.error('Erro ao atualizar categoria: ' + (err.message || 'Erro'))
+    }
+  }
+
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault()
     const val = parseFloat(txAmount)
@@ -1651,27 +1666,6 @@ const FinancePage: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-sm font-black text-white mb-1">Seguro Desportivo</h3>
-            <p className="text-[11px] text-white/50 mb-3">Valores só de referência — pré-preenchem o encargo "Seguro Desportivo" quando o criares, em Encargos. Não cobram nada automaticamente.</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Valor (€)</label>
-                <input type="number" step="0.01" value={settingsForm.insurance_amount} onChange={e => setSettingsForm(s => ({ ...s, insurance_amount: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Prazo — Mês</label>
-                <select value={settingsForm.insurance_deadline_month} onChange={e => setSettingsForm(s => ({ ...s, insurance_deadline_month: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{nomeMes(m)}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Prazo — Dia</label>
-                <input type="number" min={1} max={31} value={settingsForm.insurance_deadline_day} onChange={e => setSettingsForm(s => ({ ...s, insurance_deadline_day: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
-              </div>
-            </div>
-          </div>
-
           <button type="button" onClick={handleSaveSettings} disabled={savingSettings} className="px-5 py-2.5 bg-csc-gold text-csc-dark rounded-xl text-xs font-black hover:brightness-95 transition-all cursor-pointer disabled:opacity-60">
             {savingSettings ? 'A guardar...' : 'Guardar Definições'}
           </button>
@@ -1694,8 +1688,15 @@ const FinancePage: React.FC = () => {
           <div className="flex flex-wrap gap-1.5">
             {categories.map(c => (
               <span key={c.id} className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${c.allow_income ? 'bg-sky-400/20 text-sky-200' : 'bg-white/10 text-white/80'}`}>
-                {c.name}
-                {c.allow_income && <span className="text-[9px] font-black uppercase text-sky-300">receita</span>}
+                <button
+                  type="button"
+                  onClick={() => handleToggleCategoryIncome(c)}
+                  className="flex items-center gap-1.5 cursor-pointer hover:opacity-80"
+                  title={c.allow_income ? 'Clica para deixar de poder ser usada para receitas' : 'Clica para também poder ser usada para receitas (ex.: Encargos)'}
+                >
+                  <span>{c.name}</span>
+                  {c.allow_income && <span className="text-[9px] font-black uppercase text-sky-300">receita</span>}
+                </button>
                 <button type="button" onClick={() => handleDeleteCategory(c.id)} className="text-white/50 hover:text-red-400 cursor-pointer" title="Eliminar categoria">
                   <X size={11} />
                 </button>
