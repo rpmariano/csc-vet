@@ -1768,32 +1768,34 @@ const AdminDashboard: React.FC = () => {
                         <div>
                           <label className="block text-[11px] font-bold text-gray-600 mb-1">Valor Total (€)</label>
                           <input
+                            key={editingTourId || 'new'}
                             type="number" min="0" step="0.01"
-                            value={tourRules.registration_fee.total}
-                            onChange={e => setTourRules(prev => {
-                              // Campo vazio (a apagar para escrever de novo) devolve prev
-                              // inalterado — se se gravasse já 0, o valor controlado
-                              // "saltava" logo de volta para "0" e o 0 ficava sempre
-                              // colado à esquerda do que se tentasse escrever a seguir.
-                              if (e.target.value === '') return prev
-                              return { ...prev, registration_fee: { ...prev.registration_fee!, total: Number(e.target.value) } }
-                            })}
+                            defaultValue={tourRules.registration_fee.total}
+                            // Não controlado: o valor só é lido e gravado no estado quando se
+                            // sai do campo (onBlur), não a cada tecla. Ligar o campo
+                            // diretamente a um número controlado ("value={...Number(...)}")
+                            // fazia-o "lutar" com o utilizador — apagar para escrever de novo
+                            // ficava sempre preso a 0. A key muda por torneio para o campo
+                            // reiniciar corretamente ao abrir para editar um torneio diferente.
+                            onBlur={e => {
+                              const val = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value))
+                              e.target.value = String(val)
+                              setTourRules(prev => ({ ...prev, registration_fee: { ...prev.registration_fee!, total: val } }))
+                            }}
                             className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900"
                           />
                         </div>
                         <div>
                           <label className="block text-[11px] font-bold text-gray-600 mb-1">Nº de Tranches</label>
                           <input
+                            key={editingTourId || 'new'}
                             type="number" min="1" max="6"
-                            value={tourRules.registration_fee.installments.length}
-                            onChange={e => setTourRules(prev => {
-                              // Mesma razão que no Valor Total: sem isto, apagar o "1" para
-                              // escrever outro número caía no `|| 1` e saltava logo de volta
-                              // para 1 — impossível chegar a 2, 3, 4 ou 5 (só a 1 ou, somando
-                              // o dígito a seguir ao "1" que nunca desaparecia, a 6).
-                              if (e.target.value === '') return prev
+                            defaultValue={tourRules.registration_fee.installments.length}
+                            onBlur={e => setTourRules(prev => {
                               const rf = prev.registration_fee!
-                              const n = Math.max(1, Math.min(6, Number(e.target.value)))
+                              const n = e.target.value === '' ? rf.installments.length : Math.max(1, Math.min(6, Number(e.target.value)))
+                              e.target.value = String(n) // corrige visualmente se escreveu fora de 1–6
+                              if (n === rf.installments.length) return prev
                               const perInstallment = Number((rf.total / n).toFixed(2))
                               const installments = Array.from({ length: n }, (_, i) => rf.installments[i] || { amount: perInstallment, due_date: '', paid: false })
                               return { ...prev, registration_fee: { ...rf, installments } }
@@ -1809,15 +1811,19 @@ const AdminDashboard: React.FC = () => {
                             <div>
                               <label className="block text-[10px] font-bold text-gray-500 mb-1">Tranche {idx + 1} — Valor (€)</label>
                               <input
+                                key={`${editingTourId || 'new'}-${idx}`}
                                 type="number" min="0" step="0.01"
-                                value={inst.amount}
+                                defaultValue={inst.amount}
                                 disabled={inst.paid}
-                                onChange={e => setTourRules(prev => {
-                                  if (e.target.value === '') return prev
-                                  const rf = prev.registration_fee!
-                                  const installments = rf.installments.map((it, i) => i === idx ? { ...it, amount: Number(e.target.value) } : it)
-                                  return { ...prev, registration_fee: { ...rf, installments } }
-                                })}
+                                onBlur={e => {
+                                  const val = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value))
+                                  e.target.value = String(val)
+                                  setTourRules(prev => {
+                                    const rf = prev.registration_fee!
+                                    const installments = rf.installments.map((it, i) => i === idx ? { ...it, amount: val } : it)
+                                    return { ...prev, registration_fee: { ...rf, installments } }
+                                  })
+                                }}
                                 className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-900 disabled:bg-gray-100"
                               />
                             </div>
