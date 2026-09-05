@@ -82,12 +82,40 @@ interface Charge {
   amount: number
   due_date?: string | null
   created_at?: string
+  // Encargo-intermediário: o clube recebe isto dos jogadores mas tem de
+  // repassar a um terceiro (ex.: Seguro Desportivo → seguradora). Um único
+  // valor + prazo — não um plano de tranches como as inscrições em torneio.
+  is_intermediary?: boolean
+  payable_amount?: number | null
+  payable_due_date?: string | null
+  payable_paid?: boolean
+  payable_transaction_id?: string | null
 }
 
 interface ChargePlayer {
   id: string
   charge_id: string
   player_id: string
+}
+
+// Uma linha de "Pagamentos Programados" — despesa já certa mas ainda por
+// pagar, venha de uma tranche de inscrição em torneio ou do valor a pagar a
+// terceiros de um encargo-intermediário. Guarda dados simples (não uma ação
+// já feita) para o useMemo que a constrói não depender de handlePayInstallment/
+// handlePayChargePayable — funções recriadas a cada render, seriam sempre
+// "dependências desatualizadas" do memo. A ação certa resolve-se com
+// handlePayScheduled, no local do clique.
+interface ScheduledPayment {
+  key: string
+  title: string
+  categoryLabel: string | null
+  amount: number
+  due_date: string | null
+  source: 'tournament' | 'charge'
+  tournamentId?: string
+  tournamentName?: string
+  installmentIndex?: number
+  chargeId?: string
 }
 
 interface ChargePayment {
@@ -377,6 +405,11 @@ const FinancePage: React.FC = () => {
   const [newChargeTitle, setNewChargeTitle] = useState('')
   const [newChargeAmount, setNewChargeAmount] = useState('')
   const [newChargeDueDate, setNewChargeDueDate] = useState('')
+  // Encargo-intermediário: o clube recebe isto dos jogadores mas tem de
+  // repassar a um terceiro (ex.: Seguro Desportivo → seguradora).
+  const [newChargeIsIntermediary, setNewChargeIsIntermediary] = useState(false)
+  const [newChargePayableAmount, setNewChargePayableAmount] = useState('')
+  const [newChargePayableDueDate, setNewChargePayableDueDate] = useState('')
   const [newChargePlayerIds, setNewChargePlayerIds] = useState<Set<string>>(new Set())
   const [savingCharge, setSavingCharge] = useState(false)
   const [chargeToDelete, setChargeToDelete] = useState<string | null>(null)
@@ -397,6 +430,9 @@ const FinancePage: React.FC = () => {
     setNewChargeTitle('')
     setNewChargeAmount('')
     setNewChargeDueDate('')
+    setNewChargeIsIntermediary(false)
+    setNewChargePayableAmount('')
+    setNewChargePayableDueDate('')
     setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))
     setIsNewChargeModalOpen(true)
   }
@@ -412,6 +448,9 @@ const FinancePage: React.FC = () => {
     setNewChargeTitle(c.title)
     setNewChargeAmount(String(c.amount))
     setNewChargeDueDate(c.due_date ? c.due_date.slice(0, 10) : '')
+    setNewChargeIsIntermediary(!!c.is_intermediary)
+    setNewChargePayableAmount(c.payable_amount != null ? String(c.payable_amount) : '')
+    setNewChargePayableDueDate(c.payable_due_date ? c.payable_due_date.slice(0, 10) : '')
     setNewChargePlayerIds(new Set(c.participantIds))
     setIsNewChargeModalOpen(true)
   }
@@ -440,6 +479,17 @@ const FinancePage: React.FC = () => {
     }
   }
 
+  // Ao marcar "o clube funciona como intermediário", sugere como valor a
+  // pagar o total já configurado (valor por jogador × participantes) — só um
+  // ponto de partida, o clube pode dever um valor diferente ao terceiro.
+  const handleToggleChargeIntermediary = (checked: boolean) => {
+    setNewChargeIsIntermediary(checked)
+    if (checked && !newChargePayableAmount) {
+      const total = (parseFloat(newChargeAmount) || 0) * newChargePlayerIds.size
+      if (total > 0) setNewChargePayableAmount(String(total))
+    }
+  }
+
   const handleSaveCharge = async () => {
     if (!newChargeTitle.trim()) {
       toast.warning('Indica um título para o encargo.')
@@ -454,6 +504,14 @@ const FinancePage: React.FC = () => {
       toast.warning('Escolhe pelo menos um jogador.')
       return
     }
+    let payableAmt: number | null = null
+    if (newChargeIsIntermediary) {
+      payableAmt = parseFloat(newChargePayableAmount)
+      if (isNaN(payableAmt) || payableAmt <= 0) {
+        toast.warning('Indica quanto o clube tem de pagar ao terceiro.')
+        return
+      }
+    }
     setSavingCharge(true)
     try {
       if (editingChargeId) {
@@ -462,6 +520,9 @@ const FinancePage: React.FC = () => {
           title: newChargeTitle.trim(),
           amount: amt,
           due_date: newChargeDueDate || null,
+          is_intermediary: newChargeIsIntermediary,
+          payable_amount: payableAmt,
+          payable_due_date: newChargeIsIntermediary ? (newChargePayableDueDate || null) : null,
         }).eq('id', editingChargeId)
         if (error) throw error
 
@@ -487,6 +548,9 @@ const FinancePage: React.FC = () => {
           title: newChargeTitle.trim(),
           amount: amt,
           due_date: newChargeDueDate || null,
+          is_intermediary: newChargeIsIntermediary,
+          payable_amount: payableAmt,
+          payable_due_date: newChargeIsIntermediary ? (newChargePayableDueDate || null) : null,
           created_by: profile?.id || null,
         }]).select().single()
         if (error) throw error
@@ -516,6 +580,74 @@ const FinancePage: React.FC = () => {
     }
     toast.success('Encargo apagado.')
     fetchAll()
+  }
+
+  // Regista o pagamento ao terceiro de um encargo-intermediário (ex.: à
+  // seguradora) — cria a despesa na própria categoria do encargo (o cliente já
+  // recebe nessa categoria, por isso o saldo dela tende a zero) e marca
+  // payable_paid. Espelha handlePayInstallment (inscrições em torneio).
+  const handlePayChargePayable = async (charge: (typeof chargesWithStats)[number]) => {
+    if (!charge.payable_amount) return
+    try {
+      const { data: txData, error: txError } = await supabase.from('transactions').insert([{
+        type: 'expense',
+        amount: charge.payable_amount,
+        description: `${charge.title} — pagamento ao terceiro`,
+        date: new Date().toISOString().split('T')[0],
+        category_id: charge.category_id,
+        created_by: profile?.id || null,
+      }]).select().single()
+      if (txError) throw txError
+
+      const { error: updError } = await supabase.from('charges').update({
+        payable_paid: true,
+        payable_transaction_id: txData.id,
+      }).eq('id', charge.id)
+      if (updError) throw updError
+
+      toast.success('Pagamento ao terceiro registado!')
+      fetchAll()
+    } catch (err: any) {
+      toast.error('Erro ao registar pagamento: ' + (err.message || 'Erro'))
+    }
+  }
+
+  // Regista o pagamento de uma tranche de inscrição em torneio — espelha
+  // handlePayChargePayable acima. Declarado antes de pendingScheduledPayments
+  // (que o usa) para não referenciar um const ainda não inicializado.
+  const handlePayInstallment = async (tournamentId: string, index: number, amount: number, tournamentName: string) => {
+    try {
+      const tournament = tournaments.find(t => t.id === tournamentId)
+      const rf = tournament?.rules?.registration_fee
+      if (!tournament || !rf) return
+
+      // rf.category_id: categoria própria deste torneio, criada ao guardar o torneio
+      // (ver ensureRegistrationFeeCategory em AdminDashboard.tsx). O fallback pelo
+      // nome cobre só torneios guardados antes desta categoria por torneio existir.
+      const categoryId = rf.category_id || categories.find(c => c.name === 'Inscrições em Torneios')?.id || null
+      const { data: txData, error: txError } = await supabase.from('transactions').insert([{
+        type: 'expense',
+        amount,
+        description: `Inscrição ${tournamentName} — Tranche ${index + 1}`,
+        date: new Date().toISOString().split('T')[0],
+        category_id: categoryId,
+        tournament_id: tournamentId,
+        installment_index: index,
+        created_by: profile?.id || null,
+      }]).select().single()
+      if (txError) throw txError
+
+      const newInstallments = rf.installments.map((it: any, i: number) => i === index ? { ...it, paid: true, transaction_id: txData.id } : it)
+      const { error: updError } = await supabase.from('tournaments').update({
+        rules: { ...tournament.rules, registration_fee: { ...rf, installments: newInstallments } },
+      }).eq('id', tournamentId)
+      if (updError) throw updError
+
+      toast.success('Tranche paga — despesa registada!')
+      fetchAll()
+    } catch (err: any) {
+      toast.error('Erro ao pagar tranche: ' + (err.message || 'Erro'))
+    }
   }
 
   const openPayForm = (chargeId: string, playerId: string) => {
@@ -771,60 +903,79 @@ const FinancePage: React.FC = () => {
   }
 
   // -------------------------------------------------------------------------
-  // Inscrições em Torneios — tranches por pagar (definidas em tournaments.rules)
+  // Pagamentos Programados — despesas já certas mas ainda por pagar, de duas
+  // origens: tranches de inscrição em torneio (tournaments.rules) e o valor a
+  // pagar a terceiros de encargos-intermediário (charges.payable_amount, ex.:
+  // Seguro Desportivo → seguradora). Uma lista só — mesmo bloco em Despesas/
+  // Receitas e em Visão Geral, cada linha já traz a categoria e a ação de
+  // pagar prontas, para a UI não precisar de saber de onde veio.
   // -------------------------------------------------------------------------
-  const pendingInstallments = useMemo(() => {
-    const list: { tournamentId: string; tournamentName: string; index: number; amount: number; due_date: string }[] = []
+  const pendingScheduledPayments = useMemo(() => {
+    const list: ScheduledPayment[] = []
     for (const t of tournaments) {
       const rf = t.rules?.registration_fee
       if (!rf?.installments) continue
+      const categoryLabel = categories.find(c => c.id === rf.category_id)?.name || null
       rf.installments.forEach((inst: any, idx: number) => {
-        if (!inst.paid) list.push({ tournamentId: t.id, tournamentName: t.name, index: idx, amount: inst.amount, due_date: inst.due_date })
+        if (!inst.paid) {
+          list.push({
+            key: `tour-${t.id}-${idx}`,
+            title: `${t.name} — Tranche ${idx + 1}`,
+            categoryLabel,
+            amount: inst.amount,
+            due_date: inst.due_date || null,
+            source: 'tournament',
+            tournamentId: t.id,
+            tournamentName: t.name,
+            installmentIndex: idx,
+          })
+        }
       })
     }
+    for (const c of chargesWithStats) {
+      if (c.is_intermediary && c.payable_amount && !c.payable_paid) {
+        list.push({
+          key: `charge-${c.id}`,
+          title: c.title,
+          categoryLabel: c.categoryName,
+          amount: c.payable_amount,
+          due_date: c.payable_due_date || null,
+          source: 'charge',
+          chargeId: c.id,
+        })
+      }
+    }
     return list.sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
-  }, [tournaments])
+  }, [tournaments, chargesWithStats, categories])
 
-  // Total ainda por pagar em inscrições já agendadas — conta como despesa
-  // conhecida na previsão financeira mesmo antes de a tranche ser paga (ver
-  // "Saldo Previsto" em Visão Geral), e a parte em atraso serve de alerta.
-  const pendingRegistrationFeeTotal = pendingInstallments.reduce((s, i) => s + i.amount, 0)
-  const overdueInstallments = pendingInstallments.filter(i => i.due_date && new Date(i.due_date) < new Date())
-
-  const handlePayInstallment = async (tournamentId: string, index: number, amount: number, tournamentName: string) => {
-    try {
-      const tournament = tournaments.find(t => t.id === tournamentId)
-      const rf = tournament?.rules?.registration_fee
-      if (!tournament || !rf) return
-
-      // rf.category_id: categoria própria deste torneio, criada ao guardar o torneio
-      // (ver ensureRegistrationFeeCategory em AdminDashboard.tsx). O fallback pelo
-      // nome cobre só torneios guardados antes desta categoria por torneio existir.
-      const categoryId = rf.category_id || categories.find(c => c.name === 'Inscrições em Torneios')?.id || null
-      const { data: txData, error: txError } = await supabase.from('transactions').insert([{
-        type: 'expense',
-        amount,
-        description: `Inscrição ${tournamentName} — Tranche ${index + 1}`,
-        date: new Date().toISOString().split('T')[0],
-        category_id: categoryId,
-        tournament_id: tournamentId,
-        installment_index: index,
-        created_by: profile?.id || null,
-      }]).select().single()
-      if (txError) throw txError
-
-      const newInstallments = rf.installments.map((it: any, i: number) => i === index ? { ...it, paid: true, transaction_id: txData.id } : it)
-      const { error: updError } = await supabase.from('tournaments').update({
-        rules: { ...tournament.rules, registration_fee: { ...rf, installments: newInstallments } },
-      }).eq('id', tournamentId)
-      if (updError) throw updError
-
-      toast.success('Tranche paga — despesa registada!')
-      fetchAll()
-    } catch (err: any) {
-      toast.error('Erro ao pagar tranche: ' + (err.message || 'Erro'))
+  // Resolve a ação de pagar certa para uma linha de Pagamentos Programados —
+  // feito aqui (não dentro do useMemo acima) para este não precisar de
+  // depender de handlePayInstallment/handlePayChargePayable.
+  const handlePayScheduled = (p: ScheduledPayment) => {
+    if (p.source === 'tournament' && p.tournamentId && p.installmentIndex != null) {
+      handlePayInstallment(p.tournamentId, p.installmentIndex, p.amount, p.tournamentName || '')
+    } else if (p.source === 'charge' && p.chargeId) {
+      const charge = chargesWithStats.find(c => c.id === p.chargeId)
+      if (charge) handlePayChargePayable(charge)
     }
   }
+
+  // Total ainda por pagar em pagamentos já programados — conta como despesa
+  // conhecida na previsão financeira mesmo antes de ser paga (ver "Saldo
+  // Previsto" em Visão Geral), e a parte em atraso serve de alerta.
+  const pendingScheduledPaymentsTotal = pendingScheduledPayments.reduce((s, i) => s + i.amount, 0)
+  const overdueScheduledPayments = pendingScheduledPayments.filter(i => i.due_date && new Date(i.due_date) < new Date())
+
+  // Agrupados por categoria para a listagem em Despesas/Receitas.
+  const scheduledPaymentsByCategory = useMemo(() => {
+    const groups = new Map<string, ScheduledPayment[]>()
+    for (const p of pendingScheduledPayments) {
+      const key = p.categoryLabel || 'Sem categoria'
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(p)
+    }
+    return Array.from(groups.entries())
+  }, [pendingScheduledPayments])
 
   // -------------------------------------------------------------------------
   // Definições
@@ -905,16 +1056,48 @@ const FinancePage: React.FC = () => {
   const despesaPorCategoria = useMemo(() => agruparPorCategoria('expense', movements), [movements])
   const maxDespesa = Math.max(1, ...despesaPorCategoria.map(([, v]) => v))
 
+  // Categorias com uma obrigação de pagamento a terceiros (encargo-
+  // intermediário ou inscrição de torneio) — paga ou não, para a categoria não
+  // desaparecer do gráfico assim que fica saldada.
+  const payableCategoryLabels = useMemo(() => {
+    const set = new Set<string>()
+    for (const c of chargesWithStats) if (c.is_intermediary && c.categoryName) set.add(c.categoryName)
+    for (const t of tournaments) {
+      const rf = t.rules?.registration_fee
+      if (!rf) continue
+      const label = categories.find(cat => cat.id === rf.category_id)?.name
+      if (label) set.add(label)
+    }
+    return set
+  }, [chargesWithStats, tournaments, categories])
+
+  // Espelha receitaPorCategoria/despesaPorCategoria, mas para o lado do que o
+  // clube tem de pagar a terceiros: "pago" vem das despesas já lançadas nessa
+  // categoria (despesaPorCategoria — categorias destas são dedicadas, por
+  // isso a despesa nelas é essencialmente o pagamento ao terceiro); "por
+  // pagar" vem dos Pagamentos Programados ainda pendentes dessa categoria.
+  const pagarPorCategoria = useMemo(() => {
+    const porPagarMap = new Map<string, number>()
+    for (const p of pendingScheduledPayments) {
+      const key = p.categoryLabel || 'Sem categoria'
+      porPagarMap.set(key, (porPagarMap.get(key) || 0) + p.amount)
+    }
+    const pagoMap = new Map(despesaPorCategoria)
+    return Array.from(payableCategoryLabels)
+      .map(label => ({ label, pago: pagoMap.get(label) || 0, porPagar: porPagarMap.get(label) || 0 }))
+      .filter(r => r.pago > 0 || r.porPagar > 0)
+      .sort((a, b) => (b.pago + b.porPagar) - (a.pago + a.porPagar))
+  }, [payableCategoryLabels, pendingScheduledPayments, despesaPorCategoria])
+
   const projectedSeasonTotal = projectedQuotasTotal + totalChargesReceived + pendingChargesTotal
   const receivedTowardsProjection = totalQuotasReceived + totalChargesReceived
   const projectionPct = projectedSeasonTotal > 0 ? Math.min(100, Math.round((receivedTowardsProjection / projectedSeasonTotal) * 100)) : 0
 
   // Saldo previsto no fim da época: à previsão de receita (quotas + encargos)
-  // descontam-se as despesas já feitas e as que já se sabe que vêm aí — hoje
-  // só as inscrições em torneios agendadas mas ainda por pagar. Assim que se
-  // define o valor de uma inscrição isto desce logo, sem esperar que a
-  // tranche seja paga.
-  const projectedNetBalance = projectedSeasonTotal - totalExpenses - pendingRegistrationFeeTotal
+  // descontam-se as despesas já feitas e os Pagamentos Programados ainda por
+  // pagar (inscrições em torneio + encargos-intermediário). Assim que se
+  // define o valor, isto desce logo, sem esperar que seja pago.
+  const projectedNetBalance = projectedSeasonTotal - totalExpenses - pendingScheduledPaymentsTotal
 
   if (loading) {
     return (
@@ -980,33 +1163,34 @@ const FinancePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Alerta de pagamentos programados — inscrições em torneios já agendadas
-              (tournaments.rules.registration_fee) mas ainda por pagar. Fica logo no
+          {/* Alerta de Pagamentos Programados — despesas já certas mas ainda por
+              pagar (inscrições em torneio + encargos-intermediário). Fica logo no
               topo, antes da Previsão, para o admin ver ao abrir a página; a ação de
               pagar continua só em Despesas/Receitas. */}
-          {pendingInstallments.length > 0 && (
-            <div className={`bg-csc-dark text-white rounded-2xl shadow-sm border p-4 space-y-2.5 ${overdueInstallments.length > 0 ? 'border-red-400/40' : 'border-amber-400/30'}`}>
+          {pendingScheduledPayments.length > 0 && (
+            <div className={`bg-csc-dark text-white rounded-2xl shadow-sm border p-4 space-y-2.5 ${overdueScheduledPayments.length > 0 ? 'border-red-400/40' : 'border-amber-400/30'}`}>
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <h3 className="text-sm font-black text-white flex items-center gap-2">
-                  <Receipt size={16} className={overdueInstallments.length > 0 ? 'text-red-400' : 'text-amber-400'} />
-                  <span>Pagamentos Programados — Inscrições em Torneios</span>
+                  <Receipt size={16} className={overdueScheduledPayments.length > 0 ? 'text-red-400' : 'text-amber-400'} />
+                  <span>Pagamentos Programados</span>
                 </h3>
                 <button type="button" onClick={() => setActiveTab('expenses')} className="text-[11px] font-black text-csc-gold hover:brightness-110 cursor-pointer">
                   Ver e registar pagamento →
                 </button>
               </div>
               <p className="text-xs text-white/70">
-                <span className="font-black text-white">{pendingInstallments.length}</span> tranche{pendingInstallments.length === 1 ? '' : 's'} por pagar · <span className="font-black text-white">{fmtEuro(pendingRegistrationFeeTotal)}</span>
-                {overdueInstallments.length > 0 && (
-                  <span className="ml-2 text-red-300 font-black">{overdueInstallments.length} em atraso</span>
+                <span className="font-black text-white">{pendingScheduledPayments.length}</span> por pagar · <span className="font-black text-white">{fmtEuro(pendingScheduledPaymentsTotal)}</span>
+                {overdueScheduledPayments.length > 0 && (
+                  <span className="ml-2 text-red-300 font-black">{overdueScheduledPayments.length} em atraso</span>
                 )}
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {pendingInstallments.map(inst => {
-                  const isOverdue = inst.due_date ? new Date(inst.due_date) < new Date() : false
+                {pendingScheduledPayments.map(p => {
+                  const isOverdue = p.due_date ? new Date(p.due_date) < new Date() : false
                   return (
-                    <span key={`${inst.tournamentId}-${inst.index}`} className={`text-[11px] font-bold px-2 py-1 rounded-full border ${isOverdue ? 'bg-red-500/15 text-red-200 border-red-400/30' : 'bg-amber-500/15 text-amber-200 border-amber-400/30'}`}>
-                      {inst.tournamentName} · T{inst.index + 1} · {fmtEuro(inst.amount)}{inst.due_date ? ` · ${new Date(inst.due_date).toLocaleDateString('pt-PT')}` : ''}
+                    <span key={p.key} className={`text-[11px] font-bold px-2 py-1 rounded-full border ${isOverdue ? 'bg-red-500/15 text-red-200 border-red-400/30' : 'bg-amber-500/15 text-amber-200 border-amber-400/30'}`}>
+                      {p.categoryLabel && <span className="opacity-70">{p.categoryLabel} · </span>}
+                      {p.title} · {fmtEuro(p.amount)}{p.due_date ? ` · ${new Date(p.due_date).toLocaleDateString('pt-PT')}` : ''}
                     </span>
                   )
                 })}
@@ -1023,7 +1207,7 @@ const FinancePage: React.FC = () => {
                 <span>Previsão da Época {seasonLabel}</span>
               </h3>
               <p className="text-xs text-white/60">
-                Considerando as quotas e encargos por receber, e as inscrições em torneios já agendadas mas ainda por pagar.
+                Considerando as quotas e encargos por receber, e os Pagamentos Programados já agendados mas ainda por pagar.
               </p>
               <div className="flex items-end justify-between">
                 <div>
@@ -1049,8 +1233,8 @@ const FinancePage: React.FC = () => {
                   <span className="font-bold text-white">{fmtEuro(pendingChargesTotal)}</span>
                 </div>
                 <div>
-                  <span className="text-white/60">Inscrições por pagar: </span>
-                  <span className="font-bold text-red-300">{fmtEuro(pendingRegistrationFeeTotal)}</span>
+                  <span className="text-white/60">Encargos a pagar: </span>
+                  <span className="font-bold text-red-300">{fmtEuro(pendingScheduledPaymentsTotal)}</span>
                 </div>
               </div>
               {/* Saldo previsto: receita prevista menos despesas já feitas e por pagar —
@@ -1161,6 +1345,38 @@ const FinancePage: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Gráfico: Valor a Pagar por Categoria — espelha o "Valor Recebido por
+              Categoria" acima, mas para o que o clube tem de pagar a terceiros
+              (encargos-intermediário + inscrições em torneio): pago vs por pagar,
+              por categoria, para o saldo de cada uma se ver a tender a zero. */}
+          {pagarPorCategoria.length > 0 && (
+            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
+              <h3 className="text-sm font-black text-white">Valor a Pagar por Categoria</h3>
+              <div className="space-y-3">
+                {pagarPorCategoria.map(r => {
+                  const total = r.pago + r.porPagar
+                  const pagoPct = total > 0 ? Math.round((r.pago / total) * 100) : 0
+                  return (
+                    <div key={r.label}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-bold text-white/80">{r.label}</span>
+                        <span className="font-black text-white">{fmtEuro(r.pago)} / {fmtEuro(total)}</span>
+                      </div>
+                      <div className="h-2.5 rounded-full bg-white/10 overflow-hidden flex">
+                        <div className="h-full bg-emerald-500" style={{ width: `${pagoPct}%` }} />
+                        <div className="h-full bg-amber-400" style={{ width: `${100 - pagoPct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5 text-white/70"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Pago</span>
+                <span className="flex items-center gap-1.5 text-white/70"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Por pagar</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1474,6 +1690,60 @@ const FinancePage: React.FC = () => {
             <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="encargo-prazo">Prazo (opcional)</label>
             <input id="encargo-prazo" type="date" value={newChargeDueDate} onChange={e => setNewChargeDueDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none" />
           </div>
+
+          {/* Encargo-intermediário: o clube recebe isto dos jogadores mas tem de
+              repassar a um terceiro (ex.: Seguro Desportivo → seguradora). Uma vez
+              pago ao terceiro, fica bloqueado — tal como as tranches de inscrição
+              em torneio já pagas. */}
+          {(() => {
+            const editingCharge = editingChargeId ? chargesWithStats.find(c => c.id === editingChargeId) : undefined
+            const payableLocked = !!editingCharge?.payable_paid
+            return (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2.5">
+                <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newChargeIsIntermediary}
+                    disabled={payableLocked}
+                    onChange={e => handleToggleChargeIntermediary(e.target.checked)}
+                    className="w-4 h-4 text-csc-dark rounded"
+                  />
+                  O clube funciona como intermediário (recebe dos jogadores e depois paga a um terceiro)
+                </label>
+                {newChargeIsIntermediary && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-600 mb-1" htmlFor="encargo-payable-valor">Valor a pagar ao terceiro (€) *</label>
+                      <input
+                        id="encargo-payable-valor" type="number" step="0.01"
+                        value={newChargePayableAmount}
+                        disabled={payableLocked}
+                        onChange={e => setNewChargePayableAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-600 mb-1" htmlFor="encargo-payable-prazo">Prazo de pagamento</label>
+                      <input
+                        id="encargo-payable-prazo" type="date"
+                        value={newChargePayableDueDate}
+                        disabled={payableLocked}
+                        onChange={e => setNewChargePayableDueDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none disabled:bg-gray-100"
+                      />
+                    </div>
+                    <p className="col-span-2 text-[10px] text-gray-500">
+                      {payableLocked
+                        ? 'Já pago ao terceiro.'
+                        : 'Entra logo em Pagamentos Programados e na Previsão da Época, mesmo antes de ser pago.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
           <div>
             <div className="flex items-center justify-between gap-2 mb-1">
               <span className="block text-xs font-bold text-gray-600">Jogadores participantes * ({newChargePlayerIds.size})</span>
@@ -1576,25 +1846,32 @@ const FinancePage: React.FC = () => {
             </div>
           </div>
 
-          {pendingInstallments.length > 0 && (
+          {pendingScheduledPayments.length > 0 && (
             <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-amber-400/30 p-4">
-              <h3 className="text-sm font-black text-white mb-3">Tranches de Inscrição em Torneios por Pagar</h3>
-              <div className="space-y-2">
-                {pendingInstallments.map(inst => (
-                  <div key={`${inst.tournamentId}-${inst.index}`} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-400/20">
-                    <div className="min-w-0">
-                      <p className="font-bold text-white text-sm truncate">{inst.tournamentName} — Tranche {inst.index + 1}</p>
-                      {inst.due_date && <p className="text-[10px] text-white/60">Prazo: {new Date(inst.due_date).toLocaleDateString('pt-PT')}</p>}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-black text-sm text-amber-300">{fmtEuro(inst.amount)}</span>
-                      <button
-                        type="button"
-                        onClick={() => handlePayInstallment(inst.tournamentId, inst.index, inst.amount, inst.tournamentName)}
-                        className="px-3 py-1.5 bg-csc-gold text-csc-dark rounded-lg text-[11px] font-black hover:brightness-95 transition-all cursor-pointer"
-                      >
-                        Registar Pagamento
-                      </button>
+              <h3 className="text-sm font-black text-white mb-3">Pagamentos Programados</h3>
+              <div className="space-y-4">
+                {scheduledPaymentsByCategory.map(([label, items]) => (
+                  <div key={label}>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-white/50 mb-1.5">{label}</p>
+                    <div className="space-y-2">
+                      {items.map(p => (
+                        <div key={p.key} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-400/20">
+                          <div className="min-w-0">
+                            <p className="font-bold text-white text-sm truncate">{p.title}</p>
+                            {p.due_date && <p className="text-[10px] text-white/60">Prazo: {new Date(p.due_date).toLocaleDateString('pt-PT')}</p>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-black text-sm text-amber-300">{fmtEuro(p.amount)}</span>
+                            <button
+                              type="button"
+                              onClick={() => handlePayScheduled(p)}
+                              className="px-3 py-1.5 bg-csc-gold text-csc-dark rounded-lg text-[11px] font-black hover:brightness-95 transition-all cursor-pointer"
+                            >
+                              Registar Pagamento
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}

@@ -324,9 +324,19 @@ CREATE TABLE IF NOT EXISTS public.charges (
     amount NUMERIC(10,2) NOT NULL CHECK (amount > 0),
     due_date DATE,
     created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    -- Encargos-intermediário (ver supabase_charges_intermediary_migration.sql):
+    -- o clube recebe isto dos jogadores mas tem de repassar a um terceiro
+    -- (ex.: Seguro Desportivo → seguradora). Um único valor + prazo, não um
+    -- plano de tranches como o das inscrições em torneio.
+    is_intermediary BOOLEAN NOT NULL DEFAULT false,
+    payable_amount NUMERIC(10,2),
+    payable_due_date DATE,
+    payable_paid BOOLEAN NOT NULL DEFAULT false,
+    payable_transaction_id UUID REFERENCES public.transactions(id) ON DELETE SET NULL
 );
 ALTER TABLE public.charges ENABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_charges_payable_pending ON public.charges (payable_due_date) WHERE is_intermediary AND NOT payable_paid;
 
 CREATE TABLE IF NOT EXISTS public.charge_players (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
