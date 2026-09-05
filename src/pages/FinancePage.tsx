@@ -377,26 +377,18 @@ const FinancePage: React.FC = () => {
     const paidByPlayer = new Map<string, number>()
     for (const p of payments) paidByPlayer.set(p.player_id, (paidByPlayer.get(p.player_id) || 0) + p.amount)
     // Por participante, não pelo total do encargo: quem paga a mais não pode
-    // "tapar" o que falta aos outros. Ex.: encargo de 25€ com 28 participantes
-    // (700€ no total) em que só um pagou 30€ — o valor em falta é 27 × 25€ =
-    // 675€ (e não 700-30 = 670€, que deixaria o excedente do primeiro a
-    // reduzir artificialmente o que os restantes ainda devem).
-    let pendingAmount = 0
+    // "tapar" o que falta aos outros (só relevante para o excedente aqui — o
+    // objetivo/remanescente por cobrar já vive nos cards de categoria, que
+    // tratam a Previsão da Época como fotografia, sem descontar pagamentos).
     let surplusAmount = 0
     for (const pid of participantIds) {
       const paid = paidByPlayer.get(pid) || 0
-      if (paid < c.amount) pendingAmount += c.amount - paid
-      else if (paid > c.amount) surplusAmount += paid - c.amount
+      if (paid > c.amount) surplusAmount += paid - c.amount
     }
     const pendingCount = participantIds.filter(pid => (paidByPlayer.get(pid) || 0) < c.amount).length
     const category = categories.find(cat => cat.id === c.category_id)
-    return { ...c, participantIds, payments, totalExpected, totalPaid, pendingAmount, surplusAmount, pendingCount, categoryName: category?.name || null }
+    return { ...c, participantIds, payments, totalExpected, totalPaid, surplusAmount, pendingCount, categoryName: category?.name || null }
   }), [charges, chargePlayers, chargePayments, categories])
-
-  // Soma o que falta receber pela dívida real de cada participante (ver nota
-  // acima) — não pelo total bruto do encargo, para o excedente de alguém não
-  // reduzir o que os outros ainda devem.
-  const pendingChargesTotal = chargesWithStats.reduce((s, c) => s + c.pendingAmount, 0)
 
   const [expandedChargeId, setExpandedChargeId] = useState<string | null>(null)
   const [isNewChargeModalOpen, setIsNewChargeModalOpen] = useState(false)
@@ -1011,9 +1003,7 @@ const FinancePage: React.FC = () => {
   // Dashboard: receita por categoria + previsão da época
   // -------------------------------------------------------------------------
   // Todo o dinheiro já recebido ou gasto sai do mesmo facto — a vista de
-  // movimentos — para não haver duas contas do mesmo número a divergir. Só o
-  // que ainda está por receber (pendingChargesTotal) vem do detalhe dos
-  // encargos, porque um valor em falta não é um movimento.
+  // movimentos — para não haver duas contas do mesmo número a divergir.
   const somaMovimentos = (filtro: (m: MovementRow) => boolean) =>
     movements.filter(filtro).reduce((s, m) => s + Number(m.amount), 0)
 
@@ -1089,15 +1079,38 @@ const FinancePage: React.FC = () => {
       .sort((a, b) => (b.pago + b.porPagar) - (a.pago + a.porPagar))
   }, [payableCategoryLabels, pendingScheduledPayments, despesaPorCategoria])
 
-  const projectedSeasonTotal = projectedQuotasTotal + totalChargesReceived + pendingChargesTotal
+  // Previsão da Época é uma FOTOGRAFIA do plano — os totais não descem à
+  // medida que se recebe/paga, só mudam se o plano em si mudar (criar/editar
+  // um encargo, mudar quotas, agendar ou alterar um pagamento). O progresso
+  // dinâmico (recebido/pago vs objetivo, excedentes) já vive nos outros
+  // cards — Valor Recebido/a Pagar por Categoria, e os separadores Encargos
+  // e Despesas/Receitas — de propósito, para não se misturar aqui.
+  const totalEncargosTarget = chargesWithStats.reduce((s, c) => s + c.totalExpected, 0)
+  const totalScheduledPaymentsTarget = useMemo(() => {
+    let total = 0
+    for (const t of tournaments) {
+      const rf = t.rules?.registration_fee
+      if (rf?.installments) total += rf.installments.reduce((s: number, inst: any) => s + inst.amount, 0)
+    }
+    for (const c of chargesWithStats) {
+      if (c.is_intermediary && c.payable_amount) total += c.payable_amount
+    }
+    return total
+  }, [tournaments, chargesWithStats])
+
+  const projectedSeasonTotal = projectedQuotasTotal + totalEncargosTarget
   const receivedTowardsProjection = totalQuotasReceived + totalChargesReceived
   const projectionPct = projectedSeasonTotal > 0 ? Math.min(100, Math.round((receivedTowardsProjection / projectedSeasonTotal) * 100)) : 0
 
-  // Saldo previsto no fim da época: à previsão de receita (quotas + encargos)
-  // descontam-se as despesas já feitas e os Pagamentos Programados ainda por
-  // pagar (inscrições em torneio + encargos-intermediário). Assim que se
-  // define o valor, isto desce logo, sem esperar que seja pago.
-  const projectedNetBalance = projectedSeasonTotal - totalExpenses - pendingScheduledPaymentsTotal
+  // Saldo previsto no fim da época: plano de receita menos plano de despesa,
+  // ambos fixos — mais as despesas reais que não fazem parte de um
+  // Pagamento Programado (ex.: compra avulsa de material). totalExpenses já
+  // inclui o que entretanto se pagou de Pagamentos Programados, por isso
+  // subtrai-se aqui essa parte para não descontar o mesmo valor duas vezes
+  // (uma pelo total fixo, outra pela despesa real já lançada).
+  const scheduledPaymentsAlreadyPaid = totalScheduledPaymentsTarget - pendingScheduledPaymentsTotal
+  const otherActualExpenses = totalExpenses - scheduledPaymentsAlreadyPaid
+  const projectedNetBalance = projectedSeasonTotal - totalScheduledPaymentsTarget - otherActualExpenses
 
   if (loading) {
     return (
@@ -1207,7 +1220,7 @@ const FinancePage: React.FC = () => {
                 <span>Previsão da Época {seasonLabel}</span>
               </h3>
               <p className="text-xs text-white/60">
-                Considerando as quotas e encargos por receber, e os Pagamentos Programados já agendados mas ainda por pagar.
+                Fotografia do plano da época — quotas, encargos e Pagamentos Programados pelo valor total, sem descontar o que entretanto já foi recebido ou pago.
               </p>
               <div className="flex items-end justify-between">
                 <div>
@@ -1229,16 +1242,14 @@ const FinancePage: React.FC = () => {
                   <span className="font-bold text-white">{fmtEuro(projectedQuotasTotal)}</span>
                 </div>
                 <div>
-                  <span className="text-white/60">Encargos por receber: </span>
-                  <span className="font-bold text-white">{fmtEuro(pendingChargesTotal)}</span>
+                  <span className="text-white/60">Encargos previstos: </span>
+                  <span className="font-bold text-white">{fmtEuro(totalEncargosTarget)}</span>
                 </div>
                 <div>
-                  <span className="text-white/60">Encargos a pagar: </span>
-                  <span className="font-bold text-red-300">{fmtEuro(pendingScheduledPaymentsTotal)}</span>
+                  <span className="text-white/60">Pagamentos previstos: </span>
+                  <span className="font-bold text-red-300">{fmtEuro(totalScheduledPaymentsTarget)}</span>
                 </div>
               </div>
-              {/* Saldo previsto: receita prevista menos despesas já feitas e por pagar —
-                  desce assim que se agenda uma inscrição, mesmo antes de ser paga. */}
               <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-white/70">Saldo Previsto no Fim da Época</span>
                 <span className={`text-lg font-black ${projectedNetBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtEuro(projectedNetBalance)}</span>
