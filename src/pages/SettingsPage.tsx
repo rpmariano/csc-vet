@@ -11,16 +11,35 @@ import {
   Check,
   AlertCircle,
   Lock,
-  LogOut
+  LogOut,
+  ChevronLeft
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
+import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 
+/** Campo branco de 44px do handoff (ecrã 5b). */
+const CAMPO =
+  'w-full h-11 px-3 rounded-[13px] bg-white text-csc-tinta font-display font-bold text-xs ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold'
+
+/** Etiqueta pequena, em maiúsculas, por cima do campo. */
+const ETIQUETA =
+  'block font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-1'
+
+/** Cabeçalho numerado de secção ("1 · IDENTIFICAÇÃO…"). */
+const SECCAO =
+  'font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 ' +
+  'flex items-center gap-2 mb-2.5'
+
 const SettingsPage: React.FC = () => {
   const { profile, assignedRoles, actualRole, setSimulatedRole, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
+  const { clubSettings } = useClub()
+  const navegar = useNavigate()
   
   // 1. Identificação Pessoal & Fiscal
   const [formName, setFormName] = useState('')
@@ -206,63 +225,88 @@ const SettingsPage: React.FC = () => {
   const isInactive = profile?.status === 'inactive'
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+    <div className="space-y-4 pb-2">
       
-      {/* CABEÇALHO DA FICHA DE MEMBRO */}
-      <div className="bg-csc-dark text-white rounded-3xl p-6 sm:p-7 border border-white/10 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      {/* Voltar: o Perfil abre-se da fotografia de qualquer ecrã, e o caminho
+          de volta é sempre para trás — não para um destino fixo. */}
+      <button
+        type="button"
+        onClick={() => navegar(-1)}
+        className="flex items-center gap-3 min-h-11 -ml-1 pr-3 cursor-pointer
+          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+      >
+        <span className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white flex-none">
+          <ChevronLeft size={18} />
+        </span>
+        <span className="font-display font-bold text-xs text-white/60">Voltar</span>
+      </button>
+
+      {/* Quem sou eu, em grande. */}
+      <div className="flex items-center gap-4 pt-1">
+        <span
+          className="relative w-[74px] h-[74px] rounded-full border-[2.5px] border-csc-gold/55 flex items-center justify-center
+            font-display font-extrabold text-[22px] text-csc-gold flex-none"
+          style={{ background: photoUrl ? undefined : 'linear-gradient(140deg,#3a4143,#1b1f20)' }}
+        >
           {photoUrl ? (
-            <img src={photoUrl} alt="Avatar" className="w-16 h-16 rounded-2xl object-cover border-2 border-csc-gold shadow-sm" />
+            <img src={photoUrl} alt="" className="w-full h-full rounded-full object-cover" />
           ) : (
-            <div className="w-16 h-16 rounded-2xl bg-csc-dark text-csc-gold flex items-center justify-center font-black text-2xl shadow-sm">
-              {formName ? formName.charAt(0).toUpperCase() : 'U'}
-            </div>
+            <span>{formJerseyNumber || (formName ? formName.charAt(0).toUpperCase() : 'U')}</span>
           )}
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-white leading-tight">
-                {formName || 'O Meu Perfil'}
-              </h1>
-              {formJerseyNumber && (
-                <span className="bg-csc-dark text-csc-gold font-black text-xs px-2 py-0.5 rounded-lg shadow-2xs">
-                  #{formJerseyNumber}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-white/70 mt-0.5">
-              Ficha cadastral de atleta • Grupo Dramático e Sportivo de Cascais
-            </p>
-          </div>
-        </div>
-
-        {/* ESTADO DE ATIVIDADE & TOGGLE CLÍNICO */}
-        <div className="flex items-center flex-wrap gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
-          {/* Badge de Atividade (Apenas Leitura para o Jogador) */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10" title="O estado de filiação/atividade é gerido pela direção do clube">
-            <span className="text-[11px] font-bold text-white/70">Atividade:</span>
-            <span className={`text-xs font-black px-2 py-0.5 rounded-md ${
-              isInactive ? 'bg-gray-300 text-gray-800' : 'bg-emerald-100 text-emerald-800'
-            }`}>
-              {isInactive ? '⚪ Inativo' : '🟢 Ativo'}
-            </span>
-          </div>
-
-          {/* Toggle Clínico: Apto / Lesionado */}
-          <button
-            type="button"
-            onClick={() => toggleClinicalStatus()}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-xs cursor-pointer border active:scale-95 ${
-              isInjured
-                ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
-                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-150'
-            }`}
-            title="Clique para alternar o seu estado físico entre Apto e Lesionado"
-          >
-            <span>{isInjured ? '🔴' : '🟢'}</span>
-            <span>{isInjured ? 'Lesionado' : 'Apto'}</span>
-          </button>
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="font-display font-black text-[26px] leading-[1.05] text-white tracking-[-0.02em] truncate">
+            {profile?.nickname?.trim() || formShirtName?.trim() || formName?.split(' ')[0] || 'O meu perfil'}
+          </p>
+          <p className="text-[11px] text-white/50 mt-1 truncate">{formName}</p>
+          <p className="text-[10px] leading-snug text-white/40 mt-1">
+            Ficha cadastral de atleta · {clubSettings?.initials ?? 'GDS Cascais'}
+          </p>
         </div>
       </div>
+
+      {/* Atividade e estado físico: um é da direção, o outro é do próprio. */}
+      <div className="flex gap-2.5">
+        <div className="cartao-simples flex-1 flex items-center gap-2.5 px-3.5 py-3">
+          <span className="flex-1 min-w-0">
+            <span className="block font-display font-bold text-[8.5px] tracking-[0.12em] uppercase text-white/50">
+              Atividade
+            </span>
+            <span className="block font-display font-extrabold text-[12.5px] text-white mt-1.5">
+              {isInactive ? 'Inativo' : 'Ativo'}
+            </span>
+          </span>
+          <Lock size={13} className="text-white/30 shrink-0" />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => toggleClinicalStatus()}
+          aria-pressed={isInjured}
+          className={`flex-1 flex flex-col items-start gap-1.5 px-3.5 py-3 rounded-[18px] border text-left cursor-pointer
+            transition-transform duration-150 active:scale-97
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+              isInjured
+                ? 'bg-csc-red/14 border-csc-red/35'
+                : 'bg-csc-light/14 border-csc-light/35'
+            }`}
+        >
+          <span
+            className={`font-display font-bold text-[8.5px] tracking-[0.12em] uppercase ${
+              isInjured ? 'text-csc-vermelho-texto' : 'text-csc-verde-texto'
+            }`}
+          >
+            Estado físico
+          </span>
+          <span className="font-display font-extrabold text-[12.5px] text-white">
+            {isInjured ? 'Lesionado' : 'Apto'}
+          </span>
+        </button>
+      </div>
+
+      <p className="text-[10px] leading-snug text-white/40 px-1 -mt-1">
+        A atividade é gerida pela direção. O estado físico alternas tu, entre apto e lesionado.
+      </p>
 
       {/*
         Alternar entre os perfis atribuídos. Vivia na pílula de cargo do
@@ -306,15 +350,15 @@ const SettingsPage: React.FC = () => {
       )}
 
       {saveSuccess && (
-        <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl border-2 border-emerald-300 text-xs font-bold flex items-center gap-2 shadow-xs animate-fade-in">
-          <Check size={18} className="text-emerald-600 shrink-0" />
+        <div className="cartao-simples bg-csc-light/12 border-csc-light/30 p-4 text-[11px] font-bold text-white flex items-center gap-2 animate-fade-in">
+          <Check size={16} className="text-csc-verde-texto shrink-0" />
           <span>Ficha de membro atualizada com sucesso na base de dados!</span>
         </div>
       )}
 
       {saveError && (
-        <div className="bg-red-50 text-red-800 p-4 rounded-2xl border-2 border-red-300 text-xs font-bold flex items-center gap-2 shadow-xs">
-          <AlertCircle size={18} className="text-red-600 shrink-0" />
+        <div className="cartao-simples bg-csc-red/12 border-csc-red/30 p-4 text-[11px] font-bold text-csc-vermelho-suave flex items-center gap-2">
+          <AlertCircle size={16} className="text-csc-vermelho-texto shrink-0" />
           <span>{saveError}</span>
         </div>
       )}
@@ -322,127 +366,127 @@ const SettingsPage: React.FC = () => {
       <form onSubmit={handleSave} className="space-y-6">
         
         {/* 1. DADOS PESSOAIS & IDENTIFICAÇÃO FISCAL */}
-        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+        <div className="space-y-3.5">
+          <h3 className={SECCAO}>
             <UserIcon size={16} className="text-csc-gold" />
             <span>1. Identificação Pessoal & Fiscal</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Nome Completo *</label>
+              <label className={ETIQUETA}>Nome Completo *</label>
               <input
                 type="text"
                 required
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                className={CAMPO}
                 placeholder="Ex: André Gomes Marques do Couto"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Nome na Camisola / Alcunha</label>
+              <label className={ETIQUETA}>Nome na Camisola / Alcunha</label>
               <input
                 type="text"
                 value={formShirtName}
                 onChange={(e) => setFormShirtName(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                className={CAMPO}
                 placeholder="Ex: A. COUTO"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Data de Nascimento</label>
+              <label className={ETIQUETA}>Data de Nascimento</label>
               <input
                 type="date"
                 value={formBirthDate}
                 onChange={(e) => setFormBirthDate(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                className={CAMPO}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Nacionalidade</label>
+              <label className={ETIQUETA}>Nacionalidade</label>
               <input
                 type="text"
                 value={formNationality}
                 onChange={(e) => setFormNationality(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                className={CAMPO}
                 placeholder="Portuguesa"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Nº de Contribuinte (NIF)</label>
+              <label className={ETIQUETA}>Nº de Contribuinte (NIF)</label>
               <input
                 type="text"
                 value={formNif}
                 onChange={(e) => setFormNif(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
+                className={`${CAMPO} font-mono`}
                 placeholder="000 000 000"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Nº Cartão de Cidadão / Passaporte</label>
+              <label className={ETIQUETA}>Nº Cartão de Cidadão / Passaporte</label>
               <input
                 type="text"
                 value={formIdNumber}
                 onChange={(e) => setFormIdNumber(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
+                className={`${CAMPO} font-mono`}
                 placeholder="00000000"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Validade do Cartão de Cidadão</label>
+              <label className={ETIQUETA}>Validade do Cartão de Cidadão</label>
               <input
                 type="date"
                 value={formIdCardExpiry}
                 onChange={(e) => setFormIdCardExpiry(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                className={CAMPO}
               />
             </div>
           </div>
         </div>
 
         {/* 2. MORADA & RESIDÊNCIA */}
-        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+        <div className="space-y-3.5">
+          <h3 className={SECCAO}>
             <FileText size={16} className="text-csc-gold" />
             <span>2. Morada & Residência</span>
           </h3>
 
           <div>
-            <label className="block text-xs font-bold text-white/70 mb-1">Morada (Rua, Nº e Andar)</label>
+            <label className={ETIQUETA}>Morada (Rua, Nº e Andar)</label>
             <input
               type="text"
               value={formAddress}
               onChange={(e) => setFormAddress(e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+              className={CAMPO}
               placeholder="Rua e número da morada"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Código Postal</label>
+              <label className={ETIQUETA}>Código Postal</label>
               <input
                 type="text"
                 value={formPostalCode}
                 onChange={(e) => setFormPostalCode(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
+                className={`${CAMPO} font-mono`}
                 placeholder="0000-000"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Localidade</label>
+              <label className={ETIQUETA}>Localidade</label>
               <input
                 type="text"
                 value={formCity}
                 onChange={(e) => setFormCity(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                className={CAMPO}
                 placeholder="Cascais / Alcabideche"
               />
             </div>
@@ -450,27 +494,27 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* 3. CONTACTOS */}
-        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+        <div className="space-y-3.5">
+          <h3 className={SECCAO}>
             <Phone size={16} className="text-csc-gold" />
             <span>3. Contactos</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Email de Acesso (Apenas Leitura)</label>
+              <label className={ETIQUETA}>Email de Acesso (Apenas Leitura)</label>
               <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white/70 font-medium font-mono">
                 <Mail size={15} className="mr-2 text-white/60" />
                 <span>{formEmail}</span>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Telemóvel</label>
+              <label className={ETIQUETA}>Telemóvel</label>
               <input
                 type="tel"
                 value={formPhone}
                 onChange={(e) => setFormPhone(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
+                className={`${CAMPO} font-mono`}
                 placeholder="912 345 678"
               />
             </div>
@@ -540,13 +584,13 @@ const SettingsPage: React.FC = () => {
           {/* Camisola e Equipamento (Read-only) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-3 border-t border-amber-400/20">
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Nº da Camisola (Dorsal)</label>
+              <label className={ETIQUETA}>Nº da Camisola (Dorsal)</label>
               <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
                 {formJerseyNumber ? `#${formJerseyNumber}` : 'Não atribuído'}
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Tamanho de Equipamento</label>
+              <label className={ETIQUETA}>Tamanho de Equipamento</label>
               <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
                 {formKitSize || 'L'}
               </div>
@@ -555,30 +599,30 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* 5. DADOS BANCÁRIOS & QUOTAS */}
-        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+        <div className="space-y-3.5">
+          <h3 className={SECCAO}>
             <Shield size={16} className="text-csc-gold" />
             <span>5. Dados Bancários & Quotas</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">IBAN (Débito Direto / Quotas)</label>
+              <label className={ETIQUETA}>IBAN (Débito Direto / Quotas)</label>
               <input
                 type="text"
                 value={formIban}
                 onChange={(e) => setFormIban(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
+                className={`${CAMPO} font-mono`}
                 placeholder="PT50 0000 0000 0000 0000 0"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Nº de Sócio do Clube</label>
+              <label className={ETIQUETA}>Nº de Sócio do Clube</label>
               <input
                 type="text"
                 value={formMemberNumber}
                 onChange={(e) => setFormMemberNumber(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
+                className={`${CAMPO} font-mono`}
                 placeholder="Ex: 1420"
               />
             </div>
@@ -586,55 +630,55 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* 6. SAÚDE & CONTACTO DE EMERGÊNCIA */}
-        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+        <div className="space-y-3.5">
+          <h3 className={SECCAO}>
             <HeartPulse size={16} className="text-red-600" />
             <span>6. Saúde & Contacto de Emergência</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Contacto de Emergência (Nome / Relação)</label>
+              <label className={ETIQUETA}>Contacto de Emergência (Nome / Relação)</label>
               <input
                 type="text"
                 value={formEmergencyName}
                 onChange={(e) => setFormEmergencyName(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                className={CAMPO}
                 placeholder="Ex: Maria (Esposa)"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-white/70 mb-1">Telefone de Emergência</label>
+              <label className={ETIQUETA}>Telefone de Emergência</label>
               <input
                 type="tel"
                 value={formEmergencyPhone}
                 onChange={(e) => setFormEmergencyPhone(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium font-mono text-gray-900"
+                className={`${CAMPO} font-mono`}
                 placeholder="960 000 000"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-white/70 mb-1">Notas Médicas / Alergias / Grupo Sanguíneo</label>
+            <label className={ETIQUETA}>Notas Médicas / Alergias / Grupo Sanguíneo</label>
             <textarea
               value={formMedicalNotes}
               onChange={(e) => setFormMedicalNotes(e.target.value)}
               rows={2}
-              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+              className={CAMPO}
               placeholder="Ex: Alergia a anti-inflamatórios, Tipo O+, histórico de lesão no joelho direito..."
             />
           </div>
         </div>
 
         {/* 7. UPLOAD DE DOCUMENTOS & RGPD */}
-        <div className="bg-csc-dark text-white p-5 sm:p-6 rounded-3xl border border-white/10 shadow-xs space-y-4">
-          <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+        <div className="space-y-3.5">
+          <h3 className={SECCAO}>
             <FileText size={16} className="text-csc-gold" />
             <span>7. Documentos & Proteção de Dados (RGPD)</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-2.5">
             {/* Foto de Perfil */}
             <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
               <label className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
@@ -722,14 +766,14 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* BOTÃO SUBMIT */}
-        <div className="flex justify-end pt-2">
+        <div className="pt-1">
           <button
             type="submit"
             disabled={isSaving}
-            className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-csc-dark hover:bg-black text-white px-8 py-3 rounded-2xl font-black text-sm transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
+            className="w-full min-h-12 flex items-center justify-center gap-2 px-6 rounded-3xl bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px] cursor-pointer transition-transform duration-150 active:scale-97 disabled:opacity-45"
           >
-            <Save size={18} className="text-csc-gold" />
-            <span>{isSaving ? 'A guardar alterações...' : '💾 Guardar o Meu Perfil'}</span>
+            <Save size={16} />
+            <span>{isSaving ? 'A guardar…' : 'Guardar a minha ficha'}</span>
           </button>
         </div>
       </form>
