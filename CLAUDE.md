@@ -49,8 +49,14 @@ src/
 │   ├── useModalA11y     Escape, prisão de foco e pilha de diálogos empilhados
 │   └── useRealceDeslizante  o realce que corre por trás do item ativo ("minhoca")
 ├── pages/               uma página por rota
-├── lib/supabaseClient   cliente único
+├── lib/
+│   ├── supabaseClient   cliente único
+│   ├── finance          regra da época, quotas, encargos
+│   ├── clube            nome do clube por omissão (a verdade está em club_settings)
+│   └── rotas            endereços absolutos, com o `base` do Vite
 └── utils/haptics        vibração (navigator.vibrate)
+
+scripts/escurecer-tema.py   passa um ficheiro do tema claro para o escuro
 ```
 
 ### Papéis e autorização
@@ -126,6 +132,18 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   pastilhas, separadores e botões de linha.
 - O fim da coluna acaba acima da barra inferior com `margin-bottom`, nunca
   `padding-bottom`: com padding o último cartão fica por baixo da barra.
+- **Passar uma página ao tema escuro começa por `python scripts/escurecer-tema.py
+  <ficheiros>`**, que traduz o cinzento do tema claro (`text-gray-700` →
+  `text-white/80` e por aí, prefixos de variante incluídos) e conta os
+  `bg-white` opacos que sobram para se olhar um a um — esses exigem
+  julgamento: um painel de diálogo passa a `bg-csc-fundo`, o fundo de um
+  emblema fica branco.
+- **Um cartão que se clica não pode ser um `div` com `onClick`.** Se puder ser
+  `<button>`, é; quando tem um link dentro (o do Maps, por exemplo) e isso o
+  proíbe, leva `role="button"`, `tabIndex={0}`, um `onKeyDown` para Enter e
+  Espaço, e um `aria-label` que diga o que abre. É também o que dá aos testes
+  um seletor estável: procurar por `div.bg-csc-dark` partiu-se duas vezes num
+  dia, à segunda e à terceira vez que um cartão mudou de aspeto.
 - Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
 - **O plantel lê-se de `v_players_public`, não de `profiles`.** Tudo o que mostre
   colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a

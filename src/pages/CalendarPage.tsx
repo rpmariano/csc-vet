@@ -1351,8 +1351,24 @@ const CalendarPage: React.FC = () => {
     return (
       <div
         key={event.id}
+        role="button"
+        tabIndex={0}
         onClick={() => abrirEvento(event)}
-        className="cartao-vidro text-white overflow-hidden cursor-pointer flex flex-col justify-between transition-transform duration-150 active:scale-[0.99]"
+        onKeyDown={e => {
+          // O cartão era um `div` com `onClick`: quem navega por teclado não
+          // lhe chegava, e quem usa leitor de ecrã não ouvia que era clicável.
+          // O link do Maps lá dentro impede que seja um `<button>` a sério
+          // (interativo dentro de interativo), por isso fica o papel e o
+          // tratamento das teclas à mão.
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            abrirEvento(event)
+          }
+        }}
+        aria-label={`Ver ${isMatch ? 'jogo' : isPractice ? 'treino' : 'convívio'}: ${
+          isMatch && event.opponent ? `${cscSigla} contra ${oppSigla}` : event.title
+        }, ${new Date(event.date_time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })}`}
+        className="cartao-vidro text-white overflow-hidden cursor-pointer flex flex-col justify-between transition-transform duration-150 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
       >
         {/* Cabeçalho: tipo de evento por ícone + rótulo, não por cor de fundo */}
         <div className="px-5 pt-5 flex items-center justify-between gap-2">

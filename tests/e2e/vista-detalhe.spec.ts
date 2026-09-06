@@ -73,7 +73,7 @@ test.describe('Detalhe do evento', () => {
     await abrePagina(page, 'calendar', { events: [treino] })
 
     await expect(page).toHaveURL(/calendar$/)
-    await page.locator('div.cartao-vidro.cursor-pointer').first().click()
+    await page.getByRole('button', { name: /^Ver / }).first().click()
 
     await verificaDetalhe(page, 'Detalhe do evento', 'Campo de Teste', /\?event=e1$/)
 
