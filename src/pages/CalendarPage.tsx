@@ -52,6 +52,18 @@ const ROTULOS_ESTADO: Record<string, string> = {
   my_called: 'Fui convocado',
 }
 
+/**
+ * Campo branco dos formulários de evento (ecrã 2e) — 46px, como no handoff.
+ * É o mesmo desenho dos campos do Perfil, dois pixels mais alto porque aqui
+ * há menos campos por ecrã e mais dedo a preencher.
+ */
+const ETIQUETA_FORM =
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+
+const CAMPO_FORM =
+  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
+
 const ROTULOS_TIPO: Record<string, string> = {
   match: 'Jogos',
   practice: 'Treinos',
@@ -2455,7 +2467,7 @@ const CalendarPage: React.FC = () => {
               type="button"
               onClick={handleAttemptCloseEditModal}
               aria-label="Fechar"
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 z-20 cursor-pointer active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
@@ -2475,20 +2487,20 @@ const CalendarPage: React.FC = () => {
               <div className="lg:col-span-6 space-y-4">
                 {editType === 'gathering' && (
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Título do Convívio *</label>
+                    <label className={ETIQUETA_FORM}>Título do Convívio *</label>
                     <input
                       type="text"
                       required={editType === 'gathering'}
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                      className={CAMPO_FORM}
                       placeholder="Ex: Jantar de Natal / Reentré"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Tipo de Evento</label>
+                  <label className={ETIQUETA_FORM}>Tipo de Evento</label>
                   <div className="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-white rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
                     <span className="flex items-center gap-1.5">
                       <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
@@ -2510,7 +2522,7 @@ const CalendarPage: React.FC = () => {
                           setEditIsFriendly(e.target.checked)
                           if (e.target.checked) setEditTournamentId('')
                         }}
-                        className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
+                        className="h-4 w-4 accent-csc-gold rounded cursor-pointer"
                       />
                       <label htmlFor="editIsFriendly" className="ml-2 text-sm font-semibold text-white/80 cursor-pointer">
                         Jogo Amigável
@@ -2518,11 +2530,11 @@ const CalendarPage: React.FC = () => {
                     </div>
                     {!editIsFriendly && (
                       <div className="animate-fade-in">
-                        <label className="block text-xs font-semibold text-white/60 mb-1">Torneio / Competição</label>
+                        <label className={ETIQUETA_FORM}>Torneio / Competição</label>
                         <select
                           value={editTournamentId}
                           onChange={(e) => setEditTournamentId(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
+                          className={CAMPO_FORM}
                         >
                           <option value="">-- Selecionar Torneio --</option>
                           {tournaments.map(t => (
@@ -2536,7 +2548,7 @@ const CalendarPage: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div>
-                        <label className="block text-xs font-semibold text-white/60 mb-1">Adversário</label>
+                        <label className={ETIQUETA_FORM}>Adversário</label>
                         <select
                           value={editOpponentId}
                           onChange={(e) => {
@@ -2546,7 +2558,7 @@ const CalendarPage: React.FC = () => {
                               setEditOpponentId(e.target.value)
                             }
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
+                          className={CAMPO_FORM}
                         >
                           <option value="">-- Selecionar Adversário --</option>
                           <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
@@ -2557,11 +2569,11 @@ const CalendarPage: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-white/60 mb-1">Condição de Jogo</label>
+                        <label className={ETIQUETA_FORM}>Condição de Jogo</label>
                         <select
                           value={editHomeAway}
                           onChange={(e) => setEditHomeAway(e.target.value as any)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
+                          className={CAMPO_FORM}
                         >
                           <option value="home">🏠 Casa</option>
                           <option value="away">✈️ Fora</option>
@@ -2574,23 +2586,23 @@ const CalendarPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Data e Hora *</label>
+                    <label className={ETIQUETA_FORM}>Data e Hora *</label>
                     <input
                       type="datetime-local"
                       required
                       value={editDateTime}
                       onChange={(e) => setEditDateTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                      className={CAMPO_FORM}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Concentração (opcional)</label>
+                    <label className={ETIQUETA_FORM}>Concentração (opcional)</label>
                     <input
                       type="time"
                       value={editMeetingTime}
                       onChange={(e) => setEditMeetingTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO_FORM}
                       placeholder="Ex: 19:30"
                     />
                   </div>
@@ -2616,7 +2628,7 @@ const CalendarPage: React.FC = () => {
                         href={getGoogleMapsUrl(editLocation)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-black text-csc-dark bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-xl shadow-2xs shrink-0"
+                        className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
                         title="Ver no Google Maps"
                       >
                         <MapPin size={12} className="text-red-500" />
@@ -2653,7 +2665,7 @@ const CalendarPage: React.FC = () => {
                           }
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
+                      className={CAMPO_FORM}
                     >
                       <option value="">-- Escolher Campo / Instalação do Clube --</option>
                       <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
@@ -2667,12 +2679,12 @@ const CalendarPage: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Descrição / Notas</label>
+                  <label className={ETIQUETA_FORM}>Descrição / Notas</label>
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                    className={CAMPO_FORM}
                     placeholder="Observações ou notas do evento..."
                   />
                 </div>

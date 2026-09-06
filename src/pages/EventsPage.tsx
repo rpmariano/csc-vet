@@ -42,6 +42,14 @@ import { useModalA11y } from '../hooks/useModalA11y'
 import { VistaDetalhe } from '../components/VistaDetalhe'
 import { useSearchParams } from 'react-router-dom'
 
+/** Campo branco dos formulários de evento (ecrã 2e), o mesmo da Agenda. */
+const CAMPO_FORM =
+  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
+
+const ETIQUETA_FORM =
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
   const shirt = player.shirt_name?.trim()
@@ -1389,7 +1397,7 @@ const EventsPage: React.FC = () => {
         <button
           type="button"
           onClick={() => setViewModeTab('create')}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-csc-dark hover:bg-csc-dark/85 text-white rounded-2xl font-black text-sm shadow-md transition-all cursor-pointer active:scale-98 border-2 border-csc-gold/30"
+          className="w-full min-h-12 flex items-center justify-center gap-2 px-5 bg-csc-gold text-csc-tinta rounded-3xl font-display font-extrabold text-[12.5px] shadow-md transition-all cursor-pointer active:scale-98 border-2 border-csc-gold/30"
         >
           <Plus size={18} className="text-csc-gold" />
           <span>Novo Evento</span>
@@ -1405,11 +1413,11 @@ const EventsPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="criar-evento-titulo"
             tabIndex={-1}
-            className="bg-white w-full sm:rounded-3xl sm:max-w-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto shadow-2xl border-0 sm:border-2 sm:border-csc-gold/60 flex flex-col outline-none"
+            className="bg-csc-fundo w-full sm:rounded-3xl sm:max-w-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto shadow-2xl border-0 sm:border-2 sm:border-csc-gold/60 flex flex-col outline-none"
           >
             {/* Header fixo do modal */}
-            <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-5 sm:px-7 py-4 border-b border-gray-200 rounded-t-3xl">
-              <h3 id="criar-evento-titulo" className="text-lg font-black text-gray-900 flex items-center gap-2">
+            <div className="sticky top-0 bg-csc-fundo z-10 flex items-center justify-between px-5 py-4 border-b border-white/10 rounded-t-3xl">
+              <h3 id="criar-evento-titulo" className="text-lg font-black text-white flex items-center gap-2">
                 <Plus size={20} className="text-csc-dark" />
                 <span>Novo Evento / Atividade</span>
               </h3>
@@ -1421,7 +1429,7 @@ const EventsPage: React.FC = () => {
                   type="button"
                   onClick={() => setViewModeTab('list')}
                   aria-label="Voltar à lista"
-                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 flex items-center justify-center cursor-pointer transition-all active:scale-90"
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90"
                 >
                   <X size={18} className="stroke-[2.5]" />
                 </button>
@@ -1433,7 +1441,7 @@ const EventsPage: React.FC = () => {
             
             {/* 1. Tipo de Evento */}
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-white/80 uppercase tracking-wider mb-1.5">
                 Tipo de Evento
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -1452,7 +1460,7 @@ const EventsPage: React.FC = () => {
                       className={`p-3 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 text-xs font-bold transition-all cursor-pointer ${
                         isSelected
                           ? `${t.color} shadow-sm ring-2 ring-csc-dark/20 scale-[1.02]`
-                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                          : 'bg-white/6 border-white/12 text-white/60 hover:bg-white/10'
                       }`}
                     >
                       <Icon size={18} />
@@ -1466,7 +1474,7 @@ const EventsPage: React.FC = () => {
             {/* 2. Título (Apenas Convívios) */}
             {type === 'gathering' && (
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                <label className={ETIQUETA_FORM}>
                   Título do Convívio *
                 </label>
                 <input
@@ -1474,7 +1482,7 @@ const EventsPage: React.FC = () => {
                   required={type === 'gathering'}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-sm bg-white font-medium text-gray-900"
+                  className={CAMPO_FORM}
                   placeholder="Ex: Jantar de Natal / Reentré"
                 />
               </div>
@@ -1492,20 +1500,20 @@ const EventsPage: React.FC = () => {
                       setIsFriendly(e.target.checked)
                       if (e.target.checked) setTournamentId('')
                     }}
-                    className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
+                    className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-white/15 rounded cursor-pointer"
                   />
-                  <label htmlFor="isFriendly" className="ml-2 text-xs font-bold text-gray-800 cursor-pointer">
+                  <label htmlFor="isFriendly" className="ml-2 text-xs font-bold text-white cursor-pointer">
                     Jogo Amigável / Treino Conjunto
                   </label>
                 </div>
 
                 {!isFriendly && (
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Torneio / Competição</label>
+                    <label className={ETIQUETA_FORM}>Torneio / Competição</label>
                     <select
                       value={tournamentId}
                       onChange={(e) => setTournamentId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
+                      className={CAMPO_FORM}
                     >
                       <option value="">-- Selecionar Torneio --</option>
                       {tournaments.map(t => (
@@ -1517,7 +1525,7 @@ const EventsPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Adversário</label>
+                    <label className={ETIQUETA_FORM}>Adversário</label>
                     <select
                       value={opponentId}
                       onChange={(e) => {
@@ -1528,7 +1536,7 @@ const EventsPage: React.FC = () => {
                           setOpponentId(e.target.value)
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
+                      className={CAMPO_FORM}
                     >
                       <option value="">-- Selecionar Adversário --</option>
                       <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
@@ -1539,11 +1547,11 @@ const EventsPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-700 mb-1">Condição de Jogo</label>
+                    <label className={ETIQUETA_FORM}>Condição de Jogo</label>
                     <select
                       value={homeAway}
                       onChange={(e) => setHomeAway(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
+                      className={CAMPO_FORM}
                     >
                       <option value="home">🏠 Casa</option>
                       <option value="away">✈️ Fora</option>
@@ -1557,16 +1565,16 @@ const EventsPage: React.FC = () => {
             {/* 3. Data/Hora */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div>
-                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">Data *</label>
-                <input type="date" required value={eventDate} onChange={(e) => setEventDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold text-gray-900" />
+                <label className={ETIQUETA_FORM}>Data *</label>
+                <input type="date" required value={eventDate} onChange={(e) => setEventDate(e.target.value)} className={CAMPO_FORM} />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">Hora *</label>
-                <input type="time" required value={eventTime} onChange={(e) => setEventTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold text-gray-900" />
+                <label className={ETIQUETA_FORM}>Hora *</label>
+                <input type="time" required value={eventTime} onChange={(e) => setEventTime(e.target.value)} className={CAMPO_FORM} />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">Concentração</label>
-                <input type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900" />
+                <label className={ETIQUETA_FORM}>Concentração</label>
+                <input type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} className={CAMPO_FORM} />
               </div>
             </div>
 
@@ -1578,7 +1586,7 @@ const EventsPage: React.FC = () => {
                     <MapPin size={13} className="text-emerald-700 shrink-0" />
                     <span>Campo do Jogo (Automático - Em Casa)</span>
                   </span>
-                  <p className="text-xs font-black text-gray-900 truncate">
+                  <p className="text-xs font-black text-white truncate">
                     🏟️ {(() => {
                       const cascais = getCascaisHomeField()
                       return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
@@ -1590,7 +1598,7 @@ const EventsPage: React.FC = () => {
                     href={getGoogleMapsUrl(currentLocationStr)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-black text-csc-dark bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-xl shadow-2xs shrink-0"
+                    className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
                     title="Ver no Google Maps"
                   >
                     <MapPin size={12} className="text-red-500" />
@@ -1600,14 +1608,14 @@ const EventsPage: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2.5">
-                <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center justify-between">
+              <div className="p-3.5 bg-white/6 border border-white/12 rounded-2xl space-y-2.5">
+                <label className="block text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5"><MapPin size={14} className="text-red-600" /> Campo / Instalação</span>
                   {currentLocationStr && <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {currentLocationStr}</span>}
                 </label>
                 <select required value={fieldId} onChange={(e) => {
                     if (e.target.value === '__new__') { setQuickFieldTarget('create'); setIsQuickFieldModalOpen(true) } else { setFieldId(e.target.value); const sel = fields.find(f => f.id === e.target.value); setLocationText(sel ? (sel.address ? `${sel.name} (${sel.address})` : sel.name) : '') }
-                  }} className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark bg-white text-xs font-medium text-gray-900">
+                  }} className={CAMPO_FORM}>
                   <option value="">-- Escolher Campo / Instalação --</option>
                   <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
                   {fields.map(f => <option key={f.id} value={f.id}>🏟️ {f.name} {f.address ? `(${f.address})` : ''}</option>)}
@@ -1631,13 +1639,13 @@ const EventsPage: React.FC = () => {
 
             {/* 5. Descrição */}
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Descrição</label>
+              <label className={ETIQUETA_FORM}>Descrição</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
                 placeholder="Ex: Menus disponíveis, valor por pessoa, ordem de trabalhos ou recomendações..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white resize-none text-gray-900"
+                className={`${CAMPO_FORM} h-auto py-3 leading-relaxed resize-none`}
               />
             </div>
 
@@ -1650,9 +1658,9 @@ const EventsPage: React.FC = () => {
                       type="checkbox"
                       checked={isRecurring}
                       onChange={(e) => setIsRecurring(e.target.checked)}
-                      className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
+                      className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-white/15 rounded cursor-pointer"
                     />
-                    <span className="text-xs font-bold text-gray-900 flex items-center gap-1">
+                    <span className="text-xs font-bold text-white flex items-center gap-1">
                       <Repeat size={14} className="text-csc-gold" />
                       <span>Marcar Treino com Recorrência Semanal</span>
                     </span>
@@ -1662,7 +1670,7 @@ const EventsPage: React.FC = () => {
                 {isRecurring && (
                   <div className="space-y-2 pt-2 border-t border-amber-200/60 text-xs">
                     <div>
-                      <label className="block font-bold text-gray-700 mb-1 text-[11px]">Dias da semana:</label>
+                      <label className={ETIQUETA_FORM}>Dias da semana:</label>
                       <div className="flex flex-wrap gap-1">
                         {[
                           { label: 'Seg', val: 1 },
@@ -1688,7 +1696,7 @@ const EventsPage: React.FC = () => {
                               className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
                                 isChecked
                                   ? 'bg-csc-dark text-white'
-                                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                  : 'bg-white border border-white/15 text-white/80 hover:bg-white/6'
                               }`}
                             >
                               {d.label}
@@ -1699,13 +1707,13 @@ const EventsPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block font-bold text-gray-700 mb-1 text-[11px]">Repetir até:</label>
+                      <label className={ETIQUETA_FORM}>Repetir até:</label>
                       <input
                         type="date"
                         required={isRecurring}
                         value={recurrenceEndDate}
                         onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                        className="w-full px-3 py-1.5 border border-gray-300 rounded-xl text-xs bg-white font-bold text-gray-900"
+                        className={CAMPO_FORM}
                       />
                     </div>
                   </div>
@@ -1715,13 +1723,13 @@ const EventsPage: React.FC = () => {
 
             {/* 7. Convocatória & Notificação dos Membros */}
             {type !== 'practice' && (
-              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-3">
+              <div className="p-3.5 bg-white/6 border border-white/12 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="block text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                     <Users size={15} className="text-csc-dark" />
                     <span>Convocatória ({selectedPlayerIds.length})</span>
                   </label>
-                  <span className="text-[10px] text-gray-500 font-bold">
+                  <span className="text-[10px] text-white/50 font-bold">
                     {selectedPlayerIds.length === 0 ? 'Nenhum selecionado' : `${selectedPlayerIds.length} selecionados`}
                   </span>
                 </div>
@@ -1756,7 +1764,7 @@ const EventsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleRepeatLastCallup}
-                    className="px-2.5 py-1.5 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                    className="px-2.5 py-1.5 bg-white/8 text-white/80 border border-white/15 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
                   >
                     <RotateCcw size={11} />
                     <span>Repetir</span>
@@ -1765,7 +1773,7 @@ const EventsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleClearAll}
-                    className="px-2.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 col-span-2 sm:col-span-1"
+                    className="px-2.5 py-1.5 bg-white/15 hover:bg-white/20 text-white/80 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 col-span-2 sm:col-span-1"
                   >
                     <span>✕ Limpar</span>
                   </button>
@@ -1773,18 +1781,18 @@ const EventsPage: React.FC = () => {
 
                 {/* Barra de Pesquisa de Membros */}
                 <div className="relative">
-                  <Search size={13} className="absolute left-3 top-2.5 text-gray-400" />
+                  <Search size={13} className="absolute left-3 top-2.5 text-white/40" />
                   <input
                     type="text"
                     value={playerSearchTerm}
                     onChange={(e) => setPlayerSearchTerm(e.target.value)}
                     placeholder="Pesquisar por nome ou nº camisola..."
-                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-gray-900"
+                    className={`${CAMPO_FORM} pl-9`}
                   />
                 </div>
 
                 {/* Lista Selecionável Um a Um */}
-                <div className="grid grid-cols-1 gap-1.5 max-h-56 overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
+                <div className="grid grid-cols-1 gap-1.5 max-h-56 overflow-y-auto p-1.5 bg-white/5 border border-white/12 rounded-2xl divide-y divide-white/8">
                   {allPlayers
                     .filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase()))
                     .map(p => {
@@ -1800,8 +1808,8 @@ const EventsPage: React.FC = () => {
                             !isEligible 
                               ? 'bg-red-50/60 text-red-700 opacity-60'
                               : isSel 
-                                ? 'bg-amber-50/80 font-black text-gray-900 border border-amber-200' 
-                                : 'text-gray-700 hover:bg-gray-50'
+                                ? 'bg-amber-50/80 font-black text-white border border-amber-200' 
+                                : 'text-white/80 hover:bg-white/6'
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -1810,7 +1818,7 @@ const EventsPage: React.FC = () => {
                               checked={isSel}
                               disabled={!isEligible}
                               onChange={() => {}}
-                              className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none"
+                              className="h-4 w-4 text-csc-dark rounded border-white/15 pointer-events-none"
                             />
 
                             {/* Avatar / Number */}
@@ -1852,14 +1860,14 @@ const EventsPage: React.FC = () => {
             )}
 
             {/* 8. Opção de Ativação / Envio de Convocatória */}
-            <div className="p-4 bg-gradient-to-r from-gray-50 to-amber-50/40 rounded-2xl border-2 border-gray-200 space-y-2">
+            <div className="p-4 bg-gradient-to-r from-gray-50 to-amber-50/40 rounded-2xl border-2 border-white/12 space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <label className="text-xs font-bold text-gray-900 flex items-center gap-1.5 cursor-pointer">
+                  <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
                     <Send size={15} className={isActiveOnCreate ? 'text-emerald-600' : 'text-amber-600'} />
                     <span>Ativar Evento e Enviar Convocatória</span>
                   </label>
-                  <p className="text-[11px] text-gray-600 mt-0.5">
+                  <p className="text-[11px] text-white/60 mt-0.5">
                     {isActiveOnCreate 
                       ? '✓ O evento fica imediatamente visível na agenda e a convocatória é enviada aos membros.' 
                       : '⏸️ O evento fica guardado em modo Rascunho (Inativo). A convocatória só será disparada quando o ativares.'}
@@ -1872,7 +1880,7 @@ const EventsPage: React.FC = () => {
                     onChange={(e) => setIsActiveOnCreate(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white/20 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-csc-light"></div>
                 </label>
               </div>
             </div>
@@ -1953,22 +1961,22 @@ const EventsPage: React.FC = () => {
         return (
           <div className="w-full space-y-4">
             {/* Barra de Filtros e Pesquisa de Eventos */}
-            <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-4 space-y-3">
+            <div className="cartao-simples p-4 space-y-3">
               <div className="flex flex-col sm:flex-row items-center gap-3">
                 <div className="relative flex-1 w-full">
-                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
                   <input
                     type="text"
                     value={eventListSearch}
                     onChange={e => setEventListSearch(e.target.value)}
                     placeholder="Pesquisar por título, adversário, local..."
-                    className="w-full pl-10 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
+                    className={`${CAMPO_FORM} pl-10 pr-9`}
                   />
                   {eventListSearch && (
                     <button
                       onClick={() => setEventListSearch('')}
                       aria-label="Limpar pesquisa"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 cursor-pointer"
                     >
                       <X size={15} />
                     </button>
@@ -1977,7 +1985,7 @@ const EventsPage: React.FC = () => {
 
                 {/* Filtro de Estado (Ativos / Rascunhos) para Treinadores/Admins */}
                 {isCoachOrAdmin && (
-                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto shrink-0">
+                  <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl w-full sm:w-auto shrink-0">
                     {[
                       { id: 'all', label: 'Todos' },
                       { id: 'active', label: '🟢 Ativos' },
@@ -1989,8 +1997,8 @@ const EventsPage: React.FC = () => {
                         onClick={() => setEventListStatusFilter(sf.id as any)}
                         className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
                           eventListStatusFilter === sf.id
-                            ? 'bg-white text-csc-dark shadow-xs'
-                            : 'text-gray-600 hover:text-gray-900'
+                            ? 'bg-csc-gold text-csc-tinta'
+                            : 'text-white/60 hover:text-white'
                         }`}
                       >
                         {sf.label}
@@ -2000,7 +2008,7 @@ const EventsPage: React.FC = () => {
                 )}
 
                 {/* Filtro Temporal (Próximos / Anteriores / Todos) */}
-                <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto shrink-0">
+                <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl w-full sm:w-auto shrink-0">
                   {[
                     { id: 'upcoming', label: 'Por realizar' },
                     { id: 'past', label: 'Realizados' },
@@ -2012,8 +2020,8 @@ const EventsPage: React.FC = () => {
                       onClick={() => setEventListTimeFilter(tf.id as any)}
                       className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
                         eventListTimeFilter === tf.id
-                          ? 'bg-white text-csc-dark shadow-xs'
-                          : 'text-gray-600 hover:text-gray-900'
+                          ? 'bg-csc-gold text-csc-tinta'
+                          : 'text-white/60 hover:text-white'
                       }`}
                     >
                       {tf.label}
@@ -2023,7 +2031,7 @@ const EventsPage: React.FC = () => {
               </div>
 
               {/* Filtro de Tipo de Evento (Todos / Jogos / Treinos / Convívios) */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-gray-100">
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-white/10">
                 {[
                   { id: 'all', label: 'Todos os Tipos', emoji: '📋' },
                   { id: 'match', label: 'Jogos', emoji: '⚽' },
@@ -2036,8 +2044,8 @@ const EventsPage: React.FC = () => {
                     onClick={() => setEventListTypeFilter(item.id as any)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
                       eventListTypeFilter === item.id
-                        ? 'bg-csc-dark text-csc-gold shadow-2xs border border-csc-dark'
-                        : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200'
+                        ? 'bg-csc-gold text-csc-tinta border border-csc-gold'
+                        : 'bg-white/6 hover:bg-white/10 text-white/80 border border-white/12'
                     }`}
                   >
                     <span>{item.emoji}</span>
@@ -2047,7 +2055,7 @@ const EventsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-5 sm:p-6">
+            <div className="cartao-simples text-white p-5">
               <div className="flex items-center justify-between pb-3 mb-5 border-b border-white/10">
                 <h3 className="text-lg font-black text-white flex items-center gap-2">
                   <CalendarRange size={20} className="text-csc-gold" />
@@ -2150,7 +2158,7 @@ const EventsPage: React.FC = () => {
                               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-csc-dark hover:text-amber-700 bg-white border border-gray-300 hover:border-csc-dark px-2 py-0.5 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-2xs"
+                              className="min-h-11 px-3 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10px] flex items-center gap-1 cursor-pointer"
                               title="Abrir no Google Maps"
                             >
                               <span>Maps</span>
@@ -2239,7 +2247,7 @@ const EventsPage: React.FC = () => {
               onClick={fecharDossier}
               aria-label="Fechar"
               title="Fechar"
-              className="absolute -top-1 right-0 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="absolute -top-1 right-0 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
             >
               <X size={20} className="stroke-[2.5]" />
             </button>
@@ -2271,7 +2279,7 @@ const EventsPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <p className="text-xs sm:text-sm font-bold text-gray-100 flex items-center gap-1.5 truncate">
+                    <p className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 truncate">
                       <Clock size={13} className="text-csc-gold shrink-0" />
                       <span>
                         {new Date(activeCallupModalEvent.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })}, {new Date(activeCallupModalEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
@@ -2382,7 +2390,7 @@ const EventsPage: React.FC = () => {
                             key={p.id}
                             type="button"
                             onClick={() => handleAddPlayerToCallup(activeCallupModalEvent.id, p.id)}
-                            className="bg-white border border-gray-300 hover:border-csc-dark text-xs px-2.5 py-1 rounded-xl font-bold text-gray-800 flex items-center gap-1 shadow-2xs hover:bg-amber-50 cursor-pointer active:scale-95"
+                            className="bg-white/8 border border-white/16 text-xs px-2.5 py-1 rounded-xl font-bold text-white flex items-center gap-1 shadow-2xs hover:bg-amber-50 cursor-pointer active:scale-95"
                           >
                             <span>+ {p.name}</span>
                             {p.jersey_number && <span className="text-csc-dark font-black">#{p.jersey_number}</span>}
@@ -2437,17 +2445,17 @@ const EventsPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="editar-evento-titulo"
             tabIndex={-1}
-            className="bg-csc-dark text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10 outline-none"
+            className="bg-csc-fundo text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10 outline-none"
           >
-            <div className="sticky top-0 bg-csc-dark border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
+            <div className="sticky top-0 bg-csc-fundo border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
               <h3 id="editar-evento-titulo" className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
-              <button onClick={handleAttemptCloseEditModal} aria-label="Fechar" className="w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90 shadow-md border-2 border-white/40 shrink-0"><X size={16} className="stroke-[2.5]" /></button>
+              <button onClick={handleAttemptCloseEditModal} aria-label="Fechar" className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 shrink-0"><X size={16} className="stroke-[2.5]" /></button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
               {/* Tipo */}
               <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Tipo de Evento</label>
+                <label className={ETIQUETA_FORM}>Tipo de Evento</label>
                 <div className="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-white rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
                   <span className="flex items-center gap-1.5">
                     <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
@@ -2461,27 +2469,27 @@ const EventsPage: React.FC = () => {
               {/* Título (Apenas para Convívios) */}
               {editType === 'gathering' && (
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Título do Convívio *</label>
-                  <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} required={editType === 'gathering'} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" placeholder="Ex: Jantar de Natal / Reentré" />
+                  <label className={ETIQUETA_FORM}>Título do Convívio *</label>
+                  <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} required={editType === 'gathering'} className={CAMPO_FORM} placeholder="Ex: Jantar de Natal / Reentré" />
                 </div>
               )}
 
               {/* Data e Hora */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Data</label>
-                  <input type="date" value={editEventDate} onChange={e => setEditEventDate(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
+                  <label className={ETIQUETA_FORM}>Data</label>
+                  <input type="date" value={editEventDate} onChange={e => setEditEventDate(e.target.value)} required className={CAMPO_FORM} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Hora</label>
-                  <input type="time" value={editEventTime} onChange={e => setEditEventTime(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
+                  <label className={ETIQUETA_FORM}>Hora</label>
+                  <input type="time" value={editEventTime} onChange={e => setEditEventTime(e.target.value)} required className={CAMPO_FORM} />
                 </div>
               </div>
 
               {/* Hora de Concentração */}
               <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Hora de Concentração (opcional)</label>
-                <input type="time" value={editMeetingTime} onChange={e => setEditMeetingTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
+                <label className={ETIQUETA_FORM}>Hora de Concentração (opcional)</label>
+                <input type="time" value={editMeetingTime} onChange={e => setEditMeetingTime(e.target.value)} className={CAMPO_FORM} />
               </div>
 
               {/* Campos específicos para Jogos */}
@@ -2502,8 +2510,8 @@ const EventsPage: React.FC = () => {
 
                   {!editIsFriendly && (
                     <div>
-                      <label className="block text-xs font-bold text-white/70 mb-1">Torneio/Competição</label>
-                      <select value={editTournamentId} onChange={e => setEditTournamentId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900">
+                      <label className={ETIQUETA_FORM}>Torneio/Competição</label>
+                      <select value={editTournamentId} onChange={e => setEditTournamentId(e.target.value)} className={CAMPO_FORM}>
                         <option value="">-- Selecionar --</option>
                         {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
@@ -2512,7 +2520,7 @@ const EventsPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-xs font-bold text-white/70 mb-1">Adversário</label>
+                      <label className={ETIQUETA_FORM}>Adversário</label>
                       <select 
                         value={editOpponentId} 
                         onChange={e => {
@@ -2523,7 +2531,7 @@ const EventsPage: React.FC = () => {
                             setEditOpponentId(e.target.value)
                           }
                         }} 
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
+                        className={CAMPO_FORM}
                       >
                         <option value="">-- Selecionar Adversário --</option>
                         <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
@@ -2532,8 +2540,8 @@ const EventsPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-white/70 mb-1">Condição de Jogo</label>
-                      <select value={editHomeAway} onChange={e => setEditHomeAway(e.target.value as any)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                      <label className={ETIQUETA_FORM}>Condição de Jogo</label>
+                      <select value={editHomeAway} onChange={e => setEditHomeAway(e.target.value as any)} className={CAMPO_FORM}>
                         <option value="home">🏠 Casa</option>
                         <option value="away">✈️ Fora</option>
                         <option value="neutral">⚖️ Campo Neutro</option>
@@ -2563,7 +2571,7 @@ const EventsPage: React.FC = () => {
                       href={getGoogleMapsUrl(editLocationText)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-black text-csc-dark bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-xl shadow-2xs shrink-0"
+                      className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
                       title="Ver no Google Maps"
                     >
                       <MapPin size={12} className="text-red-500" />
@@ -2595,7 +2603,7 @@ const EventsPage: React.FC = () => {
                         }
                       }
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs font-medium bg-white text-gray-900"
+                    className={CAMPO_FORM}
                   >
                     <option value="">-- Escolher Campo / Instalação --</option>
                     <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
@@ -2758,18 +2766,18 @@ const EventsPage: React.FC = () => {
 
                     {/* Barra de Pesquisa de Membros na Edição */}
                     <div className="relative">
-                      <Search size={13} className="absolute left-3 top-2.5 text-gray-400" />
+                      <Search size={13} className="absolute left-3 top-2.5 text-white/40" />
                       <input
                         type="text"
                         value={editPlayerSearchTerm}
                         onChange={(e) => setEditPlayerSearchTerm(e.target.value)}
                         placeholder="Pesquisar membro na convocatória..."
-                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-gray-900"
+                        className={`${CAMPO_FORM} pl-9`}
                       />
                     </div>
 
                     {/* Lista de membros um a um */}
-                    <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-2xl">
+                    <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto p-1.5 bg-white/5 border border-white/12 rounded-2xl">
                       {filteredMembers.map(p => {
                         const callup = currentCallups.find(c => 
                           c.player_id === p.id ||
@@ -2793,8 +2801,8 @@ const EventsPage: React.FC = () => {
                             }}
                             className={`flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer ${
                               isCalled
-                                ? 'bg-amber-50/80 font-black text-gray-900 border border-amber-200'
-                                : 'text-gray-700 hover:bg-gray-50'
+                                ? 'bg-amber-50/80 font-black text-white border border-amber-200'
+                                : 'text-white/80 hover:bg-white/6'
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
@@ -2802,14 +2810,14 @@ const EventsPage: React.FC = () => {
                                 type="checkbox"
                                 checked={isCalled}
                                 onChange={() => {}}
-                                className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none"
+                                className="h-4 w-4 text-csc-dark rounded border-white/15 pointer-events-none"
                               />
                               <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
                                 {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
                               </div>
                               <span className="truncate">{getPlayerDisplayName(p)}</span>
                             </div>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isCalled ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}`}>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isCalled ? 'bg-emerald-100 text-emerald-800' : 'bg-white/10 text-white/50'}`}>
                               {isCalled ? '✓ Convocado' : '+ Convocar'}
                             </span>
                           </div>
@@ -2838,14 +2846,14 @@ const EventsPage: React.FC = () => {
                     onChange={(e) => setEditIsActive(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white/20 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white/20 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-csc-light"></div>
                 </label>
               </div>
 
               {/* Descrição */}
               <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Descrição / Notas</label>
-                <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white resize-none text-gray-900" placeholder="Informações adicionais, ementa do convívio..." />
+                <label className={ETIQUETA_FORM}>Descrição / Notas</label>
+                <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} className={`${CAMPO_FORM} h-auto py-3 leading-relaxed resize-none`} placeholder="Informações adicionais, ementa do convívio..." />
               </div>
 
               {/* Botões */}
