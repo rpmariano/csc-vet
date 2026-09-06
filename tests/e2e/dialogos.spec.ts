@@ -136,9 +136,8 @@ test.describe('Calendário', () => {
     away_score: null,
   }
 
-  /** Lista → cartão do evento (abre a persiana) → botão Modificar. */
+  /** Cartão do evento (abre a persiana) → botão Modificar. */
   async function abreEdicaoDoEvento(page: Page) {
-    await page.getByRole('button', { name: /^Lista/ }).click()
     await page.locator('div.cursor-pointer.bg-csc-dark').first().click()
     await page.getByTitle('Modificar evento').click()
   }

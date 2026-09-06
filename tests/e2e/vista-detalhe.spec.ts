@@ -71,7 +71,6 @@ async function verificaDetalhe(page: Page, nome: string | RegExp, textoNoDetalhe
 test.describe('Detalhe do evento', () => {
   test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'calendar', { events: [treino] })
-    await page.getByRole('button', { name: /^Lista/ }).click()
 
     await expect(page).toHaveURL(/calendar$/)
     await page.locator('div.cursor-pointer.bg-csc-dark').first().click()
@@ -82,7 +81,9 @@ test.describe('Detalhe do evento', () => {
     await page.goBack()
     await expect(page).toHaveURL(/calendar$/)
     await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
-    await expect(page.getByRole('button', { name: /^Lista/ })).toBeVisible()
+    // A agenda mostra o calendário e a lista ao mesmo tempo; o alternador de
+    // vista desapareceu com o redesenho (ecrã 1a).
+    await expect(page.getByRole('button', { name: 'Todos' })).toBeVisible()
   })
 
   test('o endereço abre o evento diretamente', async ({ page }) => {

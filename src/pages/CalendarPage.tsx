@@ -12,9 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Calendar as CalendarIcon,
   CalendarDays as CalendarDaysIcon,
-  List as ListIcon,
   Edit,
   Save,
   CalendarRange,
@@ -40,6 +38,25 @@ import { CallupRow } from '../components/callups/CallupRow'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { BottomSheet } from '../components/BottomSheet'
+import { CabecalhoEcra, Pastilha, CampoEntrada, Botao } from '../components/ui'
+import { SlidersHorizontal } from 'lucide-react'
+
+/** Como se lê cada filtro escondido, na linha de resumo do cabeçalho. */
+const ROTULOS_ESTADO: Record<string, string> = {
+  upcoming: 'Próximos',
+  past: 'Realizados',
+  my_confirmed: 'Confirmados por mim',
+  my_pending: 'Por responder',
+  my_declined: 'Recusados por mim',
+  my_called: 'Fui convocado',
+}
+
+const ROTULOS_TIPO: Record<string, string> = {
+  match: 'Jogos',
+  practice: 'Treinos',
+  gathering: 'Convívios',
+}
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -226,7 +243,9 @@ const CalendarPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
 
   // Calendar View States
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  // A pesquisa e o filtro de estado não estão à vista (ver o cabeçalho): vivem
+  // numa persiana, e o cabeçalho diz quando estão a filtrar alguma coisa.
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [typeFilter, setTypeFilter] = useState<'all' | 'match' | 'practice' | 'gathering'>('all')
@@ -1504,139 +1523,120 @@ const CalendarPage: React.FC = () => {
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
   const painelEditarEventoRef = useModalA11y({ isOpen: isEditModalOpen, onClose: handleAttemptCloseEditModal })
 
+  /**
+   * O que está escondido na persiana de filtros. Um filtro que não se vê é um
+   * filtro que se esquece — e depois a agenda parece vazia sem razão —, por
+   * isso o cabeçalho acende e uma linha por baixo diz o que está a filtrar.
+   * As pastilhas de tipo não entram: essas estão à vista.
+   */
+  const temFiltros = searchQuery.trim() !== '' || statusFilter !== 'all' || typeFilter !== 'all'
+  const resumoFiltros = [
+    searchQuery.trim() ? `"${searchQuery.trim()}"` : null,
+    statusFilter !== 'all' ? ROTULOS_ESTADO[statusFilter] : null,
+    typeFilter !== 'all' ? ROTULOS_TIPO[typeFilter] : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
     <div className="space-y-6">
       <div className="space-y-6">
 
-      {/* Barra de Navegação & Filtros de Calendário */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 space-y-3.5">
-        {/* Linha 1: Alternador de Visualização + Barra de Pesquisa + Filtro de Status */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Alternador de Visualização: Calendário vs Lista */}
-          <div className="flex items-center bg-gray-100 p-1 rounded-xl w-full md:w-auto shrink-0">
+      {/*
+        Cabeçalho da Agenda (ecrã 1a): o mês em sobrancelha dourada, o título,
+        e os dois botões de mês.
+
+        A pesquisa e o filtro de estado não existem no handoff, e o ecrã fica
+        melhor sem eles à vista — mas a app tem 52 eventos na base e alguém
+        vai querer procurar um jogo de há dois meses, ou ver só o que
+        confirmou. Passam para uma persiana atrás do funil.
+      */}
+      <CabecalhoEcra
+        titulo="Agenda"
+        sobrancelha={`${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
+        className="mb-3"
+        acoes={
+          <div className="flex items-center gap-2 flex-none">
             <button
-              onClick={() => setViewMode('calendar')}
-              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                viewMode === 'calendar' ? 'bg-csc-dark text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
+              type="button"
+              onClick={handlePrevMonth}
+              aria-label="Mês anterior"
+              className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
+                transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
             >
-              <CalendarIcon size={15} />
-              <span>Calendário</span>
+              <ChevronLeft size={17} />
             </button>
             <button
-              onClick={() => setViewMode('list')}
-              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                viewMode === 'list' ? 'bg-csc-dark text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
+              type="button"
+              onClick={handleNextMonth}
+              aria-label="Mês seguinte"
+              className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
+                transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
             >
-              <ListIcon size={15} />
-              <span>Lista ({filteredEvents.length})</span>
+              <ChevronRight size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
+              aria-label={temFiltros ? 'Pesquisa e filtros (ativos)' : 'Pesquisa e filtros'}
+              className={`relative w-9 h-9 rounded-full border flex items-center justify-center cursor-pointer
+                transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                  temFiltros
+                    ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                    : 'bg-white/10 border-white/15 text-white/75'
+                }`}
+            >
+              <SlidersHorizontal size={16} />
             </button>
           </div>
+        }
+      />
 
-          {/* Pesquisa e Filtro de Status */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 md:max-w-xl">
-            {/* Input Pesquisa */}
-            <div className="relative flex-1">
-              <Search size={15} className="absolute left-3 top-2.5 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Pesquisar por título, adversário, local..."
-                className="w-full pl-9 pr-8 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-csc-dark focus:border-transparent transition-all text-gray-900"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-2 text-xs text-gray-400 hover:text-gray-600 p-0.5"
-                  title="Limpar pesquisa"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-
-            {/* Select Status */}
-            <div className="relative shrink-0 sm:w-48">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-csc-dark font-medium text-gray-700 cursor-pointer"
-              >
-                <option value="all">⚡ Todos os Estados</option>
-                <option value="upcoming">⏳ Próximos / Futuros</option>
-                <option value="past">🏁 Realizados / Passados</option>
-                <option value="my_confirmed">🟢 Confirmados por mim</option>
-                <option value="my_pending">🟡 Pendentes da minha resposta</option>
-                <option value="my_declined">🔴 Recusados por mim</option>
-                <option value="my_called">📋 Fui convocado</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Linha 2: Filtros de Tipo de Evento & Reset de Filtros */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            <span className="text-[11px] font-bold text-gray-400 mr-1 hidden sm:inline">Tipo:</span>
-            <button
-              onClick={() => setTypeFilter('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                typeFilter === 'all' ? 'bg-csc-gold text-csc-dark font-black' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => setTypeFilter('match')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                typeFilter === 'match' ? 'bg-blue-600 text-white font-black' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              ⚽ Jogos
-            </button>
-            <button
-              onClick={() => setTypeFilter('practice')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                typeFilter === 'practice' ? 'bg-emerald-600 text-white font-black' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              🏃 Treinos
-            </button>
-            <button
-              onClick={() => setTypeFilter('gathering')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                typeFilter === 'gathering' ? 'bg-purple-600 text-white font-black' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              🍻 Convívios
-            </button>
-          </div>
-
-          {/* Botão Limpar Filtros se algum filtro estiver ativo */}
-          {(searchQuery || typeFilter !== 'all' || statusFilter !== 'all') && (
-            <button
-              onClick={() => {
-                setSearchQuery('')
-                setTypeFilter('all')
-                setStatusFilter('all')
-              }}
-              className="text-xs font-bold text-red-600 hover:text-red-800 hover:underline flex items-center gap-1 px-2 py-1 bg-red-50 rounded-lg transition-colors"
-            >
-              <X size={13} />
-              <span>Limpar Filtros</span>
-            </button>
-          )}
-        </div>
+      {/* Pastilhas de tipo — as do handoff, sem emoji. */}
+      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
+        {([
+          ['all', 'Todos'],
+          ['match', 'Jogos'],
+          ['practice', 'Treinos'],
+          ['gathering', 'Convívios'],
+        ] as const).map(([valor, etiqueta]) => (
+          <Pastilha
+            key={valor}
+            ativa={typeFilter === valor}
+            onClick={() => { triggerHaptic('selection'); setTypeFilter(valor) }}
+            className="flex-none"
+          >
+            {etiqueta}
+          </Pastilha>
+        ))}
       </div>
 
+      {/* O que a persiana esconde tem de continuar visível como estado. */}
+      {temFiltros && (
+        <button
+          type="button"
+          onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all') }}
+          className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
+            bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
+        >
+          <SlidersHorizontal size={14} className="text-csc-gold shrink-0" />
+          <span className="flex-1 font-display font-bold text-[11px] text-white/80">
+            {resumoFiltros} · {filteredEvents.length} {filteredEvents.length === 1 ? 'evento' : 'eventos'}
+          </span>
+          <span className="font-display font-bold text-[11px] text-csc-gold">Limpar</span>
+        </button>
+      )}
+
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
+        <div className="flex justify-center py-12" role="status" aria-live="polite">
+          <div className="animate-spin rounded-full h-9 w-9 border-2 border-csc-gold border-t-transparent" />
+          <span className="sr-only">A carregar…</span>
         </div>
-      ) : viewMode === 'calendar' ? (
+      ) : (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Coluna Esquerda: Grelha do Calendário Mensal Compacta */}
           <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1678,23 +1678,9 @@ const CalendarPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Setas Anterior / Próximo */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={handlePrevMonth}
-                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer active:scale-90"
-                  title="Mês Anterior"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  onClick={handleNextMonth}
-                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer active:scale-90"
-                  title="Próximo Mês"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
+              {/* As setas de mês vivem no cabeçalho do ecrã (ver 1a); aqui
+                  ficam só os saltos longos — escolher mês, ano, ou voltar a
+                  hoje. */}
             </div>
 
             {/* Cabeçalho dos Dias da Semana */}
@@ -1809,9 +1795,10 @@ const CalendarPage: React.FC = () => {
             )}
           </div>
         </div>
-      ) : (
-        /* Vista de Lista Completa */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        {/* A lista deixou de ser uma vista alternativa: no handoff vem sempre
+            por baixo do calendário, com os eventos do filtro em curso. */}
+        <div className="grid grid-cols-1 gap-3">
           {filteredEvents.length === 0 ? (
             <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-gray-200 p-8">
               <CalendarRange size={36} className="mx-auto text-gray-300 mb-2" />
@@ -1822,8 +1809,76 @@ const CalendarPage: React.FC = () => {
             filteredEvents.map((event) => renderEventCard(event))
           )}
         </div>
+        </>
       )}
       </div>
+
+      {/*
+        Pesquisa e filtro de estado. Fora do ecrã porque o handoff quer a
+        Agenda limpa, mas a um toque porque a app tem eventos que chegam para
+        os tornar necessários.
+      */}
+      <BottomSheet
+        isOpen={filtrosAbertos}
+        onClose={() => setFiltrosAbertos(false)}
+        title="Procurar na agenda"
+        description="Sobre os eventos do tipo escolhido em cima"
+        tone="dark"
+        icon={
+          <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
+            <SlidersHorizontal size={17} />
+          </div>
+        }
+        footer={
+          <>
+            <Botao
+              aparencia="vidro"
+              onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all') }}
+              disabled={!temFiltros}
+            >
+              Limpar
+            </Botao>
+            <Botao onClick={() => setFiltrosAbertos(false)}>
+              Ver {filteredEvents.length} {filteredEvents.length === 1 ? 'evento' : 'eventos'}
+            </Botao>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <CampoEntrada
+            etiqueta="Procurar"
+            type="search"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Título, adversário ou local"
+          />
+
+          <div>
+            <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+              Estado
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ['all', 'Todos'],
+                ['upcoming', 'Próximos'],
+                ['past', 'Realizados'],
+                ['my_confirmed', 'Confirmados por mim'],
+                ['my_pending', 'Por responder'],
+                ['my_declined', 'Recusados por mim'],
+                ['my_called', 'Fui convocado'],
+              ] as const).map(([valor, etiqueta]) => (
+                <Pastilha
+                  key={valor}
+                  ativa={statusFilter === valor}
+                  onClick={() => { triggerHaptic('selection'); setStatusFilter(valor) }}
+                >
+                  {etiqueta}
+                </Pastilha>
+              ))}
+            </div>
+          </div>
+        </div>
+      </BottomSheet>
 
       {/* Modal Detalhes Evento & Convocatória (persiana partilhada).
           A condição usa só `selectedEvent` (nunca voltar a null ao fechar) — a persiana
