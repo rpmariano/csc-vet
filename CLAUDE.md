@@ -220,16 +220,25 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`.
    O redesenho parte-os por secções à medida que cada área é tocada — não como
    refactor à parte.
-6. **P2 — O retroceder do browser nem sempre fecha a persiana** (~50% das vezes).
-   O endereço muda, mas a atualização do React Router não chega a ser confirmada: o
-   `popstate` não vê mudança nenhuma, o efeito que fecha o detalhe nunca corre e a
-   persiana fica aberta por cima da lista. Reproduzido com `history.back()` do
-   próprio browser (não é artefacto do Playwright) e no código anterior ao
-   redesenho — é anterior à branch `redesign`. Os renders acontecem mas os efeitos
-   não, o que aponta para renders de transição que nunca são confirmados; pôr
-   `flushSync: true` no `setSearchParams` melhora mas não resolve. É o que faz os
-   testes `tests/e2e/vista-detalhe.spec.ts` aparecerem como *flaky* — passam à
-   segunda por causa do `retries: 1`. Afeta as quatro persianas de detalhe.
+6. **P2 — O retroceder do browser nem sempre fecha a persiana.** Muito melhorado em
+   2026-09-06; não fechado. O endereço muda, mas a atualização de localização do
+   React Router não chega a ser confirmada: o `popstate` não vê mudança nenhuma, o
+   efeito que fecha o detalhe nunca corre e a persiana fica aberta por cima da
+   lista. Reproduzido com `history.back()` do próprio browser (não é artefacto do
+   Playwright) e no código anterior ao redesenho.
+   **A causa é o `React.lazy` nas rotas.** Medido em `tests/e2e/vista-detalhe.spec.ts`,
+   com `--retries=0 --repeat-each=3`: com um `<Suspense>` extra dentro da Competição
+   falhava sempre; com `React.lazy` e só o `<Suspense>` do `App`, ~50%; sem
+   `React.lazy` nas rotas que abrem detalhe, ~7%. Mover o `<Suspense>` do `App` para
+   dentro do `Layout` piora.
+   **Por isso `CalendarPage`, `EventsPage`, `TeamManagementPage` e `CompeticaoPage`
+   são importadas diretamente em `src/App.tsx`** — são as quatro que abrem um detalhe
+   com endereço próprio. O resto continua em `React.lazy`. A poupança perdida é
+   pequena: o service worker da PWA já pré-carrega todos os pedaços à primeira
+   visita, por isso a divisão só valia nos primeiros segundos da primeiríssima
+   abertura. Arranque: ~87 kB → ~156 kB comprimidos.
+   **Uma página nova que abra um detalhe pelo endereço não pode ser `lazy`.**
+   Sobram ~7% de falhas, que continuam a passar à segunda pelo `retries: 1`.
 
 **Sobre o `.env` e a chave anónima.** O `.env` deixou de ser versionado (`cdf2187`) mas
 continua no histórico, e a chave que lá está tem `role: anon` — é pública por desenho:

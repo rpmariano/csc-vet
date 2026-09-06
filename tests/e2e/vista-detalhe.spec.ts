@@ -124,7 +124,7 @@ test.describe('Ficha de jogo', () => {
     await abrePagina(page, 'competicao?ver=fichas', { events: [jogo] })
     await page.locator('div.cursor-pointer').first().click()
 
-    await verificaDetalhe(page, /^Ficha de jogo: /, 'Ficha Oficial de Jogo', /\?jogo=j1$/)
+    await verificaDetalhe(page, /^Ficha de jogo: /, 'Ficha Oficial de Jogo', /ver=fichas&jogo=j1$/)
 
     await page.goBack()
     await expect(page).toHaveURL(/ver=fichas$/)
