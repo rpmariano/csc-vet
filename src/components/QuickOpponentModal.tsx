@@ -2,6 +2,10 @@ import React from 'react'
 import { X } from 'lucide-react'
 import { useModalA11y } from '../hooks/useModalA11y'
 
+/** Campo branco do handoff, o mesmo dos formulários de evento. */
+const CAMPO_DIALOGO =
+  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
+
 /**
  * Criação rápida de um adversário sem sair do formulário de evento.
  * Irmão do QuickFieldModal: mesma moldura, mesmas regras de empilhamento.
@@ -62,30 +66,30 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
         aria-modal="true"
         aria-labelledby="quick-opp-titulo"
         tabIndex={-1}
-        className="bg-white rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-gray-100 space-y-4 outline-none"
+        className="bg-csc-fundo rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-white/10 space-y-4 outline-none"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar"
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-white/40 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
 
-        <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
+        <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-900 flex items-center justify-center text-lg font-black shadow-xs" aria-hidden="true">
             🛡️
           </div>
           <div>
             <h3 id="quick-opp-titulo" className="text-base font-black text-csc-dark">Criar Novo Adversário</h3>
-            <p className="text-[11px] text-gray-500">Regista uma nova equipa/clube adversário para seleção imediata.</p>
+            <p className="text-[11px] text-white/50">Regista uma nova equipa/clube adversário para seleção imediata.</p>
           </div>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1" htmlFor="quick-opp-nome">Nome do Clube / Equipa *</label>
+            <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-opp-nome">Nome do Clube / Equipa *</label>
             <input
               id="quick-opp-nome"
               type="text"
@@ -94,13 +98,13 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
               value={name}
               onChange={e => onNameChange(e.target.value)}
               placeholder="Ex: G.D. Estoril Praia"
-              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold text-gray-900"
+              className={CAMPO_DIALOGO}
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1" htmlFor="quick-opp-sigla">Sigla (opcional)</label>
+              <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-opp-sigla">Sigla (opcional)</label>
               <input
                 id="quick-opp-sigla"
                 type="text"
@@ -108,17 +112,17 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
                 onChange={e => onInitialsChange(e.target.value)}
                 placeholder="Ex: GDEP"
                 maxLength={6}
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white uppercase font-bold text-gray-900"
+                className={CAMPO_DIALOGO}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1" htmlFor="quick-opp-campo">Campo Habitual</label>
+              <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-opp-campo">Campo Habitual</label>
               <select
                 id="quick-opp-campo"
                 value={homeFieldId}
                 onChange={e => onHomeFieldIdChange(e.target.value)}
-                className="w-full min-w-0 px-3 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
+                className={CAMPO_DIALOGO}
               >
                 <option value="">-- Sem Campo --</option>
                 {fields.map(f => (
@@ -130,26 +134,26 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1" htmlFor="quick-opp-contacto">Nome do Contacto</label>
+              <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-opp-contacto">Nome do Contacto</label>
               <input
                 id="quick-opp-contacto"
                 type="text"
                 value={contactName}
                 onChange={e => onContactNameChange(e.target.value)}
                 placeholder="Ex: Diretor desportivo"
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
+                className={CAMPO_DIALOGO}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1" htmlFor="quick-opp-telefone">Telefone Contacto</label>
+              <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-opp-telefone">Telefone Contacto</label>
               <input
                 id="quick-opp-telefone"
                 type="tel"
                 value={contactPhone}
                 onChange={e => onContactPhoneChange(e.target.value)}
                 placeholder="Ex: 912 345 678"
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white text-gray-900"
+                className={CAMPO_DIALOGO}
               />
             </div>
           </div>
@@ -158,7 +162,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white/80 font-bold text-xs rounded-xl transition-colors cursor-pointer"
             >
               Cancelar
             </button>

@@ -365,7 +365,7 @@ const AnnouncementsPage: React.FC = () => {
                   type="button"
                   onClick={() => setIsActiveOnCreate(!isActiveOnCreate)}
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    isActiveOnCreate ? 'bg-emerald-600' : 'bg-gray-300'
+                    isActiveOnCreate ? 'bg-emerald-600' : 'bg-white/20'
                   }`}
                 >
                   <span
@@ -608,7 +608,7 @@ const AnnouncementsPage: React.FC = () => {
               type="button"
               onClick={() => setEditingAnn(null)}
               aria-label="Fechar"
-              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 cursor-pointer active:scale-97"
             >
               <X size={18} className="stroke-[2.5]" />
             </button>
@@ -662,7 +662,7 @@ const AnnouncementsPage: React.FC = () => {
                   type="button"
                   onClick={() => setEditIsActive(!editIsActive)}
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    editIsActive ? 'bg-emerald-600' : 'bg-gray-300'
+                    editIsActive ? 'bg-emerald-600' : 'bg-white/20'
                   }`}
                 >
                   <span

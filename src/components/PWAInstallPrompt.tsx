@@ -89,7 +89,7 @@ export const PWAInstallPrompt: React.FC = () => {
               />
               <div className="min-w-0">
                 <p className="text-xs font-black text-white leading-tight">Instalar App CSC</p>
-                <p className="text-[10.5px] text-gray-300 truncate">Adicione ao ecrã inicial para acesso rápido e offline.</p>
+                <p className="text-[10.5px] text-white/30 truncate">Adicione ao ecrã inicial para acesso rápido e offline.</p>
               </div>
             </div>
 
@@ -105,7 +105,7 @@ export const PWAInstallPrompt: React.FC = () => {
               <button
                 type="button"
                 onClick={handleDismissBanner}
-                className="text-gray-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                className="text-white/40 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
                 title="Fechar"
               >
                 <X size={16} />
@@ -118,25 +118,25 @@ export const PWAInstallPrompt: React.FC = () => {
       {/* Modal com Instruções de Instalação (para iOS / outros browsers) */}
       {showIOSModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-gray-900 shadow-2xl relative border-2 border-csc-gold">
+          <div className="bg-csc-fundo rounded-3xl max-w-sm w-full p-6 text-white shadow-2xl relative border-2 border-csc-gold">
             <button
               onClick={() => setShowIOSModal(false)}
               aria-label="Fechar"
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer"
+              className="absolute top-4 right-4 text-white/40 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 cursor-pointer"
             >
               <X size={20} />
             </button>
 
             <div className="text-center mb-5">
-              <div className="w-16 h-16 rounded-2xl bg-white p-2 mx-auto mb-3 shadow-md border border-gray-200 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-white p-2 mx-auto mb-3 shadow-md border border-white/12 flex items-center justify-center">
                 <img src="/csc-vet/pwa-192x192.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <h3 className="text-lg font-black text-csc-dark">Instalar App nos Veteranos</h3>
-              <p className="text-xs text-gray-500 mt-1">Siga os passos simples abaixo para adicionar a app ao seu telemóvel:</p>
+              <p className="text-xs text-white/50 mt-1">Siga os passos simples abaixo para adicionar a app ao seu telemóvel:</p>
             </div>
 
             {isIOS ? (
-              <div className="space-y-3.5 bg-gray-50 p-4 rounded-2xl border border-gray-200 text-xs font-semibold text-gray-700">
+              <div className="space-y-3.5 bg-white/6 p-4 rounded-2xl border border-white/12 text-xs font-semibold text-white/80">
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-csc-dark text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
                   <p className="leading-snug">
@@ -146,7 +146,7 @@ export const PWAInstallPrompt: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-csc-dark text-white font-bold flex items-center justify-center shrink-0 text-xs">2</span>
                   <p className="leading-snug">
-                    Deslize para baixo e selecione <strong className="text-gray-900 inline-flex items-center gap-1 font-bold"><PlusSquare size={13} /> Ecrã Principal</strong>.
+                    Deslize para baixo e selecione <strong className="text-white inline-flex items-center gap-1 font-bold"><PlusSquare size={13} /> Ecrã Principal</strong>.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
@@ -157,7 +157,7 @@ export const PWAInstallPrompt: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="space-y-3 bg-gray-50 p-4 rounded-2xl border border-gray-200 text-xs font-semibold text-gray-700">
+              <div className="space-y-3 bg-white/6 p-4 rounded-2xl border border-white/12 text-xs font-semibold text-white/80">
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-csc-dark text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
                   <p className="leading-snug">
@@ -254,25 +254,25 @@ export const PWAInstallMenuItem: React.FC<{ onClickExtra?: () => void }> = ({ on
 
       {showModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-gray-900 shadow-2xl relative border-2 border-csc-gold">
+          <div className="bg-csc-fundo rounded-3xl max-w-sm w-full p-6 text-white shadow-2xl relative border-2 border-csc-gold">
             <button
               onClick={() => setShowModal(false)}
               aria-label="Fechar"
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer"
+              className="absolute top-4 right-4 text-white/40 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 cursor-pointer"
             >
               <X size={20} />
             </button>
 
             <div className="text-center mb-5">
-              <div className="w-16 h-16 rounded-2xl bg-white p-2 mx-auto mb-3 shadow-md border border-gray-200 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-white p-2 mx-auto mb-3 shadow-md border border-white/12 flex items-center justify-center">
                 <img src="/csc-vet/pwa-192x192.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <h3 className="text-lg font-black text-csc-dark">Instalar App CSC</h3>
-              <p className="text-xs text-gray-500 mt-1">Como instalar a app no seu dispositivo:</p>
+              <p className="text-xs text-white/50 mt-1">Como instalar a app no seu dispositivo:</p>
             </div>
 
             {isIOS ? (
-              <div className="space-y-3.5 bg-gray-50 p-4 rounded-2xl border border-gray-200 text-xs font-semibold text-gray-700">
+              <div className="space-y-3.5 bg-white/6 p-4 rounded-2xl border border-white/12 text-xs font-semibold text-white/80">
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-csc-dark text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
                   <p className="leading-snug">
@@ -282,7 +282,7 @@ export const PWAInstallMenuItem: React.FC<{ onClickExtra?: () => void }> = ({ on
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-csc-dark text-white font-bold flex items-center justify-center shrink-0 text-xs">2</span>
                   <p className="leading-snug">
-                    Selecione a opção <strong className="text-gray-900 inline-flex items-center gap-1 font-bold"><PlusSquare size={13} /> Adicionar ao Ecrã Principal</strong>.
+                    Selecione a opção <strong className="text-white inline-flex items-center gap-1 font-bold"><PlusSquare size={13} /> Adicionar ao Ecrã Principal</strong>.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
@@ -293,7 +293,7 @@ export const PWAInstallMenuItem: React.FC<{ onClickExtra?: () => void }> = ({ on
                 </div>
               </div>
             ) : (
-              <div className="space-y-3 bg-gray-50 p-4 rounded-2xl border border-gray-200 text-xs font-semibold text-gray-700">
+              <div className="space-y-3 bg-white/6 p-4 rounded-2xl border border-white/12 text-xs font-semibold text-white/80">
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-csc-dark text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
                   <p className="leading-snug">

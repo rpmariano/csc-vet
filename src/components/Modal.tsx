@@ -77,14 +77,14 @@ export const Modal: React.FC<ModalProps> = ({
 
   const temCabecalho = Boolean(title || description || icon || showCloseButton)
   const cabecalhoBranded = headerStyle === 'brand'
-  const corFundo = tone === 'dark' ? 'bg-csc-dark text-white' : 'bg-white'
-  const corBordo = tone === 'dark' ? 'border-white/10' : 'border-gray-100'
-  const corTitulo = tone === 'dark' ? 'text-white' : 'text-gray-900'
-  const corDescricao = tone === 'dark' ? 'text-white/60' : 'text-gray-500'
+  const corFundo = tone === 'dark' ? 'bg-csc-dark text-white' : 'bg-csc-fundo text-white'
+  const corBordo = tone === 'dark' ? 'border-white/10' : 'border-white/10'
+  const corTitulo = tone === 'dark' ? 'text-white' : 'text-white'
+  const corDescricao = tone === 'dark' ? 'text-white/60' : 'text-white/50'
   const corBotaoFechar =
     tone === 'dark'
       ? 'bg-white/10 hover:bg-white/20 text-white'
-      : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+      : 'text-white/40 hover:text-white/80 hover:bg-white/10'
 
   return (
     <div
@@ -124,7 +124,7 @@ export const Modal: React.FC<ModalProps> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="shrink-0 w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                className="shrink-0 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 cursor-pointer active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               >
                 <X size={16} className="stroke-[2.5]" />
               </button>
@@ -163,7 +163,7 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="p-5 overflow-y-auto flex-1">{children}</div>
 
         {footer && (
-          <div className={`flex items-center justify-end gap-2.5 border-t ${corBordo} shrink-0 ${cabecalhoBranded ? 'p-4' : 'p-5 pt-3'} ${cabecalhoBranded && tone === 'light' ? 'bg-gray-50' : ''}`}>
+          <div className={`flex items-center justify-end gap-2.5 border-t ${corBordo} shrink-0 ${cabecalhoBranded ? 'p-4' : 'p-5 pt-3'} ${cabecalhoBranded && tone === 'light' ? 'bg-white/6' : ''}`}>
             {footer}
           </div>
         )}

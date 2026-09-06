@@ -41,7 +41,7 @@ export const AnnouncementsInboxButton: React.FC<AnnouncementsInboxButtonProps> =
 
   const corBotao = tone === 'dark'
     ? 'bg-white/10 hover:bg-white/20 text-white'
-    : 'bg-gray-100 hover:bg-gray-200 text-csc-dark'
+    : 'bg-white/10 hover:bg-white/15 text-csc-dark'
   const tamanhoBotao = size === 'sm' ? 'w-7 h-7' : 'w-9 h-9'
 
   return (

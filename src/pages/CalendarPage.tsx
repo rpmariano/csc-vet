@@ -2978,18 +2978,18 @@ const CalendarPage: React.FC = () => {
 
                       {/* Barra de Pesquisa de Membros */}
                       <div className="relative">
-                        <Search size={13} className="absolute left-3 top-2.5 text-gray-400" />
+                        <Search size={13} className="absolute left-3 top-2.5 text-white/40" />
                         <input
                           type="text"
                           value={editPlayerSearchTerm}
                           onChange={(e) => setEditPlayerSearchTerm(e.target.value)}
                           placeholder="Pesquisar por nome na camisola ou nº..."
-                          className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark font-medium text-gray-900"
+                          className={`${CAMPO_FORM} pl-9`}
                         />
                       </div>
 
                       {/* Lista Selecionável Um a Um */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[380px] overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-xl">
+                      <div className="grid grid-cols-1 gap-2 max-h-[380px] overflow-y-auto p-1.5 bg-white/5 border border-white/12 rounded-xl">
                         {filteredMembers.map(p => {
                           const isCalled = isMemberCalled(p)
                           const isEligible = isPlayerEligible(p, editType)
@@ -3003,8 +3003,8 @@ const CalendarPage: React.FC = () => {
                                 !isEligible 
                                   ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
                                   : isCalled 
-                                    ? 'bg-amber-50/80 font-black text-gray-900 border-amber-300 shadow-2xs' 
-                                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-amber-50/80 font-black text-white border-amber-300 shadow-2xs' 
+                                    : 'bg-white/6 border-white/12 text-white/80 hover:bg-white/10'
                               }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -3013,7 +3013,7 @@ const CalendarPage: React.FC = () => {
                                   checked={isCalled}
                                   disabled={!isEligible}
                                   onChange={() => {}}
-                                  className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none shrink-0"
+                                  className="h-4 w-4 text-csc-dark rounded border-white/15 pointer-events-none shrink-0"
                                 />
 
                                 <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">

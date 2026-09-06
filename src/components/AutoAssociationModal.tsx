@@ -118,11 +118,11 @@ export const AutoAssociationModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-      <div className="bg-white rounded-3xl max-w-lg w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-300">
+      <div className="bg-csc-fundo rounded-3xl max-w-lg w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-300">
         <button
           onClick={handleDismiss}
           aria-label="Fechar"
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer"
+          className="absolute top-4 right-4 text-white/40 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 cursor-pointer"
         >
           <X size={20} />
         </button>
@@ -136,7 +136,7 @@ export const AutoAssociationModal: React.FC = () => {
             <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
               Associação Inteligente
             </span>
-            <h2 className="text-xl font-black text-gray-900 leading-tight">
+            <h2 className="text-xl font-black text-white leading-tight">
               Encontrámos a tua Ficha de Atleta!
             </h2>
           </div>
@@ -144,8 +144,8 @@ export const AutoAssociationModal: React.FC = () => {
 
         {!isManualSelect ? (
           <div className="space-y-4">
-            <p className="text-xs text-gray-600 leading-relaxed">
-              Olá <strong className="text-gray-900">{profile?.name || user?.email}</strong>! Detetámos que a tua conta corresponde à seguinte ficha de atleta do plantel oficial:
+            <p className="text-xs text-white/60 leading-relaxed">
+              Olá <strong className="text-white">{profile?.name || user?.email}</strong>! Detetámos que a tua conta corresponde à seguinte ficha de atleta do plantel oficial:
             </p>
 
             {/* Cartão de Correspondência Sugerida */}
@@ -156,7 +156,7 @@ export const AutoAssociationModal: React.FC = () => {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-black text-gray-900 text-base leading-tight">
+                  <h3 className="font-black text-white text-base leading-tight">
                     {matchedPlayer.name}
                   </h3>
                   {matchedPlayer.shirt_name && (
@@ -169,7 +169,7 @@ export const AutoAssociationModal: React.FC = () => {
                       {matchedPlayer.position}
                     </span>
                     {matchedPlayer.kit_size && (
-                      <span className="bg-gray-100 text-gray-700 font-bold px-1.5 py-0.5 rounded">
+                      <span className="bg-white/10 text-white/80 font-bold px-1.5 py-0.5 rounded">
                         Tam: {matchedPlayer.kit_size}
                       </span>
                     )}
@@ -177,19 +177,19 @@ export const AutoAssociationModal: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-3 pt-3 border-t border-amber-200/60 grid grid-cols-2 gap-2 text-[11px] text-gray-600 font-medium">
+              <div className="mt-3 pt-3 border-t border-amber-200/60 grid grid-cols-2 gap-2 text-[11px] text-white/60 font-medium">
                 <div>
-                  <span className="text-gray-400 block text-[9px] uppercase font-bold">Email Ficha:</span>
-                  <span className="truncate block font-semibold text-gray-800">{matchedPlayer.email}</span>
+                  <span className="text-white/40 block text-[9px] uppercase font-bold">Email Ficha:</span>
+                  <span className="truncate block font-semibold text-white">{matchedPlayer.email}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block text-[9px] uppercase font-bold">Telemóvel:</span>
-                  <span className="font-semibold text-gray-800">{matchedPlayer.phone || 'Sem registo'}</span>
+                  <span className="text-white/40 block text-[9px] uppercase font-bold">Telemóvel:</span>
+                  <span className="font-semibold text-white">{matchedPlayer.phone || 'Sem registo'}</span>
                 </div>
               </div>
             </div>
 
-            <p className="text-[11px] text-gray-500 italic">
+            <p className="text-[11px] text-white/50 italic">
               Ao confirmares a associação, terás acesso imediato às tuas convocatórias, pagamento de quotas, dados de equipamento e estatísticas.
             </p>
 
@@ -208,7 +208,7 @@ export const AutoAssociationModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsManualSelect(true)}
-                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition-colors text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-2.5 bg-white/10 hover:bg-white/15 text-white/80 font-bold rounded-2xl transition-colors text-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Search size={14} />
                 <span>Não sou este atleta • Escolher outro do Plantel</span>
@@ -219,7 +219,7 @@ export const AutoAssociationModal: React.FC = () => {
           /* Modo de Seleção Manual */
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-white/60">
                 Selecione o seu nome na lista oficial dos 31 atletas:
               </p>
               <button
@@ -233,18 +233,18 @@ export const AutoAssociationModal: React.FC = () => {
 
             {/* Search Input */}
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+              <Search size={16} className="absolute left-3 top-3 text-white/40" />
               <input
                 type="text"
                 value={manualSearch}
                 onChange={(e) => setManualSearch(e.target.value)}
                 placeholder="Pesquisar por nome, camisola ou posição..."
-                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark"
+                className="w-full pl-9 pr-4 py-2 border border-white/15 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark"
               />
             </div>
 
             {/* Squad List */}
-            <div className="max-h-60 overflow-y-auto divide-y divide-gray-100 border border-gray-200 rounded-2xl">
+            <div className="max-h-60 overflow-y-auto divide-y divide-white/8 border border-white/12 rounded-2xl">
               {filteredSquad.map((p, idx) => (
                 <button
                   key={idx}
@@ -258,15 +258,15 @@ export const AutoAssociationModal: React.FC = () => {
                       {p.jersey_number ? `#${p.jersey_number}` : '-'}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-black text-gray-900 truncate group-hover:text-csc-dark">
+                      <p className="text-xs font-black text-white truncate group-hover:text-csc-dark">
                         {p.name} {p.shirt_name ? `(${p.shirt_name})` : ''}
                       </p>
-                      <p className="text-[10px] text-gray-500 truncate">
+                      <p className="text-[10px] text-white/50 truncate">
                         {p.position} {p.kit_size ? `• Tam: ${p.kit_size}` : ''}
                       </p>
                     </div>
                   </div>
-                  <ChevronRight size={16} className="text-gray-300 group-hover:text-csc-dark group-hover:translate-x-0.5 transition-all shrink-0" />
+                  <ChevronRight size={16} className="text-white/30 group-hover:text-csc-dark group-hover:translate-x-0.5 transition-all shrink-0" />
                 </button>
               ))}
             </div>

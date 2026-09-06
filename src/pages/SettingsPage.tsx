@@ -757,7 +757,7 @@ const SettingsPage: React.FC = () => {
                 type="checkbox"
                 checked={formGdprConsent}
                 onChange={(e) => setFormGdprConsent(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded text-csc-dark border-gray-300 cursor-pointer"
+                className="mt-0.5 w-4 h-4 rounded text-csc-dark border-white/15 cursor-pointer"
               />
               <span className="text-xs text-white/70 leading-relaxed font-medium">
                 Declaro que autorizo o <strong>{clubSettings?.name ?? CLUBE_NOME}</strong> a tratar os meus dados pessoais, contactos, médicos e de imagem para efeitos desportivos, seguros e gestão associativa ao abrigo do RGPD.

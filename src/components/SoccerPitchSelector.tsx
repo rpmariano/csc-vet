@@ -152,7 +152,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
                 className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-xs transition-all shadow-md ${
                   selected
                     ? 'bg-csc-gold text-csc-dark ring-4 ring-yellow-300 scale-110 shadow-xl'
-                    : 'bg-white/90 text-gray-800 hover:bg-white hover:scale-105 border border-white/60'
+                    : 'bg-white/90 text-white hover:bg-white hover:scale-105 border border-white/60'
                 }`}
               >
                 {selected ? (
@@ -181,10 +181,10 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
       </div>
 
       {/* Resumo de Posições Selecionadas com Botões de Remoção */}
-      <div className="bg-white p-3 rounded-xl border border-gray-200 space-y-1.5">
+      <div className="bg-csc-fundo p-3 rounded-xl border border-white/12 space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-gray-700">Posições Atribuídas ({selectedPositions.length}):</span>
-          <span className="text-[10px] text-gray-400 font-semibold">Clica no campo para alternar</span>
+          <span className="text-xs font-bold text-white/80">Posições Atribuídas ({selectedPositions.length}):</span>
+          <span className="text-[10px] text-white/40 font-semibold">Clica no campo para alternar</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {selectedPositions.map((pos, idx) => (

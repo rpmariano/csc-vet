@@ -72,7 +72,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           iconBg: 'bg-blue-100 text-blue-700 border border-blue-200',
           defaultIcon: <AlertTriangle size={24} />,
           confirmBtn: 'bg-csc-dark hover:bg-emerald-950 text-white shadow-sm',
-          boxBg: 'bg-gray-50 border-gray-200 text-gray-800'
+          boxBg: 'bg-white/6 border-white/12 text-white'
         }
     }
   }
@@ -90,17 +90,17 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         aria-modal="true"
         aria-labelledby={tituloId}
         tabIndex={-1}
-        className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-scale-in outline-none"
+        className="bg-csc-fundo rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/12 space-y-5 animate-scale-in outline-none"
       >
         <div className="flex items-center gap-3">
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs ${vStyles.iconBg}`}>
             {icon || vStyles.defaultIcon}
           </div>
           <div>
-            <h3 id={tituloId} className="text-base font-black text-gray-900 leading-tight">
+            <h3 id={tituloId} className="text-base font-black text-white leading-tight">
               {title}
             </h3>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-white/50 mt-0.5">
               Confirmação necessária
             </p>
           </div>
@@ -128,7 +128,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             type="button"
             disabled={isLoading}
             onClick={handleCancel}
-            className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="w-full py-2.5 bg-white/10 hover:bg-white/15 text-white/80 font-bold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             <span>{cancelText}</span>
           </button>

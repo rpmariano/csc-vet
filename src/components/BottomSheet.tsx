@@ -206,14 +206,14 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
   // claro por cima, não o verde `csc-dark` de antes, que sobre o fundo escuro
   // lia como um cartão verde a flutuar em vez de uma camada acima do ecrã.
   const corFundo = tone === 'dark' ? 'bg-csc-fundo text-white' : 'bg-white'
-  const corBordo = tone === 'dark' ? 'border-white/10' : 'border-gray-100'
-  const corTitulo = tone === 'dark' ? 'text-white' : 'text-gray-900'
-  const corDescricao = tone === 'dark' ? 'text-white/60' : 'text-gray-500'
-  const corAlca = tone === 'dark' ? 'bg-white/25' : 'bg-gray-300'
+  const corBordo = tone === 'dark' ? 'border-white/10' : 'border-white/10'
+  const corTitulo = tone === 'dark' ? 'text-white' : 'text-white'
+  const corDescricao = tone === 'dark' ? 'text-white/60' : 'text-white/50'
+  const corAlca = tone === 'dark' ? 'bg-white/25' : 'bg-white/20'
   const corBotaoFechar =
     tone === 'dark'
       ? 'bg-white/10 hover:bg-white/20 text-white'
-      : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+      : 'text-white/40 hover:text-white/80 hover:bg-white/10'
 
   // Transformação do painel: durante o arrasto segue o dedo em pixels; fora disso
   // segue a fase — desliza verticalmente no telemóvel, esbate com um leve zoom no
