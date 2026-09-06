@@ -1,24 +1,34 @@
-import React, { useEffect, useState, useRef } from 'react'
-import {
-  MapPin,
-  Check,
-  X,
-  ChevronRight,
-  ChevronLeft,
-  ShieldAlert,
-  Trophy,
-  Dumbbell,
-  Users,
-} from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ChevronRight, ShieldAlert, X, Cake, MapPin } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla, hasMatchReport, getRsvpDeadline } from './CalendarPage'
 import { triggerHaptic } from '../utils/haptics'
+import { AvatarPerfil, CartaoVidro, CartaoSimples, EtiquetaSeccao } from '../components/ui'
+import { AnnouncementsInboxButton } from '../components/AnnouncementsInbox'
+import {
+  DEFAULT_FINANCIAL_SETTINGS,
+  getSeasonLabel,
+  getSeasonMonths,
+} from '../lib/finance'
+import type { FinancialSettings } from '../lib/finance'
 
-interface Event {
+/**
+ * Hoje — o primeiro ecrã, e o único que responde a "o que é que me diz
+ * respeito agora".
+ *
+ * O redesenho tirou-lhe o carrossel de jogos e a lista de treinos: isso é a
+ * Agenda. Fica **um** compromisso, o próximo, com a resposta à convocatória no
+ * próprio cartão; depois o estado da competição, os dois números do próprio, e
+ * os anos de quem faz hoje.
+ *
+ * A resposta à convocatória existe uma vez só na app, e é aqui.
+ */
+
+interface Evento {
   id: string
   title: string
   type: 'practice' | 'match' | 'gathering'
@@ -26,657 +36,449 @@ interface Event {
   meeting_time?: string | null
   location: string
   field_id?: string | null
-  description: string
   home_away?: 'home' | 'away' | 'neutral'
   is_friendly?: boolean
   is_active?: boolean
   home_score?: number | null
+  away_score?: number | null
   tournament_id?: string | null
-  tournament?: {
-    name: string
-  } | null
-  tournament_name?: string
-  field?: {
-    name: string
-    address?: string | null
-  } | null
-  opponent?: {
-    name: string
-    initials: string
-    logo_url: string
-  }
+  tournament?: { id: string; name: string } | null
+  field?: { name: string; address?: string | null } | null
+  opponent?: { name: string; initials: string; logo_url: string } | null
 }
 
-interface Callup {
+interface Convocatoria {
   id: string
   event_id: string
-  player_id?: string
   status: 'called' | 'confirmed' | 'declined'
-  event: Event
 }
 
-// Hook para suporte a touch swipe / slide no telemóvel
-const useSwipe = (onSwipeLeft?: () => void, onSwipeRight?: () => void) => {
-  const touchStartX = useRef<number | null>(null)
-  const touchEndX = useRef<number | null>(null)
-  const minSwipeDistance = 45
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchEndX.current = null
-    touchStartX.current = e.targetTouches[0].clientX
-  }
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    touchEndX.current = e.targetTouches[0].clientX
-  }
-
-  const onTouchEnd = () => {
-    if (touchStartX.current === null || touchEndX.current === null) return
-    const distance = touchStartX.current - touchEndX.current
-    const isLeftSwipe = distance > minSwipeDistance
-    const isRightSwipe = distance < -minSwipeDistance
-
-    if (isLeftSwipe && onSwipeLeft) {
-      onSwipeLeft()
-    } else if (isRightSwipe && onSwipeRight) {
-      onSwipeRight()
-    }
-  }
-
-  return { onTouchStart, onTouchMove, onTouchEnd }
+interface Aniversariante {
+  id: string
+  nome: string
+  anos: number
 }
+
+const TIPO_ETIQUETA: Record<Evento['type'], string> = {
+  match: 'Jogo',
+  practice: 'Treino',
+  gathering: 'Convívio',
+}
+
+/** Bom dia até às 12h, boa tarde até às 20h, boa noite depois disso. */
+function saudacao(agora = new Date()): string {
+  const h = agora.getHours()
+  if (h < 12) return 'Bom dia,'
+  if (h < 20) return 'Boa tarde,'
+  return 'Boa noite,'
+}
+
+/** O nome por que a pessoa é tratada: alcunha ou nome da camisola, e só depois o próprio. */
+function primeiroNome(p: { name: string; nickname?: string | null; shirt_name?: string | null }): string {
+  const preferido = p.nickname?.trim() || p.shirt_name?.trim()
+  if (preferido) return preferido
+  return p.name.trim().split(/\s+/)[0]
+}
+
+const DATA_LONGA = new Intl.DateTimeFormat('pt-PT', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+})
 
 const Home: React.FC = () => {
   const { profile } = useAuth()
   const { clubSettings } = useClub()
-  const navigate = useNavigate()
 
-  // Matches Carousel State
-  const [upcomingMatches, setUpcomingMatches] = useState<Event[]>([])
-  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+  const [proximo, setProximo] = useState<Evento | null>(null)
+  const [minhaConvocatoria, setMinhaConvocatoria] = useState<Convocatoria | null>(null)
+  const [ultimoJogo, setUltimoJogo] = useState<Evento | null>(null)
+  const [golos, setGolos] = useState<number | null>(null)
+  const [presencas, setPresencas] = useState<number | null>(null)
+  const [aniversariantes, setAniversariantes] = useState<Aniversariante[]>([])
+  const [aCarregar, setACarregar] = useState(true)
 
-  // Suspension Alerts State
-  const [suspensionAlerts, setSuspensionAlerts] = useState<{key: string, msg: string}[]>([])
-
+  // Alertas de suspensão — deixados por quem lança fichas de jogo, em
+  // localStorage, e só visíveis a quem gere. Continuam como estavam: são um
+  // aviso pontual, não um ecrã.
+  const [alertasSuspensao, setAlertasSuspensao] = useState<{ chave: string; texto: string }[]>([])
   useEffect(() => {
-    if (profile && (profile.role === 'coach' || profile.role === 'admin')) {
-      const alerts = []
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key && key.startsWith('csc_suspension_alert_')) {
-          alerts.push({ key, msg: localStorage.getItem(key) || '' })
-        }
+    if (!profile || (profile.role !== 'coach' && profile.role !== 'admin')) return
+    const encontrados: { chave: string; texto: string }[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const chave = localStorage.key(i)
+      if (chave?.startsWith('csc_suspension_alert_')) {
+        encontrados.push({ chave, texto: localStorage.getItem(chave) || '' })
       }
-      setSuspensionAlerts(alerts)
     }
+    setAlertasSuspensao(encontrados)
   }, [profile])
 
-  // Practices State
-  const [upcomingPractices, setUpcomingPractices] = useState<Event[]>([])
-
-  const [myCallups, setMyCallups] = useState<Callup[]>([])
-  const [fields, setFields] = useState<{ id: string; name: string; address?: string | null }[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const getEventLocation = (ev?: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null) => {
-    if (!ev) return ''
-    if (ev.location && ev.location.trim()) return ev.location.trim()
-    if (ev.field?.name) {
-      return ev.field.address ? `${ev.field.name} (${ev.field.address})` : ev.field.name
-    }
-    if (ev.field_id) {
-      const f = fields.find(item => item.id === ev.field_id)
-      if (f) return f.address ? `${f.name} (${f.address})` : f.name
-    }
-    return ''
-  }
-
-  const getCountdownLabel = (dateTimeStr: string) => {
-    const eventDate = new Date(dateTimeStr).getTime()
-    const now = Date.now()
-    const diffMs = eventDate - now
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
-
-    if (diffDays <= 0) return 'É hoje'
-    if (diffDays === 1) return 'Amanhã'
-    if (diffDays <= 6) return `Faltam ${diffDays} dias`
-    return `Em ${diffDays} dias`
-  }
-
   useEffect(() => {
-    const fetchData = async () => {
-      if (!profile) return
-      setLoading(true)
+    if (!profile) return
+    let cancelado = false
+
+    const carregar = async () => {
+      setACarregar(true)
       try {
-        const nowStr = new Date().toISOString()
+        const inicioDeHoje = new Date()
+        inicioDeHoje.setHours(0, 0, 0, 0)
 
-        // Um jogo mostra-se na Home até ao fim do próprio dia — no dia seguinte desaparece,
-        // já teve o seu momento e passa a viver apenas no Calendário / Ficha de Jogo.
-        const startOfToday = new Date()
-        startOfToday.setHours(0, 0, 0, 0)
-        const startOfTodayStr = startOfToday.toISOString()
+        // A época do clube é a mesma regra do módulo financeiro — está lá
+        // porque foi lá que primeiro fez falta, mas é a época do clube e não
+        // uma noção de contabilidade.
+        const { data: defs } = await supabase.from('financial_settings').select('*').maybeSingle()
+        const definicoes: FinancialSettings = { ...DEFAULT_FINANCIAL_SETTINGS, ...(defs ?? {}) }
+        const meses = getSeasonMonths(definicoes, getSeasonLabel(definicoes))
+        const inicioEpoca = meses.length
+          ? new Date(meses[0].year, meses[0].month - 1, 1)
+          : new Date(new Date().getFullYear(), 0, 1)
 
-        // 0. Fetch fields
-        const { data: fieldsData } = await supabase
-          .from('fields')
-          .select('id, name, address')
-        if (fieldsData) {
-          setFields(fieldsData)
-        }
+        const [
+          { data: proximos },
+          { data: ultimos },
+          { data: statsMeus },
+          { data: presencasMinhas },
+          { data: plantel },
+        ] = await Promise.all([
+          // O próximo compromisso, seja jogo, treino ou convívio.
+          supabase
+            .from('events')
+            .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name), field:fields(name, address)')
+            .gte('date_time', inicioDeHoje.toISOString())
+            .order('date_time', { ascending: true })
+            .limit(4),
+          // O último jogo com resultado, para a linha da competição.
+          supabase
+            .from('events')
+            .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name)')
+            .eq('type', 'match')
+            .not('home_score', 'is', null)
+            .order('date_time', { ascending: false })
+            .limit(1),
+          supabase
+            .from('stats')
+            .select('goals, event:events!inner(date_time)')
+            .eq('player_id', profile.id)
+            .gte('event.date_time', inicioEpoca.toISOString()),
+          supabase
+            .from('attendances')
+            .select('present, event:events!inner(date_time)')
+            .eq('player_id', profile.id)
+            .gte('event.date_time', inicioEpoca.toISOString()),
+          supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date'),
+        ])
 
-        // 1. Fetch upcoming matches (inclui jogos de hoje, mesmo já a decorrer ou terminados;
-        // exclui jogos de dias anteriores)
-        const { data: matches } = await supabase
-          .from('events')
-          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season), field:fields(id, name, address)')
-          .eq('type', 'match')
-          .gte('date_time', startOfTodayStr)
-          .order('date_time', { ascending: true })
+        if (cancelado) return
 
-        const resolvedMatches: Event[] = (matches as Event[]) || []
-        // Filtrar apenas jogos ativos (publicados)
-        setUpcomingMatches(resolvedMatches.filter(m => m.is_active !== false))
+        const ativos = ((proximos as Evento[]) ?? []).filter(e => e.is_active !== false)
+        const seguinte = ativos[0] ?? null
+        setProximo(seguinte)
+        setUltimoJogo(((ultimos as Evento[]) ?? [])[0] ?? null)
 
-        // 2. Fetch upcoming practices (apenas ativos)
-        const { data: practices } = await supabase
-          .from('events')
-          .select('*, field:fields(id, name, address)')
-          .eq('type', 'practice')
-          .gte('date_time', nowStr)
-          .order('date_time', { ascending: true })
-          .limit(3)
-        if (practices) {
-          setUpcomingPractices((practices as Event[]).filter(p => p.is_active !== false))
+        // A minha convocatória para esse evento, se existir.
+        if (seguinte) {
+          const { data: conv } = await supabase
+            .from('callups')
+            .select('id, event_id, status')
+            .eq('player_id', profile.id)
+            .eq('event_id', seguinte.id)
+            .maybeSingle()
+          if (!cancelado) setMinhaConvocatoria((conv as Convocatoria) ?? null)
         } else {
-          setUpcomingPractices([])
+          setMinhaConvocatoria(null)
         }
 
-        // 3. Fetch callups (apenas para eventos ativos)
-        const { data: calls } = await supabase
-          .from('callups')
-          .select('*, event:events(*, field:fields(id, name, address), opponent:opponents(name, initials, logo_url))')
-          .eq('player_id', profile.id)
+        setGolos(((statsMeus as { goals: number | null }[]) ?? []).reduce((t, s) => t + (s.goals ?? 0), 0))
 
-        const rawCalls = (calls || []) as unknown as Callup[]
-        const activeCalls = rawCalls.filter(c => !c.event || c.event.is_active !== false)
+        const listaPresencas = (presencasMinhas as { present: boolean }[]) ?? []
+        setPresencas(
+          listaPresencas.length
+            ? Math.round((listaPresencas.filter(p => p.present).length / listaPresencas.length) * 100)
+            : null,
+        )
 
-        if (profile.status === 'injured' || profile.status === 'inactive') {
-          setMyCallups(activeCalls.filter(c => c.event?.type !== 'practice'))
-        } else {
-          setMyCallups(activeCalls)
-        }
-      } catch (err) {
-        console.error(err)
+        const hoje = new Date()
+        setAniversariantes(
+          ((plantel as { id: string; name: string; nickname?: string | null; shirt_name?: string | null; birth_date?: string | null }[]) ?? [])
+            .filter(p => {
+              if (!p.birth_date) return false
+              const d = new Date(p.birth_date)
+              return d.getDate() === hoje.getDate() && d.getMonth() === hoje.getMonth()
+            })
+            .map(p => ({
+              id: p.id,
+              nome: primeiroNome(p),
+              anos: hoje.getFullYear() - new Date(p.birth_date as string).getFullYear(),
+            })),
+        )
+      } catch (erro) {
+        console.error('Erro a carregar a Home:', erro)
       } finally {
-        setLoading(false)
+        if (!cancelado) setACarregar(false)
       }
     }
 
-    fetchData()
+    carregar()
+    return () => {
+      cancelado = true
+    }
   }, [profile])
 
-  const handleCallupResponse = async (callupId: string, status: 'confirmed' | 'declined') => {
-    const callup = myCallups.find(c => c.id === callupId)
-    if (hasMatchReport(callup?.event)) {
+  const responder = async (status: 'confirmed' | 'declined') => {
+    if (!minhaConvocatoria || !proximo) return
+
+    if (hasMatchReport(proximo)) {
       toast.error('Este jogo já tem ficha de jogo lançada — a convocatória está fechada.')
       return
     }
-    const deadline = getRsvpDeadline(callup?.event)
-    if (deadline !== null && Date.now() >= deadline) {
-      toast.error(`Já passou a hora de ${callup?.event?.meeting_time ? 'concentração' : 'início'} — a convocatória está fechada.`)
+    const limite = getRsvpDeadline(proximo)
+    if (limite !== null && Date.now() >= limite) {
+      toast.error(
+        `Já passou a hora de ${proximo.meeting_time ? 'concentração' : 'início'} — a convocatória está fechada.`,
+      )
       return
     }
+
     triggerHaptic(status === 'confirmed' ? 'success' : 'warning')
-    try {
-      const { error } = await supabase.from('callups').update({ status }).eq('id', callupId)
-      if (error) throw error
-      setMyCallups(prev => prev.map(c => (c.id === callupId ? { ...c, status } : c)))
-    } catch (err: any) {
-      console.error('Erro ao atualizar resposta:', err)
-      toast.error('Erro ao atualizar resposta: ' + (err.message || 'Erro'))
+    const anterior = minhaConvocatoria.status
+    setMinhaConvocatoria({ ...minhaConvocatoria, status })
+    const { error } = await supabase.from('callups').update({ status }).eq('id', minhaConvocatoria.id)
+    if (error) {
+      setMinhaConvocatoria({ ...minhaConvocatoria, status: anterior })
+      toast.error('Não foi possível guardar a resposta: ' + error.message)
+      return
     }
+    toast.success(status === 'confirmed' ? 'Contamos contigo.' : 'Resposta registada.')
   }
 
-  const nextMatchSlide = (e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    if (upcomingMatches.length > 1) {
-      triggerHaptic('light')
-      setCurrentMatchIndex(prev => (prev + 1) % upcomingMatches.length)
+  const local = useMemo(() => {
+    if (!proximo) return ''
+    if (proximo.location?.trim()) return proximo.location.trim()
+    if (proximo.field?.name) {
+      return proximo.field.address ? `${proximo.field.name} · ${proximo.field.address}` : proximo.field.name
     }
-  }
+    return ''
+  }, [proximo])
 
-  const prevMatchSlide = (e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    if (upcomingMatches.length > 1) {
-      triggerHaptic('light')
-      setCurrentMatchIndex(prev => (prev - 1 + upcomingMatches.length) % upcomingMatches.length)
-    }
-  }
-
-  // Swipe handlers para touch / telemóvel
-  const matchSwipeHandlers = useSwipe(() => nextMatchSlide(), () => prevMatchSlide())
-
-  const isCallupPendingResponse = (callup: Callup) => {
-    if (callup.status !== 'called') return false
-    const ev = callup.event
-    if (hasMatchReport(ev)) return false
-    if (!ev || !ev.date_time) return true
-    const eventTime = new Date(ev.date_time).getTime()
-    const now = new Date().getTime()
-    if (eventTime < now) return false
-
-    if (ev.type === 'practice') {
-      const sixDaysMs = 6 * 24 * 60 * 60 * 1000
-      return (eventTime - now) <= sixDaysMs
-    }
-    return true
-  }
-
-  const pendingCallups = myCallups
-    .filter(isCallupPendingResponse)
-    .sort((a, b) => {
-      const timeA = a.event?.date_time ? new Date(a.event.date_time).getTime() : Infinity
-      const timeB = b.event?.date_time ? new Date(b.event.date_time).getTime() : Infinity
-      return timeA - timeB
-    })
-  const currentMatch = upcomingMatches[currentMatchIndex]
-  const currentMatchCallup = currentMatch ? myCallups.find(c => c.event_id === currentMatch.id) : undefined
-
-  // Convocatórias por responder, excluindo o jogo já mostrado no cartão principal
-  // (esse tem o próprio RSVP integrado — não faz sentido pedir a mesma resposta duas vezes).
-  const outrasPendentes = pendingCallups.filter(c => c.event_id !== currentMatch?.id)
-
-  const proximoTreino = upcomingPractices[0]
-  const treinoJaNaLista = proximoTreino ? outrasPendentes.some(c => c.event_id === proximoTreino.id) : false
-
-  const formatarDiaMes = (dateStr: string) => {
-    const d = new Date(dateStr)
-    return {
-      dia: d.toLocaleDateString('pt-PT', { day: '2-digit' }),
-      mes: d.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', ''),
-    }
-  }
-
-  const tituloEvento = (ev?: Event | null) => {
-    if (!ev) return 'Evento'
-    if (ev.type === 'match') {
-      const isAway = ev.home_away === 'away'
-      const csc = formatClubSigla(clubSettings?.initials)
-      const opp = formatOpponentSigla(ev.opponent)
-      return isAway ? `${opp} vs ${csc}` : `${csc} vs ${opp}`
-    }
-    if (ev.type === 'practice') return 'Treino'
-    return ev.title || 'Convívio'
-  }
-
-  // Aparência por tipo de evento — para os diferentes compromissos da lista
-  // "Por responder" se distinguirem ao primeiro olhar, sem precisar de ler o título.
-  // Tons claros: a lista vive agora num cartão verde-escuro, não em branco.
-  const tipoInfo = (tipo?: Event['type']) => {
-    if (tipo === 'match') return { Icon: Trophy, cor: 'text-csc-gold' }
-    if (tipo === 'practice') return { Icon: Dumbbell, cor: 'text-emerald-300' }
-    return { Icon: Users, cor: 'text-blue-300' }
-  }
-
-  // Separa o nome do campo da morada, para a morada poder quebrar linha em vez
-  // de ser cortada — e para se poder abrir diretamente no Google Maps.
-  const infoLocal = (ev?: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null) => {
-    if (!ev) return null
-    const campo = ev.field || (ev.field_id ? fields.find(f => f.id === ev.field_id) : null)
-    const nome = campo?.name || ev.location?.trim() || null
-    if (!nome) return null
-    // A morada só se junta ao nome do campo — texto livre em `location` já vem completo.
-    return { nome, morada: campo?.name ? campo.address || null : null }
-  }
-
-  const linkMapa = (nome: string, morada?: string | null) =>
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(morada ? `${nome}, ${morada}` : nome)}`
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
-      </div>
-    )
-  }
+  if (!profile) return null
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Suspension Alerts (Coaches / Admins Only) */}
-      {suspensionAlerts.length > 0 && (
-        <div className="space-y-2">
-          {suspensionAlerts.map(alert => (
-            <div key={alert.key} className="bg-red-50 border border-red-300 rounded-3xl p-4 shadow-sm flex items-start gap-3">
-              <div className="mt-0.5 text-red-600 bg-red-100 rounded-full p-1.5 shrink-0">
-                <ShieldAlert size={18} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-xs font-black text-red-900 uppercase tracking-wider mb-1">Alerta de Suspensão</h4>
-                <p className="text-sm font-bold text-red-800">{alert.msg}</p>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => {
-                  localStorage.removeItem(alert.key)
-                  setSuspensionAlerts(prev => prev.filter(a => a.key !== alert.key))
-                }}
-                className="w-8 h-8 rounded-full bg-white border border-red-200 text-red-700 hover:bg-red-50 hover:border-red-400 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 shadow-2xs"
-                title="Dispensar Alerta"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          ))}
+    <div className="space-y-4 pb-2">
+      {/* Saudação: o cabeçalho da Home. É o único ecrã com o sino dos
+          comunicados — nos outros a fotografia é a única coisa que se repete. */}
+      <header className="flex items-center gap-3 pt-safe">
+        <img
+          src={clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'}
+          alt=""
+          className="w-[42px] h-[42px] rounded-full bg-white object-contain p-[3px] flex-none"
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-[10.5px] text-white/55">{saudacao()}</p>
+          <p className="font-display font-extrabold text-lg text-white truncate mt-0.5">
+            {primeiroNome(profile)}
+          </p>
         </div>
+        <AnnouncementsInboxButton tone="dark" size="md" />
+        <AvatarPerfil tamanho={46} comLapis />
+      </header>
+
+      {alertasSuspensao.map(alerta => (
+        <CartaoSimples
+          key={alerta.chave}
+          className="flex items-start gap-3 px-4 py-3.5 border-csc-red/35 bg-csc-red/12"
+        >
+          <ShieldAlert size={18} className="text-csc-vermelho-texto shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <EtiquetaSeccao como="p" className="text-csc-vermelho-suave">Alerta de suspensão</EtiquetaSeccao>
+            <p className="text-[13px] font-bold text-white mt-1">{alerta.texto}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.removeItem(alerta.chave)
+              setAlertasSuspensao(prev => prev.filter(a => a.chave !== alerta.chave))
+            }}
+            aria-label="Dispensar alerta"
+            className="w-11 h-11 -m-2 rounded-full flex items-center justify-center text-white/50 cursor-pointer shrink-0"
+          >
+            <X size={16} />
+          </button>
+        </CartaoSimples>
+      ))}
+
+      {/* O próximo compromisso — o único elemento alto do ecrã. */}
+      {aCarregar ? (
+        <CartaoVidro className="h-40 animate-pulse" />
+      ) : proximo ? (
+        <CartaoVidro className="overflow-hidden">
+          <div className="p-[17px]">
+            <p className="font-display font-extrabold text-[9.5px] tracking-[0.18em] text-csc-gold uppercase">
+              {DATA_LONGA.format(new Date(proximo.date_time))}
+            </p>
+
+            {proximo.type === 'match' ? (
+              <div className="flex items-center gap-3 mt-3.5">
+                <img
+                  src={clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'}
+                  alt={formatClubSigla(clubSettings?.initials)}
+                  className="w-11 h-11 rounded-full bg-white object-contain p-0.5 flex-none"
+                />
+                <span className="font-display font-black text-[22px] text-white tracking-[-0.02em]">vs</span>
+                {proximo.opponent?.logo_url ? (
+                  <img
+                    src={proximo.opponent.logo_url}
+                    alt={proximo.opponent.name}
+                    className="w-11 h-11 rounded-full bg-white/90 object-contain p-0.5 flex-none"
+                  />
+                ) : (
+                  <span className="w-11 h-11 rounded-full bg-white/90 flex items-center justify-center font-display font-extrabold text-[10px] text-csc-dark flex-none">
+                    {formatOpponentSigla(proximo.opponent)}
+                  </span>
+                )}
+                <span className="flex-1 min-w-0 text-right">
+                  <span className="block font-display font-bold text-xs text-white">
+                    {new Date(proximo.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span className="block text-[10.5px] text-white/50 mt-0.5 truncate">
+                    {proximo.is_friendly ? 'Jogo amigável' : proximo.tournament?.name || 'Jogo oficial'}
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 mt-3.5">
+                <span className="flex-1 min-w-0">
+                  <span className="block font-display font-extrabold text-[17px] text-white truncate">
+                    {proximo.title || TIPO_ETIQUETA[proximo.type]}
+                  </span>
+                  <span className="block text-[10.5px] text-white/50 mt-0.5">
+                    {TIPO_ETIQUETA[proximo.type]}
+                  </span>
+                </span>
+                <span className="font-display font-bold text-xs text-white flex-none">
+                  {new Date(proximo.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            )}
+
+            {local && (
+              <p className="flex items-center gap-1.5 text-[10.5px] text-white/50 mt-3">
+                <MapPin size={12} className="shrink-0" />
+                <span className="truncate">{local}</span>
+              </p>
+            )}
+          </div>
+
+          {/* A resposta à convocatória. Só aparece a quem foi convocado. */}
+          {minhaConvocatoria && (
+            <div className="flex items-center gap-3 px-[17px] py-3.5 bg-[rgba(11,45,11,.55)] border-t border-csc-light/35">
+              <span className="flex-1 font-display font-extrabold text-[13px] text-white">
+                {minhaConvocatoria.status === 'confirmed'
+                  ? 'Contamos contigo.'
+                  : minhaConvocatoria.status === 'declined'
+                    ? 'Ficas de fora.'
+                    : 'Contamos contigo?'}
+              </span>
+              <div className="flex gap-2 flex-none w-[168px]">
+                <button
+                  type="button"
+                  onClick={() => responder('confirmed')}
+                  aria-pressed={minhaConvocatoria.status === 'confirmed'}
+                  className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
+                    transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      minhaConvocatoria.status === 'confirmed'
+                        ? 'bg-csc-light border-csc-light text-white'
+                        : 'bg-white/9 border-white/20 text-white'
+                    }`}
+                >
+                  Vou
+                </button>
+                <button
+                  type="button"
+                  onClick={() => responder('declined')}
+                  aria-pressed={minhaConvocatoria.status === 'declined'}
+                  className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
+                    transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      minhaConvocatoria.status === 'declined'
+                        ? 'bg-white/90 border-white/90 text-csc-tinta'
+                        : 'bg-white/9 border-white/20 text-white'
+                    }`}
+                >
+                  Não
+                </button>
+              </div>
+            </div>
+          )}
+        </CartaoVidro>
+      ) : (
+        <CartaoVidro className="px-[17px] py-6 text-center">
+          <p className="font-display font-extrabold text-sm text-white">Nada marcado para já</p>
+          <p className="text-[11px] text-white/55 mt-1.5">
+            Quando houver jogo, treino ou convívio, aparece aqui.
+          </p>
+        </CartaoVidro>
       )}
 
-      {/* Nível 1: o próximo compromisso, único elemento alto do ecrã.
-          Funde o antigo banner de convocatória pendente com o bilhete de jogo —
-          o RSVP passa a existir num só sítio da app. */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-7">
-          {currentMatch ? (() => {
-            const isAway = currentMatch.home_away === 'away'
-            const cscSigla = formatClubSigla(clubSettings?.initials)
-            const oppSigla = formatOpponentSigla(currentMatch.opponent)
-            const leftLogo = isAway ? currentMatch.opponent?.logo_url : clubSettings?.logo_url
-            const leftInitials = isAway ? oppSigla : cscSigla
-            const rightLogo = isAway ? clubSettings?.logo_url : currentMatch.opponent?.logo_url
-            const rightInitials = isAway ? cscSigla : oppSigla
+      {/* Competição: o estado da época, num toque. */}
+      {ultimoJogo && ultimoJogo.home_score !== null && ultimoJogo.away_score !== null && (
+        <CartaoSimples
+          como={Link}
+          to="/competicao"
+          onClick={() => triggerHaptic('light')}
+          className="flex items-center gap-3.5 px-4 py-3.5 min-h-14 cursor-pointer
+            transition-transform duration-150 active:scale-97
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+        >
+          <span className="w-9 h-9 rounded-xl bg-csc-gold/15 border border-csc-gold/30 flex items-center justify-center
+            font-display font-extrabold text-[13px] text-csc-gold flex-none tabular-nums">
+            {ultimoJogo.home_score}–{ultimoJogo.away_score}
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-display font-extrabold text-[13px] text-white truncate">
+              {ultimoJogo.tournament?.name || 'Competição'}
+            </span>
+            <span className="block text-[10.5px] text-white/55 mt-0.5 truncate">
+              Último jogo com {ultimoJogo.opponent?.name ?? 'adversário'}
+            </span>
+          </span>
+          <ChevronRight size={16} className="text-white/35 flex-none" />
+        </CartaoSimples>
+      )}
 
-            const venueLabel = currentMatch.home_away === 'away' ? 'Fora de casa' : currentMatch.home_away === 'neutral' ? 'Campo neutro' : 'Em casa'
-            const competitionLabel = currentMatch.is_friendly ? 'Jogo amigável' : (currentMatch.tournament?.name || currentMatch.tournament_name || 'Jogo oficial')
-            const horaJogo = new Date(currentMatch.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
-            const horaConcentracao = currentMatch.meeting_time ? currentMatch.meeting_time.substring(0, 5) : null
-            const local = infoLocal(currentMatch)
-
-            return (
-              <div {...matchSwipeHandlers} className="relative bg-csc-dark text-white rounded-3xl overflow-hidden select-none touch-pan-y shadow-lg">
-                {/* Contador de dias: canto, para não quebrar a simetria do resto do cartão */}
-                <span className="absolute top-4 right-4 text-xs font-bold text-white bg-white/10 rounded-full px-3 py-1">
-                  {getCountdownLabel(currentMatch.date_time)}
-                </span>
-
-                <div className="relative p-6 sm:p-8 flex flex-col items-center text-center space-y-5">
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-csc-gold">Próximo jogo</span>
-                    <p className="text-xs text-white/70 mt-1">{competitionLabel} · {venueLabel}</p>
-                  </div>
-
-                  <p className="text-lg font-black capitalize">
-                    {new Date(currentMatch.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
-                  </p>
-
-                  {/* Campo: nome + morada, centrados — um toque abre a localização no Maps */}
-                  {local && (
-                    <a
-                      href={linkMapa(local.nome, local.morada)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={e => e.stopPropagation()}
-                      className="group/campo inline-flex flex-col items-center gap-0.5 -mt-2"
-                    >
-                      <span className="inline-flex items-center gap-1.5 text-sm font-bold group-hover/campo:underline">
-                        <MapPin size={14} className="text-csc-gold shrink-0" />
-                        {local.nome}
-                      </span>
-                      {local.morada && (
-                        <span className="text-xs text-white/70 leading-snug max-w-[280px]">{local.morada}</span>
-                      )}
-                    </a>
-                  )}
-
-                  {/* Duelo de equipas: emblemas em círculo e VS em traço dourado, como
-                      num bilhete — só as siglas, o nome por extenso já não cabia. */}
-                  <div
-                    onClick={() => navigate(`/calendar?event=${currentMatch.id}`)}
-                    className="w-full flex items-center justify-center gap-4 sm:gap-8 py-2 cursor-pointer group"
-                  >
-                    <div className="flex flex-col items-center gap-2 w-24">
-                      {leftLogo ? (
-                        <img src={leftLogo} alt="" className="w-16 h-16 object-contain rounded-full bg-white p-2 shadow-md group-hover:scale-105 transition-transform" />
-                      ) : (
-                        <div className="w-16 h-16 rounded-full bg-white text-csc-dark flex items-center justify-center text-sm font-black shadow-md">{leftInitials}</div>
-                      )}
-                      <div>
-                        <p className="text-sm font-black uppercase leading-tight">{leftInitials}</p>
-                        <p className="text-[11px] text-white/70">{isAway ? 'Fora' : 'Casa'}</p>
-                      </div>
-                    </div>
-
-                    <span
-                      className="text-3xl sm:text-4xl font-black text-transparent shrink-0"
-                      style={{ WebkitTextStroke: '1.5px #e3c04d' }}
-                    >
-                      VS
-                    </span>
-
-                    <div className="flex flex-col items-center gap-2 w-24">
-                      {rightLogo ? (
-                        <img src={rightLogo} alt="" className="w-16 h-16 object-contain rounded-full bg-white p-2 shadow-md group-hover:scale-105 transition-transform" />
-                      ) : (
-                        <div className="w-16 h-16 rounded-full bg-white/15 text-white flex items-center justify-center text-sm font-black shadow-md">{rightInitials}</div>
-                      )}
-                      <div>
-                        <p className="text-sm font-black uppercase leading-tight">{rightInitials}</p>
-                        <p className="text-[11px] text-white/70">{isAway ? 'Casa' : 'Fora'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Horários: concentração e hora do jogo */}
-                  <div className="flex items-center gap-6">
-                    {horaConcentracao && (
-                      <div>
-                        <p className="text-[10px] text-white/70 uppercase tracking-widest font-black">Concentração</p>
-                        <p className="text-base font-black">{horaConcentracao}</p>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-[10px] text-white/70 uppercase tracking-widest font-black">Pontapé de saída</p>
-                      <p className="text-base font-black">{horaJogo}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* RSVP: existe uma vez na app, e é aqui — barra dourada de bordo a bordo.
-                    Mostra-se sempre que ainda dá para responder — mesmo que já tenha respondido
-                    antes, até à hora de concentração o jogador pode sempre mudar de ideias. */}
-                {currentMatchCallup && (() => {
-                  const closedByReport = hasMatchReport(currentMatch)
-                  const deadline = getRsvpDeadline(currentMatch)
-                  const pastDeadline = deadline !== null && Date.now() >= deadline
-                  const canRespond = !closedByReport && !pastDeadline
-
-                  if (closedByReport) {
-                    return (
-                      <div className="relative bg-white/10 px-5 py-3.5 flex items-center justify-center gap-3">
-                        <span className="text-sm text-white/80">Jogo com ficha lançada — convocatória fechada</span>
-                      </div>
-                    )
-                  }
-
-                  if (canRespond) {
-                    const respondido = currentMatchCallup.status !== 'called'
-                    return (
-                      <div className="relative bg-csc-gold px-5 py-3.5 flex flex-col items-center justify-center gap-2">
-                        <span className="text-sm font-bold text-csc-dark">
-                          {respondido ? (
-                            currentMatchCallup.status === 'confirmed' ? '✓ Confirmaste presença' : '✕ Recusaste presença'
-                          ) : 'Vais estar presente?'}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => handleCallupResponse(currentMatchCallup.id, 'confirmed')}
-                            className={`h-10 px-5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-                              currentMatchCallup.status === 'confirmed'
-                                ? 'bg-csc-dark text-white ring-2 ring-white shadow-md'
-                                : 'bg-csc-dark/15 text-csc-dark/70 hover:bg-csc-dark/25'
-                            }`}
-                          >
-                            {currentMatchCallup.status === 'confirmed' && <Check size={15} strokeWidth={3} />}
-                            Sim
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleCallupResponse(currentMatchCallup.id, 'declined')}
-                            className={`h-10 px-5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-                              currentMatchCallup.status === 'declined'
-                                ? 'bg-csc-dark text-white ring-2 ring-white shadow-md'
-                                : 'bg-csc-dark/15 text-csc-dark/70 hover:bg-csc-dark/25'
-                            }`}
-                          >
-                            {currentMatchCallup.status === 'declined' && <X size={15} strokeWidth={3} />}
-                            Não
-                          </button>
-                        </div>
-                        {respondido && (
-                          <span className="text-[11px] font-bold text-csc-dark/70">Toca no outro botão para mudar de resposta.</span>
-                        )}
-                      </div>
-                    )
-                  }
-
-                  return (
-                    <div className="relative bg-white/10 px-5 py-3.5 flex items-center justify-center gap-3">
-                      <span className="text-sm text-white/80">A tua presença</span>
-                      {currentMatchCallup.status === 'called' ? (
-                        <span className="text-sm font-bold text-white/60">Sem resposta</span>
-                      ) : (
-                        <span className={`inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-full ${
-                          currentMatchCallup.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentMatchCallup.status === 'confirmed' ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                          {currentMatchCallup.status === 'confirmed' ? 'Confirmada' : 'Recusada'}
-                        </span>
-                      )}
-                    </div>
-                  )
-                })()}
-
-                {upcomingMatches.length > 1 && (
-                  <div className="relative flex items-center justify-center gap-4 px-5 py-2.5 border-t border-white/10">
-                    <button
-                      type="button"
-                      onClick={prevMatchSlide}
-                      aria-label="Jogo anterior"
-                      className="w-9 h-9 rounded-lg hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    <span className="text-xs font-bold text-white/70">{currentMatchIndex + 1} de {upcomingMatches.length}</span>
-                    <button
-                      type="button"
-                      onClick={nextMatchSlide}
-                      aria-label="Próximo jogo"
-                      className="w-9 h-9 rounded-lg hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )
-          })() : (
-            <div className="bg-csc-dark rounded-3xl p-8 text-center text-white/70 font-medium">
-              Sem jogos agendados no momento.
-            </div>
-          )}
-        </div>
-
-        {/* Níveis 2 e 3 */}
-        <div className="lg:col-span-5 space-y-6">
-
-          {/* Nível 2: lista, não carrossel. Cada convocatória por responder
-              resolve-se na própria linha. */}
-          {outrasPendentes.length > 0 && (
-            <div className="space-y-2.5">
-              <div className="flex items-baseline justify-between px-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Por responder</span>
-                <span className="text-xs font-bold text-csc-dark bg-csc-gold rounded-full px-2.5 py-0.5">{outrasPendentes.length}</span>
-              </div>
-              <div className="bg-csc-dark rounded-3xl overflow-hidden">
-                {outrasPendentes.map((callup, idx) => {
-                  const ev = callup.event
-                  if (!ev) return null
-                  const { dia, mes } = formatarDiaMes(ev.date_time)
-                  const { Icon, cor } = tipoInfo(ev.type)
-                  return (
-                    <div
-                      key={callup.id}
-                      className={`flex items-center gap-3 pl-4 pr-4 py-3 ${idx > 0 ? 'border-t border-white/10' : ''}`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/calendar?event=${ev.id}`)}
-                        className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
-                      >
-                        <div className="w-10 shrink-0 flex flex-col items-center">
-                          <span className="text-lg font-black text-csc-gold leading-none">{dia}</span>
-                          <span className="text-[11px] text-white/60 uppercase">{mes}</span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-white truncate flex items-center gap-1.5">
-                            <Icon size={13} className={`${cor} shrink-0`} />
-                            <span className="truncate">{tituloEvento(ev)}</span>
-                          </p>
-                          <p className="text-xs text-white/60 truncate">
-                            {new Date(ev.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} · {getEventLocation(ev) || 'Local a definir'}
-                          </p>
-                        </div>
-                      </button>
-                      <div className="flex gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleCallupResponse(callup.id, 'confirmed')}
-                          aria-label="Confirmar presença"
-                          className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-emerald-300 flex items-center justify-center transition-colors cursor-pointer"
-                        >
-                          <Check size={18} strokeWidth={2.5} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCallupResponse(callup.id, 'declined')}
-                          aria-label="Recusar presença"
-                          className="w-11 h-11 rounded-full border border-white/15 hover:bg-white/10 text-white/70 flex items-center justify-center transition-colors cursor-pointer"
-                        >
-                          <X size={18} strokeWidth={2.5} />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {proximoTreino && !treinoJaNaLista && (
-            <div className="space-y-2.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-1">Próximo treino</span>
-              <button
-                type="button"
-                onClick={() => navigate(`/calendar?event=${proximoTreino.id}`)}
-                className="w-full flex items-center gap-3 bg-csc-dark rounded-3xl px-4 py-3.5 text-left cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-2xl bg-white/10 text-emerald-300 flex items-center justify-center shrink-0">
-                  <Dumbbell size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white capitalize truncate">
-                    {new Date(proximoTreino.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}
-                    <span className="text-white/60 font-medium"> · {new Date(proximoTreino.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-                  </p>
-                  <p className="text-xs text-white/60 flex items-center gap-1 mt-0.5">
-                    <MapPin size={12} className="shrink-0" />
-                    <span className="truncate">{getEventLocation(proximoTreino) || 'Local a definir'}</span>
-                  </p>
-                </div>
-              </button>
-            </div>
-          )}
-        </div>
+      {/* Os dois números do próprio, na época em curso. */}
+      <div className="flex gap-3">
+        <CartaoSimples className="flex-1 px-4 py-3.5">
+          <EtiquetaSeccao como="p" className="tracking-[0.12em] text-[8.5px]">Os meus golos</EtiquetaSeccao>
+          <p className="font-display font-black text-[26px] leading-none text-white mt-2 tabular-nums">
+            {golos ?? '—'}
+          </p>
+        </CartaoSimples>
+        <CartaoSimples className="flex-1 px-4 py-3.5">
+          <EtiquetaSeccao como="p" className="tracking-[0.12em] text-[8.5px]">Presenças</EtiquetaSeccao>
+          <p className="font-display font-black text-[26px] leading-none text-white mt-2 tabular-nums">
+            {presencas === null ? '—' : <>{presencas}<span className="text-[15px] text-white/45">%</span></>}
+          </p>
+        </CartaoSimples>
       </div>
+
+      {aniversariantes.map(pessoa => (
+        <CartaoSimples
+          key={pessoa.id}
+          className="flex items-center gap-3 px-4 py-3.5 bg-csc-blue/15 border-csc-blue/30"
+        >
+          <span className="w-8 h-8 rounded-[10px] bg-csc-blue/25 border border-csc-blue/35 flex items-center justify-center text-csc-azul-texto flex-none">
+            <Cake size={15} />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-display font-extrabold text-[12.5px] text-white">
+              Hoje é dia do {pessoa.nome}
+            </span>
+            <span className="block text-[10.5px] text-white/60 mt-0.5">faz {pessoa.anos} anos</span>
+          </span>
+        </CartaoSimples>
+      ))}
     </div>
   )
 }

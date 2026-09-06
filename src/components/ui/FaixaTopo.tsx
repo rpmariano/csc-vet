@@ -52,11 +52,11 @@ export const FaixaTopo: React.FC<FaixaTopoProps> = ({
     <div
       className="absolute"
       style={{
-        top: '-30px',
-        right: '-90px',
-        width: '240px',
-        height: '240px',
-        background: 'rgba(11,45,11,.5)',
+        top: '20px',
+        right: '-100px',
+        width: '230px',
+        height: '230px',
+        background: 'rgba(11,45,11,.65)',
         transform: 'skewY(12deg)',
         borderRadius: '44px',
       }}

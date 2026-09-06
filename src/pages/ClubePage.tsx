@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
-import { TituloEcra, EtiquetaSeccao, CartaoSimples } from '../components/ui'
+import { CabecalhoEcra, EtiquetaSeccao, CartaoSimples } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 
 /**
@@ -109,10 +109,11 @@ const ClubePage: React.FC = () => {
 
   return (
     <div className="relative">
-      <TituloEcra className="mb-1">Clube</TituloEcra>
-      <p className="text-[11px] text-white/55 mb-5">
-        {clubSettings?.name ?? 'GD Sport Cascais — Veteranos'}
-      </p>
+      <CabecalhoEcra
+        titulo="Clube"
+        legenda={clubSettings?.name ?? 'GD Sport Cascais — Veteranos'}
+        className="mb-5"
+      />
 
       <section className="mb-6">
         <EtiquetaSeccao className="mb-2.5">Equipa</EtiquetaSeccao>

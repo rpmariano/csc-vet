@@ -7,11 +7,15 @@
  */
 
 export { CartaoVidro, CartaoSimples } from './Cartoes'
+export { AvatarPerfil } from './AvatarPerfil'
+export { CabecalhoEcra } from './CabecalhoEcra'
 export { FaixaTopo } from './FaixaTopo'
 export { FilaSeparadores } from './FilaSeparadores'
 export { Botao, Pastilha } from './Botoes'
 export { TituloEcra, EtiquetaSeccao, NumeroGrande } from './Tipografia'
 
+export type { AvatarPerfilProps } from './AvatarPerfil'
+export type { CabecalhoEcraProps } from './CabecalhoEcra'
 export type { FaixaTopoProps } from './FaixaTopo'
 export type { FilaSeparadoresProps } from './FilaSeparadores'
 export type { BotaoProps, PastilhaProps } from './Botoes'

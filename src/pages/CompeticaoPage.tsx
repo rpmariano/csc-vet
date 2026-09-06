@@ -1,6 +1,6 @@
 import React, { Suspense, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { FilaSeparadores, TituloEcra } from '../components/ui'
+import { FilaSeparadores, CabecalhoEcra } from '../components/ui'
 
 /**
  * Competição — o terceiro lugar da barra do jogador.
@@ -54,7 +54,7 @@ const CompeticaoPage: React.FC = () => {
 
   return (
     <div className="relative">
-      <TituloEcra className="mb-4">Competição</TituloEcra>
+      <CabecalhoEcra titulo="Competição" sobrancelha="Época em curso" className="mb-4" />
 
       <FilaSeparadores
         itens={SEPARADORES}

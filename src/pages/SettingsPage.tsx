@@ -17,9 +17,10 @@ import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 import { toast } from '../context/ToastContext'
+import { triggerHaptic } from '../utils/haptics'
 
 const SettingsPage: React.FC = () => {
-  const { profile, assignedRoles, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
+  const { profile, assignedRoles, actualRole, setSimulatedRole, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
   
   // 1. Identificação Pessoal & Fiscal
   const [formName, setFormName] = useState('')
@@ -262,6 +263,47 @@ const SettingsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/*
+        Alternar entre os perfis atribuídos. Vivia na pílula de cargo do
+        cabeçalho da app, que o redesenho eliminou — e o sítio certo é este: é
+        uma definição da conta, não uma ação de todos os ecrãs. Só aparece a
+        quem tem mais do que um perfil.
+      */}
+      {(assignedRoles?.length ?? 1) > 1 && (
+        <div className="cartao-simples p-4">
+          <p className="font-display font-extrabold uppercase text-[9.5px] tracking-[0.18em] text-white/55">
+            Ver a app como
+          </p>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {(['admin', 'coach', 'player'] as const)
+              .filter(papel => assignedRoles?.includes(papel))
+              .map(papel => {
+                const escolhido = profile?.role === papel
+                return (
+                  <button
+                    key={papel}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('medium')
+                      setSimulatedRole(papel === actualRole ? null : papel)
+                    }}
+                    aria-pressed={escolhido}
+                    className={`min-h-11 px-4 rounded-[22px] border font-display font-bold text-xs cursor-pointer
+                      transition-transform duration-150 active:scale-97 ${
+                        escolhido
+                          ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                          : 'bg-white/5 border-white/12 text-white/70'
+                      }`}
+                  >
+                    {papel === 'admin' ? 'Direção' : papel === 'coach' ? 'Treinador' : 'Jogador'}
+                    {papel === actualRole && ' (real)'}
+                  </button>
+                )
+              })}
+          </div>
+        </div>
+      )}
 
       {saveSuccess && (
         <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl border-2 border-emerald-300 text-xs font-bold flex items-center gap-2 shadow-xs animate-fade-in">

@@ -8,19 +8,15 @@ import {
   Shield,
   AlertTriangle,
   ArrowRight,
-  Check,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import type { UserRole } from '../context/AuthContext'
 import { AutoAssociationModal } from './AutoAssociationModal'
 import { BottomSheet } from './BottomSheet'
 import { FaixaTopo } from './ui'
-import { CabecalhoApp } from './nav/CabecalhoApp'
 import { BarraNavegacao, type ItemNavegacao } from './nav/BarraNavegacao'
 import { FolhaCriar } from './nav/FolhaCriar'
 import { triggerHaptic } from '../utils/haptics'
 import { usePlayerQuotaDebt } from '../hooks/usePlayerQuotaDebt'
-import { RoleAvatar } from './StatusChip'
 
 /**
  * A moldura da app depois do redesenho de 2026.
@@ -30,11 +26,10 @@ import { RoleAvatar } from './StatusChip'
  * num ecrã largo é a mesma coisa ao meio (ver o `#root` em `index.css`), sem
  * uma segunda estrutura a manter em paralelo.
  *
- * Ficam três superfícies:
- *  - o **cabeçalho**, transparente por cima da faixa de cada ecrã, com a
- *    fotografia (Perfil), os comunicados e o estado clínico;
- *  - a **barra inferior**, com os lugares do perfil de quem está a ver;
- *  - a folha do **[+]**, para quem cria.
+ * O que a moldura dá é a faixa do topo, a barra inferior com os lugares do
+ * perfil de quem está a ver, e a folha do [+] para quem cria. O cabeçalho não
+ * é dela: cada ecrã tem o seu título, e o que se repete é só a fotografia que
+ * abre o Perfil (`<CabecalhoEcra>`, ou a saudação no caso da Home).
  *
  * Tudo o resto — Financeiro, Torneios, Adversários, Campos — vive dentro do
  * ecrã Clube, como o handoff manda, e não numa lista lateral.
@@ -72,10 +67,9 @@ const ITENS_GESTAO: readonly ItemNavegacao[] = [
 ]
 
 const Layout: React.FC = () => {
-  const { profile, actualRole, setSimulatedRole, assignedRoles } = useAuth()
+  const { profile } = useAuth()
   const location = useLocation()
 
-  const [papelAberto, setPapelAberto] = useState(false)
   const [dividaAberta, setDividaAberta] = useState(false)
   const [criarAberto, setCriarAberto] = useState(false)
 
@@ -85,12 +79,6 @@ const Layout: React.FC = () => {
   const gere = eAdmin || eTreinador
 
   const dividaQuotas = usePlayerQuotaDebt(profile, eJogador)
-
-  const escolherPapel = (papel: UserRole) => {
-    triggerHaptic('medium')
-    setSimulatedRole(papel === actualRole ? null : papel)
-    setPapelAberto(false)
-  }
 
   // A barra flutua sobre o conteúdo, por isso o fim da coluna tem de acabar
   // acima dela — com `margin-bottom`, não `padding-bottom`: com padding, o
@@ -103,8 +91,6 @@ const Layout: React.FC = () => {
           e sangra até às margens da coluna, como no protótipo. Um ecrã que
           precise de uma capa mais alta desenha a sua por cima. */}
       <FaixaTopo />
-
-      <CabecalhoApp aoTrocarPapel={() => setPapelAberto(true)} className="px-[18px] pt-3 pb-1" />
 
       {/*
         Aviso de quota em atraso. Estava no cartão de Quotas da gaveta, que
@@ -133,7 +119,7 @@ const Layout: React.FC = () => {
         </button>
       )}
 
-      <main className="flex-1 px-[18px] pt-2" style={{ marginBottom: `${margemFinal}px` }}>
+      <main className="flex-1 px-[18px] pt-3" style={{ marginBottom: `${margemFinal}px` }}>
         <Outlet />
       </main>
 
@@ -155,50 +141,6 @@ const Layout: React.FC = () => {
       />
 
       <FolhaCriar isOpen={criarAberto} onClose={() => setCriarAberto(false)} />
-
-      {/* Seletor de papel — só para quem tem mais do que um. O papel simulado
-          muda a app inteira (barra incluída), por isso vive aqui e não numa
-          página. */}
-      <BottomSheet
-        isOpen={papelAberto}
-        onClose={() => setPapelAberto(false)}
-        title="Alternar perfil"
-        description="Vês a app como quem escolheres aqui"
-        tone="dark"
-        size="md"
-      >
-        <div className="space-y-2">
-          {(['admin', 'coach', 'player'] as const)
-            .filter(papel => assignedRoles?.includes(papel))
-            .map(papel => {
-              const escolhido = profile?.role === papel
-              return (
-                <button
-                  key={papel}
-                  type="button"
-                  onClick={() => escolherPapel(papel)}
-                  className={`w-full min-h-14 flex items-center gap-3.5 px-4 py-3 rounded-[22px] border text-left cursor-pointer
-                    transition-transform duration-150 active:scale-97 ${
-                      escolhido
-                        ? 'bg-csc-gold/15 border-csc-gold/60'
-                        : 'bg-white/5 border-white/10'
-                    }`}
-                >
-                  <RoleAvatar role={papel} size={40} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display font-extrabold text-sm text-white">
-                      {papel === 'admin' ? 'Direção' : papel === 'coach' ? 'Treinador' : 'Jogador'}
-                    </span>
-                    {papel === actualRole && (
-                      <span className="block text-[11px] text-white/50 mt-0.5">O teu perfil real</span>
-                    )}
-                  </span>
-                  {escolhido && <Check size={18} className="text-csc-gold shrink-0" />}
-                </button>
-              )
-            })}
-        </div>
-      </BottomSheet>
 
       {/* Detalhe da dívida de quotas. */}
       <BottomSheet
