@@ -139,7 +139,7 @@ test.describe('Calendário', () => {
   /** Cartão do evento (abre a persiana) → botão Modificar. */
   async function abreEdicaoDoEvento(page: Page) {
     await page.locator('div.cartao-vidro.cursor-pointer').first().click()
-    await page.getByTitle('Modificar evento').click()
+    await page.getByRole('button', { name: 'Editar evento' }).click()
   }
 
   // A contagem de partida conta já com a persiana do detalhe, aberta pelo
