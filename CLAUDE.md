@@ -73,6 +73,18 @@ Três papéis: `player` · `coach` · `admin`.
 `events`, `callups`, `attendances`, `stats`, `announcements`, `announcement_reads`,
 `dues`, `transactions`, `club_settings`.
 
+Criadas na fase 1 do redesenho (`supabase_redesign_migration.sql`) e **ainda sem uso
+na app** — existem para os ecrãs das fases seguintes nascerem com os campos certos:
+`quota_exemptions` (meses dispensados de quota, escrita só de admin, leitura do
+próprio — mesma repartição de `dues`), `notification_preferences` e
+`notification_deliveries` (ambas privadas do próprio, como `announcement_reads`; a
+segunda **sem política de INSERT** de propósito, porque quem envia é o lado do
+servidor). Mais a coluna `profiles.preferred_foot` e a função
+`admin_contas_sem_atleta()`, para o ecrã de associação manual de conta a atleta.
+
+Quatro campos que o handoff pede como novos **já existiam**:
+`profiles.quota_start_date`/`quota_end_date` e `tournaments.organizer_name`/`image_url`.
+
 `v_players_public` (`supabase_profiles_pii_migration.sql`) é a vista por onde a app lê os
 colegas de equipa — sem email, telefone, morada, NIF, cartão de cidadão nem IBAN. A tabela
 `profiles` só é legível pelo próprio e por `coach`/`admin`. A associação de uma conta à sua
@@ -174,9 +186,24 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    `<>` com `NULL` dá `NULL`, e um `IF` com condição `NULL` em plpgsql conta como `FALSE`.
    **Lição:** uma guarda de autorização em plpgsql tem de usar `IS DISTINCT FROM`, nunca
    `<>`/`=`, quando o valor comparado pode ser `NULL`.
-4. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
-   `medical_notes` e injetar `<!--roles:admin-->`, ganhando a UI de admin. A RLS trava as
-   escritas, mas combina-se com o ponto 1 na leitura.
+4. **~~P1 — Escalada de privilégios na UI pela etiqueta em `medical_notes`.~~ Já não
+   se aplica** (verificado na base em 2026-09-06). O texto anterior dizia que um
+   jogador podia injetar `<!--roles:admin-->` nas suas notas médicas e ganhar a UI de
+   admin. Entretanto passou a existir a coluna `profiles.roles`, que
+   `extractRolesFromProfile()` lê **primeiro** e só ignora se vier vazia — e está
+   preenchida nas 28 fichas. Mudá-la está travado: a política de UPDATE do próprio
+   tem `WITH CHECK (… AND role = get_user_role() AND NOT (roles IS DISTINCT FROM
+   get_user_roles()))`. A etiqueta é hoje um resto, alcançável só numa ficha com
+   `roles` vazio, que não existe.
+   **O que fica por apertar (defesa em profundidade, não porta aberta):** a política
+   de INSERT em `profiles` é `WITH CHECK (auth.uid() = id OR equipa técnica)` — não
+   restringe `role` nem `roles`. Na prática ninguém lá chega, porque o gatilho
+   `on_auth_user_created` cria a ficha com `role = 'player'` no mesmo instante em que
+   a conta nasce, e um INSERT do próprio bate na chave primária (0 contas sem ficha
+   na base). Mas se esse gatilho alguma vez falhar — tem um `EXCEPTION WHEN OTHERS`
+   que engole o erro, e `profiles.email` é NOT NULL — a conta fica sem ficha e passa
+   a poder criar a sua com `role = 'admin'`. Vale a pena acrescentar ao WITH CHECK
+   que uma ficha criada pelo próprio só pode nascer jogador.
 5. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
    Não há modais escritos à mão sem acessibilidade — todos passaram pelo `<Modal>`,
    `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`.
