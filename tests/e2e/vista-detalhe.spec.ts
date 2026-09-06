@@ -121,13 +121,13 @@ test.describe('Dossier de convocatória', () => {
 
 test.describe('Ficha de jogo', () => {
   test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
-    await abrePagina(page, 'match-reports', { events: [jogo] })
+    await abrePagina(page, 'competicao?ver=fichas', { events: [jogo] })
     await page.locator('div.cursor-pointer').first().click()
 
     await verificaDetalhe(page, /^Ficha de jogo: /, 'Ficha Oficial de Jogo', /\?jogo=j1$/)
 
     await page.goBack()
-    await expect(page).toHaveURL(/match-reports$/)
+    await expect(page).toHaveURL(/ver=fichas$/)
     await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
   })
 })

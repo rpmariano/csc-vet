@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ClubProvider } from './context/ClubContext'
 import { ToastProvider } from './context/ToastContext'
@@ -18,19 +18,27 @@ import Login from './pages/Login'
 
 const Home = React.lazy(() => import('./pages/Home'))
 const CalendarPage = React.lazy(() => import('./pages/CalendarPage'))
-const StatsPage = React.lazy(() => import('./pages/StatsPage'))
 const AnnouncementsPage = React.lazy(() => import('./pages/AnnouncementsPage'))
 const TeamManagementPage = React.lazy(() => import('./pages/TeamManagementPage'))
 const FinancePage = React.lazy(() => import('./pages/FinancePage'))
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'))
 const EventsPage = React.lazy(() => import('./pages/EventsPage'))
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'))
-const MatchReportsPage = React.lazy(() => import('./pages/MatchReportsPage'))
-const StandingsPage = React.lazy(() =>
-  import('./pages/StandingsPage').then(m => ({ default: m.StandingsPage })),
-)
 const CompeticaoPage = React.lazy(() => import('./pages/CompeticaoPage'))
 const ClubePage = React.lazy(() => import('./pages/ClubePage'))
+
+/**
+ * As classificações, as fichas de jogo e as estatísticas deixaram de ser três
+ * sítios e passaram a ser três separadores da Competição. Os endereços antigos
+ * continuam a abrir — há links partilhados no grupo do clube — e trazem a
+ * query consigo, para um `?jogo=<id>` continuar a abrir a ficha certa.
+ */
+const ParaCompeticao: React.FC<{ ver: string }> = ({ ver }) => {
+  const { search } = useLocation()
+  const params = new URLSearchParams(search)
+  params.set('ver', ver)
+  return <Navigate to={`/competicao?${params.toString()}`} replace />
+}
 
 /** Mostrado enquanto o pedaço de código da rota é descarregado. */
 const EcraACarregar: React.FC = () => (
@@ -62,17 +70,19 @@ const App: React.FC = () => {
                     do jogador. As três páginas mantêm endereço próprio: são
                     ligadas de outros sítios e são o alvo de links partilhados. */}
                 <Route path="/competicao" element={<CompeticaoPage />} />
-                <Route path="/match-reports" element={<MatchReportsPage />} />
-                <Route path="/stats" element={<StatsPage />} />
-                <Route path="/standings" element={<StandingsPage />} />
+                <Route path="/match-reports" element={<ParaCompeticao ver="fichas" />} />
+                <Route path="/stats" element={<ParaCompeticao ver="estatisticas" />} />
+                <Route path="/standings" element={<ParaCompeticao ver="classificacoes" />} />
                 <Route path="/settings" element={<SettingsPage />} />
-                {/* Comunicados: leitura aberta a todos (a própria página restringe a
-                    criação/edição a coach e admin); a RLS já protege a escrita. */}
-                <Route path="/announcements" element={<AnnouncementsPage />} />
 
                 {/* Coach and Admin Only */}
                 <Route element={<ProtectedRoute allowedRoles={['coach', 'admin']} />}>
                   <Route path="/events" element={<EventsPage />} />
+                  {/* Comunicados é o ecrã de *gestão*: publicar, editar, apagar.
+                      Quem só lê tem-nos na persiana do sino, na Home — que é
+                      onde o handoff os põe. Deixá-lo aberto a todos dava uma
+                      página sem nenhum link para o jogador. */}
+                  <Route path="/announcements" element={<AnnouncementsPage />} />
                   {/* O Clube é a porta de entrada da gestão. O `/admin` fica a
                       servir os torneios, adversários e campos até a fase 6 os
                       trazer para aqui — por isso ainda não é um redirecionamento. */}

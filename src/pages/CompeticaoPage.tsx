@@ -1,6 +1,9 @@
-import React, { Suspense, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { FilaSeparadores, CabecalhoEcra } from '../components/ui'
+import { StandingsPage } from './StandingsPage'
+import MatchReportsPage from './MatchReportsPage'
+import StatsPage from './StatsPage'
 
 /**
  * Competição — o terceiro lugar da barra do jogador.
@@ -12,9 +15,19 @@ import { FilaSeparadores, CabecalhoEcra } from '../components/ui'
  *
  * O separador escolhido vai no endereço (`?ver=`), para o retroceder do
  * browser funcionar e para se poder mandar um link direto às classificações.
+ * **Quem escreve no endereço aqui dentro tem de acrescentar, não substituir** —
+ * um `setSearchParams({ x })` numa das três páginas apaga o `?ver=` e faz o
+ * ecrã saltar para o primeiro separador.
  *
  * O conteúdo é, para já, o das páginas existentes tal como estão — ainda com
  * o aspeto claro. São redesenhadas na fase 4; o que muda aqui é onde vivem.
+ *
+ * As três são importadas diretamente e não por `React.lazy`. Não é só por
+ * serem o próprio conteúdo deste ecrã (a Competição já vem no seu pedaço de
+ * código): com um `<Suspense>` aqui dentro, a atualização de localização do
+ * React Router deixava de ser confirmada e o retroceder do browser passava a
+ * não fechar a persiana da ficha de jogo — de forma intermitente noutros
+ * ecrãs, sempre neste. Ver o risco P2 no CLAUDE.md.
  */
 
 const SEPARADORES = ['Classificações', 'Fichas de Jogo', 'Estatísticas'] as const
@@ -22,18 +35,6 @@ const SEPARADORES = ['Classificações', 'Fichas de Jogo', 'Estatísticas'] as c
 /** Valor no endereço para cada separador — estável, ao contrário do índice. */
 const CHAVES = ['classificacoes', 'fichas', 'estatisticas'] as const
 
-const StandingsPage = React.lazy(() =>
-  import('./StandingsPage').then(m => ({ default: m.StandingsPage })),
-)
-const MatchReportsPage = React.lazy(() => import('./MatchReportsPage'))
-const StatsPage = React.lazy(() => import('./StatsPage'))
-
-const ACarregar: React.FC = () => (
-  <div className="min-h-[40vh] flex items-center justify-center" role="status" aria-live="polite">
-    <div className="animate-spin rounded-full h-9 w-9 border-2 border-csc-gold border-t-transparent" />
-    <span className="sr-only">A carregar…</span>
-  </div>
-)
 
 const CompeticaoPage: React.FC = () => {
   const [params, setParams] = useSearchParams()
@@ -66,11 +67,9 @@ const CompeticaoPage: React.FC = () => {
       />
 
       <div id="painel-competicao" role="tabpanel" aria-labelledby={`painel-competicao-sep-${ativo}`}>
-        <Suspense fallback={<ACarregar />}>
-          {ativo === 0 && <StandingsPage />}
-          {ativo === 1 && <MatchReportsPage />}
-          {ativo === 2 && <StatsPage />}
-        </Suspense>
+        {ativo === 0 && <StandingsPage />}
+        {ativo === 1 && <MatchReportsPage />}
+        {ativo === 2 && <StatsPage />}
       </div>
     </div>
   )

@@ -41,14 +41,7 @@ const fmtEuro = (n: number) => `${n.toFixed(2)}€`
 const ITENS_JOGADOR: readonly ItemNavegacao[] = [
   { to: '/', etiqueta: 'Hoje', Icone: Home },
   { to: '/calendar', etiqueta: 'Agenda', Icone: Calendar },
-  {
-    to: '/competicao',
-    etiqueta: 'Competição',
-    Icone: Trophy,
-    // As três páginas que a Competição juntou continuam a ter endereço
-    // próprio; enquanto existirem, acendem o mesmo lugar na barra.
-    tambemEm: ['/standings', '/match-reports', '/stats'],
-  },
+  { to: '/competicao', etiqueta: 'Competição', Icone: Trophy },
 ]
 
 /** Barra de quatro lugares com [+] ao meio: treinador e direção. */

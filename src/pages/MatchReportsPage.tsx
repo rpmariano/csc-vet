@@ -194,7 +194,13 @@ export const MatchReportsPage: React.FC = () => {
   const handleOpenReport = (ev: MatchEvent) => {
     setSelectedEventForReport(ev)
     setIsReportModalOpen(true)
-    setSearchParams({ jogo: ev.id })
+    // Acrescentar, não substituir: esta página vive dentro dos separadores da
+    // Competição, e o separador escolhido também vai no endereço (`?ver=`).
+    // Um `setSearchParams({ jogo })` apagava-o, a Competição saltava para o
+    // primeiro separador e a ficha nunca chegava a abrir.
+    const seguintes = new URLSearchParams(searchParams)
+    seguintes.set('jogo', ev.id)
+    setSearchParams(seguintes)
   }
 
   const fecharFicha = () => {

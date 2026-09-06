@@ -8,6 +8,9 @@ import {
   MapPin,
   Shield,
   Lock,
+  Users,
+  ClipboardList,
+  UserCircle,
   ChevronRight,
   type LucideIcon,
 } from 'lucide-react'
@@ -28,6 +31,12 @@ import { triggerHaptic } from '../utils/haptics'
  * Nesta fase o ecrã é o índice: as entradas levam às páginas que já existem.
  * A fase 6 desmembra o `AdminDashboard` e traz os torneios, os adversários e
  * os campos para aqui dentro, em vez de os deixar numa página só.
+ *
+ * A entrada da Competição não está no mapa de navegação do handoff, que aqui
+ * só lista "Fichas de jogo" — mas o README promete que o treinador tem tudo o
+ * que o jogador tem, e a barra dele não tem lugar para a Competição. Sem esta
+ * entrada, quem gere perdia as classificações e as estatísticas que a sidebar
+ * antiga lhe dava.
  */
 
 interface Entrada {
@@ -39,12 +48,30 @@ interface Entrada {
   soDirecao?: boolean
 }
 
-const CONSULTA: readonly Entrada[] = [
+const EQUIPA: readonly Entrada[] = [
+  {
+    para: '/team-management',
+    titulo: 'Plantel',
+    descricao: 'Fichas, posições e estado dos atletas',
+    Icone: Users,
+  },
+  {
+    para: '/competicao',
+    titulo: 'Competição',
+    descricao: 'Classificações, fichas de jogo e estatísticas',
+    Icone: ClipboardList,
+  },
   {
     para: '/announcements',
     titulo: 'Comunicados',
-    descricao: 'Avisos publicados à equipa',
+    descricao: 'Publicar e editar os avisos à equipa',
     Icone: Megaphone,
+  },
+  {
+    para: '/settings',
+    titulo: 'O meu perfil',
+    descricao: 'A minha ficha, estado físico e conta',
+    Icone: UserCircle,
   },
 ]
 
@@ -118,7 +145,7 @@ const ClubePage: React.FC = () => {
       <section className="mb-6">
         <EtiquetaSeccao className="mb-2.5">Equipa</EtiquetaSeccao>
         <div className="space-y-2">
-          {CONSULTA.map(entrada => (
+          {EQUIPA.map(entrada => (
             <LinhaEntrada key={entrada.titulo} entrada={entrada} />
           ))}
         </div>
