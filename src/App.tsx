@@ -37,6 +37,7 @@ const FinancePage = React.lazy(() => import('./pages/FinancePage'))
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'))
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'))
 const ClubePage = React.lazy(() => import('./pages/ClubePage'))
+const NovaPalavraPasse = React.lazy(() => import('./pages/NovaPalavraPasse'))
 
 /**
  * As classificações, as fichas de jogo e as estatísticas deixaram de ser três
@@ -70,6 +71,10 @@ const App: React.FC = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
+            {/* O link de recuperação vem do email e traz uma sessão de
+                recuperação, não uma sessão normal — por isso fica fora do
+                ProtectedRoute e fora do Layout. */}
+            <Route path="/nova-palavra-passe" element={<NovaPalavraPasse />} />
 
             {/* Protected Routes (Everyone logged in) */}
             <Route element={<ProtectedRoute />}>
