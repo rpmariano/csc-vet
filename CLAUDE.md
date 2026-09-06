@@ -195,15 +195,26 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    tem `WITH CHECK (… AND role = get_user_role() AND NOT (roles IS DISTINCT FROM
    get_user_roles()))`. A etiqueta é hoje um resto, alcançável só numa ficha com
    `roles` vazio, que não existe.
-   **O que fica por apertar (defesa em profundidade, não porta aberta):** a política
-   de INSERT em `profiles` é `WITH CHECK (auth.uid() = id OR equipa técnica)` — não
-   restringe `role` nem `roles`. Na prática ninguém lá chega, porque o gatilho
-   `on_auth_user_created` cria a ficha com `role = 'player'` no mesmo instante em que
-   a conta nasce, e um INSERT do próprio bate na chave primária (0 contas sem ficha
-   na base). Mas se esse gatilho alguma vez falhar — tem um `EXCEPTION WHEN OTHERS`
-   que engole o erro, e `profiles.email` é NOT NULL — a conta fica sem ficha e passa
-   a poder criar a sua com `role = 'admin'`. Vale a pena acrescentar ao WITH CHECK
-   que uma ficha criada pelo próprio só pode nascer jogador.
+   **~~O que ficava por apertar.~~ Corrigido em 2026-09-06**
+   (`supabase_seguranca_insert_execute_migration.sql`, aplicada). A política de
+   INSERT era `WITH CHECK (auth.uid() = id OR equipa técnica)` e não dizia nada sobre
+   `role` — uma ficha criada pelo próprio podia nascer admin. Ninguém lá chegava,
+   porque o gatilho `on_auth_user_created` cria a ficha com `role = 'player'` no
+   mesmo instante em que a conta nasce e um INSERT do próprio bate na chave primária
+   (zero contas sem ficha); mas esse gatilho engole os seus erros com um `EXCEPTION
+   WHEN OTHERS` e `profiles.email` é NOT NULL, por isso uma conta sem email deixaria
+   a ficha por criar e a porta aberta. Hoje o WITH CHECK exige que uma ficha criada
+   pelo próprio nasça `role = 'player'` e `roles = {player}`. Verificado: inserir
+   como admin dá 42501, inserir como jogador — o que a app faz — passa.
+7. **~~Funções SECURITY DEFINER chamáveis sem sessão.~~ Corrigido em 2026-09-06**
+   (mesma migração). Sete funções estavam expostas em `/rest/v1/rpc/…` à chave
+   anónima. Tinham guarda interna, mas a guarda é a segunda linha de defesa.
+   **Completa a lição do ponto 2:** ali o problema era o EXECUTE estar concedido
+   *diretamente* a `anon`/`authenticated`, e um `REVOKE ... FROM PUBLIC` não chegar.
+   O inverso também é verdade — o Postgres concede EXECUTE a `PUBLIC` em toda a
+   função nova, e `anon` herda de lá. **Uma função nova precisa de
+   `REVOKE ... FROM PUBLIC, anon` e de um `GRANT` explícito a quem a deve chamar.**
+   `handle_new_user`, sendo gatilho e não RPC, saiu da API para os dois lados.
 5. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
    Não há modais escritos à mão sem acessibilidade — todos passaram pelo `<Modal>`,
    `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`.
