@@ -143,9 +143,8 @@ test.describe('Calendário', () => {
     await page.getByTitle('Modificar evento').click()
   }
 
-  // O detalhe do evento é diálogo no telemóvel e página no desktop, por isso a
-  // contagem de partida difere; o que se verifica é sempre o que se empilha
-  // por cima dela.
+  // A contagem de partida conta já com a persiana do detalhe, aberta pelo
+  // caminho acima; o que se verifica é o que se empilha por cima dela.
   test('editar evento', async ({ page }) => {
     await abrePagina(page, 'calendar', { events: [treino] })
     await abreEdicaoDoEvento(page)

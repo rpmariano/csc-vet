@@ -1,69 +1,39 @@
 import { forwardRef } from 'react'
-import { ArrowLeft } from 'lucide-react'
 import { BottomSheet, type BottomSheetProps } from './BottomSheet'
-import { useEhDesktop } from '../hooks/useEhDesktop'
 
 /**
  * Ecrã de detalhe de uma entidade — um evento, uma ficha de atleta.
  *
- * No **telemóvel** é a persiana de sempre: sobe de baixo, fecha-se com um
- * arrasto, é um diálogo por cima da lista.
+ * Era o componente que decidia a moldura pelo tamanho do ecrã: persiana no
+ * telemóvel, página inteira no computador. Com o redesenho de 2026 deixou de
+ * haver duas UIs — a app é de telemóvel, e no computador é a mesma coisa numa
+ * coluna ao meio — por isso a persiana passou a ser a única forma.
  *
- * No **desktop** não é diálogo nenhum: é a página. O conteúdo passa a ocupar a
- * área principal, com uma barra de voltar por cima, e a lista de onde se veio
- * desaparece — como em qualquer site. Sem sobreposição, sem prisão de foco,
- * com o scroll normal da página e um endereço próprio na barra do browser.
- *
- * O conteúdo é exatamente o mesmo nos dois casos: quem usa este componente
- * escreve o detalhe uma vez e não trata do resto.
+ * O componente fica, e não foi substituído pelo `BottomSheet` em cada sítio,
+ * por três razões: marca a intenção (isto é *ver uma entidade*, não um
+ * formulário curto), é o gancho onde vive a convenção de o detalhe ir no
+ * endereço (`?event=`, `?atleta=`) — o que lhe dá link próprio e faz o
+ * retroceder do browser fechá-lo — e é onde se voltaria a mexer se algum dia
+ * a moldura tornasse a divergir.
  */
 
 export interface VistaDetalheProps extends BottomSheetProps {
-  /** Texto do botão de voltar no desktop. */
+  /**
+   * Texto do botão de voltar. Sem efeito desde que o detalhe é sempre
+   * persiana; mantido para não obrigar a mexer nos sítios que o passam.
+   * @deprecated
+   */
   voltarTexto?: string
 }
 
 export const VistaDetalhe = forwardRef<HTMLDivElement, VistaDetalheProps>(function VistaDetalhe(
-  { voltarTexto = 'Voltar', children, ...props },
+  { voltarTexto: _voltarTexto, children, ...props },
   ref,
 ) {
-  const ehDesktop = useEhDesktop()
-
-  if (!ehDesktop) {
-    return (
-      <BottomSheet ref={ref} {...props}>
-        {children}
-      </BottomSheet>
-    )
-  }
-
-  if (!props.isOpen) return null
-
-  const { onClose, tone = 'dark', className = '', footer, ariaLabel } = props
-  const corFundo = tone === 'dark' ? 'bg-csc-dark text-white' : 'bg-white'
-  const corBordo = tone === 'dark' ? 'border-white/10' : 'border-gray-100'
-
   return (
-    <section aria-label={ariaLabel} className="space-y-3">
-      <button
-        type="button"
-        onClick={onClose}
-        className="flex items-center gap-1.5 text-xs font-black text-gray-500 hover:text-csc-dark transition-colors cursor-pointer group"
-      >
-        <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-        <span>{voltarTexto}</span>
-      </button>
-
-      <div ref={ref} className={`${corFundo} rounded-3xl shadow-sm border ${corBordo} p-6 ${className}`}>
-        {children}
-      </div>
-
-      {footer && (
-        <div className={`${corFundo} rounded-3xl shadow-sm border ${corBordo} p-4 flex items-center justify-end gap-2.5`}>
-          {footer}
-        </div>
-      )}
-    </section>
+    <BottomSheet ref={ref} {...props}>
+      {children}
+    </BottomSheet>
   )
 })
 

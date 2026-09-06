@@ -378,12 +378,11 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     >
       <div className="space-y-5">
 
-        {/* Fechar — só no telemóvel: no desktop isto é uma página, e quem volta
-            atrás é a barra "Voltar" da VistaDetalhe. */}
+        {/* Fechar a ficha. */}
         <button
           onClick={onClose}
           aria-label="Fechar"
-          className="md:hidden absolute top-4 right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer z-20 active:scale-90 shadow-md border-2 border-white/40"
+          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer z-20 active:scale-90 shadow-md border-2 border-white/40"
           title="Fechar"
         >
           <X size={19} className="stroke-[2.5]" />

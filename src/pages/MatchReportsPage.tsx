@@ -12,7 +12,6 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
 import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
-import { useEhDesktop } from '../hooks/useEhDesktop'
 import { useSearchParams } from 'react-router-dom'
 
 interface Opponent {
@@ -73,7 +72,6 @@ export const MatchReportsPage: React.FC = () => {
 
   // Modal de Ficha de Jogo
   const [selectedEventForReport, setSelectedEventForReport] = useState<MatchEvent | null>(null)
-  const ehDesktop = useEhDesktop()
   const [searchParams, setSearchParams] = useSearchParams()
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
 
@@ -227,9 +225,7 @@ export const MatchReportsPage: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-12">
-      {/* No desktop, abrir uma ficha de jogo é mudar de página: a lista sai da
-          frente em vez de ficar por baixo de uma janela. */}
-      <div className={ehDesktop && isReportModalOpen ? 'hidden' : 'space-y-4'}>
+      <div className="space-y-4">
       
       {/* Barra de Pesquisa e Filtros */}
       <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-200 space-y-3">

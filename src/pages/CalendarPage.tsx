@@ -29,7 +29,6 @@ import { useSearchParams } from 'react-router-dom'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
 import { VistaDetalhe } from '../components/VistaDetalhe'
-import { useEhDesktop } from '../hooks/useEhDesktop'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { QuickFieldModal } from '../components/QuickFieldModal'
 import { QuickOpponentModal } from '../components/QuickOpponentModal'
@@ -220,7 +219,6 @@ const CalendarPage: React.FC = () => {
   const [opponents, setOpponents] = useState<Opponent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [searchParams, setSearchParams] = useSearchParams()
-  const ehDesktop = useEhDesktop()
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   // Separado de `selectedEvent`: o evento fica retido (para a persiana poder deslizar
   // suavemente para fora ao fechar) mesmo depois de a persiana deixar de estar aberta.
@@ -1508,10 +1506,7 @@ const CalendarPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* No desktop, abrir um evento é mudar de página: a agenda sai da frente
-          em vez de ficar por baixo de uma janela. No telemóvel a persiana sobe
-          por cima e a lista continua onde estava. */}
-      <div className={ehDesktop && isEventSheetOpen ? 'hidden' : 'space-y-6'}>
+      <div className="space-y-6">
 
       {/* Barra de Navegação & Filtros de Calendário */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 space-y-3.5">
@@ -1834,9 +1829,9 @@ const CalendarPage: React.FC = () => {
           A condição usa só `selectedEvent` (nunca voltar a null ao fechar) — a persiana
           controla a própria visibilidade por `isEventSheetOpen`, para poder deslizar
           para fora suavemente em vez de desaparecer no instante em que se fecha. */}
-      {/* A ficha de jogo abre a partir daqui: no desktop substitui este detalhe,
-          como um nível abaixo na navegação, em vez de se sobrepor. */}
-      <div className={ehDesktop && isMatchReportOpen ? 'hidden' : ''}>
+      {/* A ficha de jogo abre a partir do detalhe do evento — uma persiana
+          por cima da outra, um nível abaixo na navegação. */}
+      <div>
       {selectedEvent && (
         <VistaDetalhe
           isOpen={isEventSheetOpen}
@@ -1852,13 +1847,12 @@ const CalendarPage: React.FC = () => {
           onContentTouchEnd={handleCarouselTouchEnd}
         >
           <div className="space-y-4 select-none">
-            {/* Fechar a persiana — só no telemóvel: no desktop isto é uma página, e
-                quem volta atrás é a barra "Voltar à agenda" da VistaDetalhe. */}
+            {/* Fechar a persiana. */}
             <button
               type="button"
               onClick={handleCloseEventModal}
               aria-label="Fechar"
-              className="md:hidden absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />

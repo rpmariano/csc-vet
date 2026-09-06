@@ -10,7 +10,8 @@ import {
   ExternalLink,
   Check,
   AlertCircle,
-  Lock
+  Lock,
+  LogOut
 } from 'lucide-react'
 import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
@@ -18,7 +19,7 @@ import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSe
 import { toast } from '../context/ToastContext'
 
 const SettingsPage: React.FC = () => {
-  const { profile, assignedRoles, toggleClinicalStatus, refreshProfile } = useAuth()
+  const { profile, assignedRoles, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
   
   // 1. Identificação Pessoal & Fiscal
   const [formName, setFormName] = useState('')
@@ -690,6 +691,25 @@ const SettingsPage: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/*
+        Terminar sessão vivia na gaveta do menu, que o redesenho eliminou. O
+        sítio certo é aqui, no Perfil — é o ecrã da conta, e é onde o handoff
+        o põe (5b). Fica separado do formulário: sair não é guardar nada, e
+        não deve parecer mais uma ação da ficha.
+      */}
+      <div className="mt-8 pt-5 border-t border-white/10">
+        <button
+          type="button"
+          onClick={() => signOut()}
+          className="w-full min-h-11 flex items-center justify-center gap-2 px-4 rounded-2xl
+            bg-csc-red/15 border border-csc-red/35 text-csc-vermelho-texto
+            font-display font-extrabold text-xs cursor-pointer transition-transform duration-150 active:scale-97"
+        >
+          <LogOut size={16} />
+          <span>Terminar Sessão</span>
+        </button>
+      </div>
     </div>
   )
 }

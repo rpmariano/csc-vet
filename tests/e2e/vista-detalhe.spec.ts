@@ -4,12 +4,14 @@ import { montarSupabaseFalso } from './supabase-mock'
 /**
  * Ver um evento ou uma ficha de atleta é navegar, não abrir uma janela.
  *
- * No desktop o detalhe é a página: sem `role="dialog"`, com a lista fora da
- * frente e com endereço próprio. No telemóvel continua a ser a persiana de
- * sempre — também com endereço, para o botão de retroceder a fechar.
+ * O detalhe é a persiana, com endereço próprio (`?event=`, `?atleta=`), para o
+ * botão de retroceder do browser a fechar.
+ *
+ * Havia aqui duas versões deste contrato — persiana no telemóvel, página no
+ * desktop. Com o redesenho de 2026 a app passou a ter uma só UI, e estes
+ * testes correm nos dois projetos (`desktop` 1280px e `telemovel`) sem
+ * ramificar: é isso, agora, que garante que a largura da janela não muda nada.
  */
-
-const ehDesktop = (page: Page) => (page.viewportSize()?.width ?? 0) >= 768
 
 const treino = {
   id: 'e1',
@@ -54,36 +56,20 @@ async function abrePagina(page: Page, caminho: string, fixtures = {}) {
   await page.waitForLoadState('networkidle')
 }
 
-/**
- * O painel do detalhe: uma `region` no desktop (o `<section>` da página), um
- * `dialog` no telemóvel (a persiana).
- */
-function painelDetalhe(page: Page, nome: string | RegExp) {
-  return ehDesktop(page)
-    ? page.getByRole('region', { name: nome })
-    : page.getByRole('dialog', { name: nome })
-}
-
-/** O contrato do detalhe, seja qual for a UI. */
+/** O contrato do detalhe, em qualquer largura de janela. */
 async function verificaDetalhe(page: Page, nome: string | RegExp, textoNoDetalhe: string, paramEsperado: RegExp) {
   await expect(page).toHaveURL(paramEsperado)
 
-  const painel = painelDetalhe(page, nome)
+  const painel = page.getByRole('dialog', { name: nome })
   await expect(painel).toBeVisible()
   await expect(painel.getByText(textoNoDetalhe).first()).toBeVisible()
 
-  if (ehDesktop(page)) {
-    // Página: nada de diálogos, e uma barra de voltar em vez de um X.
-    await expect(page.locator('[role="dialog"]')).toHaveCount(0)
-    await expect(painel.getByRole('button', { name: /^Voltar/ })).toBeVisible()
-  } else {
-    // Persiana: continua a ser um diálogo por cima da lista.
-    await expect(page.locator('[role="dialog"]')).toHaveCount(1)
-  }
+  // Um só diálogo: a persiana por cima da lista, sem nada empilhado.
+  await expect(page.locator('[role="dialog"]')).toHaveCount(1)
 }
 
 test.describe('Detalhe do evento', () => {
-  test('abre com endereço próprio e sem janela no desktop', async ({ page }) => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'calendar', { events: [treino] })
     await page.getByRole('button', { name: /^Lista/ }).click()
 
@@ -106,7 +92,7 @@ test.describe('Detalhe do evento', () => {
 })
 
 test.describe('Ficha de atleta', () => {
-  test('abre com endereço próprio e sem janela no desktop', async ({ page }) => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'team-management')
     await page.locator('div.cursor-pointer.bg-csc-dark').first().click()
 
@@ -121,7 +107,7 @@ test.describe('Ficha de atleta', () => {
 test.describe('Dossier de convocatória', () => {
   const porRealizar = { ...jogo, id: 'e2', date_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), home_score: null, away_score: null }
 
-  test('abre com endereço próprio e sem janela no desktop', async ({ page }) => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'events', { events: [porRealizar] })
     await page.getByRole('button', { name: /Ver Detalhes & RSVP/ }).click()
 
@@ -134,7 +120,7 @@ test.describe('Dossier de convocatória', () => {
 })
 
 test.describe('Ficha de jogo', () => {
-  test('abre com endereço próprio e sem janela no desktop', async ({ page }) => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'match-reports', { events: [jogo] })
     await page.locator('div.cursor-pointer').first().click()
 

@@ -1,7 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @theme {
+  /* Cores do manual de normas — as mesmas de sempre. */
   --color-csc-dark: #164f16;
   --color-csc-light: #009662;
   --color-csc-gold: #e3c04d;
@@ -9,8 +10,22 @@
   --color-csc-red: #ef3223;
   --color-csc-black: #3c3008;
 
+  /*
+   * Tema escuro. As cores acima são de superfície — cheias, saturadas, boas
+   * para uma faixa ou um botão. Estas são as de *texto*: as mesmas famílias
+   * clareadas até lerem sobre o fundo `csc-fundo`, onde o verde do clube e o
+   * azul institucional ficam demasiado escuros para uma frase.
+   *   csc-tinta — o inverso: texto escuro sobre um botão dourado.
+   */
+  --color-csc-fundo: #0e1011;
+  --color-csc-tinta: #121415;
+  --color-csc-verde-texto: #4ecf9d;
+  --color-csc-azul-texto: #7fb3e0;
+  --color-csc-vermelho-texto: #f08a7f;
+  --color-csc-vermelho-suave: #f0b8b0;
+
   --font-sans: "Helvetica", "Arial", sans-serif;
-  --font-display: "Montserrat", "Helvetica", sans-serif;
+  --font-display: "Archivo", "Helvetica", sans-serif;
 
   /*
    * Escala nomeada de z-index para diálogos, para não se repetir o que
@@ -26,16 +41,61 @@
   --z-index-modal: 50;
   --z-index-modal-top: 70;
   --z-index-modal-confirm: 80;
+
+  /*
+   * Os pontos de corte responsivos são desligados de propósito.
+   *
+   * A app deixou de ter duas UIs: é a de telemóvel, numa coluna de 480px ao
+   * meio do ecrã (ver `#root`). Mas os prefixos do Tailwind (`sm:`, `md:`,
+   * `lg:`) olham para a **janela**, não para a coluna — num monitor largo
+   * continuariam a disparar e a pôr três colunas de grelha dentro de uma
+   * faixa de 480px, que é precisamente o que não se quer.
+   *
+   * Empurrando-os para 9999px, as ~400 classes com prefixo espalhadas pelas
+   * páginas ficam inertes e sobra um único layout, igual em qualquer largura
+   * — sem ter de lhes tocar uma a uma em ficheiros que vão ser reescritos de
+   * qualquer forma nas fases seguintes. Quem redesenhar um ecrã tira-as; até
+   * lá não fazem nada.
+   *
+   * Se alguma vez voltar a haver um layout largo, é aqui que se repõem.
+   */
+  --breakpoint-sm: 9999px;
+  --breakpoint-md: 9999px;
+  --breakpoint-lg: 9999px;
+  --breakpoint-xl: 9999px;
+  --breakpoint-2xl: 9999px;
 }
 
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background-color: #f3f4f6;
-  color: #1f2937;
+  background-color: var(--color-csc-fundo);
+  color: #ffffff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/*
+ * A app é de telemóvel. No computador não há outra versão — há a mesma, ao
+ * meio do ecrã, com o fundo a continuar para os lados. O `min-height` no
+ * `#root` é o que impede a coluna de encolher e deixar ver o `body` por baixo
+ * com outra cor.
+ */
+#root {
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  position: relative;
+}
+
+/*
+ * O fundo fica no `body`, não aqui, de propósito: a faixa geométrica do topo
+ * de cada ecrã é desenhada com `z-index` negativo, para passar por trás dos
+ * cartões de vidro. Um `background-color` no `#root` tapava-a — elementos com
+ * z negativo ficam atrás do fundo do seu contexto de empilhamento, e só o
+ * fundo do elemento raiz é que se propaga para a tela e lhes fica por baixo.
+ */
 
 /* 
  * Correção do bug de renderização de sombras nos cantos arredondados em mobile (Tailwind v4)
@@ -129,3 +189,83 @@ body {
 /* Margens de segurança para ecrãs com notch / barra de gestos (iOS, Android) */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+
+/* ==========================================================================
+ * Redesenho 2026 — primitivos da nova linguagem visual
+ *
+ * Estão aqui, e não em classes soltas nos componentes, os valores que o
+ * handoff de design fixa ao pixel: os dois fundos de vidro, as sombras e a
+ * faixa geométrica do topo. Repetidos à mão em cada ecrã, divergiriam ao
+ * terceiro; aqui mudam-se uma vez.
+ * ========================================================================== */
+
+/*
+ * Cartão de vidro — o cartão principal de cada ecrã. É translúcido de
+ * propósito: deixa passar a faixa verde do topo e o gradiente do fundo, que é
+ * o que dá profundidade ao ecrã escuro.
+ */
+.cartao-vidro {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(26px) saturate(160%);
+  backdrop-filter: blur(26px) saturate(160%);
+  border-radius: 26px;
+  box-shadow: 0 20px 46px -24px rgba(0, 0, 0, 0.95);
+}
+
+/* Cartão simples — listas e blocos secundários. Sem blur: são muitos por
+ * ecrã, e o `backdrop-filter` repetido dezenas de vezes custa caro a pintar
+ * num telemóvel antigo. */
+.cartao-simples {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+}
+
+/* Barra de navegação inferior: flutua sobre o conteúdo, com blur. */
+.vidro-barra {
+  background: rgba(24, 28, 29, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+}
+
+.sombra-barra    { box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.95) !important; }
+.sombra-persiana { box-shadow: 0 -20px 60px -12px rgba(0, 0, 0, 0.9) !important; }
+.sombra-fab {
+  box-shadow: 0 0 0 5px rgba(227, 192, 77, 0.14),
+              0 12px 28px -8px rgba(227, 192, 77, 0.5) !important;
+}
+
+/*
+ * Esbatimento por cima da barra inferior. Sem isto, o conteúdo que passa por
+ * trás da barra translúcida entra-lhe pelo vidro e a barra deixa de se ler.
+ */
+.esbate-fundo {
+  background: linear-gradient(
+    to top,
+    var(--color-csc-fundo) 22%,
+    rgba(14, 16, 17, 0.85) 58%,
+    transparent
+  );
+}
+
+/*
+ * Marca de água "CASCAIS" na faixa do topo. `-webkit-text-*` para o caso de
+ * se querer o contorno; por omissão é o preenchimento translúcido do handoff.
+ */
+.marca-agua {
+  font: 900 78px/0.8 var(--font-display);
+  color: rgba(255, 255, 255, 0.065);
+  letter-spacing: -0.02em;
+  user-select: none;
+  pointer-events: none;
+}
+
+/*
+ * Filas que rolam na horizontal (separadores, listas de pastilhas). A barra
+ * de rolagem some-se, mas o gesto e o `scrollLeft` mantêm-se — o realce
+ * deslizante centra o item ativo por aí.
+ */
+.sem-barra-rolagem { scrollbar-width: none; -ms-overflow-style: none; }
+.sem-barra-rolagem::-webkit-scrollbar { width: 0; height: 0; }

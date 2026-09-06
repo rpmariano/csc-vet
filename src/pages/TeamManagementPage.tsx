@@ -29,7 +29,6 @@ import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../components/SoccerPitchSelector'
 import { VistaDetalhe } from '../components/VistaDetalhe'
 import { useSearchParams } from 'react-router-dom'
-import { useEhDesktop } from '../hooks/useEhDesktop'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
@@ -65,7 +64,6 @@ const TeamManagementPage: React.FC = () => {
   // Modals
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
-  const ehDesktop = useEhDesktop()
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -755,10 +753,7 @@ const TeamManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* No desktop, abrir uma ficha é mudar de página: a lista sai da frente
-          em vez de ficar por baixo de uma janela. No telemóvel a persiana sobe
-          por cima e a lista continua onde estava. */}
-      <div className={ehDesktop && isDetailModalOpen ? 'hidden' : 'space-y-6'}>
+      <div className="space-y-6">
       {/* Header com título removido a pedido do utilizador */}
       {isCoachOrAdmin && (
         <div className="flex items-center justify-end">
@@ -1973,12 +1968,11 @@ const TeamManagementPage: React.FC = () => {
                     <span className="hidden sm:inline">Editar Ficha</span>
                   </button>
                 )}
-                {/* Fechar a persiana — só no telemóvel: no desktop isto é uma página,
-                    e quem volta atrás é a barra "Voltar ao plantel" da VistaDetalhe. */}
+                {/* Fechar a persiana. */}
                 <button
                   onClick={() => fecharFicha()}
                   aria-label="Fechar"
-                  className="md:hidden w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40 shrink-0"
+                  className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40 shrink-0"
                   title="Fechar"
                 >
                   <X size={18} className="stroke-[2.5]" />

@@ -29,6 +29,8 @@ const MatchReportsPage = React.lazy(() => import('./pages/MatchReportsPage'))
 const StandingsPage = React.lazy(() =>
   import('./pages/StandingsPage').then(m => ({ default: m.StandingsPage })),
 )
+const CompeticaoPage = React.lazy(() => import('./pages/CompeticaoPage'))
+const ClubePage = React.lazy(() => import('./pages/ClubePage'))
 
 /** Mostrado enquanto o pedaço de código da rota é descarregado. */
 const EcraACarregar: React.FC = () => (
@@ -55,6 +57,11 @@ const App: React.FC = () => {
               <Route element={<Layout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+                {/* Competição junta classificações, fichas de jogo e
+                    estatísticas em separadores — é o terceiro lugar da barra
+                    do jogador. As três páginas mantêm endereço próprio: são
+                    ligadas de outros sítios e são o alvo de links partilhados. */}
+                <Route path="/competicao" element={<CompeticaoPage />} />
                 <Route path="/match-reports" element={<MatchReportsPage />} />
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/standings" element={<StandingsPage />} />
@@ -66,6 +73,10 @@ const App: React.FC = () => {
                 {/* Coach and Admin Only */}
                 <Route element={<ProtectedRoute allowedRoles={['coach', 'admin']} />}>
                   <Route path="/events" element={<EventsPage />} />
+                  {/* O Clube é a porta de entrada da gestão. O `/admin` fica a
+                      servir os torneios, adversários e campos até a fase 6 os
+                      trazer para aqui — por isso ainda não é um redirecionamento. */}
+                  <Route path="/clube" element={<ClubePage />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/team-management" element={<TeamManagementPage />} />
                 </Route>
