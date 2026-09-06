@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet"><style>
+body{margin:0;background:#e8e6e1;font-family:Helvetica,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#164f16;text-decoration:none}a:hover{color:#009662}
+*{box-sizing:border-box}
+</style></helmet>
+
+<div style="max-width:1180px;margin:0 auto;padding:44px 32px 64px">
+
+<div style="font:800 10px Archivo,sans-serif;letter-spacing:.24em;color:#009662">CSC VETERANOS · REDESENHO</div>
+<h1 style="font:900 40px/1.05 Archivo,sans-serif;color:#121415;letter-spacing:-.03em;margin:12px 0 0">Mapa de navegação</h1>
+<p style="font:400 13.5px/1.65 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);margin:14px 0 0;max-width:760px;text-wrap:pretty">Todos os ecrãs desenhados, com o que cada um abre. Os códigos são os crachás do documento de ecrãs — <strong style="font-weight:700">10a</strong> é o ecrã de entrada, <strong style="font-weight:700">8b</strong> a matriz de quotas, e assim por diante. As caixas cinzentas são popups e persianas; as brancas são ecrãs inteiros, com barra de navegação.</p>
+
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 0">
+  <span style="display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 13px;border-radius:17px;background:#fff;border:1px solid rgba(0,0,0,.12);font:700 11.5px Archivo,sans-serif;color:#121415"><span style="width:9px;height:9px;border-radius:50%;background:#009662"></span>Jogador</span>
+  <span style="display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 13px;border-radius:17px;background:#fff;border:1px solid rgba(0,0,0,.12);font:700 11.5px Archivo,sans-serif;color:#121415"><span style="width:9px;height:9px;border-radius:50%;background:#005296"></span>Treinador</span>
+  <span style="display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 13px;border-radius:17px;background:#fff;border:1px solid rgba(0,0,0,.12);font:700 11.5px Archivo,sans-serif;color:#121415"><span style="width:9px;height:9px;border-radius:50%;background:#b8912a"></span>Direção</span>
+  <span style="display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 13px;border-radius:17px;background:rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.1);font:700 11.5px Archivo,sans-serif;color:rgba(0,0,0,.6)">Popup ou persiana</span>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin:44px 0 16px"><span style="font:800 11px Archivo,sans-serif;letter-spacing:.2em;color:#009662">1 · ENTRADA</span><span style="flex:1;height:1px;background:rgba(0,0,0,.12)"></span></div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+  <div style="flex:1;min-width:250px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #009662;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">10a</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Entrar</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ Hoje <span style="color:rgba(0,0,0,.45)">(email e palavra-passe, ou Google)</span></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">10b</strong> Registar</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">10c</strong> Esqueci-me da palavra-passe</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:250px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #009662;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">10b</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Registar</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">11a</strong> conta sem ficha ligada</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">10a</strong> Já tenho conta</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:250px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #009662;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">10c</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Recuperar</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">10d</strong> pelo link do email</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">10a</strong> Voltar a entrar</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:250px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #009662;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">10d</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Nova palavra-passe</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ Hoje <span style="color:rgba(0,0,0,.45)">(guarda e entra)</span></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">10c</strong> se o link expirou</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin:44px 0 16px"><span style="font:800 11px Archivo,sans-serif;letter-spacing:.2em;color:#009662">2 · JOGADOR — TRÊS DESTINOS E A FOTO</span><span style="flex:1;height:1px;background:rgba(0,0,0,.12)"></span></div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #009662;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">Home</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Hoje</span><span style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.45)">cabeçalho em 7a</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Responder ao jogo <span style="color:rgba(0,0,0,.45)">no próprio cartão</span></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">5a</strong> Comunicados <span style="color:rgba(0,0,0,.45)">(ícone com contador)</span></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">5b</strong> Perfil <span style="color:rgba(0,0,0,.45)">(fotografia)</span></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">7b</strong> Competição <span style="color:rgba(0,0,0,.45)">(cartão da classificação)</span></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">2c</strong> detalhe do evento</div>
+      <div style="font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.5)">barra: Hoje · Agenda · Competição</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #009662;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">1a</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Agenda</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">2c</strong> detalhe do evento e ações</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Responder ✓ / ✕ <span style="color:rgba(0,0,0,.45)">na linha</span></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Vazia → <strong style="font-weight:700">11b</strong></div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #009662;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">7b</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Competição</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Separadores: Classificação · Fichas · Estatísticas</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Seletor de competição <span style="color:rgba(0,0,0,.45)">(sublinhado)</span></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">1c</strong> tabela completa</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">2a</strong> ficha do jogo · <strong style="font-weight:700">1b</strong> lista de fichas · <strong style="font-weight:700">1d</strong> estatísticas</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #009662;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">5b</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Perfil</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">12c</strong> Os meus pagamentos</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">12b</strong> Avisos</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Alterna estado físico · carrega documentos</div>
+      <div style="font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.5)">bloco desportivo bloqueado (equipa técnica)</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #009662;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">5a</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Comunicados</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Só leitura, sem respostas</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ anteriores, na mesma lista</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.1);border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">12c</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Os meus pagamentos</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Quotas mês a mês, encargos, total em dívida</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Copiar IBAN · fecha para <strong style="font-weight:700">5b</strong></div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin:44px 0 16px"><span style="font:800 11px Archivo,sans-serif;letter-spacing:.2em;color:#005296">3 · TREINADOR — CRIAR E CONVOCAR</span><span style="flex:1;height:1px;background:rgba(0,0,0,.12)"></span></div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+  <div style="flex:1;min-width:290px;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.1);border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#005296;color:#fff;border-radius:5px;padding:3px 7px">4b</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Folha do [+]</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">2e</strong> Jogo · Treino · Convívio</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">9b</strong> Comunicado</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">2d</strong> Jornada</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.1);border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#005296;color:#fff;border-radius:5px;padding:3px 7px">2e</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Criar ou editar evento</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Guardar jogo ou convívio → <strong style="font-weight:700">4f</strong> convocatória</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Guardar treino → <strong style="font-weight:700">4g</strong> confirmação</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">9e</strong> novo adversário · <strong style="font-weight:700">9g</strong> novo campo</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Rascunho: fica sem convocatória e sem alerta</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.1);border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#005296;color:#fff;border-radius:5px;padding:3px 7px">4f</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Convocatória</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Convocar N jogadores → <strong style="font-weight:700">1a</strong> Agenda</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Rascunho → <strong style="font-weight:700">1a</strong></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">4a</strong> persiana de um convocado</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #005296;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">2c</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Detalhe do evento</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">2f</strong> ver convocados · <strong style="font-weight:700">4f</strong> convocar</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">2e</strong> editar · <strong style="font-weight:700">9c</strong> eliminar</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">2b</strong> registar ficha de jogo</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #005296;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">3a</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Plantel</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">3b</strong> ficha do atleta</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">3b → <strong style="font-weight:700">3c</strong> editar · <strong style="font-weight:700">9c</strong> eliminar · marcar lesionado</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">3c: estado, posições, quotas do atleta, documentos</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #005296;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">2d</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Torneios e jornadas</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Criar jornada e lançar resultados</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">9a</strong> novo torneio</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin:44px 0 16px"><span style="font:800 11px Archivo,sans-serif;letter-spacing:.2em;color:#b8912a">4 · CLUBE E GESTÃO</span><span style="flex:1;height:1px;background:rgba(0,0,0,.12)"></span></div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #b8912a;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">6a</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Clube</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">3a</strong> Plantel · <strong style="font-weight:700">5a</strong> Comunicados</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">2a</strong> Fichas de jogo · <strong style="font-weight:700">5b</strong> Perfil</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Gestão 🔒 → <strong style="font-weight:700">8a</strong> Financeiro · <strong style="font-weight:700">2d</strong> Torneios · <strong style="font-weight:700">9d</strong> Adversários e campos</div>
+      <div style="font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.5)">campo principal, regulamento, quota mensal</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #b8912a;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">9d</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Adversários</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Separador → <strong style="font-weight:700">9f</strong> Campos</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">9h</strong> ficha do adversário</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">9h → <strong style="font-weight:700">9e</strong> editar · <strong style="font-weight:700">9g</strong> mudar campo · <strong style="font-weight:700">9c</strong> eliminar</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #b8912a;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">9f</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Campos</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">9i</strong> ficha do campo</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">9i → <strong style="font-weight:700">9g</strong> editar · <strong style="font-weight:700">9c</strong> eliminar · eventos ali marcados</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">9g</strong> novo campo</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin:44px 0 16px"><span style="font:800 11px Archivo,sans-serif;letter-spacing:.2em;color:#b8912a">5 · FINANCEIRO E QUOTAS (SÓ DIREÇÃO)</span><span style="flex:1;height:1px;background:rgba(0,0,0,.12)"></span></div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #b8912a;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">8a–8d, 8f, 8g</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Os seis separadores</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">8a</strong> Visão geral → alerta de pagamentos programados (<strong style="font-weight:700">8c</strong>), atrasos (<strong style="font-weight:700">8b</strong>)</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">8b</strong> Quotas: marcar mês pago na matriz</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">8c</strong> Encargos → <strong style="font-weight:700">8e</strong> novo · pagar tranche (<strong style="font-weight:700">8i</strong>)</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">8f</strong> Despesas/Receitas → <strong style="font-weight:700">8h</strong> lançamento</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">8g</strong> Definições → <strong style="font-weight:700">8i</strong> nova categoria</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">8d</strong> Movimentos: filtros e exportar</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.1);border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#b8912a;color:#fff;border-radius:5px;padding:3px 7px">8e, 8h, 8i</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Popups do dinheiro</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">8e</strong> Novo encargo: categoria vem de <strong style="font-weight:700">8g</strong></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">8h</strong> Despesa ou receita avulsa</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">8i</strong> Pagar tranche · nova categoria</div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin:44px 0 16px"><span style="font:800 11px Archivo,sans-serif;letter-spacing:.2em;color:#009662">6 · AVISOS E ESTADOS</span><span style="flex:1;height:1px;background:rgba(0,0,0,.12)"></span></div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+  <div style="flex:1;min-width:290px;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.1);border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">4c → 4d</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Evento sem convocatória</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Alerta ao entrar → persiana com os eventos em falta</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">→ <strong style="font-weight:700">4f</strong> convocar agora · <strong style="font-weight:700">4e</strong> ver na agenda</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.1);border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">12a</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Notificações</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Convocatória: responde no cartão, ou → <strong style="font-weight:700">2c</strong></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Comunicado → <strong style="font-weight:700">5a</strong> · Quota → <strong style="font-weight:700">12c</strong></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)">Preferências em <strong style="font-weight:700">12b</strong></div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:290px;background:#fff;border:1px solid rgba(0,0,0,.12);border-top:3px solid #009662;border-radius:18px;padding:17px 18px">
+    <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 10px ui-monospace,Menlo,monospace;background:#121415;color:#fff;border-radius:5px;padding:3px 7px">11a–11c</span><span style="font:800 15px Archivo,sans-serif;color:#121415">Ecrãs vazios</span></div>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">11a</strong> conta por ligar → <strong style="font-weight:700">5b</strong></div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">11b</strong> agenda vazia (mostra aniversários)</div>
+      <div style="font:400 12px Helvetica,Arial,sans-serif;color:rgba(0,0,0,.7)"><strong style="font-weight:700">11c</strong> primeiro dia → <strong style="font-weight:700">9g</strong>, <strong style="font-weight:700">3c</strong>, <strong style="font-weight:700">9a</strong>, <strong style="font-weight:700">8g</strong></div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin:44px 0 16px"><span style="font:800 11px Archivo,sans-serif;letter-spacing:.2em;color:#ef3223">7 · PONTAS SOLTAS A CONFIRMAR</span><span style="flex:1;height:1px;background:rgba(0,0,0,.12)"></span></div>
+<div style="background:#fff;border:1px solid rgba(239,50,35,.3);border-left:4px solid #ef3223;border-radius:18px;padding:19px 20px">
+  <div style="display:flex;flex-direction:column;gap:11px">
+    <div style="font:400 12.5px/1.55 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.75)"><strong style="font-weight:700">Ligar conta à ficha de atleta.</strong> A ligação é automática pelo email do registo. Quando falha, a direção resolve-a na ficha do atleta: <strong style="font-weight:700">3b</strong> mostra o aviso "conta não ligada" e abre o <strong style="font-weight:700">3d</strong>, onde escolhe entre as contas sem atleta.</div>
+    <div style="font:400 12.5px/1.55 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.75)"><strong style="font-weight:700">Estatísticas.</strong> No <strong style="font-weight:700">7b</strong> o separador Estatísticas tem Equipa e Eu: o "Eu" mostra os números do próprio jogador — golos, assistências, presenças e disciplina — com o mesmo desenho do <strong style="font-weight:700">1d</strong>.</div>
+    <div style="font:400 12.5px/1.55 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.75)"><strong style="font-weight:700">Substituídos.</strong> <strong style="font-weight:700">5c</strong>, <strong style="font-weight:700">6c</strong> e <strong style="font-weight:700">6d</strong> eram versões antigas da tesouraria, hoje cobertas pelo turno 8; o antigo hub Gestão (<strong style="font-weight:700">6b</strong>) foi desmembrado no Clube.</div>
+  </div>
+</div>
+
+<div style="font:400 11.5px/1.6 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.45);margin:26px 0 0">Cada ecrã tem sempre um caminho de volta: os ecrãs de barra pelos três ou quatro destinos, as popups pelo Cancelar ou pelo ✕, e as fichas pela seta do cabeçalho.</div>
+
+</div>
+</x-dc>
+</body>
+</html>
