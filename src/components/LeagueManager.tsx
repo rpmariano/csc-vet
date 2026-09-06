@@ -4,6 +4,7 @@ import { Trophy, Trash2, Shield, Plus, Users } from 'lucide-react'
 import { toast } from '../context/ToastContext'
 import { ConfirmModal } from './ConfirmModal'
 import { Modal } from './Modal'
+import { CLUBE_SIGLA } from '../lib/clube'
 
 interface LeagueManagerProps {
   tournamentId: string
@@ -201,7 +202,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                       className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                     >
                       <option value="">Selecione a Equipa</option>
-                      <option value="csc">🛡️ GDS Cascais (Nós)</option>
+                      <option value="csc">🛡️ {CLUBE_SIGLA} (Nós)</option>
                       {opponents.map(o => (
                         <option key={o.id} value={o.id}>{o.name}</option>
                       ))}
@@ -238,7 +239,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                               ) : (
                                 <>
                                   <img src="/csc-vet/cascais-emblem.png" alt="" className="w-5 h-5 object-contain" />
-                                  <span className="font-bold text-blue-800">GDS Cascais</span>
+                                  <span className="font-bold text-blue-800">{CLUBE_SIGLA}</span>
                                 </>
                               )}
                             </span>

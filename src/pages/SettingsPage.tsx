@@ -17,6 +17,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
+import { CLUBE_NOME, CLUBE_SIGLA } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 import { toast } from '../context/ToastContext'
@@ -260,7 +261,7 @@ const SettingsPage: React.FC = () => {
           </p>
           <p className="text-[11px] text-white/50 mt-1 truncate">{formName}</p>
           <p className="text-[10px] leading-snug text-white/40 mt-1">
-            Ficha cadastral de atleta · {clubSettings?.initials ?? 'GDS Cascais'}
+            Ficha cadastral de atleta · {clubSettings?.initials ?? CLUBE_SIGLA}
           </p>
         </div>
       </div>
@@ -759,7 +760,7 @@ const SettingsPage: React.FC = () => {
                 className="mt-0.5 w-4 h-4 rounded text-csc-dark border-gray-300 cursor-pointer"
               />
               <span className="text-xs text-white/70 leading-relaxed font-medium">
-                Declaro que autorizo o <strong>Grupo Dramático e Sportivo de Cascais</strong> a tratar os meus dados pessoais, contactos, médicos e de imagem para efeitos desportivos, seguros e gestão associativa ao abrigo do RGPD.
+                Declaro que autorizo o <strong>{clubSettings?.name ?? CLUBE_NOME}</strong> a tratar os meus dados pessoais, contactos, médicos e de imagem para efeitos desportivos, seguros e gestão associativa ao abrigo do RGPD.
               </span>
             </label>
           </div>

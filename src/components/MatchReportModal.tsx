@@ -5,6 +5,7 @@ import { formatClubSigla, formatOpponentSigla } from '../pages/CalendarPage'
 import { toast } from '../context/ToastContext'
 import { VistaDetalhe } from './VistaDetalhe'
 import { Modal } from './Modal'
+import { CLUBE_SIGLA } from '../lib/clube'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -350,8 +351,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const oppSigla = formatOpponentSigla(event?.opponent)
   const leftSigla = isAway ? oppSigla : cscSigla
   const rightSigla = isAway ? cscSigla : oppSigla
-  const leftName = isAway ? (event?.opponent?.name || 'Adversário') : 'GDS Cascais'
-  const rightName = isAway ? 'GDS Cascais' : (event?.opponent?.name || 'Adversário')
+  const leftName = isAway ? (event?.opponent?.name || 'Adversário') : CLUBE_SIGLA
+  const rightName = isAway ? CLUBE_SIGLA : (event?.opponent?.name || 'Adversário')
 
   const starters = playerStats.filter(p => p.lineup_status === 'starter')
   const subs = playerStats.filter(p => p.lineup_status === 'sub')

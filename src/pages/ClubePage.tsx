@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { CabecalhoEcra, EtiquetaSeccao, CartaoSimples } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
+import { CLUBE_NOME } from '../lib/clube'
 
 /**
  * Clube — o quarto lugar da barra de quem gere.
@@ -138,7 +139,7 @@ const ClubePage: React.FC = () => {
     <div className="relative">
       <CabecalhoEcra
         titulo="Clube"
-        legenda={clubSettings?.name ?? 'GD Sport Cascais — Veteranos'}
+        legenda={clubSettings?.name ?? CLUBE_NOME}
         className="mb-5"
       />
 

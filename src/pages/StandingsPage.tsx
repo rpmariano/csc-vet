@@ -6,8 +6,9 @@ import { triggerHaptic } from '../utils/haptics'
 import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays } from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
+import { CLUBE_SIGLA } from '../lib/clube'
 
-const nomeEquipa = (team: any) => team?.opponent_id ? (team.opponent?.name || 'Desconhecida') : 'GDS Cascais'
+const nomeEquipa = (team: any) => team?.opponent_id ? (team.opponent?.name || 'Desconhecida') : CLUBE_SIGLA
 
 export const StandingsPage = () => {
   const { profile } = useAuth()
@@ -425,7 +426,7 @@ export const StandingsPage = () => {
                       <tbody className="divide-y divide-gray-100">
                         {standings.map((s, index) => {
                           const isCSC = s.team.opponent_id === null
-                          const tName = isCSC ? 'GDS Cascais' : s.team.opponent?.name || 'Desconhecida'
+                          const tName = isCSC ? CLUBE_SIGLA : s.team.opponent?.name || 'Desconhecida'
                           const logo = isCSC ? null : s.team.opponent?.logo_url
 
                           return (

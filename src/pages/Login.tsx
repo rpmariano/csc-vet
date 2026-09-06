@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { MolduraEntrada, CampoEntrada, Botao, CartaoSimples } from '../components/ui'
 import { caminhoNovaPalavraPasse } from '../lib/rotas'
+import { CLUBE_NOME } from '../lib/clube'
 
 /**
  * A entrada na app: entrar (10a), registar (10b) e recuperar a palavra-passe
@@ -122,7 +123,7 @@ const Login: React.FC = () => {
         />
         <div className="text-center">
           <h1 className="font-display font-black text-2xl leading-tight text-white tracking-[-0.02em] text-balance">
-            {clubSettings?.name ?? 'Grupo Dramático e Sportivo de Cascais'}
+            {clubSettings?.name ?? CLUBE_NOME}
           </h1>
           <p className="text-[11.5px] text-white/60 mt-1.5">{TEXTOS[modo].legenda}</p>
         </div>

@@ -33,6 +33,7 @@ import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { CLUBE_NOME } from '../lib/clube'
 
 const POSITIONS = [
   'Guarda-redes',
@@ -1878,7 +1879,7 @@ const TeamManagementPage: React.FC = () => {
                     className="mt-0.5 w-4 h-4 text-csc-dark rounded border-gray-300 focus:ring-csc-dark"
                   />
                   <label htmlFor="gdpr_consent" className="text-xs text-white/70 font-medium cursor-pointer">
-                    Aceita que os seus dados sejam processados pela política de proteção de dados (RGPD) do Grupo Dramático e Sportivo de Cascais.
+                    Aceita que os seus dados sejam processados pela política de proteção de dados (RGPD) do {CLUBE_NOME}.
                   </label>
                 </div>
               </div>
