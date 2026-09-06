@@ -138,7 +138,7 @@ test.describe('Calendário', () => {
 
   /** Cartão do evento (abre a persiana) → botão Modificar. */
   async function abreEdicaoDoEvento(page: Page) {
-    await page.locator('div.cursor-pointer.bg-csc-dark').first().click()
+    await page.locator('div.cartao-vidro.cursor-pointer').first().click()
     await page.getByTitle('Modificar evento').click()
   }
 

@@ -1069,6 +1069,12 @@ const CalendarPage: React.FC = () => {
     setCurrentDate(prev => new Date(prev.getFullYear(), newMonth, 1))
   }
 
+  /** Dois anos para trás e dois para a frente — o clube não agenda mais longe. */
+  const anosDisponiveis = Array.from(
+    { length: 5 },
+    (_, i) => new Date().getFullYear() - 2 + i,
+  )
+
   const handleYearChange = (newYear: number) => {
     triggerHaptic('light')
     setCurrentDate(prev => new Date(newYear, prev.getMonth(), 1))
@@ -1334,7 +1340,7 @@ const CalendarPage: React.FC = () => {
       <div
         key={event.id}
         onClick={() => abrirEvento(event)}
-        className="rounded-3xl transition-all cursor-pointer bg-csc-dark text-white overflow-hidden shadow-sm hover:shadow-lg flex flex-col justify-between"
+        className="cartao-vidro text-white overflow-hidden cursor-pointer flex flex-col justify-between transition-transform duration-150 active:scale-[0.99]"
       >
         {/* Cabeçalho: tipo de evento por ícone + rótulo, não por cor de fundo */}
         <div className="px-5 pt-5 flex items-center justify-between gap-2">
@@ -1376,7 +1382,7 @@ const CalendarPage: React.FC = () => {
                 <div className="flex items-center justify-between gap-3">
                   {isAway ? opponentBlock(false) : cscBlock(false)}
                   <div className="shrink-0 px-1 flex items-center justify-center">
-                    <span className="w-7 h-7 flex items-center justify-center text-[11px] font-black rounded-full bg-csc-gold text-csc-dark shadow-xs">
+                    <span className="px-2.5 py-1 rounded-[9px] bg-white/10 font-display font-bold text-[11px] text-white/50">
                       VS
                     </span>
                   </div>
@@ -1400,26 +1406,38 @@ const CalendarPage: React.FC = () => {
               </div>
             )}
 
-            {/* Concentração Acima da Hora (por extenso) */}
-            {event.meeting_time && (
-              <div className="flex items-center">
-                <div className="inline-flex items-center gap-1.5 text-xs font-black text-csc-gold bg-white/10 px-3 py-1 rounded-full">
-                  <span>Concentração: {event.meeting_time.substring(0, 5)}</span>
-                </div>
+            {/* As duas horas lado a lado, divididas por uma linha: a de
+                concentração à esquerda (quando existe) e a de início à
+                direita, esta em dourado, porque é a que não se pode falhar. */}
+            <div className="flex items-stretch -mx-5 border-y border-white/13">
+              {event.meeting_time && (
+                <>
+                  <div className="flex-none px-5 py-2.5">
+                    <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/55">
+                      Concentração
+                    </p>
+                    <p className="font-display font-extrabold text-[17px] text-white mt-0.5">
+                      {event.meeting_time.substring(0, 5)}
+                    </p>
+                  </div>
+                  <div className="w-px bg-white/13" />
+                </>
+              )}
+              <div className="flex-1 px-5 py-2.5">
+                <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-csc-gold">
+                  Início
+                </p>
+                <p className="font-display font-extrabold text-[17px] text-white mt-0.5">
+                  {new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                </p>
               </div>
-            )}
+            </div>
 
             {/* Horas e Localização / Endereço à frente */}
             {(() => {
               const locStr = getEventLocation(event)
               return (
                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                  {/* Hora */}
-                  <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-white bg-white/10 px-2.5 py-1 rounded-full shrink-0">
-                    <Clock size={13} className="text-csc-gold" />
-                    <span>{new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-
                   {/* Localização & Maps */}
                   {locStr && (
                     <div className="inline-flex items-center gap-1 text-xs text-white/80 bg-white/10 px-2.5 py-1 rounded-full max-w-full truncate min-w-0">
@@ -1637,142 +1655,115 @@ const CalendarPage: React.FC = () => {
         </div>
       ) : (
         <>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Coluna Esquerda: Grelha do Calendário Mensal Compacta */}
-          <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            {/* Cabeçalho do Calendário com Seleção Rápida de Mês e Ano */}
-            <div className="p-3 sm:p-4 bg-gradient-to-r from-csc-dark via-gray-900 to-csc-dark text-white rounded-t-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm border-b border-white/10">
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Dropdown Mês */}
-                <select
-                  value={currentDate.getMonth()}
-                  onChange={(e) => handleMonthChange(Number(e.target.value))}
-                  className="bg-white/15 hover:bg-white/25 text-white font-black text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-white/20 outline-none focus:ring-2 focus:ring-csc-gold cursor-pointer transition-all appearance-none pr-7 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[right_8px_center] bg-no-repeat"
-                >
-                  {monthNames.map((mName, idx) => (
-                    <option key={mName} value={idx} className="bg-gray-900 text-white font-bold">
-                      {mName}
-                    </option>
-                  ))}
-                </select>
+        <div className="space-y-4">
+          {/*
+            O calendário do mês (ecrã 1a): células de 34px, um ponto por baixo
+            do número quando há eventos, e o dia escolhido numa pastilha
+            dourada. O ponto é da cor do tipo de evento — verde treino, azul
+            convívio, dourado jogo — e quando há mais do que um mostram-se até
+            três, que é o que cabe.
+          */}
+          <div className="cartao-vidro px-3 pt-3.5 pb-3">
+            {/* Saltos longos: mês, ano, ou voltar a hoje. As setas de mês
+                estão no cabeçalho do ecrã. */}
+            <div className="flex items-center gap-2 px-1 pb-3">
+              <select
+                value={currentDate.getMonth()}
+                onChange={e => handleMonthChange(Number(e.target.value))}
+                aria-label="Mês"
+                className="h-11 px-3 rounded-[18px] bg-white/8 border border-white/15 text-white font-display font-bold text-xs
+                  outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-csc-gold"
+              >
+                {monthNames.map((nome, idx) => (
+                  <option key={nome} value={idx} className="bg-csc-fundo text-white">{nome}</option>
+                ))}
+              </select>
 
-                {/* Dropdown Ano */}
-                <select
-                  value={currentDate.getFullYear()}
-                  onChange={(e) => handleYearChange(Number(e.target.value))}
-                  className="bg-white/15 hover:bg-white/25 text-csc-gold font-black text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-white/20 outline-none focus:ring-2 focus:ring-csc-gold cursor-pointer transition-all appearance-none pr-7 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23F59E0B%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[right_8px_center] bg-no-repeat"
-                >
-                  {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => (
-                    <option key={y} value={y} className="bg-gray-900 text-csc-gold font-bold">
-                      {y}
-                    </option>
-                  ))}
-                </select>
+              <select
+                value={currentDate.getFullYear()}
+                onChange={e => handleYearChange(Number(e.target.value))}
+                aria-label="Ano"
+                className="h-11 px-3 rounded-[18px] bg-white/8 border border-white/15 text-white font-display font-bold text-xs
+                  outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-csc-gold"
+              >
+                {anosDisponiveis.map(ano => (
+                  <option key={ano} value={ano} className="bg-csc-fundo text-white">{ano}</option>
+                ))}
+              </select>
 
-                {/* Botão Hoje */}
-                <button
-                  onClick={handleToday}
-                  className="text-xs font-bold px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-dark rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer font-black"
-                >
-                  Hoje
-                </button>
-              </div>
-
-              {/* As setas de mês vivem no cabeçalho do ecrã (ver 1a); aqui
-                  ficam só os saltos longos — escolher mês, ano, ou voltar a
-                  hoje. */}
+              <button
+                type="button"
+                onClick={handleToday}
+                className="ml-auto min-h-11 px-4 rounded-[18px] bg-csc-gold text-csc-tinta font-display font-bold text-xs cursor-pointer
+                  transition-transform duration-150 active:scale-97
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+              >
+                Hoje
+              </button>
             </div>
 
-            {/* Cabeçalho dos Dias da Semana */}
-            <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200 text-center py-2">
-              {weekDayNames.map((w, idx) => (
-                <div key={w} className={`text-[11px] font-black uppercase tracking-wider ${idx >= 5 ? 'text-amber-700' : 'text-gray-500'}`}>
+            <div className="grid grid-cols-7 gap-0.5 mb-1.5">
+              {weekDayNames.map(w => (
+                <span key={w} className="font-display font-bold text-[9px] text-white/40 text-center">
                   {w}
-                </div>
+                </span>
               ))}
             </div>
 
-            {/* Células dos Dias Compactas */}
-            <div className="grid grid-cols-7 auto-rows-fr border-b border-gray-100 divide-x divide-y divide-gray-100">
+            <div className="grid grid-cols-7 gap-0.5">
               {calendarDays.map((cell, idx) => {
                 const dayEvents = getEventsForDate(cell.date)
-                const hasEvents = dayEvents.length > 0
 
                 return (
-                  <div
+                  <button
                     key={idx}
-                    onClick={() => setSelectedDate(cell.date)}
-                    className={`min-h-[44px] sm:min-h-[58px] p-1 sm:p-1.5 cursor-pointer transition-all flex flex-col justify-between ${
-                      !cell.isCurrentMonth ? 'bg-gray-50/50 opacity-30' : 'bg-white hover:bg-gray-50/80'
-                    } ${
-                      cell.isSelected ? 'ring-2 ring-csc-gold ring-inset bg-amber-50/40 font-black' : ''
-                    }`}
+                    type="button"
+                    onClick={() => { triggerHaptic('selection'); setSelectedDate(cell.date) }}
+                    aria-label={`${cell.date.getDate()} — ${dayEvents.length} ${dayEvents.length === 1 ? 'evento' : 'eventos'}`}
+                    aria-pressed={cell.isSelected}
+                    className={`h-11 rounded-[11px] flex flex-col items-center justify-center gap-0.5 cursor-pointer
+                      transition-colors duration-200
+                      focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-csc-gold ${
+                        cell.isSelected
+                          ? 'bg-csc-gold'
+                          : cell.isToday
+                            ? 'bg-white/12'
+                            : ''
+                      }`}
                   >
-                    {/* Topo da Célula: Número do Dia */}
-                    <div className="flex items-center justify-between">
-                      <span className={`text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full transition-colors ${
-                        cell.isToday 
-                          ? 'bg-csc-gold text-csc-dark font-black shadow-xs' 
-                          : cell.isSelected 
-                          ? 'bg-csc-dark text-white font-black' 
-                          : cell.isCurrentMonth ? 'text-gray-800' : 'text-gray-400'
-                      }`}>
-                        {cell.date.getDate()}
-                      </span>
+                    <span
+                      className={`font-display text-xs leading-none ${
+                        cell.isSelected
+                          ? 'font-extrabold text-csc-tinta'
+                          : !cell.isCurrentMonth
+                            ? 'font-semibold text-white/20'
+                            : cell.isToday
+                              ? 'font-extrabold text-csc-gold'
+                              : 'font-semibold text-white/75'
+                      }`}
+                    >
+                      {cell.date.getDate()}
+                    </span>
 
-                      {hasEvents && (
-                        <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-csc-dark text-white shadow-2xs">
-                          {dayEvents.length}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Mini Indicadores de Eventos */}
-                    <div className="mt-1 space-y-0.5 overflow-hidden">
-                      {/* Vista Desktop: Pílulas Compactas */}
-                      <div className="hidden sm:block space-y-0.5">
-                        {dayEvents.slice(0, 2).map(ev => (
-                          <div
+                    {dayEvents.length > 0 && (
+                      <span className="flex items-center gap-0.5 h-1">
+                        {dayEvents.slice(0, 3).map(ev => (
+                          <span
                             key={ev.id}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedEvent(ev)
-                              setIsEventSheetOpen(true)
-                            }}
-                            className={`text-[9px] px-1 py-0.2 rounded font-bold truncate flex items-center gap-0.5 shadow-2xs hover:opacity-85 ${
-                              ev.type === 'match' 
-                                ? 'bg-blue-100 text-blue-900 border border-blue-200' 
-                                : ev.type === 'practice' 
-                                ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' 
-                                : 'bg-purple-100 text-purple-900 border border-purple-200'
+                            className={`w-1 h-1 rounded-full ${
+                              cell.isSelected
+                                ? 'bg-csc-tinta'
+                                : ev.type === 'match'
+                                  ? 'bg-csc-gold'
+                                  : ev.type === 'practice'
+                                    ? 'bg-csc-verde-texto'
+                                    : 'bg-csc-azul-texto'
                             }`}
-                            title={`${ev.title}`}
-                          >
-                            <span className="flex items-center">{ev.type === 'match' ? '⚽' : ev.type === 'practice' ? <TrainingIcon size={11} className="text-emerald-800" /> : '🎉'}</span>
-                            <span className="truncate">{ev.type === 'match' && ev.opponent ? (ev.opponent.initials || ev.opponent.name) : ev.title}</span>
-                          </div>
-                        ))}
-                        {dayEvents.length > 2 && (
-                          <span className="text-[8px] font-bold text-gray-500 pl-0.5">
-                            +{dayEvents.length - 2} mais
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Vista Mobile: Pontos compactos */}
-                      <div className="sm:hidden flex flex-wrap gap-1 items-center justify-center">
-                        {dayEvents.map(ev => (
-                          <span 
-                            key={ev.id} 
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              ev.type === 'match' ? 'bg-blue-600' : ev.type === 'practice' ? 'bg-emerald-600' : 'bg-purple-600'
-                            }`} 
-                            title={ev.title}
                           />
                         ))}
-                      </div>
-                    </div>
-                  </div>
+                      </span>
+                    )}
+                  </button>
                 )
               })}
             </div>
@@ -1782,10 +1773,12 @@ const CalendarPage: React.FC = () => {
           <div className="lg:col-span-5 space-y-3 lg:sticky lg:top-6">
             {selectedDate && (
               selectedDayEvents.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-xs bg-white rounded-2xl p-6 border border-dashed border-gray-200 shadow-2xs">
-                  <CalendarDaysIcon size={28} className="mx-auto text-gray-300 mb-2" />
-                  <p className="font-bold text-sm text-gray-600">Sem eventos neste dia.</p>
-                  <p className="mt-1 text-xs text-gray-400">Seleciona outro dia no calendário para consultar os eventos agendados.</p>
+                <div className="cartao-simples border-dashed text-center px-5 py-8">
+                  <CalendarDaysIcon size={26} className="mx-auto text-white/25 mb-2.5" />
+                  <p className="font-display font-extrabold text-sm text-white">Sem eventos neste dia.</p>
+                  <p className="text-[11px] text-white/50 mt-1.5">
+                    Escolhe outro dia no calendário, ou vê tudo o que vem a seguir mais abaixo.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1800,10 +1793,10 @@ const CalendarPage: React.FC = () => {
             por baixo do calendário, com os eventos do filtro em curso. */}
         <div className="grid grid-cols-1 gap-3">
           {filteredEvents.length === 0 ? (
-            <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-gray-200 p-8">
-              <CalendarRange size={36} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm font-bold text-gray-600">Nenhum evento encontrado.</p>
-              <p className="text-xs text-gray-400 mt-1">Ajuste os filtros ou crie um novo evento.</p>
+            <div className="cartao-simples border-dashed text-center px-5 py-10">
+              <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
+              <p className="font-display font-extrabold text-sm text-white">Nenhum evento encontrado.</p>
+              <p className="text-[11px] text-white/50 mt-1.5">Limpa os filtros, ou marca alguma coisa no [+].</p>
             </div>
           ) : (
             filteredEvents.map((event) => renderEventCard(event))
