@@ -1,9 +1,15 @@
 # CSC Veteranos — GDS Cascais
 
 PWA de gestão da equipa de futebol de veteranos do GD Sport Cascais.
-Interface em **português de Portugal**. Duas UIs no mesmo código: **desktop** (sidebar
-fixa de 256px) e **telemóvel** (header + bottom tab bar), separadas pelo breakpoint
-Tailwind `md:`.
+Interface em **português de Portugal**. **Uma só UI, a de telemóvel**: num ecrã largo
+é a mesma app numa coluna de 480px ao meio (`#root` em `src/index.css`). A UI de
+computador — sidebar de 256px, gaveta de traços — foi retirada no redesenho de 2026.
+
+Os pontos de corte responsivos do Tailwind estão **desligados** no `@theme`
+(`--breakpoint-*: 9999px`): olham para a janela e não para a coluna, e num monitor
+largo poriam grelhas de três colunas dentro de 480px. As classes `sm:`/`md:`/`lg:`
+que ainda restam nas páginas por redesenhar não geram nada — tiram-se à medida que
+cada ecrã é tocado.
 
 ## Stack
 
@@ -11,6 +17,7 @@ Tailwind `md:`.
 |---|---|
 | Build | Vite 8 (`base: '/csc-vet/'`) + `vite-plugin-pwa` (generateSW, autoUpdate) |
 | UI | React 19, React Router 7 (`BrowserRouter`), Tailwind CSS **v4** |
+| Design | Redesenho 2026 — handoff em `Redesign UI app futebol veteranos/design_handoff_app_veteranos/README.md` |
 | Ícones | `lucide-react` |
 | Backend | Supabase (auth + Postgres + RLS) |
 | Lint | oxlint (`.oxlintrc.json`) |
@@ -34,10 +41,13 @@ src/
 │   ├── AuthContext      sessão, perfil, papéis, simulação de papel, estado clínico
 │   ├── ClubContext      club_settings (id=1), campo de casa
 │   └── ToastContext     toasts + singleton global `toast.success(...)`
-├── components/          Layout (nav desktop+mobile), modais partilhados, PWA prompt
+├── components/
+│   ├── ui/              primitivos do redesenho: cartões, faixa, botões, separadores
+│   ├── nav/             barra inferior, cabeçalho, folha do [+]
+│   └── …                Layout (a moldura), modais partilhados, PWA prompt
 ├── hooks/
 │   ├── useModalA11y     Escape, prisão de foco e pilha de diálogos empilhados
-│   └── useEhDesktop     ponto de corte `md:` em JS, para o que muda de estrutura
+│   └── useRealceDeslizante  o realce que corre por trás do item ativo ("minhoca")
 ├── pages/               uma página por rota
 ├── lib/supabaseClient   cliente único
 └── utils/haptics        vibração (navigator.vibrate)
@@ -89,24 +99,32 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
 ## Convenções
 
 - **Design tokens** em `src/index.css` (`@theme` do Tailwind v4), não em `tailwind.config.js`
-  (esse ficheiro é legado da v3 e está inerte):
+  (esse ficheiro é legado da v3 e está inerte). De superfície:
   `csc-dark #164f16` · `csc-light #009662` · `csc-gold #e3c04d` · `csc-blue #005296` ·
-  `csc-red #ef3223` · `csc-black #3c3008`. Tipo de letra de display: Montserrat.
-- Tipografia densa e pesada: `font-black`, tamanhos `text-[9px]`–`text-sm`, `rounded-xl`/`2xl`.
-- Cartões: `bg-white rounded-2xl shadow-sm border border-gray-100`.
+  `csc-red #ef3223`. De texto sobre o fundo escuro, porque as de superfície são
+  escuras de mais para uma frase: `csc-verde-texto #4ecf9d` · `csc-azul-texto #7fb3e0` ·
+  `csc-vermelho-texto #f08a7f`. Fundo `csc-fundo #0e1011`; `csc-tinta #121415` é o
+  texto sobre dourado. Tipo de letra de display: **Archivo**.
+- Tipografia densa e pesada: `font-black`, tamanhos `text-[9px]`–`text-sm`.
+- **Cartões: usar os primitivos**, não classes à mão — `<CartaoVidro>` para o cartão
+  principal de um ecrã (translúcido, deixa passar a faixa do topo) e `<CartaoSimples>`
+  para listas e blocos. Idem `<Botao>`, `<Pastilha>`, `<TituloEcra>`,
+  `<EtiquetaSeccao>` e `<FilaSeparadores>` (`src/components/ui`).
+- **Todos os alvos de toque têm no mínimo 44px de altura**, sem exceções — inclui
+  pastilhas, separadores e botões de linha.
+- O fim da coluna acaba acima da barra inferior com `margin-bottom`, nunca
+  `padding-bottom`: com padding o último cartão fica por baixo da barra.
 - Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
 - **O plantel lê-se de `v_players_public`, não de `profiles`.** Tudo o que mostre
   colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a
   vista, que só tem colunas de equipa. `profiles` fica para a própria ficha e para o
   Plantel (treinador/admin), onde os dados pessoais são o assunto.
-- **Detalhe é página no desktop, persiana no telemóvel.** Ver um evento ou uma ficha
-  de atleta não abre janela nenhuma no desktop: o `<VistaDetalhe>` decide a moldura
-  pelo `useEhDesktop()` e o endereço leva o item (`?event=`, `?atleta=`), portanto há
-  link próprio e o retroceder do browser fecha. Modais ficam para inserções curtas
-  (criar um campo, confirmar) — não para consultar uma entidade. Já assim estão o
-  detalhe do evento, a ficha de atleta, o dossier de convocatória e a ficha de jogo;
-  quando um detalhe abre outro (ficha de jogo a partir do evento), o de baixo sai da
-  frente em vez de se sobreporem.
+- **Detalhe é persiana, e vai no endereço.** Ver um evento ou uma ficha de atleta
+  abre o `<VistaDetalhe>` e põe o item no endereço (`?event=`, `?atleta=`), portanto
+  há link próprio e o retroceder do browser fecha (ver Riscos, ponto 6). Modais ficam
+  para inserções curtas (criar um campo, confirmar) — não para consultar uma
+  entidade. Assim estão o detalhe do evento, a ficha de atleta, o dossier de
+  convocatória e a ficha de jogo.
 - Comentários e strings de UI em português.
 - Assets públicos são referenciados com o prefixo literal `/csc-vet/` (não com
   `import.meta.env.BASE_URL`).
@@ -162,6 +180,18 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
 5. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
    Não há modais escritos à mão sem acessibilidade — todos passaram pelo `<Modal>`,
    `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`.
+   O redesenho parte-os por secções à medida que cada área é tocada — não como
+   refactor à parte.
+6. **P2 — O retroceder do browser nem sempre fecha a persiana** (~50% das vezes).
+   O endereço muda, mas a atualização do React Router não chega a ser confirmada: o
+   `popstate` não vê mudança nenhuma, o efeito que fecha o detalhe nunca corre e a
+   persiana fica aberta por cima da lista. Reproduzido com `history.back()` do
+   próprio browser (não é artefacto do Playwright) e no código anterior ao
+   redesenho — é anterior à branch `redesign`. Os renders acontecem mas os efeitos
+   não, o que aponta para renders de transição que nunca são confirmados; pôr
+   `flushSync: true` no `setSearchParams` melhora mas não resolve. É o que faz os
+   testes `tests/e2e/vista-detalhe.spec.ts` aparecerem como *flaky* — passam à
+   segunda por causa do `retries: 1`. Afeta as quatro persianas de detalhe.
 
 **Sobre o `.env` e a chave anónima.** O `.env` deixou de ser versionado (`cdf2187`) mas
 continua no histórico, e a chave que lá está tem `role: anon` — é pública por desenho:
@@ -172,6 +202,13 @@ teria de ser rodada de imediato.
 
 ## Regras de trabalho
 
-- Desenvolvimento na branch indicada pela tarefa; nunca fazer push direto para `main`.
-- Antes de cada commit: `npm run lint` e `npm run build` têm de passar.
-- Qualquer alteração de UI tem de ser verificada **nas duas** UIs (mobile e desktop).
+- O redesenho de 2026 vive na branch de integração **`redesign`**; a `main` fica em
+  produção intacta até estar tudo pronto. Uma branch e um PR por fase, contra a
+  `redesign`. Nunca fazer push direto para `main`.
+- Antes de cada commit: `npm run lint`, `npm run build` e `npm run test:e2e` têm de
+  passar.
+- Qualquer alteração de UI tem de ser verificada em janela **estreita e larga**: em
+  ambas tem de aparecer a mesma coisa, centrada. Diferenças entre as duas são bug.
+- Ao redesenhar um ecrã, cruzar com `Mapa de Navegação.dc.html` do handoff para
+  nenhum botão ficar sem destino, e manter o vocabulário do código (posições GR–PL,
+  estados Apto/Lesionado/Inativo, tipos de evento, participação na ficha de jogo).
