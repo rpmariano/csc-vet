@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { 
   MapPin, 
-  Clock, 
   X, 
   Users, 
   CheckCircle2,
   XCircle,
   Trash2,
+  ClipboardList,
   Search, 
   ExternalLink,
   ChevronLeft,
@@ -1960,90 +1960,62 @@ const CalendarPage: React.FC = () => {
                 )
               })()}
 
-              {/* Linha Principal: Símbolo + Pílula do Tipo + Data e Hora + Ações Admin/Treinador */}
-              <div className="flex items-center justify-between gap-3 pr-8 sm:pr-10">
-                {/* Símbolo + Pílula do Tipo + Data e Hora */}
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {/* 1. Símbolo Oficial */}
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white p-1 shadow-md shrink-0 border border-csc-gold flex items-center justify-center">
-                    <img 
-                      src="/csc-vet/cascais-emblem.png" 
-                      alt="CSC" 
-                      className="w-full h-full object-contain" 
-                    />
-                  </div>
+              {/*
+                O ecrã 2c abre com o que o evento é, não com uma barra de
+                ferramentas: as etiquetas, o confronto em grande e a data. As
+                ações de quem gere descem para o bloco de gestão, no fim — são
+                o que menos vezes se faz aqui.
+              */}
+              <div className="flex flex-wrap gap-1.5">
+                <span className={`inline-flex items-center h-[22px] px-2.5 rounded-[11px] border font-display font-bold text-[9.5px] ${
+                  selectedEvent.type === 'match'
+                    ? 'bg-csc-gold/16 border-csc-gold/35 text-csc-gold'
+                    : selectedEvent.type === 'practice'
+                      ? 'bg-csc-light/18 border-csc-light/35 text-csc-verde-texto'
+                      : 'bg-csc-blue/20 border-csc-blue/40 text-csc-azul-texto'
+                }`}>
+                  {selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}
+                </span>
 
-                  {/* 2. Pílula do Tipo & 3. Data e Hora */}
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`inline-flex items-center h-[22px] px-2.5 rounded-[11px] border font-display font-bold text-[9.5px] ${
-                        selectedEvent.type === 'match'
-                          ? 'bg-csc-gold/16 border-csc-gold/35 text-csc-gold'
-                          : selectedEvent.type === 'practice'
-                            ? 'bg-csc-light/18 border-csc-light/35 text-csc-verde-texto'
-                            : 'bg-csc-blue/20 border-csc-blue/40 text-csc-azul-texto'
-                      }`}>
-                        {selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}
-                      </span>
-
-                      {selectedEvent.is_friendly && selectedEvent.type === 'match' && (
-                        <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white">
-                          Amigável
-                        </span>
-                      )}
-                      {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-white/10 text-white border border-white/16 truncate max-w-[150px] flex items-center gap-1">
-                          {selectedEvent.tournament.image_url ? (
-                            <img src={selectedEvent.tournament.image_url} alt="" className="w-3.5 h-3.5 object-contain rounded-full shrink-0" />
-                          ) : '🏆'}
-                          {selectedEvent.tournament.name}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs sm:text-sm font-bold text-gray-100 flex items-center gap-1.5 truncate">
-                      <Clock size={13} className="text-csc-gold shrink-0" />
-                      <span>
-                        {new Date(selectedEvent.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })}, {new Date(selectedEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Botão Ficha de Jogo (quando Jogo já realizado ou com resultado registado) */}
-                {selectedEvent.type === 'match' && (new Date(selectedEvent.date_time).getTime() <= Date.now() || (selectedEvent.home_score !== null && selectedEvent.home_score !== undefined)) && (
-                  <button
-                    type="button"
-                    onClick={() => setIsMatchReportOpen(true)}
-                    className="px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-dark font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
-                  >
-                    <span>📋 Ficha de Jogo</span>
-                  </button>
+                {selectedEvent.type === 'match' && selectedEvent.is_friendly && (
+                  <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white">
+                    Amigável
+                  </span>
                 )}
 
-                {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
-                {isCoachOrAdmin && (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {!hasMatchReport(selectedEvent) && (
-                      <button
-                        type="button"
-                        onClick={() => handleStartEditEvent(selectedEvent)}
-                        className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
-                        title="Modificar evento"
-                      >
-                        <Edit size={14} />
-                      </button>
+                {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
+                  <span className="inline-flex items-center gap-1.5 h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white max-w-[170px]">
+                    {selectedEvent.tournament.image_url && (
+                      <img src={selectedEvent.tournament.image_url} alt="" className="w-3.5 h-3.5 object-contain rounded-full shrink-0" />
                     )}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
-                      className="p-2 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
-                      title="Apagar evento"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                    <span className="truncate">{selectedEvent.tournament.name}</span>
+                  </span>
                 )}
+
+                {selectedEvent.type === 'match' && (
+                  <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white">
+                    {selectedEvent.home_away === 'away' ? 'Fora' : selectedEvent.home_away === 'neutral' ? 'Campo neutro' : 'Em casa'}
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <h2 className="font-display font-black text-[30px] leading-[1.05] text-white tracking-[-0.03em]">
+                  {selectedEvent.type === 'match' && selectedEvent.opponent ? (
+                    selectedEvent.home_away === 'away' ? (
+                      <>{formatOpponentSigla(selectedEvent.opponent)} <span className="text-white/40 text-xl">vs</span> {formatClubSigla(clubSettings?.initials)}</>
+                    ) : (
+                      <>{formatClubSigla(clubSettings?.initials)} <span className="text-white/40 text-xl">vs</span> {formatOpponentSigla(selectedEvent.opponent)}</>
+                    )
+                  ) : (
+                    selectedEvent.title
+                  )}
+                </h2>
+                <p className="text-[11.5px] text-white/60 mt-1.5">
+                  {new Date(selectedEvent.date_time).toLocaleDateString('pt-PT', {
+                    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                  })}
+                </p>
               </div>
             </div>
 
@@ -2053,128 +2025,77 @@ const CalendarPage: React.FC = () => {
               {/* COLUNA ESQUERDA (5 Colunas): Detalhes do Evento, Matchup VS e Presença Pessoal */}
               <div className="lg:col-span-5 space-y-5">
 
-                {/* Matchup Box no Modal (quando Jogo com adversário) */}
-                {selectedEvent.type === 'match' && selectedEvent.opponent && (() => {
-                  const isAway = selectedEvent.home_away === 'away'
-                  const cscSigla = formatClubSigla(clubSettings?.initials)
-                  const oppSigla = formatOpponentSigla(selectedEvent.opponent)
-                  const leftLogo = isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url
-                  const leftSigla = isAway ? oppSigla : cscSigla
-                  const rightLogo = isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url
-                  const rightSigla = isAway ? cscSigla : oppSigla
-
-                  return (
-                    <div className="bg-white/[0.07] p-4 sm:p-5 rounded-2xl space-y-3 border border-white/10 border-t-2 border-t-csc-gold/50 shadow-lg shadow-black/20">
-                      <div className="flex items-center justify-between gap-3 sm:gap-4">
-                        {/* Left Team */}
-                        <div className="flex-1 flex flex-col items-start text-left min-w-0">
-                          <div className="flex items-center gap-2">
-                            {leftLogo ? (
-                              <img src={leftLogo} alt={leftSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
-                            ) : (
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white text-csc-dark rounded-full flex items-center justify-center text-xs font-black shrink-0">
-                                {leftSigla}
-                              </div>
-                            )}
-                            <span className="font-black text-sm sm:text-base text-white uppercase tracking-tight">
-                              {leftSigla}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* VS Badge */}
-                        <div className="shrink-0 px-1 flex flex-col items-center">
-                          <span className="px-2.5 py-1 rounded-[9px] bg-white/10 font-display font-bold text-[11px] text-white/50">
-                            VS
-                          </span>
-                        </div>
-
-                        {/* Right Team */}
-                        <div className="flex-1 flex flex-col items-end text-right min-w-0">
-                          <div className="flex items-center gap-2 flex-row-reverse">
-                            {rightLogo ? (
-                              <img src={rightLogo} alt={rightSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
-                            ) : (
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white text-csc-dark rounded-full flex items-center justify-center text-xs font-black shrink-0">
-                                {rightSigla}
-                              </div>
-                            )}
-                            <span className="font-black text-sm sm:text-base text-white uppercase tracking-tight">
-                              {rightSigla}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="pt-2.5 border-t border-white/10 flex items-center justify-between text-xs text-white/60 gap-2">
-                        <span className="font-bold">
-                          Condição: <strong className="text-white">{selectedEvent.home_away === 'neutral' ? 'Neutro' : isAway ? 'Visitante' : 'Visitado'}</strong>
-                        </span>
-                        {(new Date(selectedEvent.date_time).getTime() <= Date.now() || (selectedEvent.home_score !== null && selectedEvent.home_score !== undefined)) && (
-                          <button
-                            type="button"
-                            onClick={() => setIsMatchReportOpen(true)}
-                            className="px-2.5 py-1 bg-csc-gold hover:brightness-105 text-csc-dark rounded-full text-[11px] font-black flex items-center gap-1 cursor-pointer transition-all active:scale-95 shrink-0"
-                          >
-                            <span>Ficha de Jogo</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })()}
+                {/* O confronto era aqui um cartão com os dois emblemas e a
+                    linha "Condição: Visitado". Passou a ser o título do ecrã
+                    (ver acima) e uma etiqueta — dizia-se três vezes a mesma
+                    coisa, e uma delas com outras palavras. */}
 
                 {/* Title (apenas exibido para convívios) */}
                 {selectedEvent.type === 'gathering' && (
                   <h2 className="text-2xl font-black text-white leading-tight">{selectedEvent.title}</h2>
                 )}
 
-                {/* Concentração Acima da Hora */}
-                {selectedEvent.meeting_time && (
-                  <div className="flex items-center">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-csc-gold bg-white/10 px-3 py-1 rounded-full border border-csc-gold/30 shadow-sm shadow-black/20">
-                      <span>Concentração: {selectedEvent.meeting_time.substring(0, 5)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Info Box (Data, Hora e Local) */}
-                <div className="space-y-2 bg-white/[0.07] p-3.5 rounded-2xl text-xs border border-white/10 border-t-white/20 shadow-md shadow-black/20">
-                  <div className="flex items-center text-white space-x-2.5">
-                    <Clock size={16} className="text-csc-gold shrink-0" />
-                    <div>
-                      <p className="text-[10px] font-bold text-white/60 uppercase">Data e Horário</p>
-                      <p className="font-extrabold text-xs text-white">
-                        {new Date(selectedEvent.date_time).toLocaleString('pt-PT', { dateStyle: 'full', timeStyle: 'short' })}
+                {/*
+                  As horas e o local num só cartão, como no 2c: a concentração
+                  e o início lado a lado divididos por uma linha, e o campo por
+                  baixo com o nome em cima da morada. Eram três blocos soltos —
+                  uma pastilha de concentração, uma caixa de data e uma linha de
+                  local — a dizer coisas da mesma natureza.
+                */}
+                <div className="cartao-vidro overflow-hidden">
+                  <div className="flex items-stretch">
+                    {selectedEvent.meeting_time && (
+                      <>
+                        <div className="flex-none px-4 py-3">
+                          <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/55">
+                            Concentração
+                          </p>
+                          <p className="font-display font-extrabold text-[18px] text-white mt-0.5">
+                            {selectedEvent.meeting_time.substring(0, 5)}
+                          </p>
+                        </div>
+                        <div className="w-px bg-white/13" />
+                      </>
+                    )}
+                    <div className="flex-1 px-4 py-3">
+                      <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-csc-gold">
+                        Início
+                      </p>
+                      <p className="font-display font-extrabold text-[18px] text-white mt-0.5">
+                        {new Date(selectedEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
 
                   {(() => {
-                    const locStr = getEventLocation(selectedEvent)
+                    const campo = selectedEvent.field
+                      ?? fields.find(f => f.id === selectedEvent.field_id)
+                      ?? null
+                    const nome = campo?.name || selectedEvent.location?.trim() || ''
+                    const morada = campo?.address || ''
+                    const paraMaps = getEventLocation(selectedEvent)
+
+                    if (!nome && !paraMaps) return null
+
                     return (
-                      <div className="flex items-center justify-between text-white pt-2 border-t border-white/10">
-                        <div className="flex items-center space-x-2.5 min-w-0">
-                          <MapPin size={16} className="text-csc-gold shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-bold text-white/60 uppercase">Localização</p>
-                            <p className="font-extrabold text-xs text-white truncate">{locStr || 'Sem local definido'}</p>
-                          </div>
-                        </div>
-                        {locStr && (
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locStr)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-full text-[11px] font-bold flex items-center gap-1 transition-colors shrink-0 ml-2"
-                            title="Abrir no Google Maps"
-                          >
-                            <MapPin size={12} className="text-csc-gold shrink-0" />
-                            <span>Maps</span>
-                            <ExternalLink size={10} className="opacity-60" />
-                          </a>
-                        )}
-                      </div>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(paraMaps || nome)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 px-4 py-3 border-t border-white/13 min-h-14
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                      >
+                        <MapPin size={15} className="text-csc-red shrink-0" />
+                        <span className="flex-1 min-w-0">
+                          <span className="block font-display font-bold text-xs text-white truncate">
+                            {nome || 'Sem local definido'}
+                          </span>
+                          {morada && (
+                            <span className="block text-[11px] leading-snug text-white/60 truncate">{morada}</span>
+                          )}
+                        </span>
+                        <ExternalLink size={14} className="text-white/40 shrink-0" />
+                      </a>
                     )
                   })()}
                 </div>
@@ -2448,6 +2369,66 @@ const CalendarPage: React.FC = () => {
               })()}
 
             </div>
+
+            {/*
+              Gestão do evento (ecrã 2c). Estava no topo, em botões de ícone
+              apertados ao lado da data; é o que menos vezes se faz nesta
+              persiana e passa para o fim, com os nomes por extenso.
+            */}
+            {isCoachOrAdmin && (
+              <div className="rounded-[20px] bg-csc-gold/10 border border-csc-gold/26 p-3.5">
+                <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
+                  Gestão do evento
+                </p>
+
+                <div className="flex flex-col gap-2.5 mt-3">
+                  {!hasMatchReport(selectedEvent) && (
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditEvent(selectedEvent)}
+                      className="min-h-11 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px]
+                        flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                    >
+                      <Edit size={15} />
+                      <span>Editar evento</span>
+                    </button>
+                  )}
+
+                  {selectedEvent.type === 'match' &&
+                    (new Date(selectedEvent.date_time).getTime() <= Date.now() ||
+                      selectedEvent.home_score !== null) && (
+                      <button
+                        type="button"
+                        onClick={() => setIsMatchReportOpen(true)}
+                        className="min-h-11 rounded-[22px] bg-white/8 border border-white/18 text-white font-display font-bold text-[11.5px]
+                          flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                      >
+                        <ClipboardList size={15} />
+                        <span>{hasMatchReport(selectedEvent) ? 'Ver ficha de jogo' : 'Lançar ficha de jogo'}</span>
+                      </button>
+                    )}
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
+                    className="min-h-11 rounded-[22px] bg-csc-red/10 border border-csc-red/35 text-csc-vermelho-texto
+                      font-display font-bold text-xs flex items-center justify-center gap-2 cursor-pointer
+                      transition-transform duration-150 active:scale-97
+                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                  >
+                    <Trash2 size={15} />
+                    <span>Eliminar evento</span>
+                  </button>
+                </div>
+
+                <p className="text-[10px] leading-snug text-white/45 mt-2.5">
+                  Com ficha de jogo lançada, o evento fecha: deixa de ser editável e a convocatória
+                  não aceita respostas.
+                </p>
+              </div>
+            )}
           </div>
         </VistaDetalhe>
       )}
