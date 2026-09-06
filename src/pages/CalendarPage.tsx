@@ -1900,14 +1900,14 @@ const CalendarPage: React.FC = () => {
               type="button"
               onClick={handleCloseEventModal}
               aria-label="Fechar"
-              className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 z-30 cursor-pointer active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               title="Fechar"
             >
-              <X size={20} className="stroke-[2.5]" />
+              <X size={18} />
             </button>
 
             {/* Topo Premium Unificado da Persiana (Layout Verde Oficial CSC com Carrossel Integrado) */}
-            <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold relative overflow-hidden space-y-2.5">
+            <div className="cartao-vidro text-white p-4 relative overflow-hidden space-y-2.5">
               
               {/* Barra Integrada de Convocatórias Pendentes (Apenas se existirem múltiplos eventos pendentes) */}
               {myPendingEvents.length > 1 && myPendingEvents.some(pe => pe.id === selectedEvent.id) && (() => {
@@ -1976,23 +1976,23 @@ const CalendarPage: React.FC = () => {
                   {/* 2. Pílula do Tipo & 3. Data e Hora */}
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider shadow-2xs ${
-                        selectedEvent.type === 'match' 
-                          ? 'bg-blue-600 text-white' 
-                          : selectedEvent.type === 'practice' 
-                          ? 'bg-emerald-700 text-white' 
-                          : 'bg-purple-700 text-white'
+                      <span className={`inline-flex items-center h-[22px] px-2.5 rounded-[11px] border font-display font-bold text-[9.5px] ${
+                        selectedEvent.type === 'match'
+                          ? 'bg-csc-gold/16 border-csc-gold/35 text-csc-gold'
+                          : selectedEvent.type === 'practice'
+                            ? 'bg-csc-light/18 border-csc-light/35 text-csc-verde-texto'
+                            : 'bg-csc-blue/20 border-csc-blue/40 text-csc-azul-texto'
                       }`}>
-                        {selectedEvent.type === 'match' ? '⚽ Jogo' : selectedEvent.type === 'practice' ? '🏃 Treino' : '🎉 Convívio'}
+                        {selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}
                       </span>
 
                       {selectedEvent.is_friendly && selectedEvent.type === 'match' && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-400 text-csc-dark">
+                        <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white">
                           Amigável
                         </span>
                       )}
                       {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-900/80 text-blue-200 border border-blue-400/30 truncate max-w-[150px] flex items-center gap-1">
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-white/10 text-white border border-white/16 truncate max-w-[150px] flex items-center gap-1">
                           {selectedEvent.tournament.image_url ? (
                             <img src={selectedEvent.tournament.image_url} alt="" className="w-3.5 h-3.5 object-contain rounded-full shrink-0" />
                           ) : '🏆'}
@@ -2084,7 +2084,7 @@ const CalendarPage: React.FC = () => {
 
                         {/* VS Badge */}
                         <div className="shrink-0 px-1 flex flex-col items-center">
-                          <span className="w-8 h-8 flex items-center justify-center text-xs font-black rounded-full bg-csc-gold text-csc-dark shadow-xs">
+                          <span className="px-2.5 py-1 rounded-[9px] bg-white/10 font-display font-bold text-[11px] text-white/50">
                             VS
                           </span>
                         </div>
@@ -2222,19 +2222,21 @@ const CalendarPage: React.FC = () => {
                         // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home.
                         // Mostra-se sempre que ainda dá para responder, mesmo que já tenha respondido antes —
                         // até à hora de concentração o jogador pode sempre mudar de ideias.
-                        <div className="bg-csc-gold px-4 py-3.5 flex flex-col items-center justify-center gap-2">
-                          <span className="text-sm font-bold text-csc-dark">
+                        <div className="bg-[rgba(11,45,11,.55)] border-t border-csc-light/35 px-4 py-3.5 flex flex-col items-center justify-center gap-2.5">
+                          <span className="font-display font-extrabold text-[13px] text-white">
                             {myCallup.status === 'called' ? 'Vais estar presente?' :
                               myCallup.status === 'confirmed' ? '✓ Confirmaste presença' : '✕ Recusaste presença'}
                           </span>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2.5 w-full">
                             <button
                               type="button"
                               onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                              className={`h-10 px-5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                              className={`flex-1 min-h-11 px-5 rounded-[22px] border font-display font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer
+                                transition-transform duration-150 active:scale-97
+                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                                 myCallup.status === 'confirmed'
-                                  ? 'bg-csc-dark text-white ring-2 ring-white shadow-md'
-                                  : 'bg-csc-dark/15 text-csc-dark/70 hover:bg-csc-dark/25'
+                                  ? 'bg-csc-light border-csc-light text-white'
+                                  : 'bg-white/9 border-white/20 text-white'
                               }`}
                             >
                               {myCallup.status === 'confirmed' && <CheckCircle2 size={15} />}
@@ -2243,10 +2245,12 @@ const CalendarPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                              className={`h-10 px-5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                              className={`flex-1 min-h-11 px-5 rounded-[22px] border font-display font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer
+                                transition-transform duration-150 active:scale-97
+                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                                 myCallup.status === 'declined'
-                                  ? 'bg-csc-dark text-white ring-2 ring-white shadow-md'
-                                  : 'bg-csc-dark/15 text-csc-dark/70 hover:bg-csc-dark/25'
+                                  ? 'bg-white/90 border-white/90 text-csc-tinta'
+                                  : 'bg-white/9 border-white/20 text-white'
                               }`}
                             >
                               {myCallup.status === 'declined' && <XCircle size={15} />}
@@ -2254,7 +2258,7 @@ const CalendarPage: React.FC = () => {
                             </button>
                           </div>
                           {myCallup.status !== 'called' && (
-                            <span className="text-[11px] font-bold text-csc-dark/70">Toca no outro botão para mudar de resposta.</span>
+                            <span className="text-[10.5px] text-white/55">Toca no outro botão para mudar de resposta.</span>
                           )}
                         </div>
                       ) : (
