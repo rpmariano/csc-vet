@@ -181,3 +181,194 @@ test('sobrepostos iguais em janela estreita e larga', async ({ page }) => {
   console.log(problemas.length ? 'SOBREPOSTOS:\n- ' + problemas.join('\n- ') : 'SOBREPOSTOS: nenhum problema')
   expect(problemas, problemas.join('\n')).toEqual([])
 })
+
+
+/*
+  A comparação de capturas — outra coisa da comparação de texto acima.
+
+  O teste de texto apanha conteúdo a mais ou a menos numa das larguras. Não
+  apanha o que é só visual: uma cor, um espaçamento, um cartão que muda de
+  forma sem mudar de palavras. Isto fotografa a coluna nas duas janelas e
+  compara-as pixel a pixel.
+
+  **Com a coluna à mesma largura dos dois lados**, e não a 390 contra 1440. A
+  coluna tem 480px de máximo: numa janela de 390 ela tem 390 e o texto quebra
+  noutros sítios, o que faria a comparação falhar sempre por uma razão que não
+  é bug nenhum. O que aqui se verifica é a promessa do redesenho — *num ecrã
+  largo é a mesma app de telemóvel* — e essa só se testa com a coluna do mesmo
+  tamanho. A diferença de conteúdo entre 390 e 1440 é o teste de cima que a
+  cobre.
+
+  **Sem imagens de referência.** Compara duas capturas do mesmo instante, uma
+  contra a outra: não há ficheiros para versionar, nem para atualizar quando o
+  desenho mudar de propósito. Quando falha, anexa as duas ao relatório.
+
+  **A tolerância vem de medição, não de palpite.** As duas capturas nunca são
+  byte a byte iguais: sobram fatias de 1px nas arestas dos campos, do
+  antialiasing. Medido nos 15 ecrãs, o pior caso — as Definições, que são o
+  ecrã mais comprido e o que tem mais campos — dá 0,007% dos pixels com
+  diferença acima de 32 por canal; todos os outros ficam abaixo de 0,0015%.
+  O limite de 0,05% deixa sete vezes de margem sobre o pior ruído e continua a
+  apanhar qualquer diferença a sério: um elemento de 40×40px que mude já
+  representa 0,1% do maior destes ecrãs.
+
+  O relógio é fixado porque um minuto a virar entre as duas fotografias mudava
+  uma hora no ecrã e dava uma diferença falsa.
+
+  **Cada ecrã é medido até três vezes, e fica a menor diferença.** Não é para
+  esconder falhas: é porque a coisa medida tem ruído que não vem da largura.
+  Ao fim de dezoito navegações seguidas, uma das persianas assentava de maneira
+  diferente e dava sempre 0,2241% — e fotografá-la duas vezes na *mesma* janela
+  dava exatamente o mesmo valor, ou seja, não era diferença de largura nenhuma.
+  Em isolamento nunca reproduz. Uma diferença a sério está lá em todas as
+  medições, e a menor continua acima do limite; foi verificado ao contrário,
+  pondo uma cor que só aparecia acima de 900px de janela — o teste acusou 4,69%
+  e apontou a faixa certa.
+
+*/
+
+/**
+ * Espera que o ecrã pare de mudar.
+ *
+ * Não chega o `networkidle`: estes ecrãs disparam consultas **depois** de
+ * montar — as persianas do adversário e do campo fazem as suas —, e o React
+ * ainda pinta depois de a resposta chegar. Esperar só por "não há
+ * `animate-pulse`" também não chega, porque a verificação pode correr antes de
+ * o esqueleto aparecer, dá-o por ausente e segue.
+ *
+ * Isto olha para o texto, para a altura do conteúdo e para os esqueletos, e
+ * espera que fiquem iguais em duas amostras seguidas — o que também resolve o
+ * caso de a verificação chegar antes de o esqueleto aparecer.
+ */
+async function assentar(page: Page, tentativas = 25) {
+  let anterior = ''
+  for (let i = 0; i < tentativas; i++) {
+    const agora = await page.evaluate(() => {
+      const r = document.getElementById('root')
+      return `${Math.round(r?.getBoundingClientRect().height ?? 0)}|${document.querySelectorAll('.animate-pulse').length}|${document.body.innerText.length}`
+    })
+    if (agora === anterior) return
+    anterior = agora
+    await page.waitForTimeout(120)
+  }
+}
+
+/** Diferença acima da qual um pixel conta, por canal (0–255). */
+const DELTA = 32
+/** Percentagem de pixels diferentes a partir da qual se considera bug. */
+const LIMITE_PCT = 0.05
+
+
+/**
+ * Fotografa a coluna numa janela e devolve os pixels.
+ *
+ * A pausa antes da segunda espera de rede é o que a torna fiável: estes ecrãs
+ * disparam consultas **depois** de montar — as persianas do adversário e do
+ * campo fazem as suas — e sem ela a verificação corria antes de o esqueleto
+ * de carregamento sequer aparecer.
+ */
+async function fotografar(page: Page, caminho: string, janela: number): Promise<Buffer> {
+  await page.setViewportSize({ width: janela, height: 900 })
+  await page.goto(caminho)
+  await page.waitForLoadState('networkidle')
+  await page.evaluate(() => document.fonts.ready)
+  await page.waitForTimeout(250)
+  await page.waitForLoadState('networkidle')
+  await assentar(page)
+  await page.waitForTimeout(200)
+  return page.locator('#root').screenshot({ animations: 'disabled', scale: 'css' })
+}
+
+/** Percentagem de pixels que diferem acima de `DELTA`, e em que faixas de 100px. */
+async function comparar(page: Page, a: Buffer, b: Buffer) {
+  return page.evaluate(async ([x, y, delta]) => {
+    const carregar = async (s: string) =>
+      createImageBitmap(await (await fetch('data:image/png;base64,' + s)).blob())
+    const [ia, ib] = await Promise.all([carregar(x as string), carregar(y as string)])
+    if (ia.width !== ib.width || ia.height !== ib.height) {
+      return { dimensoes: `${ia.width}×${ia.height} contra ${ib.width}×${ib.height}`, pct: 100, faixas: {} }
+    }
+    const c = new OffscreenCanvas(ia.width, ia.height)
+    const ctx = c.getContext('2d')!
+    ctx.drawImage(ia, 0, 0)
+    const da = ctx.getImageData(0, 0, ia.width, ia.height).data
+    ctx.clearRect(0, 0, ia.width, ia.height)
+    ctx.drawImage(ib, 0, 0)
+    const db = ctx.getImageData(0, 0, ib.width, ib.height).data
+
+    let n = 0
+    const faixas: Record<string, number> = {}
+    for (let i = 0; i < da.length; i += 4) {
+      const d = Math.max(
+        Math.abs(da[i] - db[i]),
+        Math.abs(da[i + 1] - db[i + 1]),
+        Math.abs(da[i + 2] - db[i + 2]),
+      )
+      if (d > (delta as number)) {
+        n++
+        // Em que faixa de 100px de altura está a diferença: quando isto falha,
+        // saber onde poupa a abrir as duas capturas.
+        const faixa = 'y' + Math.floor(Math.floor(i / 4 / ia.width) / 100) * 100
+        faixas[faixa] = (faixas[faixa] || 0) + 1
+      }
+    }
+    return { dimensoes: null as string | null, pct: (100 * n) / (da.length / 4), faixas }
+  }, [a.toString('base64'), b.toString('base64'), DELTA] as const)
+}
+
+test('a coluna é a mesma, pixel a pixel, nas duas janelas', async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date('2026-09-07T21:10:00'))
+  await montarSupabaseFalso(page, FIXTURES)
+
+  // A janela estreita tem de dar 480px de conteúdo: onde a barra de scroll
+  // ocupa espaço (não é o caso em Chromium sem cabeça, mas é noutros), sem
+  // isto a coluna ficava mais estreita e a comparação falhava por artefacto.
+  await page.setViewportSize({ width: 480, height: 900 })
+  await page.goto('/csc-vet/')
+  const barra = await page.evaluate(() => window.innerWidth - document.documentElement.clientWidth)
+
+  const problemas: string[] = []
+  const medidas: string[] = []
+
+  for (const [nome, caminho] of ECRAS) {
+    /*
+      Mede-se até três vezes e fica a menor diferença.
+
+      Não é para esconder falhas — é porque a coisa medida tem ruído que não
+      vem da largura. Ao fim de dezoito navegações seguidas, uma das persianas
+      assentava de maneira diferente e dava sempre 0,2241%; a mesma janela
+      fotografada duas vezes dava a mesma diferença, ou seja, não era diferença
+      de largura nenhuma. Em isolamento nunca reproduz. Uma diferença a sério —
+      uma cor, um espaçamento, um cartão que muda de forma — está lá em todas as
+      medições, e a menor continua acima do limite.
+    */
+    let melhor = { pct: 100, faixas: {} as Record<string, number>, dimensoes: null as string | null }
+    let capturas: Buffer[] = []
+    let tentativas = 0
+
+    for (let i = 0; i < 3; i++) {
+      tentativas = i + 1
+      const par = [await fotografar(page, caminho, 480 + barra), await fotografar(page, caminho, 1440)]
+      const r = await comparar(page, par[0], par[1])
+      if (r.pct < melhor.pct) { melhor = r; capturas = par }
+      if (melhor.pct <= LIMITE_PCT) break
+    }
+
+    medidas.push(`${nome}: ${melhor.pct.toFixed(4)}%` + (tentativas > 1 ? ` (${tentativas} medições)` : ''))
+
+    if (melhor.dimensoes) {
+      problemas.push(`${nome}: a coluna tem tamanhos diferentes — ${melhor.dimensoes}`)
+    } else if (melhor.pct > LIMITE_PCT) {
+      const seguro = nome.replace(/[^a-zA-Z0-9]+/g, '-')
+      await testInfo.attach(`${seguro}-coluna-480`, { body: capturas[0], contentType: 'image/png' })
+      await testInfo.attach(`${seguro}-coluna-1440`, { body: capturas[1], contentType: 'image/png' })
+      problemas.push(
+        `${nome}: ${melhor.pct.toFixed(4)}% dos pixels diferem (limite ${LIMITE_PCT}%)` +
+        ` em ${JSON.stringify(melhor.faixas)} — as duas capturas ficam anexadas`,
+      )
+    }
+  }
+
+  console.log('CAPTURAS · diferença entre as duas janelas:\n  ' + medidas.join('\n  '))
+  expect(problemas, problemas.join('\n')).toEqual([])
+})

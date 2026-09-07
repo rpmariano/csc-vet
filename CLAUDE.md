@@ -364,10 +364,15 @@ teria de ser rodada de imediato.
   passar.
 - Qualquer alteração de UI tem de ser verificada em janela **estreita e larga**: em
   ambas tem de aparecer a mesma coisa, centrada. Diferenças entre as duas são bug.
-  **`tests/e2e/larguras.spec.ts` verifica-o sozinho** — percorre os ecrãs todos e
-  as persianas a 390px e a 1440px e compara o texto visível, a largura e o centro
-  da coluna, e o scroll lateral, que nunca deve existir. Um ecrã novo acrescenta-se
-  à lista `ECRAS` desse ficheiro.
+  **`tests/e2e/larguras.spec.ts` verifica-o sozinho**, de duas maneiras. A
+  estrutural percorre os ecrãs todos e as persianas a 390px e a 1440px e compara
+  o texto visível, a largura e o centro da coluna, e o scroll lateral, que nunca
+  deve existir. A visual fotografa a coluna nas duas janelas — com a coluna à
+  mesma largura dos dois lados, senão o texto quebra noutros sítios e falha
+  sempre — e compara pixel a pixel, o que apanha o que muda de aspeto sem mudar
+  de palavras. **Não guarda imagens de referência**: compara duas capturas do
+  mesmo instante, portanto não há nada para versionar nem para atualizar quando o
+  desenho mudar de propósito. Um ecrã novo acrescenta-se à lista `ECRAS`.
 - Ao redesenhar um ecrã, cruzar com `Mapa de Navegação.dc.html` do handoff para
   nenhum botão ficar sem destino, e manter o vocabulário do código (posições GR–PL,
   estados Apto/Lesionado/Inativo, tipos de evento, participação na ficha de jogo).
