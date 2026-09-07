@@ -133,11 +133,20 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
 - O fim da coluna acaba acima da barra inferior com `margin-bottom`, nunca
   `padding-bottom`: com padding o último cartão fica por baixo da barra.
 - **Passar uma página ao tema escuro começa por `python scripts/escurecer-tema.py
-  <ficheiros>`**, que traduz o cinzento do tema claro (`text-gray-700` →
-  `text-white/80` e por aí, prefixos de variante incluídos) e conta os
+  --estados <ficheiros>`**, que traduz o cinzento do tema claro (`text-gray-700` →
+  `text-white/80` e por aí, prefixos de variante incluídos) e, com `--estados`,
+  também as cores de estado (`bg-emerald-100`, `text-amber-900`,
+  `border-blue-200` → os tokens do clube em translúcido). Depois conta os
   `bg-white` opacos que sobram para se olhar um a um — esses exigem
   julgamento: um painel de diálogo passa a `bg-csc-fundo`, o fundo de um
-  emblema fica branco.
+  emblema fica branco. **Correr sem `--estados` não chega:** foi assim que a
+  página de Eventos ficou dada por escura com 28 pastilhas verde-menta e
+  amarelo-pálido ainda a brilhar sobre o fundo preto.
+- **Um `Modal` não tem tom.** O painel é sempre `bg-csc-fundo`. Havia um
+  `tone` cujo `'dark'` dava o verde do clube, ao contrário do `BottomSheet`,
+  onde a mesma palavra dá o fundo escuro — um modal escrito por analogia com
+  uma persiana saía verde-garrafa. Se algum dia for preciso um painel verde,
+  é uma prop nova com o nome da cor, não um "tom".
 - **Um cartão que se clica não pode ser um `div` com `onClick`.** Se puder ser
   `<button>`, é; quando tem um link dentro (o do Maps, por exemplo) e isso o
   proíbe, leva `role="button"`, `tabIndex={0}`, um `onKeyDown` para Enter e
