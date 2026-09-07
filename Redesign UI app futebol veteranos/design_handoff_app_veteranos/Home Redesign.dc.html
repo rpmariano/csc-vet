@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics=""><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&amp;display=swap" rel="stylesheet"><style>
+body{margin:0;background:#e8e6e1;font-family:Helvetica,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#164f16;text-decoration:none}a:hover{color:#009662}
+*{box-sizing:border-box}
+.sc::-webkit-scrollbar{width:0;height:0}
+.sc{scrollbar-width:none}
+.sc>*{flex-shrink:0}
+@keyframes shine{0%{transform:translateX(-120%)}100%{transform:translateX(220%)}}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+</style></helmet>
+
+<section style="padding:40px 44px 34px;border-bottom:1px solid rgba(0,0,0,.08);{{ rootVars }}" id="t5">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 6px"><a style="font:700 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#121415;color:#fff;border-radius:4px;text-decoration:none" href="#t5">5</a><span style="font:700 13px/1.2 Archivo,sans-serif;color:#121415">Menu por perfil</span></div>
+<p style="margin:0 0 24px;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55);max-width:760px">O que cada perfil vê. Troca de perfil no seletor dentro do telemóvel: admin vê tudo, treinador tudo menos tesouraria, jogador só o que lhe diz respeito. Tirei o bloco de admin da home — as diferenças de papel vivem aqui.</p>
+<div style="display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px" id="5a">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55)"><a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px;text-decoration:none" href="#5a">5a</a>Menu — secções aparecem conforme o perfil</div>
+<div style="width:392px;height:846px;border-radius:46px;background:#0e1011;border:1px solid rgba(0,0,0,.35);box-shadow:0 24px 60px -20px rgba(0,0,0,.5);overflow:hidden;position:relative;display:flex;flex-direction:column">
+  <div style="position:absolute;top:0;left:0;right:0;height:240px;overflow:hidden">
+    <div style="position:absolute;inset:0;background:linear-gradient(160deg,#164f16,#0a2b16 65%,#0e1011)"></div>
+    <div style="position:absolute;top:-60px;left:-90px;width:260px;height:260px;background:rgba(0,150,98,.28);transform:skewY(-14deg);border-radius:44px"></div>
+    <div style="position:absolute;bottom:-4px;left:-14px;font:900 76px/.8 Archivo,sans-serif;letter-spacing:-.05em;color:rgba(255,255,255,.06);white-space:nowrap">CASCAIS</div>
+    <div style="position:absolute;inset:0;background:linear-gradient(to top,#0e1011 2%,rgba(14,16,17,.4) 58%,transparent)"></div>
+  </div>
+  <div style="position:relative;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:rgba(255,255,255,.9);font:600 13px Archivo,sans-serif;flex:none"><span>11:42</span><div style="display:flex;gap:5px;align-items:center"><div style="width:16px;height:9px;border-radius:2px;background:rgba(255,255,255,.55)"></div><div style="width:22px;height:11px;border-radius:3px;border:1.5px solid rgba(255,255,255,.55)"></div></div></div>
+  <div class="sc" style="position:relative;flex:1;overflow-y:auto;padding:6px 18px 112px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;padding:4px 2px 2px">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(140deg,#2a2f31,#15191a);border:2px solid var(--gold,#e3c04d);flex:none"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font:800 19px Archivo,sans-serif;color:#fff">Rui Mariano</div>
+        <div style="font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6);margin-top:3px">Médio · nº 8 · sócio 1042</div>
+      </div>
+      <span style="font:700 18px Archivo,sans-serif;color:rgba(255,255,255,.4);flex:none">›</span>
+    </div>
+
+    <div style="padding:2px">
+      <div style="font:700 8.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.35);margin-bottom:8px">VER COMO</div>
+      <div style="display:flex;gap:8px">
+        <button type="button" onClick="{{ setAdmin }}" style="{{ rAdmin }}" style-active="transform:scale(.96)">Admin</button>
+        <button type="button" onClick="{{ setCoach }}" style="{{ rCoach }}" style-active="transform:scale(.96)">Treinador</button>
+        <button type="button" onClick="{{ setPlayer }}" style="{{ rPlayer }}" style-active="transform:scale(.96)">Jogador</button>
+      </div>
+    </div>
+
+    <div>
+      <div style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45);padding:0 3px 9px">O MEU</div>
+      <div style="border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:15px;height:15px;border-radius:50%;border:2px solid var(--gold,#e3c04d)"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Perfil</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <div onClick="{{ openPay }}" style="display:flex;align-items:center;gap:13px;padding:14px 16px;cursor:pointer" style-active="background:rgba(255,255,255,.04)"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:16px;height:12px;border-radius:3px;border:2px solid var(--gold,#e3c04d)"></span></span><span style="flex:1;min-width:0;font:700 13.5px Archivo,sans-serif;color:#fff">Os meus pagamentos</span><span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;background:rgba(239,50,35,.14);border:1px solid rgba(239,50,35,.35);font:700 10.5px Archivo,sans-serif;color:#f08a7f;flex:none"><span style="width:5px;height:5px;border-radius:50%;background:#ef3223"></span>1 em atraso</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45);padding:0 3px 9px">EQUIPA</div>
+      <div style="border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:14px;height:16px;border-radius:2px;border:2px solid var(--acc2,#4ecf9d)"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Fichas de jogo</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:16px;height:14px;border-top:2px solid var(--acc2,#4ecf9d);border-bottom:2px solid var(--acc2,#4ecf9d)"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Classificações</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:16px;height:16px;border-radius:3px;border:2px solid var(--acc2,#4ecf9d)"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Estatísticas</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+        <sc-if value="{{ isCoachUp }}" hint-placeholder-val="{{ true }}">
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:16px;height:16px;border-radius:50%;border:2px solid var(--acc2,#4ecf9d)"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Plantel</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+        </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ isCoachUp }}" hint-placeholder-val="{{ true }}">
+    <div>
+      <div style="display:flex;align-items:baseline;gap:8px;padding:0 3px 9px"><span style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45);flex:1">GESTÃO</span><span style="font:700 9.5px Archivo,sans-serif;color:var(--gold,#e3c04d)">treinador e admin</span></div>
+      <div style="border-radius:22px;background:rgba(227,192,77,.08);border:1px solid rgba(227,192,77,.2);backdrop-filter:blur(16px);overflow:hidden">
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(227,192,77,.14);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:15px;height:15px;border-radius:4px;border:2px solid var(--gold,#e3c04d)"></span></span><span style="flex:1;min-width:0;font:700 13.5px Archivo,sans-serif;color:#fff">Convocatórias<span style="display:block;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:2px">3 presenças em falta</span></span><span style="font:800 11px Archivo,sans-serif;color:#121415;background:var(--gold,#e3c04d);border-radius:10px;padding:2px 8px;flex:none">3</span></a>
+        <div style="height:1px;background:rgba(227,192,77,.14)"></div>
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(227,192,77,.14);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:15px;height:15px;border-radius:4px;border:2px solid var(--gold,#e3c04d)"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Jogos, treinos e convívios</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+        <div style="height:1px;background:rgba(227,192,77,.14)"></div>
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(227,192,77,.14);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:15px;height:15px;border-radius:4px;border:2px solid var(--gold,#e3c04d)"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Campos e adversários</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+        <div style="height:1px;background:rgba(227,192,77,.14)"></div>
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(227,192,77,.14);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:16px;height:14px;border-top:2px solid var(--gold,#e3c04d);border-bottom:2px solid var(--gold,#e3c04d)"></span></span><span style="flex:1;min-width:0;font:700 13.5px Archivo,sans-serif;color:#fff">Torneios e competições<span style="display:block;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:2px">2 a decorrer</span></span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+    <div>
+      <div style="display:flex;align-items:baseline;gap:8px;padding:0 3px 9px"><span style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45);flex:1">TESOURARIA</span><span style="font:700 9.5px Archivo,sans-serif;color:#f08a7f">só admin</span></div>
+      <div style="border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(239,50,35,.12);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:16px;height:12px;border-radius:3px;border:2px solid #f08a7f"></span></span><span style="flex:1;min-width:0;font:700 13.5px Archivo,sans-serif;color:#fff">Quotas do plantel<span style="display:block;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:2px">4 em atraso · 180 €</span></span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(239,50,35,.12);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:16px;height:16px;border-radius:4px;border:2px solid #f08a7f"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Receitas e despesas</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+      </div>
+    </div>
+    </sc-if>
+
+    <div>
+      <div style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45);padding:0 3px 9px">CLUBE</div>
+      <div style="border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.6)"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Comunicados</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+        <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:15px;height:15px;border-radius:4px;border:2px solid rgba(255,255,255,.6)"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Sobre o clube</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></a>
+        </sc-if>
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <a href="#5a" style="display:flex;align-items:center;gap:13px;padding:14px 16px"><span style="width:34px;height:34px;border-radius:11px;background:rgba(239,50,35,.1);display:flex;align-items:center;justify-content:center;flex:none"><span style="width:14px;height:14px;border-radius:4px;border:2px solid #f08a7f"></span></span><span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#f08a7f">Terminar sessão</span></a>
+      </div>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:120px;z-index:4;pointer-events:none;background:linear-gradient(to top,#0e1011 22%,rgba(14,16,17,.85) 58%,transparent)"></div>
+  <div style="position:absolute;z-index:5;bottom:22px;left:20px;right:20px;display:flex;align-items:center;padding:10px 6px;border-radius:26px;background:rgba(24,28,29,.86);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(28px) saturate(160%);box-shadow:0 16px 40px -14px rgba(0,0,0,.95)">
+    <div style="{{ mBlob }}"></div>
+    <div onClick="{{ mNav0 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ mIco0 }}"></div><span style="{{ mLbl0 }}">Hoje</span></div>
+    <div onClick="{{ mNav1 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ mIco1 }}"></div><span style="{{ mLbl1 }}">Agenda</span></div>
+    <div onClick="{{ mNav2 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ mIco2 }}"></div><span style="{{ mLbl2 }}">Plantel</span></div>
+    <div onClick="{{ mNav3 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ mIco3 }}"></div><span style="{{ mLbl3 }}">Clube</span></div>
+  </div>
+  <sc-if value="{{ payOpen }}">
+  <div style="position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;padding:22px">
+    <div onClick="{{ closePay }}" style="position:absolute;inset:0;background:rgba(6,8,8,.7);backdrop-filter:blur(6px)"></div>
+    <div style="position:relative;width:100%;border-radius:26px;background:rgba(28,32,33,.92);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(30px) saturate(160%);box-shadow:0 30px 70px -20px rgba(0,0,0,.95);overflow:hidden">
+      <div style="display:flex;align-items:flex-start;gap:13px;padding:18px 18px 16px">
+        <span style="width:40px;height:40px;border-radius:13px;background:rgba(239,50,35,.14);border:1px solid rgba(239,50,35,.3);display:flex;align-items:center;justify-content:center;flex:none"><span style="font:800 16px Archivo,sans-serif;color:#f08a7f">!</span></span>
+        <span style="flex:1;min-width:0"><span style="display:block;font:800 16px Archivo,sans-serif;color:#fff">Quotas em Atraso</span><span style="display:block;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.55);margin-top:3px">1 mês por regularizar</span></span>
+        <button type="button" onClick="{{ closePay }}" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.7);font:700 14px Archivo,sans-serif;cursor:pointer;flex:none" style-active="transform:scale(.92)">✕</button>
+      </div>
+      <div style="padding:0 18px">
+        <div style="display:flex;align-items:center;gap:10px;padding:14px 15px;border-radius:16px;background:rgba(239,50,35,.1);border:1px solid rgba(239,50,35,.22)">
+          <span style="flex:1;font:700 13.5px Archivo,sans-serif;color:#fff">Agosto 2026</span>
+          <span style="font:800 15px Archivo,sans-serif;color:#f08a7f">10.00€</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:10px;padding:18px 18px 14px">
+        <span style="flex:1;font:800 10px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.5)">TOTAL EM DÍVIDA</span>
+        <span style="font:800 24px Archivo,sans-serif;color:#fff">10.00€</span>
+      </div>
+      <div style="padding:0 18px 18px">
+        <button type="button" onClick="{{ closePay }}" style="width:100%;height:48px;border-radius:24px;border:0;background:var(--gold,#e3c04d);color:#121415;font:800 13.5px Archivo,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px" style-active="transform:scale(.97)">Consultar IBAN &amp; Regularizar<span style="font:700 15px Archivo,sans-serif">→</span></button>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</div>
+
+</div>
+<p style="margin:22px 0 0;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.5)">A seguir: "os itens bloqueados devem aparecer a cinzento em vez de desaparecer" · "junta Fichas de jogo ao <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#4a">4a</a>" · "desenha o ecrã de pagamentos"</p>
+</section>
+
+<section style="padding:40px 44px 34px;border-bottom:1px solid rgba(0,0,0,.08);{{ rootVars }}" id="t4">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 6px"><a style="font:700 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#121415;color:#fff;border-radius:4px;text-decoration:none" href="#t4">4</a><span style="font:700 13px/1.2 Archivo,sans-serif;color:#121415">Respiro do <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#3b">3b</a> + por responder do <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#2a">2a</a></span></div>
+<p style="margin:0 0 24px;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55);max-width:760px">Cartão do jogo, último jogo e classificação como em <a href="#3b">3b</a>; os compromissos por responder voltam a carrossel de cartões, agora à escala do respiro, com o traço minhoca em baixo.</p>
+<div style="display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px" id="4a">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55)"><a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px;text-decoration:none" href="#4a">4a</a>A mistura</div>
+<div style="width:392px;height:846px;border-radius:46px;background:#0e1011;border:1px solid rgba(0,0,0,.35);box-shadow:0 24px 60px -20px rgba(0,0,0,.5);overflow:hidden;position:relative;display:flex;flex-direction:column">
+  <div style="position:absolute;top:0;left:0;right:0;height:380px;overflow:hidden">
+    <div style="position:absolute;inset:0;background:linear-gradient(155deg,#164f16,#0a2b16 60%,#0e1011)"></div>
+    <div style="position:absolute;top:-40px;left:-70px;width:300px;height:300px;background:rgba(0,150,98,.32);transform:skewY(-14deg);border-radius:44px"></div>
+    <div style="position:absolute;top:60px;right:-90px;width:260px;height:260px;background:rgba(11,45,11,.7);transform:skewY(12deg);border-radius:44px"></div>
+    <div style="position:absolute;bottom:20px;left:-18px;font:900 100px/.8 Archivo,sans-serif;letter-spacing:-.05em;color:rgba(255,255,255,.07);white-space:nowrap">CASCAIS</div>
+    <div style="position:absolute;inset:0;background:linear-gradient(to top,#0e1011 1%,rgba(14,16,17,.35) 58%,transparent)"></div>
+  </div>
+  <div style="position:relative;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:rgba(255,255,255,.9);font:600 13px Archivo,sans-serif;flex:none"><span>11:42</span><div style="display:flex;gap:5px;align-items:center"><div style="width:16px;height:9px;border-radius:2px;background:rgba(255,255,255,.55)"></div><div style="width:22px;height:11px;border-radius:3px;border:1.5px solid rgba(255,255,255,.55)"></div></div></div>
+  <div class="sc" style="position:relative;flex:1;overflow-y:auto;padding:4px 18px 112px;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:34px;height:38px;border-radius:5px 5px 16px 16px;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font:800 9.5px Archivo,sans-serif;color:#164f16;flex:none">CSC</div>
+      <div style="flex:1;min-width:0"><div style="font:800 13.5px Archivo,sans-serif;color:#fff">Veteranos</div><div style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6);margin-top:1px">Época 25/26</div></div>
+      <span style="display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px;border-radius:14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);font:700 11.5px Archivo,sans-serif;color:#fff;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:var(--acc2,#4ecf9d);animation:pulse 2.6s ease-in-out infinite"></span>Apto</span>
+      <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(140deg,#2a2f31,#15191a);border:1.5px solid rgba(255,255,255,.85);flex:none"></div>
+    </div>
+    <div style="padding:22px 2px 4px">
+      <div style="font:800 10px Archivo,sans-serif;letter-spacing:.24em;color:var(--gold,#e3c04d)">SÁBADO, 12 DE SETEMBRO</div>
+      <div style="font:900 44px/1 Archivo,sans-serif;color:#fff;letter-spacing:-.035em;margin-top:12px">GDPCC<br><span style="color:rgba(255,255,255,.42);font-size:28px">vs</span> CSC</div>
+      <div style="display:flex;align-items:center;gap:9px;margin-top:15px;font:400 12.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.72)"><span style="display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:13px;background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.15);font:700 11px Archivo,sans-serif;color:#fff">Em 8 dias</span>Amigável · fora de casa</div>
+    </div>
+    <div style="border-radius:26px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.17);backdrop-filter:blur(26px) saturate(160%);box-shadow:0 22px 50px -24px rgba(0,0,0,.95);overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:center;gap:24px;padding:18px 18px 16px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100px"><div style="width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font:800 12.5px Archivo,sans-serif;color:#164f16">GDPCC</div><div style="font:700 12px Archivo,sans-serif;color:rgba(255,255,255,.85)">Casa</div></div>
+        <div style="font:900 28px Archivo,sans-serif;color:transparent;-webkit-text-stroke:1.5px var(--gold,#e3c04d);margin-bottom:20px">VS</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100px"><div style="width:58px;height:58px;border-radius:50%;background:linear-gradient(150deg,#1c6b1c,#0f3d0f);border:1.5px solid rgba(227,192,77,.55);display:flex;align-items:center;justify-content:center;font:800 15px Archivo,sans-serif;color:var(--gold,#e3c04d)">CSC</div><div style="font:700 12px Archivo,sans-serif;color:rgba(255,255,255,.85)">Fora</div></div>
+      </div>
+      <div style="display:flex;align-items:stretch;border-top:1px solid rgba(255,255,255,.13)">
+        <div style="flex:none;padding:15px 17px"><div style="font:700 9.5px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.55)">CONCENTRAÇÃO</div><div style="font:800 22px Archivo,sans-serif;color:#fff;margin-top:5px">16:00</div></div>
+        <div style="width:1px;background:rgba(255,255,255,.13)"></div>
+        <div style="flex:1;padding:15px 17px;display:flex;align-items:center;gap:12px">
+          <div><div style="font:700 9.5px Archivo,sans-serif;letter-spacing:.16em;color:var(--gold,#e3c04d)">PONTAPÉ</div><div style="font:800 22px Archivo,sans-serif;color:#fff;margin-top:5px">18:00</div></div>
+          <span style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 11px;border-radius:14px;background:rgba(0,82,150,.22);border:1px solid rgba(0,82,150,.4);flex:none"><span style="font:800 12px Archivo,sans-serif;color:#9cc6ea">19°</span><span style="font:400 9.5px Helvetica,Arial,sans-serif;color:rgba(156,198,234,.85)">vento 24 km/h</span></span>
+        </div>
+      </div>
+      <a href="#4a" style="display:flex;align-items:center;gap:10px;padding:14px 17px;border-top:1px solid rgba(255,255,255,.13)">
+        <span style="width:14px;height:14px;border-radius:50% 50% 50% 0;border:2px solid var(--gold,#e3c04d);transform:rotate(-45deg);flex:none"></span>
+        <span style="flex:1;min-width:0;font:400 11.5px/1.4 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.7)"><strong style="font:700 12.5px Archivo,sans-serif;color:#fff;display:block">GD Pescadores da Costa da Caparica</strong>Av. Dom Sebastião 75B, Costa de Caparica</span>
+        <span style="font:700 17px Archivo,sans-serif;color:rgba(255,255,255,.4);flex:none">›</span>
+      </a>
+      <div style="padding:15px 17px 17px;background:rgba(227,192,77,.13);border-top:1px solid rgba(227,192,77,.24)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span style="font:800 14px Archivo,sans-serif;color:#fff">Contamos contigo?</span><span style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6)">13 confirmados</span></div>
+        <div style="display:flex;gap:11px;margin-top:13px">
+          <button type="button" onClick="{{ yesH }}" style="{{ yesHStyle }}" style-active="transform:scale(.96)">Sim, vou</button>
+          <button type="button" onClick="{{ noH }}" style="{{ noHStyle }}" style-active="transform:scale(.96)">Não posso</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;padding:1px 0 2px">
+      <div style="position:relative;width:44px;height:5px">
+        <div style="{{ wormN }}"></div>
+        <div onClick="{{ n0 }}" style="position:absolute;left:0;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+        <div onClick="{{ n1 }}" style="position:absolute;left:22px;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:2px 3px 10px"><span style="font:800 10px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45)">POR RESPONDER</span><span style="font:800 11px Archivo,sans-serif;color:#121415;background:var(--gold,#e3c04d);border-radius:10px;padding:2px 8px">2</span></div>
+      <div class="sc" ref="{{ railQ }}" onScroll="{{ scrollQ }}" style="display:flex;gap:12px;overflow-x:auto;padding:0 3px 4px;scroll-snap-type:x mandatory">
+        <div style="flex:none;width:200px;scroll-snap-align:start;padding:16px;border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);border-left:3px solid var(--acc2,#009662)">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:700 11.5px Archivo,sans-serif;color:var(--acc2,#4ecf9d)">Treino</span><span style="font:800 11.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">09 SET</span></div>
+          <div style="font:800 16px/1.25 Archivo,sans-serif;color:#fff;margin-top:12px">Terça, 22:00</div>
+          <div style="font:400 11.5px/1.4 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:5px">Estádio Municipal Dramático</div>
+          <div style="display:flex;gap:9px;margin-top:15px"><button type="button" onClick="{{ okQ }}" style="{{ okQStyle }}" style-active="transform:scale(.95)">Vou</button><button type="button" onClick="{{ noQ }}" style="{{ noQStyle }}" style-active="transform:scale(.95)">Não</button></div>
+        </div>
+        <div style="flex:none;width:200px;scroll-snap-align:start;padding:16px;border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);border-left:3px solid var(--social,#005296)">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:700 11.5px Archivo,sans-serif;color:var(--social,#7fb3e0)">Convívio</span><span style="font:800 11.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">12 SET</span></div>
+          <div style="font:800 16px/1.25 Archivo,sans-serif;color:#fff;margin-top:12px">Jantar Reentré</div>
+          <div style="font:400 11.5px/1.4 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:5px">20:00 · GD Pescadores</div>
+          <div style="display:flex;gap:9px;margin-top:15px"><button type="button" onClick="{{ okR }}" style="{{ okRStyle }}" style-active="transform:scale(.95)">Vou</button><button type="button" onClick="{{ noR }}" style="{{ noRStyle }}" style-active="transform:scale(.95)">Não</button></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:11px 0 2px">
+        <div style="position:relative;width:44px;height:5px">
+          <div style="{{ wormQ }}"></div>
+          <div onClick="{{ q0 }}" style="position:absolute;left:0;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+          <div onClick="{{ q1 }}" style="position:absolute;left:22px;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+        </div>
+      </div>
+    </div>
+    <div style="border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:15px 16px 12px"><span style="font:800 10px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45);flex:1">ÚLTIMO JOGO</span><span style="font:800 14px Archivo,sans-serif;color:#fff">CSC <span style="color:var(--gold,#e3c04d)">3</span>—1 Sesimbra</span></div>
+      <div style="padding:0 16px 15px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="width:30px;font:800 12px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">12'</span><span style="flex:1;font:700 13px Archivo,sans-serif;color:#fff">Nuno Aleixo</span><span style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);flex:none">as. Paulo</span></div>
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <div style="display:flex;align-items:center;gap:12px"><span style="width:30px;font:800 12px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">38'</span><span style="flex:1;font:700 13px Archivo,sans-serif;color:#fff">Rui Mariano</span><span style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);flex:none">as. Nuno</span></div>
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <div style="display:flex;align-items:center;gap:12px"><span style="width:30px;font:800 12px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">71'</span><span style="flex:1;font:700 13px Archivo,sans-serif;color:#fff">Nuno Aleixo</span><span style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);flex:none">as. Tiago</span></div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:2px 3px 10px"><span style="font:800 10px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45)">CLASSIFICAÇÃO</span></div>
+      <div class="sc" ref="{{ railK }}" onScroll="{{ scrollK }}" style="display:flex;gap:12px;overflow-x:auto;padding:0 3px 4px;scroll-snap-type:x mandatory">
+        <div style="flex:none;width:300px;scroll-snap-align:start;border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+          <div style="display:flex;align-items:baseline;gap:10px;padding:14px 16px 11px"><span style="font:700 13px Archivo,sans-serif;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Liga Veteranos Setúbal</span><span style="font:700 11.5px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">3º de 8</span></div>
+          <div style="padding:0 16px 15px;display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;gap:9px;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:13px;font:700 11px Archivo,sans-serif">2</span><span style="flex:1">Almada Veteranos</span><span style="font:700 11px Archivo,sans-serif">16</span></div>
+            <div style="display:flex;align-items:center;gap:9px;font:700 12.5px Archivo,sans-serif;color:#fff;padding:7px 9px;margin:0 -9px;border-radius:10px;background:rgba(227,192,77,.14)"><span style="width:13px;color:var(--gold,#e3c04d)">3</span><span style="flex:1">CSC Veteranos</span><span>14</span></div>
+            <div style="display:flex;align-items:center;gap:9px;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:13px;font:700 11px Archivo,sans-serif">4</span><span style="flex:1">Sesimbra</span><span style="font:700 11px Archivo,sans-serif">12</span></div>
+          </div>
+        </div>
+        <div style="flex:none;width:300px;scroll-snap-align:start;border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+          <div style="display:flex;align-items:baseline;gap:10px;padding:14px 16px 11px"><span style="font:700 13px Archivo,sans-serif;color:#fff;flex:1">Taça do Concelho</span><span style="font:700 11.5px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">1º de 4</span></div>
+          <div style="padding:0 16px 15px;display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;gap:9px;font:700 12.5px Archivo,sans-serif;color:#fff;padding:7px 9px;margin:0 -9px;border-radius:10px;background:rgba(227,192,77,.14)"><span style="width:13px;color:var(--gold,#e3c04d)">1</span><span style="flex:1">CSC Veteranos</span><span>7</span></div>
+            <div style="display:flex;align-items:center;gap:9px;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:13px;font:700 11px Archivo,sans-serif">2</span><span style="flex:1">GD Pescadores</span><span style="font:700 11px Archivo,sans-serif">6</span></div>
+            <div style="display:flex;align-items:center;gap:9px;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:13px;font:700 11px Archivo,sans-serif">3</span><span style="flex:1">Alcabideche</span><span style="font:700 11px Archivo,sans-serif">3</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:11px 0 2px">
+        <div style="position:relative;width:44px;height:5px">
+          <div style="{{ wormK }}"></div>
+          <div onClick="{{ k0 }}" style="position:absolute;left:0;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+          <div onClick="{{ k1 }}" style="position:absolute;left:22px;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;padding:15px 16px;border-radius:22px;background:linear-gradient(100deg,rgba(227,192,77,.14),rgba(227,192,77,.04));border:1px solid rgba(227,192,77,.24);backdrop-filter:blur(14px)">
+      <div style="display:flex;flex:none"><div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(140deg,#3a4143,#1b1f20);border:1.5px solid #0e1011;animation:float 5s ease-in-out infinite"></div><div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(140deg,#2f4a35,#16251a);border:1.5px solid #0e1011;margin-left:-11px"></div></div>
+      <div style="flex:1;min-width:0"><div style="font:700 13.5px Archivo,sans-serif;color:#fff">Aniversários deste mês</div><div style="font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:2px">Nuno faz anos hoje · Paulo a 21</div></div>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:120px;z-index:4;pointer-events:none;background:linear-gradient(to top,#0e1011 22%,rgba(14,16,17,.85) 58%,transparent)"></div>
+  <div style="position:absolute;z-index:5;bottom:22px;left:20px;right:20px;display:flex;align-items:center;padding:10px 6px;border-radius:26px;background:rgba(24,28,29,.86);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(28px) saturate(160%);box-shadow:0 16px 40px -14px rgba(0,0,0,.95)">
+    <div style="{{ navBlob }}"></div>
+    <div onClick="{{ nav0 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico0 }}"></div><span style="{{ lbl0 }}">Hoje</span></div>
+    <div onClick="{{ nav1 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico1 }}"></div><span style="{{ lbl1 }}">Agenda</span></div>
+    <div onClick="{{ nav2 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico2 }}"></div><span style="{{ lbl2 }}">Plantel</span></div>
+    <div onClick="{{ nav3 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico3 }}"></div><span style="{{ lbl3 }}">Clube</span></div>
+  </div>
+</div>
+</div>
+
+</div>
+<p style="margin:22px 0 0;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.5)">A seguir: "aplica <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#4a">4a</a> à Agenda" · "junta o bloco de admin ao <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#4a">4a</a>" · "cartões por responder mais largos"</p>
+</section>
+
+<section style="padding:40px 44px 34px;border-bottom:1px solid rgba(0,0,0,.08);{{ rootVars }}" id="t3">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 6px"><a style="font:700 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#121415;color:#fff;border-radius:4px;text-decoration:none" href="#t3">3</a><span style="font:700 13px/1.2 Archivo,sans-serif;color:#121415">Meteorologia, cronologia e pull-to-refresh sobre <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#2a">2a</a></span></div>
+<p style="margin:0 0 24px;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55);max-width:760px">Mesmas três adições nas duas; <a href="#3a">3a</a> é compacta, <a href="#3b">3b</a> respira. O gesto de refrescar está isolado em baixo, nas duas fases.</p>
+<div style="display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px" id="3a">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55)"><a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px;text-decoration:none" href="#3a">3a</a>Compacta — tudo à vista sem scroll</div>
+<div style="width:392px;height:846px;border-radius:46px;background:#0e1011;border:1px solid rgba(0,0,0,.35);box-shadow:0 24px 60px -20px rgba(0,0,0,.5);overflow:hidden;position:relative;display:flex;flex-direction:column">
+  <div style="position:absolute;top:0;left:0;right:0;height:300px;overflow:hidden">
+    <div style="position:absolute;inset:0;background:linear-gradient(155deg,#164f16,#0a2b16 60%,#0e1011)"></div>
+    <div style="position:absolute;top:-50px;left:-80px;width:280px;height:280px;background:rgba(0,150,98,.3);transform:skewY(-14deg);border-radius:44px"></div>
+    <div style="position:absolute;top:40px;right:-100px;width:240px;height:240px;background:rgba(11,45,11,.7);transform:skewY(12deg);border-radius:44px"></div>
+    <div style="position:absolute;bottom:6px;left:-16px;font:900 84px/.8 Archivo,sans-serif;letter-spacing:-.05em;color:rgba(255,255,255,.07);white-space:nowrap">CASCAIS</div>
+    <div style="position:absolute;inset:0;background:linear-gradient(to top,#0e1011 1%,rgba(14,16,17,.4) 55%,transparent)"></div>
+  </div>
+  <div style="position:relative;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:rgba(255,255,255,.9);font:600 13px Archivo,sans-serif;flex:none"><span>11:42</span><div style="display:flex;gap:5px;align-items:center"><div style="width:16px;height:9px;border-radius:2px;background:rgba(255,255,255,.55)"></div><div style="width:22px;height:11px;border-radius:3px;border:1.5px solid rgba(255,255,255,.55)"></div></div></div>
+  <div class="sc" style="position:relative;flex:1;overflow-y:auto;padding:2px 14px 108px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:30px;height:34px;border-radius:5px 5px 14px 14px;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font:800 8.5px Archivo,sans-serif;color:#164f16;flex:none">CSC</div>
+      <div style="flex:1;min-width:0"><div style="font:800 12px Archivo,sans-serif;color:#fff">Veteranos</div><div style="font:400 9.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6);margin-top:1px">Época 25/26</div></div>
+      <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);font:700 10.5px Archivo,sans-serif;color:#fff;flex:none"><span style="width:5px;height:5px;border-radius:50%;background:var(--acc2,#4ecf9d)"></span>Apto</span>
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(140deg,#2a2f31,#15191a);border:1.5px solid rgba(255,255,255,.85);flex:none"></div>
+    </div>
+    <div style="padding:10px 2px 2px">
+      <div style="font:800 9px Archivo,sans-serif;letter-spacing:.2em;color:var(--gold,#e3c04d)">SÁBADO, 12 SET · EM 8 DIAS</div>
+      <div style="font:900 30px/1.04 Archivo,sans-serif;color:#fff;letter-spacing:-.03em;margin-top:7px">GDPCC <span style="color:rgba(255,255,255,.4);font-size:19px">vs</span> CSC</div>
+    </div>
+    <div style="border-radius:20px;background:rgba(255,255,255,.085);border:1px solid rgba(255,255,255,.17);backdrop-filter:blur(24px) saturate(160%);box-shadow:0 18px 40px -24px rgba(0,0,0,.95);overflow:hidden">
+      <div style="display:flex;align-items:stretch">
+        <div style="flex:none;padding:11px 13px"><div style="font:700 8.5px Archivo,sans-serif;letter-spacing:.14em;color:rgba(255,255,255,.55)">CONCENTRAÇÃO</div><div style="font:800 18px Archivo,sans-serif;color:#fff;margin-top:3px">16:00</div></div>
+        <div style="width:1px;background:rgba(255,255,255,.13)"></div>
+        <div style="flex:1;padding:11px 13px;display:flex;align-items:center;gap:10px">
+          <div><div style="font:700 8.5px Archivo,sans-serif;letter-spacing:.14em;color:var(--gold,#e3c04d)">PONTAPÉ</div><div style="font:800 18px Archivo,sans-serif;color:#fff;margin-top:3px">18:00</div></div>
+          <span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border-radius:13px;background:rgba(0,82,150,.22);border:1px solid rgba(0,82,150,.4);font:700 10px Archivo,sans-serif;color:#9cc6ea;flex:none"><span style="width:8px;height:8px;border-radius:50%;border:2px solid #9cc6ea"></span>19° · vento 24</span>
+        </div>
+      </div>
+      <a href="#3a" style="display:flex;align-items:center;gap:8px;padding:10px 13px;border-top:1px solid rgba(255,255,255,.13)">
+        <span style="width:12px;height:12px;border-radius:50% 50% 50% 0;border:2px solid var(--gold,#e3c04d);transform:rotate(-45deg);flex:none"></span>
+        <span style="flex:1;min-width:0;font:700 11px Archivo,sans-serif;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">GD Pescadores da Costa da Caparica</span>
+        <span style="font:700 15px Archivo,sans-serif;color:rgba(255,255,255,.4);flex:none">›</span>
+      </a>
+      <div style="padding:11px 13px 13px;background:rgba(227,192,77,.13);border-top:1px solid rgba(227,192,77,.24);display:flex;align-items:center;gap:10px">
+        <span style="font:800 12px Archivo,sans-serif;color:#fff;flex:1">Contamos contigo?</span>
+        <div style="display:flex;gap:8px;flex:none;width:196px">
+          <button type="button" onClick="{{ yesF }}" style="{{ yesFStyle }}" style-active="transform:scale(.95)">Vou</button>
+          <button type="button" onClick="{{ noF }}" style="{{ noFStyle }}" style-active="transform:scale(.95)">Não</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:2px 3px 7px"><span style="font:800 9px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45)">POR RESPONDER</span><span style="font:800 10.5px Archivo,sans-serif;color:#121415;background:var(--gold,#e3c04d);border-radius:9px;padding:2px 7px">2</span></div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:15px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));border-left:3px solid var(--acc2,#009662)">
+          <div style="flex:1;min-width:0"><div style="font:700 12px Archivo,sans-serif;color:#fff">Treino · ter 22:00</div><div style="font:400 10px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">09 set · Estádio Municipal</div></div>
+          <div style="display:flex;gap:6px;flex:none"><button type="button" onClick="{{ okT }}" style="{{ okTStyle }}" style-active="transform:scale(.92)">✓</button><button type="button" onClick="{{ noT }}" style="{{ noTStyle }}" style-active="transform:scale(.92)">✕</button></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:15px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));border-left:3px solid var(--social,#005296)">
+          <div style="flex:1;min-width:0"><div style="font:700 12px Archivo,sans-serif;color:#fff">Jantar — Reentré</div><div style="font:400 10px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">12 set · 20:00 · GD Pescadores</div></div>
+          <div style="display:flex;gap:6px;flex:none"><button type="button" onClick="{{ okJ }}" style="{{ okJStyle }}" style-active="transform:scale(.92)">✓</button><button type="button" onClick="{{ noJ }}" style="{{ noJStyle }}" style-active="transform:scale(.92)">✕</button></div>
+        </div>
+      </div>
+    </div>
+    <div style="border-radius:18px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px"><span style="font:800 9px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45);flex:1">ÚLTIMO JOGO</span><span style="font:800 12px Archivo,sans-serif;color:#fff">CSC <span style="color:var(--gold,#e3c04d)">3</span>—1 Sesimbra</span></div>
+      <div style="display:flex;gap:7px;padding:0 12px 11px;overflow:hidden">
+        <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:12px;background:rgba(227,192,77,.14);font:700 10px Archivo,sans-serif;color:#fff;flex:none">12' Nuno <span style="color:rgba(255,255,255,.5);font-weight:400">as. Paulo</span></span>
+        <span style="display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:12px;background:rgba(227,192,77,.14);font:700 10px Archivo,sans-serif;color:#fff;flex:none">38' Rui</span>
+        <span style="display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:12px;background:rgba(227,192,77,.14);font:700 10px Archivo,sans-serif;color:#fff;flex:none">71' Nuno</span>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:2px 3px 7px"><span style="font:800 9px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45)">CLASSIFICAÇÃO</span></div>
+      <div class="sc" style="display:flex;gap:10px;overflow-x:auto;padding:0 3px 4px;scroll-snap-type:x mandatory">
+        <div style="flex:none;width:280px;scroll-snap-align:start;border-radius:18px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));overflow:hidden">
+          <div style="display:flex;align-items:baseline;gap:10px;padding:10px 12px 8px"><span style="font:700 11.5px Archivo,sans-serif;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Liga Veteranos Setúbal</span><span style="font:700 10.5px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">3º de 8</span></div>
+          <div style="padding:0 12px 11px;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:8px;font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:11px;font:700 10px Archivo,sans-serif">2</span><span style="flex:1">Almada Veteranos</span><span style="font:700 10px Archivo,sans-serif">16</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font:700 11px Archivo,sans-serif;color:#fff;padding:5px 7px;margin:0 -7px;border-radius:8px;background:rgba(227,192,77,.14)"><span style="width:11px;color:var(--gold,#e3c04d)">3</span><span style="flex:1">CSC Veteranos</span><span>14</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:11px;font:700 10px Archivo,sans-serif">4</span><span style="flex:1">Sesimbra</span><span style="font:700 10px Archivo,sans-serif">12</span></div>
+          </div>
+        </div>
+        <div style="flex:none;width:280px;scroll-snap-align:start;border-radius:18px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));overflow:hidden">
+          <div style="display:flex;align-items:baseline;gap:10px;padding:10px 12px 8px"><span style="font:700 11.5px Archivo,sans-serif;color:#fff;flex:1">Taça do Concelho</span><span style="font:700 10.5px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">1º de 4</span></div>
+          <div style="padding:0 12px 11px;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:8px;font:700 11px Archivo,sans-serif;color:#fff;padding:5px 7px;margin:0 -7px;border-radius:8px;background:rgba(227,192,77,.14)"><span style="width:11px;color:var(--gold,#e3c04d)">1</span><span style="flex:1">CSC Veteranos</span><span>7</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:11px;font:700 10px Archivo,sans-serif">2</span><span style="flex:1">GD Pescadores</span><span style="font:700 10px Archivo,sans-serif">6</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:11px;font:700 10px Archivo,sans-serif">3</span><span style="flex:1">Alcabideche</span><span style="font:700 10px Archivo,sans-serif">3</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:120px;z-index:4;pointer-events:none;background:linear-gradient(to top,#0e1011 22%,rgba(14,16,17,.85) 58%,transparent)"></div>
+  <div style="position:absolute;z-index:5;bottom:22px;left:20px;right:20px;display:flex;align-items:center;padding:10px 6px;border-radius:26px;background:rgba(24,28,29,.86);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(28px) saturate(160%);box-shadow:0 16px 40px -14px rgba(0,0,0,.95)">
+    <div style="{{ navBlob }}"></div>
+    <div onClick="{{ nav0 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico0 }}"></div><span style="{{ lbl0 }}">Hoje</span></div>
+    <div onClick="{{ nav1 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico1 }}"></div><span style="{{ lbl1 }}">Agenda</span></div>
+    <div onClick="{{ nav2 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico2 }}"></div><span style="{{ lbl2 }}">Plantel</span></div>
+    <div onClick="{{ nav3 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico3 }}"></div><span style="{{ lbl3 }}">Clube</span></div>
+  </div>
+</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px" id="3b">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55)"><a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px;text-decoration:none" href="#3b">3b</a>Com respiro — menos por ecrã, mais peso a cada coisa</div>
+<div style="width:392px;height:846px;border-radius:46px;background:#0e1011;border:1px solid rgba(0,0,0,.35);box-shadow:0 24px 60px -20px rgba(0,0,0,.5);overflow:hidden;position:relative;display:flex;flex-direction:column">
+  <div style="position:absolute;top:0;left:0;right:0;height:380px;overflow:hidden">
+    <div style="position:absolute;inset:0;background:linear-gradient(155deg,#164f16,#0a2b16 60%,#0e1011)"></div>
+    <div style="position:absolute;top:-40px;left:-70px;width:300px;height:300px;background:rgba(0,150,98,.32);transform:skewY(-14deg);border-radius:44px"></div>
+    <div style="position:absolute;top:60px;right:-90px;width:260px;height:260px;background:rgba(11,45,11,.7);transform:skewY(12deg);border-radius:44px"></div>
+    <div style="position:absolute;bottom:20px;left:-18px;font:900 100px/.8 Archivo,sans-serif;letter-spacing:-.05em;color:rgba(255,255,255,.07);white-space:nowrap">CASCAIS</div>
+    <div style="position:absolute;inset:0;background:linear-gradient(to top,#0e1011 1%,rgba(14,16,17,.35) 58%,transparent)"></div>
+  </div>
+  <div style="position:relative;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:rgba(255,255,255,.9);font:600 13px Archivo,sans-serif;flex:none"><span>11:42</span><div style="display:flex;gap:5px;align-items:center"><div style="width:16px;height:9px;border-radius:2px;background:rgba(255,255,255,.55)"></div><div style="width:22px;height:11px;border-radius:3px;border:1.5px solid rgba(255,255,255,.55)"></div></div></div>
+  <div class="sc" style="position:relative;flex:1;overflow-y:auto;padding:4px 18px 112px;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:34px;height:38px;border-radius:5px 5px 16px 16px;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font:800 9.5px Archivo,sans-serif;color:#164f16;flex:none">CSC</div>
+      <div style="flex:1;min-width:0"><div style="font:800 13.5px Archivo,sans-serif;color:#fff">Veteranos</div><div style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6);margin-top:1px">Época 25/26</div></div>
+      <span style="display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px;border-radius:14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);font:700 11.5px Archivo,sans-serif;color:#fff;flex:none"><span style="width:6px;height:6px;border-radius:50%;background:var(--acc2,#4ecf9d);animation:pulse 2.6s ease-in-out infinite"></span>Apto</span>
+      <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(140deg,#2a2f31,#15191a);border:1.5px solid rgba(255,255,255,.85);flex:none"></div>
+    </div>
+    <div style="padding:22px 2px 4px">
+      <div style="font:800 10px Archivo,sans-serif;letter-spacing:.24em;color:var(--gold,#e3c04d)">SÁBADO, 12 DE SETEMBRO</div>
+      <div style="font:900 44px/1 Archivo,sans-serif;color:#fff;letter-spacing:-.035em;margin-top:12px">GDPCC<br><span style="color:rgba(255,255,255,.42);font-size:28px">vs</span> CSC</div>
+      <div style="display:flex;align-items:center;gap:9px;margin-top:15px;font:400 12.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.72)"><span style="display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:13px;background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.15);font:700 11px Archivo,sans-serif;color:#fff">Em 8 dias</span>Amigável · fora de casa</div>
+    </div>
+    <div style="border-radius:26px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.17);backdrop-filter:blur(26px) saturate(160%);box-shadow:0 22px 50px -24px rgba(0,0,0,.95);overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:center;gap:24px;padding:18px 18px 16px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100px"><div style="width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font:800 12.5px Archivo,sans-serif;color:#164f16">GDPCC</div><div style="font:700 12px Archivo,sans-serif;color:rgba(255,255,255,.85)">Casa</div></div>
+        <div style="font:900 28px Archivo,sans-serif;color:transparent;-webkit-text-stroke:1.5px var(--gold,#e3c04d);margin-bottom:20px">VS</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100px"><div style="width:58px;height:58px;border-radius:50%;background:linear-gradient(150deg,#1c6b1c,#0f3d0f);border:1.5px solid rgba(227,192,77,.55);display:flex;align-items:center;justify-content:center;font:800 15px Archivo,sans-serif;color:var(--gold,#e3c04d)">CSC</div><div style="font:700 12px Archivo,sans-serif;color:rgba(255,255,255,.85)">Fora</div></div>
+      </div>
+      <div style="display:flex;align-items:stretch;border-top:1px solid rgba(255,255,255,.13)">
+        <div style="flex:none;padding:15px 17px"><div style="font:700 9.5px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.55)">CONCENTRAÇÃO</div><div style="font:800 22px Archivo,sans-serif;color:#fff;margin-top:5px">16:00</div></div>
+        <div style="width:1px;background:rgba(255,255,255,.13)"></div>
+        <div style="flex:1;padding:15px 17px;display:flex;align-items:center;gap:12px">
+          <div><div style="font:700 9.5px Archivo,sans-serif;letter-spacing:.16em;color:var(--gold,#e3c04d)">PONTAPÉ</div><div style="font:800 22px Archivo,sans-serif;color:#fff;margin-top:5px">18:00</div></div>
+          <span style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 11px;border-radius:14px;background:rgba(0,82,150,.22);border:1px solid rgba(0,82,150,.4);flex:none"><span style="font:800 12px Archivo,sans-serif;color:#9cc6ea">19°</span><span style="font:400 9.5px Helvetica,Arial,sans-serif;color:rgba(156,198,234,.85)">vento 24 km/h</span></span>
+        </div>
+      </div>
+      <a href="#3b" style="display:flex;align-items:center;gap:10px;padding:14px 17px;border-top:1px solid rgba(255,255,255,.13)">
+        <span style="width:14px;height:14px;border-radius:50% 50% 50% 0;border:2px solid var(--gold,#e3c04d);transform:rotate(-45deg);flex:none"></span>
+        <span style="flex:1;min-width:0;font:400 11.5px/1.4 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.7)"><strong style="font:700 12.5px Archivo,sans-serif;color:#fff;display:block">GD Pescadores da Costa da Caparica</strong>Av. Dom Sebastião 75B, Costa de Caparica</span>
+        <span style="font:700 17px Archivo,sans-serif;color:rgba(255,255,255,.4);flex:none">›</span>
+      </a>
+      <div style="padding:15px 17px 17px;background:rgba(227,192,77,.13);border-top:1px solid rgba(227,192,77,.24)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span style="font:800 14px Archivo,sans-serif;color:#fff">Contamos contigo?</span><span style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6)">13 confirmados</span></div>
+        <div style="display:flex;gap:11px;margin-top:13px">
+          <button type="button" onClick="{{ yesG }}" style="{{ yesGStyle }}" style-active="transform:scale(.96)">Sim, vou</button>
+          <button type="button" onClick="{{ noG }}" style="{{ noGStyle }}" style-active="transform:scale(.96)">Não posso</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:2px 3px 10px"><span style="font:800 10px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45)">POR RESPONDER</span><span style="font:800 11px Archivo,sans-serif;color:#121415;background:var(--gold,#e3c04d);border-radius:10px;padding:2px 8px">2</span></div>
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <div style="display:flex;align-items:center;gap:13px;padding:15px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);border-left:3px solid var(--acc2,#009662)">
+          <div style="flex:1;min-width:0"><div style="font:700 14px Archivo,sans-serif;color:#fff">Treino · terça 22:00</div><div style="font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">09 set · Estádio Municipal Dramático</div></div>
+          <div style="display:flex;gap:8px;flex:none"><button type="button" onClick="{{ okT }}" style="{{ okTStyle }}" style-active="transform:scale(.92)">✓</button><button type="button" onClick="{{ noT }}" style="{{ noTStyle }}" style-active="transform:scale(.92)">✕</button></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:13px;padding:15px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);border-left:3px solid var(--social,#005296)">
+          <div style="flex:1;min-width:0"><div style="font:700 14px Archivo,sans-serif;color:#fff">Jantar — Reentré</div><div style="font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">12 set · 20:00 · GD Pescadores</div></div>
+          <div style="display:flex;gap:8px;flex:none"><button type="button" onClick="{{ okJ }}" style="{{ okJStyle }}" style-active="transform:scale(.92)">✓</button><button type="button" onClick="{{ noJ }}" style="{{ noJStyle }}" style-active="transform:scale(.92)">✕</button></div>
+        </div>
+      </div>
+    </div>
+    <div style="border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:15px 16px 12px"><span style="font:800 10px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45);flex:1">ÚLTIMO JOGO</span><span style="font:800 14px Archivo,sans-serif;color:#fff">CSC <span style="color:var(--gold,#e3c04d)">3</span>—1 Sesimbra</span></div>
+      <div style="padding:0 16px 15px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="width:30px;font:800 12px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">12'</span><span style="flex:1;font:700 13px Archivo,sans-serif;color:#fff">Nuno Aleixo</span><span style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);flex:none">as. Paulo</span></div>
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <div style="display:flex;align-items:center;gap:12px"><span style="width:30px;font:800 12px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">38'</span><span style="flex:1;font:700 13px Archivo,sans-serif;color:#fff">Rui Mariano</span><span style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);flex:none">as. Nuno</span></div>
+        <div style="height:1px;background:rgba(255,255,255,.07)"></div>
+        <div style="display:flex;align-items:center;gap:12px"><span style="width:30px;font:800 12px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">71'</span><span style="flex:1;font:700 13px Archivo,sans-serif;color:#fff">Nuno Aleixo</span><span style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);flex:none">as. Tiago</span></div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:2px 3px 10px"><span style="font:800 10px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45)">CLASSIFICAÇÃO</span></div>
+      <div class="sc" style="display:flex;gap:12px;overflow-x:auto;padding:0 3px 4px;scroll-snap-type:x mandatory">
+        <div style="flex:none;width:300px;scroll-snap-align:start;border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+          <div style="display:flex;align-items:baseline;gap:10px;padding:14px 16px 11px"><span style="font:700 13px Archivo,sans-serif;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Liga Veteranos Setúbal</span><span style="font:700 11.5px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">3º de 8</span></div>
+          <div style="padding:0 16px 15px;display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;gap:9px;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:13px;font:700 11px Archivo,sans-serif">2</span><span style="flex:1">Almada Veteranos</span><span style="font:700 11px Archivo,sans-serif">16</span></div>
+            <div style="display:flex;align-items:center;gap:9px;font:700 12.5px Archivo,sans-serif;color:#fff;padding:7px 9px;margin:0 -9px;border-radius:10px;background:rgba(227,192,77,.14)"><span style="width:13px;color:var(--gold,#e3c04d)">3</span><span style="flex:1">CSC Veteranos</span><span>14</span></div>
+            <div style="display:flex;align-items:center;gap:9px;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:13px;font:700 11px Archivo,sans-serif">4</span><span style="flex:1">Sesimbra</span><span style="font:700 11px Archivo,sans-serif">12</span></div>
+          </div>
+        </div>
+        <div style="flex:none;width:300px;scroll-snap-align:start;border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+          <div style="display:flex;align-items:baseline;gap:10px;padding:14px 16px 11px"><span style="font:700 13px Archivo,sans-serif;color:#fff;flex:1">Taça do Concelho</span><span style="font:700 11.5px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">1º de 4</span></div>
+          <div style="padding:0 16px 15px;display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;gap:9px;font:700 12.5px Archivo,sans-serif;color:#fff;padding:7px 9px;margin:0 -9px;border-radius:10px;background:rgba(227,192,77,.14)"><span style="width:13px;color:var(--gold,#e3c04d)">1</span><span style="flex:1">CSC Veteranos</span><span>7</span></div>
+            <div style="display:flex;align-items:center;gap:9px;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:13px;font:700 11px Archivo,sans-serif">2</span><span style="flex:1">GD Pescadores</span><span style="font:700 11px Archivo,sans-serif">6</span></div>
+            <div style="display:flex;align-items:center;gap:9px;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:13px;font:700 11px Archivo,sans-serif">3</span><span style="flex:1">Alcabideche</span><span style="font:700 11px Archivo,sans-serif">3</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:120px;z-index:4;pointer-events:none;background:linear-gradient(to top,#0e1011 22%,rgba(14,16,17,.85) 58%,transparent)"></div>
+  <div style="position:absolute;z-index:5;bottom:22px;left:20px;right:20px;display:flex;align-items:center;padding:10px 6px;border-radius:26px;background:rgba(24,28,29,.86);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(28px) saturate(160%);box-shadow:0 16px 40px -14px rgba(0,0,0,.95)">
+    <div style="{{ navBlob }}"></div>
+    <div onClick="{{ nav0 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico0 }}"></div><span style="{{ lbl0 }}">Hoje</span></div>
+    <div onClick="{{ nav1 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico1 }}"></div><span style="{{ lbl1 }}">Agenda</span></div>
+    <div onClick="{{ nav2 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico2 }}"></div><span style="{{ lbl2 }}">Plantel</span></div>
+    <div onClick="{{ nav3 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer"><div style="{{ ico3 }}"></div><span style="{{ lbl3 }}">Clube</span></div>
+  </div>
+</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px" id="3c">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55)"><a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px;text-decoration:none" href="#3c">3c</a>Pull-to-refresh: brasão desenha-se por traços</div>
+<div style="display:flex;gap:14px">
+  <div style="width:190px;border-radius:26px;background:#0e1011;border:1px solid rgba(0,0,0,.35);overflow:hidden;padding:18px 16px 20px;display:flex;flex-direction:column;align-items:center;gap:14px">
+    <div style="font:700 9px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.4)">A ARRASTAR</div>
+    <div style="position:relative;width:52px;height:58px">
+      <div style="position:absolute;inset:0;border-radius:7px 7px 24px 24px;border:2px solid rgba(255,255,255,.14)"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:22px;border-radius:7px 7px 0 0;border:2px solid var(--gold,#e3c04d);border-bottom:0"></div>
+      <div style="position:absolute;top:20px;left:14px;width:24px;height:3px;border-radius:2px;background:rgba(227,192,77,.75)"></div>
+    </div>
+    <div style="width:100%;height:4px;border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden"><div style="width:44%;height:4px;border-radius:2px;background:var(--gold,#e3c04d)"></div></div>
+    <div style="font:400 10.5px/1.4 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);text-align:center">O escudo desenha-se à medida que arrastas</div>
+  </div>
+  <div style="width:190px;border-radius:26px;background:#0e1011;border:1px solid rgba(0,0,0,.35);overflow:hidden;padding:18px 16px 20px;display:flex;flex-direction:column;align-items:center;gap:14px">
+    <div style="font:700 9px Archivo,sans-serif;letter-spacing:.16em;color:var(--gold,#e3c04d)">A REFRESCAR</div>
+    <div style="position:relative;width:52px;height:58px;animation:float 2.4s ease-in-out infinite">
+      <div style="position:absolute;inset:0;border-radius:7px 7px 24px 24px;border:2px solid var(--gold,#e3c04d);box-shadow:0 0 24px -4px rgba(227,192,77,.5)"></div>
+      <div style="position:absolute;top:18px;left:12px;width:28px;height:3px;border-radius:2px;background:var(--gold,#e3c04d)"></div>
+      <div style="position:absolute;top:28px;left:16px;width:20px;height:14px;border-radius:0 0 12px 12px;border:2px solid rgba(227,192,77,.7);border-top:0"></div>
+    </div>
+    <div style="width:100%;height:4px;border-radius:2px;background:rgba(227,192,77,.2);overflow:hidden"><div style="width:100%;height:4px;border-radius:2px;background:var(--gold,#e3c04d);animation:pulse 1.4s ease-in-out infinite"></div></div>
+    <div style="font:400 10.5px/1.4 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);text-align:center">Completo, pulsa até os dados chegarem</div>
+  </div>
+</div>
+<div style="font:400 10.5px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.4);max-width:394px">escudo = placeholder; entra o brasão real em SVG traçado</div>
+</div>
+
+</div>
+<p style="margin:22px 0 0;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.5)">A seguir: "fico com <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#3b">3b</a>, aplica à Agenda" · "a cronologia de <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#3b">3b</a> dentro do cartão do jogo" · "meteorologia só nas últimas 48h"</p>
+</section>
+
+<section style="padding:40px 44px 34px;border-bottom:1px solid rgba(0,0,0,.08);{{ rootVars }}" id="t2">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 6px"><a style="font:700 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#121415;color:#fff;border-radius:4px;text-decoration:none" href="#t2">2</a><span style="font:700 13px/1.2 Archivo,sans-serif;color:#121415">Cruzamentos entre <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#1a">1a</a> e <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#1c">1c</a></span></div>
+<p style="margin:0 0 24px;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55);max-width:760px">Duas formas de juntar o grafismo do <a href="#1c">1c</a> — faixa de tons de verde, lettering em escala, tipografia grande — com a disciplina de cartões e o RSVP do <a href="#1a">1a</a>.</p>
+
+<div style="display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px" id="2a">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55)"><a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px;text-decoration:none" href="#2a">2a</a>Faixa gráfica + cartão a flutuar</div>
+<div style="width:392px;height:846px;border-radius:46px;background:#0e1011;border:1px solid rgba(0,0,0,.35);box-shadow:0 24px 60px -20px rgba(0,0,0,.5);overflow:hidden;position:relative;display:flex;flex-direction:column">
+  <div style="position:absolute;top:0;left:0;right:0;height:330px;overflow:hidden">
+    <div style="position:absolute;inset:0;background:linear-gradient(155deg,#164f16,#0a2b16 60%,#0e1011)"></div>
+    <div style="position:absolute;top:-50px;left:-80px;width:290px;height:290px;background:rgba(0,150,98,.32);transform:skewY(-14deg);border-radius:44px"></div>
+    <div style="position:absolute;top:40px;right:-100px;width:250px;height:250px;background:rgba(11,45,11,.7);transform:skewY(12deg);border-radius:44px"></div>
+    <div style="position:absolute;bottom:8px;left:-16px;font:900 92px/.8 Archivo,sans-serif;letter-spacing:-.05em;color:rgba(255,255,255,.07);white-space:nowrap">CASCAIS</div>
+    <div style="position:absolute;inset:0;background:linear-gradient(to top,#0e1011 1%,rgba(14,16,17,.4) 55%,transparent)"></div>
+  </div>
+  <div style="position:relative;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:rgba(255,255,255,.9);font:600 13px Archivo,sans-serif;flex:none"><span>11:42</span><div style="display:flex;gap:5px;align-items:center"><div style="width:16px;height:9px;border-radius:2px;background:rgba(255,255,255,.55)"></div><div style="width:22px;height:11px;border-radius:3px;border:1.5px solid rgba(255,255,255,.55)"></div></div></div>
+  <div class="sc" style="position:relative;flex:1;overflow-y:auto;padding:2px 16px 112px;display:flex;flex-direction:column;gap:13px">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div style="width:32px;height:36px;border-radius:5px 5px 15px 15px;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font:800 9px Archivo,sans-serif;color:#164f16;flex:none">CSC</div>
+      <div style="flex:1;min-width:0"><div style="font:800 12.5px Archivo,sans-serif;color:#fff">Veteranos</div><div style="font:400 10px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6);margin-top:1px">Época 25/26</div></div>
+      <span style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:13px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(12px);font:700 11px Archivo,sans-serif;color:#fff;flex:none"><span style="width:5px;height:5px;border-radius:50%;background:var(--acc2,#4ecf9d);animation:pulse 2.6s ease-in-out infinite"></span>Apto</span>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(140deg,#2a2f31,#15191a);border:1.5px solid rgba(255,255,255,.85);flex:none"></div>
+    </div>
+    <div style="padding:16px 2px 6px">
+      <div style="font:800 9.5px Archivo,sans-serif;letter-spacing:.22em;color:var(--gold,#e3c04d)">SÁBADO, 12 DE SETEMBRO</div>
+      <div style="font:900 40px/1.02 Archivo,sans-serif;color:#fff;letter-spacing:-.03em;margin-top:9px">GDPCC<br><span style="color:rgba(255,255,255,.42);font-size:26px;letter-spacing:0">vs</span> CSC</div>
+      <div style="display:flex;align-items:center;gap:9px;margin-top:12px;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.7)"><span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:12px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.14);font:700 10.5px Archivo,sans-serif;color:#fff">Em 8 dias</span>Amigável · fora de casa</div>
+    </div>
+    <div style="border-radius:24px;background:rgba(255,255,255,.085);border:1px solid rgba(255,255,255,.17);backdrop-filter:blur(26px) saturate(160%);box-shadow:0 22px 48px -24px rgba(0,0,0,.95);overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:center;gap:20px;padding:16px 16px 14px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:96px"><div style="width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font:800 12px Archivo,sans-serif;color:#164f16">GDPCC</div><div style="font:700 11.5px Archivo,sans-serif;color:rgba(255,255,255,.85)">Casa</div></div>
+        <div style="font:900 26px Archivo,sans-serif;color:transparent;-webkit-text-stroke:1.5px var(--gold,#e3c04d);margin-bottom:18px">VS</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;width:96px"><div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(150deg,#1c6b1c,#0f3d0f);border:1.5px solid rgba(227,192,77,.55);display:flex;align-items:center;justify-content:center;font:800 14px Archivo,sans-serif;color:var(--gold,#e3c04d)">CSC</div><div style="font:700 11.5px Archivo,sans-serif;color:rgba(255,255,255,.85)">Fora</div></div>
+      </div>
+      <div style="display:flex;border-top:1px solid rgba(255,255,255,.13)">
+        <div style="flex:1;padding:13px 15px"><div style="font:700 9px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.55)">CONCENTRAÇÃO</div><div style="font:800 20px Archivo,sans-serif;color:#fff;margin-top:4px">16:00</div></div>
+        <div style="width:1px;background:rgba(255,255,255,.13)"></div>
+        <div style="flex:1;padding:13px 15px"><div style="font:700 9px Archivo,sans-serif;letter-spacing:.16em;color:var(--gold,#e3c04d)">PONTAPÉ</div><div style="font:800 20px Archivo,sans-serif;color:#fff;margin-top:4px">18:00</div></div>
+      </div>
+      <a href="#2a" style="display:flex;align-items:center;gap:9px;padding:12px 15px;border-top:1px solid rgba(255,255,255,.13)">
+        <span style="width:13px;height:13px;border-radius:50% 50% 50% 0;border:2px solid var(--gold,#e3c04d);transform:rotate(-45deg);flex:none"></span>
+        <span style="flex:1;min-width:0;font:400 11px/1.35 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.7)"><strong style="font:700 12px Archivo,sans-serif;color:#fff;display:block">GD Pescadores da Costa da Caparica</strong>Av. Dom Sebastião 75B, Costa de Caparica</span>
+        <span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.4);flex:none">›</span>
+      </a>
+      <div style="padding:13px 15px 15px;background:rgba(227,192,77,.13);border-top:1px solid rgba(227,192,77,.24)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span style="font:800 13px Archivo,sans-serif;color:#fff">Contamos contigo?</span><span style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6)">13 confirmados</span></div>
+        <div style="display:flex;gap:10px;margin-top:11px">
+          <button type="button" onClick="{{ yesD }}" style="{{ yesDStyle }}" style-active="transform:scale(.96)">Sim, vou</button>
+          <button type="button" onClick="{{ noD }}" style="{{ noDStyle }}" style-active="transform:scale(.96)">Não posso</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;padding:1px 0 2px">
+      <div style="position:relative;width:44px;height:5px">
+        <div style="{{ wormM }}"></div>
+        <div onClick="{{ m0 }}" style="position:absolute;left:0;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+        <div onClick="{{ m1 }}" style="position:absolute;left:22px;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:4px 3px 9px"><span style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45)">POR RESPONDER</span><span style="font:800 11px Archivo,sans-serif;color:#121415;background:var(--gold,#e3c04d);border-radius:10px;padding:2px 8px">2</span></div>
+      <div class="sc" ref="{{ railP }}" onScroll="{{ scrollP }}" style="display:flex;gap:11px;overflow-x:auto;padding:0 3px 4px;scroll-snap-type:x mandatory">
+        <div style="flex:none;width:186px;padding:14px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(14px);border-left:3px solid var(--acc2,#009662)">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:700 10.5px Archivo,sans-serif;color:var(--acc2,#4ecf9d)">Treino</span><span style="font:800 11px Archivo,sans-serif;color:rgba(255,255,255,.45)">09 SET</span></div>
+          <div style="font:800 15px/1.25 Archivo,sans-serif;color:#fff;margin-top:10px">Terça, 22:00</div>
+          <div style="font:400 11px/1.35 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:3px">Estádio Municipal Dramático</div>
+          <div style="display:flex;gap:8px;margin-top:13px"><button type="button" onClick="{{ okT }}" style="{{ okTWide }}" style-active="transform:scale(.95)">Vou</button><button type="button" onClick="{{ noT }}" style="{{ noTWide }}" style-active="transform:scale(.95)">Não</button></div>
+        </div>
+        <div style="flex:none;width:186px;padding:14px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(14px);border-left:3px solid var(--social,#005296)">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:700 10.5px Archivo,sans-serif;color:var(--social,#7fb3e0)">Convívio</span><span style="font:800 11px Archivo,sans-serif;color:rgba(255,255,255,.45)">12 SET</span></div>
+          <div style="font:800 15px/1.25 Archivo,sans-serif;color:#fff;margin-top:10px">Jantar Reentré</div>
+          <div style="font:400 11px/1.35 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:3px">20:00 · GD Pescadores</div>
+          <div style="display:flex;gap:8px;margin-top:13px"><button type="button" onClick="{{ okJ }}" style="{{ okJWide }}" style-active="transform:scale(.95)">Vou</button><button type="button" onClick="{{ noJ }}" style="{{ noJWide }}" style-active="transform:scale(.95)">Não</button></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:9px 0 2px">
+        <div style="position:relative;width:44px;height:5px">
+          <div style="{{ wormP }}"></div>
+          <div onClick="{{ p0 }}" style="position:absolute;left:0;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+          <div onClick="{{ p1 }}" style="position:absolute;left:22px;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:2px 3px 9px">
+        <span style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45)">CLASSIFICAÇÃO</span>
+      </div>
+      <div class="sc" ref="{{ railC }}" onScroll="{{ scrollC }}" style="display:flex;gap:11px;overflow-x:auto;padding:0 3px 4px;scroll-snap-type:x mandatory">
+        <div style="flex:none;width:298px;scroll-snap-align:start;border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+          <div style="display:flex;align-items:baseline;gap:10px;padding:12px 14px 10px"><span style="font:700 12px Archivo,sans-serif;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Liga Veteranos Setúbal</span><span style="font:700 11px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">3º de 8</span></div>
+          <div style="padding:0 14px 13px;display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;align-items:center;gap:8px;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:12px;font:700 10.5px Archivo,sans-serif">2</span><span style="flex:1">Almada Veteranos</span><span style="font:700 10.5px Archivo,sans-serif">16</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font:700 11.5px Archivo,sans-serif;color:#fff;padding:6px 8px;margin:0 -8px;border-radius:9px;background:rgba(227,192,77,.14)"><span style="width:12px;color:var(--gold,#e3c04d)">3</span><span style="flex:1">CSC Veteranos</span><span>14</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:12px;font:700 10.5px Archivo,sans-serif">4</span><span style="flex:1">Sesimbra</span><span style="font:700 10.5px Archivo,sans-serif">12</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid rgba(255,255,255,.08)"><span style="flex:1;font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.55)">Último: CSC <strong style="color:var(--gold,#e3c04d)">3</strong>—1 Sesimbra</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></div>
+        </div>
+        <div style="flex:none;width:298px;scroll-snap-align:start;border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+          <div style="display:flex;align-items:baseline;gap:10px;padding:12px 14px 10px"><span style="font:700 12px Archivo,sans-serif;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Taça do Concelho</span><span style="font:700 11px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">1º de 4</span></div>
+          <div style="padding:0 14px 13px;display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;align-items:center;gap:8px;font:700 11.5px Archivo,sans-serif;color:#fff;padding:6px 8px;margin:0 -8px;border-radius:9px;background:rgba(227,192,77,.14)"><span style="width:12px;color:var(--gold,#e3c04d)">1</span><span style="flex:1">CSC Veteranos</span><span>7</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:12px;font:700 10.5px Archivo,sans-serif">2</span><span style="flex:1">GD Pescadores</span><span style="font:700 10.5px Archivo,sans-serif">6</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:12px;font:700 10.5px Archivo,sans-serif">3</span><span style="flex:1">Alcabideche</span><span style="font:700 10.5px Archivo,sans-serif">3</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid rgba(255,255,255,.08)"><span style="flex:1;font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.55)">Último: CSC <strong style="color:var(--gold,#e3c04d)">2</strong>—2 Alcabideche</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:9px 0 2px">
+        <div style="position:relative;width:44px;height:5px">
+          <div style="{{ wormC }}"></div>
+          <div onClick="{{ c0 }}" style="position:absolute;left:0;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+          <div onClick="{{ c1 }}" style="position:absolute;left:22px;top:0;width:22px;height:5px;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:20px;background:linear-gradient(100deg,rgba(227,192,77,.13),rgba(227,192,77,.04));border:1px solid rgba(227,192,77,.22);backdrop-filter:blur(14px)">
+      <div style="display:flex;flex:none"><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(140deg,#3a4143,#1b1f20);border:1.5px solid #0e1011;animation:float 5s ease-in-out infinite"></div><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(140deg,#2f4a35,#16251a);border:1.5px solid #0e1011;margin-left:-10px"></div></div>
+      <div style="flex:1;min-width:0"><div style="font:700 12.5px Archivo,sans-serif;color:#fff">Nuno e Paulo fazem anos</div><div style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:1px">Manda um abraço no mural</div></div>
+    </div>
+    
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:120px;z-index:4;pointer-events:none;background:linear-gradient(to top,#0e1011 22%,rgba(14,16,17,.85) 58%,transparent)"></div>
+  <div style="position:absolute;z-index:5;bottom:22px;left:20px;right:20px;display:flex;align-items:center;padding:10px 6px;border-radius:26px;background:rgba(24,28,29,.86);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(28px) saturate(160%);box-shadow:0 16px 40px -14px rgba(0,0,0,.95)">
+    <div style="{{ navBlob }}"></div>
+    <div onClick="{{ nav0 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer" style-active="transform:scale(.94)"><div style="{{ ico0 }}"></div><span style="{{ lbl0 }}">Hoje</span></div>
+    <div onClick="{{ nav1 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer" style-active="transform:scale(.94)"><div style="{{ ico1 }}"></div><span style="{{ lbl1 }}">Agenda</span></div>
+    <div onClick="{{ nav2 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer" style-active="transform:scale(.94)"><div style="{{ ico2 }}"></div><span style="{{ lbl2 }}">Plantel</span></div>
+    <div onClick="{{ nav3 }}" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:5px;width:85px;cursor:pointer" style-active="transform:scale(.94)"><div style="{{ ico3 }}"></div><span style="{{ lbl3 }}">Clube</span></div>
+  </div>
+</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px" id="2b">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55)"><a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px;text-decoration:none" href="#2b">2b</a>Grafismo dentro do cartão, estrutura do 1a</div>
+<div style="width:392px;height:846px;border-radius:46px;background:#0e1011;border:1px solid rgba(0,0,0,.35);box-shadow:0 24px 60px -20px rgba(0,0,0,.5);overflow:hidden;position:relative;display:flex;flex-direction:column">
+  <div style="position:absolute;inset:0;background:radial-gradient(110% 50% at 12% -6%,rgba(0,150,98,.18),transparent 62%)"></div>
+  <div style="position:relative;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:rgba(255,255,255,.85);font:600 13px Archivo,sans-serif;flex:none"><span>11:42</span><div style="display:flex;gap:5px;align-items:center"><div style="width:16px;height:9px;border-radius:2px;background:rgba(255,255,255,.5)"></div><div style="width:22px;height:11px;border-radius:3px;border:1.5px solid rgba(255,255,255,.5)"></div></div></div>
+  <div style="position:relative;flex:none;display:flex;align-items:center;gap:10px;padding:6px 16px 12px">
+    <div style="width:34px;height:38px;border-radius:6px 6px 16px 16px;background:linear-gradient(160deg,#164f16,#0b2d0b);border:1px solid rgba(227,192,77,.55);display:flex;align-items:center;justify-content:center;font:800 10px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">CSC</div>
+    <div style="min-width:0;flex:1"><div style="font:800 13px/1.1 Archivo,sans-serif;color:#fff;letter-spacing:.02em">VETERANOS</div><div style="font:500 8px/1.3 Archivo,sans-serif;color:rgba(255,255,255,.45);letter-spacing:.11em;margin-top:2px;white-space:nowrap">DRAMÁTICO E SPORTIVO DE CASCAIS</div></div>
+    <span style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:13px;background:var(--g1,rgba(255,255,255,.07));border:1px solid var(--st,rgba(255,255,255,.12));font:700 11px Archivo,sans-serif;color:var(--acc2,#4ecf9d);flex:none"><span style="width:5px;height:5px;border-radius:50%;background:var(--acc2,#4ecf9d)"></span>Apto</span>
+    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(140deg,#2a2f31,#15191a);border:1.5px solid var(--gold,#e3c04d);flex:none"></div>
+  </div>
+  <div class="sc" style="position:relative;flex:1;overflow-y:auto;padding:0 16px 108px;display:flex;flex-direction:column;gap:13px">
+    <div style="position:relative;border-radius:26px;overflow:hidden;border:1px solid var(--st,rgba(255,255,255,.13));box-shadow:0 20px 44px -22px rgba(0,0,0,.95)">
+      <div style="position:absolute;inset:0;overflow:hidden">
+        <div style="position:absolute;inset:0;background:linear-gradient(155deg,#164f16,#0a2b16 62%,#0d1618)"></div>
+        <div style="position:absolute;top:-60px;left:-70px;width:250px;height:250px;background:rgba(0,150,98,.3);transform:skewY(-14deg);border-radius:40px"></div>
+        <div style="position:absolute;top:120px;right:-90px;width:230px;height:230px;background:rgba(11,45,11,.6);transform:skewY(12deg);border-radius:40px"></div>
+        <div style="position:absolute;bottom:96px;left:-12px;font:900 78px/.8 Archivo,sans-serif;letter-spacing:-.05em;color:rgba(255,255,255,.075);white-space:nowrap">CASCAIS</div>
+      </div>
+      <div style="position:relative;padding:17px 17px 15px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div><div style="font:800 9.5px Archivo,sans-serif;letter-spacing:.2em;color:var(--gold,#e3c04d)">PRÓXIMO JOGO</div><div style="font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.62);margin-top:4px">Amigável · fora de casa</div></div>
+          <span style="display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:13px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(12px);font:700 11.5px Archivo,sans-serif;color:#fff;flex:none">Em 8 dias</span>
+        </div>
+        <div style="font:900 32px/1.04 Archivo,sans-serif;color:#fff;letter-spacing:-.03em;margin-top:14px">GDPCC <span style="color:rgba(255,255,255,.4);font-size:21px">vs</span> CSC</div>
+        <div style="display:flex;align-items:center;gap:9px;margin-top:11px">
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;font:800 8.5px Archivo,sans-serif;color:#164f16;flex:none">GDPCC</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(150deg,#1c6b1c,#0f3d0f);border:1.5px solid rgba(227,192,77,.5);display:flex;align-items:center;justify-content:center;font:800 10px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">CSC</div>
+          <div style="font:800 14px Archivo,sans-serif;color:#fff;margin-left:4px">Sáb, 12 de setembro</div>
+        </div>
+        <div style="display:flex;margin-top:15px;border-radius:16px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(22px);overflow:hidden">
+          <div style="flex:1;padding:12px 14px"><div style="font:700 9px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.55)">CONCENTRAÇÃO</div><div style="font:800 20px Archivo,sans-serif;color:#fff;margin-top:4px">16:00</div></div>
+          <div style="width:1px;background:rgba(255,255,255,.15)"></div>
+          <div style="flex:1;padding:12px 14px"><div style="font:700 9px Archivo,sans-serif;letter-spacing:.16em;color:var(--gold,#e3c04d)">PONTAPÉ</div><div style="font:800 20px Archivo,sans-serif;color:#fff;margin-top:4px">18:00</div></div>
+        </div>
+        <a href="#2b" style="display:flex;align-items:center;gap:9px;margin-top:11px">
+          <span style="width:13px;height:13px;border-radius:50% 50% 50% 0;border:2px solid var(--gold,#e3c04d);transform:rotate(-45deg);flex:none"></span>
+          <span style="flex:1;min-width:0;font:400 10.5px/1.35 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6)"><strong style="font:700 11.5px Archivo,sans-serif;color:#fff;display:block">GD Pescadores da Costa da Caparica</strong>Av. Dom Sebastião 75B, Costa de Caparica</span>
+          <span style="font:700 15px Archivo,sans-serif;color:rgba(255,255,255,.4);flex:none">›</span>
+        </a>
+      </div>
+      <div style="position:relative;padding:12px 17px 14px;background:var(--gold,#e3c04d)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span style="font:800 13px Archivo,sans-serif;color:#121415">Contamos contigo?</span><span style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(18,20,21,.65)">13 confirmados</span></div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button type="button" onClick="{{ yesE }}" style="{{ yesEStyle }}" style-active="transform:scale(.96)">Sim, vou</button>
+          <button type="button" onClick="{{ noE }}" style="{{ noEStyle }}" style-active="transform:scale(.96)">Não posso</button>
+        </div>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 0 11px;background:rgba(14,16,17,.7)"><span style="width:22px;height:5px;border-radius:3px;background:var(--gold,#e3c04d)"></span><span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span></div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:4px 3px 9px"><span style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45)">POR RESPONDER</span><span style="font:800 11px Archivo,sans-serif;color:#121415;background:var(--gold,#e3c04d);border-radius:10px;padding:2px 8px">2</span></div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:18px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);border-left:3px solid var(--acc2,#009662)">
+          <div style="flex:1;min-width:0"><div style="font:700 13px Archivo,sans-serif;color:#fff">Treino · terça 22:00</div><div style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">09 set · Estádio Municipal Dramático</div></div>
+          <div style="display:flex;gap:7px;flex:none"><button type="button" onClick="{{ okT }}" style="{{ okTStyle }}" style-active="transform:scale(.92)">✓</button><button type="button" onClick="{{ noT }}" style="{{ noTStyle }}" style-active="transform:scale(.92)">✕</button></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:18px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);border-left:3px solid var(--social,#005296)">
+          <div style="flex:1;min-width:0"><div style="font:700 13px Archivo,sans-serif;color:#fff">Jantar — Reentré</div><div style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">12 set · 20:00 · GD Pescadores</div></div>
+          <div style="display:flex;gap:7px;flex:none"><button type="button" onClick="{{ okJ }}" style="{{ okJStyle }}" style-active="transform:scale(.92)">✓</button><button type="button" onClick="{{ noJ }}" style="{{ noJStyle }}" style-active="transform:scale(.92)">✕</button></div>
+        </div>
+      </div>
+    </div>
+    <div style="border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+      
+      <div style="padding:0 14px 13px;display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;align-items:center;gap:8px;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:12px;font:700 10.5px Archivo,sans-serif">2</span><span style="flex:1">Almada Veteranos</span><span style="font:700 10.5px Archivo,sans-serif">16</span></div>
+        <div style="display:flex;align-items:center;gap:8px;font:700 11.5px Archivo,sans-serif;color:#fff;padding:6px 8px;margin:0 -8px;border-radius:9px;background:rgba(227,192,77,.14)"><span style="width:12px;color:var(--gold,#e3c04d)">3</span><span style="flex:1">CSC Veteranos</span><span>14</span></div>
+        <div style="display:flex;align-items:center;gap:8px;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:12px;font:700 10.5px Archivo,sans-serif">4</span><span style="flex:1">Sesimbra</span><span style="font:700 10.5px Archivo,sans-serif">12</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid rgba(255,255,255,.08)"><span style="flex:1;font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.55)">Último: CSC <strong style="color:var(--gold,#e3c04d)">3</strong>—1 Sesimbra</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></div>
+    </div>
+    
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;padding:8px 14px 20px;background:linear-gradient(to top,rgba(14,16,17,.96),rgba(14,16,17,.6) 70%,transparent)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:24px;background:var(--g2,rgba(255,255,255,.07));border:1px solid var(--st,rgba(255,255,255,.12));backdrop-filter:blur(24px) saturate(150%);box-shadow:0 12px 30px -14px rgba(0,0,0,.9)">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:56px"><div style="width:19px;height:17px;border:2px solid var(--gold,#e3c04d);border-radius:3px 3px 4px 4px"></div><span style="font:700 9.5px Archivo,sans-serif;color:var(--gold,#e3c04d)">Home</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:56px"><div style="width:19px;height:17px;border:2px solid rgba(255,255,255,.45);border-radius:4px"></div><span style="font:600 9.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">Agenda</span></div>
+      <div style="width:46px;height:46px;border-radius:50%;background:var(--gold,#e3c04d);display:flex;align-items:center;justify-content:center;font:700 26px/1 Archivo,sans-serif;color:#121415;box-shadow:0 8px 20px -6px rgba(227,192,77,.6);margin-top:-16px">+</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:56px"><div style="width:19px;height:17px;border:2px solid rgba(255,255,255,.45);border-radius:9px"></div><span style="font:600 9.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">Plantel</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:56px"><div style="width:19px;height:17px;border-top:2px solid rgba(255,255,255,.45);border-bottom:2px solid rgba(255,255,255,.45)"></div><span style="font:600 9.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">Mais</span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div><p style="margin:22px 0 0;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.5)">A seguir: "fica com <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#2b">2b</a> mas com a nav flutuante do <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#2a">2a</a>" · "a faixa gráfica do <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#2a">2a</a> com mais altura" · "aplica a escolhida à Agenda"</p>
+</section>
+
+<section style="padding:40px 44px 34px;border-bottom:1px solid rgba(0,0,0,.08);{{ rootVars }}" id="t1">
+<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 6px"><a style="font:700 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#121415;color:#fff;border-radius:4px;text-decoration:none" href="#t1">1</a><span style="font:700 13px/1.2 Archivo,sans-serif;color:#121415">Home — três direções sobre carvão neutro</span></div>
+<p style="margin:0 0 24px;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55);max-width:760px">Base carvão, verde e dourado só como acento. Dados reais do <em>Home.tsx</em>: GDPCC vs CSC, 12 set, amigável fora. Emblemas e fotos são placeholders.</p>
+
+
+<div style="display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start">
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px" id="1a">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55)"><a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px;text-decoration:none" href="#1a">1a</a>Vidro sobre carvão — a estrutura atual, respirada</div>
+
+<div style="width:392px;height:846px;border-radius:46px;background:#0e1011;border:1px solid rgba(0,0,0,.35);box-shadow:0 24px 60px -20px rgba(0,0,0,.5);overflow:hidden;position:relative;display:flex;flex-direction:column">
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 60% at 20% -8%,rgba(0,150,98,.22),transparent 60%),radial-gradient(90% 50% at 100% 4%,rgba(22,79,22,.35),transparent 65%)"></div>
+  <div style="position:relative;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:rgba(255,255,255,.85);font:600 13px Archivo,sans-serif;flex:none"><span>11:42</span><div style="display:flex;gap:5px;align-items:center"><div style="width:16px;height:9px;border-radius:2px;background:rgba(255,255,255,.5)"></div><div style="width:22px;height:11px;border-radius:3px;border:1.5px solid rgba(255,255,255,.5)"></div></div></div>
+
+  <div style="position:relative;flex:none;display:flex;align-items:center;gap:10px;padding:6px 16px 12px">
+    <div style="width:34px;height:38px;border-radius:6px 6px 16px 16px;background:linear-gradient(160deg,#164f16,#0b2d0b);border:1px solid rgba(227,192,77,.55);display:flex;align-items:center;justify-content:center;font:800 10px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">CSC</div>
+    <div style="min-width:0;flex:1">
+      <div style="font:800 13px/1.1 Archivo,sans-serif;color:#fff;letter-spacing:.02em">VETERANOS</div>
+      <div style="font:500 8px/1.3 Archivo,sans-serif;color:rgba(255,255,255,.45);letter-spacing:.11em;margin-top:2px;white-space:nowrap">DRAMÁTICO E SPORTIVO DE CASCAIS</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:7px;flex:none">
+      <span style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:13px;background:var(--g1,rgba(255,255,255,.07));border:1px solid var(--st,rgba(255,255,255,.12));font:700 11px Archivo,sans-serif;color:var(--acc2,#4ecf9d)"><span style="width:5px;height:5px;border-radius:50%;background:var(--acc2,#4ecf9d);animation:pulse 2.6s ease-in-out infinite"></span>Apto</span>
+      <div style="width:30px;height:30px;border-radius:50%;background:var(--g1,rgba(255,255,255,.07));border:1px solid var(--st,rgba(255,255,255,.12));display:flex;align-items:center;justify-content:center;position:relative"><div style="width:11px;height:11px;border:1.6px solid rgba(255,255,255,.7);border-radius:3px 3px 0 0;border-bottom:0"></div><span style="position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--gold,#e3c04d);border:1.5px solid #0e1011"></span></div>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(140deg,#2a2f31,#15191a);border:1.5px solid var(--gold,#e3c04d)"></div>
+    </div>
+  </div>
+
+  <div class="sc" style="position:relative;flex:1;overflow-y:auto;padding:0 16px 108px;display:flex;flex-direction:column;gap:14px">
+
+    <sc-if value="{{ admin }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:18px;background:linear-gradient(100deg,rgba(227,192,77,.16),rgba(227,192,77,.05));border:1px solid rgba(227,192,77,.28);backdrop-filter:blur(14px)">
+      <div style="width:28px;height:28px;border-radius:9px;background:rgba(227,192,77,.2);display:flex;align-items:center;justify-content:center;font:800 10px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">ADM</div>
+      <div style="flex:1;min-width:0">
+        <div style="font:700 12.5px Archivo,sans-serif;color:#fff">3 presenças por confirmar</div>
+        <div style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.55);margin-top:1px">Convocatória fecha sábado às 16:00</div>
+      </div>
+      <span style="font:700 18px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">›</span>
+    </div>
+    </sc-if>
+
+    <div style="position:relative;border-radius:26px;overflow:hidden;background:linear-gradient(165deg,rgba(22,79,22,.55),rgba(14,16,17,.9));border:1px solid var(--st,rgba(255,255,255,.12));box-shadow:0 18px 40px -22px rgba(0,0,0,.9)">
+      <div style="position:absolute;inset:0;overflow:hidden">
+        <div style="position:absolute;top:-18px;left:-26px;font:900 132px/.78 Archivo,sans-serif;letter-spacing:-.05em;color:rgba(255,255,255,.045);white-space:nowrap">CASCAIS</div>
+        <div style="position:absolute;bottom:-70px;right:-50px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(0,150,98,.3),transparent 70%)"></div>
+      </div>
+      <div style="position:relative;padding:18px 18px 16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div>
+            <div style="font:800 10px Archivo,sans-serif;letter-spacing:.2em;color:var(--gold,#e3c04d)">PRÓXIMO JOGO</div>
+            <div style="font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6);margin-top:4px">Jogo amigável · Fora de casa</div>
+          </div>
+          <span style="display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:13px;background:var(--g2,rgba(255,255,255,.1));border:1px solid var(--st,rgba(255,255,255,.14));backdrop-filter:blur(12px);font:700 11.5px Archivo,sans-serif;color:#fff;flex:none">Em 8 dias</span>
+        </div>
+        <div style="font:800 23px/1.15 Archivo,sans-serif;color:#fff;margin-top:12px;letter-spacing:-.01em">Sábado, 12 de setembro</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:22px;margin:18px 0 6px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:104px">
+            <div style="width:62px;height:62px;border-radius:50%;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;font:800 13px Archivo,sans-serif;color:#164f16;box-shadow:0 8px 18px -8px rgba(0,0,0,.8)">GDPCC</div>
+            <div style="text-align:center"><div style="font:800 13px Archivo,sans-serif;color:#fff">GDPCC</div><div style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:1px">Casa</div></div>
+          </div>
+          <div style="font:900 30px Archivo,sans-serif;color:transparent;-webkit-text-stroke:1.5px var(--gold,#e3c04d);flex:none;margin-bottom:22px">VS</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;width:104px">
+            <div style="width:62px;height:62px;border-radius:50%;background:linear-gradient(150deg,#1c6b1c,#0f3d0f);border:1.5px solid rgba(227,192,77,.5);display:flex;align-items:center;justify-content:center;font:800 15px Archivo,sans-serif;color:var(--gold,#e3c04d)">CSC</div>
+            <div style="text-align:center"><div style="font:800 13px Archivo,sans-serif;color:#fff">CSC</div><div style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:1px">Fora</div></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px">
+          <div style="padding:10px 12px;border-radius:15px;background:var(--g1,rgba(255,255,255,.07));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(12px)"><div style="font:700 9px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.5)">CONCENTRAÇÃO</div><div style="font:800 19px Archivo,sans-serif;color:#fff;margin-top:3px">16:00</div></div>
+          <div style="padding:10px 12px;border-radius:15px;background:var(--g1,rgba(255,255,255,.07));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(12px)"><div style="font:700 9px Archivo,sans-serif;letter-spacing:.16em;color:var(--gold,#e3c04d)">PONTAPÉ</div><div style="font:800 19px Archivo,sans-serif;color:#fff;margin-top:3px">18:00</div></div>
+        </div>
+        <a href="#1a" style="display:flex;align-items:flex-start;gap:8px;margin-top:11px;padding:10px 12px;border-radius:15px;background:var(--g1,rgba(255,255,255,.05));border:1px solid var(--st,rgba(255,255,255,.09))">
+          <span style="width:14px;height:14px;border-radius:50% 50% 50% 0;border:2px solid var(--gold,#e3c04d);transform:rotate(-45deg);margin-top:2px;flex:none"></span>
+          <span style="min-width:0"><span style="display:block;font:700 12px Archivo,sans-serif;color:#fff">GD Pescadores da Costa da Caparica</span><span style="display:block;font:400 11px/1.35 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:2px">Av. Dom Sebastião 75B, 2825-385 Costa de Caparica</span></span>
+        </a>
+      </div>
+      <div style="position:relative;padding:13px 18px 15px;background:var(--g2,rgba(255,255,255,.06));border-top:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;gap:10px">
+        <div style="font:700 13px Archivo,sans-serif;color:#fff">Contamos contigo?</div>
+        <div style="display:flex;gap:10px;width:100%">
+          <button type="button" onClick="{{ yesA }}" style="{{ yesAStyle }}" style-active="transform:scale(.96)">Sim, vou</button>
+          <button type="button" onClick="{{ noA }}" style="{{ noAStyle }}" style-active="transform:scale(.96)">Não</button>
+        </div>
+        <sc-if value="{{ ansA }}"><div style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)">Podes mudar até à hora de concentração.</div></sc-if>
+      </div>
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 0 12px;border-top:1px solid rgba(255,255,255,.07)">
+        <span style="width:22px;height:5px;border-radius:3px;background:var(--gold,#e3c04d)"></span>
+        <span style="width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,.25)"></span>
+      </div>
+    </div><div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 3px 9px"><span style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45)">POR RESPONDER</span><span style="font: 800 11px Archivo, sans-serif; background: var(--gold,#e3c04d); border-radius: 10px; padding: 2px 8px; color: rgb(18, 20, 21);">2</span></div><div class="sc" style="display:flex;gap:11px;overflow-x:auto;padding:0 3px 4px">
+        <div style="flex:none;width:186px;padding:14px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(14px)">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:11px;background:rgba(0,150,98,.16);font:700 10px Archivo,sans-serif;color:var(--acc2,#4ecf9d)">Treino</span><span style="font:800 11px Archivo,sans-serif;color:rgba(255,255,255,.45)">09 SET</span></div>
+          <div style="font:800 15px/1.25 Archivo,sans-serif;color:#fff;margin-top:11px">Terça, 22:00</div>
+          <div style="font:400 11px/1.35 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:3px">Estádio Municipal Dramático</div>
+          <div style="display:flex;gap:8px;margin-top:13px">
+            <button type="button" onClick="{{ okT }}" style="{{ okTWide }}" style-active="transform:scale(.95)">Vou</button>
+            <button type="button" onClick="{{ noT }}" style="{{ noTWide }}" style-active="transform:scale(.95)">Não</button>
+          </div>
+        </div>
+        <div style="flex:none;width:186px;padding:14px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(14px)">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:11px;background:rgba(0,82,150,.24);font:700 10px Archivo,sans-serif;color:var(--social,#7fb3e0)">Convívio</span><span style="font:800 11px Archivo,sans-serif;color:rgba(255,255,255,.45)">12 SET</span></div>
+          <div style="font:800 15px/1.25 Archivo,sans-serif;color:#fff;margin-top:11px">Jantar Reentré</div>
+          <div style="font:400 11px/1.35 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:3px">20:00 · GD Pescadores</div>
+          <div style="display:flex;gap:8px;margin-top:13px">
+            <button type="button" onClick="{{ okJ }}" style="{{ okJWide }}" style-active="transform:scale(.95)">Vou</button>
+            <button type="button" onClick="{{ noJ }}" style="{{ noJWide }}" style-active="transform:scale(.95)">Não</button>
+          </div>
+        </div>
+      </div>
+
+    <div style="display:flex;align-items:center;gap:12px;padding:13px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px)">
+      <div style="flex:1;min-width:0"><div style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45)">ÚLTIMO RESULTADO</div><div style="font:700 13px Archivo,sans-serif;color:#fff;margin-top:6px">CSC <span style="color:var(--gold,#e3c04d)">3</span> — <span style="color:rgba(255,255,255,.6)">1</span> Sesimbra</div></div>
+      <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:12px;background:rgba(0,150,98,.18);border:1px solid rgba(0,150,98,.35);font:700 10.5px Archivo,sans-serif;color:var(--acc2,#4ecf9d);flex:none">Vitória</span>
+      <span style="font:700 18px Archivo,sans-serif;color:rgba(255,255,255,.35);flex:none">›</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+      <div style="padding:13px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px)">
+        <div style="font:800 9.5px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45)">CLASSIFICAÇÃO</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px"><span style="font:800 26px/1 Archivo,sans-serif;color:var(--gold,#e3c04d)">3º</span><span style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)">de 8</span></div>
+        <div style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:6px">14 pts · 4V 2E 1D</div>
+      </div>
+      <div style="padding:13px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px)">
+        <div style="font:800 9.5px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45)">ANIVERSÁRIOS</div>
+        <div style="display:flex;margin-top:9px">
+          <div style="width:29px;height:29px;border-radius:50%;background:linear-gradient(140deg,#3a4143,#1b1f20);border:1.5px solid #0e1011"></div>
+          <div style="width:29px;height:29px;border-radius:50%;background:linear-gradient(140deg,#2f4a35,#16251a);border:1.5px solid #0e1011;margin-left:-9px"></div>
+          <div style="width:29px;height:29px;border-radius:50%;background:rgba(227,192,77,.16);border:1.5px solid #0e1011;margin-left:-9px;display:flex;align-items:center;justify-content:center;font:700 10px Archivo,sans-serif;color:var(--gold,#e3c04d)">+2</div>
+        </div>
+        <div style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:7px">Nuno faz anos hoje</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute;bottom:0;left:0;right:0;padding:8px 14px 20px;background:linear-gradient(to top,rgba(14,16,17,.96),rgba(14,16,17,.6) 70%,transparent)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:24px;background:var(--g2,rgba(255,255,255,.07));border:1px solid var(--st,rgba(255,255,255,.12));backdrop-filter:blur(24px) saturate(150%);box-shadow:0 12px 30px -14px rgba(0,0,0,.9)">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:56px"><div style="width:19px;height:17px;border:2px solid var(--gold,#e3c04d);border-radius:3px 3px 4px 4px"></div><span style="font:700 9.5px Archivo,sans-serif;color:var(--gold,#e3c04d)">Home</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:56px"><div style="width:19px;height:17px;border:2px solid rgba(255,255,255,.45);border-radius:4px"></div><span style="font:600 9.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">Agenda</span></div>
+      <div style="width:46px;height:46px;border-radius:50%;background:var(--gold,#e3c04d);display:flex;align-items:center;justify-content:center;font:700 26px/1 Archivo,sans-serif;color:#121415;box-shadow:0 8px 20px -6px rgba(227,192,77,.6);margin-top:-16px">+</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:56px"><div style="width:19px;height:17px;border:2px solid rgba(255,255,255,.45);border-radius:9px"></div><span style="font:600 9.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">Plantel</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:56px"><div style="width:19px;height:17px;border-top:2px solid rgba(255,255,255,.45);border-bottom:2px solid rgba(255,255,255,.45)"></div><span style="font:600 9.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">Mais</span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px" id="1b">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55)"><a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px;text-decoration:none" href="#1b">1b</a>Bilhete — o jogo como talão, contagem dominante</div>
+
+<div style="width:392px;height:846px;border-radius:46px;background:#0e1011;border:1px solid rgba(0,0,0,.35);box-shadow:0 24px 60px -20px rgba(0,0,0,.5);overflow:hidden;position:relative;display:flex;flex-direction:column">
+  <div style="position:absolute;inset:0;background:radial-gradient(100% 40% at 50% 0%,rgba(0,150,98,.16),transparent 60%)"></div>
+  <div style="position:relative;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:rgba(255,255,255,.85);font:600 13px Archivo,sans-serif;flex:none"><span>11:42</span><div style="display:flex;gap:5px;align-items:center"><div style="width:16px;height:9px;border-radius:2px;background:rgba(255,255,255,.5)"></div><div style="width:22px;height:11px;border-radius:3px;border:1.5px solid rgba(255,255,255,.5)"></div></div></div>
+
+  <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:4px 18px 4px;flex:none">
+    <div style="width:30px;height:34px;border-radius:5px 5px 14px 14px;background:linear-gradient(160deg,#164f16,#0b2d0b);border:1px solid rgba(227,192,77,.5);display:flex;align-items:center;justify-content:center;font:800 9px Archivo,sans-serif;color:var(--gold,#e3c04d)">CSC</div>
+    <span style="font:700 10px Archivo,sans-serif;letter-spacing:.2em;color:rgba(255,255,255,.4)">VETERANOS</span>
+    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(140deg,#2a2f31,#15191a);border:1.5px solid var(--gold,#e3c04d)"></div>
+  </div>
+
+  <div class="sc" style="position:relative;flex:1;overflow-y:auto;padding:8px 16px 108px;display:flex;flex-direction:column;gap:16px">
+    <div style="padding:0 3px">
+      <div style="font:800 30px/1.05 Archivo,sans-serif;color:#fff;letter-spacing:-.02em">Olá, Rui.</div>
+      <div style="font:400 13px/1.4 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:5px">Tens 2 respostas em falta e um jogo à porta.</div>
+    </div>
+
+    <div style="position:relative;border-radius:24px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.04));border:1px solid var(--st,rgba(255,255,255,.13));backdrop-filter:blur(20px) saturate(150%);box-shadow:0 20px 46px -24px rgba(0,0,0,.95)">
+      <div style="position:absolute;inset:0;overflow:hidden"><div style="position:absolute;top:-30px;right:-40px;font:900 150px/.8 Archivo,sans-serif;color:rgba(0,150,98,.09);letter-spacing:-.06em">12</div></div>
+      <div style="position:relative;padding:18px 18px 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font:800 9.5px Archivo,sans-serif;letter-spacing:.2em;color:var(--gold,#e3c04d)">PRÓXIMO JOGO · 1 DE 2</span>
+          <span style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.45)">amigável · fora</span>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:9px;margin-top:14px">
+          <span style="font:900 62px/.85 Archivo,sans-serif;color:#fff;letter-spacing:-.045em">8</span>
+          <span style="font:700 15px Archivo,sans-serif;color:rgba(255,255,255,.55);padding-bottom:8px">dias</span>
+          <span style="flex:1"></span>
+          <span style="font:800 15px/1.2 Archivo,sans-serif;color:#fff;text-align:right;padding-bottom:6px">Sáb 12 set<br><span style="font:700 12px Archivo,sans-serif;color:var(--gold,#e3c04d)">18:00</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:18px;padding:12px;border-radius:16px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.07)">
+          <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;font:800 10px Archivo,sans-serif;color:#164f16;flex:none">GDPCC</div>
+          <div style="flex:1;min-width:0"><div style="font:800 13px Archivo,sans-serif;color:#fff">GDPCC <span style="color:rgba(255,255,255,.35);font-weight:600">vs</span> CSC</div><div style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Costa da Caparica · concentração 16:00</div></div>
+          <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(150deg,#1c6b1c,#0f3d0f);border:1.5px solid rgba(227,192,77,.5);display:flex;align-items:center;justify-content:center;font:800 12px Archivo,sans-serif;color:var(--gold,#e3c04d);flex:none">CSC</div>
+        </div>
+      </div>
+      <div style="position:relative;height:20px">
+        <div style="position:absolute;top:50%;left:14px;right:14px;border-top:2px dashed rgba(255,255,255,.16)"></div>
+        <div style="position:absolute;top:50%;left:-11px;width:22px;height:22px;border-radius:50%;background:#0e1011;transform:translateY(-50%)"></div>
+        <div style="position:absolute;top:50%;right:-11px;width:22px;height:22px;border-radius:50%;background:#0e1011;transform:translateY(-50%)"></div>
+      </div>
+      <div style="position:relative;padding:6px 18px 18px;display:flex;align-items:center;gap:12px">
+        <div style="flex:1;min-width:0"><div style="font:800 13px Archivo,sans-serif;color:#fff">Contamos contigo?</div><div style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.45);margin-top:2px">Resposta até sáb, 16:00</div></div>
+        <div style="display:flex;gap:8px;flex:none">
+          <button type="button" onClick="{{ yesB }}" style="{{ yesBStyle }}" style-active="transform:scale(.94)">Vou</button>
+          <button type="button" onClick="{{ noB }}" style="{{ noBStyle }}" style-active="transform:scale(.94)">Não</button>
+        </div>
+      </div>
+      <div style="position:absolute;top:0;bottom:0;left:0;width:70px;background:linear-gradient(100deg,transparent,rgba(255,255,255,.09),transparent);animation:shine 6s ease-in-out infinite;pointer-events:none"></div>
+    </div>
+
+    <div>
+      
+      
+    </div>
+
+    <div style="border-radius:22px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:13px 14px"><span style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45);flex:1">TEMPORADA 25/26</span><span style="font:700 11px Archivo,sans-serif;color:var(--gold,#e3c04d)">3º de 8</span></div>
+      <div style="display:flex;gap:1px;background:rgba(255,255,255,.07)">
+        <div style="flex:1;padding:11px 8px;background:rgba(14,16,17,.5);text-align:center"><div style="font:800 18px Archivo,sans-serif;color:var(--acc2,#4ecf9d)">4</div><div style="font:600 9.5px Archivo,sans-serif;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-top:3px">VITÓRIAS</div></div>
+        <div style="flex:1;padding:11px 8px;background:rgba(14,16,17,.5);text-align:center"><div style="font:800 18px Archivo,sans-serif;color:#fff">2</div><div style="font:600 9.5px Archivo,sans-serif;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-top:3px">EMPATES</div></div>
+        <div style="flex:1;padding:11px 8px;background:rgba(14,16,17,.5);text-align:center"><div style="font:800 18px Archivo,sans-serif;color:rgba(255,255,255,.55)">1</div><div style="font:600 9.5px Archivo,sans-serif;letter-spacing:.1em;color:rgba(255,255,255,.4);margin-top:3px">DERROTAS</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.07)"><span style="font:400 11.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.55);flex:1">Último: CSC 3—1 Sesimbra</span><span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.35)">›</span></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:22px;background:linear-gradient(100deg,rgba(227,192,77,.14),rgba(227,192,77,.04));border:1px solid rgba(227,192,77,.24);backdrop-filter:blur(14px)">
+      <div style="display:flex;flex:none"><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(140deg,#3a4143,#1b1f20);border:1.5px solid #0e1011"></div><div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(140deg,#2f4a35,#16251a);border:1.5px solid #0e1011;margin-left:-10px"></div></div>
+      <div style="flex:1;min-width:0"><div style="font:700 12.5px Archivo,sans-serif;color:#fff">Nuno e Paulo fazem anos</div><div style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:1px">Manda um abraço no mural</div></div>
+    </div>
+  </div>
+
+  <div style="position:absolute;bottom:0;left:0;right:0;padding:8px 14px 20px;background:linear-gradient(to top,rgba(14,16,17,.96),rgba(14,16,17,.55) 70%,transparent)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-radius:24px;background:var(--g2,rgba(255,255,255,.07));border:1px solid var(--st,rgba(255,255,255,.12));backdrop-filter:blur(24px) saturate(150%)">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:60px"><div style="width:19px;height:17px;border:2px solid var(--gold,#e3c04d);border-radius:3px 3px 4px 4px"></div><span style="font:700 9.5px Archivo,sans-serif;color:var(--gold,#e3c04d)">Hoje</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:60px"><div style="width:19px;height:17px;border:2px solid rgba(255,255,255,.45);border-radius:4px"></div><span style="font:600 9.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">Agenda</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:60px"><div style="width:19px;height:17px;border:2px solid rgba(255,255,255,.45);border-radius:9px"></div><span style="font:600 9.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">Plantel</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:60px"><div style="width:19px;height:17px;border:2px solid rgba(255,255,255,.45);border-radius:50%"></div><span style="font:600 9.5px Archivo,sans-serif;color:rgba(255,255,255,.45)">Clube</span></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div style="flex:none;display:flex;flex-direction:column;gap:10px" id="1c">
+<div style="display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.55)"><a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px;text-decoration:none" href="#1c">1c</a>Linha gráfica — brasão em escala, vidro sobreposto</div>
+
+<div style="width:392px;height:846px;border-radius:46px;background:#0e1011;border:1px solid rgba(0,0,0,.35);box-shadow:0 24px 60px -20px rgba(0,0,0,.5);overflow:hidden;position:relative;display:flex;flex-direction:column">
+  <div style="position:absolute;top:0;left:0;right:0;height:430px;overflow:hidden">
+    <div style="position:absolute;inset:0;background:linear-gradient(160deg,#164f16,#0a2b16 55%,#0e1011)"></div>
+    <div style="position:absolute;top:-40px;left:-70px;width:300px;height:300px;background:rgba(0,150,98,.35);transform:skewY(-14deg);border-radius:40px"></div>
+    <div style="position:absolute;top:70px;right:-90px;width:260px;height:260px;background:rgba(11,45,11,.65);transform:skewY(12deg);border-radius:40px"></div>
+    <div style="position:absolute;bottom:34px;left:-14px;font:900 96px/.8 Archivo,sans-serif;letter-spacing:-.05em;color:rgba(255,255,255,.07);white-space:nowrap">CASCAIS</div>
+    <div style="position:absolute;inset:0;background:linear-gradient(to top,#0e1011 2%,rgba(14,16,17,.35) 45%,transparent)"></div>
+  </div>
+
+  <div style="position:relative;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:rgba(255,255,255,.9);font:600 13px Archivo,sans-serif;flex:none"><span>11:42</span><div style="display:flex;gap:5px;align-items:center"><div style="width:16px;height:9px;border-radius:2px;background:rgba(255,255,255,.55)"></div><div style="width:22px;height:11px;border-radius:3px;border:1.5px solid rgba(255,255,255,.55)"></div></div></div>
+
+  <div class="sc" style="position:relative;flex:1;overflow-y:auto;padding:2px 16px 112px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div style="width:32px;height:36px;border-radius:5px 5px 15px 15px;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font:800 9px Archivo,sans-serif;color:#164f16;flex:none">CSC</div>
+      <div style="flex:1;min-width:0"><div style="font:800 12.5px Archivo,sans-serif;color:#fff">Veteranos</div><div style="font:400 10px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.55);margin-top:1px">Época 25/26</div></div>
+      <span style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:13px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(12px);font:700 11px Archivo,sans-serif;color:#fff;flex:none"><span style="width:5px;height:5px;border-radius:50%;background:var(--acc2,#4ecf9d)"></span>Apto</span>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(140deg,#2a2f31,#15191a);border:1.5px solid rgba(255,255,255,.85);flex:none"></div>
+    </div>
+
+    <div style="padding:16px 2px 6px">
+      <div style="font:800 9.5px Archivo,sans-serif;letter-spacing:.22em;color:var(--gold,#e3c04d)">SÁBADO, 12 DE SETEMBRO</div>
+      <div style="font:900 40px/1.02 Archivo,sans-serif;color:#fff;letter-spacing:-.03em;margin-top:9px">GDPCC<br><span style="color:rgba(255,255,255,.42);font-size:26px;letter-spacing:0">vs</span> CSC</div>
+      <div style="display:flex;align-items:center;gap:9px;margin-top:12px;font:400 12px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.7)"><span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:12px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.14);font:700 10.5px Archivo,sans-serif;color:#fff">Em 8 dias</span>Amigável · fora de casa</div>
+    </div>
+
+    <div style="border-radius:24px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(26px) saturate(160%);box-shadow:0 20px 46px -22px rgba(0,0,0,.95);overflow:hidden">
+      <div style="display:flex">
+        <div style="flex:1;padding:14px 15px"><div style="font:700 9px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.55)">CONCENTRAÇÃO</div><div style="font:800 21px Archivo,sans-serif;color:#fff;margin-top:4px">16:00</div></div>
+        <div style="width:1px;background:rgba(255,255,255,.14)"></div>
+        <div style="flex:1;padding:14px 15px"><div style="font:700 9px Archivo,sans-serif;letter-spacing:.16em;color:var(--gold,#e3c04d)">PONTAPÉ</div><div style="font:800 21px Archivo,sans-serif;color:#fff;margin-top:4px">18:00</div></div>
+      </div>
+      <a href="#1c" style="display:flex;align-items:center;gap:9px;padding:12px 15px;border-top:1px solid rgba(255,255,255,.12)">
+        <span style="width:13px;height:13px;border-radius:50% 50% 50% 0;border:2px solid var(--gold,#e3c04d);transform:rotate(-45deg);flex:none"></span>
+        <span style="flex:1;min-width:0;font:400 11.5px/1.35 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.72)"><strong style="font:700 12px Archivo,sans-serif;color:#fff;display:block">GD Pescadores da Costa da Caparica</strong>Av. Dom Sebastião 75B, Costa de Caparica</span>
+        <span style="font:700 16px Archivo,sans-serif;color:rgba(255,255,255,.4);flex:none">›</span>
+      </a>
+      <div style="padding:13px 15px 15px;background:rgba(0,0,0,.22);border-top:1px solid rgba(255,255,255,.12)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="flex:1;min-width:0"><div style="font:800 13.5px Archivo,sans-serif;color:#fff">Contamos contigo?</div><div style="display:flex;align-items:center;gap:6px;margin-top:5px"><div style="display:flex"><div style="width:20px;height:20px;border-radius:50%;background:linear-gradient(140deg,#3a4143,#1b1f20);border:1.5px solid #16201a"></div><div style="width:20px;height:20px;border-radius:50%;background:linear-gradient(140deg,#2f4a35,#16251a);border:1.5px solid #16201a;margin-left:-7px"></div><div style="width:20px;height:20px;border-radius:50%;background:linear-gradient(140deg,#4a4030,#241f16);border:1.5px solid #16201a;margin-left:-7px"></div></div><span style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.55)">13 já confirmaram</span></div></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button type="button" onClick="{{ yesC }}" style="{{ yesCStyle }}" style-active="transform:scale(.96)">Sim, vou</button>
+          <button type="button" onClick="{{ noC }}" style="{{ noCStyle }}" style-active="transform:scale(.96)">Não posso</button>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ admin }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;gap:10px">
+      <div style="flex:1;padding:12px 13px;border-radius:18px;background:rgba(227,192,77,.13);border:1px solid rgba(227,192,77,.26);backdrop-filter:blur(14px)"><div style="font:800 8.5px Archivo,sans-serif;letter-spacing:.16em;color:var(--gold,#e3c04d)">ADMIN</div><div style="font:800 20px Archivo,sans-serif;color:#fff;margin-top:6px">3</div><div style="font:400 10.5px/1.3 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6);margin-top:2px">presenças a confirmar</div></div>
+      <div style="flex:1;padding:12px 13px;border-radius:18px;background:rgba(239,50,35,.1);border:1px solid rgba(239,50,35,.24);backdrop-filter:blur(14px)"><div style="font:800 8.5px Archivo,sans-serif;letter-spacing:.16em;color:#f08a7f">FECHA EM</div><div style="font:800 20px Archivo,sans-serif;color:#fff;margin-top:6px">2d 4h</div><div style="font:400 10.5px/1.3 Helvetica,Arial,sans-serif;color:rgba(255,255,255,.6);margin-top:2px">convocatória do jogo</div></div>
+    </div>
+    </sc-if>
+
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:4px 3px 9px"><span style="font:800 9.5px Archivo,sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.45)">TAMBÉM À TUA ESPERA</span><span style="font:800 10.5px Archivo,sans-serif;color:#121415;background:var(--gold,#e3c04d);border-radius:9px;padding:2px 7px">2</span></div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:18px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);border-left:3px solid var(--acc2,#009662)">
+          <div style="flex:1;min-width:0"><div style="font:700 13px Archivo,sans-serif;color:#fff">Treino · terça 22:00</div><div style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">09 set · Estádio Municipal Dramático</div></div>
+          <div style="display:flex;gap:7px;flex:none">
+            <button type="button" onClick="{{ okT }}" style="{{ okTStyle }}" style-active="transform:scale(.92)">✓</button>
+            <button type="button" onClick="{{ noT }}" style="{{ noTStyle }}" style-active="transform:scale(.92)">✕</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:18px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);border-left:3px solid var(--social,#005296)">
+          <div style="flex:1;min-width:0"><div style="font:700 13px Archivo,sans-serif;color:#fff">Jantar — Reentré</div><div style="font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">12 set · 20:00 · GD Pescadores</div></div>
+          <div style="display:flex;gap:7px;flex:none">
+            <button type="button" onClick="{{ okJ }}" style="{{ okJStyle }}" style-active="transform:scale(.92)">✓</button>
+            <button type="button" onClick="{{ noJ }}" style="{{ noJStyle }}" style-active="transform:scale(.92)">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.15fr 1fr;gap:10px">
+      <div style="padding:13px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px)">
+        <div style="font:800 9px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45)">CLASSIFICAÇÃO</div>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px">
+          <div style="display:flex;align-items:center;gap:8px;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:12px;font:700 10.5px Archivo,sans-serif">2</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Almada Vet.</span><span style="font:700 10.5px Archivo,sans-serif">16</span></div>
+          <div style="display:flex;align-items:center;gap:8px;font:700 11.5px Archivo,sans-serif;color:#fff;padding:5px 7px;margin:0 -7px;border-radius:9px;background:rgba(227,192,77,.14)"><span style="width:12px;color:var(--gold,#e3c04d)">3</span><span style="flex:1">CSC Veteranos</span><span>14</span></div>
+          <div style="display:flex;align-items:center;gap:8px;font:400 11px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.5)"><span style="width:12px;font:700 10.5px Archivo,sans-serif">4</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Sesimbra</span><span style="font:700 10.5px Archivo,sans-serif">12</span></div>
+        </div>
+      </div>
+      <div style="padding:13px;border-radius:20px;background:var(--g1,rgba(255,255,255,.055));border:1px solid var(--st,rgba(255,255,255,.1));backdrop-filter:blur(16px);display:flex;flex-direction:column">
+        <div style="font:800 9px Archivo,sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.45)">ANIVERSÁRIOS</div>
+        <div style="display:flex;align-items:center;gap:9px;margin-top:11px"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(140deg,#3a4143,#1b1f20);animation:float 5s ease-in-out infinite;flex:none"></div><div style="min-width:0"><div style="font:700 11.5px Archivo,sans-serif;color:#fff">Nuno</div><div style="font:400 10px Helvetica,Arial,sans-serif;color:var(--gold,#e3c04d)">hoje, 52</div></div></div>
+        <div style="font:400 10.5px Helvetica,Arial,sans-serif;color:rgba(255,255,255,.45);margin-top:9px">+2 este mês</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute;bottom:22px;left:20px;right:20px;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:26px;background:rgba(24,28,29,.72);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(28px) saturate(160%);box-shadow:0 16px 40px -14px rgba(0,0,0,.95)">
+    <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:17px;background:var(--gold,#e3c04d)"><div style="width:15px;height:14px;border:2px solid #121415;border-radius:2px 2px 3px 3px"></div><span style="font:800 11px Archivo,sans-serif;color:#121415">Hoje</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:52px"><div style="width:18px;height:16px;border:2px solid rgba(255,255,255,.5);border-radius:4px"></div><span style="font:600 9px Archivo,sans-serif;color:rgba(255,255,255,.5)">Agenda</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:52px"><div style="width:18px;height:16px;border:2px solid rgba(255,255,255,.5);border-radius:8px"></div><span style="font:600 9px Archivo,sans-serif;color:rgba(255,255,255,.5)">Plantel</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:52px"><div style="width:18px;height:16px;border-top:2px solid rgba(255,255,255,.5);border-bottom:2px solid rgba(255,255,255,.5)"></div><span style="font:600 9px Archivo,sans-serif;color:rgba(255,255,255,.5)">Clube</span></div>
+  </div>
+</div>
+</div>
+
+</div><p style="margin:22px 0 0;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.5)">A seguir: "segue <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#1c">1c</a> mas com o RSVP de <a style="font:700 10.5px ui-monospace,Menlo,monospace;padding:2px 6px;background:rgba(0,0,0,.08);color:#121415;border-radius:5px" href="#1a">1a</a>" · "aplica a direção escolhida à Agenda" · "mais vidro, menos carvão"</p>
+</section>
+
+<section style="padding:34px 44px 60px" id="brief">
+<div style="max-width:820px">
+<div style="font:800 11px Archivo,sans-serif;letter-spacing:.18em;color:rgba(0,0,0,.4)">CONTEXTO E DECISÕES</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:22px;margin-top:16px">
+<div><div style="font:700 12.5px Archivo,sans-serif;color:#121415">Paleta do manual</div><div style="display:flex;gap:6px;margin:9px 0 8px"><span style="width:26px;height:26px;border-radius:7px;background:#121415"></span><span style="width:26px;height:26px;border-radius:7px;background:#164f16"></span><span style="width:26px;height:26px;border-radius:7px;background:#009662"></span><span style="width:26px;height:26px;border-radius:7px;background:#e3c04d"></span><span style="width:26px;height:26px;border-radius:7px;background:#005296"></span><span style="width:26px;height:26px;border-radius:7px;background:#ef3223"></span></div><div style="font:400 11.5px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6)">O verde sai do fundo e passa a acento. Azul = convívio, verde = treino, dourado = jogo, vermelho só para prazos e suspensões.</div></div>
+<div><div style="font:700 12.5px Archivo,sans-serif;color:#121415">Tipografia</div><div style="font:400 11.5px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);margin-top:9px">Code Pro Bold não existe em web font. Uso <strong>Archivo</strong> 700–900 nos títulos, o grotesco mais próximo, e Helvetica no texto corrido, como manda o manual.</div></div>
+<div><div style="font:700 12.5px Archivo,sans-serif;color:#121415">Navegação</div><div style="font:400 11.5px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);margin-top:9px">Gestão sai da barra: era um destino só para admins a ocupar 20% do espaço permanente. Em <a href="#1a">1a</a> vira o botão [+] de ação rápida; em <a href="#1b">1b</a> e <a href="#1c">1c</a> vive dentro de <em>Clube</em>.</div></div>
+<div><div style="font:700 12.5px Archivo,sans-serif;color:#121415">Placeholders</div><div style="font:400 11.5px/1.5 Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);margin-top:9px">O SVG que enviaste é uma imagem embutida, sem vetor utilizável — os emblemas são círculos com sigla, como a app já faz quando não há <code>logo_url</code>.</div></div>
+</div>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;glassStrength&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:60,&quot;min&quot;:0,&quot;max&quot;:100,&quot;step&quot;:5,&quot;unit&quot;:&quot;%&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Vidro&quot;},&quot;accentMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Só dourado&quot;,&quot;Dourado + verde vivo&quot;,&quot;Paleta completa&quot;],&quot;default&quot;:&quot;Dourado + verde vivo&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Cor&quot;},&quot;showAdmin&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Conteúdo&quot;}}">
+class Component extends DCLogic {
+  state = { a: null, b: null, c: null, t: null, j: null };
+
+  set(k, v) { this.setState(s => ({ [k]: s[k] === v ? null : v })); }
+
+  pill(active, tone) {
+    const base = 'flex:1;height:44px;border-radius:22px;border:1px solid;cursor:pointer;font:700 13px Archivo,sans-serif;transition:transform .16s ease,background .2s ease,color .2s ease;';
+    if (active && tone === 'yes') return base + 'background:#e3c04d;border-color:#e3c04d;color:#121415;box-shadow:0 8px 20px -8px rgba(227,192,77,.55)';
+    if (active && tone === 'no') return base + 'background:rgba(255,255,255,.9);border-color:rgba(255,255,255,.9);color:#121415';
+    return base + 'background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.16);color:rgba(255,255,255,.85)';
+  }
+
+  small(active, tone) {
+    const base = 'width:44px;height:44px;border-radius:50%;border:1px solid;cursor:pointer;font:700 15px Archivo,sans-serif;display:flex;align-items:center;justify-content:center;transition:transform .16s ease,background .2s ease,color .2s ease;';
+    if (active && tone === 'yes') return base + 'background:#009662;border-color:#009662;color:#fff';
+    if (active && tone === 'no') return base + 'background:rgba(255,255,255,.85);border-color:rgba(255,255,255,.85);color:#121415';
+    if (tone === 'yes') return base + 'background:rgba(0,150,98,.14);border-color:rgba(0,150,98,.3);color:#4ecf9d';
+    return base + 'background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14);color:rgba(255,255,255,.6)';
+  }
+
+  wide(active, tone) {
+    const base = 'flex:1;height:44px;border-radius:22px;border:1px solid;cursor:pointer;font:700 12.5px Archivo,sans-serif;transition:transform .16s ease,background .2s ease,color .2s ease;';
+    if (active && tone === 'yes') return base + 'background:#e3c04d;border-color:#e3c04d;color:#121415';
+    if (active && tone === 'no') return base + 'background:rgba(255,255,255,.85);border-color:rgba(255,255,255,.85);color:#121415';
+    return base + 'background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.8)';
+  }
+
+  setNav(i, key, def) {
+    const k = key || 'nav';
+    this.setState(s => ({ ['prev_' + k]: s[k] ?? (def || 0), [k]: i }));
+  }
+
+  worm(key, n) {
+    const i = this.state[key] ?? 0;
+    const p = this.state['p_' + key] ?? i;
+    const slot = 22, total = n * slot;
+    const L = i * slot;
+    const R = total - (L + slot);
+    const lead = '.3s cubic-bezier(.3,.85,.25,1)';
+    const trail = '.42s cubic-bezier(.45,0,.2,1) .1s';
+    const tr = i >= p ? 'transition:right ' + lead + ',left ' + trail : 'transition:left ' + lead + ',right ' + trail;
+    return 'position:absolute;top:0;bottom:0;border-radius:3px;background:#e3c04d;z-index:1;left:' + L + 'px;right:' + R + 'px;' + tr;
+  }
+
+  setIdx(key, i, rail, pitch) {
+    this.setState(s => ({ ['p_' + key]: s[key] ?? 0, [key]: i }));
+    const el = this[rail];
+    if (el) el.scrollTo({ left: i * pitch, behavior: 'smooth' });
+  }
+
+  onRailScroll(key, e, pitch) {
+    const i = Math.round(e.target.scrollLeft / pitch);
+    if ((this.state[key] ?? 0) !== i) this.setState(s => ({ ['p_' + key]: s[key] ?? 0, [key]: i }));
+  }
+
+  navIco(i, radius, key, def) {
+    const a = (this.state[key || 'nav'] ?? (def || 0)) === i;
+    const base = 'width:19px;height:17px;border:2px solid;border-radius:' + radius + ';';
+    if (a) return base + 'border-color:#121415;transform:translateY(8px);transition:transform .34s cubic-bezier(.34,1.5,.56,1) .18s,border-color .25s ease .18s';
+    return base + 'border-color:rgba(255,255,255,.5);transform:translateY(0);transition:transform .28s ease,border-color .25s ease';
+  }
+
+  navLbl(i, key, def) {
+    const a = (this.state[key || 'nav'] ?? (def || 0)) === i;
+    return 'font:' + (a ? '800' : '600') + ' 9px Archivo,sans-serif;transition:color .3s ease,opacity .3s ease;' + (a ? 'color:#121415;opacity:0' : 'color:rgba(255,255,255,.5);opacity:.9');
+  }
+
+  navSet(prefix, key, def) {
+    const radii = ['3px 3px 4px 4px', '4px', '9px', '50%'];
+    const out = {};
+    out[prefix + 'Blob'] = this.navBlobStyle(key, def);
+    for (let i = 0; i < 4; i++) {
+      out[prefix + 'Ico' + i] = this.navIco(i, radii[i], key, def);
+      out[prefix + 'Lbl' + i] = this.navLbl(i, key, def);
+      out[prefix + 'Nav' + i] = () => this.setNav(i, key, def);
+    }
+    return out;
+  }
+
+  tab(group, name, first) {
+    const active = (this.state['tab_' + group] ?? first) === name;
+    const base = 'flex:none;height:34px;padding:0 15px;border-radius:17px;border:1px solid;cursor:pointer;font:700 12px Archivo,sans-serif;transition:background .25s ease,color .25s ease,border-color .25s ease;';
+    return base + (active
+      ? 'background:#e3c04d;border-color:#e3c04d;color:#121415'
+      : 'background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.13);color:rgba(255,255,255,.65)');
+  }
+
+  setTab(group, name) { this.setState({ ['tab_' + group]: name }); }
+
+  roleBtn(name) {
+    const active = (this.state.role ?? 'Admin') === name;
+    const base = 'flex:1;height:34px;border-radius:17px;border:1px solid;cursor:pointer;font:700 11.5px Archivo,sans-serif;transition:background .25s ease,color .25s ease;';
+    return base + (active
+      ? 'background:#e3c04d;border-color:#e3c04d;color:#121415'
+      : 'background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14);color:rgba(255,255,255,.65)');
+  }
+
+  navBlobStyle(key, def) {
+    const k = key || 'nav';
+    const i = this.state[k] ?? (def || 0);
+    const p = this.state['prev_' + k] ?? i;
+    const bar = 350, w = 46;
+    const L = 6 + i * 85 + 19.5;
+    const R = bar - (L + w);
+    const lead = '.32s cubic-bezier(.3,.85,.25,1)';
+    const trail = '.44s cubic-bezier(.45,0,.2,1) .12s';
+    const tr = i >= p
+      ? 'transition:right ' + lead + ',left ' + trail
+      : 'transition:left ' + lead + ',right ' + trail;
+    return 'position:absolute;top:4px;bottom:4px;border-radius:22px;background:#e3c04d;box-shadow:0 6px 16px -6px rgba(227,192,77,.45);z-index:0;left:' + L + 'px;right:' + R + 'px;' + tr;
+  }
+
+  onGold(active) {
+    const base = 'flex:1;height:40px;border-radius:20px;border:1px solid;cursor:pointer;font:700 13px Archivo,sans-serif;transition:transform .16s ease,background .2s ease,color .2s ease;';
+    if (active) return base + 'background:#121415;border-color:#121415;color:#e3c04d';
+    return base + 'background:rgba(18,20,21,.14);border-color:rgba(18,20,21,.28);color:#121415';
+  }
+
+  renderVals() {
+    const p = this.props;
+    const g = (p.glassStrength ?? 60) / 100;
+    const mode = p.accentMode ?? 'Dourado + verde vivo';
+    const acc2 = mode === 'Só dourado' ? '#e3c04d' : '#4ecf9d';
+    const social = mode === 'Só dourado' ? '#e3c04d' : '#7fb3e0';
+    const vars = '--g1:rgba(255,255,255,' + (0.03 + g * 0.06).toFixed(3) + ');' +
+      '--g2:rgba(255,255,255,' + (0.04 + g * 0.09).toFixed(3) + ');' +
+      '--st:rgba(255,255,255,' + (0.07 + g * 0.11).toFixed(3) + ');' +
+      '--gold:#e3c04d;--acc2:' + acc2 + ';--social:' + social + ';';
+    const s = this.state;
+    return {
+      rootVars: vars,
+      admin: p.showAdmin ?? true,
+      ansA: s.a !== null,
+      yesA: () => this.set('a', 'yes'), noA: () => this.set('a', 'no'),
+      yesAStyle: this.pill(s.a === 'yes', 'yes'), noAStyle: this.pill(s.a === 'no', 'no'),
+      yesB: () => this.set('b', 'yes'), noB: () => this.set('b', 'no'),
+      yesBStyle: this.wide(s.b === 'yes', 'yes'), noBStyle: this.wide(s.b === 'no', 'no'),
+      yesC: () => this.set('c', 'yes'), noC: () => this.set('c', 'no'),
+      yesCStyle: this.pill(s.c === 'yes', 'yes'), noCStyle: this.pill(s.c === 'no', 'no'),
+      okT: () => this.set('t', 'yes'), noT: () => this.set('t', 'no'),
+      okTStyle: this.small(s.t === 'yes', 'yes'), noTStyle: this.small(s.t === 'no', 'no'),
+      okTWide: this.wide(s.t === 'yes', 'yes'), noTWide: this.wide(s.t === 'no', 'no'),
+      okJ: () => this.set('j', 'yes'), noJ: () => this.set('j', 'no'),
+      okJStyle: this.small(s.j === 'yes', 'yes'), noJStyle: this.small(s.j === 'no', 'no'),
+      okJWide: this.wide(s.j === 'yes', 'yes'), noJWide: this.wide(s.j === 'no', 'no'),
+      okTa: () => this.set('ta', 'yes'), noTa: () => this.set('ta', 'no'),
+      okTaWide: this.wide(s.ta === 'yes', 'yes'), noTaWide: this.wide(s.ta === 'no', 'no'),
+      okJa: () => this.set('ja', 'yes'), noJa: () => this.set('ja', 'no'),
+      okJaWide: this.wide(s.ja === 'yes', 'yes'), noJaWide: this.wide(s.ja === 'no', 'no'),
+      yesD: () => this.set('d', 'yes'), noD: () => this.set('d', 'no'),
+      yesDStyle: this.pill(s.d === 'yes', 'yes'), noDStyle: this.pill(s.d === 'no', 'no'),
+      yesE: () => this.set('e', 'yes'), noE: () => this.set('e', 'no'),
+      yesEStyle: this.onGold(s.e === 'yes'), noEStyle: this.onGold(s.e === 'no'),
+      navBlob: this.navBlobStyle(),
+      yesH: () => this.set('h', 'yes'), noH: () => this.set('h', 'no'),
+      yesHStyle: this.pill(s.h === 'yes', 'yes'), noHStyle: this.pill(s.h === 'no', 'no'),
+      okQ: () => this.set('q', 'yes'), noQ: () => this.set('q', 'no'),
+      okQStyle: this.wide(s.q === 'yes', 'yes'), noQStyle: this.wide(s.q === 'no', 'no'),
+      okR: () => this.set('r', 'yes'), noR: () => this.set('r', 'no'),
+      okRStyle: this.wide(s.r === 'yes', 'yes'), noRStyle: this.wide(s.r === 'no', 'no'),
+      wormQ: this.worm('qIdx', 2), wormK: this.worm('kIdx', 2), wormN: this.worm('nIdx', 2),
+      n0: () => this.setIdx('nIdx', 0), n1: () => this.setIdx('nIdx', 1),
+      q0: () => this.setIdx('qIdx', 0, 'railQ', 212), q1: () => this.setIdx('qIdx', 1, 'railQ', 212),
+      k0: () => this.setIdx('kIdx', 0, 'railK', 312), k1: () => this.setIdx('kIdx', 1, 'railK', 312),
+      railQ: el => { this.railQ = el; }, railK: el => { this.railK = el; },
+      scrollQ: e => this.onRailScroll('qIdx', e, 212),
+      scrollK: e => this.onRailScroll('kIdx', e, 312),
+      yesF: () => this.set('f', 'yes'), noF: () => this.set('f', 'no'),
+      yesFStyle: this.wide(s.f === 'yes', 'yes'), noFStyle: this.wide(s.f === 'no', 'no'),
+      yesG: () => this.set('g', 'yes'), noG: () => this.set('g', 'no'),
+      yesGStyle: this.pill(s.g === 'yes', 'yes'), noGStyle: this.pill(s.g === 'no', 'no'),
+      wormM: this.worm('mIdx', 2), wormC: this.worm('cIdx', 2), wormP: this.worm('pIdx', 2),
+      m0: () => this.setIdx('mIdx', 0), m1: () => this.setIdx('mIdx', 1),
+      c0: () => this.setIdx('cIdx', 0, 'railC', 309), c1: () => this.setIdx('cIdx', 1, 'railC', 309),
+      p0: () => this.setIdx('pIdx', 0, 'railP', 197), p1: () => this.setIdx('pIdx', 1, 'railP', 197),
+      railC: el => { this.railC = el; }, railP: el => { this.railP = el; },
+      scrollC: e => this.onRailScroll('cIdx', e, 309),
+      scrollP: e => this.onRailScroll('pIdx', e, 197),
+      ico0: this.navIco(0, '3px 3px 4px 4px'), ico1: this.navIco(1, '4px'), ico2: this.navIco(2, '9px'), ico3: this.navIco(3, '50%'),
+      lbl0: this.navLbl(0), lbl1: this.navLbl(1), lbl2: this.navLbl(2), lbl3: this.navLbl(3),
+      nav0: () => this.setNav(0), nav1: () => this.setNav(1),
+      nav2: () => this.setNav(2), nav3: () => this.setNav(3),
+      mBlob: this.navBlobStyle('mnav', 3),
+      mIco0: this.navIco(0, '3px 3px 4px 4px', 'mnav', 3), mIco1: this.navIco(1, '4px', 'mnav', 3),
+      mIco2: this.navIco(2, '9px', 'mnav', 3), mIco3: this.navIco(3, '50%', 'mnav', 3),
+      mLbl0: this.navLbl(0, 'mnav', 3), mLbl1: this.navLbl(1, 'mnav', 3),
+      mLbl2: this.navLbl(2, 'mnav', 3), mLbl3: this.navLbl(3, 'mnav', 3),
+      mNav0: () => this.setNav(0, 'mnav', 3), mNav1: () => this.setNav(1, 'mnav', 3),
+      mNav2: () => this.setNav(2, 'mnav', 3), mNav3: () => this.setNav(3, 'mnav', 3),
+      payOpen: !!this.state.payOpen,
+      openPay: () => this.setState({ payOpen: true }),
+      closePay: () => this.setState({ payOpen: false }),
+      ...this.navSet('ag', 'agnav', 1),
+      ...this.navSet('fx', 'fxnav', 3),
+      ...this.navSet('cl', 'clnav', 3),
+      ...this.navSet('st', 'stnav', 3),
+      agAll: this.tab('ag', 'Todos', 'Todos'), agJog: this.tab('ag', 'Jogos', 'Todos'),
+      agTre: this.tab('ag', 'Treinos', 'Todos'), agCon: this.tab('ag', 'Convívios', 'Todos'),
+      setAgAll: () => this.setTab('ag', 'Todos'), setAgJog: () => this.setTab('ag', 'Jogos'),
+      setAgTre: () => this.setTab('ag', 'Treinos'), setAgCon: () => this.setTab('ag', 'Convívios'),
+      clLiga: this.tab('cl', 'Liga', 'Liga'), clTaca: this.tab('cl', 'Taça', 'Liga'),
+      setClLiga: () => this.setTab('cl', 'Liga'), setClTaca: () => this.setTab('cl', 'Taça'),
+      stEq: this.tab('st', 'Equipa', 'Equipa'), stEu: this.tab('st', 'Eu', 'Equipa'),
+      setStEq: () => this.setTab('st', 'Equipa'), setStEu: () => this.setTab('st', 'Eu'),
+      okA1: () => this.set('a1', 'yes'), noA1: () => this.set('a1', 'no'),
+      okA1Style: this.small(this.state.a1 === 'yes', 'yes'), noA1Style: this.small(this.state.a1 === 'no', 'no'),
+      okA2: () => this.set('a2', 'yes'), noA2: () => this.set('a2', 'no'),
+      okA2Style: this.small(this.state.a2 === 'yes', 'yes'), noA2Style: this.small(this.state.a2 === 'no', 'no'),
+      role: this.state.role ?? 'Admin',
+      isCoachUp: (this.state.role ?? 'Admin') !== 'Jogador',
+      isAdmin: (this.state.role ?? 'Admin') === 'Admin',
+      rAdmin: this.roleBtn('Admin'), rCoach: this.roleBtn('Treinador'), rPlayer: this.roleBtn('Jogador'),
+      setAdmin: () => this.setState({ role: 'Admin' }), setCoach: () => this.setState({ role: 'Treinador' }), setPlayer: () => this.setState({ role: 'Jogador' })
+    };
+  }
+}
+</script>
+</body>
+</html>

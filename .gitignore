@@ -32,3 +32,9 @@ design/*.html
 test-results/
 playwright-report/
 blob-report/
+
+# Backups locais da base de dados (contêm PII de profiles: IBAN, NIF, morada, notas médicas)
+backups/
+
+# Pacote comprimido do handoff de design — a pasta descomprimida é que está versionada
+Redesign UI app futebol veteranos.zip

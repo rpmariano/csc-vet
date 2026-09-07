@@ -1,9 +1,15 @@
 # CSC Veteranos — GDS Cascais
 
 PWA de gestão da equipa de futebol de veteranos do GD Sport Cascais.
-Interface em **português de Portugal**. Duas UIs no mesmo código: **desktop** (sidebar
-fixa de 256px) e **telemóvel** (header + bottom tab bar), separadas pelo breakpoint
-Tailwind `md:`.
+Interface em **português de Portugal**. **Uma só UI, a de telemóvel**: num ecrã largo
+é a mesma app numa coluna de 480px ao meio (`#root` em `src/index.css`). A UI de
+computador — sidebar de 256px, gaveta de traços — foi retirada no redesenho de 2026.
+
+Os pontos de corte responsivos do Tailwind estão **desligados** no `@theme`
+(`--breakpoint-*: 9999px`): olham para a janela e não para a coluna, e num monitor
+largo poriam grelhas de três colunas dentro de 480px. As classes `sm:`/`md:`/`lg:`
+que ainda restam nas páginas por redesenhar não geram nada — tiram-se à medida que
+cada ecrã é tocado.
 
 ## Stack
 
@@ -11,6 +17,7 @@ Tailwind `md:`.
 |---|---|
 | Build | Vite 8 (`base: '/csc-vet/'`) + `vite-plugin-pwa` (generateSW, autoUpdate) |
 | UI | React 19, React Router 7 (`BrowserRouter`), Tailwind CSS **v4** |
+| Design | Redesenho 2026 — handoff em `Redesign UI app futebol veteranos/design_handoff_app_veteranos/README.md` |
 | Ícones | `lucide-react` |
 | Backend | Supabase (auth + Postgres + RLS) |
 | Lint | oxlint (`.oxlintrc.json`) |
@@ -34,13 +41,22 @@ src/
 │   ├── AuthContext      sessão, perfil, papéis, simulação de papel, estado clínico
 │   ├── ClubContext      club_settings (id=1), campo de casa
 │   └── ToastContext     toasts + singleton global `toast.success(...)`
-├── components/          Layout (nav desktop+mobile), modais partilhados, PWA prompt
+├── components/
+│   ├── ui/              primitivos do redesenho: cartões, faixa, botões, separadores
+│   ├── nav/             barra inferior, cabeçalho, folha do [+]
+│   └── …                Layout (a moldura), modais partilhados, PWA prompt
 ├── hooks/
 │   ├── useModalA11y     Escape, prisão de foco e pilha de diálogos empilhados
-│   └── useEhDesktop     ponto de corte `md:` em JS, para o que muda de estrutura
+│   └── useRealceDeslizante  o realce que corre por trás do item ativo ("minhoca")
 ├── pages/               uma página por rota
-├── lib/supabaseClient   cliente único
+├── lib/
+│   ├── supabaseClient   cliente único
+│   ├── finance          regra da época, quotas, encargos
+│   ├── clube            nome do clube por omissão (a verdade está em club_settings)
+│   └── rotas            endereços absolutos, com o `base` do Vite
 └── utils/haptics        vibração (navigator.vibrate)
+
+scripts/escurecer-tema.py   passa um ficheiro do tema claro para o escuro
 ```
 
 ### Papéis e autorização
@@ -63,6 +79,19 @@ Três papéis: `player` · `coach` · `admin`.
 `events`, `callups`, `attendances`, `stats`, `announcements`, `announcement_reads`,
 `dues`, `transactions`, `club_settings`.
 
+Criadas na fase 1 do redesenho (`supabase_redesign_migration.sql`) e **ainda sem uso
+na app** — existem para os ecrãs das fases seguintes nascerem com os campos certos:
+`quota_exemptions` (meses dispensados de quota, escrita só de admin, leitura do
+próprio — mesma repartição de `dues`), `notification_preferences` e
+`notification_deliveries` (ambas privadas do próprio, como `announcement_reads`; a
+segunda **sem política de INSERT** de propósito, porque quem envia é o lado do
+servidor). Mais a coluna `profiles.preferred_foot` e a função
+`admin_contas_por_ligar()` (criada como `admin_contas_sem_atleta()` e reescrita a
+2026-09-07 — ver abaixo), para o ecrã de associação manual de conta a ficha.
+
+Quatro campos que o handoff pede como novos **já existiam**:
+`profiles.quota_start_date`/`quota_end_date` e `tournaments.organizer_name`/`image_url`.
+
 `v_players_public` (`supabase_profiles_pii_migration.sql`) é a vista por onde a app lê os
 colegas de equipa — sem email, telefone, morada, NIF, cartão de cidadão nem IBAN. A tabela
 `profiles` só é legível pelo próprio e por `coach`/`admin`. A associação de uma conta à sua
@@ -75,6 +104,13 @@ a quota **por pagar** — em `dues` só há linha para as pagas).
 A função `public.financial_season(date)` espelha `getSeasonLabel()` de `src/lib/finance.ts` —
 qualquer mudança à regra da época tem de ser feita **nos dois sítios**.
 Ver `docs/financeiro-campos-reporting.md`.
+
+`callups.responded_at` (`supabase_callups_responded_at_migration.sql`) guarda quando
+o atleta confirmou ou recusou — `created_at` é de quando foi *convocado*, e não servia.
+É preenchida pelo gatilho `callups_marcar_resposta` e nunca pelo cliente: a política de
+UPDATE deixa o jogador escrever a sua própria linha e o `WITH CHECK` só olha ao `status`,
+por isso uma hora enviada pelo cliente era uma hora falsificável. As respostas anteriores
+à migração ficaram a NULL.
 
 `announcement_reads` (`supabase_announcement_reads_migration.sql`) guarda que comunicados
 cada pessoa já leu. Estava em `localStorage`, que é por dispositivo — o badge de por ler
@@ -89,24 +125,88 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
 ## Convenções
 
 - **Design tokens** em `src/index.css` (`@theme` do Tailwind v4), não em `tailwind.config.js`
-  (esse ficheiro é legado da v3 e está inerte):
+  (esse ficheiro é legado da v3 e está inerte). De superfície:
   `csc-dark #164f16` · `csc-light #009662` · `csc-gold #e3c04d` · `csc-blue #005296` ·
-  `csc-red #ef3223` · `csc-black #3c3008`. Tipo de letra de display: Montserrat.
-- Tipografia densa e pesada: `font-black`, tamanhos `text-[9px]`–`text-sm`, `rounded-xl`/`2xl`.
-- Cartões: `bg-white rounded-2xl shadow-sm border border-gray-100`.
+  `csc-red #ef3223`. De texto sobre o fundo escuro, porque as de superfície são
+  escuras de mais para uma frase: `csc-verde-texto #4ecf9d` · `csc-azul-texto #7fb3e0` ·
+  `csc-vermelho-texto #f08a7f`. Fundo `csc-fundo #0e1011`; `csc-tinta #121415` é o
+  texto sobre dourado. Tipo de letra de display: **Archivo**.
+- Tipografia densa e pesada: `font-black`, tamanhos `text-[9px]`–`text-sm`.
+- **Cartões: usar os primitivos**, não classes à mão — `<CartaoVidro>` para o cartão
+  principal de um ecrã (translúcido, deixa passar a faixa do topo) e `<CartaoSimples>`
+  para listas e blocos. Idem `<Botao>`, `<Pastilha>`, `<TituloEcra>`,
+  `<EtiquetaSeccao>` e `<FilaSeparadores>` (`src/components/ui`).
+- **Todos os alvos de toque têm no mínimo 44px de altura**, sem exceções — inclui
+  pastilhas, separadores e botões de linha.
+- O fim da coluna acaba acima da barra inferior com `margin-bottom`, nunca
+  `padding-bottom`: com padding o último cartão fica por baixo da barra.
+- **Passar uma página ao tema escuro começa por `python scripts/escurecer-tema.py
+  --estados <ficheiros>`**, que traduz o cinzento do tema claro (`text-gray-700` →
+  `text-white/80` e por aí, prefixos de variante incluídos) e, com `--estados`,
+  também as cores de estado (`bg-emerald-100`, `text-amber-900`,
+  `border-blue-200` → os tokens do clube em translúcido). Depois conta os
+  `bg-white` opacos que sobram para se olhar um a um — esses exigem
+  julgamento: um painel de diálogo passa a `bg-csc-fundo`, o fundo de um
+  emblema fica branco. **Correr sem `--estados` não chega:** foi assim que a
+  página de Eventos ficou dada por escura com 28 pastilhas verde-menta e
+  amarelo-pálido ainda a brilhar sobre o fundo preto. **E a seguir grepar por
+  `bg-white text-white`:** o script traduz o `text-gray-900` de dentro de uma
+  caixa que fica branca, e o campo passa a ter texto branco sobre branco — o
+  Plantel tinha dezoito assim, todos ilegíveis e nenhum visível numa leitura
+  do diff. **E grepar também por `-csc-[a-z]+/\d+/\d+`:** o script traduzia
+  `bg-amber-50/80` para `bg-csc-gold/10/80`, que não é classe nenhuma — o
+  Tailwind não gera nada e o elemento fica sem fundo, sem erro nem aviso.
+  Corrigido em 2026-09-07 (o padrão passou a engolir o sufixo de opacidade da
+  origem), mas o grep custa um segundo. **E o script traduz comentários**, que
+  não sabe distinguir de classes: um comentário que cite `bg-red-50` fica a
+  dizer `bg-csc-red/10` e passa a mentir.
+- **Um diálogo tem de levar o foco lá para dentro ao abrir**, e o
+  `useModalA11y` trata disso — mas insistindo por `requestAnimationFrame` até o
+  painel existir, e não uma vez só. A versão anterior tentava com
+  `setTimeout(…, 0)` e desistia em silêncio se a ref ainda fosse nula: chegava
+  para os diálogos que abrem de um clique, e falhava nas persianas abertas
+  **pelo endereço**, porque o `BottomSheet` monta o painel num segundo passo
+  para animar a entrada. Medido antes da correção: a ficha do adversário ficava
+  com o foco no `<body>` em 10 de 12 aberturas — quem navega por teclado abria o
+  diálogo e continuava do lado de fora dele. `dialogos.spec.ts` cobre agora as
+  persianas abertas por navegação direta, e repete cada uma quatro vezes: era
+  uma corrida, e uma passagem única dava verde com o bug lá.
+- **Um `Modal` não tem tom.** O painel é sempre `bg-csc-fundo`. Havia um
+  `tone` cujo `'dark'` dava o verde do clube, ao contrário do `BottomSheet`,
+  onde a mesma palavra dá o fundo escuro — um modal escrito por analogia com
+  uma persiana saía verde-garrafa. Se algum dia for preciso um painel verde,
+  é uma prop nova com o nome da cor, não um "tom".
+- **Um cartão que se clica não pode ser um `div` com `onClick`.** Se puder ser
+  `<button>`, é; quando tem um link dentro (o do Maps, por exemplo) e isso o
+  proíbe, leva `role="button"`, `tabIndex={0}`, um `onKeyDown` para Enter e
+  Espaço, e um `aria-label` que diga o que abre. É também o que dá aos testes
+  um seletor estável: procurar por `div.bg-csc-dark` partiu-se duas vezes num
+  dia, à segunda e à terceira vez que um cartão mudou de aspeto.
+- **Presença, nesta app, é a resposta à convocatória — e não se lhe chama
+  presença.** A tabela `attendances` existe e nunca foi escrita: zero linhas.
+  O que há é `callups.status` — `called` (sem resposta), `confirmed`,
+  `declined` — e `callups.responded_at`. Daí o vocabulário dos ecrãs: "Disse
+  que sim", "Disse que não", "Sem resposta", nunca "presente", "falta" ou
+  "presenças". Só `confirmed` e `declined` entram em percentagens: quem foi
+  convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
+  a norma, não a exceção — em produção há 1191 convocatórias por responder para
+  9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
 - Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
 - **O plantel lê-se de `v_players_public`, não de `profiles`.** Tudo o que mostre
   colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a
   vista, que só tem colunas de equipa. `profiles` fica para a própria ficha e para o
   Plantel (treinador/admin), onde os dados pessoais são o assunto.
-- **Detalhe é página no desktop, persiana no telemóvel.** Ver um evento ou uma ficha
-  de atleta não abre janela nenhuma no desktop: o `<VistaDetalhe>` decide a moldura
-  pelo `useEhDesktop()` e o endereço leva o item (`?event=`, `?atleta=`), portanto há
-  link próprio e o retroceder do browser fecha. Modais ficam para inserções curtas
-  (criar um campo, confirmar) — não para consultar uma entidade. Já assim estão o
-  detalhe do evento, a ficha de atleta, o dossier de convocatória e a ficha de jogo;
-  quando um detalhe abre outro (ficha de jogo a partir do evento), o de baixo sai da
-  frente em vez de se sobreporem.
+- **Guardar um evento leva à convocatória**, e é lá que as linhas de `callups`
+  são escritas — em mais lado nenhum do fluxo de criação
+  (`ConvocatoriaAoCriar`, ecrãs 4f/4g). Era um bloco no meio do formulário, e
+  ter dois sítios a escrever a mesma tabela é como se perde a conta de quem
+  está chamado.
+- **Detalhe é persiana, e vai no endereço.** Ver um evento ou uma ficha de atleta
+  abre o `<VistaDetalhe>` e põe o item no endereço (`?event=`, `?atleta=`), portanto
+  há link próprio e o retroceder do browser fecha (ver Riscos, ponto 6). Modais ficam
+  para inserções curtas (criar um campo, confirmar) — não para consultar uma
+  entidade. Assim estão o detalhe do evento, a ficha de atleta, o dossier de
+  convocatória e a ficha de jogo.
 - Comentários e strings de UI em português.
 - Assets públicos são referenciados com o prefixo literal `/csc-vet/` (não com
   `import.meta.env.BASE_URL`).
@@ -156,12 +256,108 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    `<>` com `NULL` dá `NULL`, e um `IF` com condição `NULL` em plpgsql conta como `FALSE`.
    **Lição:** uma guarda de autorização em plpgsql tem de usar `IS DISTINCT FROM`, nunca
    `<>`/`=`, quando o valor comparado pode ser `NULL`.
-4. **P1 — Escalada de privilégios na UI:** um jogador pode editar o seu próprio
-   `medical_notes` e injetar `<!--roles:admin-->`, ganhando a UI de admin. A RLS trava as
-   escritas, mas combina-se com o ponto 1 na leitura.
+4. **~~P1 — Escalada de privilégios na UI pela etiqueta em `medical_notes`.~~ Já não
+   se aplica** (verificado na base em 2026-09-06). O texto anterior dizia que um
+   jogador podia injetar `<!--roles:admin-->` nas suas notas médicas e ganhar a UI de
+   admin. Entretanto passou a existir a coluna `profiles.roles`, que
+   `extractRolesFromProfile()` lê **primeiro** e só ignora se vier vazia — e está
+   preenchida nas 28 fichas. Mudá-la está travado: a política de UPDATE do próprio
+   tem `WITH CHECK (… AND role = get_user_role() AND NOT (roles IS DISTINCT FROM
+   get_user_roles()))`. A etiqueta é hoje um resto, alcançável só numa ficha com
+   `roles` vazio, que não existe.
+   **~~O que ficava por apertar.~~ Corrigido em 2026-09-06**
+   (`supabase_seguranca_insert_execute_migration.sql`, aplicada). A política de
+   INSERT era `WITH CHECK (auth.uid() = id OR equipa técnica)` e não dizia nada sobre
+   `role` — uma ficha criada pelo próprio podia nascer admin. Ninguém lá chegava,
+   porque o gatilho `on_auth_user_created` cria a ficha com `role = 'player'` no
+   mesmo instante em que a conta nasce e um INSERT do próprio bate na chave primária
+   (zero contas sem ficha); mas esse gatilho engole os seus erros com um `EXCEPTION
+   WHEN OTHERS` e `profiles.email` é NOT NULL, por isso uma conta sem email deixaria
+   a ficha por criar e a porta aberta. Hoje o WITH CHECK exige que uma ficha criada
+   pelo próprio nasça `role = 'player'` e `roles = {player}`. Verificado: inserir
+   como admin dá 42501, inserir como jogador — o que a app faz — passa.
+7. **~~Funções SECURITY DEFINER chamáveis sem sessão.~~ Corrigido em 2026-09-06**
+   (mesma migração). Sete funções estavam expostas em `/rest/v1/rpc/…` à chave
+   anónima. Tinham guarda interna, mas a guarda é a segunda linha de defesa.
+   **Completa a lição do ponto 2:** ali o problema era o EXECUTE estar concedido
+   *diretamente* a `anon`/`authenticated`, e um `REVOKE ... FROM PUBLIC` não chegar.
+   O inverso também é verdade — o Postgres concede EXECUTE a `PUBLIC` em toda a
+   função nova, e `anon` herda de lá. **Uma função nova precisa de
+   `REVOKE ... FROM PUBLIC, anon` e de um `GRANT` explícito a quem a deve chamar.**
+   `handle_new_user`, sendo gatilho e não RPC, saiu da API para os dois lados.
 5. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
    Não há modais escritos à mão sem acessibilidade — todos passaram pelo `<Modal>`,
    `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`.
+   O redesenho parte-os por secções à medida que cada área é tocada — não como
+   refactor à parte.
+6. **P2 — O retroceder do browser nem sempre fecha a persiana.** Muito melhorado em
+   2026-09-06; não fechado. O endereço muda, mas a atualização de localização do
+   React Router não chega a ser confirmada: o `popstate` não vê mudança nenhuma, o
+   efeito que fecha o detalhe nunca corre e a persiana fica aberta por cima da
+   lista. Reproduzido com `history.back()` do próprio browser (não é artefacto do
+   Playwright) e no código anterior ao redesenho.
+   **A causa é o `React.lazy` nas rotas.** Medido em `tests/e2e/vista-detalhe.spec.ts`,
+   com `--retries=0 --repeat-each=3`: com um `<Suspense>` extra dentro da Competição
+   falhava sempre; com `React.lazy` e só o `<Suspense>` do `App`, ~50%; sem
+   `React.lazy` nas rotas que abrem detalhe, ~7%. Mover o `<Suspense>` do `App` para
+   dentro do `Layout` piora.
+   **Por isso `CalendarPage`, `EventsPage`, `TeamManagementPage`, `CompeticaoPage`
+   e `AdminDashboard` são importadas diretamente em `src/App.tsx`** — são as cinco que
+   abrem um detalhe com endereço próprio (`?event=`, `?atleta=`, `?convocatoria=`,
+   `?jogo=`, `?adversario=`, `?campo=`). O resto continua em `React.lazy`. A poupança
+   perdida é pequena: o service worker da PWA já pré-carrega todos os pedaços à primeira
+   visita, por isso a divisão só valia nos primeiros segundos da primeiríssima
+   abertura. Arranque: ~87 kB → ~156 kB → ~161 kB comprimidos (o último salto é o
+   `AdminDashboard`, que entrou em 2026-09-07 com as fichas 9h e 9i).
+   **Uma página nova que abra um detalhe pelo endereço não pode ser `lazy`.**
+   Sobram ~7% de falhas, que continuam a passar à segunda pelo `retries: 1`.
+
+**A identidade de uma pessoa é o endereço de email, e mais nada.** Uma conta liga-se
+à ficha que a direção criou quando — e só quando — o email do registo é igual ao
+email da ficha; se não houver ficha com esse email, a conta fica por ligar e é a
+direção que resolve no ecrã 3d (ou corrige o email na ficha, que resolve também
+para a próxima vez). `supabase_identidade_por_email_migration.sql`, aplicada a
+2026-09-07.
+
+O email que conta é o de **`auth.users`**, verificado pelo Supabase. Nunca o de
+`public.profiles`: a política de UPDATE da própria ficha só guarda `role` e
+`roles`, por isso o `email` e o `phone` da própria ficha são escrevíveis pelo
+cliente e não provam identidade nenhuma. Era por aí que entrava a falha que esta
+migração fechou — `associate_my_profile()` aceitava também o telefone como prova,
+e bastava pôr no telefone da própria ficha o número de um sócio, ir buscar o `id`
+dele a `v_players_public` e chamar a função para lhe absorver a ficha (NIF, IBAN,
+morada, notas médicas) e apagar a original. Saiu também a prova pelo primeiro e
+último nome, que confundia homónimos.
+
+**Consequências no cliente, para não voltarem a aparecer:** o `AutoAssociationModal`
+foi apagado — com o email como chave a correspondência é certa e o `AuthContext`
+liga-a sozinho, não há nada para confirmar, e o modal oferecia escolher *qualquer*
+ficha do plantel. As sugestões de fusão do Plantel e as coincidências do ecrã 3d
+também são só por email. **Nenhum caminho de ligação pode voltar a usar telefone
+ou nome.**
+
+**`profiles` são as pessoas do clube, não os atletas.** Há quem jogue, quem jogue
+e treine, quem jogue e dirija, e quem não jogue de todo — um treinador, alguém da
+direção. Uma ficha sem número de camisola nem posição **não** é uma ficha por
+ligar: pode muito bem ser a de quem não entra em campo.
+
+Isto tem consequência em dois sítios, e nos dois a regra é a mesma: **decidir só
+por colunas que o próprio não pode escrever.** São elas `role` e `roles` (a
+política de UPDATE da própria ficha impede mudá-los) e `jersey_number` e
+`position` (o bloco desportivo das Definições é só de leitura). `birth_date` e
+`member_number` **não servem**, por muito que pareçam: as Definições deixam o
+próprio escrevê-los, e bastava preencher o aniversário para se deixar de ser
+contado. Idem telefone, fotografia e alcunha.
+
+- `public.admin_contas_por_ligar()` (`supabase_contas_por_ligar_migration.sql`,
+  aplicada a 2026-09-07) alimenta o ecrã 3d. Chamava-se `admin_contas_sem_atleta()`
+  e olhava a camisola, o sócio, o nascimento e a posição — listava o treinador do
+  clube como "conta sem atleta". Hoje exige também que o clube nunca tenha contado
+  com a pessoa: sem convocatórias, sem estatísticas, sem quotas.
+- `useFichaPorLigar()` (`src/components/FichaPorLigar.tsx`) decide se o ecrã 11a
+  substitui a Home. Faz o teste das colunas de graça e, só para quem passa, vai
+  confirmar à rede que não há convocatórias — porque aqui um falso positivo não é
+  uma linha a mais numa lista, é a app inteira que desaparece.
 
 **Sobre o `.env` e a chave anónima.** O `.env` deixou de ser versionado (`cdf2187`) mas
 continua no histórico, e a chave que lá está tem `role: anon` — é pública por desenho:
@@ -172,6 +368,22 @@ teria de ser rodada de imediato.
 
 ## Regras de trabalho
 
-- Desenvolvimento na branch indicada pela tarefa; nunca fazer push direto para `main`.
-- Antes de cada commit: `npm run lint` e `npm run build` têm de passar.
-- Qualquer alteração de UI tem de ser verificada **nas duas** UIs (mobile e desktop).
+- O redesenho de 2026 vive na branch de integração **`redesign`**; a `main` fica em
+  produção intacta até estar tudo pronto. Uma branch e um PR por fase, contra a
+  `redesign`. Nunca fazer push direto para `main`.
+- Antes de cada commit: `npm run lint`, `npm run build` e `npm run test:e2e` têm de
+  passar.
+- Qualquer alteração de UI tem de ser verificada em janela **estreita e larga**: em
+  ambas tem de aparecer a mesma coisa, centrada. Diferenças entre as duas são bug.
+  **`tests/e2e/larguras.spec.ts` verifica-o sozinho**, de duas maneiras. A
+  estrutural percorre os ecrãs todos e as persianas a 390px e a 1440px e compara
+  o texto visível, a largura e o centro da coluna, e o scroll lateral, que nunca
+  deve existir. A visual fotografa a coluna nas duas janelas — com a coluna à
+  mesma largura dos dois lados, senão o texto quebra noutros sítios e falha
+  sempre — e compara pixel a pixel, o que apanha o que muda de aspeto sem mudar
+  de palavras. **Não guarda imagens de referência**: compara duas capturas do
+  mesmo instante, portanto não há nada para versionar nem para atualizar quando o
+  desenho mudar de propósito. Um ecrã novo acrescenta-se à lista `ECRAS`.
+- Ao redesenhar um ecrã, cruzar com `Mapa de Navegação.dc.html` do handoff para
+  nenhum botão ficar sem destino, e manter o vocabulário do código (posições GR–PL,
+  estados Apto/Lesionado/Inativo, tipos de evento, participação na ficha de jogo).

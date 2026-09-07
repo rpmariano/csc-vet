@@ -44,35 +44,51 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     onCancel()
   }
 
+  /*
+    As quatro variantes, nos tokens do clube.
+    
+    Estavam nas paletas do Tailwind do tema claro: um vermelho-50 a 80% de
+    opacidade como fundo da caixa da mensagem, e um vermelho-950 no texto. No
+    tema claro era um tom discreto sobre branco; sobre o fundo `#0e1011` era um
+    retângulo quase branco com texto quase preto, aceso no meio de um diálogo
+    escuro. E este diálogo é o de **todas** as confirmações de apagar da app.
+    (Sem nomes de classe neste comentário de propósito: o
+    `scripts/escurecer-tema.py` traduz o que encontra, comentários incluídos.)
+
+    A cor de cada variante mantém-se — vermelho para eliminar, dourado para
+    avisar, verde para confirmar, azul para informar: é informação e não
+    decoração. O que muda é a forma de a aplicar, que passa a ser a do
+    redesenho: a cor em translúcido sobre o fundo escuro, e o texto a branco.
+  */
   const getVariantStyles = () => {
     switch (variant) {
       case 'danger':
         return {
-          iconBg: 'bg-red-100 text-red-700 border border-red-200',
+          iconBg: 'bg-csc-red/16 text-csc-vermelho-texto border border-csc-red/32',
           defaultIcon: <Trash2 size={24} />,
-          confirmBtn: 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-sm',
-          boxBg: 'bg-red-50/80 border-red-200/90 text-red-950'
+          confirmBtn: 'bg-csc-red text-white',
+          boxBg: 'bg-csc-red/10 border-csc-red/28 text-white/85',
         }
       case 'warning':
         return {
-          iconBg: 'bg-amber-100 text-amber-700 border border-amber-200',
+          iconBg: 'bg-csc-gold/16 text-csc-gold border border-csc-gold/32',
           defaultIcon: <AlertCircle size={24} />,
-          confirmBtn: 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-csc-dark font-black shadow-sm',
-          boxBg: 'bg-amber-50/80 border-amber-200/90 text-amber-950'
+          confirmBtn: 'bg-csc-gold text-csc-tinta',
+          boxBg: 'bg-csc-gold/10 border-csc-gold/28 text-white/85',
         }
       case 'success':
         return {
-          iconBg: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+          iconBg: 'bg-csc-light/16 text-csc-verde-texto border border-csc-light/32',
           defaultIcon: <CheckCircle size={24} />,
-          confirmBtn: 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm',
-          boxBg: 'bg-emerald-50/80 border-emerald-200/90 text-emerald-950'
+          confirmBtn: 'bg-csc-light text-white',
+          boxBg: 'bg-csc-light/10 border-csc-light/28 text-white/85',
         }
       default:
         return {
-          iconBg: 'bg-blue-100 text-blue-700 border border-blue-200',
+          iconBg: 'bg-csc-blue/20 text-csc-azul-texto border border-csc-blue/35',
           defaultIcon: <AlertTriangle size={24} />,
-          confirmBtn: 'bg-csc-dark hover:bg-emerald-950 text-white shadow-sm',
-          boxBg: 'bg-gray-50 border-gray-200 text-gray-800'
+          confirmBtn: 'bg-csc-blue text-white',
+          boxBg: 'bg-white/6 border-white/12 text-white/85',
         }
     }
   }
@@ -90,17 +106,17 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         aria-modal="true"
         aria-labelledby={tituloId}
         tabIndex={-1}
-        className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-5 animate-scale-in outline-none"
+        className="bg-csc-fundo rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/12 space-y-5 animate-scale-in outline-none"
       >
         <div className="flex items-center gap-3">
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs ${vStyles.iconBg}`}>
             {icon || vStyles.defaultIcon}
           </div>
           <div>
-            <h3 id={tituloId} className="text-base font-black text-gray-900 leading-tight">
+            <h3 id={tituloId} className="text-base font-black text-white leading-tight">
               {title}
             </h3>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-white/50 mt-0.5">
               Confirmação necessária
             </p>
           </div>
@@ -118,7 +134,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             type="button"
             disabled={isLoading}
             onClick={handleConfirm}
-            className={`w-full py-3 font-black text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50 ${vStyles.confirmBtn}`}
+            className={`w-full min-h-12 px-4 font-display font-black text-[12.5px] rounded-2xl transition-transform duration-150
+              flex items-center justify-center gap-2 cursor-pointer active:scale-97 disabled:opacity-45
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${vStyles.confirmBtn}`}
           >
             <span>{isLoading ? 'A processar...' : confirmText}</span>
           </button>
@@ -128,7 +146,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             type="button"
             disabled={isLoading}
             onClick={handleCancel}
-            className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="w-full min-h-11 px-4 bg-white/9 border border-white/20 text-white font-display font-bold text-[12.5px]
+              rounded-2xl transition-transform duration-150 active:scale-97 cursor-pointer text-center
+              flex items-center justify-center gap-1.5 disabled:opacity-45
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
             <span>{cancelText}</span>
           </button>

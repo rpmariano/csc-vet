@@ -4,12 +4,14 @@ import { montarSupabaseFalso } from './supabase-mock'
 /**
  * Ver um evento ou uma ficha de atleta é navegar, não abrir uma janela.
  *
- * No desktop o detalhe é a página: sem `role="dialog"`, com a lista fora da
- * frente e com endereço próprio. No telemóvel continua a ser a persiana de
- * sempre — também com endereço, para o botão de retroceder a fechar.
+ * O detalhe é a persiana, com endereço próprio (`?event=`, `?atleta=`), para o
+ * botão de retroceder do browser a fechar.
+ *
+ * Havia aqui duas versões deste contrato — persiana no telemóvel, página no
+ * desktop. Com o redesenho de 2026 a app passou a ter uma só UI, e estes
+ * testes correm nos dois projetos (`desktop` 1280px e `telemovel`) sem
+ * ramificar: é isso, agora, que garante que a largura da janela não muda nada.
  */
-
-const ehDesktop = (page: Page) => (page.viewportSize()?.width ?? 0) >= 768
 
 const treino = {
   id: 'e1',
@@ -54,41 +56,24 @@ async function abrePagina(page: Page, caminho: string, fixtures = {}) {
   await page.waitForLoadState('networkidle')
 }
 
-/**
- * O painel do detalhe: uma `region` no desktop (o `<section>` da página), um
- * `dialog` no telemóvel (a persiana).
- */
-function painelDetalhe(page: Page, nome: string | RegExp) {
-  return ehDesktop(page)
-    ? page.getByRole('region', { name: nome })
-    : page.getByRole('dialog', { name: nome })
-}
-
-/** O contrato do detalhe, seja qual for a UI. */
+/** O contrato do detalhe, em qualquer largura de janela. */
 async function verificaDetalhe(page: Page, nome: string | RegExp, textoNoDetalhe: string, paramEsperado: RegExp) {
   await expect(page).toHaveURL(paramEsperado)
 
-  const painel = painelDetalhe(page, nome)
+  const painel = page.getByRole('dialog', { name: nome })
   await expect(painel).toBeVisible()
   await expect(painel.getByText(textoNoDetalhe).first()).toBeVisible()
 
-  if (ehDesktop(page)) {
-    // Página: nada de diálogos, e uma barra de voltar em vez de um X.
-    await expect(page.locator('[role="dialog"]')).toHaveCount(0)
-    await expect(painel.getByRole('button', { name: /^Voltar/ })).toBeVisible()
-  } else {
-    // Persiana: continua a ser um diálogo por cima da lista.
-    await expect(page.locator('[role="dialog"]')).toHaveCount(1)
-  }
+  // Um só diálogo: a persiana por cima da lista, sem nada empilhado.
+  await expect(page.locator('[role="dialog"]')).toHaveCount(1)
 }
 
 test.describe('Detalhe do evento', () => {
-  test('abre com endereço próprio e sem janela no desktop', async ({ page }) => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'calendar', { events: [treino] })
-    await page.getByRole('button', { name: /^Lista/ }).click()
 
     await expect(page).toHaveURL(/calendar$/)
-    await page.locator('div.cursor-pointer.bg-csc-dark').first().click()
+    await page.getByRole('button', { name: /^Ver / }).first().click()
 
     await verificaDetalhe(page, 'Detalhe do evento', 'Campo de Teste', /\?event=e1$/)
 
@@ -96,7 +81,9 @@ test.describe('Detalhe do evento', () => {
     await page.goBack()
     await expect(page).toHaveURL(/calendar$/)
     await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
-    await expect(page.getByRole('button', { name: /^Lista/ })).toBeVisible()
+    // A agenda mostra o calendário e a lista ao mesmo tempo; o alternador de
+    // vista desapareceu com o redesenho (ecrã 1a).
+    await expect(page.getByRole('button', { name: 'Todos' })).toBeVisible()
   })
 
   test('o endereço abre o evento diretamente', async ({ page }) => {
@@ -106,11 +93,13 @@ test.describe('Detalhe do evento', () => {
 })
 
 test.describe('Ficha de atleta', () => {
-  test('abre com endereço próprio e sem janela no desktop', async ({ page }) => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'team-management')
-    await page.locator('div.cursor-pointer.bg-csc-dark').first().click()
+    // Pelo papel e pelo nome: o seletor por classe partiu-se em cada
+    // redesenho da linha (ver a convenção no CLAUDE.md).
+    await page.getByRole('button', { name: /^Ver a ficha de / }).first().click()
 
-    await verificaDetalhe(page, /^Ficha de /, 'Ficha Oficial de Atleta', /\?atleta=/)
+    await verificaDetalhe(page, /^Ficha de /, 'Gestão do atleta', /\?atleta=/)
 
     await page.goBack()
     await expect(page).toHaveURL(/team-management$/)
@@ -121,7 +110,7 @@ test.describe('Ficha de atleta', () => {
 test.describe('Dossier de convocatória', () => {
   const porRealizar = { ...jogo, id: 'e2', date_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), home_score: null, away_score: null }
 
-  test('abre com endereço próprio e sem janela no desktop', async ({ page }) => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'events', { events: [porRealizar] })
     await page.getByRole('button', { name: /Ver Detalhes & RSVP/ }).click()
 
@@ -134,14 +123,58 @@ test.describe('Dossier de convocatória', () => {
 })
 
 test.describe('Ficha de jogo', () => {
-  test('abre com endereço próprio e sem janela no desktop', async ({ page }) => {
-    await abrePagina(page, 'match-reports', { events: [jogo] })
-    await page.locator('div.cursor-pointer').first().click()
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
+    await abrePagina(page, 'competicao?ver=fichas', { events: [jogo] })
+    // Pelo papel e pelo nome, não pela classe: o cartão já se partiu duas vezes
+    // por o seletor estar preso ao aspeto (ver a convenção no CLAUDE.md).
+    await page.getByRole('button', { name: /ficha do jogo com/ }).click()
 
-    await verificaDetalhe(page, /^Ficha de jogo: /, 'Ficha Oficial de Jogo', /\?jogo=j1$/)
+    await verificaDetalhe(page, /^Ficha de jogo: /, 'Ficha oficial de jogo', /ver=fichas&jogo=j1$/)
 
     await page.goBack()
-    await expect(page).toHaveURL(/match-reports$/)
+    await expect(page).toHaveURL(/ver=fichas$/)
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
+  })
+})
+
+/*
+  As fichas do adversário (9h) e do campo (9i) entraram no mesmo contrato, e é
+  por causa delas que o `AdminDashboard` deixou de ser `React.lazy` — ver o
+  ponto 6 dos riscos no CLAUDE.md.
+*/
+const campo = { id: 'f1', name: 'Estádio Municipal', address: 'Rua da Bela Vista, 2750-343 Cascais' }
+const adversario = {
+  id: 'o1',
+  name: 'Sesimbra Veteranos',
+  initials: 'SES',
+  logo_url: null,
+  contact_name: 'João',
+  contact_phone: '967 000 111',
+  home_field_id: 'f1',
+}
+
+test.describe('Ficha do adversário', () => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
+    await abrePagina(page, 'admin?ver=opponents', { opponents: [adversario], fields: [campo] })
+    await page.getByRole('button', { name: /^Ver a ficha do adversário / }).first().click()
+
+    await verificaDetalhe(page, /Sesimbra Veteranos/, 'Jogos entre nós', /adversario=o1/)
+
+    await page.goBack()
+    await expect(page).toHaveURL(/ver=opponents$/)
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
+  })
+})
+
+test.describe('Ficha do campo', () => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
+    await abrePagina(page, 'admin?ver=fields', { fields: [campo] })
+    await page.getByRole('button', { name: /^Ver a ficha do campo / }).first().click()
+
+    await verificaDetalhe(page, /Estádio Municipal/, 'Próximos eventos aqui', /campo=f1/)
+
+    await page.goBack()
+    await expect(page).toHaveURL(/ver=fields$/)
     await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
   })
 })

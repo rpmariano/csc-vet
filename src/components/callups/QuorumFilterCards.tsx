@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, ListChecks, XCircle } from 'lucide-react'
+import { triggerHaptic } from '../../utils/haptics'
 
 export type CallupFilter = 'all' | 'confirmed' | 'called' | 'declined'
 
@@ -12,70 +12,70 @@ interface QuorumFilterCardsProps {
 }
 
 /**
- * Os 4 cartões de resumo de quórum (Todos / Confirmados / Pendentes / Recusados), clicáveis
- * para filtrar a lista de convocados. Partilhado entre o modal de evento da Agenda e o modal
- * de RSVP da Gestão de Eventos. A Gestão de Eventos tinha, além destes cartões, uma segunda
- * fila de separadores (incluindo "Todos") a fazer exatamente o mesmo filtro — foi absorvida
- * aqui como um 4º cartão em vez de duas UIs redundantes para a mesma ação.
+ * O quórum de uma convocatória (ecrã 2f): quantos confirmaram, quantos
+ * recusaram, quantos ainda não responderam — e cada número é o filtro da
+ * lista que vem por baixo.
+ *
+ * O handoff mostra três mosaicos; aqui são quatro, porque o "Todos" é o que
+ * desfaz o filtro. Sem ele, escolher um número era uma viagem só de ida.
+ *
+ * Partilhado entre o detalhe do evento na Agenda e o dossier de convocatória
+ * na Gestão de Eventos. A Gestão tinha, além destes cartões, uma segunda fila
+ * de separadores a fazer o mesmo filtro; foi absorvida aqui.
  */
-export function QuorumFilterCards({ totalCount, confirmedCount, pendingCount, declinedCount, activeFilter, onSelect }: QuorumFilterCardsProps) {
+
+const MOSAICOS = [
+  { chave: 'all', etiqueta: 'Todos', cor: 'text-csc-gold', fundoAtivo: 'bg-csc-gold/18 border-csc-gold/45' },
+  { chave: 'confirmed', etiqueta: 'Confirmados', cor: 'text-csc-verde-texto', fundoAtivo: 'bg-csc-light/20 border-csc-light/45' },
+  { chave: 'called', etiqueta: 'Sem resposta', cor: 'text-white/60', fundoAtivo: 'bg-white/12 border-white/25' },
+  { chave: 'declined', etiqueta: 'Recusaram', cor: 'text-csc-vermelho-texto', fundoAtivo: 'bg-csc-red/16 border-csc-red/40' },
+] as const
+
+export function QuorumFilterCards({
+  totalCount,
+  confirmedCount,
+  pendingCount,
+  declinedCount,
+  activeFilter,
+  onSelect,
+}: QuorumFilterCardsProps) {
+  const valores: Record<CallupFilter, number> = {
+    all: totalCount,
+    confirmed: confirmedCount,
+    called: pendingCount,
+    declined: declinedCount,
+  }
+
   return (
-    <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5">
-      <button
-        type="button"
-        onClick={() => onSelect('all')}
-        title="Ver Todos"
-        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center shadow-sm shadow-black/10 ${
-          activeFilter === 'all' ? 'bg-csc-gold/20 border-csc-gold shadow-md ring-2 ring-csc-gold/40' : 'bg-white/5 border-white/15 hover:bg-white/10'
-        }`}
-      >
-        <p className="text-lg sm:text-2xl font-black text-csc-gold">{totalCount}</p>
-        <p className="text-[9px] sm:text-[11px] font-bold text-white/80 flex items-center justify-center gap-1 mt-0.5">
-          <ListChecks size={12} /> Todos
-        </p>
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onSelect('confirmed')}
-        title="Filtrar por Confirmados"
-        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center shadow-sm shadow-black/10 ${
-          activeFilter === 'confirmed' ? 'bg-emerald-500/20 border-emerald-400 shadow-md ring-2 ring-emerald-400/40' : 'bg-emerald-500/10 border-emerald-400/20 hover:bg-emerald-500/15'
-        }`}
-      >
-        <p className="text-lg sm:text-2xl font-black text-emerald-300">{confirmedCount}</p>
-        <p className="text-[9px] sm:text-[11px] font-bold text-emerald-200 flex items-center justify-center gap-1 mt-0.5">
-          <CheckCircle2 size={12} /> Confirmados
-        </p>
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onSelect('called')}
-        title="Filtrar por Pendentes"
-        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center shadow-sm shadow-black/10 ${
-          activeFilter === 'called' ? 'bg-amber-500/20 border-amber-400 shadow-md ring-2 ring-amber-400/40' : 'bg-amber-500/10 border-amber-400/20 hover:bg-amber-500/15'
-        }`}
-      >
-        <p className="text-lg sm:text-2xl font-black text-amber-300">{pendingCount}</p>
-        <p className="text-[9px] sm:text-[11px] font-bold text-amber-200 flex items-center justify-center gap-1 mt-0.5">
-          <Clock size={12} /> Pendentes
-        </p>
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onSelect('declined')}
-        title="Filtrar por Recusados"
-        className={`p-2 sm:p-3 rounded-2xl border-2 text-center cursor-pointer transition-all active:scale-95 flex flex-col items-center justify-center shadow-sm shadow-black/10 ${
-          activeFilter === 'declined' ? 'bg-red-500/20 border-red-400 shadow-md ring-2 ring-red-400/40' : 'bg-red-500/10 border-red-400/20 hover:bg-red-500/15'
-        }`}
-      >
-        <p className="text-lg sm:text-2xl font-black text-red-300">{declinedCount}</p>
-        <p className="text-[9px] sm:text-[11px] font-bold text-red-200 flex items-center justify-center gap-1 mt-0.5">
-          <XCircle size={12} /> Recusados
-        </p>
-      </button>
+    <div className="grid grid-cols-4 gap-2">
+      {MOSAICOS.map(mosaico => {
+        const ativo = activeFilter === mosaico.chave
+        return (
+          <button
+            key={mosaico.chave}
+            type="button"
+            onClick={() => {
+              triggerHaptic('selection')
+              onSelect(mosaico.chave)
+            }}
+            aria-pressed={ativo}
+            className={`min-h-14 px-2.5 py-2.5 rounded-2xl border text-left cursor-pointer
+              transition-transform duration-150 active:scale-97
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                ativo ? mosaico.fundoAtivo : 'bg-white/5 border-white/10'
+              }`}
+          >
+            <span
+              className={`block font-display font-extrabold text-[8px] tracking-[0.1em] uppercase leading-tight ${mosaico.cor}`}
+            >
+              {mosaico.etiqueta}
+            </span>
+            <span className="block font-display font-extrabold text-[19px] text-white mt-1 tabular-nums">
+              {valores[mosaico.chave]}
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }

@@ -1,19 +1,36 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { 
-  Trophy, 
-  Calendar, 
-  MapPin, 
-  Search, 
-  Filter, 
-  ChevronRight
+import {
+  Trophy,
+  Search,
+  ChevronRight,
+  SlidersHorizontal,
+  Home,
+  Plane,
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
 import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
-import { useEhDesktop } from '../hooks/useEhDesktop'
 import { useSearchParams } from 'react-router-dom'
+import { BottomSheet } from '../components/BottomSheet'
+import { Pastilha, Botao } from '../components/ui'
+import { triggerHaptic } from '../utils/haptics'
+
+/** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
+const CAMPO =
+  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
+
+const ETIQUETA =
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+
+/** Como se lê cada filtro escondido, na linha de resumo. */
+const ROTULOS_TIPO: Record<string, string> = {
+  official: 'Oficiais',
+  tournament: 'Por torneio',
+  friendly: 'Amigáveis',
+}
 
 interface Opponent {
   id: string
@@ -73,9 +90,9 @@ export const MatchReportsPage: React.FC = () => {
 
   // Modal de Ficha de Jogo
   const [selectedEventForReport, setSelectedEventForReport] = useState<MatchEvent | null>(null)
-  const ehDesktop = useEhDesktop()
   const [searchParams, setSearchParams] = useSearchParams()
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
 
@@ -196,7 +213,13 @@ export const MatchReportsPage: React.FC = () => {
   const handleOpenReport = (ev: MatchEvent) => {
     setSelectedEventForReport(ev)
     setIsReportModalOpen(true)
-    setSearchParams({ jogo: ev.id })
+    // Acrescentar, não substituir: esta página vive dentro dos separadores da
+    // Competição, e o separador escolhido também vai no endereço (`?ver=`).
+    // Um `setSearchParams({ jogo })` apagava-o, a Competição saltava para o
+    // primeiro separador e a ficha nunca chegava a abrir.
+    const seguintes = new URLSearchParams(searchParams)
+    seguintes.set('jogo', ev.id)
+    setSearchParams(seguintes)
   }
 
   const fecharFicha = () => {
@@ -221,78 +244,153 @@ export const MatchReportsPage: React.FC = () => {
     }
   }, [searchParams, matches])
 
+  /**
+   * O que a persiana esconde, para o funil poder acender e a linha de resumo
+   * dizê-lo. As pastilhas de tipo entram no resumo — ao contrário da Agenda,
+   * aqui o "Limpar" tem de as repor também, senão fica meia limpeza.
+   */
+  const temFiltros =
+    searchTerm.trim() !== '' ||
+    filterType !== 'all' ||
+    selectedYear !== 'all' ||
+    selectedMonth !== 'all'
+
+  const resumoFiltros = [
+    searchTerm.trim() ? `"${searchTerm.trim()}"` : null,
+    filterType !== 'all' ? ROTULOS_TIPO[filterType] : null,
+    selectedYear !== 'all' ? selectedYear : null,
+    selectedMonth !== 'all' ? MONTHS.find(m => m.value === selectedMonth)?.label : null,
+  ]
+    .filter(Boolean)
+    .join(' · ') || 'Filtrado'
+
+  const limparFiltros = () => {
+    setSearchTerm('')
+    setFilterType('all')
+    setSelectedYear('all')
+    setSelectedMonth('all')
+  }
+
   const handleSavedReport = () => {
     fetchMatches()
   }
 
   return (
     <div className="space-y-4 pb-12">
-      {/* No desktop, abrir uma ficha de jogo é mudar de página: a lista sai da
-          frente em vez de ficar por baixo de uma janela. */}
-      <div className={ehDesktop && isReportModalOpen ? 'hidden' : 'space-y-4'}>
+      <div className="space-y-4">
       
-      {/* Barra de Pesquisa e Filtros */}
-      <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-200 space-y-3">
-        {/* Pesquisa Rápida */}
-        <div className="relative">
-          <Search size={16} className="absolute left-3.5 top-3 text-gray-400" />
+      {/*
+        Pesquisa e filtros das fichas (ecrã 1b). O handoff mostra a caixa de
+        pesquisa e quatro pastilhas, e mais nada. O ano, o mês e o torneio não
+        estão lá mas fazem falta a quem procura um jogo de há duas épocas —
+        vão para a persiana atrás do funil, como na Agenda e nos Eventos.
+      */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
           <input
-            type="text"
+            type="search"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Pesquisar por adversário, torneio ou local..."
-            className="w-full pl-9.5 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold outline-none focus:bg-white focus:ring-2 focus:ring-csc-dark transition-all"
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Adversário, torneio ou local"
+            aria-label="Procurar nas fichas de jogo"
+            className={`${CAMPO} pl-9.5`}
           />
         </div>
+        <button
+          type="button"
+          onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
+          aria-label={temFiltros ? 'Filtros (ativos)' : 'Filtros'}
+          className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
+            transition-transform duration-150 active:scale-97
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+              temFiltros
+                ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                : 'bg-white/10 border-white/15 text-white/75'
+            }`}
+        >
+          <SlidersHorizontal size={16} />
+        </button>
+      </div>
 
-        {/* Pílulas de Contexto */}
-        <div className="flex flex-wrap gap-2">
-          {[
-            { id: 'all', label: 'Todos os Jogos', emoji: '🌐' },
-            { id: 'official', label: 'Competições Oficiais', emoji: '🏆' },
-            { id: 'tournament', label: 'Por Torneio', emoji: '🏅' },
-            { id: 'friendly', label: 'Amigáveis', emoji: '⚽' },
-          ].map(opt => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setFilterType(opt.id as FilterType)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-                filterType === opt.id
-                  ? 'bg-csc-dark text-white shadow-sm ring-2 ring-csc-gold/40'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
-              }`}
-            >
-              <span>{opt.emoji}</span>
-              <span>{opt.label}</span>
-            </button>
-          ))}
-        </div>
+      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
+        {([
+          ['all', 'Todos'],
+          ['official', 'Oficiais'],
+          ['tournament', 'Por torneio'],
+          ['friendly', 'Amigáveis'],
+        ] as const).map(([valor, etiqueta]) => (
+          <Pastilha
+            key={valor}
+            ativa={filterType === valor}
+            onClick={() => { triggerHaptic('selection'); setFilterType(valor) }}
+            className="flex-none"
+          >
+            {etiqueta}
+          </Pastilha>
+        ))}
+      </div>
 
-        {/* Linha 2: Filtro por Ano, Mês e Torneio */}
-        <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-gray-100">
-          {/* Seletor de Ano */}
-          <div className="flex items-center gap-1.5 min-w-[120px]">
-            <Calendar size={14} className="text-csc-gold shrink-0" />
+      {temFiltros && (
+        <button
+          type="button"
+          onClick={limparFiltros}
+          className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
+            bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
+        >
+          <SlidersHorizontal size={14} className="text-csc-gold shrink-0" />
+          <span className="flex-1 font-display font-bold text-[11px] text-white/80">
+            {resumoFiltros} · {filteredMatches.length} {filteredMatches.length === 1 ? 'jogo' : 'jogos'}
+          </span>
+          <span className="font-display font-bold text-[11px] text-csc-gold">Limpar</span>
+        </button>
+      )}
+
+      <BottomSheet
+        isOpen={filtrosAbertos}
+        onClose={() => setFiltrosAbertos(false)}
+        title="Filtrar fichas"
+        description="Sobre o tipo de jogo escolhido em cima"
+        tone="dark"
+        icon={
+          <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
+            <SlidersHorizontal size={17} />
+          </div>
+        }
+        footer={
+          <>
+            <Botao aparencia="vidro" onClick={limparFiltros} disabled={!temFiltros}>
+              Limpar
+            </Botao>
+            <Botao onClick={() => setFiltrosAbertos(false)}>
+              Ver {filteredMatches.length} {filteredMatches.length === 1 ? 'jogo' : 'jogos'}
+            </Botao>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className={ETIQUETA} htmlFor="ficha-ano">Ano</label>
             <select
+              id="ficha-ano"
               value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="w-full py-1.5 px-2.5 rounded-xl text-xs font-black outline-none cursor-pointer border border-gray-300 bg-gray-50 hover:bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark focus:border-csc-dark transition-all"
+              onChange={e => setSelectedYear(e.target.value)}
+              className={CAMPO}
             >
-              <option value="all">Todos os Anos</option>
+              <option value="all">Todos os anos</option>
               {availableYears.map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
           </div>
 
-          {/* Seletor de Mês */}
-          <div className="flex items-center gap-1.5 min-w-[140px]">
-            <span className="text-xs">🗓️</span>
+          <div>
+            <label className={ETIQUETA} htmlFor="ficha-mes">Mês</label>
             <select
+              id="ficha-mes"
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full py-1.5 px-2.5 rounded-xl text-xs font-black outline-none cursor-pointer border border-gray-300 bg-gray-50 hover:bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark focus:border-csc-dark transition-all"
+              onChange={e => setSelectedMonth(e.target.value)}
+              className={CAMPO}
             >
               {MONTHS.map(m => (
                 <option key={m.value} value={m.value}>{m.label}</option>
@@ -300,14 +398,15 @@ export const MatchReportsPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Seletor de Torneio (quando Por Torneio está ativo) */}
+          {/* Só faz sentido escolher a prova quando se está a filtrar por ela. */}
           {filterType === 'tournament' && (
-            <div className="flex items-center gap-1.5 flex-1 min-w-[180px]">
-              <Filter size={14} className="text-csc-gold shrink-0" />
+            <div>
+              <label className={ETIQUETA} htmlFor="ficha-torneio">Torneio</label>
               <select
+                id="ficha-torneio"
                 value={selectedTournamentId}
-                onChange={(e) => setSelectedTournamentId(e.target.value)}
-                className="w-full py-1.5 px-2.5 rounded-xl text-xs font-black outline-none cursor-pointer border border-gray-300 bg-gray-50 hover:bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark focus:border-csc-dark transition-all"
+                onChange={e => setSelectedTournamentId(e.target.value)}
+                className={CAMPO}
               >
                 {tournaments.length === 0 ? (
                   <option value="">Sem torneios registados</option>
@@ -321,24 +420,8 @@ export const MatchReportsPage: React.FC = () => {
               </select>
             </div>
           )}
-
-          {/* Botão Limpar Filtros se algum estiver ativo */}
-          {(selectedYear !== 'all' || selectedMonth !== 'all' || filterType !== 'all' || searchTerm) && (
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedYear('all')
-                setSelectedMonth('all')
-                setFilterType('all')
-                setSearchTerm('')
-              }}
-              className="text-[11px] font-bold text-gray-500 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded-lg transition-colors cursor-pointer ml-auto"
-            >
-              ✕ Limpar filtros
-            </button>
-          )}
         </div>
-      </div>
+      </BottomSheet>
 
       {/* Lista de Jogos Ocorridos */}
       {loading ? (
@@ -358,18 +441,17 @@ export const MatchReportsPage: React.FC = () => {
         <div className="space-y-3">
           {filteredMatches.map(m => {
             const dateObj = new Date(m.date_time)
-            const dateFormatted = dateObj.toLocaleDateString('pt-PT', { 
-              weekday: 'short', 
-              day: 'numeric', 
-              month: 'short', 
-              year: 'numeric' 
-            })
-            const timeFormatted = dateObj.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
+            const dataCurta = [
+              dateObj.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, ''),
+              dateObj.getDate(),
+              dateObj.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', ''),
+            ].join(' ').replace(' ', ', ')
+            const hora = dateObj.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
 
             const isAway = m.home_away === 'away'
             const cscSigla = formatClubSigla(clubSettings?.initials)
             const oppSigla = formatOpponentSigla(m.opponent)
-            
+
             const leftSigla = isAway ? oppSigla : cscSigla
             const rightSigla = isAway ? cscSigla : oppSigla
 
@@ -382,113 +464,119 @@ export const MatchReportsPage: React.FC = () => {
             const parsedMeta = parseMatchReportMetadata(m.description)
             const formationDisplay = (parsedMeta.tacticalFormation || '4-3-3').replace(/^1-/, '')
 
+            const nomeAdversario = m.opponent?.name || 'adversário'
+
             return (
-              <div
+              /*
+                Cartão de ficha (ecrã 1b): a data e a prova em cima, o placar
+                ao meio, o local e a entrada para a ficha em baixo.
+
+                É um `button` e não um `div` com `onClick` — abre a persiana da
+                ficha, e quem navega por teclado tem de lá chegar. Ver a
+                convenção no CLAUDE.md.
+              */
+              <button
                 key={m.id}
-                onClick={() => handleOpenReport(m)}
-                className="bg-csc-dark text-white rounded-2xl sm:rounded-3xl border border-white/10 hover:border-csc-gold/60 shadow-sm p-4 sm:p-5 transition-all cursor-pointer hover:shadow-md active:scale-[0.99] space-y-3.5 group"
+                type="button"
+                onClick={() => { triggerHaptic('light'); handleOpenReport(m) }}
+                aria-label={`${isCoachOrAdmin ? 'Editar' : 'Ver'} a ficha do jogo com ${nomeAdversario} de ${dataCurta}`}
+                className="cartao-simples w-full text-left p-3.5 space-y-3 cursor-pointer
+                  transition-transform duration-150 active:scale-[0.99]
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               >
-                {/* Header do Card: Data, Competição e Condição */}
-                <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2.5 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-white capitalize flex items-center gap-1.5">
-                      <Calendar size={14} className="text-csc-gold" />
-                      <span>{dateFormatted} • {timeFormatted}</span>
-                    </span>
+                {/* Data à esquerda, prova à direita. */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-display font-black text-[11.5px] text-white capitalize">
+                    {dataCurta} · {hora}
+                  </span>
+
+                  <span className="flex items-center gap-1.5 shrink-0">
                     {m.is_active === false && (
-                      <span className="text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full">
+                      <span className="font-display font-black text-[8.5px] tracking-[0.1em] uppercase text-csc-gold bg-csc-gold/15 border border-csc-gold/30 px-2 py-0.5 rounded-full">
                         Rascunho
                       </span>
                     )}
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
                     {m.tournament ? (
-                      <span className="text-[10px] font-black bg-emerald-50 text-emerald-900 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                        <Trophy size={11} className="text-emerald-700" />
-                        <span>{m.tournament.name}</span>
+                      <span className="font-display font-bold text-[9.5px] text-csc-verde-texto bg-csc-light/15 border border-csc-light/30 px-2.5 py-1 rounded-full truncate max-w-[130px]">
+                        {m.tournament.name}
                       </span>
                     ) : m.is_friendly ? (
-                      <span className="text-[10px] font-black bg-purple-50 text-purple-900 border border-purple-200 px-2.5 py-0.5 rounded-full">
-                        ⚽ Amigável
+                      <span className="font-display font-bold text-[9.5px] text-csc-gold bg-csc-gold/12 border border-csc-gold/30 px-2.5 py-1 rounded-full">
+                        Amigável
                       </span>
                     ) : null}
-
-                    <span className="text-[10px] font-extrabold text-white/60 bg-white/10 px-2 py-0.5 rounded-full">
-                      {isAway ? '✈️ Fora' : '🏠 Casa'}
-                    </span>
-                  </div>
+                  </span>
                 </div>
 
-                {/* Scoreboard Central */}
-                <div className="grid grid-cols-11 items-center gap-2 py-1 text-center">
-                  {/* Equipa Esquerda */}
-                  <div className="col-span-4 flex items-center justify-end gap-2.5 min-w-0">
-                    <span className="text-sm sm:text-base font-black text-white uppercase truncate">
+                {/* Placar. */}
+                <div className="flex items-center justify-center gap-2.5">
+                  <span className="flex-1 flex items-center justify-end gap-2 min-w-0">
+                    <span className="font-display font-black text-[13px] text-white uppercase truncate">
                       {leftSigla}
                     </span>
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white p-1 border border-white/20 flex items-center justify-center shrink-0 shadow-xs">
+                    <span className="w-9 h-9 rounded-full bg-white p-0.5 flex items-center justify-center shrink-0">
                       {leftLogo ? (
-                        <img src={leftLogo} alt={leftSigla} className="w-full h-full object-contain rounded-full" />
+                        <img src={leftLogo} alt="" className="w-full h-full object-contain rounded-full" />
                       ) : (
-                        <span className="font-black text-csc-dark text-xs">{leftSigla}</span>
+                        <span className="font-display font-black text-csc-tinta text-[9px]">{leftSigla}</span>
                       )}
-                    </div>
-                  </div>
+                    </span>
+                  </span>
 
-                  {/* Placar */}
-                  <div className="col-span-3 flex flex-col items-center justify-center">
+                  <span className="flex items-center gap-1.5 shrink-0">
                     {hasScore ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-2xl sm:text-3xl font-black text-white bg-white/10 px-2.5 py-0.5 rounded-xl border border-white/15 shadow-inner">
+                      <>
+                        <span className="min-w-9 text-center font-display font-black text-[22px] text-white bg-white/8 border border-white/12 px-2 py-0.5 rounded-xl tabular-nums">
                           {m.home_score}
                         </span>
-                        <span className="text-lg font-black text-csc-gold">:</span>
-                        <span className="text-2xl sm:text-3xl font-black text-white bg-white/10 px-2.5 py-0.5 rounded-xl border border-white/15 shadow-inner">
+                        <span className="font-display font-black text-csc-gold">:</span>
+                        <span className="min-w-9 text-center font-display font-black text-[22px] text-white bg-white/8 border border-white/12 px-2 py-0.5 rounded-xl tabular-nums">
                           {m.away_score}
                         </span>
-                      </div>
+                      </>
                     ) : (
-                      <span className="text-xs font-black text-white/65 uppercase tracking-widest px-2 py-1 bg-white/10 rounded-lg">
-                        VS
+                      <span className="font-display font-black text-[10px] text-white/55 uppercase tracking-[0.14em] px-2.5 py-1.5 bg-white/10 rounded-lg">
+                        vs
                       </span>
                     )}
-                  </div>
+                  </span>
 
-                  {/* Equipa Direita */}
-                  <div className="col-span-4 flex items-center justify-start gap-2.5 min-w-0">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white p-1 border border-white/20 flex items-center justify-center shrink-0 shadow-xs">
+                  <span className="flex-1 flex items-center justify-start gap-2 min-w-0">
+                    <span className="w-9 h-9 rounded-full bg-white p-0.5 flex items-center justify-center shrink-0">
                       {rightLogo ? (
-                        <img src={rightLogo} alt={rightSigla} className="w-full h-full object-contain rounded-full" />
+                        <img src={rightLogo} alt="" className="w-full h-full object-contain rounded-full" />
                       ) : (
-                        <span className="font-black text-csc-dark text-xs">{rightSigla}</span>
+                        <span className="font-display font-black text-csc-tinta text-[9px]">{rightSigla}</span>
                       )}
-                    </div>
-                    <span className="text-sm sm:text-base font-black text-white uppercase truncate">
+                    </span>
+                    <span className="font-display font-black text-[13px] text-white uppercase truncate">
                       {rightSigla}
                     </span>
-                  </div>
+                  </span>
                 </div>
 
-                {/* Footer do Card: Local e Botão de Ação */}
-                <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/10 text-xs">
-                  <div className="flex items-center gap-1.5 text-white/60 font-semibold truncate min-w-0">
-                    <MapPin size={13} className="text-red-500 shrink-0" />
-                    <span className="truncate">{locationStr}</span>
+                {/* Local, casa ou fora, tática — e a entrada para a ficha. */}
+                <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/10">
+                  <span className="flex items-center gap-1.5 min-w-0 text-white/55">
+                    {isAway
+                      ? <Plane size={12} className="shrink-0 text-white/40" />
+                      : <Home size={12} className="shrink-0 text-white/40" />}
+                    <span className="text-[10.5px] font-semibold truncate">
+                      {isAway ? 'Fora' : 'Casa'} · {locationStr}
+                    </span>
                     {formationDisplay && (
-                      <span className="hidden sm:inline-block text-[10px] bg-white/10 text-white/70 px-2 py-0.5 rounded-md font-bold ml-1">
-                        Tática: {formationDisplay}
+                      <span className="shrink-0 text-[9px] bg-white/8 text-white/55 px-1.5 py-0.5 rounded font-bold tabular-nums">
+                        {formationDisplay}
                       </span>
                     )}
-                  </div>
+                  </span>
 
-                  <div className="flex items-center gap-1 text-csc-gold group-hover:text-emerald-300 font-black shrink-0">
-                    <span>{isCoachOrAdmin ? 'Editar Ficha' : 'Ver Ficha'}</span>
-                    <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-                  </div>
+                  <span className="flex items-center gap-0.5 text-csc-gold font-display font-black text-[11px] shrink-0">
+                    {isCoachOrAdmin ? 'Editar ficha' : 'Ver ficha'}
+                    <ChevronRight size={14} />
+                  </span>
                 </div>
-
-              </div>
+              </button>
             )
           })}
         </div>

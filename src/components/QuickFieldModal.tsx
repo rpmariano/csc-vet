@@ -2,6 +2,10 @@ import React from 'react'
 import { X, Plus } from 'lucide-react'
 import { useModalA11y } from '../hooks/useModalA11y'
 
+/** Campo branco do handoff, o mesmo dos formulários de evento. */
+const CAMPO_DIALOGO =
+  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
+
 /**
  * Criação rápida de um campo/instalação sem sair do formulário de evento.
  *
@@ -52,30 +56,30 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
         aria-modal="true"
         aria-labelledby="quick-field-titulo"
         tabIndex={-1}
-        className="bg-white rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-gray-100 space-y-4 outline-none"
+        className="bg-csc-fundo rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-white/10 space-y-4 outline-none"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar"
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-white/40 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
 
-        <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
+        <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
           <div className="w-10 h-10 rounded-xl bg-csc-dark text-csc-gold flex items-center justify-center text-lg font-black shadow-xs" aria-hidden="true">
             🏟️
           </div>
           <div>
             <h3 id="quick-field-titulo" className="text-base font-black text-csc-dark">Criar Novo Campo / Instalação</h3>
-            <p className="text-[11px] text-gray-500">Regista um novo campo para ser imediatamente selecionado.</p>
+            <p className="text-[11px] text-white/50">Regista um novo campo para ser imediatamente selecionado.</p>
           </div>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1" htmlFor="quick-field-nome">Nome do Campo / Estádio *</label>
+            <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-field-nome">Nome do Campo / Estádio *</label>
             <input
               id="quick-field-nome"
               type="text"
@@ -84,28 +88,28 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
               value={name}
               onChange={e => onNameChange(e.target.value)}
               placeholder="Ex: Campo Sintético Municipal de Tires"
-              className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+              className={CAMPO_DIALOGO}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1" htmlFor="quick-field-morada">Morada / Localização</label>
+            <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-field-morada">Morada / Localização</label>
             <input
               id="quick-field-morada"
               type="text"
               value={address}
               onChange={e => onAddressChange(e.target.value)}
               placeholder="Ex: Av. Amadeu Duarte, Tires, Cascais"
-              className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+              className={CAMPO_DIALOGO}
             />
-            <p className="text-[10.5px] text-gray-500 mt-1">Usada para navegação e rotas com Google Maps.</p>
+            <p className="text-[10.5px] text-white/50 mt-1">Usada para navegação e rotas com Google Maps.</p>
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/12">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              className="px-4 py-2 border border-white/15 hover:bg-white/10 text-white/80 rounded-xl text-xs font-bold transition-colors cursor-pointer"
             >
               Cancelar
             </button>

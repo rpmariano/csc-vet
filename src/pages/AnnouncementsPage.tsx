@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { CabecalhoEcra } from '../components/ui'
 
 interface Announcement {
   id: string
@@ -24,6 +25,14 @@ interface Announcement {
   is_active?: boolean
   created_by?: string | null
 }
+
+/** Campo branco do handoff, o mesmo do Perfil (ecrã 5b). */
+const CAMPO =
+  'w-full h-11 px-3 rounded-[13px] bg-white text-csc-tinta font-display font-bold text-xs ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
+
+const ETIQUETA =
+  'block font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-1.5'
 
 const AnnouncementsPage: React.FC = () => {
   const { profile } = useAuth()
@@ -293,12 +302,20 @@ const AnnouncementsPage: React.FC = () => {
   const painelApagarRef = useModalA11y({ isOpen: !!deletingAnn, onClose: () => setDeletingAnn(null) })
 
   return (
-    <div className="space-y-4 pb-12">
+    <div className="relative space-y-4 pb-2">
+      <CabecalhoEcra
+        titulo="Comunicados"
+        sobrancelha="Avisos à equipa"
+        legenda="Quem só lê tem-nos no sino da Home. Aqui publicam-se e editam-se."
+        className="mb-1"
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Formulário de Criação — apenas coach/admin. Para jogadores a rota é só de leitura. */}
+      <div className="space-y-4">
+        {/* Publicar e editar. A rota é de treinador e direção (ver App.tsx);
+            este `isCoachOrAdmin` fica como segunda linha, porque um papel
+            simulado muda o que se pode fazer sem mudar de rota. */}
         {isCoachOrAdmin && (
-          <div className="lg:col-span-5 bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-5 sm:p-6 space-y-4 sticky top-6">
+          <div className="cartao-vidro p-5 space-y-4">
             <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
               <div className="w-8 h-8 rounded-xl bg-csc-gold text-csc-dark flex items-center justify-center text-sm font-bold">
                 <Megaphone size={16} />
@@ -311,7 +328,7 @@ const AnnouncementsPage: React.FC = () => {
 
             <form onSubmit={handlePublish} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                <label className={ETIQUETA}>
                   Título do Comunicado *
                 </label>
                 <input
@@ -319,13 +336,13 @@ const AnnouncementsPage: React.FC = () => {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold placeholder:font-normal placeholder:text-gray-400 text-gray-900"
+                  className={CAMPO}
                   placeholder="Ex: Ponto de Encontro Alterado"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                <label className={ETIQUETA}>
                   Conteúdo da Mensagem *
                 </label>
                 <textarea
@@ -333,7 +350,7 @@ const AnnouncementsPage: React.FC = () => {
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={4}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white resize-none leading-relaxed placeholder:text-gray-400 text-gray-900"
+                  className={`${CAMPO} h-auto py-3 leading-relaxed resize-none`}
                   placeholder="Escreve aqui a mensagem completa para os atletas e equipa técnica..."
                 />
               </div>
@@ -342,13 +359,13 @@ const AnnouncementsPage: React.FC = () => {
               <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold text-white/80 block">Ativar de Imediato</span>
-                  <span className="text-[10.5px] text-white/70 block">Fica visível no carrossel de avisos da Homepage</span>
+                  <span className="text-[10.5px] text-white/70 block">Fica visível no sino dos comunicados, na Home</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsActiveOnCreate(!isActiveOnCreate)}
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    isActiveOnCreate ? 'bg-emerald-600' : 'bg-gray-300'
+                    isActiveOnCreate ? 'bg-emerald-600' : 'bg-white/20'
                   }`}
                 >
                   <span
@@ -362,9 +379,9 @@ const AnnouncementsPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isPublishing || !title.trim() || !content.trim()}
-                className="w-full flex items-center justify-center gap-2 bg-csc-gold hover:brightness-95 text-csc-dark py-3 rounded-2xl font-black text-xs transition-all shadow-md active:scale-98 disabled:opacity-50 cursor-pointer"
+                className="w-full min-h-12 flex items-center justify-center gap-2 bg-csc-gold text-csc-tinta rounded-3xl font-display font-extrabold text-[12.5px] transition-transform duration-150 active:scale-97 disabled:opacity-45 cursor-pointer"
               >
-                <Plus size={16} className="text-csc-dark" />
+                <Plus size={16} />
                 <span>{isPublishing ? 'A publicar...' : 'Publicar Comunicado'}</span>
               </button>
             </form>
@@ -372,8 +389,8 @@ const AnnouncementsPage: React.FC = () => {
         )}
 
         {/* Lista e Histórico de Comunicados */}
-        <div className={isCoachOrAdmin ? 'lg:col-span-7 space-y-4' : 'lg:col-span-12 space-y-4'}>
-          <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-5 sm:p-6 space-y-4">
+        <div className="space-y-4">
+          <div className="cartao-simples p-5 space-y-4">
             
             {/* Barra de Filtros e Pesquisa */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
@@ -383,9 +400,9 @@ const AnnouncementsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setStatusFilter('all')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    className={`min-h-11 px-3.5 rounded-[18px] font-display text-xs font-bold transition-colors cursor-pointer ${
                       statusFilter === 'all'
-                        ? 'bg-csc-gold text-csc-dark shadow-2xs'
+                        ? 'bg-csc-gold text-csc-tinta'
                         : 'text-white/60 hover:text-white'
                     }`}
                   >
@@ -394,21 +411,21 @@ const AnnouncementsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setStatusFilter('active')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`min-h-11 px-3.5 rounded-[18px] font-display text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                       statusFilter === 'active'
-                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        ? 'bg-csc-light text-white'
                         : 'text-white/60 hover:text-white'
                     }`}
                   >
                     <span>Ativos</span>
                     <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      statusFilter === 'active' ? 'bg-emerald-800 text-white' : 'bg-white/10 text-white/60'
+                      statusFilter === 'active' ? 'bg-csc-dark text-white' : 'bg-white/10 text-white/60'
                     }`}>{activeCount}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setStatusFilter('inactive')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`min-h-11 px-3.5 rounded-[18px] font-display text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                       statusFilter === 'inactive'
                         ? 'bg-white/20 text-white shadow-2xs'
                         : 'text-white/60 hover:text-white'
@@ -424,13 +441,13 @@ const AnnouncementsPage: React.FC = () => {
 
               {/* Input de Pesquisa */}
               <div className="relative flex-1 sm:max-w-[220px]">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40 z-1" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Pesquisar..."
-                  className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium placeholder:text-gray-400 text-gray-900"
+                  className={`${CAMPO} pl-9`}
                 />
               </div>
             </div>
@@ -443,7 +460,7 @@ const AnnouncementsPage: React.FC = () => {
               </div>
             ) : filteredAnnouncements.length === 0 ? (
               <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6 space-y-2">
-                <span className="text-3xl">📭</span>
+                <Megaphone size={34} className="mx-auto text-white/20" />
                 <p className="text-xs font-bold text-white/70">Nenhum comunicado encontrado.</p>
                 <p className="text-[11px] text-white/65">
                   {searchTerm
@@ -493,7 +510,7 @@ const AnnouncementsPage: React.FC = () => {
                         {isCoachOrAdmin && (
                           <div>
                             {isActive ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-csc-light/15 text-csc-verde-texto border border-csc-light/35">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
                                 <span>Ativo na Home</span>
                               </span>
@@ -520,19 +537,19 @@ const AnnouncementsPage: React.FC = () => {
                             onClick={() => handleToggleActive(ann)}
                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                               isActive
-                                ? 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
-                                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 font-black'
+                                ? 'bg-csc-gold/10 text-csc-gold hover:bg-csc-gold/15 border border-csc-gold/25'
+                                : 'bg-csc-light/10 text-csc-verde-texto hover:bg-csc-light/15 border border-csc-light/25 font-black'
                             }`}
                             title={isActive ? 'Ocultar da Homepage' : 'Mostrar na Homepage'}
                           >
                             {isActive ? (
                               <>
-                                <EyeOff size={13} className="text-amber-600" />
+                                <EyeOff size={13} className="text-csc-gold" />
                                 <span>Desativar</span>
                               </>
                             ) : (
                               <>
-                                <Eye size={13} className="text-emerald-600" />
+                                <Eye size={13} className="text-csc-light" />
                                 <span>Ativar na Home</span>
                               </>
                             )}
@@ -585,20 +602,20 @@ const AnnouncementsPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="editar-comunicado-titulo"
             tabIndex={-1}
-            className="bg-csc-dark text-white rounded-3xl max-w-lg w-full p-6 relative shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
+            className="bg-csc-fundo text-white rounded-3xl max-w-lg w-full p-6 relative shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
           >
             <button
               type="button"
               onClick={() => setEditingAnn(null)}
               aria-label="Fechar"
-              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 cursor-pointer active:scale-97"
             >
               <X size={18} className="stroke-[2.5]" />
             </button>
 
             <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
-              <div className="w-10 h-10 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center text-lg font-black shadow-xs">
-                ✏️
+              <div className="w-10 h-10 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center shadow-xs">
+                <Edit3 size={17} />
               </div>
               <div>
                 <h3 id="editar-comunicado-titulo" className="text-base font-black text-white">Editar Comunicado</h3>
@@ -616,7 +633,7 @@ const AnnouncementsPage: React.FC = () => {
                   required
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-bold text-gray-900"
+                  className={CAMPO}
                 />
               </div>
 
@@ -629,7 +646,7 @@ const AnnouncementsPage: React.FC = () => {
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
                   rows={5}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white resize-none leading-relaxed text-gray-900"
+                  className={`${CAMPO} h-auto py-3 leading-relaxed resize-none`}
                 />
               </div>
 
@@ -638,14 +655,14 @@ const AnnouncementsPage: React.FC = () => {
                 <div>
                   <span className="text-xs font-bold text-white/80 block">Estado de Publicação</span>
                   <span className="text-[10.5px] text-white/70 block">
-                    {editIsActive ? '🟢 Ativo (Visível na Homepage)' : '⚪ Inativo (Oculto)'}
+                    {editIsActive ? 'Ativo (visível para a equipa)' : 'Inativo (oculto)'}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEditIsActive(!editIsActive)}
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    editIsActive ? 'bg-emerald-600' : 'bg-gray-300'
+                    editIsActive ? 'bg-emerald-600' : 'bg-white/20'
                   }`}
                 >
                   <span
@@ -669,7 +686,7 @@ const AnnouncementsPage: React.FC = () => {
                   disabled={isSavingEdit || !editTitle.trim() || !editContent.trim()}
                   className="flex-1 px-4 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark font-black text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-md"
                 >
-                  {isSavingEdit ? 'A guardar...' : '💾 Guardar Alterações'}
+                  {isSavingEdit ? 'A guardar...' : 'Guardar alterações'}
                 </button>
               </div>
             </form>
@@ -686,10 +703,10 @@ const AnnouncementsPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="apagar-comunicado-titulo"
             tabIndex={-1}
-            className="bg-csc-dark text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
+            className="bg-csc-fundo text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
           >
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-csc-red/15 text-csc-vermelho-texto flex items-center justify-center shrink-0">
                 <Trash2 size={24} />
               </div>
               <div>

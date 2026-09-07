@@ -40,8 +40,6 @@ export interface ModalProps {
   showCloseButton?: boolean
   /** Nome acessível quando não há título visível (ex.: um visualizador de fotos). */
   ariaLabel?: string
-  /** 'light': cartão branco (padrão). 'dark': cartão csc-dark, como a persiana de eventos. */
-  tone?: 'light' | 'dark'
   /**
    * Cabeçalho: 'plain' é o título sobre o próprio cartão; 'brand' é a barra
    * csc-dark com ícone dourado e botão de fechar redondo — a moldura usada nos
@@ -65,7 +63,6 @@ export const Modal: React.FC<ModalProps> = ({
   closeOnEscape = true,
   showCloseButton = true,
   ariaLabel,
-  tone = 'light',
   headerStyle = 'plain',
   stacked = false,
   children,
@@ -77,14 +74,19 @@ export const Modal: React.FC<ModalProps> = ({
 
   const temCabecalho = Boolean(title || description || icon || showCloseButton)
   const cabecalhoBranded = headerStyle === 'brand'
-  const corFundo = tone === 'dark' ? 'bg-csc-dark text-white' : 'bg-white'
-  const corBordo = tone === 'dark' ? 'border-white/10' : 'border-gray-100'
-  const corTitulo = tone === 'dark' ? 'text-white' : 'text-gray-900'
-  const corDescricao = tone === 'dark' ? 'text-white/60' : 'text-gray-500'
-  const corBotaoFechar =
-    tone === 'dark'
-      ? 'bg-white/10 hover:bg-white/20 text-white'
-      : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+  /*
+    Havia aqui um `tone` com dois valores: 'light' dava `bg-csc-fundo` e
+    'dark' dava `bg-csc-dark`, que é o verde do clube. No `BottomSheet` a
+    mesma palavra significa o contrário — lá 'dark' é o `bg-csc-fundo`. Um
+    modal escrito por analogia com uma persiana saía verde-garrafa por cima do
+    fundo preto, e foi o que aconteceu ao editor da ficha de jogo.
+    Sem tom nenhum: o painel é sempre o fundo da app.
+  */
+  const corFundo = 'bg-csc-fundo text-white'
+  const corBordo = 'border-white/10'
+  const corTitulo = 'text-white'
+  const corDescricao = 'text-white/50'
+  const corBotaoFechar = 'text-white/40 hover:text-white/80 hover:bg-white/10'
 
   return (
     <div
@@ -124,7 +126,7 @@ export const Modal: React.FC<ModalProps> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="shrink-0 w-8 h-8 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                className="shrink-0 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 cursor-pointer active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               >
                 <X size={16} className="stroke-[2.5]" />
               </button>
@@ -163,7 +165,7 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="p-5 overflow-y-auto flex-1">{children}</div>
 
         {footer && (
-          <div className={`flex items-center justify-end gap-2.5 border-t ${corBordo} shrink-0 ${cabecalhoBranded ? 'p-4' : 'p-5 pt-3'} ${cabecalhoBranded && tone === 'light' ? 'bg-gray-50' : ''}`}>
+          <div className={`flex items-center justify-end gap-2.5 border-t ${corBordo} shrink-0 ${cabecalhoBranded ? 'p-4' : 'p-5 pt-3'} ${cabecalhoBranded ? 'bg-white/4' : ''}`}>
             {footer}
           </div>
         )}

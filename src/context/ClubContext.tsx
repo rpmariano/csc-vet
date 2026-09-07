@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './AuthContext'
+import { CLUBE_NOME, CLUBE_SIGLA } from '../lib/clube'
 
 export interface ClubSettings {
   id: number
@@ -58,8 +59,8 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const cachedHomeField = localStorage.getItem('csc_club_home_field_id')
       setClubSettings({
         id: 1,
-        name: 'Cascais Sport Clube',
-        initials: 'CSC',
+        name: CLUBE_NOME,
+        initials: CLUBE_SIGLA,
         logo_url: null,
         primary_color: '#1c1c1c',
         home_field_id: cachedHomeField || null

@@ -5,8 +5,7 @@ import {
   Plus, 
   Edit2, 
   Trash2, 
-  Phone, 
-  Mail, 
+  Phone,
   FileText, 
   Shield, 
   HeartPulse, 
@@ -21,7 +20,10 @@ import {
   Check,
   LayoutGrid,
   List,
-  ChevronRight
+  SlidersHorizontal,
+  ClipboardList,
+  Landmark,
+  User as UserIcon,
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth, extractRolesFromProfile, cleanNotesFromRolesTag } from '../context/AuthContext'
@@ -29,11 +31,38 @@ import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../components/SoccerPitchSelector'
 import { VistaDetalhe } from '../components/VistaDetalhe'
 import { useSearchParams } from 'react-router-dom'
-import { useEhDesktop } from '../hooks/useEhDesktop'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { CLUBE_NOME } from '../lib/clube'
+import { BottomSheet } from '../components/BottomSheet'
+import { CabecalhoEcra, Pastilha, Botao } from '../components/ui'
+import { triggerHaptic } from '../utils/haptics'
+import { getSeasonLabel, comOmissoes } from '../lib/finance'
+
+/** As abreviaturas dos meses, para as pastilhas de quota dispensada. */
+const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+/** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
+const CAMPO =
+  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
+
+const ETIQUETA =
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+
+/** Como se lê cada filtro escondido, na linha de resumo. */
+const ROTULOS_ESTADO: Record<string, string> = {
+  active: 'Aptos',
+  injured: 'Lesionados',
+  inactive: 'Inativos',
+}
+
+const ROTULOS_ORDEM: Record<string, string> = {
+  jga: 'por J · G · A',
+  nome: 'por nome',
+}
 
 const POSITIONS = [
   'Guarda-redes',
@@ -58,6 +87,10 @@ const TeamManagementPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | ProfileStatus>('all')
   const [positionFilter, setPositionFilter] = useState('all')
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
+  /* O handoff ordena o plantel por número; a ordenação por nome era a única
+     que existia e continua à mão de quem a preferir. */
+  const [ordem, setOrdem] = useState<'numero' | 'jga' | 'nome'>('numero')
   const [viewMode, setViewMode] = useState<'list' | 'cards'>(() => {
     return (localStorage.getItem('csc_team_view_mode') as 'list' | 'cards') || 'list'
   })
@@ -65,7 +98,6 @@ const TeamManagementPage: React.FC = () => {
   // Modals
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
-  const ehDesktop = useEhDesktop()
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -95,6 +127,9 @@ const TeamManagementPage: React.FC = () => {
   const [formEmergencyName, setFormEmergencyName] = useState('')
   const [formEmergencyPhone, setFormEmergencyPhone] = useState('')
   const [formMedicalNotes, setFormMedicalNotes] = useState('')
+  const [formQuotaStart, setFormQuotaStart] = useState('')
+  const [formQuotaEnd, setFormQuotaEnd] = useState('')
+  const [formMesesDispensados, setFormMesesDispensados] = useState<string[]>([])
 
   // Upload URLs & Status
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
@@ -173,9 +208,69 @@ const TeamManagementPage: React.FC = () => {
     fetchProfiles()
   }, [])
 
+  /*
+    Jogos, golos e assistências por atleta — a coluna "J · G · A" do ecrã 3a.
+    Uma linha de `stats` é um jogo em que o atleta entrou, que é a mesma
+    contagem que a página de Estatísticas faz; aqui só se soma por jogador,
+    sem filtro de prova, porque a lista do plantel é da época toda.
+  */
+  /* A época do clube vive nas definições financeiras — está lá porque foi lá
+     que primeiro fez falta, mas é a época do clube. Ver a mesma nota na Home. */
+  const [epoca, setEpoca] = useState<string>('')
+  useEffect(() => {
+    supabase.from('financial_settings').select('*').maybeSingle().then(({ data }) => {
+      const definicoes = comOmissoes(data)
+      setEpoca(getSeasonLabel(definicoes))
+    })
+  }, [])
+
+  const [estatisticas, setEstatisticas] = useState<Record<string, { j: number; g: number; a: number }>>({})
+  useEffect(() => {
+    supabase
+      .from('stats')
+      .select('player_id, goals, assists')
+      .then(({ data, error }) => {
+        if (error || !data) return
+        const porJogador: Record<string, { j: number; g: number; a: number }> = {}
+        for (const linha of data as { player_id: string; goals: number | null; assists: number | null }[]) {
+          const atual = porJogador[linha.player_id] ?? { j: 0, g: 0, a: 0 }
+          atual.j += 1
+          atual.g += linha.goals || 0
+          atual.a += linha.assists || 0
+          porJogador[linha.player_id] = atual
+        }
+        setEstatisticas(porJogador)
+      })
+  }, [])
+
   // Quais fichas têm conta de login associada — só o admin precisa de saber,
   // para o merge de fichas nunca poder apagar o lado que tem sessão.
   const [linkedProfileIds, setLinkedProfileIds] = useState<Set<string>>(new Set())
+
+  /*
+    As contas de login que não correspondem a pessoa nenhuma do clube (ecrã 3d).
+    Só o admin as pode ler: a RPC recusa a quem não for.
+
+    Chamava-se "contas sem atleta", e isso estava errado nas duas pontas:
+    `profiles` são as **pessoas** do clube — há quem jogue, quem jogue e treine,
+    e quem não jogue de todo —, e uma ficha sem camisola nem posição pode ser
+    simplesmente a de um treinador. A condição está agora em
+    `supabase_contas_por_ligar_migration.sql` e olha só para colunas que o
+    próprio não pode escrever.
+  */
+  const [contasPorLigar, setContasPorLigar] = useState<
+    { id: string; name: string | null; email: string | null; photo_url: string | null; created_at: string | null }[]
+  >([])
+  useEffect(() => {
+    if (!isAdmin) return
+    supabase.rpc('admin_contas_por_ligar').then(({ data, error }) => {
+      if (error) {
+        console.error('Erro ao carregar as contas por ligar:', error.message)
+        return
+      }
+      setContasPorLigar((data as typeof contasPorLigar) ?? [])
+    })
+  }, [isAdmin])
   useEffect(() => {
     if (!isAdmin) return
     supabase.rpc('admin_linked_profile_ids').then(({ data, error }) => {
@@ -224,6 +319,9 @@ const TeamManagementPage: React.FC = () => {
     setFormEmergencyName('')
     setFormEmergencyPhone('')
     setFormMedicalNotes('')
+    setFormQuotaStart('')
+    setFormQuotaEnd('')
+    setFormMesesDispensados([])
     setPhotoUrl(null)
     setIdDocUrl(null)
     setInsuranceDocUrl(null)
@@ -265,6 +363,19 @@ const TeamManagementPage: React.FC = () => {
     setFormEmergencyName(p.emergency_contact_name || '')
     setFormEmergencyPhone(p.emergency_contact_phone || '')
     setFormMedicalNotes(cleanNotesFromRolesTag(p.medical_notes) || '')
+    setFormQuotaStart(p.quota_start_date || '')
+    setFormQuotaEnd(p.quota_end_date || '')
+    /* Os meses dispensados vivem noutra tabela; lêem-se ao abrir a ficha. */
+    setFormMesesDispensados([])
+    supabase
+      .from('quota_exemptions')
+      .select('month_year')
+      .eq('profile_id', p.id)
+      .then(({ data }) => {
+        setFormMesesDispensados(
+          ((data ?? []) as { month_year: string }[]).map(l => l.month_year.slice(-2)),
+        )
+      })
     setPhotoUrl(p.photo_url || null)
     setIdDocUrl(p.id_document_url || null)
     setInsuranceDocUrl(p.insurance_doc_url || null)
@@ -419,10 +530,30 @@ const TeamManagementPage: React.FC = () => {
       if (currentUserProfile && currentUserProfile.id === player.id) {
         await refreshProfile()
       }
-      toast.success(newStatus === 'injured' ? 'Atleta marcado como lesionado ⚠️' : 'Atleta marcado como apto ✓')
+      toast.success(newStatus === 'injured' ? 'Atleta marcado como lesionado.' : 'Atleta marcado como apto.')
     } catch (err: any) {
       toast.error('Erro ao atualizar estado físico: ' + (err.message || 'Erro desconhecido'))
     }
+  }
+
+  /*
+    Os meses dispensados de quota vivem em `quota_exemptions`, uma linha por
+    mês. Apaga-se o que lá está e escreve-se o que ficou escolhido: são no
+    máximo doze linhas por atleta, e um diff seria mais código do que vale.
+
+    O `month_year` da tabela é 'AAAA-MM' e a dispensa é para todos os anos —
+    grava-se com o ano 0000, que nenhuma época usa, e lê-se só o mês. Se um
+    dia fizer falta dispensar um mês de um ano em concreto, a coluna já lá
+    está para isso.
+  */
+  const guardarMesesDispensados = async (profileId: string) => {
+    const { error: apagou } = await supabase.from('quota_exemptions').delete().eq('profile_id', profileId)
+    if (apagou) throw apagou
+    if (formMesesDispensados.length === 0) return
+    const { error } = await supabase.from('quota_exemptions').insert(
+      formMesesDispensados.map(mes => ({ profile_id: profileId, month_year: `0000-${mes}` })),
+    )
+    if (error) throw error
   }
 
   const handleSaveMember = async (e: React.FormEvent) => {
@@ -475,6 +606,8 @@ const TeamManagementPage: React.FC = () => {
       iban: sanitizeText(formIban),
       gdpr_consent: Boolean(formGdprConsent),
       member_number: sanitizeText(formMemberNumber),
+      quota_start_date: sanitizeDate(formQuotaStart),
+      quota_end_date: sanitizeDate(formQuotaEnd),
       emergency_contact_name: sanitizeText(formEmergencyName),
       emergency_contact_phone: sanitizeText(formEmergencyPhone),
       medical_notes: medicalNotesEncoded,
@@ -514,6 +647,7 @@ const TeamManagementPage: React.FC = () => {
           console.warn('Update matched 0 rows')
         }
         savedPlayerId = formId
+        await guardarMesesDispensados(formId)
         toast.success('Ficha de membro atualizada com sucesso!')
       } else {
         // 2. Se for um membro de semente (seed-X) ou novo registo:
@@ -642,7 +776,7 @@ const TeamManagementPage: React.FC = () => {
     setConfirmModalConfig({
       isOpen: true,
       title: 'Fundir Fichas',
-      description: `Vais fundir "${apagar.name}" em "${manter.name}": os dados em falta em "${manter.name}" são preenchidos a partir de "${apagar.name}", todo o histórico (convocatórias, presenças, estatísticas, quotas, encargos, seguros) passa para "${manter.name}", e a ficha "${apagar.name}" é apagada. Tens a certeza?`,
+      description: `Vais fundir "${apagar.name}" em "${manter.name}": os dados em falta em "${manter.name}" são preenchidos a partir de "${apagar.name}", todo o histórico (convocatórias e respostas, estatísticas, quotas, encargos, seguros) passa para "${manter.name}", e a ficha "${apagar.name}" é apagada. Tens a certeza?`,
       confirmText: 'Sim, Fundir Fichas',
       cancelText: 'Cancelar',
       variant: 'warning',
@@ -672,7 +806,22 @@ const TeamManagementPage: React.FC = () => {
     })
   }
 
-  // Procura de sugestões inteligentes de associação
+  /*
+    Sugestões de ligação para a direção (ecrã 3d).
+
+    **Só por email.** Procurava também por telefone e por primeiro-e-último
+    nome, e isso é adivinhar: ligar duas fichas apaga uma delas, e dois
+    homónimos — ou um número de telefone reaproveitado — davam uma sugestão que
+    parecia certa e destruía dados. A identidade de uma pessoa neste clube é o
+    endereço de email, como na
+    `supabase_identidade_por_email_migration.sql`.
+
+    Por isto raramente aparece alguma coisa, e é assim que deve ser: quando o
+    email bate certo, o `AuthContext` já ligou sozinho no arranque. Sobra o caso
+    em que a ficha foi criada **depois** de a pessoa se registar. Quando o email
+    não bate, não há sugestão nenhuma a fazer — é a direção que decide, à mão,
+    na lista de baixo.
+  */
   const associationSuggestions = React.useMemo(() => {
     if (!isAdmin) return []
     const registeredUsersWithoutKit = profiles.filter(p => linkedProfileIds.has(p.id) && (!p.jersey_number || !p.kit_size))
@@ -682,33 +831,11 @@ const TeamManagementPage: React.FC = () => {
 
     registeredUsersWithoutKit.forEach(userP => {
       const uEmail = (userP.email || '').toLowerCase().trim()
-      const uPhone = (userP.phone || '').trim().replace(/\D/g, '')
-      const uName = (userP.name || '').toLowerCase().trim()
-      const uWords = uName.split(' ').filter(w => w.length > 2)
+      if (!uEmail) return
 
-      const match = unlinkedSquadProfiles.find(squadP => {
-        const sEmail = (squadP.email || '').toLowerCase().trim()
-        const sPhone = (squadP.phone || '').trim().replace(/\D/g, '')
-        const sName = (squadP.name || '').toLowerCase().trim()
-        const sWords = sName.split(' ').filter(w => w.length > 2)
-
-        // 1. Email idêntico
-        if (uEmail && sEmail && uEmail === sEmail) return true
-
-        // 2. Telefone idêntico (>= 9 dígitos)
-        if (uPhone && sPhone && uPhone.length >= 9 && uPhone === sPhone) return true
-
-        // 3. Se a ficha tiver outro email atribuído, não associar por nome
-        if (sEmail && uEmail && sEmail !== uEmail) return false
-
-        // 4. Nome completo idêntico ou Primeiro + Último Nome
-        if (uName && sName && uName === sName) return true
-        if (uWords.length >= 2 && sWords.length >= 2) {
-          return uWords[0] === sWords[0] && uWords[uWords.length - 1] === sWords[sWords.length - 1]
-        }
-
-        return false
-      })
+      const match = unlinkedSquadProfiles.find(
+        squadP => (squadP.email || '').toLowerCase().trim() === uEmail,
+      )
 
       if (match) {
         suggestions.push({ user: userP, player: match })
@@ -737,6 +864,60 @@ const TeamManagementPage: React.FC = () => {
     return matchesSearch && matchesStatus && matchesPosition
   })
 
+  /*
+    A ordem por que a lista sai. O handoff (3a) põe o plantel por número de
+    camisola; quem não tem número vai para o fim, senão os sem número ficavam
+    todos à cabeça.
+  */
+  const jga = (id: string) => estatisticas[id] ?? { j: 0, g: 0, a: 0 }
+  filteredProfiles.sort((a, b) => {
+    if (ordem === 'nome') return (a.name || '').localeCompare(b.name || '')
+    if (ordem === 'jga') {
+      const ea = jga(a.id)
+      const eb = jga(b.id)
+      if (eb.g !== ea.g) return eb.g - ea.g
+      if (eb.a !== ea.a) return eb.a - ea.a
+      return eb.j - ea.j
+    }
+    const na = a.jersey_number ?? 999
+    const nb = b.jersey_number ?? 999
+    if (na !== nb) return na - nb
+    return (a.name || '').localeCompare(b.name || '')
+  })
+
+  /*
+    Os inativos vão para o fim, num bloco à parte (ecrã 3a): já não jogam, e
+    misturados por número faziam saltar a numeração da lista de quem joga.
+    Quando o filtro é justamente "Inativos", não se separa nada — seria uma
+    lista vazia com um cabeçalho por baixo.
+  */
+  const separarInativos = statusFilter === 'all'
+  const perfisAtivos = separarInativos ? filteredProfiles.filter(p => p.status !== 'inactive') : filteredProfiles
+  const perfisInativos = separarInativos ? filteredProfiles.filter(p => p.status === 'inactive') : []
+
+  /** O que a persiana esconde, para o funil acender e o resumo dizê-lo. */
+  const temFiltros =
+    searchTerm.trim() !== '' ||
+    statusFilter !== 'all' ||
+    positionFilter !== 'all' ||
+    ordem !== 'numero'
+
+  const resumoFiltros = [
+    searchTerm.trim() ? `"${searchTerm.trim()}"` : null,
+    statusFilter !== 'all' ? ROTULOS_ESTADO[statusFilter] : null,
+    positionFilter !== 'all' ? positionFilter : null,
+    ordem !== 'numero' ? ROTULOS_ORDEM[ordem] : null,
+  ]
+    .filter(Boolean)
+    .join(' · ') || 'Filtrado'
+
+  const limparFiltros = () => {
+    setSearchTerm('')
+    setStatusFilter('all')
+    setPositionFilter('all')
+    setOrdem('numero')
+  }
+
   // Quick Metrics
   const totalCount = profiles.length
   const activeCount = profiles.filter(p => p.status === 'active').length
@@ -755,58 +936,62 @@ const TeamManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* No desktop, abrir uma ficha é mudar de página: a lista sai da frente
-          em vez de ficar por baixo de uma janela. No telemóvel a persiana sobe
-          por cima e a lista continua onde estava. */}
-      <div className={ehDesktop && isDetailModalOpen ? 'hidden' : 'space-y-6'}>
-      {/* Header com título removido a pedido do utilizador */}
-      {isCoachOrAdmin && (
-        <div className="flex items-center justify-end">
+      <div className="space-y-6">
+      {/*
+        Cabeçalho do Plantel (ecrã 3a): a sobrancelha conta o plantel e diz a
+        época, e a ação de adicionar é um botão redondo ao lado do título em
+        vez de uma barra própria em cima de tudo.
+      */}
+      <CabecalhoEcra
+        titulo="Plantel"
+        sobrancelha={`${totalCount} ${totalCount === 1 ? 'membro' : 'membros'}${epoca ? ` · época ${epoca}` : ''}`}
+        className="mb-1"
+        acoes={isCoachOrAdmin ? (
           <button
-            onClick={openCreateModal}
-            className="flex items-center space-x-2 bg-csc-dark text-white px-4 py-2.5 rounded-xl font-bold hover:bg-csc-dark/80 transition-colors shadow-md shrink-0 text-xs sm:text-sm cursor-pointer active:scale-95"
+            type="button"
+            onClick={() => { triggerHaptic('light'); openCreateModal() }}
+            aria-label="Adicionar membro ao plantel"
+            className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center shrink-0 cursor-pointer
+              transition-transform duration-150 active:scale-97
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
-            <Plus size={18} />
-            <span>Adicionar Membro</span>
+            <Plus size={19} />
           </button>
-        </div>
-      )}
+        ) : undefined}
+      />
 
       {/* Banner de Sugestões Inteligentes de Fusão de Fichas — só admin, que é
           quem pode chamar admin_merge_profiles */}
       {isAdmin && associationSuggestions.length > 0 && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-amber-50 to-emerald-500/10 border-2 border-amber-300 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <Sparkles size={18} className="text-amber-600 animate-pulse" />
-              <h3 className="text-sm font-black text-gray-900">
-                Sugestões de Associação Automática ({associationSuggestions.length} conta{associationSuggestions.length > 1 ? 's' : ''} detetada{associationSuggestions.length > 1 ? 's' : ''})
-              </h3>
-            </div>
-            <span className="text-[10px] bg-amber-200 text-amber-900 font-extrabold px-2 py-0.5 rounded-full">
-              Smart Link
-            </span>
+        <div className="cartao-simples bg-csc-gold/10 border-csc-gold/30 p-3.5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles size={15} className="text-csc-gold shrink-0" />
+            <h3 className="font-display font-extrabold text-[9.5px] tracking-[0.14em] uppercase text-csc-gold">
+              Mesmo email, por ligar ({associationSuggestions.length})
+            </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="space-y-2">
             {associationSuggestions.map(({ user: u, player: pl }, idx) => (
-              <div key={idx} className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs flex items-center justify-between gap-3">
+              <div key={idx} className="bg-white/5 border border-white/10 p-3 rounded-2xl flex items-center justify-between gap-2.5">
                 <div className="min-w-0">
-                  <p className="text-xs font-black text-gray-900 truncate">
-                    👤 Conta: {u.name} <span className="text-gray-400 font-normal">({u.email})</span>
+                  <p className="font-display font-bold text-[12px] text-white truncate">
+                    {u.name} <span className="text-white/40 font-normal">{u.email}</span>
                   </p>
-                  <p className="text-[11px] text-amber-900 font-bold truncate mt-0.5">
-                    ⚽ Ficha: #{pl.jersey_number} {pl.name} {pl.shirt_name ? `(${pl.shirt_name})` : ''}
+                  <p className="text-[10.5px] text-csc-gold font-bold truncate mt-0.5">
+                    nº {pl.jersey_number} {pl.name}{pl.shirt_name ? ` (${pl.shirt_name})` : ''}
                   </p>
                 </div>
                 <button
                   type="button"
                   disabled={associatingLoading}
                   onClick={() => handleConfirmAssociate(pl, u, false)}
-                  className="px-3 py-1.5 bg-csc-dark hover:bg-csc-dark/85 text-white text-xs font-black rounded-lg shrink-0 shadow-xs cursor-pointer active:scale-95 flex items-center gap-1"
+                  className="min-h-11 px-3.5 rounded-[18px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[11px]
+                    flex items-center gap-1.5 shrink-0 cursor-pointer transition-transform duration-150 active:scale-97
+                    disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                 >
                   <Link2 size={13} />
-                  <span>Fundir</span>
+                  <span>Ligar</span>
                 </button>
               </div>
             ))}
@@ -814,158 +999,169 @@ const TeamManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Barra de Pesquisa + Filtro de Posição + Alternador de Vista (Posicionada Acima dos Cards) */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-3.5 sm:p-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-          {/* Pesquisa */}
-          <div className="flex-1 relative">
-            <Search size={16} className="absolute left-3.5 top-3 text-gray-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Pesquisar por nome, nome na camisola, posição ou nº camisola..."
-              className="w-full pl-9.5 pr-4 py-2 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
-            />
-          </div>
-
-          {/* Filtro por Posição & Alternador de Vista */}
-          <div className="flex gap-2 items-center flex-wrap shrink-0 justify-between sm:justify-end">
-            <select
-              value={positionFilter}
-              onChange={(e) => setPositionFilter(e.target.value)}
-              className="px-3.5 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-bold text-gray-700 max-w-[190px] shadow-2xs cursor-pointer"
+      {/*
+        Os três mosaicos de estado (ecrã 3a), que também são o filtro. O
+        "Total" saiu: era o quarto mosaico e é a soma dos outros três — e com
+        quatro numa coluna de 480px cada um ficava com 100px. Toca-se outra vez
+        no mosaico aceso para voltar a ver todos.
+      */}
+      <div className="grid grid-cols-3 gap-2">
+        {([
+          ['active', 'Aptos', activeCount, 'text-csc-verde-texto', 'bg-csc-light/18 border-csc-light/45'],
+          ['injured', 'Lesionados', injuredCount, 'text-csc-vermelho-texto', 'bg-csc-red/16 border-csc-red/40'],
+          ['inactive', 'Inativos', inactiveCount, 'text-white/60', 'bg-white/12 border-white/25'],
+        ] as const).map(([valor, etiqueta, contagem, cor, fundoAtivo]) => {
+          const ativo = statusFilter === valor
+          return (
+            <button
+              key={valor}
+              type="button"
+              onClick={() => { triggerHaptic('selection'); setStatusFilter(ativo ? 'all' : valor) }}
+              aria-pressed={ativo}
+              className={`min-h-14 px-2.5 py-2.5 rounded-2xl border text-left cursor-pointer
+                transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                  ativo ? fundoAtivo : 'bg-white/5 border-white/10'
+                }`}
             >
-              <option value="all">Todas as Posições</option>
+              <span className={`block font-display font-extrabold text-[8px] tracking-[0.1em] uppercase leading-tight ${cor}`}>
+                {etiqueta}
+              </span>
+              <span className="block font-display font-extrabold text-[19px] text-white mt-1 tabular-nums">
+                {contagem}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Procurar, e a ordem por que a lista sai. */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Procurar no plantel"
+            aria-label="Procurar no plantel"
+            className={`${CAMPO} pl-9.5`}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
+          aria-label={temFiltros ? 'Filtros e apresentação (ativos)' : 'Filtros e apresentação'}
+          className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
+            transition-transform duration-150 active:scale-97
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+              temFiltros
+                ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                : 'bg-white/10 border-white/15 text-white/75'
+            }`}
+        >
+          <SlidersHorizontal size={16} />
+        </button>
+      </div>
+
+      {temFiltros && (
+        <button
+          type="button"
+          onClick={limparFiltros}
+          className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
+            bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
+        >
+          <SlidersHorizontal size={14} className="text-csc-gold shrink-0" />
+          <span className="flex-1 font-display font-bold text-[11px] text-white/80">
+            {resumoFiltros} · {filteredProfiles.length} {filteredProfiles.length === 1 ? 'membro' : 'membros'}
+          </span>
+          <span className="font-display font-bold text-[11px] text-csc-gold">Limpar</span>
+        </button>
+      )}
+
+      <BottomSheet
+        isOpen={filtrosAbertos}
+        onClose={() => setFiltrosAbertos(false)}
+        title="Plantel"
+        description="Como filtrar e como ordenar"
+        icon={
+          <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
+            <SlidersHorizontal size={17} />
+          </div>
+        }
+        footer={
+          <>
+            <Botao aparencia="vidro" onClick={limparFiltros} disabled={!temFiltros}>
+              Limpar
+            </Botao>
+            <Botao onClick={() => setFiltrosAbertos(false)}>
+              Ver {filteredProfiles.length} {filteredProfiles.length === 1 ? 'membro' : 'membros'}
+            </Botao>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className={ETIQUETA} htmlFor="plantel-posicao">Posição</label>
+            <select
+              id="plantel-posicao"
+              value={positionFilter}
+              onChange={e => setPositionFilter(e.target.value)}
+              className={CAMPO}
+            >
+              <option value="all">Todas as posições</option>
               {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
             </select>
+          </div>
 
-            {/* Alternador Duplo de Vista (Lista vs Cartas) */}
-            <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0">
-              <button
-                type="button"
+          <div>
+            <p className={ETIQUETA}>Ordenar por</p>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ['numero', 'Número'],
+                ['jga', 'J · G · A'],
+                ['nome', 'Nome'],
+              ] as const).map(([valor, etiqueta]) => (
+                <Pastilha
+                  key={valor}
+                  ativa={ordem === valor}
+                  onClick={() => { triggerHaptic('selection'); setOrdem(valor) }}
+                >
+                  {etiqueta}
+                </Pastilha>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className={ETIQUETA}>Apresentação</p>
+            <div className="flex flex-wrap gap-2">
+              <Pastilha
+                ativa={viewMode === 'list'}
                 onClick={() => {
+                  triggerHaptic('selection')
                   setViewMode('list')
                   localStorage.setItem('csc_team_view_mode', 'list')
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                  viewMode === 'list'
-                    ? 'bg-white text-csc-dark shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800'
-                }`}
-                title="Vista em Lista Compacta"
               >
-                <List size={15} />
-                <span className="hidden sm:inline">Lista</span>
-              </button>
-
-              <button
-                type="button"
+                <List size={14} />
+                Lista
+              </Pastilha>
+              <Pastilha
+                ativa={viewMode === 'cards'}
                 onClick={() => {
+                  triggerHaptic('selection')
                   setViewMode('cards')
                   localStorage.setItem('csc_team_view_mode', 'cards')
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                  viewMode === 'cards'
-                    ? 'bg-white text-csc-dark shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800'
-                }`}
-                title="Vista em Cartas (FUT)"
               >
-                <LayoutGrid size={15} />
-                <span className="hidden sm:inline">Cartas</span>
-              </button>
+                <LayoutGrid size={14} />
+                Cartas
+              </Pastilha>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Cards de Status (Filtram ao Clicar) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* Total Plantel (Todos) */}
-        <button
-          type="button"
-          onClick={() => setStatusFilter('all')}
-          className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
-            statusFilter === 'all'
-              ? 'bg-csc-dark border-csc-gold ring-2 ring-csc-gold shadow-md scale-102'
-              : 'bg-csc-dark border-white/10 hover:border-white/25 hover:bg-white/5'
-          }`}
-        >
-          <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
-            statusFilter === 'all' ? 'bg-white/15 text-csc-gold' : 'bg-white/10 text-white/70'
-          }`}>
-            {totalCount}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-white/70 font-bold uppercase tracking-wider">Total Plantel</p>
-            <p className="text-sm font-black text-white leading-tight">Membros</p>
-          </div>
-        </button>
-
-        {/* Ativos / Disponíveis */}
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
-          className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
-            statusFilter === 'active'
-              ? 'bg-csc-dark border-emerald-400 ring-2 ring-emerald-400 shadow-md scale-102'
-              : 'bg-csc-dark border-white/10 hover:border-emerald-400/40 hover:bg-emerald-500/5'
-          }`}
-        >
-          <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
-            statusFilter === 'active' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-800'
-          }`}>
-            {activeCount}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-emerald-300 font-bold uppercase tracking-wider">Disponíveis</p>
-            <p className="text-sm font-black text-emerald-200 leading-tight">Ativos</p>
-          </div>
-        </button>
-
-        {/* Lesionados / Dpto Médico */}
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'injured' ? 'all' : 'injured')}
-          className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
-            statusFilter === 'injured'
-              ? 'bg-csc-dark border-red-400 ring-2 ring-red-400 shadow-md scale-102'
-              : 'bg-csc-dark border-white/10 hover:border-red-400/40 hover:bg-red-500/5'
-          }`}
-        >
-          <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
-            statusFilter === 'injured' ? 'bg-red-600 text-white animate-pulse' : 'bg-red-100 text-red-800'
-          }`}>
-            {injuredCount}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-red-300 font-bold uppercase tracking-wider">Dpto. Médico</p>
-            <p className="text-sm font-black text-red-200 leading-tight">Lesionados</p>
-          </div>
-        </button>
-
-        {/* Inativos */}
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive')}
-          className={`p-3.5 sm:p-4 rounded-2xl border-2 transition-all flex items-center gap-3 text-left cursor-pointer shadow-2xs ${
-            statusFilter === 'inactive'
-              ? 'bg-csc-dark border-white/40 ring-2 ring-white/40 shadow-md scale-102'
-              : 'bg-csc-dark border-white/10 hover:border-white/25 hover:bg-white/5'
-          }`}
-        >
-          <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center font-black text-base shrink-0 transition-colors ${
-            statusFilter === 'inactive' ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-600'
-          }`}>
-            {inactiveCount}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] text-white/70 font-bold uppercase tracking-wider">Indisponíveis</p>
-            <p className="text-sm font-black text-white/80 leading-tight">Inativos</p>
-          </div>
-        </button>
-      </div>
+      </BottomSheet>
 
       {/* Profiles View */}
       {loading ? (
@@ -979,378 +1175,213 @@ const TeamManagementPage: React.FC = () => {
           <p className="text-xs text-white/65 mt-1">Ajuste os filtros de pesquisa ou adicione um novo membro.</p>
         </div>
       ) : viewMode === 'list' ? (
-        /* VISTA 1: LISTA MODERNA & ELEGANTE (Mobile-first) */
-        <div className="space-y-2.5">
-          {filteredProfiles.map((person) => {
-            const age = calculateAge(person.birth_date)
-            const roles = extractRolesFromProfile(person)
-            // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
-            // omissão de parsePositions(null) mostrava sempre "Médio Defensivo".
-            const positions = roles.includes('player') ? parsePositions(person.position) : []
+        /*
+          Lista do plantel (ecrã 3a): número, alcunha, nome, posições e a
+          coluna J · G · A. Cada linha é um `button` — abre a ficha, e quem
+          navega por teclado tem de lá chegar (ver a convenção no CLAUDE.md).
 
-            return (
-              <div
-                key={person.id}
-                onClick={() => openDetailModal(person)}
-                className="bg-csc-dark text-white rounded-2xl border border-white/10 shadow-2xs hover:shadow-md hover:border-csc-gold/60 transition-all p-3.5 sm:p-4 cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-              >
-                {/* Top/Main Section: Jersey Number + Photo + Name + Positions */}
-                <div className="flex items-center gap-3.5 min-w-0">
-                  {/* Photo with Number Overlay */}
-                  <div className="relative shrink-0">
-                    {person.photo_url ? (
-                      <img
-                        src={person.photo_url}
-                        alt={person.name}
-                        className="w-13 h-13 rounded-2xl object-cover border-2 border-csc-dark/10 shadow-xs group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-csc-dark to-emerald-900 text-white flex items-center justify-center font-black text-lg shadow-xs group-hover:scale-105 transition-transform">
-                        {person.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+          As ações de gestão saíram da linha. Eram quatro alvos de 15px dentro
+          de uma linha que já era um alvo, e o dedo acertava na ficha quando
+          queria editar; agora vivem na ficha do atleta, que é onde o handoff
+          as põe (3b, "Gestão do atleta"). Fica na linha só a pastilha de
+          estado, que o treinador usa a toda a hora para marcar um lesionado.
+        */
+        <div className="space-y-4">
+          {([
+            ['', perfisAtivos],
+            ['Inativos', perfisInativos],
+          ] as const).map(([titulo, grupo]) => (
+            grupo.length === 0 ? null : (
+              <div key={titulo || 'plantel'} className="space-y-2">
+                {titulo && (
+                  <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/45 pt-1">
+                    {titulo}
+                  </p>
+                )}
 
-                    {/* Jersey Badge Pin */}
-                    {person.jersey_number ? (
-                      <span className="absolute -bottom-1.5 -right-1.5 bg-csc-dark text-csc-gold font-black text-[11px] px-1.5 py-0.2 rounded-md border-2 border-white shadow-xs">
-                        #{person.jersey_number}
-                      </span>
-                    ) : null}
-                  </div>
+                {grupo.map(person => {
+                  const roles = extractRolesFromProfile(person)
+                  // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
+                  // omissão de parsePositions(null) mostrava sempre "Médio Defensivo".
+                  const positions = roles.includes('player') ? parsePositions(person.position) : []
+                  const e = jga(person.id)
+                  const inativo = person.status === 'inactive'
+                  const nomeCurto = person.shirt_name || person.nickname || person.name
 
-                  {/* Name + Positions + Details */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-black text-white text-sm sm:text-base leading-tight group-hover:text-csc-gold transition-colors">
-                        {person.name}
-                      </h3>
-
-                      {(person.shirt_name || person.nickname) && (
-                        <span className="text-[11px] font-black text-amber-950 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
-                          <span>👕</span>
-                          <span className="uppercase">{person.shirt_name || person.nickname}</span>
-                        </span>
-                      )}
-
-                      {/* Role Badges */}
-                      {roles.map((r) => (
-                        <span
-                          key={r}
-                          className={`text-[9px] font-black px-1.5 py-0.2 rounded border ${
-                            r === 'admin'
-                              ? 'bg-amber-100 text-amber-900 border-amber-300'
-                              : r === 'coach'
-                              ? 'bg-blue-100 text-blue-800 border-blue-200'
-                              : 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                          }`}
-                        >
-                          {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
-                        </span>
-                      ))}
-
-                      {/* Conta de login associada — só o admin precisa de ver isto */}
-                      {isAdmin && (
-                        linkedProfileIds.has(person.id) ? (
-                          <span
-                            className="text-[9px] font-black px-1.5 py-0.2 rounded border bg-sky-100 text-sky-800 border-sky-200 flex items-center gap-0.5"
-                            title="Esta ficha tem conta de login associada"
-                          >
-                            <UserCheck size={9} /> Conta
-                          </span>
-                        ) : (
-                          <span
-                            className="text-[9px] font-black px-1.5 py-0.2 rounded border bg-gray-100 text-gray-500 border-gray-200"
-                            title="Ninguém fez login associado a esta ficha ainda"
-                          >
-                            Sem Conta
-                          </span>
-                        )
-                      )}
-                    </div>
-
-                    {/* Subtitle: Positions + Info */}
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-xs">
-                      {positions.map((pos, idx) => (
-                        <span
-                          key={idx}
-                          className="bg-amber-50/90 text-amber-900 border border-amber-200/80 text-[10px] font-extrabold px-2 py-0.5 rounded-md shadow-2xs"
-                        >
-                          {pos}
-                        </span>
-                      ))}
-
-                      {person.kit_size && (
-                        <span className="text-[10px] text-white/60 font-semibold bg-white/10 px-1.5 py-0.5 rounded">
-                          Tam: {person.kit_size}
-                        </span>
-                      )}
-
-                      {person.member_number && (
-                        <span className="text-[10px] text-white/65 font-medium hidden sm:inline">
-                          • Sócio nº {person.member_number}
-                        </span>
-                      )}
-
-                      {age && (
-                        <span className="text-[10px] text-white/65 font-medium">
-                          • {age} anos
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right / Bottom Action Bar */}
-                <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10">
-                  {/* Status Indicator Interativo */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleTogglePlayerClinicalStatus(person, e)}
-                    className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-2xs cursor-pointer hover:opacity-90 active:scale-95 transition-all ${
-                      person.status === 'active' ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200' :
-                      person.status === 'injured' ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse hover:bg-red-200' :
-                      'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
-                    }`}
-                    title="Clique para alternar o estado de aptidão física (Apto / Lesionado)"
-                  >
-                    {person.status === 'active' ? <CheckCircle2 size={11}/> :
-                     person.status === 'injured' ? <HeartPulse size={11}/> :
-                     <XCircle size={11}/>}
-                    <span>{person.status === 'active' ? 'Apto' : person.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
-                  </button>
-
-                  {/* Actions for Coach / Admin */}
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    {isCoachOrAdmin && (
-                      <>
-                        {isAdmin && !linkedProfileIds.has(person.id) && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openAssociateModal(person)
-                            }}
-                            className="p-1.5 text-blue-300 hover:text-blue-200 rounded-lg hover:bg-blue-500/10 transition-colors"
-                            title="Fundir com outra ficha"
-                          >
-                            <Link2 size={15} />
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openEditModal(person)
-                          }}
-                          className="p-1.5 text-white/70 hover:text-csc-gold rounded-lg hover:bg-white/10 transition-colors"
-                          title="Editar Ficha"
-                        >
-                          <Edit2 size={15} />
-                        </button>
-
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteMember(person.id, person.name)
-                            }}
-                            className="p-1.5 text-white/60 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
-                            title="Eliminar Membro"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        )}
-                      </>
-                    )}
-
-                    <ChevronRight size={16} className="text-white/25 group-hover:text-csc-gold group-hover:translate-x-0.5 transition-all ml-1" />
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        /* VISTA 3: CARTAS VERTICAIS ESTILO FUT / TRADING CARDS */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredProfiles.map((person) => {
-            const age = calculateAge(person.birth_date)
-            // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
-            // omissão de parsePositions(null) mostrava sempre "Médio Defensivo".
-            const positions = extractRolesFromProfile(person).includes('player') ? parsePositions(person.position) : []
-
-            return (
-              <div
-                key={person.id}
-                onClick={() => openDetailModal(person)}
-                className={`bg-csc-dark text-white rounded-2xl shadow-sm border-2 transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer flex flex-col justify-between overflow-hidden group relative ${
-                  person.status === 'injured'
-                    ? 'border-red-400/50 ring-2 ring-red-400/20'
-                    : 'border-white/10 hover:border-csc-gold'
-                }`}
-              >
-                {/* Top Card Gradient Background Accent */}
-                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-csc-gold/10 to-transparent pointer-events-none" />
-
-                <div className="p-4 relative z-10 flex flex-col items-center text-center space-y-3">
-                  {/* Top Bar: Number left, Status right */}
-                  <div className="w-full flex justify-between items-center">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xl font-black text-csc-gold tracking-tighter">
-                        {person.jersey_number ? `#${person.jersey_number}` : '-'}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => handleTogglePlayerClinicalStatus(person, e)}
-                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 cursor-pointer hover:opacity-90 active:scale-95 transition-all ${
-                        person.status === 'active' ? 'bg-green-100 text-green-800 hover:bg-green-200' :
-                        person.status === 'injured' ? 'bg-red-100 text-red-800 animate-pulse hover:bg-red-200' :
-                        'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                      title="Clique para alternar o estado de aptidão física (Apto / Lesionado)"
-                    >
-                      {person.status === 'active' ? <CheckCircle2 size={10}/> :
-                       person.status === 'injured' ? <HeartPulse size={10}/> :
-                       <XCircle size={10}/>}
-                      <span>{person.status === 'active' ? 'Apto' :
-                       person.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
-                    </button>
-                  </div>
-
-                  {/* Centered Large Photo */}
-                  <div className="relative my-1">
-                    {person.photo_url ? (
-                      <img
-                        src={person.photo_url}
-                        alt={person.name}
-                        className="w-20 h-20 rounded-2xl object-cover border-2 border-csc-gold shadow-md group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-csc-dark to-csc-light text-white flex items-center justify-center font-black text-2xl shadow-md border-2 border-csc-gold group-hover:scale-105 transition-transform">
-                        {person.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Nome da Camisola como título da carta */}
-                  <div className="w-full">
-                    <h3 className="font-black text-white text-base leading-tight uppercase tracking-wide truncate group-hover:text-csc-gold transition-colors" title={person.name}>
-                      {person.shirt_name || person.nickname || person.name}
-                    </h3>
-
-                    {/* Positions Ribbon */}
-                    <div className="flex flex-wrap justify-center gap-1 mt-1.5">
-                      {positions.map((pos, idx) => (
-                        <span
-                          key={idx}
-                          className="bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-extrabold px-2 py-0.5 rounded-md shadow-2xs"
-                        >
-                          {pos}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Role Badges */}
-                    <div className="flex flex-wrap justify-center gap-1 mt-2">
-                      {extractRolesFromProfile(person).map((r) => (
-                        <span
-                          key={r}
-                          className={`text-[9px] font-black px-2 py-0.5 rounded border ${
-                            r === 'admin'
-                              ? 'bg-csc-gold text-csc-dark border-amber-300'
-                              : r === 'coach'
-                              ? 'bg-blue-500 text-white border-blue-600'
-                              : 'bg-emerald-700 text-white border-emerald-800'
-                          }`}
-                        >
-                          {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
-                        </span>
-                      ))}
-
-                      {/* Conta de login associada — só o admin precisa de ver isto */}
-                      {isAdmin && (
-                        linkedProfileIds.has(person.id) ? (
-                          <span
-                            className="text-[9px] font-black px-2 py-0.5 rounded border bg-sky-100 text-sky-800 border-sky-200 flex items-center gap-0.5"
-                            title="Esta ficha tem conta de login associada"
-                          >
-                            <UserCheck size={9} /> Conta
-                          </span>
-                        ) : (
-                          <span
-                            className="text-[9px] font-black px-2 py-0.5 rounded border bg-white/10 text-white/50 border-white/15"
-                            title="Ninguém fez login associado a esta ficha ainda"
-                          >
-                            Sem Conta
-                          </span>
-                        )
-                      )}
-                    </div>
-
-                    {/* Member & Age Info */}
-                    <p className="text-[10px] text-white/65 font-semibold mt-1">
-                      {person.kit_size ? `Tam: ${person.kit_size} • ` : ''}{person.member_number ? `Sócio nº ${person.member_number}` : ''} {age ? `• ${age} anos` : ''}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Card Footer */}
-                <div className="bg-white/5 px-3.5 py-2.5 border-t border-white/10 flex items-center justify-between text-xs">
-                  <span className="text-xs font-black text-csc-gold group-hover:underline flex items-center gap-1">
-                    Ver Ficha Completa
-                  </span>
-
-                  {isCoachOrAdmin && (
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      {isAdmin && !linkedProfileIds.has(person.id) && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openAssociateModal(person)
-                          }}
-                          className="p-1.5 text-blue-300 hover:text-blue-200 rounded-lg hover:bg-blue-500/10 transition-colors"
-                          title="Fundir com outra ficha"
-                        >
-                          <Link2 size={14} />
-                        </button>
-                      )}
-
+                  return (
+                    <div key={person.id} className="cartao-simples flex items-stretch overflow-hidden">
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openEditModal(person)
-                        }}
-                        className="p-1.5 text-white/70 hover:text-csc-gold rounded-lg hover:bg-white/10 transition-colors"
-                        title="Editar Ficha"
+                        onClick={() => { triggerHaptic('light'); openDetailModal(person) }}
+                        aria-label={`Ver a ficha de ${person.name}`}
+                        className="flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2.5 text-left cursor-pointer
+                          transition-transform duration-150 active:scale-[0.99]
+                          focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold"
                       >
-                        <Edit2 size={14} />
+                        <span className="w-8 h-8 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 text-csc-gold font-display font-extrabold text-[11px] flex items-center justify-center shrink-0 tabular-nums">
+                          {person.jersey_number ?? '–'}
+                        </span>
+
+                        {person.photo_url ? (
+                          <img
+                            src={person.photo_url}
+                            alt=""
+                            className="w-9 h-9 rounded-xl object-cover shrink-0"
+                          />
+                        ) : (
+                          <span className="w-9 h-9 rounded-xl bg-white/10 text-white/60 flex items-center justify-center font-display font-black text-[13px] shrink-0">
+                            {(person.name || '?').charAt(0).toUpperCase()}
+                          </span>
+                        )}
+
+                        <span className="flex-1 min-w-0">
+                          <span className="block font-display font-black text-[13px] text-white truncate">
+                            {nomeCurto}
+                          </span>
+                          <span className="block text-[10px] text-white/45 truncate mt-0.5">
+                            {nomeCurto === person.name ? '' : `${person.name} · `}
+                            {positions.length > 0
+                              ? positions.map(pos => normalizePositionName(pos)).join(' · ')
+                              : roles.includes('coach') ? 'Treinador' : roles.includes('admin') ? 'Direção' : ''}
+                          </span>
+                        </span>
+
+                        {/* J · G · A — os inativos não jogaram esta época. */}
+                        {inativo ? (
+                          <span className="text-[9.5px] text-white/35 italic shrink-0">sem jogos</span>
+                        ) : (
+                          <span className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
+                            <span className="font-display font-bold text-[11px] text-white/55">{e.j}<span className="text-white/30">J</span></span>
+                            <span className="font-display font-black text-[11px] text-csc-gold">{e.g}<span className="opacity-60">G</span></span>
+                            <span className="font-display font-black text-[11px] text-csc-azul-texto">{e.a}<span className="opacity-60">A</span></span>
+                          </span>
+                        )}
                       </button>
 
-                      {isAdmin && (
+                      {/* O estado é o único botão que fica na linha: é o que o
+                          treinador carrega a toda a hora. */}
+                      <button
+                        type="button"
+                        onClick={e2 => handleTogglePlayerClinicalStatus(person, e2)}
+                        disabled={!isCoachOrAdmin}
+                        aria-label={`${person.name} está ${person.status === 'active' ? 'apto' : person.status === 'injured' ? 'lesionado' : 'inativo'}${isCoachOrAdmin ? '. Alternar entre apto e lesionado' : ''}`}
+                        title={isCoachOrAdmin ? 'Alternar entre apto e lesionado' : undefined}
+                        className={`w-11 flex items-center justify-center shrink-0 border-l border-white/8
+                          transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
+                            isCoachOrAdmin ? 'cursor-pointer active:scale-97' : 'cursor-default'
+                          } ${
+                            person.status === 'active' ? 'text-csc-verde-texto'
+                              : person.status === 'injured' ? 'text-csc-vermelho-texto'
+                              : 'text-white/35'
+                          }`}
+                      >
+                        {person.status === 'active' ? <CheckCircle2 size={16} />
+                          : person.status === 'injured' ? <HeartPulse size={16} />
+                          : <XCircle size={16} />}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          ))}
+        </div>
+      ) : (
+        /*
+          Vista em cartas. Não está no handoff — que tem só a lista — mas é o
+          que a app já dava e foi decidido mantê-la, agora escolhida na
+          persiana de filtros em vez de num alternador sempre à vista.
+
+          Duas colunas, e não `sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4`:
+          os pontos de corte do Tailwind estão desligados nesta app, e olhavam
+          para a janela e não para a coluna de 480px.
+        */
+        <div className="space-y-4">
+          {([
+            ['', perfisAtivos],
+            ['Inativos', perfisInativos],
+          ] as const).map(([titulo, grupo]) => (
+            grupo.length === 0 ? null : (
+              <div key={titulo || 'plantel'} className="space-y-2">
+                {titulo && (
+                  <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/45 pt-1">
+                    {titulo}
+                  </p>
+                )}
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  {grupo.map(person => {
+                    const roles = extractRolesFromProfile(person)
+                    // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
+                    // omissão de parsePositions(null) mostrava sempre "Médio Defensivo".
+                    const positions = roles.includes('player') ? parsePositions(person.position) : []
+                    const e = jga(person.id)
+
+                    return (
+                      <div
+                        key={person.id}
+                        className={`cartao-simples overflow-hidden flex flex-col ${
+                          person.status === 'injured' ? 'border-csc-red/35' : ''
+                        }`}
+                      >
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteMember(person.id, person.name)
-                          }}
-                          className="p-1.5 text-white/60 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
-                          title="Eliminar Membro"
+                          onClick={() => { triggerHaptic('light'); openDetailModal(person) }}
+                          aria-label={`Ver a ficha de ${person.name}`}
+                          className="flex-1 p-3 flex flex-col items-center text-center gap-2 cursor-pointer
+                            transition-transform duration-150 active:scale-[0.99]
+                            focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold"
                         >
-                          <Trash2 size={14} />
+                          <span className="w-full flex items-center justify-between">
+                            <span className="font-display font-black text-[15px] text-csc-gold tabular-nums">
+                              {person.jersey_number ? `#${person.jersey_number}` : '–'}
+                            </span>
+                            <span
+                              className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                person.status === 'active' ? 'bg-csc-light'
+                                  : person.status === 'injured' ? 'bg-csc-red'
+                                  : 'bg-white/25'
+                              }`}
+                              aria-hidden="true"
+                            />
+                          </span>
+
+                          {person.photo_url ? (
+                            <img
+                              src={person.photo_url}
+                              alt=""
+                              className="w-16 h-16 rounded-2xl object-cover border border-csc-gold/45"
+                            />
+                          ) : (
+                            <span className="w-16 h-16 rounded-2xl bg-white/10 border border-csc-gold/45 text-white/70 flex items-center justify-center font-display font-black text-[22px]">
+                              {(person.name || '?').charAt(0).toUpperCase()}
+                            </span>
+                          )}
+
+                          <span className="w-full min-w-0">
+                            <span className="block font-display font-black text-[13px] text-white uppercase truncate">
+                              {person.shirt_name || person.nickname || person.name}
+                            </span>
+                            <span className="block text-[9.5px] text-white/45 truncate mt-0.5">
+                              {positions.length > 0
+                                ? positions.map(pos => normalizePositionName(pos)).join(' · ')
+                                : roles.includes('coach') ? 'Treinador' : roles.includes('admin') ? 'Direção' : ''}
+                            </span>
+                          </span>
+
+                          <span className="w-full flex items-baseline justify-center gap-2 tabular-nums border-t border-white/8">
+                            <span className="font-display font-bold text-[11px] text-white/55 pt-1.5">{e.j}<span className="text-white/30">J</span></span>
+                            <span className="font-display font-black text-[11px] text-csc-gold pt-1.5">{e.g}<span className="opacity-60">G</span></span>
+                            <span className="font-display font-black text-[11px] text-csc-azul-texto pt-1.5">{e.a}<span className="opacity-60">A</span></span>
+                          </span>
                         </button>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )
-          })}
+          ))}
         </div>
       )}
 
@@ -1369,191 +1400,197 @@ const TeamManagementPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="ficha-membro-titulo"
             tabIndex={-1}
-            className="bg-csc-dark text-white rounded-3xl max-w-4xl xl:max-w-5xl w-full p-6 lg:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border-2 border-amber-400/40 outline-none"
+            className="bg-csc-fundo text-white rounded-3xl w-full p-4 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/12 outline-none"
           >
             <button
               type="button"
               onClick={handleAttemptCloseFormModal}
               aria-label="Fechar"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center z-10 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
             >
-              <X size={19} className="stroke-[2.5]" />
+              <X size={18} />
             </button>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4 mb-5">
-              <div>
-                <h2 id="ficha-membro-titulo" className="text-2xl font-black text-white mb-0.5">
-                  {isEditing ? 'Editar Ficha do Membro' : 'Criar Ficha de Novo Membro'}
-                </h2>
-                <p className="text-xs text-white/70">
-                  Preencha os dados cadastrais, fiscais, morada, equipamento, contactos e anexe a documentação legal.
-                </p>
-              </div>
 
-              {/* Estado de Aptidão & Atividade no Cabeçalho */}
-              <div className="flex items-center gap-2 bg-white/10 p-1.5 rounded-2xl border border-white/10 self-start sm:self-auto shrink-0">
-                <span className="text-xs font-bold text-white/70 pl-1.5">Estado:</span>
-                <div className="flex rounded-xl p-0.5 bg-white/10 border border-white/10 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setFormStatus('active')}
-                    className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                      formStatus === 'active'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-white/70 hover:text-white'
-                    }`}
-                  >
-                    🟢 Apto
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormStatus('injured')}
-                    className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                      formStatus === 'injured'
-                        ? 'bg-red-600 text-white shadow-xs animate-pulse'
-                        : 'text-white/70 hover:text-white'
-                    }`}
-                  >
-                    🔴 Lesionado
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormStatus('inactive')}
-                    className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                      formStatus === 'inactive'
-                        ? 'bg-white/25 text-white shadow-xs'
-                        : 'text-white/70 hover:text-white'
-                    }`}
-                  >
-                    ⚪ Inativo
-                  </button>
-                </div>
-              </div>
+            {/*
+              Editar atleta (ecrã 3c). O painel era `bg-csc-dark`, o verde do
+              clube, e sobre o fundo preto lia-se como um erro; o título ficava
+              por baixo de um botão de fechar branco e redondo.
+
+              O estado passou para uma secção própria, a "2 · ESTADO" do
+              handoff, em vez de um segmentado espremido ao lado do título.
+            */}
+            <div className="border-b border-white/10 pb-3.5 mb-4 pr-12">
+              <p className="font-display font-extrabold text-[9px] tracking-[0.16em] uppercase text-csc-gold">
+                {isEditing ? 'Editar atleta' : 'Novo membro'}
+              </p>
+              <h2 id="ficha-membro-titulo" className="font-display font-black text-[20px] leading-tight text-white mt-0.5">
+                {isEditing ? (formName || 'Ficha do atleta') : 'Criar ficha'}
+              </h2>
+              {isEditing && formJerseyNumber !== '' && (
+                <p className="text-[11px] text-white/55 mt-0.5">nº {formJerseyNumber}</p>
+              )}
             </div>
 
-            <form onSubmit={handleSaveMember} className="space-y-6">
+            <form onSubmit={handleSaveMember} className="space-y-4">
+
+              {/* Estado — a secção 2 do handoff, aqui em primeiro porque é o
+                  que mais vezes se vem cá mudar. */}
+              <div className="cartao-simples p-4 space-y-2.5">
+                <h3 className={ETIQUETA}>Estado</h3>
+                <div className="grid grid-cols-3 gap-1 bg-white/6 p-1 rounded-2xl border border-white/10">
+                  {([
+                    ['active', 'Apto'],
+                    ['injured', 'Lesionado'],
+                    ['inactive', 'Inativo'],
+                  ] as const).map(([valor, etiqueta]) => (
+                    <button
+                      key={valor}
+                      type="button"
+                      onClick={() => setFormStatus(valor)}
+                      aria-pressed={formStatus === valor}
+                      className={`min-h-11 rounded-[14px] font-display font-black text-[11px] cursor-pointer
+                        transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
+                          formStatus === valor
+                            ? valor === 'injured'
+                              ? 'bg-csc-red text-white'
+                              : valor === 'inactive'
+                              ? 'bg-white/25 text-white'
+                              : 'bg-csc-light text-white'
+                            : 'text-white/55'
+                        }`}
+                    >
+                      {etiqueta}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10.5px] leading-relaxed text-white/55">
+                  Lesionado ou inativo sai dos treinos futuros; lesionado ainda pode ir a convívios.
+                </p>
+              </div>
               
               {/* 1. DADOS PESSOAIS & IDENTIFICAÇÃO FISCAL */}
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+              <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                   <Users size={14} className="text-csc-gold" />
                   <span>1. Identificação Pessoal & Fiscal</span>
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Nome Completo *</label>
+                    <label className={ETIQUETA}>Nome Completo *</label>
                     <input
                       type="text"
                       required
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="Ex: André Gomes Marques do Couto"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Nome na Camisola</label>
+                    <label className={ETIQUETA}>Nome na Camisola</label>
                     <input
                       type="text"
                       value={formShirtName}
                       onChange={(e) => setFormShirtName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="Ex: A. COUTO"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Data de Nascimento</label>
+                    <label className={ETIQUETA}>Data de Nascimento</label>
                     <input
                       type="date"
                       value={formBirthDate}
                       onChange={(e) => setFormBirthDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Nacionalidade</label>
+                    <label className={ETIQUETA}>Nacionalidade</label>
                     <input
                       type="text"
                       value={formNationality}
                       onChange={(e) => setFormNationality(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="Portuguesa"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Nº de Contribuinte (NIF)</label>
+                    <label className={ETIQUETA}>Nº de Contribuinte (NIF)</label>
                     <input
                       type="text"
                       value={formNif}
                       onChange={(e) => setFormNif(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="000 000 000"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Nº Cartão de Cidadão / Passaporte</label>
+                    <label className={ETIQUETA}>Nº Cartão de Cidadão / Passaporte</label>
                     <input
                       type="text"
                       value={formIdNumber}
                       onChange={(e) => setFormIdNumber(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="00000000"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Validade do Cartão de Cidadão</label>
+                    <label className={ETIQUETA}>Validade do Cartão de Cidadão</label>
                     <input
                       type="date"
                       value={formIdCardExpiry}
                       onChange={(e) => setFormIdCardExpiry(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                     />
                   </div>
                 </div>
               </div>
 
               {/* 2. MORADA & RESIDÊNCIA */}
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+              <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                   <FileText size={14} className="text-csc-gold" />
                   <span>2. Morada & Residência</span>
                 </h3>
 
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Morada (Rua, Nº e Andar)</label>
+                  <label className={ETIQUETA}>Morada (Rua, Nº e Andar)</label>
                   <input
                     type="text"
                     value={formAddress}
                     onChange={(e) => setFormAddress(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                    className={CAMPO}
                     placeholder="Rua e número da morada"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Código Postal</label>
+                    <label className={ETIQUETA}>Código Postal</label>
                     <input
                       type="text"
                       value={formPostalCode}
                       onChange={(e) => setFormPostalCode(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="0000-000"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Localidade</label>
+                    <label className={ETIQUETA}>Localidade</label>
                     <input
                       type="text"
                       value={formCity}
                       onChange={(e) => setFormCity(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="Cascais / Alcabideche"
                     />
                   </div>
@@ -1561,31 +1598,31 @@ const TeamManagementPage: React.FC = () => {
               </div>
 
               {/* 3. CONTACTOS */}
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+              <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                   <Phone size={14} className="text-csc-gold" />
                   <span>3. Contactos</span>
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Email *</label>
+                    <label className={ETIQUETA}>Email *</label>
                     <input
                       type="email"
                       required
                       value={formEmail}
                       onChange={(e) => setFormEmail(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="atleta@clube.pt"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Telemóvel</label>
+                    <label className={ETIQUETA}>Telemóvel</label>
                     <input
                       type="tel"
                       value={formPhone}
                       onChange={(e) => setFormPhone(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="912 345 678"
                     />
                   </div>
@@ -1593,7 +1630,7 @@ const TeamManagementPage: React.FC = () => {
               </div>
 
               {/* 4. DADOS DESPORTIVOS, EQUIPAMENTO & PAPEL */}
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+              <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <Shield size={14} className="text-csc-gold" />
@@ -1621,21 +1658,21 @@ const TeamManagementPage: React.FC = () => {
                   <label className="block text-xs font-bold text-white/70 mb-2">
                     Papel / Funções no Sistema (Selecione 1, 2 ou 3):
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-3 gap-2">
                     {/* Jogador */}
                     <button
                       type="button"
                       onClick={() => toggleRole('player')}
                       className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('player')
-                          ? 'bg-emerald-500/15 border-emerald-400 ring-2 ring-emerald-400/40 shadow-xs'
+                          ? 'bg-csc-light/15 border-csc-light/50'
                           : 'bg-white/5 border-white/10 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center justify-between w-full mb-1">
-                        <span className="text-base">⚽</span>
+                        <UserIcon size={15} className="text-csc-verde-texto" />
                         <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                          formRoles.includes('player') ? 'bg-emerald-600 text-white' : 'border border-white/20'
+                          formRoles.includes('player') ? 'bg-csc-light text-white' : 'border border-white/20'
                         }`}>
                           {formRoles.includes('player') && <Check size={12} className="stroke-[3]" />}
                         </div>
@@ -1650,14 +1687,14 @@ const TeamManagementPage: React.FC = () => {
                       onClick={() => toggleRole('coach')}
                       className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('coach')
-                          ? 'bg-blue-500/15 border-blue-400 ring-2 ring-blue-400/40 shadow-xs'
+                          ? 'bg-csc-blue/18 border-csc-blue/50'
                           : 'bg-white/5 border-white/10 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center justify-between w-full mb-1">
-                        <span className="text-base">📋</span>
+                        <ClipboardList size={15} className="text-csc-azul-texto" />
                         <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                          formRoles.includes('coach') ? 'bg-blue-600 text-white' : 'border border-white/20'
+                          formRoles.includes('coach') ? 'bg-csc-blue text-white' : 'border border-white/20'
                         }`}>
                           {formRoles.includes('coach') && <Check size={12} className="stroke-[3]" />}
                         </div>
@@ -1672,12 +1709,12 @@ const TeamManagementPage: React.FC = () => {
                       onClick={() => toggleRole('admin')}
                       className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('admin')
-                          ? 'bg-amber-500/15 border-csc-gold ring-2 ring-csc-gold/40 shadow-xs'
+                          ? 'bg-csc-gold/15 border-csc-gold/50'
                           : 'bg-white/5 border-white/10 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center justify-between w-full mb-1">
-                        <span className="text-base">🛡️</span>
+                        <Shield size={15} className="text-csc-gold" />
                         <div className={`w-4 h-4 rounded flex items-center justify-center ${
                           formRoles.includes('admin') ? 'bg-white/10 text-csc-gold' : 'border border-white/20'
                         }`}>
@@ -1691,26 +1728,26 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 4.3 Camisola & Tamanho de Equipamento */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/10">
+                <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-white/10">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Nº da Camisola</label>
+                    <label className={ETIQUETA}>Nº da Camisola</label>
                     <input
                       type="number"
                       min="1"
                       max="99"
                       value={formJerseyNumber}
                       onChange={(e) => setFormJerseyNumber(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="Ex: 10"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Tamanho Equipamento</label>
+                    <label className={ETIQUETA}>Tamanho Equipamento</label>
                     <select
                       value={formKitSize}
                       onChange={(e) => setFormKitSize(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-bold text-gray-900"
+                      className={CAMPO}
                     >
                       <option value="S">S</option>
                       <option value="M">M</option>
@@ -1723,86 +1760,168 @@ const TeamManagementPage: React.FC = () => {
               </div>
 
               {/* 5. DADOS BANCÁRIOS & QUOTAS */}
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+              <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                   <Shield size={14} className="text-csc-gold" />
                   <span>5. Dados Bancários & Quotas</span>
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">IBAN (Débito Direto / Quotas)</label>
+                    <label className={ETIQUETA}>IBAN (Débito Direto / Quotas)</label>
                     <input
                       type="text"
                       value={formIban}
                       onChange={(e) => setFormIban(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-mono text-gray-900"
+                      className={`${CAMPO} font-mono`}
                       placeholder="PT50 0000 0000 0000 0000 0"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Nº de Sócio do Clube</label>
+                    <label className={ETIQUETA}>Nº de Sócio do Clube</label>
                     <input
                       type="text"
                       value={formMemberNumber}
                       onChange={(e) => setFormMemberNumber(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="Ex: 1420"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* 6. SAÚDE & EMERGÊNCIA */}
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+              {/*
+                Quotas deste atleta (ecrã 3c). A janela em que ele paga quota
+                e os meses em que está dispensado.
+
+                Não é uma definição do clube: as datas recortam a janela do
+                atleta dentro da época, e o `getPlayerQuotaMonths` já as
+                respeita — só não havia sítio nenhum na app para as preencher,
+                e ficavam a inferir-se do estado do perfil. Os meses
+                dispensados vivem em `quota_exemptions`, criada na fase 1 e
+                até agora sem uso.
+              */}
+              <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                  <HeartPulse size={14} className="text-red-400" />
-                  <span>6. Saúde & Contacto de Emergência</span>
+                  <Landmark size={14} className="text-csc-gold" />
+                  <span>6. Quotas deste atleta</span>
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Contacto de Emergência (Nome / Relação)</label>
+                    <label className={ETIQUETA} htmlFor="quota-inicio">Início de atividade</label>
+                    <input
+                      id="quota-inicio"
+                      type="date"
+                      value={formQuotaStart}
+                      onChange={e => setFormQuotaStart(e.target.value)}
+                      className={CAMPO}
+                    />
+                  </div>
+                  <div>
+                    <label className={ETIQUETA} htmlFor="quota-fim">Fim de atividade</label>
+                    <input
+                      id="quota-fim"
+                      type="date"
+                      value={formQuotaEnd}
+                      onChange={e => setFormQuotaEnd(e.target.value)}
+                      className={CAMPO}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[10.5px] leading-relaxed text-white/50">
+                  Sem datas, a janela infere-se do estado: quem fica inativo deixa de gerar meses
+                  novos, mas mantém os que já venceram. Ao preencher o fim, as quotas seguintes
+                  deixam de ser devidas.
+                </p>
+
+                <div>
+                  <p className={ETIQUETA}>Meses dispensados de quota</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+                      const chave = String(m).padStart(2, '0')
+                      const dispensado = formMesesDispensados.includes(chave)
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('selection')
+                            setFormMesesDispensados(atual =>
+                              dispensado ? atual.filter(x => x !== chave) : [...atual, chave],
+                            )
+                          }}
+                          aria-pressed={dispensado}
+                          className={`min-h-11 px-3 rounded-[18px] border font-display font-black text-[11px] cursor-pointer
+                            transition-transform duration-150 active:scale-97
+                            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                              dispensado
+                                ? 'bg-csc-gold text-csc-tinta border-csc-gold'
+                                : 'bg-white/5 border-white/12 text-white/55'
+                            }`}
+                        >
+                          {MESES_CURTOS[m - 1]}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[10.5px] leading-relaxed text-white/50 mt-2">
+                    Dourado = dispensado, todos os anos. Os meses que o clube inteiro não paga
+                    definem-se no Financeiro, e não aqui.
+                  </p>
+                </div>
+              </div>
+              {/* 6. SAÚDE & EMERGÊNCIA */}
+              <div className="cartao-simples p-4 space-y-3.5">
+                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                  <HeartPulse size={14} className="text-red-400" />
+                  <span>7. Saúde & Contacto de Emergência</span>
+                </h3>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className={ETIQUETA}>Contacto de Emergência (Nome / Relação)</label>
                     <input
                       type="text"
                       value={formEmergencyName}
                       onChange={(e) => setFormEmergencyName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="Ex: Maria (Esposa)"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Telefone de Emergência</label>
+                    <label className={ETIQUETA}>Telefone de Emergência</label>
                     <input
                       type="tel"
                       value={formEmergencyPhone}
                       onChange={(e) => setFormEmergencyPhone(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO}
                       placeholder="960 000 000"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Notas Médicas / Alergias / Tipo Sanguíneo</label>
+                  <label className={ETIQUETA}>Notas Médicas / Alergias / Tipo Sanguíneo</label>
                   <textarea
                     value={formMedicalNotes}
                     onChange={(e) => setFormMedicalNotes(e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                    className={CAMPO}
                     placeholder="Ex: Alergia a anti-inflamatórios, Tipo O+, histórico de lesão no joelho direito..."
                   />
                 </div>
               </div>
 
               {/* 7. UPLOAD DE DOCUMENTOS & RGPD */}
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+              <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                   <FileText size={14} className="text-csc-gold" />
-                  <span>7. Documentos & Proteção de Dados (RGPD)</span>
+                  <span>8. Documentos & Proteção de Dados (RGPD)</span>
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3">
                   {/* Foto de Perfil */}
                   <div className="p-3 bg-white/5 border border-white/10 rounded-lg space-y-2">
                     <label className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
@@ -1816,7 +1935,7 @@ const TeamManagementPage: React.FC = () => {
                     {photoUrl && (
                       <div className="flex items-center gap-2 pt-1">
                         <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover" />
-                        <span className="text-[11px] text-green-700 font-bold">✓ Foto anexada</span>
+                        <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
                       </div>
                     )}
                   </div>
@@ -1832,7 +1951,7 @@ const TeamManagementPage: React.FC = () => {
                       className="text-xs w-full"
                     />
                     {idDocUrl && (
-                      <a href={idDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-blue-700 font-bold hover:underline flex items-center gap-1">
+                      <a href={idDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
                         <ExternalLink size={11} /> Ver Documento CC anexado
                       </a>
                     )}
@@ -1849,7 +1968,7 @@ const TeamManagementPage: React.FC = () => {
                       className="text-xs w-full"
                     />
                     {insuranceDocUrl && (
-                      <a href={insuranceDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-purple-700 font-bold hover:underline flex items-center gap-1">
+                      <a href={insuranceDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
                         <ExternalLink size={11} /> Ver Seguro anexado
                       </a>
                     )}
@@ -1866,7 +1985,7 @@ const TeamManagementPage: React.FC = () => {
                       className="text-xs w-full"
                     />
                     {medicalExamDocUrl && (
-                      <a href={medicalExamDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-emerald-700 font-bold hover:underline flex items-center gap-1">
+                      <a href={medicalExamDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-verde-texto font-bold hover:underline flex items-center gap-1">
                         <ExternalLink size={11} /> Ver Atestado anexado
                       </a>
                     )}
@@ -1880,10 +1999,10 @@ const TeamManagementPage: React.FC = () => {
                     id="gdpr_consent"
                     checked={formGdprConsent}
                     onChange={(e) => setFormGdprConsent(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 text-csc-dark rounded border-gray-300 focus:ring-csc-dark"
+                    className="mt-0.5 w-4 h-4 text-csc-dark rounded border-white/15 focus:ring-csc-dark"
                   />
                   <label htmlFor="gdpr_consent" className="text-xs text-white/70 font-medium cursor-pointer">
-                    Aceita que os seus dados sejam processados pela política de proteção de dados (RGPD) do Grupo Dramático e Sportivo de Cascais.
+                    Aceita que os seus dados sejam processados pela política de proteção de dados (RGPD) do {CLUBE_NOME}.
                   </label>
                 </div>
               </div>
@@ -1927,221 +2046,163 @@ const TeamManagementPage: React.FC = () => {
           className="border-2 border-amber-400/40"
         >
           <div className="space-y-6">
-            {/* Top Bar Header */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <div className="flex items-center gap-3">
-                <span className="w-10 h-10 rounded-2xl bg-csc-dark text-csc-gold font-black flex items-center justify-center text-lg shadow-sm border border-amber-300">
-                  {selectedProfile.jersey_number ? `#${selectedProfile.jersey_number}` : '⚽'}
+            {/* Fechar a persiana. */}
+            <button
+              type="button"
+              onClick={() => fecharFicha()}
+              aria-label="Fechar"
+              title="Fechar"
+              className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center z-30 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+            >
+              <X size={18} />
+            </button>
+
+            {/*
+              Ficha do atleta (ecrã 3b). A fotografia grande, o nome, o número
+              e o estado — e as posições logo a seguir, porque é o que se vem
+              cá ver.
+
+              Era uma grelha de doze colunas com um dossier ao lado do cartão
+              de identidade, desenhada para o desktop que já não existe. Numa
+              coluna de 480px isso empilhava-se em qualquer ordem menos a
+              certa.
+            */}
+            <div className="cartao-vidro p-4 flex flex-col items-center text-center gap-2.5 pr-12">
+              {selectedProfile.photo_url ? (
+                <img
+                  src={selectedProfile.photo_url}
+                  alt=""
+                  className="w-22 h-22 rounded-3xl object-cover border-2 border-csc-gold"
+                  style={{ width: 88, height: 88 }}
+                />
+              ) : (
+                <span
+                  className="rounded-3xl bg-white/10 border-2 border-csc-gold text-white/70 flex items-center justify-center font-display font-black text-[30px]"
+                  style={{ width: 88, height: 88 }}
+                >
+                  {(selectedProfile.name || '?').charAt(0).toUpperCase()}
                 </span>
-                <div>
-                  <span className="text-[10px] uppercase font-black tracking-widest text-white/65 block">
-                    Ficha Oficial de Atleta • Plantel CSC
-                  </span>
-                  <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">
-                    {selectedProfile.name}
-                  </h2>
-                </div>
+              )}
+
+              <div>
+                <h2 className="font-display font-black text-[22px] leading-none text-white tracking-[-0.02em]">
+                  {selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name}
+                </h2>
+                {(selectedProfile.shirt_name || selectedProfile.nickname) && (
+                  <p className="text-[11px] text-white/55 mt-1">{selectedProfile.name}</p>
+                )}
+                <p className="font-display font-bold text-[11.5px] text-csc-gold mt-1">
+                  {selectedProfile.jersey_number ? `nº ${selectedProfile.jersey_number}` : 'sem número'}
+                  {parsePositions(selectedProfile.position).length > 0 && extractRolesFromProfile(selectedProfile).includes('player')
+                    ? ` · ${normalizePositionName(parsePositions(selectedProfile.position)[0])}`
+                    : ''}
+                </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* Toggle Clínico Interativo para todos os perfis */}
-                <button
-                  type="button"
-                  onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border shadow-xs cursor-pointer active:scale-95 ${
+              <button
+                type="button"
+                onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
+                disabled={!isCoachOrAdmin}
+                aria-label={`Estado: ${selectedProfile.status === 'injured' ? 'lesionado' : selectedProfile.status === 'inactive' ? 'inativo' : 'apto'}${isCoachOrAdmin ? '. Alternar entre apto e lesionado' : ''}`}
+                className={`min-h-11 px-4 rounded-[22px] border font-display font-black text-[11px] flex items-center gap-2
+                  transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                    isCoachOrAdmin ? 'cursor-pointer active:scale-97' : 'cursor-default'
+                  } ${
                     selectedProfile.status === 'injured'
-                      ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 animate-pulse ring-2 ring-red-200'
+                      ? 'bg-csc-red/15 text-csc-vermelho-texto border-csc-red/35'
                       : selectedProfile.status === 'inactive'
-                      ? 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                      : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-2 ring-emerald-150'
+                      ? 'bg-white/8 text-white/60 border-white/15'
+                      : 'bg-csc-light/15 text-csc-verde-texto border-csc-light/35'
                   }`}
-                  title="Clique para alternar o estado de aptidão física (Apto / Lesionado)"
-                >
-                  <span>{selectedProfile.status === 'injured' ? '🔴' : selectedProfile.status === 'inactive' ? '⚪' : '🟢'}</span>
-                  <span>{selectedProfile.status === 'injured' ? 'Lesionado' : selectedProfile.status === 'inactive' ? 'Inativo' : 'Apto'}</span>
-                </button>
+              >
+                {selectedProfile.status === 'injured' ? <HeartPulse size={14} />
+                  : selectedProfile.status === 'inactive' ? <XCircle size={14} />
+                  : <CheckCircle2 size={14} />}
+                {selectedProfile.status === 'injured' ? 'Lesionado' : selectedProfile.status === 'inactive' ? 'Inativo' : 'Apto'}
+              </button>
 
-                {isCoachOrAdmin && (
-                  <button
-                    onClick={() => {
-                      fecharFicha()
-                      openEditModal(selectedProfile)
-                    }}
-                    className="px-3.5 py-1.5 bg-csc-gold text-csc-dark rounded-xl text-xs font-bold hover:brightness-95 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {extractRolesFromProfile(selectedProfile).map(r => (
+                  <span
+                    key={r}
+                    className={`font-display font-black text-[9px] tracking-[0.1em] uppercase px-2 py-1 rounded-full border ${
+                      r === 'admin'
+                        ? 'bg-csc-gold/15 text-csc-gold border-csc-gold/35'
+                        : r === 'coach'
+                        ? 'bg-csc-blue/20 text-csc-azul-texto border-csc-blue/30'
+                        : 'bg-csc-light/15 text-csc-verde-texto border-csc-light/25'
+                    }`}
                   >
-                    <Edit2 size={13} />
-                    <span className="hidden sm:inline">Editar Ficha</span>
-                  </button>
-                )}
-                {/* Fechar a persiana — só no telemóvel: no desktop isto é uma página,
-                    e quem volta atrás é a barra "Voltar ao plantel" da VistaDetalhe. */}
-                <button
-                  onClick={() => fecharFicha()}
-                  aria-label="Fechar"
-                  className="md:hidden w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40 shrink-0"
-                  title="Fechar"
-                >
-                  <X size={18} className="stroke-[2.5]" />
-                </button>
+                    {r === 'admin' ? 'Direção' : r === 'coach' ? 'Treinador' : 'Jogador'}
+                  </span>
+                ))}
               </div>
             </div>
 
-            {/* Desktop 2-Column Grid (Traditional PC Dossier) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              
-              {/* COLUNA ESQUERDA: Cartão de Identidade Desportiva + Campo Tático (lg:col-span-5 xl:col-span-4) */}
-              <div className="lg:col-span-5 xl:col-span-4 space-y-4">
-                {/* Hero ID Card */}
-                <div className="bg-gradient-to-br from-csc-dark via-csc-dark to-emerald-950 p-5 rounded-2xl border-2 border-amber-400/40 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-csc-gold/10 to-transparent pointer-events-none" />
-
-                  {/* Photo with Gold Ring */}
-                  <div className="relative mb-3 z-10">
-                    {selectedProfile.photo_url ? (
-                      <img
-                        src={selectedProfile.photo_url}
-                        alt={selectedProfile.name}
-                        className="w-24 h-24 rounded-2xl object-cover border-2 border-csc-gold shadow-md"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-csc-dark to-emerald-900 text-white flex items-center justify-center font-black text-3xl shadow-md border-2 border-csc-gold">
-                        {selectedProfile.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-
-                    {selectedProfile.jersey_number && (
-                      <span className="absolute -bottom-2 -right-2 bg-csc-dark text-csc-gold font-black text-xs px-2 py-0.5 rounded-lg border-2 border-white shadow-xs">
-                        #{selectedProfile.jersey_number}
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="font-black text-white text-lg leading-tight">
-                    {selectedProfile.name}
-                  </h3>
-
-                  {selectedProfile.shirt_name && (
-                    <p className="text-xs font-bold text-amber-300 mt-0.5">
-                      Nome na Camisola: "{selectedProfile.shirt_name}"
+            {/* Estatísticas da época (ecrã 3b). */}
+            {extractRolesFromProfile(selectedProfile).includes('player') && (
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  ['Jogos', jga(selectedProfile.id).j, 'text-white'],
+                  ['Golos', jga(selectedProfile.id).g, 'text-csc-gold'],
+                  ['Assistências', jga(selectedProfile.id).a, 'text-csc-azul-texto'],
+                ] as const).map(([etiqueta, valor, cor]) => (
+                  <div key={etiqueta} className="cartao-simples p-3">
+                    <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+                      {etiqueta}
                     </p>
-                  )}
-
-                  {/* Status clicável no cartão */}
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
-                      className={`text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-2xs cursor-pointer hover:opacity-90 active:scale-95 transition-all ${
-                        selectedProfile.status === 'active' ? 'bg-green-100 text-green-800 border border-green-200 hover:bg-green-200' :
-                        selectedProfile.status === 'injured' ? 'bg-red-100 text-red-800 border border-red-200 animate-pulse hover:bg-red-200' :
-                        'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
-                      }`}
-                      title="Clique para alternar o estado de aptidão física"
-                    >
-                      {selectedProfile.status === 'active' ? <CheckCircle2 size={12}/> :
-                       selectedProfile.status === 'injured' ? <HeartPulse size={12}/> :
-                       <XCircle size={12}/>}
-                      <span>{selectedProfile.status === 'active' ? 'Apto' : selectedProfile.status === 'injured' ? 'Lesionado' : 'Inativo'}</span>
-                    </button>
+                    <p className={`font-display font-black text-[22px] mt-1 tabular-nums leading-none ${cor}`}>
+                      {valor}
+                    </p>
                   </div>
-
-                  {/* Role Badges */}
-                  <div className="flex flex-wrap justify-center gap-1 mt-3">
-                    {extractRolesFromProfile(selectedProfile).map((r) => (
-                      <span
-                        key={r}
-                        className={`text-[9.5px] font-black px-2 py-0.5 rounded border ${
-                          r === 'admin'
-                            ? 'bg-amber-100 text-amber-900 border-amber-300'
-                            : r === 'coach'
-                            ? 'bg-blue-100 text-blue-800 border-blue-200'
-                            : 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                        }`}
-                      >
-                        {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Quick Meta Pills */}
-                  <div className="grid grid-cols-2 gap-2 w-full mt-4 pt-3 border-t border-white/10 text-xs">
-                    <div className="bg-white/10 p-2 rounded-xl border border-white/10">
-                      <span className="text-white/65 block text-[9px] uppercase font-bold">Equipamento</span>
-                      <span className="font-extrabold text-white">Tam: {selectedProfile.kit_size || '-'}</span>
-                    </div>
-                    <div className="bg-white/10 p-2 rounded-xl border border-white/10">
-                      <span className="text-white/65 block text-[9px] uppercase font-bold">Nº de Sócio</span>
-                      <span className="font-extrabold text-white">{selectedProfile.member_number ? `#${selectedProfile.member_number}` : '-'}</span>
-                    </div>
-                  </div>
-
-                  {/* Contact Buttons */}
-                  <div className="w-full mt-3 space-y-1.5">
-                    {selectedProfile.phone && (
-                      <a
-                        href={`tel:${selectedProfile.phone}`}
-                        className="w-full py-2 px-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-colors"
-                      >
-                        <Phone size={13} className="text-csc-gold" />
-                        <span>{selectedProfile.phone}</span>
-                      </a>
-                    )}
-                    {selectedProfile.email && (
-                      <a
-                        href={`mailto:${selectedProfile.email}`}
-                        className="w-full py-2 px-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-colors truncate"
-                      >
-                        <Mail size={13} className="text-csc-gold" />
-                        <span className="truncate">{selectedProfile.email}</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* Campo Tático — só para quem tem o papel de Jogador */}
-                {extractRolesFromProfile(selectedProfile).includes('player') && (
-                  <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                        <Shield size={14} className="text-csc-gold" />
-                        <span>Posicionamento Tático</span>
-                      </h4>
-                      <span className="text-[10px] font-extrabold bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
-                        {parsePositions(selectedProfile.position).join(', ') || 'Não definido'}
-                      </span>
-                    </div>
-
-                    <SoccerPitchSelector
-                      selectedPositions={parsePositions(selectedProfile.position)}
-                      onChange={() => {}}
-                      readOnly={true}
-                    />
-                  </div>
-                )}
+                ))}
               </div>
+            )}
 
-              {/* COLUNA DIREITA: Dossier Completo Cadastral (lg:col-span-7 xl:col-span-8) */}
-              <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+            <div className="space-y-4">
+
+              {/* Campo Tático — só para quem tem o papel de Jogador */}
+              {extractRolesFromProfile(selectedProfile).includes('player') && (
+                <div className="cartao-simples p-4 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 flex items-center gap-1.5">
+                      <Shield size={13} className="text-csc-gold" />
+                      Posições atribuídas
+                    </h4>
+                    <span className="font-display font-black text-[10px] text-csc-gold shrink-0">
+                      {parsePositions(selectedProfile.position).length || 0}
+                    </span>
+                  </div>
+
+                  <SoccerPitchSelector
+                    selectedPositions={parsePositions(selectedProfile.position)}
+                    onChange={() => {}}
+                    readOnly={true}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-4">
                 
                 {/* 1. Identificação & Dados Fiscais */}
-                <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-3">
+                <div className="cartao-simples p-4 space-y-3">
                   <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                     <Users size={14} className="text-csc-gold" />
                     <span>1. Identificação & Dados Fiscais</span>
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 text-xs">
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nome Completo</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.name}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nome na Camisola</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.birth_date ? (
@@ -2150,29 +2211,29 @@ const TeamManagementPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
                       <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.nif || '-'}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
                       <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.id_number || '-'}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Validade do CC</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.id_card_expiry ? new Date(selectedProfile.id_card_expiry).toLocaleDateString('pt-PT') : '-'}
                       </p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nacionalidade</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
                     </div>
@@ -2180,19 +2241,19 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 2. Morada & Residência */}
-                <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-3">
+                <div className="cartao-simples p-4 space-y-3">
                   <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                     <FileText size={14} className="text-csc-gold" />
                     <span>2. Morada & Residência</span>
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.address || 'Não registada'}</p>
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.postal_code || '-'} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
@@ -2202,7 +2263,7 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 3. Dados Bancários (Débito Direto) */}
-                <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-3">
+                <div className="cartao-simples p-4 space-y-3">
                   <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                     <Shield size={14} className="text-csc-gold" />
                     <span>3. Dados Bancários & Quotas</span>
@@ -2216,8 +2277,8 @@ const TeamManagementPage: React.FC = () => {
                       </p>
                     </div>
                     {selectedProfile.iban && (
-                      <span className="text-[10px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded">
-                        ✓ Ativo
+                      <span className="text-[10px] font-bold bg-csc-light/16 border border-csc-light/30 text-csc-verde-texto px-2 py-0.5 rounded">
+                        Ativo
                       </span>
                     )}
                   </div>
@@ -2230,7 +2291,7 @@ const TeamManagementPage: React.FC = () => {
                     <span>4. Saúde & Contacto de Emergência</span>
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="bg-white/10 p-3 rounded-xl border border-red-400/20">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Contacto de Emergência</p>
                       <p className="font-extrabold text-white mt-0.5">
@@ -2253,24 +2314,24 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 5. Documentos Anexados & RGPD */}
-                <div className="bg-white/[0.07] p-4 rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 space-y-3">
+                <div className="cartao-simples p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                       <FileText size={14} className="text-csc-gold" />
                       <span>5. Documentação Oficial & RGPD</span>
                     </h4>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-100 text-green-800 flex items-center gap-1">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-csc-light/16 border border-csc-light/30 text-csc-verde-texto flex items-center gap-1">
                       <CheckCircle2 size={11} /> RGPD Consentido
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                  <div className="grid grid-cols-1 gap-2 text-xs">
                     {selectedProfile.id_document_url ? (
                       <a
                         href={selectedProfile.id_document_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-blue-700 font-bold hover:bg-blue-100 transition-colors text-center"
+                        className="p-3 bg-csc-blue/12 border border-csc-blue/30 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-azul-texto font-bold hover:bg-csc-blue/20 transition-colors text-center"
                       >
                         <FileText size={18} />
                         <span>Doc. Identificação</span>
@@ -2288,7 +2349,7 @@ const TeamManagementPage: React.FC = () => {
                         href={selectedProfile.insurance_doc_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-purple-700 font-bold hover:bg-purple-100 transition-colors text-center"
+                        className="p-3 bg-csc-blue/12 border border-csc-blue/30 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-azul-texto font-bold hover:bg-csc-blue/20 transition-colors text-center"
                       >
                         <Shield size={18} />
                         <span>Seguro Desportivo</span>
@@ -2306,7 +2367,7 @@ const TeamManagementPage: React.FC = () => {
                         href={selectedProfile.medical_exam_doc_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col items-center justify-center gap-1.5 text-emerald-700 font-bold hover:bg-emerald-100 transition-colors text-center"
+                        className="p-3 bg-csc-light/10 border border-csc-light/25 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-verde-texto font-bold hover:bg-csc-light/15 transition-colors text-center"
                       >
                         <HeartPulse size={18} />
                         <span>Atestado Médico</span>
@@ -2324,53 +2385,91 @@ const TeamManagementPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Bottom Actions Footer */}
-            <div className="pt-4 border-t border-white/10 flex flex-wrap justify-between items-center gap-3">
-              {isAdmin && selectedProfile?.id && (
-                linkedProfileIds.has(selectedProfile.id) ? (
-                  <span className="px-4 py-2.5 bg-sky-50 text-sky-800 border border-sky-200 rounded-xl text-xs font-bold flex items-center gap-1.5">
-                    <UserCheck size={15} />
-                    <span>Tem Conta de Login Associada</span>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const profileToAssociate = selectedProfile
-                      fecharFicha()
-                      openAssociateModal(profileToAssociate)
-                    }}
-                    className="px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                  >
-                    <Link2 size={15} />
-                    <span>Fundir com Outra Ficha</span>
-                  </button>
-                )
-              )}
+            {/*
+              Gestão do atleta (ecrã 3b): o cartão dourado no fim da ficha, com
+              as ações que só a equipa técnica e a direção veem. É onde estão
+              agora o editar, o marcar lesionado e o eliminar — saíram da linha
+              da lista, onde eram quatro alvos de 15px dentro de um alvo maior.
+            */}
+            {isCoachOrAdmin && (
+              <div className="cartao-simples bg-csc-gold/8 border-csc-gold/25 p-4 space-y-2.5">
+                <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
+                  Gestão do atleta
+                </h4>
 
-              <div className="flex items-center gap-2 ml-auto">
                 <button
                   type="button"
-                  onClick={() => fecharFicha()}
-                  className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  onClick={() => {
+                    const alvo = selectedProfile
+                    fecharFicha()
+                    openEditModal(alvo)
+                  }}
+                  className="w-full min-h-12 px-4 rounded-2xl bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px]
+                    flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                 >
-                  Fechar
+                  <Edit2 size={15} />
+                  Editar atleta
                 </button>
-                {isCoachOrAdmin && (
+
+                <p className="text-[10.5px] leading-relaxed text-white/60">
+                  Marcar como lesionado retira-o dos treinos futuros; ao voltar a apto entra outra vez.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
+                  className="w-full min-h-12 px-4 rounded-2xl bg-csc-red/12 border border-csc-red/30 text-csc-vermelho-texto
+                    font-display font-extrabold text-[12px] flex items-center justify-center gap-2 cursor-pointer
+                    transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                >
+                  <HeartPulse size={15} />
+                  {selectedProfile.status === 'injured' ? 'Marcar como apto' : 'Marcar lesionado'}
+                </button>
+
+                {isAdmin && selectedProfile?.id && (
+                  linkedProfileIds.has(selectedProfile.id) ? (
+                    <p className="flex items-center gap-1.5 text-[10.5px] text-csc-verde-texto font-bold pt-1">
+                      <UserCheck size={13} className="shrink-0" />
+                      Tem conta de acesso ligada.
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const alvo = selectedProfile
+                        fecharFicha()
+                        openAssociateModal(alvo)
+                      }}
+                      className="w-full min-h-12 px-4 rounded-2xl bg-white/8 border border-white/15 text-white/80
+                        font-display font-extrabold text-[12px] flex items-center justify-center gap-2 cursor-pointer
+                        transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                    >
+                      <Link2 size={15} />
+                      Fundir com outra ficha
+                    </button>
+                  )
+                )}
+
+                {isAdmin && (
                   <button
                     type="button"
                     onClick={() => {
-                      fecharFicha()
-                      openEditModal(selectedProfile)
+                      const alvo = selectedProfile
+                      handleDeleteMember(alvo.id, alvo.name)
                     }}
-                    className="px-5 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs font-black transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
+                    className="w-full min-h-12 px-4 rounded-2xl text-csc-vermelho-texto font-display font-extrabold text-[12px]
+                      flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
+                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                   >
-                    <Edit2 size={14} />
-                    <span>Editar Ficha</span>
+                    <Trash2 size={15} />
+                    Eliminar atleta
                   </button>
                 )}
               </div>
-            </div>
+            )}
 
           </div>
         </VistaDetalhe>
@@ -2378,12 +2477,18 @@ const TeamManagementPage: React.FC = () => {
 
       {/* MODAL 3: ASSOCIAR UTILIZADOR A JOGADOR */}
       {associatingPlayer && (() => {
+        // As contas que se registaram e ficaram sem ficha — é o que o handoff
+        // pede em 3d, e o que na prática se quer ligar. Vêm da RPC
+        // `admin_contas_por_ligar`, que só o admin pode chamar.
+        const porLigar = contasPorLigar.filter(c => c.id !== associatingPlayer.id)
+
         // Encontrar potenciais coincidências por email ou telefone
-        const potentialMatches = profiles.filter(p => 
-          p.id !== associatingPlayer.id && (
-            (p.email && associatingPlayer.email && p.email.trim().toLowerCase() === associatingPlayer.email.trim().toLowerCase()) ||
-            (p.phone && associatingPlayer.phone && p.phone.trim() === associatingPlayer.phone.trim())
-          )
+        // Só por email: é a identidade de uma pessoa neste clube. O telefone
+        // saiu — é auto-editável, e fundir duas fichas apaga uma delas.
+        const potentialMatches = profiles.filter(p =>
+          p.id !== associatingPlayer.id &&
+          p.email && associatingPlayer.email &&
+          p.email.trim().toLowerCase() === associatingPlayer.email.trim().toLowerCase()
         )
 
         const otherUsers = profiles.filter(p => 
@@ -2404,7 +2509,7 @@ const TeamManagementPage: React.FC = () => {
               aria-modal="true"
               aria-labelledby="associar-utilizador-titulo"
               tabIndex={-1}
-              className="bg-csc-dark text-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/10 outline-none"
+              className="bg-csc-fundo text-white rounded-3xl max-w-xl w-full p-5 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/12 outline-none"
             >
               <button
                 onClick={() => {
@@ -2412,14 +2517,14 @@ const TeamManagementPage: React.FC = () => {
                   setSelectedUserToAssociate(null)
                 }}
                 aria-label="Fechar"
-                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+                className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               >
                 <X size={18} className="stroke-[2.5]" />
               </button>
 
               {/* Cabeçalho */}
               <div className="flex items-center gap-2.5 mb-2">
-                <div className="p-2.5 bg-blue-100 rounded-xl text-blue-700">
+                <div className="p-2.5 bg-csc-blue/20 rounded-xl text-csc-azul-texto">
                   <Link2 size={22} />
                 </div>
                 <div>
@@ -2447,30 +2552,31 @@ const TeamManagementPage: React.FC = () => {
               {/* 1. Sugestões Automáticas / Coincidências Encontradas */}
               {potentialMatches.length > 0 && (
                 <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-emerald-300">
-                    <Sparkles size={16} className="text-emerald-400" />
-                    <span>Coincidência Automática Detetada por Email/Contacto!</span>
+                  <div className="flex items-center gap-1.5 text-xs font-black text-csc-verde-texto">
+                    <Sparkles size={16} className="text-csc-verde-texto" />
+                    <span>Mesmo email — é a mesma pessoa</span>
                   </div>
                   {potentialMatches.map(match => {
                     const matchTemConta = linkedProfileIds.has(match.id)
                     return (
                       <div
                         key={match.id}
-                        className="p-3.5 bg-green-50/80 border-2 border-green-400 rounded-xl flex items-center justify-between gap-3 shadow-xs"
+                        className="p-3.5 cartao-simples bg-csc-light/12 border-csc-light/32 flex items-center justify-between gap-3"
                       >
-                        <div className="text-xs">
-                          <p className="font-bold text-green-950 text-sm">{match.name}</p>
-                          <p className="text-green-800 font-medium">{match.email}</p>
-                          {match.phone && <p className="text-green-700 text-[11px]">Tel: {match.phone}</p>}
-                          <p className="text-green-700 text-[10px] font-bold mt-0.5">
-                            {matchTemConta ? '✓ Tem conta de login — vai ser a ficha que fica' : 'Sem conta de login'}
+                        <div className="text-xs min-w-0">
+                          <p className="font-display font-bold text-white text-sm truncate">{match.name}</p>
+                          <p className="text-white/70 font-medium truncate">{match.email}</p>
+                          <p className="text-csc-verde-texto text-[10px] font-bold mt-0.5">
+                            {matchTemConta ? 'Tem conta de acesso — vai ser a ficha que fica' : 'Sem conta de acesso'}
                           </p>
                         </div>
                         <button
                           type="button"
                           disabled={associatingLoading}
                           onClick={() => handleConfirmAssociate(associatingPlayer, match, !matchTemConta)}
-                          className="px-3.5 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-xs font-bold transition-colors shadow-xs shrink-0 flex items-center gap-1"
+                          className="min-h-11 px-3.5 rounded-[18px] bg-csc-light text-white text-xs font-display font-extrabold
+                            shrink-0 flex items-center gap-1.5 cursor-pointer transition-transform duration-150 active:scale-97
+                            disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                         >
                           <UserCheck size={14} />
                           <span>Fundir Imediatamente</span>
@@ -2481,6 +2587,63 @@ const TeamManagementPage: React.FC = () => {
                 </div>
               )}
 
+              {/*
+                Contas por ligar (ecrã 3d). São as pessoas que se registaram na
+                app e não ficaram ligadas a nenhuma ficha do clube — que é o
+                caso que se vem cá resolver. A lista de baixo, com o plantel
+                inteiro, fica para o caso raro de haver duas fichas da mesma
+                pessoa.
+              */}
+              {porLigar.length > 0 && (
+                <div className="mt-5 space-y-2">
+                  <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
+                    Contas por ligar ({porLigar.length})
+                  </h4>
+                  <p className="text-[10.5px] leading-relaxed text-white/50">
+                    Registaram-se com um email que não está em ficha nenhuma — é por aí que a app
+                    liga as contas —, por isso a ficha que têm só tem o nome e o email. Ao ligar,
+                    as respostas e os pagamentos já lançados ficam nesta ficha. Corrigir o email
+                    na ficha resolve o mesmo, e resolve-o para a próxima vez.
+                  </p>
+
+                  {porLigar.map(conta => (
+                    <button
+                      key={conta.id}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('selection')
+                        setSelectedUserToAssociate(conta as unknown as Profile)
+                      }}
+                      aria-pressed={selectedUserToAssociate?.id === conta.id}
+                      className={`w-full min-h-14 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl border text-left cursor-pointer
+                        transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                          selectedUserToAssociate?.id === conta.id
+                            ? 'bg-csc-gold/15 border-csc-gold/45'
+                            : 'bg-white/5 border-white/10'
+                        }`}
+                    >
+                      <span className="w-9 h-9 rounded-xl bg-white/10 text-white/60 flex items-center justify-center font-display font-black text-[13px] shrink-0">
+                        {(conta.name || conta.email || '?').charAt(0).toUpperCase()}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-display font-bold text-[12.5px] text-white truncate">
+                          {conta.name || 'Sem nome'}
+                        </span>
+                        <span className="block text-[10px] text-white/45 truncate mt-0.5">
+                          {conta.email}
+                          {conta.created_at
+                            ? ` · registou-se a ${new Date(conta.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}`
+                            : ''}
+                        </span>
+                      </span>
+                      {selectedUserToAssociate?.id === conta.id && (
+                        <Check size={16} className="text-csc-gold shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
               {/* 2. Pesquisa e Seleção de Outro Utilizador Registado */}
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between">
@@ -2490,13 +2653,13 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 <div className="relative">
-                  <Search size={15} className="absolute left-3 top-2.5 text-gray-400" />
+                  <Search size={15} className="absolute left-3 top-2.5 text-white/40" />
                   <input
                     type="text"
                     value={associateSearchTerm}
                     onChange={(e) => setAssociateSearchTerm(e.target.value)}
                     placeholder="Pesquisar utilizador por nome, email ou telefone..."
-                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                    className={`${CAMPO} pl-9.5`}
                   />
                 </div>
 

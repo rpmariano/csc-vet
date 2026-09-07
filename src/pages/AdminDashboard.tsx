@@ -17,12 +17,27 @@ import {
   Plus,
   Search,
   Phone,
-  User
+  User,
+  ChevronDown,
 } from 'lucide-react'
 import { useClub } from '../context/ClubContext'
 import { toast } from '../context/ToastContext'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { useSearchParams } from 'react-router-dom'
+import { CabecalhoEcra, Pastilha } from '../components/ui'
+import { triggerHaptic } from '../utils/haptics'
+import { FichaAdversario } from '../components/clube/FichaAdversario'
+import { FichaCampo } from '../components/clube/FichaCampo'
+import { formatClubSigla } from './CalendarPage'
+
+/** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
+const CAMPO =
+  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
+
+const ETIQUETA =
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
 
 // Interfaces
 interface Field {
@@ -130,7 +145,7 @@ type TabType = 'club' | 'fields' | 'opponents' | 'tournaments'
 
 const AdminDashboard: React.FC = () => {
   const { clubSettings, refreshSettings } = useClub()
-  const [activeTab, setActiveTab] = useState<TabType>('club')
+  const [params, setParams] = useSearchParams()
   
   // Club states
   const [clubName, setClubName] = useState('')
@@ -776,51 +791,86 @@ const AdminDashboard: React.FC = () => {
   const painelAdversarioRef = useModalA11y({ isOpen: isOppModalOpen, onClose: handleRequestCloseOppModal })
   const painelTorneioRef = useModalA11y({ isOpen: isTourModalOpen, onClose: handleRequestCloseTourModal })
 
-  return (
-    <div className="space-y-4 pb-12">
+  /*
+    O separador escolhido vai no endereço (`?ver=`), como na Competição: o
+    Clube tem entradas separadas para "Dados do clube", "Adversários e
+    campos" e "Torneios e jornadas", e sem isto as três caíam todas no
+    primeiro separador. Também dá link próprio e faz o retroceder funcionar.
+  */
+  const verAtual = (params.get('ver') ?? '') as TabType
+  const activeTab: TabType = (['club', 'fields', 'opponents', 'tournaments'] as const).includes(verAtual)
+    ? verAtual
+    : 'club'
 
-      {/* Tabs */}
-      <div className="flex bg-white rounded-2xl shadow-xs border border-gray-200 p-1.5 gap-1 overflow-x-auto">
-        <button 
-          onClick={() => setActiveTab('club')}
-          className={`flex-1 min-w-[110px] py-2.5 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            activeTab === 'club' ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100/70 hover:text-gray-900'
-          }`}
-        >
-          <Building2 size={16} className={activeTab === 'club' ? 'text-csc-gold' : ''} />
-          <span>Clube</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('fields')}
-          className={`flex-1 min-w-[110px] py-2.5 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            activeTab === 'fields' ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100/70 hover:text-gray-900'
-          }`}
-        >
-          <MapPin size={16} className={activeTab === 'fields' ? 'text-csc-gold' : ''} />
-          <span>Campos ({fields.length})</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('opponents')}
-          className={`flex-1 min-w-[120px] py-2.5 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            activeTab === 'opponents' ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100/70 hover:text-gray-900'
-          }`}
-        >
-          <Shield size={16} className={activeTab === 'opponents' ? 'text-csc-gold' : ''} />
-          <span>Adversários ({opponents.length})</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('tournaments')}
-          className={`flex-1 min-w-[110px] py-2.5 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
-            activeTab === 'tournaments' ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100/70 hover:text-gray-900'
-          }`}
-        >
-          <Trophy size={16} className={activeTab === 'tournaments' ? 'text-csc-gold' : ''} />
-          <span>Torneios ({tournaments.length})</span>
-        </button>
+  const setActiveTab = (seguinte: TabType) => {
+    const seguintes = new URLSearchParams(params)
+    seguintes.set('ver', seguinte)
+    // `replace`: andar entre separadores não deve encher o histórico.
+    setParams(seguintes, { replace: true })
+  }
+
+  /*
+    As fichas do adversário (9h) e do campo (9i) vão no endereço, como o
+    detalhe de evento e a ficha de atleta: `?adversario=<id>` e `?campo=<id>`.
+    É o que lhes dá link próprio e faz o retroceder do browser fechá-las.
+
+    Foi por causa disto que esta página deixou de ser `React.lazy` no
+    `src/App.tsx` — ver o ponto 6 dos riscos no CLAUDE.md.
+  */
+  const adversarioAberto = opponents.find(o => o.id === params.get('adversario')) ?? null
+  const campoAberto = fields.find(f => f.id === params.get('campo')) ?? null
+
+  const abrirDetalhe = (chave: 'adversario' | 'campo', id: string) => {
+    triggerHaptic('light')
+    const seguintes = new URLSearchParams(params)
+    seguintes.set(chave, id)
+    setParams(seguintes)
+  }
+
+  const fecharDetalhe = (chave: 'adversario' | 'campo') => {
+    const seguintes = new URLSearchParams(params)
+    seguintes.delete(chave)
+    setParams(seguintes, { replace: true })
+  }
+
+  const SEPARADORES: readonly { chave: TabType; etiqueta: string }[] = [
+    { chave: 'club', etiqueta: 'Clube' },
+    { chave: 'fields', etiqueta: `Campos (${fields.length})` },
+    { chave: 'opponents', etiqueta: `Adversários (${opponents.length})` },
+    { chave: 'tournaments', etiqueta: `Torneios (${tournaments.length})` },
+  ]
+
+  const TITULOS: Record<TabType, { titulo: string; sobrancelha: string }> = {
+    club: { titulo: 'Dados do clube', sobrancelha: 'Nome, emblema e campo de casa' },
+    fields: { titulo: 'Campos', sobrancelha: `${fields.length} ${fields.length === 1 ? 'campo' : 'campos'}` },
+    opponents: { titulo: 'Adversários', sobrancelha: `${opponents.length} ${opponents.length === 1 ? 'clube' : 'clubes'}` },
+    tournaments: { titulo: 'Torneios', sobrancelha: `${tournaments.length} ${tournaments.length === 1 ? 'prova' : 'provas'}` },
+  }
+
+  return (
+    <div className="space-y-4">
+
+      <CabecalhoEcra
+        titulo={TITULOS[activeTab].titulo}
+        sobrancelha={TITULOS[activeTab].sobrancelha}
+        className="mb-3"
+      />
+
+      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
+        {SEPARADORES.map(s => (
+          <Pastilha
+            key={s.chave}
+            ativa={activeTab === s.chave}
+            onClick={() => { triggerHaptic('selection'); setActiveTab(s.chave) }}
+            className="flex-none"
+          >
+            {s.etiqueta}
+          </Pastilha>
+        ))}
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-csc-dark rounded-3xl border border-white/10">
+        <div className="flex flex-col items-center justify-center py-20 cartao-simples">
           <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-csc-gold mb-3"></div>
           <p className="text-xs font-bold text-white/70">A carregar dados...</p>
         </div>
@@ -830,9 +880,9 @@ const AdminDashboard: React.FC = () => {
           {/* TAB 1: CLUBE */}
           {/* ========================================================================= */}
           {activeTab === 'club' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-4">
               {/* Detalhes do Clube */}
-              <div className="md:col-span-2 bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-6 sm:p-7">
+              <div className="cartao-simples text-white p-4">
                 <form onSubmit={handleUpdateClub} className="space-y-5">
                   <div className="flex items-center justify-between border-b border-white/10 pb-3">
                     <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
@@ -843,24 +893,24 @@ const AdminDashboard: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">Nome Oficial *</label>
+                      <label className={ETIQUETA}>Nome Oficial *</label>
                       <input 
                         type="text" 
                         required 
                         value={clubName} 
                         onChange={e => setClubName(e.target.value)} 
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-csc-dark outline-none font-bold text-sm bg-white text-gray-900" 
+                        className={CAMPO} 
                         placeholder="Ex: Grupo Dramático e Sportivo de Cascais" 
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">Sigla / Abreviatura *</label>
+                      <label className={ETIQUETA}>Sigla / Abreviatura *</label>
                       <input 
                         type="text" 
                         required 
                         value={clubInitials} 
                         onChange={e => setClubInitials(e.target.value)} 
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-csc-dark outline-none font-bold text-sm bg-white text-gray-900" 
+                        className={CAMPO} 
                         placeholder="Ex: CSC" 
                       />
                     </div>
@@ -883,12 +933,12 @@ const AdminDashboard: React.FC = () => {
                     <select
                       value={clubHomeField}
                       onChange={e => setClubHomeField(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-csc-dark outline-none bg-white text-sm font-bold text-gray-800"
+                      className={CAMPO}
                     >
                       <option value="">-- Selecionar campo de casa --</option>
                       {fields.map(f => (
                         <option key={f.id} value={f.id}>
-                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                          {f.name} {f.address ? `(${f.address})` : ''}
                         </option>
                       ))}
                     </select>
@@ -898,9 +948,9 @@ const AdminDashboard: React.FC = () => {
                   <div className="pt-2">
                     <button 
                       type="submit" 
-                      className="w-full sm:w-auto px-6 py-3 bg-csc-gold text-csc-dark rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                      className="w-full sm:w-auto px-6 py-3 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                     >
-                      <Save size={17} className="text-csc-dark" />
+                      <Save size={17} className="text-csc-tinta" />
                       <span>Guardar Dados do Clube</span>
                     </button>
                   </div>
@@ -908,7 +958,7 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Símbolo do Clube */}
-              <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-6 flex flex-col justify-between">
+              <div className="cartao-simples text-white p-4 flex flex-col justify-between">
                 <div>
                   <h3 className="text-base font-black text-white border-b border-white/10 pb-3 flex items-center gap-2">
                     <Shield size={18} className="text-csc-gold" />
@@ -968,21 +1018,21 @@ const AdminDashboard: React.FC = () => {
           {activeTab === 'fields' && (
             <div className="space-y-4">
               {/* Barra de Filtros e Criação */}
-              <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="relative flex-1">
-                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
                   <input
                     type="text"
                     value={fieldSearch}
                     onChange={e => setFieldSearch(e.target.value)}
                     placeholder="Pesquisar por nome ou morada do campo..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
+                    className={`${CAMPO} pl-9.5`}
                   />
                   {fieldSearch && (
                     <button
                       onClick={() => setFieldSearch('')}
                       aria-label="Limpar pesquisa"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
                     >
                       <X size={15} />
                     </button>
@@ -992,15 +1042,15 @@ const AdminDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleOpenCreateField}
-                  className="px-4 py-2.5 bg-csc-dark text-white rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-csc-dark/90 transition-all shadow-xs shrink-0 cursor-pointer active:scale-98"
+                  className="w-11 h-11 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                 >
-                  <Plus size={16} className="text-csc-gold" />
-                  <span>Novo Campo</span>
+                  <Plus size={19} />
+                  <span className="sr-only">Criar campo</span>
                 </button>
               </div>
 
               {/* Lista de Campos */}
-              <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-4 sm:p-6 space-y-3">
+              <div className="cartao-simples text-white p-4 space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/70">
                   <span>A apresentar {filteredFields.length} de {fields.length} campos registados</span>
                 </div>
@@ -1012,7 +1062,7 @@ const AdminDashboard: React.FC = () => {
                     <p className="text-xs text-white/65 mt-0.5">Tente outro termo na pesquisa ou crie um novo campo.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-2.5">
                     {filteredFields.map(f => {
                       const mapsQuery = f.address ? `${f.name}, ${f.address}` : f.name
                       const mapsUrl = getGoogleMapsUrl(mapsQuery)
@@ -1023,9 +1073,16 @@ const AdminDashboard: React.FC = () => {
                           key={f.id} 
                           className="flex flex-col justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all gap-3"
                         >
-                          <div className="space-y-1">
+                          <button
+                            type="button"
+                            onClick={() => abrirDetalhe('campo', f.id)}
+                            aria-label={`Ver a ficha do campo ${f.name}`}
+                            className="space-y-1 text-left min-h-11 cursor-pointer rounded-xl
+                              transition-transform duration-150 active:scale-97
+                              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                          >
                             <div className="flex items-center gap-2">
-                              <span className="text-base">🏟️</span>
+                              <MapPin size={14} className="text-csc-gold shrink-0" />
                               <h4 className="font-black text-sm text-white">{f.name}</h4>
                               {isDefaultClubField && (
                                 <span className="bg-csc-dark text-csc-gold text-[10px] font-black px-2 py-0.5 rounded-full border border-csc-gold/30">
@@ -1038,7 +1095,7 @@ const AdminDashboard: React.FC = () => {
                             ) : (
                               <p className="text-xs text-white/65 italic pl-6">Sem morada definida</p>
                             )}
-                          </div>
+                          </button>
 
                           <div className="flex items-center justify-between pt-2 border-t border-white/10 mt-1">
                             <a
@@ -1084,21 +1141,21 @@ const AdminDashboard: React.FC = () => {
           {activeTab === 'opponents' && (
             <div className="space-y-4">
               {/* Barra de Filtros e Criação */}
-              <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="relative flex-1">
-                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
                   <input
                     type="text"
                     value={oppSearch}
                     onChange={e => setOppSearch(e.target.value)}
                     placeholder="Pesquisar por equipa, sigla, contacto ou campo..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
+                    className={`${CAMPO} pl-9.5`}
                   />
                   {oppSearch && (
                     <button
                       onClick={() => setOppSearch('')}
                       aria-label="Limpar pesquisa"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
                     >
                       <X size={15} />
                     </button>
@@ -1108,15 +1165,15 @@ const AdminDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleOpenCreateOpponent}
-                  className="px-4 py-2.5 bg-csc-dark text-white rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-csc-dark/90 transition-all shadow-xs shrink-0 cursor-pointer active:scale-98"
+                  className="w-11 h-11 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                 >
-                  <Plus size={16} className="text-csc-gold" />
-                  <span>Novo Adversário</span>
+                  <Plus size={19} />
+                  <span className="sr-only">Criar adversário</span>
                 </button>
               </div>
 
               {/* Lista de Adversários */}
-              <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-4 sm:p-6 space-y-3">
+              <div className="cartao-simples text-white p-4 space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/70">
                   <span>A apresentar {filteredOpponents.length} de {opponents.length} equipas registadas</span>
                 </div>
@@ -1128,7 +1185,7 @@ const AdminDashboard: React.FC = () => {
                     <p className="text-xs text-white/65 mt-0.5">Tente outro filtro ou crie um novo adversário.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-1 gap-3">
                     {filteredOpponents.map(o => {
                       const homeField = fields.find(f => f.id === o.home_field_id)
                       const mapsQuery = homeField ? (homeField.address ? `${homeField.name}, ${homeField.address}` : homeField.name) : o.name
@@ -1139,12 +1196,19 @@ const AdminDashboard: React.FC = () => {
                           key={o.id} 
                           className="flex flex-col justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all gap-3"
                         >
-                          <div className="flex items-start gap-3.5">
+                          <button
+                            type="button"
+                            onClick={() => abrirDetalhe('adversario', o.id)}
+                            aria-label={`Ver a ficha do adversário ${o.name}`}
+                            className="flex items-start gap-3.5 text-left w-full min-h-11 cursor-pointer rounded-xl
+                              transition-transform duration-150 active:scale-97
+                              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                          >
                             {o.logo_url ? (
                               <img 
                                 src={o.logo_url} 
                                 alt={o.name} 
-                                className="w-13 h-13 object-contain bg-white rounded-xl border border-gray-200 p-1.5 shadow-2xs shrink-0" 
+                                className="w-13 h-13 object-contain bg-white rounded-xl border border-white/12 p-1.5 shadow-2xs shrink-0" 
                               />
                             ) : (
                               <div className="w-13 h-13 bg-white/10 border border-white/15 rounded-xl flex items-center justify-center font-black text-white/70 text-sm shrink-0">
@@ -1159,11 +1223,14 @@ const AdminDashboard: React.FC = () => {
 
                               {homeField && (
                                 <p className="text-xs text-white/60 font-medium flex items-center gap-1 mt-1 truncate">
-                                  <span className="text-white/65">🏟️ Campo:</span>
+                                  <span className="text-white/50">Campo:</span>
                                   <span className="truncate">{homeField.name}</span>
                                 </p>
                               )}
 
+                              {/* O telefone era um `<a href="tel:">` dentro do que passou a
+                                  ser o botão que abre a ficha — um interativo dentro de
+                                  outro. Fica como texto; ligar faz-se na ficha (9h). */}
                               {(o.contact_name || o.contact_phone) && (
                                 <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-white/60 font-medium">
                                   {o.contact_name && (
@@ -1173,18 +1240,15 @@ const AdminDashboard: React.FC = () => {
                                     </span>
                                   )}
                                   {o.contact_phone && (
-                                    <a 
-                                      href={`tel:${o.contact_phone}`}
-                                      className="flex items-center gap-1 text-csc-gold font-bold hover:underline"
-                                    >
+                                    <span className="flex items-center gap-1 text-csc-gold font-bold">
                                       <Phone size={12} className="text-csc-gold" />
                                       <span>{o.contact_phone}</span>
-                                    </a>
+                                    </span>
                                   )}
                                 </div>
                               )}
                             </div>
-                          </div>
+                          </button>
 
                           <div className="flex items-center justify-between pt-2.5 border-t border-white/10 mt-1">
                             {homeField ? (
@@ -1234,37 +1298,45 @@ const AdminDashboard: React.FC = () => {
           {activeTab === 'tournaments' && (
             <div className="space-y-4">
               {/* Barra de Filtros e Criação */}
-              <div className="bg-white rounded-2xl shadow-xs border border-gray-200 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div className="flex flex-col sm:flex-row items-center gap-2.5 flex-1">
-                  <div className="relative w-full sm:flex-1">
-                    <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <div className="flex items-center gap-2">
+                {/*
+                  `min-w-0` não é decoração: sem ele o `flex-1` não encolhe
+                  abaixo da largura intrínseca do `<input>`, e o separador dos
+                  torneios era o único do Backoffice a empurrar a página para
+                  fora da janela estreita. Os dos campos e dos adversários já o
+                  tinham. Os `sm:` saíram porque não geram nada — os pontos de
+                  corte estão desligados no `@theme`.
+                */}
+                <div className="flex flex-col items-center gap-2.5 flex-1 min-w-0">
+                  <div className="relative w-full">
+                    <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
                     <input
                       type="text"
                       value={tourSearch}
                       onChange={e => setTourSearch(e.target.value)}
                       placeholder="Pesquisar por nome ou época da competição..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none transition-all text-gray-900"
+                      className={`${CAMPO} pl-9.5`}
                     />
                     {tourSearch && (
                       <button
                         onClick={() => setTourSearch('')}
                         aria-label="Limpar pesquisa"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
                       >
                         <X size={15} />
                       </button>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
+                  <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl w-full">
                     {(['all', 'ativo', 'agendado', 'terminado'] as const).map(st => (
                       <button
                         key={st}
                         onClick={() => setTourStatusFilter(st)}
-                        className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black capitalize transition-all cursor-pointer ${
+                        className={`flex-1 min-h-11 px-3 rounded-lg text-xs font-black capitalize transition-all cursor-pointer ${
                           tourStatusFilter === st 
-                            ? 'bg-white text-csc-dark shadow-xs' 
-                            : 'text-gray-600 hover:text-gray-900'
+                            ? 'bg-white text-csc-tinta shadow-xs' 
+                            : 'text-white/60 hover:text-white'
                         }`}
                       >
                         {st === 'all' ? 'Todos' : st}
@@ -1276,15 +1348,15 @@ const AdminDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleOpenCreateTournament}
-                  className="px-4 py-2.5 bg-csc-dark text-white rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-csc-dark/90 transition-all shadow-xs shrink-0 cursor-pointer active:scale-98"
+                  className="w-11 h-11 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                 >
-                  <Plus size={16} className="text-csc-gold" />
-                  <span>Novo Torneio</span>
+                  <Plus size={19} />
+                  <span className="sr-only">Criar torneio</span>
                 </button>
               </div>
 
               {/* Lista de Torneios */}
-              <div className="bg-csc-dark text-white rounded-3xl shadow-sm border border-white/10 p-4 sm:p-6 space-y-3">
+              <div className="cartao-simples text-white p-4 space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/70">
                   <span>A apresentar {filteredTournaments.length} de {tournaments.length} torneios registados</span>
                 </div>
@@ -1296,7 +1368,7 @@ const AdminDashboard: React.FC = () => {
                     <p className="text-xs text-white/65 mt-0.5">Tente alterar os filtros ou adicione uma nova competição.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-2.5">
                     {filteredTournaments.map(t => (
                       <div 
                         key={t.id} 
@@ -1304,7 +1376,7 @@ const AdminDashboard: React.FC = () => {
                       >
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">🏆</span>
+                            <Trophy size={17} className="text-csc-gold" />
                             <div>
                               <h4 className="font-black text-sm text-white">{t.name}</h4>
                               {t.season && (
@@ -1314,9 +1386,9 @@ const AdminDashboard: React.FC = () => {
                           </div>
                           <div>
                             <span className={`inline-block text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                              t.status === 'ativo' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                              t.status === 'ativo' ? 'bg-csc-light/15 text-csc-verde-texto border border-csc-light/35' :
                               t.status === 'terminado' ? 'bg-white/10 text-white/70' :
-                              'bg-amber-100 text-amber-800 border border-amber-300'
+                              'bg-csc-gold/15 text-csc-gold border border-csc-gold/35'
                             }`}>
                               {t.status}
                             </span>
@@ -1367,9 +1439,9 @@ const AdminDashboard: React.FC = () => {
             aria-modal="true"
             aria-labelledby="admin-campo-titulo"
             tabIndex={-1}
-            className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in outline-none"
+            className="bg-csc-fundo text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in outline-none"
           >
-            <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <MapPin size={22} className="text-csc-gold" />
                 <h3 id="admin-campo-titulo" className="font-black text-lg">
@@ -1379,7 +1451,7 @@ const AdminDashboard: React.FC = () => {
               <button
                 onClick={handleRequestCloseFieldModal}
                 aria-label="Fechar"
-                className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+                className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               >
                 <X size={18} className="stroke-[2.5]" />
               </button>
@@ -1387,7 +1459,7 @@ const AdminDashboard: React.FC = () => {
 
             <form onSubmit={handleSaveFieldForm} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                <label className={ETIQUETA}>
                   Nome do Campo *
                 </label>
                 <input
@@ -1396,12 +1468,12 @@ const AdminDashboard: React.FC = () => {
                   value={fieldName}
                   onChange={e => setFieldName(e.target.value)}
                   placeholder="Ex: Estádio Municipal Dramático de Cascais"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                  className={CAMPO}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                <label className={ETIQUETA}>
                   Morada / Localização
                 </label>
                 <input
@@ -1409,7 +1481,7 @@ const AdminDashboard: React.FC = () => {
                   value={fieldAddress}
                   onChange={e => setFieldAddress(e.target.value)}
                   placeholder="Ex: R. da Torre, 2750-760 Cascais"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                  className={CAMPO}
                 />
                 <p className="text-[11px] text-white/70 mt-1 font-medium">Usada para integração e navegação direta no Google Maps.</p>
               </div>
@@ -1424,9 +1496,9 @@ const AdminDashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-gold text-csc-dark rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
+                  className="px-6 py-2.5 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
                 >
-                  <Save size={16} className="text-csc-dark" />
+                  <Save size={16} className="text-csc-tinta" />
                   <span>{editingFieldId ? 'Atualizar Campo' : 'Guardar Campo'}</span>
                 </button>
               </div>
@@ -1446,9 +1518,9 @@ const AdminDashboard: React.FC = () => {
             aria-modal="true"
             aria-labelledby="admin-adversario-titulo"
             tabIndex={-1}
-            className="bg-csc-dark text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in my-8 outline-none"
+            className="bg-csc-fundo text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in my-8 outline-none"
           >
-            <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <Shield size={22} className="text-csc-gold" />
                 <h3 id="admin-adversario-titulo" className="font-black text-lg">
@@ -1458,7 +1530,7 @@ const AdminDashboard: React.FC = () => {
               <button
                 onClick={handleRequestCloseOppModal}
                 aria-label="Fechar"
-                className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+                className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               >
                 <X size={18} className="stroke-[2.5]" />
               </button>
@@ -1467,7 +1539,7 @@ const AdminDashboard: React.FC = () => {
             <form onSubmit={handleSaveOpponentForm} className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                  <label className={ETIQUETA}>
                     Nome da Equipa *
                   </label>
                   <input
@@ -1476,11 +1548,11 @@ const AdminDashboard: React.FC = () => {
                     value={oppName}
                     onChange={e => setOppName(e.target.value)}
                     placeholder="Ex: Grupo Desportivo Pescadores"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                    className={CAMPO}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                  <label className={ETIQUETA}>
                     Siglas
                   </label>
                   <input
@@ -1488,18 +1560,18 @@ const AdminDashboard: React.FC = () => {
                     value={oppInitials}
                     onChange={e => setOppInitials(e.target.value)}
                     placeholder="Ex: GDPCC"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                    className={CAMPO}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                <label className={ETIQUETA}>
                   Símbolo (Logótipo)
                 </label>
                 {existingLogoUrl && !oppLogo && (
                   <div className="flex items-center gap-3 mb-2 p-2 bg-white/5 border border-white/10 rounded-xl">
-                    <img src={existingLogoUrl} alt="Logo Atual" className="w-10 h-10 object-contain p-1 bg-white rounded-lg border" />
+                    <img src={existingLogoUrl} alt="Logo Atual" className="w-10 h-10 object-contain p-1 bg-white rounded-lg border border-white/20" />
                     <span className="text-xs text-white/60 font-medium truncate flex-1">Símbolo atualmente guardado</span>
                   </div>
                 )}
@@ -1507,23 +1579,23 @@ const AdminDashboard: React.FC = () => {
                   type="file"
                   accept="image/*"
                   onChange={e => setOppLogo(e.target.files ? e.target.files[0] : null)}
-                  className="w-full px-4 py-2 border border-white/15 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-dark"
+                  className="w-full px-4 py-2 border border-white/15 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-tinta"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                <label className={ETIQUETA}>
                   Campo Habitual
                 </label>
                 <select
                   value={oppField}
                   onChange={e => setOppField(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                  className={CAMPO}
                 >
                   <option value="">-- Nenhum campo habitual associado --</option>
                   {fields.map(f => (
                     <option key={f.id} value={f.id}>
-                      🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                      {f.name} {f.address ? `(${f.address})` : ''}
                     </option>
                   ))}
                 </select>
@@ -1531,7 +1603,7 @@ const AdminDashboard: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                  <label className={ETIQUETA}>
                     Pessoa de Contacto
                   </label>
                   <input
@@ -1539,11 +1611,11 @@ const AdminDashboard: React.FC = () => {
                     value={oppContact}
                     onChange={e => setOppContact(e.target.value)}
                     placeholder="Ex: Sr. Carlos Diretor"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                    className={`${CAMPO} h-auto py-3 leading-relaxed`}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                  <label className={ETIQUETA}>
                     Telefone
                   </label>
                   <input
@@ -1551,7 +1623,7 @@ const AdminDashboard: React.FC = () => {
                     value={oppPhone}
                     onChange={e => setOppPhone(e.target.value)}
                     placeholder="Ex: 910 000 000"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                    className={`${CAMPO} h-auto py-3 leading-relaxed`}
                   />
                 </div>
               </div>
@@ -1567,13 +1639,13 @@ const AdminDashboard: React.FC = () => {
                 <button
                   type="submit"
                   disabled={uploadingOppLogo}
-                  className="px-6 py-2.5 bg-csc-gold text-csc-dark rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98"
+                  className="px-6 py-2.5 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98"
                 >
                   {uploadingOppLogo ? (
                     <span>A enviar dados...</span>
                   ) : (
                     <>
-                      <Save size={16} className="text-csc-dark" />
+                      <Save size={16} className="text-csc-tinta" />
                       <span>{editingOppId ? 'Atualizar Adversário' : 'Guardar Adversário'}</span>
                     </>
                   )}
@@ -1602,9 +1674,9 @@ const AdminDashboard: React.FC = () => {
             aria-modal="true"
             aria-labelledby="admin-torneio-titulo"
             tabIndex={-1}
-            className="bg-csc-dark text-white w-full max-w-3xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden animate-scale-in flex flex-col max-h-[90vh] outline-none"
+            className="bg-csc-fundo text-white w-full max-w-3xl rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in flex flex-col max-h-[90vh] outline-none"
           >
-            <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-csc-dark text-white">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <Trophy size={22} className="text-csc-gold" />
                 <h3 id="admin-torneio-titulo" className="font-black text-lg">
@@ -1614,7 +1686,7 @@ const AdminDashboard: React.FC = () => {
               <button
                 onClick={handleRequestCloseTourModal}
                 aria-label="Fechar"
-                className="w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+                className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               >
                 <X size={18} className="stroke-[2.5]" />
               </button>
@@ -1622,7 +1694,7 @@ const AdminDashboard: React.FC = () => {
 
             <form onSubmit={handleSaveTournamentForm} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                <label className={ETIQUETA}>
                   Nome da Competição *
                 </label>
                 <input
@@ -1631,13 +1703,13 @@ const AdminDashboard: React.FC = () => {
                   value={tourName}
                   onChange={e => setTourName(e.target.value)}
                   placeholder="Ex: Liga Veteranos AF Lisboa"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                  className={CAMPO}
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                  <label className={ETIQUETA}>
                     Época Desportiva
                   </label>
                   <input
@@ -1645,17 +1717,17 @@ const AdminDashboard: React.FC = () => {
                     value={tourSeason}
                     onChange={e => setTourSeason(e.target.value)}
                     placeholder="Ex: 2025/2026"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                    className={CAMPO}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                  <label className={ETIQUETA}>
                     Estado do Torneio
                   </label>
                   <select
                     value={tourStatus}
                     onChange={e => setTourStatus(e.target.value as any)}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                    className={CAMPO}
                   >
                     <option value="agendado">Agendado</option>
                     <option value="ativo">Ativo (Em Curso)</option>
@@ -1665,7 +1737,7 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                <label className={ETIQUETA}>
                   Empresa Organizadora
                 </label>
                 <input
@@ -1673,17 +1745,17 @@ const AdminDashboard: React.FC = () => {
                   value={tourOrganizerName}
                   onChange={e => setTourOrganizerName(e.target.value)}
                   placeholder="Ex: Associação de Futebol de Lisboa"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none text-gray-900"
+                  className={CAMPO}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-white/70 uppercase tracking-wider mb-1.5">
+                <label className={ETIQUETA}>
                   Imagem do Torneio
                 </label>
                 {existingTourImageUrl && !tourImage && (
                   <div className="flex items-center gap-3 mb-2 p-2 bg-white/5 border border-white/10 rounded-xl">
-                    <img src={existingTourImageUrl} alt="Imagem Atual" className="w-10 h-10 object-contain p-1 bg-white rounded-lg border" />
+                    <img src={existingTourImageUrl} alt="Imagem Atual" className="w-10 h-10 object-contain p-1 bg-white rounded-lg border border-white/20" />
                     <span className="text-xs text-white/60 font-medium truncate flex-1">Imagem atualmente guardada</span>
                   </div>
                 )}
@@ -1691,91 +1763,91 @@ const AdminDashboard: React.FC = () => {
                   type="file"
                   accept="image/*"
                   onChange={e => setTourImage(e.target.files ? e.target.files[0] : null)}
-                  className="w-full px-4 py-2 border border-white/15 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-dark"
+                  className="w-full px-4 py-2 border border-white/15 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-tinta"
                 />
                 <p className="text-[11px] text-white/50 font-medium mt-1">Acompanha os ecrãs desta competição (Gestão da Liga, Classificações, badges de jogo).</p>
               </div>
 
               <details className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden group">
                 <summary className="px-4 py-3 text-sm font-bold text-white/80 cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors">
-                  <span>⚙️ Configuração de Regras (Opcional)</span>
-                  <span className="text-white/65 group-open:rotate-180 transition-transform">▼</span>
+                  <span>Regras da prova (opcional)</span>
+                  <ChevronDown size={15} className="text-white/50 group-open:rotate-180 transition-transform" />
                 </summary>
-                <div className="p-4 border-t border-gray-200 bg-white grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto">
+                <div className="p-4 border-t border-white/10 grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto">
                   
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px]">Formato da Competição</h4>
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/40 uppercase tracking-wider mb-[-5px]">Formato da Competição</h4>
                   <div className="col-span-1 sm:col-span-2">
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Modelo de Liga</label>
+                    <label className={ETIQUETA}>Modelo de Liga</label>
                     <select 
                       value={tourRules.format || 'single_league'} 
                       onChange={e => setTourRules({...tourRules, format: e.target.value as any})} 
-                      className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-bold bg-white text-gray-900"
+                      className={CAMPO}
                     >
                       <option value="single_league">Liga Única (1 Fase)</option>
                       <option value="two_phases">2 Fases (Grupos + Fase Final)</option>
                     </select>
                   </div>
 
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/40 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Idade Mínima</label>
-                    <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
+                    <label className={ETIQUETA}>Idade Mínima</label>
+                    <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Permitir Exceções</label>
-                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({...tourRules, exceptions_allowed: e.target.value === 'true'})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900">
+                    <label className={ETIQUETA}>Permitir Exceções</label>
+                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({...tourRules, exceptions_allowed: e.target.value === 'true'})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white">
                       <option value="true">Sim</option>
                       <option value="false">Não</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Máx. Exceções de Idade</label>
-                    <input type="number" min="0" value={tourRules.exceptions_count} onChange={e => setTourRules({...tourRules, exceptions_count: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" disabled={!tourRules.exceptions_allowed} />
+                    <label className={ETIQUETA}>Máx. Exceções de Idade</label>
+                    <input type="number" min="0" value={tourRules.exceptions_count} onChange={e => setTourRules({...tourRules, exceptions_count: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" disabled={!tourRules.exceptions_allowed} />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Idade Mín. da Exceção</label>
-                    <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" disabled={!tourRules.exceptions_allowed} />
-                  </div>
-
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Máx. Inscritos (Plantel)</label>
-                    <input type="number" min="0" value={tourRules.max_squad_size} onChange={e => setTourRules({...tourRules, max_squad_size: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Máx. Convocados / Jogo</label>
-                    <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({...tourRules, max_match_players: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
+                    <label className={ETIQUETA}>Idade Mín. da Exceção</label>
+                    <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" disabled={!tourRules.exceptions_allowed} />
                   </div>
 
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo & Subs</h4>
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/40 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Duração Total (mins)</label>
-                    <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({...tourRules, match_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
+                    <label className={ETIQUETA}>Máx. Inscritos (Plantel)</label>
+                    <input type="number" min="0" value={tourRules.max_squad_size} onChange={e => setTourRules({...tourRules, max_squad_size: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Duração 1ª Parte (mins)</label>
-                    <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({...tourRules, half_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
+                    <label className={ETIQUETA}>Máx. Convocados / Jogo</label>
+                    <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({...tourRules, max_match_players: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
+                  </div>
+
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/40 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo & Subs</h4>
+                  <div>
+                    <label className={ETIQUETA}>Duração Total (mins)</label>
+                    <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({...tourRules, match_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
+                  </div>
+                  <div>
+                    <label className={ETIQUETA}>Duração 1ª Parte (mins)</label>
+                    <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({...tourRules, half_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
                   </div>
                   
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-gray-400 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/40 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Amarelos para Suspensão</label>
-                    <input type="number" min="0" value={tourRules.yellow_cards_to_suspension} onChange={e => setTourRules({...tourRules, yellow_cards_to_suspension: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" />
+                    <label className={ETIQUETA}>Amarelos para Suspensão</label>
+                    <input type="number" min="0" value={tourRules.yellow_cards_to_suspension} onChange={e => setTourRules({...tourRules, yellow_cards_to_suspension: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-600 mb-1">Resultado p/ Falta Comp.</label>
-                    <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({...tourRules, walkover_score: e.target.value})} className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900" placeholder="Ex: 5-0" />
+                    <label className={ETIQUETA}>Resultado p/ Falta Comp.</label>
+                    <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({...tourRules, walkover_score: e.target.value})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" placeholder="Ex: 5-0" />
                   </div>
                 </div>
               </details>
 
               <details className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden group">
                 <summary className="px-4 py-3 text-sm font-bold text-white/80 cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors">
-                  <span>💶 Inscrição na Prova (Opcional)</span>
-                  <span className="text-white/65 group-open:rotate-180 transition-transform">▼</span>
+                  <span>Inscrição na prova (opcional)</span>
+                  <ChevronDown size={15} className="text-white/50 group-open:rotate-180 transition-transform" />
                 </summary>
-                <div className="p-4 border-t border-gray-200 bg-white space-y-3">
-                  <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                <div className="p-4 border-t border-white/10 space-y-3">
+                  <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={!!tourRules.registration_fee}
@@ -1785,7 +1857,7 @@ const AdminDashboard: React.FC = () => {
                           ? { total: 0, installments: [{ amount: 0, due_date: '', paid: false }] }
                           : undefined
                       }))}
-                      className="w-4 h-4 text-csc-dark rounded"
+                      className="w-4 h-4 text-csc-tinta rounded"
                     />
                     Esta prova tem valor de inscrição a pagar
                   </label>
@@ -1794,7 +1866,7 @@ const AdminDashboard: React.FC = () => {
                     <>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Valor Total (€)</label>
+                          <label className={ETIQUETA}>Valor Total (€)</label>
                           <input
                             key={editingTourId || 'new'}
                             type="number" min="0" step="0.01"
@@ -1818,11 +1890,11 @@ const AdminDashboard: React.FC = () => {
                                 return { ...prev, registration_fee: { ...rf, total: val, installments } }
                               })
                             }}
-                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900"
+                            className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white"
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Nº de Tranches</label>
+                          <label className={ETIQUETA}>Nº de Tranches</label>
                           <input
                             key={editingTourId || 'new'}
                             type="number" min="1" max="6"
@@ -1835,19 +1907,19 @@ const AdminDashboard: React.FC = () => {
                               const installments = redistributeInstallments(rf.installments, rf.total, n)
                               return { ...prev, registration_fee: { ...rf, installments } }
                             })}
-                            className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900"
+                            className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white"
                           />
                         </div>
                       </div>
-                      <p className="text-[10px] text-gray-500 -mt-1">
+                      <p className="text-[10px] text-white/50 -mt-1">
                         Mudar o Valor Total ou o Nº de Tranches reparte o valor em partes iguais pelas tranches ainda por pagar. Depois disso, cada tranche pode ser ajustada à mão abaixo.
                       </p>
 
                       <div className="space-y-2">
                         {tourRules.registration_fee.installments.map((inst, idx) => (
-                          <div key={idx} className="grid grid-cols-3 gap-2 items-end p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                          <div key={idx} className="grid grid-cols-3 gap-2 items-end p-2.5 bg-white/6 rounded-lg border border-white/10">
                             <div>
-                              <label className="block text-[10px] font-bold text-gray-500 mb-1">Tranche {idx + 1} — Valor (€)</label>
+                              <label className={ETIQUETA}>Tranche {idx + 1} — Valor (€)</label>
                               <input
                                 // O valor entra na key: como o campo não é controlado (ver nota
                                 // no Valor Total), sem isto o input não mostrava o valor
@@ -1867,11 +1939,11 @@ const AdminDashboard: React.FC = () => {
                                     return { ...prev, registration_fee: { ...rf, installments } }
                                   })
                                 }}
-                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-900 disabled:bg-gray-100"
+                                className="w-full px-2.5 py-1.5 border border-white/12 rounded-lg text-xs text-white disabled:bg-white/10"
                               />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-gray-500 mb-1">Prazo</label>
+                              <label className={ETIQUETA}>Prazo</label>
                               <input
                                 type="date"
                                 value={inst.due_date}
@@ -1881,20 +1953,20 @@ const AdminDashboard: React.FC = () => {
                                   const installments = rf.installments.map((it, i) => i === idx ? { ...it, due_date: e.target.value } : it)
                                   return { ...prev, registration_fee: { ...rf, installments } }
                                 })}
-                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-900 disabled:bg-gray-100"
+                                className="w-full px-2.5 py-1.5 border border-white/12 rounded-lg text-xs text-white disabled:bg-white/10"
                               />
                             </div>
                             <div className="text-xs font-bold">
                               {inst.paid ? (
-                                <span className="text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">✓ Paga</span>
+                                <span className="text-csc-verde-texto bg-csc-light/10 px-2 py-1 rounded-lg border border-csc-light/25">✓ Paga</span>
                               ) : (
-                                <span className="text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">Por pagar</span>
+                                <span className="text-csc-gold bg-csc-gold/10 px-2 py-1 rounded-lg border border-csc-gold/25">Por pagar</span>
                               )}
                             </div>
                           </div>
                         ))}
                       </div>
-                      <p className="text-[10px] text-gray-500">
+                      <p className="text-[10px] text-white/50">
                         Ao guardar, cria-se automaticamente a categoria de despesa "Inscrição — {tourName.trim() || 'nome do torneio'}". O valor total já entra na previsão financeira antes de ser pago, e cada tranche pode ser paga depois na página Financeiro & Quotas.
                       </p>
                     </>
@@ -1939,21 +2011,21 @@ const AdminDashboard: React.FC = () => {
                         const playerPositions = p.position ? p.position.split(',').map((pos: string) => pos.trim()).filter(Boolean) : []
 
                         return (
-                          <label key={p.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'} ${isInvalid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50'} transition-colors`}>
+                          <label key={p.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-csc-light/45 bg-csc-light/15' : 'border-white/12 bg-white/5'} ${isInvalid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/10'} transition-colors`}>
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 bg-green-700 rounded-full overflow-hidden shrink-0 flex items-center justify-center">
-                                <span className="text-sm font-black text-amber-400">{p.jersey_number || '-'}</span>
+                              <div className="w-9 h-9 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 overflow-hidden shrink-0 flex items-center justify-center">
+                                <span className="font-display text-sm font-black text-csc-gold">{p.jersey_number || '-'}</span>
                               </div>
                               <div>
-                                <p className="text-xs font-black text-gray-900">{p.shirt_name || p.name}</p>
+                                <p className="text-xs font-black text-white">{p.shirt_name || p.name}</p>
                                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                   {age !== null && (
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isTooYoung ? (isExceptionButValid ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') : 'bg-green-100 text-green-700'}`}>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isTooYoung ? (isExceptionButValid ? 'bg-csc-gold/15 text-csc-gold' : 'bg-csc-red/15 text-csc-vermelho-texto') : 'bg-csc-light/16 text-csc-verde-texto'}`}>
                                       {age} anos
                                     </span>
                                   )}
                                   {playerPositions.map((pos: string, idx: number) => (
-                                    <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                                    <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-csc-blue/20 text-csc-azul-texto">
                                       {pos}
                                     </span>
                                   ))}
@@ -1980,7 +2052,7 @@ const AdminDashboard: React.FC = () => {
                                     setTourPlayers(prev => prev.filter(id => id !== p.id))
                                   }
                                 }}
-                                className="w-4 h-4 text-csc-dark border-gray-300 rounded focus:ring-csc-dark"
+                                className="w-4 h-4 text-csc-tinta border-white/15 rounded focus:ring-csc-dark"
                               />
                             </div>
                           </label>
@@ -2006,9 +2078,9 @@ const AdminDashboard: React.FC = () => {
                 <button
                   type="submit"
                   disabled={uploadingTourImage}
-                  className="px-6 py-2.5 bg-csc-gold text-csc-dark rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98 disabled:opacity-60"
+                  className="px-6 py-2.5 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98 disabled:opacity-60"
                 >
-                  <Save size={16} className="text-csc-dark" />
+                  <Save size={16} className="text-csc-tinta" />
                   <span>{uploadingTourImage ? 'A guardar...' : editingTourId ? 'Atualizar Torneio' : 'Guardar Torneio'}</span>
                 </button>
               </div>
@@ -2041,6 +2113,47 @@ const AdminDashboard: React.FC = () => {
         variant={confirmModalConfig.variant}
         onConfirm={confirmModalConfig.onConfirm}
         onCancel={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Ficha do adversário (9h) e ficha do campo (9i), ambas no endereço. */}
+      <FichaAdversario
+        adversario={adversarioAberto}
+        campoPrincipal={
+          adversarioAberto ? (fields.find(f => f.id === adversarioAberto.home_field_id) ?? null) : null
+        }
+        siglaClube={formatClubSigla(clubSettings?.initials)}
+        aoFechar={() => fecharDetalhe('adversario')}
+        aoEditar={() => {
+          if (!adversarioAberto) return
+          const alvo = adversarioAberto
+          fecharDetalhe('adversario')
+          handleStartEditOpponent(alvo)
+        }}
+        aoEliminar={() => {
+          if (!adversarioAberto) return
+          const alvo = adversarioAberto
+          fecharDetalhe('adversario')
+          handleDeleteOpponent(alvo.id, alvo.name)
+        }}
+      />
+
+      <FichaCampo
+        campo={campoAberto}
+        eCampoDoClube={Boolean(campoAberto && clubSettings?.home_field_id === campoAberto.id)}
+        siglaClube={formatClubSigla(clubSettings?.initials)}
+        aoFechar={() => fecharDetalhe('campo')}
+        aoEditar={() => {
+          if (!campoAberto) return
+          const alvo = campoAberto
+          fecharDetalhe('campo')
+          handleStartEditField(alvo)
+        }}
+        aoEliminar={() => {
+          if (!campoAberto) return
+          const alvo = campoAberto
+          fecharDetalhe('campo')
+          handleDeleteField(alvo.id, alvo.name)
+        }}
       />
     </div>
   )

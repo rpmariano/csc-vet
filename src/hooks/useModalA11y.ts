@@ -152,18 +152,44 @@ export function useModalA11y({
 
     focoAnterior.current = document.activeElement as HTMLElement | null
 
-    let t = 0
+    /*
+      Insistir até o painel existir, em vez de tentar uma vez e desistir.
+
+      Isto era um `setTimeout(…, 0)` com um `if (!painelRef.current) return`
+      lá dentro: uma tentativa só, e em silêncio. Chegava para os diálogos que
+      abrem a partir de um clique, mas não para as persianas que abrem pelo
+      endereço — o `BottomSheet` monta o painel num segundo passo, para a
+      animação de entrada, e nesse caso a ref ainda era nula quando o
+      temporizador disparava. Medido: a ficha do adversário ficava com o foco
+      no `<body>` em **10 de 12** aberturas, e a do campo em 7 de 12. Um
+      diálogo que abre sem levar o foco lá para dentro deixa quem navega por
+      teclado ou com leitor de ecrã do lado de fora — o Tab continua a
+      percorrer a página por baixo.
+
+      Tenta a cada frame durante meio segundo, o que cobre a montagem em dois
+      passos sem prender nada se o painel nunca aparecer.
+    */
+    let cancelado = false
+    let frame = 0
     if (autoFocus) {
-      t = window.setTimeout(() => {
-        if (!painelRef.current) return
-        const primeiro = painelRef.current.querySelector<HTMLElement>(SELETOR_FOCAVEL)
-        // Sem nada focável, focar o painel para que o leitor de ecrã o anuncie.
-        ;(primeiro ?? painelRef.current).focus()
-      }, 0)
+      const limite = performance.now() + 500
+      const tentar = () => {
+        if (cancelado) return
+        const painel = painelRef.current
+        if (painel) {
+          const primeiro = painel.querySelector<HTMLElement>(SELETOR_FOCAVEL)
+          // Sem nada focável, focar o painel para que o leitor de ecrã o anuncie.
+          ;(primeiro ?? painel).focus()
+          return
+        }
+        if (performance.now() < limite) frame = requestAnimationFrame(tentar)
+      }
+      frame = requestAnimationFrame(tentar)
     }
 
     return () => {
-      if (t) window.clearTimeout(t)
+      cancelado = true
+      if (frame) cancelAnimationFrame(frame)
       focoAnterior.current?.focus?.()
     }
   }, [isOpen, autoFocus])

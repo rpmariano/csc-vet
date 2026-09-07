@@ -1,20 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { 
   MapPin, 
-  Clock, 
   X, 
   Users, 
   CheckCircle2,
   XCircle,
   Trash2,
+  ClipboardList,
   Search, 
   ExternalLink,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Calendar as CalendarIcon,
   CalendarDays as CalendarDaysIcon,
-  List as ListIcon,
   Edit,
   Save,
   CalendarRange,
@@ -25,11 +23,10 @@ import {
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
 import { VistaDetalhe } from '../components/VistaDetalhe'
-import { useEhDesktop } from '../hooks/useEhDesktop'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { QuickFieldModal } from '../components/QuickFieldModal'
 import { QuickOpponentModal } from '../components/QuickOpponentModal'
@@ -38,9 +35,42 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
 import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
+import { AniversariosDoMes } from '../components/AniversariosDoMes'
+import { FichaConvocado } from '../components/callups/FichaConvocado'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { BottomSheet } from '../components/BottomSheet'
+import { CabecalhoEcra, Pastilha, CampoEntrada, Botao } from '../components/ui'
+import { SlidersHorizontal } from 'lucide-react'
+
+/** Como se lê cada filtro escondido, na linha de resumo do cabeçalho. */
+const ROTULOS_ESTADO: Record<string, string> = {
+  upcoming: 'Próximos',
+  past: 'Realizados',
+  my_confirmed: 'Confirmados por mim',
+  my_pending: 'Por responder',
+  my_declined: 'Recusados por mim',
+  my_called: 'Fui convocado',
+}
+
+/**
+ * Campo branco dos formulários de evento (ecrã 2e) — 46px, como no handoff.
+ * É o mesmo desenho dos campos do Perfil, dois pixels mais alto porque aqui
+ * há menos campos por ecrã e mais dedo a preencher.
+ */
+const ETIQUETA_FORM =
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+
+const CAMPO_FORM =
+  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
+
+const ROTULOS_TIPO: Record<string, string> = {
+  match: 'Jogos',
+  practice: 'Treinos',
+  gathering: 'Convívios',
+}
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -189,6 +219,8 @@ interface CallupWithPlayer {
   event_id: string
   player_id: string
   status: 'called' | 'confirmed' | 'declined'
+  /** Quando o atleta respondeu. Escrito por gatilho no servidor; NULL nas respostas anteriores a set/2026. */
+  responded_at?: string | null
   player: Profile
 }
 
@@ -220,7 +252,6 @@ const CalendarPage: React.FC = () => {
   const [opponents, setOpponents] = useState<Opponent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [searchParams, setSearchParams] = useSearchParams()
-  const ehDesktop = useEhDesktop()
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   // Separado de `selectedEvent`: o evento fica retido (para a persiana poder deslizar
   // suavemente para fora ao fechar) mesmo depois de a persiana deixar de estar aberta.
@@ -228,9 +259,15 @@ const CalendarPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
 
   // Calendar View States
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  // A pesquisa e o filtro de estado não estão à vista (ver o cabeçalho): vivem
+  // numa persiana, e o cabeçalho diz quando estão a filtrar alguma coisa.
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
+  /* A ficha rápida do convocado (4a), por cima da persiana do evento. Guarda-se
+     o id da convocatória e não a linha, para a ficha acompanhar as alterações
+     de estado feitas nos seus próprios botões. */
+  const [convocadoAberto, setConvocadoAberto] = useState<string | null>(null)
   const [typeFilter, setTypeFilter] = useState<'all' | 'match' | 'practice' | 'gathering'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'past' | 'my_confirmed' | 'my_declined' | 'my_pending' | 'my_called'>('all')
@@ -240,7 +277,18 @@ const CalendarPage: React.FC = () => {
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [modalCallupStatusFilter, setModalCallupStatusFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
-  const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 640 : true)
+  /*
+    A convocatória, no detalhe do evento, começa recolhida.
+
+    Começava aberta ou fechada conforme `window.innerWidth >= 640` — resto do
+    tempo em que havia duas UIs. Com uma só, isso passou a ser um bug: o mesmo
+    evento mostrava a lista de convocados numa janela larga e escondia-a num
+    telemóvel, e a regra é que as duas larguras têm de mostrar a mesma coisa.
+    Fica o comportamento do telemóvel, que é o que toda a gente vê: a persiana
+    abre curta, com a hora, o local e a resposta do próprio à vista, e a lista
+    do plantel a um toque.
+  */
+  const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(false)
   const [isMatchReportOpen, setIsMatchReportOpen] = useState(false)
 
 
@@ -265,10 +313,9 @@ const CalendarPage: React.FC = () => {
   const modalScrollRef = React.useRef<HTMLDivElement>(null)
   const carouselDragRef = React.useRef<{ startX: number; startY: number; lastDeltaX: number; lastDeltaY: number } | null>(null)
 
+  // Abrir outro evento repõe a convocatória recolhida.
   useEffect(() => {
-    if (selectedEvent) {
-      setIsModalCallupsExpanded(typeof window !== 'undefined' ? window.innerWidth >= 640 : true)
-    }
+    if (selectedEvent) setIsModalCallupsExpanded(false)
   }, [selectedEvent])
 
   // Retroceder no browser (ou qualquer coisa que tire o ?event= do endereço)
@@ -590,7 +637,7 @@ const CalendarPage: React.FC = () => {
       const myCallupsPromise = profile?.id
         ? supabase
             .from('callups')
-            .select('id, event_id, player_id, status, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)')
+            .select('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)')
             .eq('player_id', profile.id)
         : Promise.resolve({ data: [] } as any)
 
@@ -599,7 +646,7 @@ const CalendarPage: React.FC = () => {
           .from('events')
           .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season, image_url, organizer_name), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
-        fetchAllCallups('id, event_id, player_id, status, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
+        fetchAllCallups('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
         myCallupsPromise,
         // Plantel: a vista traz só as colunas de equipa (sem IBAN, NIF, morada,
         // contactos ou notas médicas), por isso qualquer membro a pode ler.
@@ -895,8 +942,8 @@ const CalendarPage: React.FC = () => {
       await fetchEventsAndData()
 
       toast.success(resendCallups 
-        ? '✨ Evento atualizado e pedidos de confirmação reenviados aos atletas!' 
-        : '✨ Evento atualizado com sucesso!'
+        ? 'Evento atualizado e pedidos de confirmação reenviados aos atletas!' 
+        : 'Evento atualizado com sucesso!'
       )
     } catch (err: any) {
       toast.error('Erro ao atualizar evento: ' + (err.message || 'Erro'))
@@ -979,7 +1026,7 @@ const CalendarPage: React.FC = () => {
         }
         return { ...prev, [eventId]: curList }
       })
-      toast.success(status === 'confirmed' ? '✓ Presença confirmada!' : '✕ Presença recusada.')
+      toast.success(status === 'confirmed' ? 'Presença confirmada!' : 'Presença recusada.')
     } catch (err: any) {
       console.error('Erro ao atualizar resposta:', err)
       toast.error('Erro ao atualizar resposta: ' + (err.message || 'Erro'))
@@ -1051,6 +1098,12 @@ const CalendarPage: React.FC = () => {
     triggerHaptic('light')
     setCurrentDate(prev => new Date(prev.getFullYear(), newMonth, 1))
   }
+
+  /** Dois anos para trás e dois para a frente — o clube não agenda mais longe. */
+  const anosDisponiveis = Array.from(
+    { length: 5 },
+    (_, i) => new Date().getFullYear() - 2 + i,
+  )
 
   const handleYearChange = (newYear: number) => {
     triggerHaptic('light')
@@ -1252,6 +1305,76 @@ const CalendarPage: React.FC = () => {
 
   const selectedDayEvents = selectedDate ? getEventsForDate(selectedDate) : []
 
+  /*
+    Ecrã 4e: os eventos por convocar sobem ao topo, fora da lista.
+
+    A regra é a mesma do alerta flutuante da Home (4c), e por isso está escrita
+    do mesmo modo: jogos e convívios — os treinos convocam sozinhos todos os
+    aptos —, no futuro, não rascunhos, e sem uma única linha em `callups`. A
+    diferença é que aqui não há janela de sete dias: na Agenda vê-se o mês todo,
+    e um jogo daqui a três semanas sem ninguém chamado é para tratar quando se
+    reparar nele, não só quando ficar urgente.
+  */
+  const eventosPorConvocar = !isCoachOrAdmin ? [] : filteredEvents.filter(e =>
+    (e.type === 'match' || e.type === 'gathering') &&
+    e.is_active !== false &&
+    new Date(e.date_time).getTime() >= Date.now() &&
+    (eventCallups[e.id] || []).length === 0,
+  )
+  const idsPorConvocar = new Set(eventosPorConvocar.map(e => e.id))
+  const eventosDaLista = filteredEvents.filter(e => !idsPorConvocar.has(e.id))
+
+  /** O cartão destacado de um evento sem ninguém convocado (4e). */
+  const renderCartaoPorConvocar = (event: Event) => {
+    const quando = new Date(event.date_time)
+    const titulo = event.type === 'match'
+      ? `${formatClubSigla(clubSettings?.initials)} vs ${event.opponent?.name ?? 'adversário por definir'}`
+      : (event.title || 'Convívio')
+    const prova = event.is_friendly ? 'Amigável' : event.tournament?.name
+
+    return (
+      <div key={event.id} className="cartao-vidro overflow-hidden border-csc-gold/35">
+        <div className="flex items-center gap-3.5 px-4 pt-4">
+          <span className="w-11 shrink-0 text-center">
+            <span className="block font-display font-black text-[19px] text-csc-gold leading-none tabular-nums">
+              {String(quando.getDate()).padStart(2, '0')}
+            </span>
+            <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/45 mt-0.5">
+              {quando.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, '')}
+            </span>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display font-extrabold text-[15px] text-white truncate">{titulo}</span>
+            <span className="block text-[11px] text-white/55 mt-0.5 truncate">
+              {quando.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+              {prova ? ` · ${prova}` : ''}
+            </span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3 px-4 py-3.5 mt-3.5 bg-csc-gold/10 border-t border-csc-gold/25">
+          <span className="min-w-0 flex-1">
+            <span className="block font-display font-extrabold text-[12.5px] text-csc-gold">
+              Ninguém foi convocado
+            </span>
+            <span className="block text-[10.5px] leading-snug text-white/60 mt-0.5">
+              Sem convocatória o plantel não recebe pedido de resposta
+            </span>
+          </span>
+          <Link
+            to={`/events?convocatoria=${event.id}`}
+            onClick={() => triggerHaptic('light')}
+            className="h-11 px-4 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[11.5px]
+              flex items-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+          >
+            Convocar
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const renderEventCard = (event: Event) => {
     const callups = eventCallups[event.id] || []
     let myCallup = profile ? callups.find(c => c.player_id === profile.id || c.player?.id === profile.id || (c.player?.email && profile.email && c.player.email.toLowerCase().trim() === profile.email.toLowerCase().trim())) : null
@@ -1265,6 +1388,7 @@ const CalendarPage: React.FC = () => {
       }
     }
     const confirmedCount = callups.filter(c => c.status === 'confirmed').length
+    const semRespostaCount = callups.filter(c => c.status === 'called').length
 
     const isMatch = event.type === 'match'
     const isPractice = event.type === 'practice'
@@ -1316,8 +1440,24 @@ const CalendarPage: React.FC = () => {
     return (
       <div
         key={event.id}
+        role="button"
+        tabIndex={0}
         onClick={() => abrirEvento(event)}
-        className="rounded-3xl transition-all cursor-pointer bg-csc-dark text-white overflow-hidden shadow-sm hover:shadow-lg flex flex-col justify-between"
+        onKeyDown={e => {
+          // O cartão era um `div` com `onClick`: quem navega por teclado não
+          // lhe chegava, e quem usa leitor de ecrã não ouvia que era clicável.
+          // O link do Maps lá dentro impede que seja um `<button>` a sério
+          // (interativo dentro de interativo), por isso fica o papel e o
+          // tratamento das teclas à mão.
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            abrirEvento(event)
+          }
+        }}
+        aria-label={`Ver ${isMatch ? 'jogo' : isPractice ? 'treino' : 'convívio'}: ${
+          isMatch && event.opponent ? `${cscSigla} contra ${oppSigla}` : event.title
+        }, ${new Date(event.date_time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })}`}
+        className="cartao-vidro text-white overflow-hidden cursor-pointer flex flex-col justify-between transition-transform duration-150 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
       >
         {/* Cabeçalho: tipo de evento por ícone + rótulo, não por cor de fundo */}
         <div className="px-5 pt-5 flex items-center justify-between gap-2">
@@ -1343,10 +1483,30 @@ const CalendarPage: React.FC = () => {
             )}
           </div>
 
-          {callups.length > 0 && (
-            <span className="text-xs font-bold flex items-center gap-1 bg-white/10 text-white px-2.5 py-1 rounded-full shrink-0">
-              <Users size={13} />
-              <span><strong>{confirmedCount}</strong>/{callups.length}</span>
+          {/*
+            Quantos foram chamados e quantos responderam (ecrã 4e). **Só a quem
+            gere**: para o jogador é ruído — o que lhe diz respeito é a hora, o
+            local e a sua própria resposta, que estão mais abaixo no cartão.
+            Mostra-se o número de "sim" enquanto houver algum, e só quando não
+            há nenhum é que passa a dizer quantos faltam responder: com 0,7% de
+            respostas em toda a base, um "0 sim" em cada cartão seria a única
+            coisa que a Agenda dizia.
+          */}
+          {isCoachOrAdmin && callups.length > 0 && (
+            <span className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[11px] font-bold flex items-center gap-1 bg-white/10 text-white/70 px-2.5 py-1 rounded-full">
+                <Users size={13} />
+                {callups.length} convocados
+              </span>
+              <span
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                  confirmedCount > 0
+                    ? 'bg-csc-light/16 border-csc-light/30 text-csc-verde-texto'
+                    : 'bg-csc-gold/16 border-csc-gold/30 text-csc-gold'
+                }`}
+              >
+                {confirmedCount > 0 ? `${confirmedCount} sim` : `${semRespostaCount} sem resp.`}
+              </span>
             </span>
           )}
         </div>
@@ -1359,7 +1519,7 @@ const CalendarPage: React.FC = () => {
                 <div className="flex items-center justify-between gap-3">
                   {isAway ? opponentBlock(false) : cscBlock(false)}
                   <div className="shrink-0 px-1 flex items-center justify-center">
-                    <span className="w-7 h-7 flex items-center justify-center text-[11px] font-black rounded-full bg-csc-gold text-csc-dark shadow-xs">
+                    <span className="px-2.5 py-1 rounded-[9px] bg-white/10 font-display font-bold text-[11px] text-white/50">
                       VS
                     </span>
                   </div>
@@ -1383,26 +1543,38 @@ const CalendarPage: React.FC = () => {
               </div>
             )}
 
-            {/* Concentração Acima da Hora (por extenso) */}
-            {event.meeting_time && (
-              <div className="flex items-center">
-                <div className="inline-flex items-center gap-1.5 text-xs font-black text-csc-gold bg-white/10 px-3 py-1 rounded-full">
-                  <span>Concentração: {event.meeting_time.substring(0, 5)}</span>
-                </div>
+            {/* As duas horas lado a lado, divididas por uma linha: a de
+                concentração à esquerda (quando existe) e a de início à
+                direita, esta em dourado, porque é a que não se pode falhar. */}
+            <div className="flex items-stretch -mx-5 border-y border-white/13">
+              {event.meeting_time && (
+                <>
+                  <div className="flex-none px-5 py-2.5">
+                    <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/55">
+                      Concentração
+                    </p>
+                    <p className="font-display font-extrabold text-[17px] text-white mt-0.5">
+                      {event.meeting_time.substring(0, 5)}
+                    </p>
+                  </div>
+                  <div className="w-px bg-white/13" />
+                </>
+              )}
+              <div className="flex-1 px-5 py-2.5">
+                <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-csc-gold">
+                  Início
+                </p>
+                <p className="font-display font-extrabold text-[17px] text-white mt-0.5">
+                  {new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                </p>
               </div>
-            )}
+            </div>
 
             {/* Horas e Localização / Endereço à frente */}
             {(() => {
               const locStr = getEventLocation(event)
               return (
                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                  {/* Hora */}
-                  <div className="inline-flex items-center gap-1.5 text-xs font-extrabold text-white bg-white/10 px-2.5 py-1 rounded-full shrink-0">
-                    <Clock size={13} className="text-csc-gold" />
-                    <span>{new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-
                   {/* Localização & Maps */}
                   {locStr && (
                     <div className="inline-flex items-center gap-1 text-xs text-white/80 bg-white/10 px-2.5 py-1 rounded-full max-w-full truncate min-w-0">
@@ -1453,7 +1625,7 @@ const CalendarPage: React.FC = () => {
                   onClick={(e) => e.stopPropagation()}
                   className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap"
                 >
-                  <span className="text-xs font-bold text-white/70">Presença:</span>
+                  <span className="text-xs font-bold text-white/70">A tua resposta:</span>
                   {closedByReport ? (
                     <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
                       Jogo com ficha lançada — convocatória fechada
@@ -1506,292 +1678,229 @@ const CalendarPage: React.FC = () => {
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
   const painelEditarEventoRef = useModalA11y({ isOpen: isEditModalOpen, onClose: handleAttemptCloseEditModal })
 
+  /**
+   * O que está escondido na persiana de filtros. Um filtro que não se vê é um
+   * filtro que se esquece — e depois a agenda parece vazia sem razão —, por
+   * isso o cabeçalho acende e uma linha por baixo diz o que está a filtrar.
+   * As pastilhas de tipo não entram: essas estão à vista.
+   */
+  const temFiltros = searchQuery.trim() !== '' || statusFilter !== 'all' || typeFilter !== 'all'
+  const resumoFiltros = [
+    searchQuery.trim() ? `"${searchQuery.trim()}"` : null,
+    statusFilter !== 'all' ? ROTULOS_ESTADO[statusFilter] : null,
+    typeFilter !== 'all' ? ROTULOS_TIPO[typeFilter] : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
     <div className="space-y-6">
-      {/* No desktop, abrir um evento é mudar de página: a agenda sai da frente
-          em vez de ficar por baixo de uma janela. No telemóvel a persiana sobe
-          por cima e a lista continua onde estava. */}
-      <div className={ehDesktop && isEventSheetOpen ? 'hidden' : 'space-y-6'}>
+      <div className="space-y-6">
 
-      {/* Barra de Navegação & Filtros de Calendário */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 space-y-3.5">
-        {/* Linha 1: Alternador de Visualização + Barra de Pesquisa + Filtro de Status */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Alternador de Visualização: Calendário vs Lista */}
-          <div className="flex items-center bg-gray-100 p-1 rounded-xl w-full md:w-auto shrink-0">
+      {/*
+        Cabeçalho da Agenda (ecrã 1a): o mês em sobrancelha dourada, o título,
+        e os dois botões de mês.
+
+        A pesquisa e o filtro de estado não existem no handoff, e o ecrã fica
+        melhor sem eles à vista — mas a app tem 52 eventos na base e alguém
+        vai querer procurar um jogo de há dois meses, ou ver só o que
+        confirmou. Passam para uma persiana atrás do funil.
+      */}
+      <CabecalhoEcra
+        titulo="Agenda"
+        sobrancelha={`${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
+        className="mb-3"
+        acoes={
+          <div className="flex items-center gap-2 flex-none">
             <button
-              onClick={() => setViewMode('calendar')}
-              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                viewMode === 'calendar' ? 'bg-csc-dark text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
+              type="button"
+              onClick={handlePrevMonth}
+              aria-label="Mês anterior"
+              className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
+                transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
             >
-              <CalendarIcon size={15} />
-              <span>Calendário</span>
+              <ChevronLeft size={17} />
             </button>
             <button
-              onClick={() => setViewMode('list')}
-              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                viewMode === 'list' ? 'bg-csc-dark text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
+              type="button"
+              onClick={handleNextMonth}
+              aria-label="Mês seguinte"
+              className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
+                transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
             >
-              <ListIcon size={15} />
-              <span>Lista ({filteredEvents.length})</span>
+              <ChevronRight size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
+              aria-label={temFiltros ? 'Pesquisa e filtros (ativos)' : 'Pesquisa e filtros'}
+              className={`relative w-9 h-9 rounded-full border flex items-center justify-center cursor-pointer
+                transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                  temFiltros
+                    ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                    : 'bg-white/10 border-white/15 text-white/75'
+                }`}
+            >
+              <SlidersHorizontal size={16} />
             </button>
           </div>
+        }
+      />
 
-          {/* Pesquisa e Filtro de Status */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 md:max-w-xl">
-            {/* Input Pesquisa */}
-            <div className="relative flex-1">
-              <Search size={15} className="absolute left-3 top-2.5 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Pesquisar por título, adversário, local..."
-                className="w-full pl-9 pr-8 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-csc-dark focus:border-transparent transition-all text-gray-900"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-2 text-xs text-gray-400 hover:text-gray-600 p-0.5"
-                  title="Limpar pesquisa"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-
-            {/* Select Status */}
-            <div className="relative shrink-0 sm:w-48">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-csc-dark font-medium text-gray-700 cursor-pointer"
-              >
-                <option value="all">⚡ Todos os Estados</option>
-                <option value="upcoming">⏳ Próximos / Futuros</option>
-                <option value="past">🏁 Realizados / Passados</option>
-                <option value="my_confirmed">🟢 Confirmados por mim</option>
-                <option value="my_pending">🟡 Pendentes da minha resposta</option>
-                <option value="my_declined">🔴 Recusados por mim</option>
-                <option value="my_called">📋 Fui convocado</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Linha 2: Filtros de Tipo de Evento & Reset de Filtros */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            <span className="text-[11px] font-bold text-gray-400 mr-1 hidden sm:inline">Tipo:</span>
-            <button
-              onClick={() => setTypeFilter('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                typeFilter === 'all' ? 'bg-csc-gold text-csc-dark font-black' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => setTypeFilter('match')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                typeFilter === 'match' ? 'bg-blue-600 text-white font-black' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              ⚽ Jogos
-            </button>
-            <button
-              onClick={() => setTypeFilter('practice')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                typeFilter === 'practice' ? 'bg-emerald-600 text-white font-black' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              🏃 Treinos
-            </button>
-            <button
-              onClick={() => setTypeFilter('gathering')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                typeFilter === 'gathering' ? 'bg-purple-600 text-white font-black' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              🍻 Convívios
-            </button>
-          </div>
-
-          {/* Botão Limpar Filtros se algum filtro estiver ativo */}
-          {(searchQuery || typeFilter !== 'all' || statusFilter !== 'all') && (
-            <button
-              onClick={() => {
-                setSearchQuery('')
-                setTypeFilter('all')
-                setStatusFilter('all')
-              }}
-              className="text-xs font-bold text-red-600 hover:text-red-800 hover:underline flex items-center gap-1 px-2 py-1 bg-red-50 rounded-lg transition-colors"
-            >
-              <X size={13} />
-              <span>Limpar Filtros</span>
-            </button>
-          )}
-        </div>
+      {/* Pastilhas de tipo — as do handoff, sem emoji. */}
+      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
+        {([
+          ['all', 'Todos'],
+          ['match', 'Jogos'],
+          ['practice', 'Treinos'],
+          ['gathering', 'Convívios'],
+        ] as const).map(([valor, etiqueta]) => (
+          <Pastilha
+            key={valor}
+            ativa={typeFilter === valor}
+            onClick={() => { triggerHaptic('selection'); setTypeFilter(valor) }}
+            className="flex-none"
+          >
+            {etiqueta}
+          </Pastilha>
+        ))}
       </div>
 
+      {/* O que a persiana esconde tem de continuar visível como estado. */}
+      {temFiltros && (
+        <button
+          type="button"
+          onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all') }}
+          className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
+            bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
+        >
+          <SlidersHorizontal size={14} className="text-csc-gold shrink-0" />
+          <span className="flex-1 font-display font-bold text-[11px] text-white/80">
+            {resumoFiltros} · {filteredEvents.length} {filteredEvents.length === 1 ? 'evento' : 'eventos'}
+          </span>
+          <span className="font-display font-bold text-[11px] text-csc-gold">Limpar</span>
+        </button>
+      )}
+
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark"></div>
+        <div className="flex justify-center py-12" role="status" aria-live="polite">
+          <div className="animate-spin rounded-full h-9 w-9 border-2 border-csc-gold border-t-transparent" />
+          <span className="sr-only">A carregar…</span>
         </div>
-      ) : viewMode === 'calendar' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Coluna Esquerda: Grelha do Calendário Mensal Compacta */}
-          <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            {/* Cabeçalho do Calendário com Seleção Rápida de Mês e Ano */}
-            <div className="p-3 sm:p-4 bg-gradient-to-r from-csc-dark via-gray-900 to-csc-dark text-white rounded-t-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm border-b border-white/10">
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Dropdown Mês */}
-                <select
-                  value={currentDate.getMonth()}
-                  onChange={(e) => handleMonthChange(Number(e.target.value))}
-                  className="bg-white/15 hover:bg-white/25 text-white font-black text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-white/20 outline-none focus:ring-2 focus:ring-csc-gold cursor-pointer transition-all appearance-none pr-7 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[right_8px_center] bg-no-repeat"
-                >
-                  {monthNames.map((mName, idx) => (
-                    <option key={mName} value={idx} className="bg-gray-900 text-white font-bold">
-                      {mName}
-                    </option>
-                  ))}
-                </select>
+      ) : (
+        <>
+        <div className="space-y-4">
+          {/*
+            O calendário do mês (ecrã 1a): células de 34px, um ponto por baixo
+            do número quando há eventos, e o dia escolhido numa pastilha
+            dourada. O ponto é da cor do tipo de evento — verde treino, azul
+            convívio, dourado jogo — e quando há mais do que um mostram-se até
+            três, que é o que cabe.
+          */}
+          <div className="cartao-vidro px-3 pt-3.5 pb-3">
+            {/* Saltos longos: mês, ano, ou voltar a hoje. As setas de mês
+                estão no cabeçalho do ecrã. */}
+            <div className="flex items-center gap-2 px-1 pb-3">
+              <select
+                value={currentDate.getMonth()}
+                onChange={e => handleMonthChange(Number(e.target.value))}
+                aria-label="Mês"
+                className="h-11 px-3 rounded-[18px] bg-white/8 border border-white/15 text-white font-display font-bold text-xs
+                  outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-csc-gold"
+              >
+                {monthNames.map((nome, idx) => (
+                  <option key={nome} value={idx} className="bg-csc-fundo text-white">{nome}</option>
+                ))}
+              </select>
 
-                {/* Dropdown Ano */}
-                <select
-                  value={currentDate.getFullYear()}
-                  onChange={(e) => handleYearChange(Number(e.target.value))}
-                  className="bg-white/15 hover:bg-white/25 text-csc-gold font-black text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-white/20 outline-none focus:ring-2 focus:ring-csc-gold cursor-pointer transition-all appearance-none pr-7 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23F59E0B%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[right_8px_center] bg-no-repeat"
-                >
-                  {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map(y => (
-                    <option key={y} value={y} className="bg-gray-900 text-csc-gold font-bold">
-                      {y}
-                    </option>
-                  ))}
-                </select>
+              <select
+                value={currentDate.getFullYear()}
+                onChange={e => handleYearChange(Number(e.target.value))}
+                aria-label="Ano"
+                className="h-11 px-3 rounded-[18px] bg-white/8 border border-white/15 text-white font-display font-bold text-xs
+                  outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-csc-gold"
+              >
+                {anosDisponiveis.map(ano => (
+                  <option key={ano} value={ano} className="bg-csc-fundo text-white">{ano}</option>
+                ))}
+              </select>
 
-                {/* Botão Hoje */}
-                <button
-                  onClick={handleToday}
-                  className="text-xs font-bold px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-dark rounded-xl transition-all shadow-xs active:scale-95 cursor-pointer font-black"
-                >
-                  Hoje
-                </button>
-              </div>
-
-              {/* Setas Anterior / Próximo */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={handlePrevMonth}
-                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer active:scale-90"
-                  title="Mês Anterior"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  onClick={handleNextMonth}
-                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer active:scale-90"
-                  title="Próximo Mês"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleToday}
+                className="ml-auto min-h-11 px-4 rounded-[18px] bg-csc-gold text-csc-tinta font-display font-bold text-xs cursor-pointer
+                  transition-transform duration-150 active:scale-97
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+              >
+                Hoje
+              </button>
             </div>
 
-            {/* Cabeçalho dos Dias da Semana */}
-            <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200 text-center py-2">
-              {weekDayNames.map((w, idx) => (
-                <div key={w} className={`text-[11px] font-black uppercase tracking-wider ${idx >= 5 ? 'text-amber-700' : 'text-gray-500'}`}>
+            <div className="grid grid-cols-7 gap-0.5 mb-1.5">
+              {weekDayNames.map(w => (
+                <span key={w} className="font-display font-bold text-[9px] text-white/40 text-center">
                   {w}
-                </div>
+                </span>
               ))}
             </div>
 
-            {/* Células dos Dias Compactas */}
-            <div className="grid grid-cols-7 auto-rows-fr border-b border-gray-100 divide-x divide-y divide-gray-100">
+            <div className="grid grid-cols-7 gap-0.5">
               {calendarDays.map((cell, idx) => {
                 const dayEvents = getEventsForDate(cell.date)
-                const hasEvents = dayEvents.length > 0
 
                 return (
-                  <div
+                  <button
                     key={idx}
-                    onClick={() => setSelectedDate(cell.date)}
-                    className={`min-h-[44px] sm:min-h-[58px] p-1 sm:p-1.5 cursor-pointer transition-all flex flex-col justify-between ${
-                      !cell.isCurrentMonth ? 'bg-gray-50/50 opacity-30' : 'bg-white hover:bg-gray-50/80'
-                    } ${
-                      cell.isSelected ? 'ring-2 ring-csc-gold ring-inset bg-amber-50/40 font-black' : ''
-                    }`}
+                    type="button"
+                    onClick={() => { triggerHaptic('selection'); setSelectedDate(cell.date) }}
+                    aria-label={`${cell.date.getDate()} — ${dayEvents.length} ${dayEvents.length === 1 ? 'evento' : 'eventos'}`}
+                    aria-pressed={cell.isSelected}
+                    className={`h-11 rounded-[11px] flex flex-col items-center justify-center gap-0.5 cursor-pointer
+                      transition-colors duration-200
+                      focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-csc-gold ${
+                        cell.isSelected
+                          ? 'bg-csc-gold'
+                          : cell.isToday
+                            ? 'bg-white/12'
+                            : ''
+                      }`}
                   >
-                    {/* Topo da Célula: Número do Dia */}
-                    <div className="flex items-center justify-between">
-                      <span className={`text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full transition-colors ${
-                        cell.isToday 
-                          ? 'bg-csc-gold text-csc-dark font-black shadow-xs' 
-                          : cell.isSelected 
-                          ? 'bg-csc-dark text-white font-black' 
-                          : cell.isCurrentMonth ? 'text-gray-800' : 'text-gray-400'
-                      }`}>
-                        {cell.date.getDate()}
-                      </span>
+                    <span
+                      className={`font-display text-xs leading-none ${
+                        cell.isSelected
+                          ? 'font-extrabold text-csc-tinta'
+                          : !cell.isCurrentMonth
+                            ? 'font-semibold text-white/20'
+                            : cell.isToday
+                              ? 'font-extrabold text-csc-gold'
+                              : 'font-semibold text-white/75'
+                      }`}
+                    >
+                      {cell.date.getDate()}
+                    </span>
 
-                      {hasEvents && (
-                        <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-csc-dark text-white shadow-2xs">
-                          {dayEvents.length}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Mini Indicadores de Eventos */}
-                    <div className="mt-1 space-y-0.5 overflow-hidden">
-                      {/* Vista Desktop: Pílulas Compactas */}
-                      <div className="hidden sm:block space-y-0.5">
-                        {dayEvents.slice(0, 2).map(ev => (
-                          <div
+                    {dayEvents.length > 0 && (
+                      <span className="flex items-center gap-0.5 h-1">
+                        {dayEvents.slice(0, 3).map(ev => (
+                          <span
                             key={ev.id}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedEvent(ev)
-                              setIsEventSheetOpen(true)
-                            }}
-                            className={`text-[9px] px-1 py-0.2 rounded font-bold truncate flex items-center gap-0.5 shadow-2xs hover:opacity-85 ${
-                              ev.type === 'match' 
-                                ? 'bg-blue-100 text-blue-900 border border-blue-200' 
-                                : ev.type === 'practice' 
-                                ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' 
-                                : 'bg-purple-100 text-purple-900 border border-purple-200'
+                            className={`w-1 h-1 rounded-full ${
+                              cell.isSelected
+                                ? 'bg-csc-tinta'
+                                : ev.type === 'match'
+                                  ? 'bg-csc-gold'
+                                  : ev.type === 'practice'
+                                    ? 'bg-csc-verde-texto'
+                                    : 'bg-csc-azul-texto'
                             }`}
-                            title={`${ev.title}`}
-                          >
-                            <span className="flex items-center">{ev.type === 'match' ? '⚽' : ev.type === 'practice' ? <TrainingIcon size={11} className="text-emerald-800" /> : '🎉'}</span>
-                            <span className="truncate">{ev.type === 'match' && ev.opponent ? (ev.opponent.initials || ev.opponent.name) : ev.title}</span>
-                          </div>
-                        ))}
-                        {dayEvents.length > 2 && (
-                          <span className="text-[8px] font-bold text-gray-500 pl-0.5">
-                            +{dayEvents.length - 2} mais
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Vista Mobile: Pontos compactos */}
-                      <div className="sm:hidden flex flex-wrap gap-1 items-center justify-center">
-                        {dayEvents.map(ev => (
-                          <span 
-                            key={ev.id} 
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              ev.type === 'match' ? 'bg-blue-600' : ev.type === 'practice' ? 'bg-emerald-600' : 'bg-purple-600'
-                            }`} 
-                            title={ev.title}
                           />
                         ))}
-                      </div>
-                    </div>
-                  </div>
+                      </span>
+                    )}
+                  </button>
                 )
               })}
             </div>
@@ -1799,12 +1908,20 @@ const CalendarPage: React.FC = () => {
 
           {/* Coluna Direita: Eventos do Dia Selecionado Diretamente */}
           <div className="lg:col-span-5 space-y-3 lg:sticky lg:top-6">
-            {selectedDate && (
+            {/*
+              Com a agenda toda vazia (ecrã 11b) este painel calava-se: dizia
+              "Sem eventos neste dia" logo por cima de "Nada marcado ainda", e
+              duas mensagens de vazio seguidas leem-se como uma avaria. O
+              painel do dia só faz sentido quando há eventos noutros dias.
+            */}
+            {selectedDate && !(filteredEvents.length === 0 && !temFiltros) && (
               selectedDayEvents.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-xs bg-white rounded-2xl p-6 border border-dashed border-gray-200 shadow-2xs">
-                  <CalendarDaysIcon size={28} className="mx-auto text-gray-300 mb-2" />
-                  <p className="font-bold text-sm text-gray-600">Sem eventos neste dia.</p>
-                  <p className="mt-1 text-xs text-gray-400">Seleciona outro dia no calendário para consultar os eventos agendados.</p>
+                <div className="cartao-simples border-dashed text-center px-5 py-8">
+                  <CalendarDaysIcon size={26} className="mx-auto text-white/25 mb-2.5" />
+                  <p className="font-display font-extrabold text-sm text-white">Sem eventos neste dia.</p>
+                  <p className="text-[11px] text-white/50 mt-1.5">
+                    Escolhe outro dia no calendário, ou vê tudo o que vem a seguir mais abaixo.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1814,29 +1931,121 @@ const CalendarPage: React.FC = () => {
             )}
           </div>
         </div>
-      ) : (
-        /* Vista de Lista Completa */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredEvents.length === 0 ? (
-            <div className="col-span-full text-center py-12 bg-white rounded-2xl border border-gray-200 p-8">
-              <CalendarRange size={36} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm font-bold text-gray-600">Nenhum evento encontrado.</p>
-              <p className="text-xs text-gray-400 mt-1">Ajuste os filtros ou crie um novo evento.</p>
-            </div>
+
+        {/* A lista deixou de ser uma vista alternativa: no handoff vem sempre
+            por baixo do calendário, com os eventos do filtro em curso. */}
+        <div className="grid grid-cols-1 gap-3">
+          {eventosPorConvocar.map(event => renderCartaoPorConvocar(event))}
+
+          {eventosDaLista.length === 0 && eventosPorConvocar.length === 0 ? (
+            /*
+              Dois vazios diferentes, e a diferença importa: com filtro posto o
+              que falta é tirá-lo; sem filtro nenhum não há mesmo nada marcado,
+              e é o ecrã 11b — a frase que diz que o próximo evento aparece
+              aqui, mais os aniversários do mês para a página não ficar em
+              branco.
+            */
+            temFiltros ? (
+              <div className="cartao-simples border-dashed text-center px-5 py-10">
+                <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
+                <p className="font-display font-extrabold text-sm text-white">Nenhum evento encontrado.</p>
+                <p className="text-[11px] text-white/50 mt-1.5">Limpa os filtros para ver o resto da agenda.</p>
+              </div>
+            ) : (
+              <>
+                <div className="cartao-vidro text-center px-5 py-10">
+                  <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
+                  <p className="font-display font-extrabold text-sm text-white">Nada marcado ainda</p>
+                  <p className="text-[11px] leading-relaxed text-white/50 mt-1.5">
+                    O próximo jogo ou treino aparece aqui assim que a equipa técnica o criar.
+                    Recebes aviso quando houver convocatória.
+                  </p>
+                </div>
+                <AniversariosDoMes mes={currentDate.getMonth()} />
+              </>
+            )
           ) : (
-            filteredEvents.map((event) => renderEventCard(event))
+            eventosDaLista.map((event) => renderEventCard(event))
           )}
         </div>
+        </>
       )}
       </div>
+
+      {/*
+        Pesquisa e filtro de estado. Fora do ecrã porque o handoff quer a
+        Agenda limpa, mas a um toque porque a app tem eventos que chegam para
+        os tornar necessários.
+      */}
+      <BottomSheet
+        isOpen={filtrosAbertos}
+        onClose={() => setFiltrosAbertos(false)}
+        title="Procurar na agenda"
+        description="Sobre os eventos do tipo escolhido em cima"
+        tone="dark"
+        icon={
+          <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
+            <SlidersHorizontal size={17} />
+          </div>
+        }
+        footer={
+          <>
+            <Botao
+              aparencia="vidro"
+              onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all') }}
+              disabled={!temFiltros}
+            >
+              Limpar
+            </Botao>
+            <Botao onClick={() => setFiltrosAbertos(false)}>
+              Ver {filteredEvents.length} {filteredEvents.length === 1 ? 'evento' : 'eventos'}
+            </Botao>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <CampoEntrada
+            etiqueta="Procurar"
+            type="search"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Título, adversário ou local"
+          />
+
+          <div>
+            <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+              Estado
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ['all', 'Todos'],
+                ['upcoming', 'Próximos'],
+                ['past', 'Realizados'],
+                ['my_confirmed', 'Confirmados por mim'],
+                ['my_pending', 'Por responder'],
+                ['my_declined', 'Recusados por mim'],
+                ['my_called', 'Fui convocado'],
+              ] as const).map(([valor, etiqueta]) => (
+                <Pastilha
+                  key={valor}
+                  ativa={statusFilter === valor}
+                  onClick={() => { triggerHaptic('selection'); setStatusFilter(valor) }}
+                >
+                  {etiqueta}
+                </Pastilha>
+              ))}
+            </div>
+          </div>
+        </div>
+      </BottomSheet>
 
       {/* Modal Detalhes Evento & Convocatória (persiana partilhada).
           A condição usa só `selectedEvent` (nunca voltar a null ao fechar) — a persiana
           controla a própria visibilidade por `isEventSheetOpen`, para poder deslizar
           para fora suavemente em vez de desaparecer no instante em que se fecha. */}
-      {/* A ficha de jogo abre a partir daqui: no desktop substitui este detalhe,
-          como um nível abaixo na navegação, em vez de se sobrepor. */}
-      <div className={ehDesktop && isMatchReportOpen ? 'hidden' : ''}>
+      {/* A ficha de jogo abre a partir do detalhe do evento — uma persiana
+          por cima da outra, um nível abaixo na navegação. */}
+      <div>
       {selectedEvent && (
         <VistaDetalhe
           isOpen={isEventSheetOpen}
@@ -1852,20 +2061,19 @@ const CalendarPage: React.FC = () => {
           onContentTouchEnd={handleCarouselTouchEnd}
         >
           <div className="space-y-4 select-none">
-            {/* Fechar a persiana — só no telemóvel: no desktop isto é uma página, e
-                quem volta atrás é a barra "Voltar à agenda" da VistaDetalhe. */}
+            {/* Fechar a persiana. */}
             <button
               type="button"
               onClick={handleCloseEventModal}
               aria-label="Fechar"
-              className="md:hidden absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-30 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 z-30 cursor-pointer active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               title="Fechar"
             >
-              <X size={20} className="stroke-[2.5]" />
+              <X size={18} />
             </button>
 
             {/* Topo Premium Unificado da Persiana (Layout Verde Oficial CSC com Carrossel Integrado) */}
-            <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold relative overflow-hidden space-y-2.5">
+            <div className="cartao-vidro text-white p-4 relative overflow-hidden space-y-2.5">
               
               {/* Barra Integrada de Convocatórias Pendentes (Apenas se existirem múltiplos eventos pendentes) */}
               {myPendingEvents.length > 1 && myPendingEvents.some(pe => pe.id === selectedEvent.id) && (() => {
@@ -1892,14 +2100,14 @@ const CalendarPage: React.FC = () => {
                       type="button"
                       onClick={prevEvent}
                       className="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-white/10 hover:bg-white/20 text-white"
-                      title="Convocatória Anterior (ou desliza para a direita 👉)"
+                      title="Convocatória anterior (ou desliza para a direita)"
                     >
                       <ChevronLeft size={16} />
                     </button>
 
                     <div className="flex items-center gap-2 select-none min-w-0">
                       <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
-                        <span>🔔 Convocatória Pendente</span>
+                        <span>Convocatória pendente</span>
                         <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-white/20 text-white tracking-wider">
                           {activeIndex + 1}/{myPendingEvents.length}
                         </span>
@@ -1918,90 +2126,62 @@ const CalendarPage: React.FC = () => {
                 )
               })()}
 
-              {/* Linha Principal: Símbolo + Pílula do Tipo + Data e Hora + Ações Admin/Treinador */}
-              <div className="flex items-center justify-between gap-3 pr-8 sm:pr-10">
-                {/* Símbolo + Pílula do Tipo + Data e Hora */}
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {/* 1. Símbolo Oficial */}
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white p-1 shadow-md shrink-0 border border-csc-gold flex items-center justify-center">
-                    <img 
-                      src="/csc-vet/cascais-emblem.png" 
-                      alt="CSC" 
-                      className="w-full h-full object-contain" 
-                    />
-                  </div>
+              {/*
+                O ecrã 2c abre com o que o evento é, não com uma barra de
+                ferramentas: as etiquetas, o confronto em grande e a data. As
+                ações de quem gere descem para o bloco de gestão, no fim — são
+                o que menos vezes se faz aqui.
+              */}
+              <div className="flex flex-wrap gap-1.5">
+                <span className={`inline-flex items-center h-[22px] px-2.5 rounded-[11px] border font-display font-bold text-[9.5px] ${
+                  selectedEvent.type === 'match'
+                    ? 'bg-csc-gold/16 border-csc-gold/35 text-csc-gold'
+                    : selectedEvent.type === 'practice'
+                      ? 'bg-csc-light/18 border-csc-light/35 text-csc-verde-texto'
+                      : 'bg-csc-blue/20 border-csc-blue/40 text-csc-azul-texto'
+                }`}>
+                  {selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}
+                </span>
 
-                  {/* 2. Pílula do Tipo & 3. Data e Hora */}
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider shadow-2xs ${
-                        selectedEvent.type === 'match' 
-                          ? 'bg-blue-600 text-white' 
-                          : selectedEvent.type === 'practice' 
-                          ? 'bg-emerald-700 text-white' 
-                          : 'bg-purple-700 text-white'
-                      }`}>
-                        {selectedEvent.type === 'match' ? '⚽ Jogo' : selectedEvent.type === 'practice' ? '🏃 Treino' : '🎉 Convívio'}
-                      </span>
-
-                      {selectedEvent.is_friendly && selectedEvent.type === 'match' && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-amber-400 text-csc-dark">
-                          Amigável
-                        </span>
-                      )}
-                      {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-blue-900/80 text-blue-200 border border-blue-400/30 truncate max-w-[150px] flex items-center gap-1">
-                          {selectedEvent.tournament.image_url ? (
-                            <img src={selectedEvent.tournament.image_url} alt="" className="w-3.5 h-3.5 object-contain rounded-full shrink-0" />
-                          ) : '🏆'}
-                          {selectedEvent.tournament.name}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs sm:text-sm font-bold text-gray-100 flex items-center gap-1.5 truncate">
-                      <Clock size={13} className="text-csc-gold shrink-0" />
-                      <span>
-                        {new Date(selectedEvent.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })}, {new Date(selectedEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                {/* Botão Ficha de Jogo (quando Jogo já realizado ou com resultado registado) */}
-                {selectedEvent.type === 'match' && (new Date(selectedEvent.date_time).getTime() <= Date.now() || (selectedEvent.home_score !== null && selectedEvent.home_score !== undefined)) && (
-                  <button
-                    type="button"
-                    onClick={() => setIsMatchReportOpen(true)}
-                    className="px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-dark font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
-                  >
-                    <span>📋 Ficha de Jogo</span>
-                  </button>
+                {selectedEvent.type === 'match' && selectedEvent.is_friendly && (
+                  <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white">
+                    Amigável
+                  </span>
                 )}
 
-                {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
-                {isCoachOrAdmin && (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {!hasMatchReport(selectedEvent) && (
-                      <button
-                        type="button"
-                        onClick={() => handleStartEditEvent(selectedEvent)}
-                        className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
-                        title="Modificar evento"
-                      >
-                        <Edit size={14} />
-                      </button>
+                {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
+                  <span className="inline-flex items-center gap-1.5 h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white max-w-[170px]">
+                    {selectedEvent.tournament.image_url && (
+                      <img src={selectedEvent.tournament.image_url} alt="" className="w-3.5 h-3.5 object-contain rounded-full shrink-0" />
                     )}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
-                      className="p-2 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
-                      title="Apagar evento"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                    <span className="truncate">{selectedEvent.tournament.name}</span>
+                  </span>
                 )}
+
+                {selectedEvent.type === 'match' && (
+                  <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white">
+                    {selectedEvent.home_away === 'away' ? 'Fora' : selectedEvent.home_away === 'neutral' ? 'Campo neutro' : 'Em casa'}
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <h2 className="font-display font-black text-[30px] leading-[1.05] text-white tracking-[-0.03em]">
+                  {selectedEvent.type === 'match' && selectedEvent.opponent ? (
+                    selectedEvent.home_away === 'away' ? (
+                      <>{formatOpponentSigla(selectedEvent.opponent)} <span className="text-white/40 text-xl">vs</span> {formatClubSigla(clubSettings?.initials)}</>
+                    ) : (
+                      <>{formatClubSigla(clubSettings?.initials)} <span className="text-white/40 text-xl">vs</span> {formatOpponentSigla(selectedEvent.opponent)}</>
+                    )
+                  ) : (
+                    selectedEvent.title
+                  )}
+                </h2>
+                <p className="text-[11.5px] text-white/60 mt-1.5">
+                  {new Date(selectedEvent.date_time).toLocaleDateString('pt-PT', {
+                    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                  })}
+                </p>
               </div>
             </div>
 
@@ -2011,128 +2191,77 @@ const CalendarPage: React.FC = () => {
               {/* COLUNA ESQUERDA (5 Colunas): Detalhes do Evento, Matchup VS e Presença Pessoal */}
               <div className="lg:col-span-5 space-y-5">
 
-                {/* Matchup Box no Modal (quando Jogo com adversário) */}
-                {selectedEvent.type === 'match' && selectedEvent.opponent && (() => {
-                  const isAway = selectedEvent.home_away === 'away'
-                  const cscSigla = formatClubSigla(clubSettings?.initials)
-                  const oppSigla = formatOpponentSigla(selectedEvent.opponent)
-                  const leftLogo = isAway ? selectedEvent.opponent?.logo_url : clubSettings?.logo_url
-                  const leftSigla = isAway ? oppSigla : cscSigla
-                  const rightLogo = isAway ? clubSettings?.logo_url : selectedEvent.opponent?.logo_url
-                  const rightSigla = isAway ? cscSigla : oppSigla
-
-                  return (
-                    <div className="bg-white/[0.07] p-4 sm:p-5 rounded-2xl space-y-3 border border-white/10 border-t-2 border-t-csc-gold/50 shadow-lg shadow-black/20">
-                      <div className="flex items-center justify-between gap-3 sm:gap-4">
-                        {/* Left Team */}
-                        <div className="flex-1 flex flex-col items-start text-left min-w-0">
-                          <div className="flex items-center gap-2">
-                            {leftLogo ? (
-                              <img src={leftLogo} alt={leftSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
-                            ) : (
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white text-csc-dark rounded-full flex items-center justify-center text-xs font-black shrink-0">
-                                {leftSigla}
-                              </div>
-                            )}
-                            <span className="font-black text-sm sm:text-base text-white uppercase tracking-tight">
-                              {leftSigla}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* VS Badge */}
-                        <div className="shrink-0 px-1 flex flex-col items-center">
-                          <span className="w-8 h-8 flex items-center justify-center text-xs font-black rounded-full bg-csc-gold text-csc-dark shadow-xs">
-                            VS
-                          </span>
-                        </div>
-
-                        {/* Right Team */}
-                        <div className="flex-1 flex flex-col items-end text-right min-w-0">
-                          <div className="flex items-center gap-2 flex-row-reverse">
-                            {rightLogo ? (
-                              <img src={rightLogo} alt={rightSigla} className="w-9 h-9 sm:w-10 sm:h-10 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
-                            ) : (
-                              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white text-csc-dark rounded-full flex items-center justify-center text-xs font-black shrink-0">
-                                {rightSigla}
-                              </div>
-                            )}
-                            <span className="font-black text-sm sm:text-base text-white uppercase tracking-tight">
-                              {rightSigla}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="pt-2.5 border-t border-white/10 flex items-center justify-between text-xs text-white/60 gap-2">
-                        <span className="font-bold">
-                          Condição: <strong className="text-white">{selectedEvent.home_away === 'neutral' ? 'Neutro' : isAway ? 'Visitante' : 'Visitado'}</strong>
-                        </span>
-                        {(new Date(selectedEvent.date_time).getTime() <= Date.now() || (selectedEvent.home_score !== null && selectedEvent.home_score !== undefined)) && (
-                          <button
-                            type="button"
-                            onClick={() => setIsMatchReportOpen(true)}
-                            className="px-2.5 py-1 bg-csc-gold hover:brightness-105 text-csc-dark rounded-full text-[11px] font-black flex items-center gap-1 cursor-pointer transition-all active:scale-95 shrink-0"
-                          >
-                            <span>Ficha de Jogo</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })()}
+                {/* O confronto era aqui um cartão com os dois emblemas e a
+                    linha "Condição: Visitado". Passou a ser o título do ecrã
+                    (ver acima) e uma etiqueta — dizia-se três vezes a mesma
+                    coisa, e uma delas com outras palavras. */}
 
                 {/* Title (apenas exibido para convívios) */}
                 {selectedEvent.type === 'gathering' && (
                   <h2 className="text-2xl font-black text-white leading-tight">{selectedEvent.title}</h2>
                 )}
 
-                {/* Concentração Acima da Hora */}
-                {selectedEvent.meeting_time && (
-                  <div className="flex items-center">
-                    <div className="inline-flex items-center gap-1.5 text-xs font-black text-csc-gold bg-white/10 px-3 py-1 rounded-full border border-csc-gold/30 shadow-sm shadow-black/20">
-                      <span>Concentração: {selectedEvent.meeting_time.substring(0, 5)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Info Box (Data, Hora e Local) */}
-                <div className="space-y-2 bg-white/[0.07] p-3.5 rounded-2xl text-xs border border-white/10 border-t-white/20 shadow-md shadow-black/20">
-                  <div className="flex items-center text-white space-x-2.5">
-                    <Clock size={16} className="text-csc-gold shrink-0" />
-                    <div>
-                      <p className="text-[10px] font-bold text-white/60 uppercase">Data e Horário</p>
-                      <p className="font-extrabold text-xs text-white">
-                        {new Date(selectedEvent.date_time).toLocaleString('pt-PT', { dateStyle: 'full', timeStyle: 'short' })}
+                {/*
+                  As horas e o local num só cartão, como no 2c: a concentração
+                  e o início lado a lado divididos por uma linha, e o campo por
+                  baixo com o nome em cima da morada. Eram três blocos soltos —
+                  uma pastilha de concentração, uma caixa de data e uma linha de
+                  local — a dizer coisas da mesma natureza.
+                */}
+                <div className="cartao-vidro overflow-hidden">
+                  <div className="flex items-stretch">
+                    {selectedEvent.meeting_time && (
+                      <>
+                        <div className="flex-none px-4 py-3">
+                          <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/55">
+                            Concentração
+                          </p>
+                          <p className="font-display font-extrabold text-[18px] text-white mt-0.5">
+                            {selectedEvent.meeting_time.substring(0, 5)}
+                          </p>
+                        </div>
+                        <div className="w-px bg-white/13" />
+                      </>
+                    )}
+                    <div className="flex-1 px-4 py-3">
+                      <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-csc-gold">
+                        Início
+                      </p>
+                      <p className="font-display font-extrabold text-[18px] text-white mt-0.5">
+                        {new Date(selectedEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
 
                   {(() => {
-                    const locStr = getEventLocation(selectedEvent)
+                    const campo = selectedEvent.field
+                      ?? fields.find(f => f.id === selectedEvent.field_id)
+                      ?? null
+                    const nome = campo?.name || selectedEvent.location?.trim() || ''
+                    const morada = campo?.address || ''
+                    const paraMaps = getEventLocation(selectedEvent)
+
+                    if (!nome && !paraMaps) return null
+
                     return (
-                      <div className="flex items-center justify-between text-white pt-2 border-t border-white/10">
-                        <div className="flex items-center space-x-2.5 min-w-0">
-                          <MapPin size={16} className="text-csc-gold shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-bold text-white/60 uppercase">Localização</p>
-                            <p className="font-extrabold text-xs text-white truncate">{locStr || 'Sem local definido'}</p>
-                          </div>
-                        </div>
-                        {locStr && (
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locStr)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-full text-[11px] font-bold flex items-center gap-1 transition-colors shrink-0 ml-2"
-                            title="Abrir no Google Maps"
-                          >
-                            <MapPin size={12} className="text-csc-gold shrink-0" />
-                            <span>Maps</span>
-                            <ExternalLink size={10} className="opacity-60" />
-                          </a>
-                        )}
-                      </div>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(paraMaps || nome)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 px-4 py-3 border-t border-white/13 min-h-14
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                      >
+                        <MapPin size={15} className="text-csc-red shrink-0" />
+                        <span className="flex-1 min-w-0">
+                          <span className="block font-display font-bold text-xs text-white truncate">
+                            {nome || 'Sem local definido'}
+                          </span>
+                          {morada && (
+                            <span className="block text-[11px] leading-snug text-white/60 truncate">{morada}</span>
+                          )}
+                        </span>
+                        <ExternalLink size={14} className="text-white/40 shrink-0" />
+                      </a>
                     )
                   })()}
                 </div>
@@ -2180,19 +2309,21 @@ const CalendarPage: React.FC = () => {
                         // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home.
                         // Mostra-se sempre que ainda dá para responder, mesmo que já tenha respondido antes —
                         // até à hora de concentração o jogador pode sempre mudar de ideias.
-                        <div className="bg-csc-gold px-4 py-3.5 flex flex-col items-center justify-center gap-2">
-                          <span className="text-sm font-bold text-csc-dark">
-                            {myCallup.status === 'called' ? 'Vais estar presente?' :
-                              myCallup.status === 'confirmed' ? '✓ Confirmaste presença' : '✕ Recusaste presença'}
+                        <div className="bg-[rgba(11,45,11,.55)] border-t border-csc-light/35 px-4 py-3.5 flex flex-col items-center justify-center gap-2.5">
+                          <span className="font-display font-extrabold text-[13px] text-white">
+                            {myCallup.status === 'called' ? 'Contamos contigo?' :
+                              myCallup.status === 'confirmed' ? 'Disseste que sim' : 'Disseste que não'}
                           </span>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2.5 w-full">
                             <button
                               type="button"
                               onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                              className={`h-10 px-5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                              className={`flex-1 min-h-11 px-5 rounded-[22px] border font-display font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer
+                                transition-transform duration-150 active:scale-97
+                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                                 myCallup.status === 'confirmed'
-                                  ? 'bg-csc-dark text-white ring-2 ring-white shadow-md'
-                                  : 'bg-csc-dark/15 text-csc-dark/70 hover:bg-csc-dark/25'
+                                  ? 'bg-csc-light border-csc-light text-white'
+                                  : 'bg-white/9 border-white/20 text-white'
                               }`}
                             >
                               {myCallup.status === 'confirmed' && <CheckCircle2 size={15} />}
@@ -2201,10 +2332,12 @@ const CalendarPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                              className={`h-10 px-5 rounded-full text-sm font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                              className={`flex-1 min-h-11 px-5 rounded-[22px] border font-display font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer
+                                transition-transform duration-150 active:scale-97
+                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                                 myCallup.status === 'declined'
-                                  ? 'bg-csc-dark text-white ring-2 ring-white shadow-md'
-                                  : 'bg-csc-dark/15 text-csc-dark/70 hover:bg-csc-dark/25'
+                                  ? 'bg-white/90 border-white/90 text-csc-tinta'
+                                  : 'bg-white/9 border-white/20 text-white'
                               }`}
                             >
                               {myCallup.status === 'declined' && <XCircle size={15} />}
@@ -2212,7 +2345,7 @@ const CalendarPage: React.FC = () => {
                             </button>
                           </div>
                           {myCallup.status !== 'called' && (
-                            <span className="text-[11px] font-bold text-csc-dark/70">Toca no outro botão para mudar de resposta.</span>
+                            <span className="text-[10.5px] text-white/55">Toca no outro botão para mudar de resposta.</span>
                           )}
                         </div>
                       ) : (
@@ -2224,8 +2357,8 @@ const CalendarPage: React.FC = () => {
                                 myCallup.status === 'confirmed' ? 'text-emerald-300' :
                                 myCallup.status === 'declined' ? 'text-red-300' : 'text-csc-gold'
                               }>
-                                {myCallup.status === 'confirmed' ? 'Confirmaste presença' :
-                                 myCallup.status === 'declined' ? 'Recusaste presença' : 'Aguarda a tua resposta'}
+                                {myCallup.status === 'confirmed' ? 'Disseste que sim' :
+                                 myCallup.status === 'declined' ? 'Disseste que não' : 'Aguarda a tua resposta'}
                               </span>
                             </p>
                           </div>
@@ -2275,9 +2408,12 @@ const CalendarPage: React.FC = () => {
                 return (
                   <div className="lg:col-span-7 bg-white/[0.07] p-4 sm:p-5 rounded-3xl space-y-3.5 transition-all border border-white/10 border-t-white/20 shadow-lg shadow-black/20">
                     {/* Topo da Convocatória com Botão de Colapsar / Expandir */}
-                    <div
+                    <button
+                      type="button"
                       onClick={() => setIsModalCallupsExpanded(prev => !prev)}
-                      className="flex items-center justify-between cursor-pointer select-none group"
+                      aria-expanded={isModalCallupsExpanded}
+                      className="w-full min-h-11 flex items-center justify-between cursor-pointer select-none group text-left
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold rounded-xl"
                     >
                       <div className="flex-1 pr-2">
                         <div className="flex items-center gap-2">
@@ -2316,7 +2452,7 @@ const CalendarPage: React.FC = () => {
                           )}
                         </div>
                       </div>
-                    </div>
+                    </button>
 
                     {/* Conteúdo Expandido da Convocatória */}
                     {isModalCallupsExpanded && (
@@ -2390,6 +2526,7 @@ const CalendarPage: React.FC = () => {
                                   onDecline={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'declined')}
                                   onSetPending={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'called')}
                                   onRemove={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)}
+                                  onOpen={isCoachOrAdmin ? () => setConvocadoAberto(c.id) : undefined}
                                 />
                               ))}
                             </div>
@@ -2402,9 +2539,95 @@ const CalendarPage: React.FC = () => {
               })()}
 
             </div>
+
+            {/*
+              Gestão do evento (ecrã 2c). Estava no topo, em botões de ícone
+              apertados ao lado da data; é o que menos vezes se faz nesta
+              persiana e passa para o fim, com os nomes por extenso.
+            */}
+            {isCoachOrAdmin && (
+              <div className="rounded-[20px] bg-csc-gold/10 border border-csc-gold/26 p-3.5">
+                <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
+                  Gestão do evento
+                </p>
+
+                <div className="flex flex-col gap-2.5 mt-3">
+                  {!hasMatchReport(selectedEvent) && (
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditEvent(selectedEvent)}
+                      className="min-h-11 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px]
+                        flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                    >
+                      <Edit size={15} />
+                      <span>Editar evento</span>
+                    </button>
+                  )}
+
+                  {selectedEvent.type === 'match' &&
+                    (new Date(selectedEvent.date_time).getTime() <= Date.now() ||
+                      selectedEvent.home_score !== null) && (
+                      <button
+                        type="button"
+                        onClick={() => setIsMatchReportOpen(true)}
+                        className="min-h-11 rounded-[22px] bg-white/8 border border-white/18 text-white font-display font-bold text-[11.5px]
+                          flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                      >
+                        <ClipboardList size={15} />
+                        <span>{hasMatchReport(selectedEvent) ? 'Ver ficha de jogo' : 'Lançar ficha de jogo'}</span>
+                      </button>
+                    )}
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
+                    className="min-h-11 rounded-[22px] bg-csc-red/10 border border-csc-red/35 text-csc-vermelho-texto
+                      font-display font-bold text-xs flex items-center justify-center gap-2 cursor-pointer
+                      transition-transform duration-150 active:scale-97
+                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                  >
+                    <Trash2 size={15} />
+                    <span>Eliminar evento</span>
+                  </button>
+                </div>
+
+                <p className="text-[10px] leading-snug text-white/45 mt-2.5">
+                  Com ficha de jogo lançada, o evento fecha: deixa de ser editável e a convocatória
+                  não aceita respostas.
+                </p>
+              </div>
+            )}
           </div>
         </VistaDetalhe>
       )}
+
+      {/*
+        A ficha rápida do convocado (4a), empilhada por cima da persiana do
+        evento — o `useModalA11y` trata da pilha. Fica fora da `VistaDetalhe`
+        para não ser desmontada quando ela anima a saída.
+      */}
+      {selectedEvent && (() => {
+        const tira = (eventCallups[selectedEvent.id] || []) as CallupWithPlayer[]
+        const aberta = tira.find(c => c.id === convocadoAberto) ?? null
+        return (
+          <FichaConvocado
+            convocatoria={aberta}
+            tira={tira}
+            displayName={aberta ? getPlayerDisplayName(aberta.player) : ''}
+            aoEscolher={setConvocadoAberto}
+            aoFechar={() => setConvocadoAberto(null)}
+            aoConfirmar={() => aberta && handleUpdateCallupStatus(aberta.id, selectedEvent.id, 'confirmed')}
+            aoRecusar={() => aberta && handleUpdateCallupStatus(aberta.id, selectedEvent.id, 'declined')}
+            aoRemover={() => {
+              if (!aberta) return
+              handleRemovePlayerFromCallup(aberta.id, selectedEvent.id)
+              setConvocadoAberto(null)
+            }}
+          />
+        )
+      })()}
       </div>
 
       {/* MODAL 3: EDITAR EVENTO ESPECÍFICO (Versão Larga 2 Colunas) */}
@@ -2428,7 +2651,7 @@ const CalendarPage: React.FC = () => {
               type="button"
               onClick={handleAttemptCloseEditModal}
               aria-label="Fechar"
-              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+              className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 z-20 cursor-pointer active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               title="Fechar"
             >
               <X size={20} className="stroke-[2.5]" />
@@ -2448,26 +2671,26 @@ const CalendarPage: React.FC = () => {
               <div className="lg:col-span-6 space-y-4">
                 {editType === 'gathering' && (
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Título do Convívio *</label>
+                    <label className={ETIQUETA_FORM}>Título do Convívio *</label>
                     <input
                       type="text"
                       required={editType === 'gathering'}
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                      className={CAMPO_FORM}
                       placeholder="Ex: Jantar de Natal / Reentré"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Tipo de Evento</label>
+                  <label className={ETIQUETA_FORM}>Tipo de Evento</label>
                   <div className="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-white rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
                     <span className="flex items-center gap-1.5">
-                      <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
+                      <span>{editType === 'match' ? 'Jogo' : editType === 'practice' ? 'Treino' : 'Convívio'}</span>
                     </span>
                     <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-md">
-                      🔒 Tipo Bloqueado
+                      Tipo bloqueado
                     </span>
                   </div>
                 </div>
@@ -2483,7 +2706,7 @@ const CalendarPage: React.FC = () => {
                           setEditIsFriendly(e.target.checked)
                           if (e.target.checked) setEditTournamentId('')
                         }}
-                        className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-gray-300 rounded cursor-pointer"
+                        className="h-4 w-4 accent-csc-gold rounded cursor-pointer"
                       />
                       <label htmlFor="editIsFriendly" className="ml-2 text-sm font-semibold text-white/80 cursor-pointer">
                         Jogo Amigável
@@ -2491,16 +2714,16 @@ const CalendarPage: React.FC = () => {
                     </div>
                     {!editIsFriendly && (
                       <div className="animate-fade-in">
-                        <label className="block text-xs font-semibold text-white/60 mb-1">Torneio / Competição</label>
+                        <label className={ETIQUETA_FORM}>Torneio / Competição</label>
                         <select
                           value={editTournamentId}
                           onChange={(e) => setEditTournamentId(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
+                          className={CAMPO_FORM}
                         >
                           <option value="">-- Selecionar Torneio --</option>
                           {tournaments.map(t => (
                             <option key={t.id} value={t.id}>
-                              🏆 {t.name} {t.season ? `(${t.season})` : ''}
+                              {t.name} {t.season ? `(${t.season})` : ''}
                             </option>
                           ))}
                         </select>
@@ -2509,7 +2732,7 @@ const CalendarPage: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       <div>
-                        <label className="block text-xs font-semibold text-white/60 mb-1">Adversário</label>
+                        <label className={ETIQUETA_FORM}>Adversário</label>
                         <select
                           value={editOpponentId}
                           onChange={(e) => {
@@ -2519,10 +2742,10 @@ const CalendarPage: React.FC = () => {
                               setEditOpponentId(e.target.value)
                             }
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
+                          className={CAMPO_FORM}
                         >
                           <option value="">-- Selecionar Adversário --</option>
-                          <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
+                          <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo adversário…</option>
                           {opponents.map(o => (
                             <option key={o.id} value={o.id}>{o.name}</option>
                           ))}
@@ -2530,15 +2753,15 @@ const CalendarPage: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-white/60 mb-1">Condição de Jogo</label>
+                        <label className={ETIQUETA_FORM}>Condição de Jogo</label>
                         <select
                           value={editHomeAway}
                           onChange={(e) => setEditHomeAway(e.target.value as any)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900"
+                          className={CAMPO_FORM}
                         >
-                          <option value="home">🏠 Casa</option>
-                          <option value="away">✈️ Fora</option>
-                          <option value="neutral">⚖️ Campo Neutro</option>
+                          <option value="home">Casa</option>
+                          <option value="away">Fora</option>
+                          <option value="neutral">Campo neutro</option>
                         </select>
                       </div>
                     </div>
@@ -2547,23 +2770,23 @@ const CalendarPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Data e Hora *</label>
+                    <label className={ETIQUETA_FORM}>Data e Hora *</label>
                     <input
                       type="datetime-local"
                       required
                       value={editDateTime}
                       onChange={(e) => setEditDateTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white font-medium text-gray-900"
+                      className={CAMPO_FORM}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Concentração (opcional)</label>
+                    <label className={ETIQUETA_FORM}>Concentração (opcional)</label>
                     <input
                       type="time"
                       value={editMeetingTime}
                       onChange={(e) => setEditMeetingTime(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                      className={CAMPO_FORM}
                       placeholder="Ex: 19:30"
                     />
                   </div>
@@ -2578,7 +2801,7 @@ const CalendarPage: React.FC = () => {
                         <span>Campo do Jogo (Automático - Em Casa)</span>
                       </span>
                       <p className="text-xs font-black text-white truncate">
-                        🏟️ {(() => {
+                        {(() => {
                           const cascais = getCascaisHomeField()
                           return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
                         })()}
@@ -2589,7 +2812,7 @@ const CalendarPage: React.FC = () => {
                         href={getGoogleMapsUrl(editLocation)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-black text-csc-dark bg-white border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-xl shadow-2xs shrink-0"
+                        className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
                         title="Ver no Google Maps"
                       >
                         <MapPin size={12} className="text-red-500" />
@@ -2602,10 +2825,10 @@ const CalendarPage: React.FC = () => {
                   <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
                       <label className="font-bold text-white/80 flex items-center gap-1.5">
-                        <span>🏟️ Campo / Instalação *</span>
+                        <span>Campo / Instalação *</span>
                         {editLocation && (
-                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                            ✓ {editLocation}
+                          <span className="text-[10px] text-csc-verde-texto font-bold bg-csc-light/15 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                            {editLocation}
                           </span>
                         )}
                       </label>
@@ -2626,13 +2849,13 @@ const CalendarPage: React.FC = () => {
                           }
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark text-xs bg-white font-medium text-gray-900"
+                      className={CAMPO_FORM}
                     >
                       <option value="">-- Escolher Campo / Instalação do Clube --</option>
-                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
+                      <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo campo…</option>
                       {fields.map(f => (
                         <option key={f.id} value={f.id}>
-                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                          {f.name} {f.address ? `(${f.address})` : ''}
                         </option>
                       ))}
                     </select>
@@ -2640,12 +2863,12 @@ const CalendarPage: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Descrição / Notas</label>
+                  <label className={ETIQUETA_FORM}>Descrição / Notas</label>
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-dark bg-white text-gray-900"
+                    className={CAMPO_FORM}
                     placeholder="Observações ou notas do evento..."
                   />
                 </div>
@@ -2906,51 +3129,51 @@ const CalendarPage: React.FC = () => {
                           className="px-2 py-1.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer active:scale-95 disabled:opacity-40"
                         >
                           <Sparkles size={11} className="text-csc-dark" />
-                          <span>✨ Todos ({editUncalledPlayers.length})</span>
+                          <span>Todos ({editUncalledPlayers.length})</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={handleEditAddOnlyPlayers}
                           disabled={editUncalledPlayers.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
-                          className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
+                          className="min-h-11 px-3 bg-csc-light/15 hover:bg-csc-light/25 text-csc-verde-texto border border-csc-light/35 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
                         >
-                          <span>⚽ Jogadores</span>
+                          <span>Jogadores</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={handleEditAddStaff}
                           disabled={editUncalledPlayers.filter(p => ['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
-                          className="px-2 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
+                          className="min-h-11 px-3 bg-csc-blue/20 hover:bg-csc-blue/30 text-csc-azul-texto border border-csc-blue/40 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
                         >
-                          <span>📋 Staff</span>
+                          <span>Staff</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={handleEditRemoveAll}
                           disabled={currentCallups.length === 0 || isEditBatchCalling}
-                          className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-900 border border-red-200 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
+                          className="min-h-11 px-3 bg-csc-red/15 hover:bg-csc-red/25 text-csc-vermelho-texto border border-csc-red/25 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
                         >
-                          <span>✕ Limpar</span>
+                          <span>Limpar</span>
                         </button>
                       </div>
 
                       {/* Barra de Pesquisa de Membros */}
                       <div className="relative">
-                        <Search size={13} className="absolute left-3 top-2.5 text-gray-400" />
+                        <Search size={13} className="absolute left-3 top-2.5 text-white/40" />
                         <input
                           type="text"
                           value={editPlayerSearchTerm}
                           onChange={(e) => setEditPlayerSearchTerm(e.target.value)}
                           placeholder="Pesquisar por nome na camisola ou nº..."
-                          className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-csc-dark font-medium text-gray-900"
+                          className={`${CAMPO_FORM} pl-9`}
                         />
                       </div>
 
                       {/* Lista Selecionável Um a Um */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[380px] overflow-y-auto p-1.5 bg-white border border-gray-200 rounded-xl">
+                      <div className="grid grid-cols-1 gap-2 max-h-[380px] overflow-y-auto p-1.5 bg-white/5 border border-white/12 rounded-xl">
                         {filteredMembers.map(p => {
                           const isCalled = isMemberCalled(p)
                           const isEligible = isPlayerEligible(p, editType)
@@ -2962,10 +3185,10 @@ const CalendarPage: React.FC = () => {
                               onClick={() => isEligible && handleToggleCallup(p)}
                               className={`flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer border ${
                                 !isEligible 
-                                  ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
+                                  ? 'bg-csc-red/10 border-csc-red/25 text-csc-vermelho-texto opacity-60 cursor-not-allowed'
                                   : isCalled 
-                                    ? 'bg-amber-50/80 font-black text-gray-900 border-amber-300 shadow-2xs' 
-                                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-csc-gold/10 font-black text-white border-csc-gold/35 shadow-2xs' 
+                                    : 'bg-white/6 border-white/12 text-white/80 hover:bg-white/10'
                               }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -2974,7 +3197,7 @@ const CalendarPage: React.FC = () => {
                                   checked={isCalled}
                                   disabled={!isEligible}
                                   onChange={() => {}}
-                                  className="h-4 w-4 text-csc-dark rounded border-gray-300 pointer-events-none shrink-0"
+                                  className="h-4 w-4 text-csc-dark rounded border-white/15 pointer-events-none shrink-0"
                                 />
 
                                 <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
@@ -2988,12 +3211,12 @@ const CalendarPage: React.FC = () => {
                                       <span
                                         key={r}
                                         className={`text-[8.5px] font-black px-1 rounded ${
-                                          r === 'admin' ? 'bg-amber-100 text-amber-900' :
-                                          r === 'coach' ? 'bg-blue-100 text-blue-900' :
-                                          'bg-emerald-100 text-emerald-900'
+                                          r === 'admin' ? 'bg-csc-gold/15 text-csc-gold' :
+                                          r === 'coach' ? 'bg-csc-blue/20 text-csc-azul-texto' :
+                                          'bg-csc-light/15 text-csc-verde-texto'
                                         }`}
                                       >
-                                        {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
+                                        {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
                                       </span>
                                     ))}
                                   </div>
@@ -3001,7 +3224,7 @@ const CalendarPage: React.FC = () => {
                               </div>
 
                               {p.status === 'injured' && (
-                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
+                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-csc-red/15 text-csc-vermelho-texto shrink-0 ml-1">
                                   {editType === 'gathering' ? 'Lesionado (Pode ir)' : 'Lesionado'}
                                 </span>
                               )}

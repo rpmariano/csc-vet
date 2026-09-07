@@ -36,19 +36,16 @@ import { useModalA11y } from '../hooks/useModalA11y'
 
 export type BottomSheetSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl'
 
-const LARGURAS: Record<BottomSheetSize, string> = {
-  sm: 'sm:max-w-sm',
-  md: 'sm:max-w-md',
-  lg: 'sm:max-w-lg',
-  xl: 'sm:max-w-xl',
-  '2xl': 'sm:max-w-2xl',
-  '3xl': 'sm:max-w-3xl',
-  // Tamanhos largos: dossiês/fichas de detalhe com layout de 2 colunas no desktop.
-  '4xl': 'sm:max-w-4xl',
-  '5xl': 'sm:max-w-5xl',
-  '6xl': 'sm:max-w-6xl',
-  '7xl': 'sm:max-w-7xl',
-}
+/**
+ * Largura da persiana: a da coluna da app, sempre.
+ *
+ * Havia aqui dez larguras, do `sm` ao `7xl`, porque no computador a persiana
+ * degradava para um modal centrado e os dossiês de duas colunas precisavam de
+ * espaço. Sem UI de computador, a persiana é sempre a de telemóvel e ocupa a
+ * coluna toda — a prop `size` continua a ser aceite (dezenas de sítios a
+ * passam) mas já não muda nada.
+ */
+const LARGURA_COLUNA = 'max-w-[480px]'
 
 /** Distância arrastada para baixo, em px, a partir da qual a persiana fecha. */
 const DISTANCIA_FECHO = 110
@@ -94,7 +91,7 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
     title,
     description,
     icon,
-    size = 'lg',
+    size: _size,
     footer,
     closeOnOverlayClick = true,
     closeOnEscape = true,
@@ -160,7 +157,9 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
 
   if (phase === 'closed') return null
 
-  const ehMobile = typeof window !== 'undefined' && window.innerWidth < 640
+  // A persiana sobe sempre do fundo — já não há a variante centrada de
+  // computador que entrava com um `scale`.
+  const ehMobile = true
   const aberto = phase === 'open'
 
   const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -203,15 +202,19 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
   }
 
   const temCabecalho = Boolean(title || description || icon || showCloseButton)
-  const corFundo = tone === 'dark' ? 'bg-csc-dark text-white' : 'bg-white'
-  const corBordo = tone === 'dark' ? 'border-white/10' : 'border-gray-100'
-  const corTitulo = tone === 'dark' ? 'text-white' : 'text-gray-900'
-  const corDescricao = tone === 'dark' ? 'text-white/60' : 'text-gray-500'
-  const corAlca = tone === 'dark' ? 'bg-white/25' : 'bg-gray-300'
+  // A persiana escura é a superfície do redesenho — o fundo da app com um véu
+  // claro por cima, não o verde `csc-dark` de antes, que sobre o fundo escuro
+  // lia como um cartão verde a flutuar em vez de uma camada acima do ecrã.
+  /* O 'light' era `bg-white`: um resto do tema claro. Ver a nota no Modal. */
+  const corFundo = 'bg-csc-fundo text-white'
+  const corBordo = tone === 'dark' ? 'border-white/10' : 'border-white/10'
+  const corTitulo = tone === 'dark' ? 'text-white' : 'text-white'
+  const corDescricao = tone === 'dark' ? 'text-white/60' : 'text-white/50'
+  const corAlca = tone === 'dark' ? 'bg-white/25' : 'bg-white/20'
   const corBotaoFechar =
     tone === 'dark'
       ? 'bg-white/10 hover:bg-white/20 text-white'
-      : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+      : 'text-white/40 hover:text-white/80 hover:bg-white/10'
 
   // Transformação do painel: durante o arrasto segue o dedo em pixels; fora disso
   // segue a fase — desliza verticalmente no telemóvel, esbate com um leve zoom no
@@ -224,7 +227,7 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
 
   return (
     <div
-      className="fixed inset-0 z-modal flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/60 backdrop-blur-xs overflow-hidden"
+      className="fixed inset-0 z-modal flex items-end justify-center p-0 bg-black/60 backdrop-blur-xs overflow-hidden"
       style={{ opacity: aberto ? 1 : 0, transition: 'opacity 200ms ease' }}
       onMouseDown={e => {
         if (closeOnOverlayClick && e.target === e.currentTarget) onClose()
@@ -245,20 +248,22 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
           opacity: ehMobile || isDragging ? 1 : aberto ? 1 : 0,
           transition: isDragging ? 'none' : `transform ${DURACAO_TRANSICAO_MS}ms cubic-bezier(0.32, 0.72, 0, 1), opacity ${DURACAO_TRANSICAO_MS}ms ease`,
         }}
-        className={`${corFundo} w-full ${LARGURAS[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl relative max-h-[90vh] sm:max-h-[88vh] flex flex-col outline-none overscroll-contain ${className}`}
+        className={`${corFundo} w-full ${LARGURA_COLUNA} rounded-t-[30px] ${
+          tone === 'dark' ? 'border-t border-x border-white/10 sombra-persiana' : 'shadow-2xl'
+        } relative max-h-[90vh] flex flex-col outline-none overscroll-contain ${className}`}
       >
-        {/* Alça de arrasto — só no telemóvel; também funciona como botão de fecho */}
+        {/* Alça de arrasto; também funciona como botão de fecho */}
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar"
-          className="sm:hidden flex items-center justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing shrink-0"
+          className="flex items-center justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing shrink-0"
         >
           <span className={`w-12 h-1.5 rounded-full transition-colors ${corAlca}`} />
         </button>
 
         {temCabecalho && (
-          <div className={`flex items-start gap-3 px-5 pb-3 pt-1 sm:pt-5 border-b ${corBordo} shrink-0`}>
+          <div className={`flex items-start gap-3 px-5 pb-3 pt-1 border-b ${corBordo} shrink-0`}>
             {icon && <div className="shrink-0 mt-0.5">{icon}</div>}
 
             <div className="flex-1 min-w-0">

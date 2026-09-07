@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import {
-  DEFAULT_FINANCIAL_SETTINGS, getSeasonLabel, getPlayerQuotaMonths,
+  comOmissoes, getSeasonLabel, getPlayerQuotaMonths,
   computeQuotaMonthStatus, formatMonthYear,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaEligiblePlayer } from '../lib/finance'
@@ -49,18 +49,25 @@ export function usePlayerQuotaDebt(
 
     const carregar = async () => {
       try {
-        const [{ data: settingsData }, { data: duesData }] = await Promise.all([
+        const [{ data: settingsData }, { data: duesData }, { data: dispensados }] = await Promise.all([
           supabase.from('financial_settings').select('*').eq('id', 1).maybeSingle(),
           supabase.from('dues').select('month_year, amount, status').eq('player_id', player.id),
+          // Meses em que este atleta está dispensado — não entram na dívida.
+          supabase.from('quota_exemptions').select('month_year').eq('profile_id', player.id),
         ])
         if (cancelado) return
 
-        const settings: FinancialSettings = (settingsData as FinancialSettings) || DEFAULT_FINANCIAL_SETTINGS
+        const settings = comOmissoes(settingsData as Partial<FinancialSettings> | null)
         const today = new Date()
         const seasonLabel = getSeasonLabel(settings, today)
         const paidMonths = new Set((duesData || []).map(d => d.month_year))
 
-        const overdueMonths = getPlayerQuotaMonths(player, settings, seasonLabel, today)
+        const jogadorComDispensas = {
+          ...player,
+          meses_dispensados: ((dispensados ?? []) as { month_year: string }[]).map(l => l.month_year.slice(-2)),
+        }
+
+        const overdueMonths = getPlayerQuotaMonths(jogadorComDispensas, settings, seasonLabel, today)
           .filter(m => computeQuotaMonthStatus(m, paidMonths.has(m.monthYear), settings, today) === 'late')
           .map(m => ({ monthYear: m.monthYear, label: formatMonthYear(m.monthYear), amount: settings.quota_amount }))
 

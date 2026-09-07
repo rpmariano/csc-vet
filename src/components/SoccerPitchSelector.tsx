@@ -99,7 +99,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
   return (
     <div className="space-y-3">
       {/* Campo Visual */}
-      <div className="relative w-full max-w-md mx-auto aspect-[4/5] bg-gradient-to-b from-emerald-800 via-emerald-700 to-emerald-900 rounded-2xl p-3 shadow-inner border-2 border-emerald-600/60 overflow-hidden select-none">
+      <div className="relative w-full max-w-md mx-auto aspect-[4/5] bg-gradient-to-b from-[#16601f] via-[#12511a] to-[#0d3b13] rounded-2xl p-3 shadow-inner border border-csc-light/35 overflow-hidden select-none">
         
         {/* Linhas do Relvado (Soccer Field Markings) */}
         <div className="absolute inset-2 border-2 border-white/40 rounded-xl pointer-events-none">
@@ -124,11 +124,6 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
           <div className="absolute bottom-16 left-1/2 w-20 h-8 border-t-2 border-white/40 rounded-t-full -translate-x-1/2" />
         </div>
 
-        {/* Indicador de Seleção no Topo */}
-        <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-xs text-csc-gold text-[10px] font-black px-2.5 py-0.5 rounded-full border border-white/15 z-10">
-          <span>{selectedPositions.length} {selectedPositions.length === 1 ? 'posição' : 'posições'}</span>
-        </div>
-
         {/* Nós Interativos de Posição */}
         {PITCH_POSITIONS.map((pos) => {
           const selected = isPosSelected(pos.name)
@@ -151,8 +146,8 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
               <div
                 className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-xs transition-all shadow-md ${
                   selected
-                    ? 'bg-csc-gold text-csc-dark ring-4 ring-yellow-300 scale-110 shadow-xl'
-                    : 'bg-white/90 text-gray-800 hover:bg-white hover:scale-105 border border-white/60'
+                    ? 'bg-csc-gold text-csc-tinta ring-2 ring-csc-gold/50 scale-110'
+                    : 'bg-white/85 text-csc-tinta hover:bg-white border border-white/60'
                 }`}
               >
                 {selected ? (
@@ -165,32 +160,30 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
                 )}
               </div>
 
-              {/* Rótulo da Posição */}
-              <span
-                className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded mt-1 whitespace-nowrap shadow-xs transition-colors ${
-                  selected
-                    ? 'bg-black/85 text-csc-gold border border-csc-gold/40'
-                    : 'bg-black/55 text-white group-hover:bg-black/75'
-                }`}
-              >
-                {pos.name}
-              </span>
+              {/*
+                Sem rótulo por baixo do círculo. Estavam lá os onze nomes por
+                extenso ao mesmo tempo e, numa coluna de 480px, sobrepunham-se
+                uns aos outros — "Ponta de Lança (Esq)" por cima de "Ponta de
+                Lança (Dir)", e não se lia nenhum. A sigla dentro do círculo
+                identifica o lugar, e as posições atribuídas estão por extenso
+                na lista debaixo do campo.
+              */}
             </button>
           )
         })}
       </div>
 
       {/* Resumo de Posições Selecionadas com Botões de Remoção */}
-      <div className="bg-white p-3 rounded-xl border border-gray-200 space-y-1.5">
+      <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-gray-700">Posições Atribuídas ({selectedPositions.length}):</span>
-          <span className="text-[10px] text-gray-400 font-semibold">Clica no campo para alternar</span>
+          <span className="text-xs font-bold text-white/80">Posições Atribuídas ({selectedPositions.length}):</span>
+          <span className="text-[10px] text-white/40 font-semibold">Clica no campo para alternar</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {selectedPositions.map((pos, idx) => (
             <span
               key={idx}
-              className="bg-csc-dark text-white text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-2xs"
+              className="bg-csc-gold/15 border border-csc-gold/30 text-csc-gold text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5"
             >
               <span>{pos}</span>
               {!readOnly && (

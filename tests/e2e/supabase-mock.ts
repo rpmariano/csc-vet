@@ -136,7 +136,33 @@ export async function montarSupabaseFalso(page: Page, fixtures: Fixtures = {}) {
     }
 
     if (url.includes('/rest/v1/')) {
-      const linhas = tabelas[tabelaDoPedido(url)] ?? []
+      /*
+        As RPC são POST mas não são escritas: o ramo de baixo devolvia-lhes
+        `{ id: 'novo-0', ...corpo }`, e o `associate_my_profile` do AuthContext
+        aceitava isso como sendo o perfil — que passava a não ter nome nem
+        papel, e a app mandava o utilizador para fora das rotas de gestão.
+        Uma lista vazia é o que a base devolve quando não há correspondência,
+        que é o caso em todos os testes.
+      */
+      if (url.includes('/rest/v1/rpc/')) {
+        const nomeFuncao = url.split('/rest/v1/rpc/')[1]?.split(/[?&]/)[0] ?? ''
+        return responder(route, tabelas[`rpc:${nomeFuncao}`] ?? [])
+      }
+
+      let linhas = tabelas[tabelaDoPedido(url)] ?? []
+
+      /*
+        Filtrar por `id=eq.<x>` quando o pedido o traz. Sem isto, uma leitura
+        de uma ficha só devolvia a tabela inteira e o cliente ficava com a
+        primeira linha, fosse ela quem fosse — o `maybeSingle()` do
+        AuthContext trazia o primeiro do plantel em vez de quem tem sessão.
+        É o único filtro que se imita, e é o que basta.
+      */
+      const filtroId = /[?&]id=eq\.([^&]+)/.exec(url)
+      if (filtroId) {
+        const alvo = decodeURIComponent(filtroId[1])
+        linhas = linhas.filter(l => String((l as { id?: unknown }).id) === alvo)
+      }
 
       // Escritas: devolver a linha como se tivesse sido gravada, por cima da
       // fixture — assim os campos que a UI assume (nome, papel) nunca faltam.

@@ -41,7 +41,7 @@ export const AnnouncementsInboxButton: React.FC<AnnouncementsInboxButtonProps> =
 
   const corBotao = tone === 'dark'
     ? 'bg-white/10 hover:bg-white/20 text-white'
-    : 'bg-gray-100 hover:bg-gray-200 text-csc-dark'
+    : 'bg-white/10 hover:bg-white/15 text-csc-dark'
   const tamanhoBotao = size === 'sm' ? 'w-7 h-7' : 'w-9 h-9'
 
   return (
@@ -54,7 +54,7 @@ export const AnnouncementsInboxButton: React.FC<AnnouncementsInboxButtonProps> =
       >
         <Bell size={size === 'sm' ? 14 : 16} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-csc-red text-white text-[10px] font-black flex items-center justify-center border-2 border-white shadow-sm">
+          <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1.5 rounded-full bg-csc-gold text-csc-tinta font-display text-[10px] font-extrabold flex items-center justify-center border-2 border-[#101314]">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
