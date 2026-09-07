@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
-import { formatClubSigla, formatOpponentSigla, hasMatchReport, getRsvpDeadline } from './CalendarPage'
+import { formatClubSigla, formatOpponentSigla, convocatoriaFechada, textoConvocatoriaFechada } from './CalendarPage'
 import { triggerHaptic } from '../utils/haptics'
 import { AvatarPerfil, CartaoVidro, CartaoSimples, EtiquetaSeccao } from '../components/ui'
 import { AnnouncementsInboxButton } from '../components/AnnouncementsInbox'
@@ -268,15 +268,12 @@ const Home: React.FC = () => {
   const responder = async (status: 'confirmed' | 'declined') => {
     if (!minhaConvocatoria || !proximo) return
 
-    if (hasMatchReport(proximo)) {
-      toast.error('Este jogo já tem ficha de jogo lançada — a convocatória está fechada.')
-      return
-    }
-    const limite = getRsvpDeadline(proximo)
-    if (limite !== null && Date.now() >= limite) {
-      toast.error(
-        `Já passou a hora de ${proximo.meeting_time ? 'concentração' : 'início'} — a convocatória está fechada.`,
-      )
+    // A regra de quando a convocatória aceita respostas vive no CalendarPage,
+    // uma vez só. Aqui há sempre convocados: se a pessoa tem linha, alguém foi
+    // chamado.
+    const fechada = convocatoriaFechada(proximo, true)
+    if (fechada) {
+      toast.error(textoConvocatoriaFechada(fechada, proximo) + '.')
       return
     }
 
@@ -432,8 +429,9 @@ const Home: React.FC = () => {
             )}
           </div>
 
-          {/* A resposta à convocatória. Só aparece a quem foi convocado. */}
-          {minhaConvocatoria && (
+          {/* A resposta à convocatória. Só a quem foi convocado, e só quando o
+              evento a aceita — nos treinos não se pergunta nada. */}
+          {minhaConvocatoria && !convocatoriaFechada(proximo, true) && (
             <div className="flex items-center gap-3 px-[17px] py-3.5 bg-[rgba(11,45,11,.55)] border-t border-csc-light/35">
               <span className="flex-1 font-display font-extrabold text-[13px] text-white">
                 {minhaConvocatoria.status === 'confirmed'

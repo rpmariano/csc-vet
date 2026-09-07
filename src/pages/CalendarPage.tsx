@@ -106,6 +106,73 @@ export const getRsvpDeadline = (ev?: { date_time?: string | null; meeting_time?:
   return prazo.getTime()
 }
 
+/**
+ * Porque é que a convocatória de um evento não aceita respostas — ou `null`
+ * quando aceita.
+ *
+ * A regra é uma só e vive aqui, porque estava escrita por extenso em quatro
+ * sítios (o cartão da Agenda, a persiana do evento, o guarda do `handleCallupResponse`
+ * e a Home) e já divergia entre eles.
+ *
+ * **Os treinos não se respondem.** É o único tipo de evento assim: são
+ * semanais, convocam automaticamente todos os aptos, e pedir confirmação
+ * semana após semana só ensinava toda a gente a ignorar o pedido. Antes
+ * abriam seis dias antes, o que era a mesma pergunta feita mais tarde.
+ *
+ * **Tudo o resto abre assim que o evento deixa de ser rascunho e tem gente
+ * convocada.** Sem convocatória feita não há a quem perguntar; em rascunho o
+ * evento ainda é da equipa técnica.
+ *
+ * E fecha quando a ficha de jogo é lançada — as estatísticas já dependem
+ * daquele estado — ou quando passa a hora de concentração, ou a de início se
+ * não houver concentração.
+ */
+export type ConvocatoriaFechada =
+  | 'treino'
+  | 'rascunho'
+  | 'sem-convocados'
+  | 'ficha-lancada'
+  | 'passou-a-hora'
+
+export function convocatoriaFechada(
+  ev?: {
+    type?: string
+    date_time?: string | null
+    meeting_time?: string | null
+    home_score?: number | null
+    is_active?: boolean | null
+  } | null,
+  temConvocados = true,
+): ConvocatoriaFechada | null {
+  if (!ev) return 'sem-convocados'
+  if (ev.type === 'practice') return 'treino'
+  if (ev.is_active === false) return 'rascunho'
+  if (!temConvocados) return 'sem-convocados'
+  if (hasMatchReport(ev)) return 'ficha-lancada'
+  const prazo = getRsvpDeadline(ev)
+  if (prazo !== null && Date.now() >= prazo) return 'passou-a-hora'
+  return null
+}
+
+/** A frase a mostrar no lugar dos botões. O treino não tem: não se mostra nada. */
+export function textoConvocatoriaFechada(
+  motivo: ConvocatoriaFechada,
+  ev?: { meeting_time?: string | null } | null,
+): string {
+  switch (motivo) {
+    case 'treino':
+      return 'Os treinos não pedem resposta'
+    case 'rascunho':
+      return 'Em rascunho — a convocatória abre quando o evento for publicado'
+    case 'sem-convocados':
+      return 'Convocatória por fazer'
+    case 'ficha-lancada':
+      return 'Jogo com ficha lançada — convocatória fechada'
+    case 'passou-a-hora':
+      return `Convocatória fechada — já passou a hora de ${ev?.meeting_time ? 'concentração' : 'início'}`
+  }
+}
+
 export const formatClubSigla = (initials?: string | null): string => {
   if (!initials) return 'CSC'
   const trimmed = initials.trim()
@@ -979,13 +1046,9 @@ const CalendarPage: React.FC = () => {
   const handleCallupResponse = async (eventId: string, status: 'confirmed' | 'declined') => {
     if (!profile) return
     const targetEvent = events.find(e => e.id === eventId)
-    if (hasMatchReport(targetEvent)) {
-      toast.error('Este jogo já tem ficha de jogo lançada — a convocatória está fechada.')
-      return
-    }
-    const deadline = getRsvpDeadline(targetEvent)
-    if (deadline !== null && Date.now() >= deadline) {
-      toast.error(`Já passou a hora de ${targetEvent?.meeting_time ? 'concentração' : 'início'} — a convocatória está fechada.`)
+    const fechada = convocatoriaFechada(targetEvent, (eventCallups[eventId] || []).length > 0)
+    if (fechada) {
+      toast.error(textoConvocatoriaFechada(fechada, targetEvent) + '.')
       return
     }
     try {
@@ -1611,14 +1674,9 @@ const CalendarPage: React.FC = () => {
 
             {/* Ação rápida de Presença (RSVP) */}
             {myCallup && (() => {
-              const eventTime = new Date(event.date_time).getTime()
-              const now = new Date().getTime()
-              const diffDays = Math.ceil((eventTime - now) / (1000 * 60 * 60 * 24))
-              const isPractice = event.type === 'practice'
-              const closedByReport = hasMatchReport(event)
-              const deadline = getRsvpDeadline(event)
-              const pastDeadline = deadline !== null && now >= deadline
-              const isRsvpOpen = !closedByReport && !pastDeadline && (!isPractice || diffDays <= 6)
+              const fechada = convocatoriaFechada(event, callups.length > 0)
+              // Num treino não se mostra linha nenhuma: não há pergunta a fazer.
+              if (fechada === 'treino') return null
 
               return (
                 <div
@@ -1626,17 +1684,9 @@ const CalendarPage: React.FC = () => {
                   className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap"
                 >
                   <span className="text-xs font-bold text-white/70">A tua resposta:</span>
-                  {closedByReport ? (
+                  {fechada ? (
                     <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
-                      Jogo com ficha lançada — convocatória fechada
-                    </span>
-                  ) : pastDeadline ? (
-                    <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
-                      Convocatória fechada — já passou a hora de {event.meeting_time ? 'concentração' : 'início'}
-                    </span>
-                  ) : !isRsvpOpen ? (
-                    <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
-                      Confirmações abrem 6 dias antes ({new Date(eventTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })})
+                      {textoConvocatoriaFechada(fechada, event)}
                     </span>
                   ) : (
                     <div className="flex items-center gap-1.5 sm:gap-2">
@@ -2295,17 +2345,16 @@ const CalendarPage: React.FC = () => {
 
                   if (!myCallup) return null
 
-                  const eventTime = new Date(selectedEvent.date_time).getTime()
-                  const now = new Date().getTime()
-                  const isPractice = selectedEvent.type === 'practice'
-                  const closedByReport = hasMatchReport(selectedEvent)
-                  const deadline = getRsvpDeadline(selectedEvent)
-                  const pastDeadline = deadline !== null && now >= deadline
-                  const isRsvpOpen = !closedByReport && !pastDeadline && (!isPractice || ((eventTime - now) <= 6 * 24 * 60 * 60 * 1000))
+                  const fechada = convocatoriaFechada(
+                    selectedEvent,
+                    (eventCallups[selectedEvent.id] || []).length > 0,
+                  )
+                  // Num treino não há pergunta a fazer nem estado a mostrar.
+                  if (fechada === 'treino') return null
 
                   return (
-                    <div className={isRsvpOpen ? 'rounded-2xl overflow-hidden shadow-lg shadow-black/20' : 'p-4 bg-white/[0.07] rounded-2xl space-y-3 border border-white/10 border-t-white/20 shadow-md shadow-black/20'}>
-                      {isRsvpOpen ? (
+                    <div className={!fechada ? 'rounded-2xl overflow-hidden shadow-lg shadow-black/20' : 'p-4 bg-white/[0.07] rounded-2xl space-y-3 border border-white/10 border-t-white/20 shadow-md shadow-black/20'}>
+                      {!fechada ? (
                         // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home.
                         // Mostra-se sempre que ainda dá para responder, mesmo que já tenha respondido antes —
                         // até à hora de concentração o jogador pode sempre mudar de ideias.
@@ -2362,19 +2411,9 @@ const CalendarPage: React.FC = () => {
                               </span>
                             </p>
                           </div>
-                          {closedByReport ? (
-                            <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
-                              Este jogo já tem <strong className="text-white">ficha de jogo lançada</strong> — a convocatória está fechada e já não pode ser alterada.
-                            </div>
-                          ) : pastDeadline ? (
-                            <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
-                              Já passou a hora de <strong className="text-white">{selectedEvent.meeting_time ? 'concentração' : 'início'}</strong> — a convocatória está fechada e já não pode ser alterada.
-                            </div>
-                          ) : !isRsvpOpen && (
-                            <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
-                              O pedido de confirmação de presença abre <strong className="text-white">6 dias antes do treino</strong> (a {new Date(eventTime - 6 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })}).
-                            </div>
-                          )}
+                          <div className="p-3 bg-white/10 rounded-xl text-xs text-white/70 font-medium">
+                            {textoConvocatoriaFechada(fechada, selectedEvent)}.
+                          </div>
                         </>
                       )}
                     </div>
