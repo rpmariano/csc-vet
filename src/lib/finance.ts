@@ -35,6 +35,13 @@ export interface QuotaEligiblePlayer {
   quota_start_date?: string | null
   quota_end_date?: string | null
   created_at?: string | null
+  /**
+   * Meses em que este atleta está dispensado de quota, como 'MM' — vêm de
+   * `quota_exemptions` e são de todos os anos. Diferentes do
+   * `quota_excluded_months` das definições, que é o mês que o clube inteiro
+   * não paga.
+   */
+  meses_dispensados?: string[] | null
 }
 
 const MESES_PT = [
@@ -127,6 +134,9 @@ export const getQuotaMonthsForSeason = (settings: FinancialSettings, seasonLabel
  * do estado do perfil: um jogador 'inactive' não gera mais meses a partir de hoje
  * (os que já venceram antes de ficar inativo mantêm-se a dever); 'active'/'injured'
  * continuam elegíveis para todos os meses da época, passados e futuros.
+ *
+ * Por cima disso saem os meses em que este atleta em concreto está dispensado
+ * (`quota_exemptions`, editáveis na ficha do atleta).
  */
 export const getPlayerQuotaMonths = (
   player: QuotaEligiblePlayer,
@@ -135,6 +145,7 @@ export const getPlayerQuotaMonths = (
   today: Date = new Date(),
 ): SeasonMonth[] => {
   const allMonths = getQuotaMonthsForSeason(settings, seasonLabel)
+  const dispensados = new Set(player.meses_dispensados ?? [])
   const startDate = player.quota_start_date ? new Date(player.quota_start_date) : null
   const endDate = player.quota_end_date
     ? new Date(player.quota_end_date)
@@ -147,6 +158,7 @@ export const getPlayerQuotaMonths = (
     const monthStart = new Date(m.year, m.month - 1, 1)
     if (startDate && monthEnd < startDate) return false
     if (endDate && monthStart > endDate) return false
+    if (dispensados.has(String(m.month).padStart(2, '0'))) return false
     return true
   })
 }

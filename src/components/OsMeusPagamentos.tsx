@@ -69,13 +69,14 @@ export const OsMeusPagamentos: React.FC<{
 
     const carregar = async () => {
       try {
-        const [{ data: defs }, { data: quotasPagas }, { data: pagamentos }] = await Promise.all([
+        const [{ data: defs }, { data: quotasPagas }, { data: pagamentos }, { data: dispensados }] = await Promise.all([
           supabase.from('financial_settings').select('*').eq('id', 1).maybeSingle(),
           supabase.from('dues').select('month_year, amount, status').eq('player_id', jogador.id),
           supabase
             .from('charge_payments')
             .select('id, amount, paid_at, charge:charges(id, title, amount, due_date)')
             .eq('player_id', jogador.id),
+          supabase.from('quota_exemptions').select('month_year').eq('profile_id', jogador.id),
         ])
         if (cancelado) return
 
@@ -87,7 +88,15 @@ export const OsMeusPagamentos: React.FC<{
         setQuotaMensal(definicoes.quota_amount)
         setEpoca(rotulo)
         setMeses(
-          getPlayerQuotaMonths(jogador, definicoes, rotulo, hoje).map(m => {
+          getPlayerQuotaMonths(
+            {
+              ...jogador,
+              meses_dispensados: ((dispensados ?? []) as { month_year: string }[]).map(l => l.month_year.slice(-2)),
+            },
+            definicoes,
+            rotulo,
+            hoje,
+          ).map(m => {
             const estaPaga = pagas.has(m.monthYear)
             const estado = computeQuotaMonthStatus(m, estaPaga, definicoes, hoje)
             return {

@@ -22,6 +22,7 @@ import {
   List,
   SlidersHorizontal,
   ClipboardList,
+  Landmark,
   User as UserIcon,
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -39,6 +40,9 @@ import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import { getSeasonLabel, comOmissoes } from '../lib/finance'
+
+/** As abreviaturas dos meses, para as pastilhas de quota dispensada. */
+const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
 const CAMPO =
@@ -123,6 +127,9 @@ const TeamManagementPage: React.FC = () => {
   const [formEmergencyName, setFormEmergencyName] = useState('')
   const [formEmergencyPhone, setFormEmergencyPhone] = useState('')
   const [formMedicalNotes, setFormMedicalNotes] = useState('')
+  const [formQuotaStart, setFormQuotaStart] = useState('')
+  const [formQuotaEnd, setFormQuotaEnd] = useState('')
+  const [formMesesDispensados, setFormMesesDispensados] = useState<string[]>([])
 
   // Upload URLs & Status
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
@@ -239,6 +246,22 @@ const TeamManagementPage: React.FC = () => {
   // Quais fichas têm conta de login associada — só o admin precisa de saber,
   // para o merge de fichas nunca poder apagar o lado que tem sessão.
   const [linkedProfileIds, setLinkedProfileIds] = useState<Set<string>>(new Set())
+
+  /* As contas registadas sem ficha de atleta (ecrã 3d). Só o admin as pode
+     ler: a RPC recusa a quem não for. */
+  const [contasSemAtleta, setContasSemAtleta] = useState<
+    { id: string; name: string | null; email: string | null; photo_url: string | null; created_at: string | null }[]
+  >([])
+  useEffect(() => {
+    if (!isAdmin) return
+    supabase.rpc('admin_contas_sem_atleta').then(({ data, error }) => {
+      if (error) {
+        console.error('Erro ao carregar as contas sem atleta:', error.message)
+        return
+      }
+      setContasSemAtleta((data as typeof contasSemAtleta) ?? [])
+    })
+  }, [isAdmin])
   useEffect(() => {
     if (!isAdmin) return
     supabase.rpc('admin_linked_profile_ids').then(({ data, error }) => {
@@ -287,6 +310,9 @@ const TeamManagementPage: React.FC = () => {
     setFormEmergencyName('')
     setFormEmergencyPhone('')
     setFormMedicalNotes('')
+    setFormQuotaStart('')
+    setFormQuotaEnd('')
+    setFormMesesDispensados([])
     setPhotoUrl(null)
     setIdDocUrl(null)
     setInsuranceDocUrl(null)
@@ -328,6 +354,19 @@ const TeamManagementPage: React.FC = () => {
     setFormEmergencyName(p.emergency_contact_name || '')
     setFormEmergencyPhone(p.emergency_contact_phone || '')
     setFormMedicalNotes(cleanNotesFromRolesTag(p.medical_notes) || '')
+    setFormQuotaStart(p.quota_start_date || '')
+    setFormQuotaEnd(p.quota_end_date || '')
+    /* Os meses dispensados vivem noutra tabela; lêem-se ao abrir a ficha. */
+    setFormMesesDispensados([])
+    supabase
+      .from('quota_exemptions')
+      .select('month_year')
+      .eq('profile_id', p.id)
+      .then(({ data }) => {
+        setFormMesesDispensados(
+          ((data ?? []) as { month_year: string }[]).map(l => l.month_year.slice(-2)),
+        )
+      })
     setPhotoUrl(p.photo_url || null)
     setIdDocUrl(p.id_document_url || null)
     setInsuranceDocUrl(p.insurance_doc_url || null)
@@ -488,6 +527,26 @@ const TeamManagementPage: React.FC = () => {
     }
   }
 
+  /*
+    Os meses dispensados de quota vivem em `quota_exemptions`, uma linha por
+    mês. Apaga-se o que lá está e escreve-se o que ficou escolhido: são no
+    máximo doze linhas por atleta, e um diff seria mais código do que vale.
+
+    O `month_year` da tabela é 'AAAA-MM' e a dispensa é para todos os anos —
+    grava-se com o ano 0000, que nenhuma época usa, e lê-se só o mês. Se um
+    dia fizer falta dispensar um mês de um ano em concreto, a coluna já lá
+    está para isso.
+  */
+  const guardarMesesDispensados = async (profileId: string) => {
+    const { error: apagou } = await supabase.from('quota_exemptions').delete().eq('profile_id', profileId)
+    if (apagou) throw apagou
+    if (formMesesDispensados.length === 0) return
+    const { error } = await supabase.from('quota_exemptions').insert(
+      formMesesDispensados.map(mes => ({ profile_id: profileId, month_year: `0000-${mes}` })),
+    )
+    if (error) throw error
+  }
+
   const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formName || !formEmail) {
@@ -538,6 +597,8 @@ const TeamManagementPage: React.FC = () => {
       iban: sanitizeText(formIban),
       gdpr_consent: Boolean(formGdprConsent),
       member_number: sanitizeText(formMemberNumber),
+      quota_start_date: sanitizeDate(formQuotaStart),
+      quota_end_date: sanitizeDate(formQuotaEnd),
       emergency_contact_name: sanitizeText(formEmergencyName),
       emergency_contact_phone: sanitizeText(formEmergencyPhone),
       medical_notes: medicalNotesEncoded,
@@ -577,6 +638,7 @@ const TeamManagementPage: React.FC = () => {
           console.warn('Update matched 0 rows')
         }
         savedPlayerId = formId
+        await guardarMesesDispensados(formId)
         toast.success('Ficha de membro atualizada com sucesso!')
       } else {
         // 2. Se for um membro de semente (seed-X) ou novo registo:
@@ -1709,7 +1771,7 @@ const TeamManagementPage: React.FC = () => {
                       type="text"
                       value={formIban}
                       onChange={(e) => setFormIban(e.target.value)}
-                      className="w-full px-3 py-2 border border-white/15 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-mono text-white"
+                      className={`${CAMPO} font-mono`}
                       placeholder="PT50 0000 0000 0000 0000 0"
                     />
                   </div>
@@ -1726,11 +1788,93 @@ const TeamManagementPage: React.FC = () => {
                 </div>
               </div>
 
+              {/*
+                Quotas deste atleta (ecrã 3c). A janela em que ele paga quota
+                e os meses em que está dispensado.
+
+                Não é uma definição do clube: as datas recortam a janela do
+                atleta dentro da época, e o `getPlayerQuotaMonths` já as
+                respeita — só não havia sítio nenhum na app para as preencher,
+                e ficavam a inferir-se do estado do perfil. Os meses
+                dispensados vivem em `quota_exemptions`, criada na fase 1 e
+                até agora sem uso.
+              */}
+              <div className="cartao-simples p-4 space-y-3.5">
+                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                  <Landmark size={14} className="text-csc-gold" />
+                  <span>6. Quotas deste atleta</span>
+                </h3>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className={ETIQUETA} htmlFor="quota-inicio">Início de atividade</label>
+                    <input
+                      id="quota-inicio"
+                      type="date"
+                      value={formQuotaStart}
+                      onChange={e => setFormQuotaStart(e.target.value)}
+                      className={CAMPO}
+                    />
+                  </div>
+                  <div>
+                    <label className={ETIQUETA} htmlFor="quota-fim">Fim de atividade</label>
+                    <input
+                      id="quota-fim"
+                      type="date"
+                      value={formQuotaEnd}
+                      onChange={e => setFormQuotaEnd(e.target.value)}
+                      className={CAMPO}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[10.5px] leading-relaxed text-white/50">
+                  Sem datas, a janela infere-se do estado: quem fica inativo deixa de gerar meses
+                  novos, mas mantém os que já venceram. Ao preencher o fim, as quotas seguintes
+                  deixam de ser devidas.
+                </p>
+
+                <div>
+                  <p className={ETIQUETA}>Meses dispensados de quota</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+                      const chave = String(m).padStart(2, '0')
+                      const dispensado = formMesesDispensados.includes(chave)
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('selection')
+                            setFormMesesDispensados(atual =>
+                              dispensado ? atual.filter(x => x !== chave) : [...atual, chave],
+                            )
+                          }}
+                          aria-pressed={dispensado}
+                          className={`min-h-11 px-3 rounded-[18px] border font-display font-black text-[11px] cursor-pointer
+                            transition-transform duration-150 active:scale-97
+                            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                              dispensado
+                                ? 'bg-csc-gold text-csc-tinta border-csc-gold'
+                                : 'bg-white/5 border-white/12 text-white/55'
+                            }`}
+                        >
+                          {MESES_CURTOS[m - 1]}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[10.5px] leading-relaxed text-white/50 mt-2">
+                    Dourado = dispensado, todos os anos. Os meses que o clube inteiro não paga
+                    definem-se no Financeiro, e não aqui.
+                  </p>
+                </div>
+              </div>
               {/* 6. SAÚDE & EMERGÊNCIA */}
               <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                   <HeartPulse size={14} className="text-red-400" />
-                  <span>6. Saúde & Contacto de Emergência</span>
+                  <span>7. Saúde & Contacto de Emergência</span>
                 </h3>
 
                 <div className="grid grid-cols-1 gap-3">
@@ -1772,7 +1916,7 @@ const TeamManagementPage: React.FC = () => {
               <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                   <FileText size={14} className="text-csc-gold" />
-                  <span>7. Documentos & Proteção de Dados (RGPD)</span>
+                  <span>8. Documentos & Proteção de Dados (RGPD)</span>
                 </h3>
 
                 <div className="grid grid-cols-1 gap-3">
@@ -2331,6 +2475,11 @@ const TeamManagementPage: React.FC = () => {
 
       {/* MODAL 3: ASSOCIAR UTILIZADOR A JOGADOR */}
       {associatingPlayer && (() => {
+        // As contas que se registaram e ainda não têm ficha de atleta — é o
+        // que o handoff pede em 3d, e o que na prática se quer ligar. Vêm da
+        // RPC `admin_contas_sem_atleta`, que só o admin pode chamar.
+        const semAtleta = contasSemAtleta.filter(c => c.id !== associatingPlayer.id)
+
         // Encontrar potenciais coincidências por email ou telefone
         const potentialMatches = profiles.filter(p => 
           p.id !== associatingPlayer.id && (
@@ -2357,7 +2506,7 @@ const TeamManagementPage: React.FC = () => {
               aria-modal="true"
               aria-labelledby="associar-utilizador-titulo"
               tabIndex={-1}
-              className="bg-csc-dark text-white rounded-2xl max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/10 outline-none"
+              className="bg-csc-fundo text-white rounded-3xl max-w-xl w-full p-5 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/12 outline-none"
             >
               <button
                 onClick={() => {
@@ -2365,7 +2514,7 @@ const TeamManagementPage: React.FC = () => {
                   setSelectedUserToAssociate(null)
                 }}
                 aria-label="Fechar"
-                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
+                className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               >
                 <X size={18} className="stroke-[2.5]" />
               </button>
@@ -2434,6 +2583,61 @@ const TeamManagementPage: React.FC = () => {
                 </div>
               )}
 
+              {/*
+                Contas sem atleta (ecrã 3d). São as pessoas que se registaram
+                na app e ainda não estão ligadas a nenhuma ficha do plantel —
+                que é o caso que se vem cá resolver. A lista de baixo, com o
+                plantel inteiro, fica para o caso raro de haver duas fichas da
+                mesma pessoa.
+              */}
+              {semAtleta.length > 0 && (
+                <div className="mt-5 space-y-2">
+                  <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
+                    Contas sem atleta ({semAtleta.length})
+                  </h4>
+                  <p className="text-[10.5px] leading-relaxed text-white/50">
+                    Registaram-se na app e ainda não têm ficha. Ao ligar, as respostas e os
+                    pagamentos já lançados ficam nesta ficha.
+                  </p>
+
+                  {semAtleta.map(conta => (
+                    <button
+                      key={conta.id}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('selection')
+                        setSelectedUserToAssociate(conta as unknown as Profile)
+                      }}
+                      aria-pressed={selectedUserToAssociate?.id === conta.id}
+                      className={`w-full min-h-14 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl border text-left cursor-pointer
+                        transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                          selectedUserToAssociate?.id === conta.id
+                            ? 'bg-csc-gold/15 border-csc-gold/45'
+                            : 'bg-white/5 border-white/10'
+                        }`}
+                    >
+                      <span className="w-9 h-9 rounded-xl bg-white/10 text-white/60 flex items-center justify-center font-display font-black text-[13px] shrink-0">
+                        {(conta.name || conta.email || '?').charAt(0).toUpperCase()}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-display font-bold text-[12.5px] text-white truncate">
+                          {conta.name || 'Sem nome'}
+                        </span>
+                        <span className="block text-[10px] text-white/45 truncate mt-0.5">
+                          {conta.email}
+                          {conta.created_at
+                            ? ` · registou-se a ${new Date(conta.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}`
+                            : ''}
+                        </span>
+                      </span>
+                      {selectedUserToAssociate?.id === conta.id && (
+                        <Check size={16} className="text-csc-gold shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
               {/* 2. Pesquisa e Seleção de Outro Utilizador Registado */}
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between">
