@@ -140,7 +140,7 @@ export const PWAInstallPrompt: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-csc-dark text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
                   <p className="leading-snug">
-                    Toque no botão <strong className="text-blue-600 inline-flex items-center gap-1 font-bold"><Share size={13} /> Partilhar</strong> na barra do Safari (ao fundo do ecrã).
+                    Toque no botão <strong className="text-csc-azul-texto inline-flex items-center gap-1 font-bold"><Share size={13} /> Partilhar</strong> na barra do Safari (ao fundo do ecrã).
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
@@ -276,7 +276,7 @@ export const PWAInstallMenuItem: React.FC<{ onClickExtra?: () => void }> = ({ on
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-csc-dark text-white font-bold flex items-center justify-center shrink-0 text-xs">1</span>
                   <p className="leading-snug">
-                    No Safari, toque no botão <strong className="text-blue-600 inline-flex items-center gap-1 font-bold"><Share size={13} /> Partilhar</strong>.
+                    No Safari, toque no botão <strong className="text-csc-azul-texto inline-flex items-center gap-1 font-bold"><Share size={13} /> Partilhar</strong>.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">

@@ -153,7 +153,13 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   `bg-white text-white`:** o script traduz o `text-gray-900` de dentro de uma
   caixa que fica branca, e o campo passa a ter texto branco sobre branco — o
   Plantel tinha dezoito assim, todos ilegíveis e nenhum visível numa leitura
-  do diff.
+  do diff. **E grepar também por `-csc-[a-z]+/\d+/\d+`:** o script traduzia
+  `bg-amber-50/80` para `bg-csc-gold/10/80`, que não é classe nenhuma — o
+  Tailwind não gera nada e o elemento fica sem fundo, sem erro nem aviso.
+  Corrigido em 2026-09-07 (o padrão passou a engolir o sufixo de opacidade da
+  origem), mas o grep custa um segundo. **E o script traduz comentários**, que
+  não sabe distinguir de classes: um comentário que cite `bg-red-50` fica a
+  dizer `bg-csc-red/10` e passa a mentir.
 - **Um `Modal` não tem tom.** O painel é sempre `bg-csc-fundo`. Havia um
   `tone` cujo `'dark'` dava o verde do clube, ao contrário do `BottomSheet`,
   onde a mesma palavra dá o fundo escuro — um modal escrito por analogia com

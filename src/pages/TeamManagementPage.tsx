@@ -1747,7 +1747,7 @@ const TeamManagementPage: React.FC = () => {
                     <select
                       value={formKitSize}
                       onChange={(e) => setFormKitSize(e.target.value)}
-                      className="w-full px-3 py-2 border border-white/15 rounded-lg text-sm outline-none focus:ring-2 focus:ring-csc-dark bg-white font-bold text-white"
+                      className={CAMPO}
                     >
                       <option value="S">S</option>
                       <option value="M">M</option>

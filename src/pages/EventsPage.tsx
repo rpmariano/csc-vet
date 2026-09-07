@@ -1464,7 +1464,7 @@ const EventsPage: React.FC = () => {
                       className={CAMPO_FORM}
                     >
                       <option value="">-- Selecionar Adversário --</option>
-                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo adversário…</option>
+                      <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo adversário…</option>
                       {opponents.map(o => (
                         <option key={o.id} value={o.id}>{o.name}</option>
                       ))}
@@ -1535,14 +1535,14 @@ const EventsPage: React.FC = () => {
             ) : (
               <div className="p-3.5 bg-white/6 border border-white/12 rounded-2xl space-y-2.5">
                 <label className="block text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
-                  <span className="flex items-center gap-1.5"><MapPin size={14} className="text-red-600" /> Campo / Instalação</span>
+                  <span className="flex items-center gap-1.5"><MapPin size={14} className="text-csc-vermelho-texto" /> Campo / Instalação</span>
                   {currentLocationStr && <span className="text-[10px] text-csc-verde-texto font-bold bg-csc-light/15 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {currentLocationStr}</span>}
                 </label>
                 <select required value={fieldId} onChange={(e) => {
                     if (e.target.value === '__new__') { setQuickFieldTarget('create'); setIsQuickFieldModalOpen(true) } else { setFieldId(e.target.value); const sel = fields.find(f => f.id === e.target.value); setLocationText(sel ? (sel.address ? `${sel.name} (${sel.address})` : sel.name) : '') }
                   }} className={CAMPO_FORM}>
                   <option value="">-- Escolher Campo / Instalação --</option>
-                  <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo campo…</option>
+                  <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo campo…</option>
                   {fields.map(f => <option key={f.id} value={f.id}>{f.name} {f.address ? `(${f.address})` : ''}</option>)}
                 </select>
                 {currentLocationStr && (
@@ -1553,7 +1553,7 @@ const EventsPage: React.FC = () => {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-black text-csc-tinta bg-csc-gold hover:brightness-95 border border-csc-gold px-3 min-h-11 rounded-xl transition-all shadow-2xs active:scale-95"
                     >
-                      <MapPin size={13} className="text-red-600" />
+                      <MapPin size={13} className="text-csc-vermelho-texto" />
                       <span>Ver no Google Maps: "{currentLocationStr}"</span>
                       <ExternalLink size={12} />
                     </a>
@@ -1593,7 +1593,7 @@ const EventsPage: React.FC = () => {
                 </div>
 
                 {isRecurring && (
-                  <div className="space-y-2 pt-2 border-t border-amber-200/60 text-xs">
+                  <div className="space-y-2 pt-2 border-t border-csc-gold/25 text-xs">
                     <div>
                       <label className={ETIQUETA_FORM}>Dias da semana:</label>
                       <div className="flex flex-wrap gap-1">
@@ -2049,18 +2049,18 @@ const EventsPage: React.FC = () => {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-white/10">
                         <div className="flex items-center gap-2 text-xs">
                           <span className="flex items-center gap-1 font-black text-csc-verde-texto bg-csc-light/15 border border-csc-light/35 px-2 py-0.5 rounded-lg">
-                            <CheckCircle2 size={12} className="text-emerald-700" />
+                            <CheckCircle2 size={12} className="text-csc-verde-texto" />
                             <span>{confirmedList.length}</span>
                           </span>
 
                           <span className="flex items-center gap-1 font-bold text-csc-gold bg-csc-gold/15 border border-csc-gold/35 px-2 py-0.5 rounded-lg">
-                            <HelpCircle size={12} className="text-amber-700" />
+                            <HelpCircle size={12} className="text-csc-gold" />
                             <span>{pendingList.length}</span>
                           </span>
 
                           {declinedList.length > 0 && (
                             <span className="flex items-center gap-1 font-bold text-csc-vermelho-texto bg-csc-red/15 border border-csc-red/35 px-2 py-0.5 rounded-lg">
-                              <XCircle size={12} className="text-red-700" />
+                              <XCircle size={12} className="text-csc-vermelho-texto" />
                               <span>{declinedList.length} Indisponíveis</span>
                             </span>
                           )}
@@ -2434,7 +2434,7 @@ const EventsPage: React.FC = () => {
                         className={CAMPO_FORM}
                       >
                         <option value="">-- Selecionar Adversário --</option>
-                        <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo adversário…</option>
+                        <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo adversário…</option>
                         {opponents.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                       </select>
                     </div>
@@ -2506,7 +2506,7 @@ const EventsPage: React.FC = () => {
                     className={CAMPO_FORM}
                   >
                     <option value="">-- Escolher Campo / Instalação --</option>
-                    <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo campo…</option>
+                    <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo campo…</option>
                     {fields.map(f => (
                       <option key={f.id} value={f.id}>{f.name} {f.address ? `(${f.address})` : ''}</option>
                     ))}
@@ -2733,7 +2733,7 @@ const EventsPage: React.FC = () => {
               <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
                 <div>
                   <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
-                    <Send size={14} className={editIsActive ? 'text-emerald-600' : 'text-amber-600'} />
+                    <Send size={14} className={editIsActive ? 'text-csc-light' : 'text-csc-gold'} />
                     <span>Estado: {editIsActive ? 'Ativo (Publicado)' : 'Rascunho (Inativo)'}</span>
                   </label>
                   <p className="text-[10.5px] text-white/70 mt-0.5">

@@ -46,11 +46,18 @@ MAPA = {
 ESTADOS = {
   # verde — presente, pago, apto
   'bg-emerald-50':'bg-csc-light/10', 'bg-emerald-100':'bg-csc-light/15',
+  'bg-emerald-200':'bg-csc-light/25', 'bg-green-50':'bg-csc-light/10',
+  'bg-green-100':'bg-csc-light/15', 'bg-green-200':'bg-csc-light/25',
+  'text-green-700':'text-csc-verde-texto', 'text-green-800':'text-csc-verde-texto',
+  'text-green-900':'text-csc-verde-texto', 'text-green-950':'text-csc-verde-texto',
+  'text-emerald-950':'text-csc-verde-texto',
+  'border-green-200':'border-csc-light/25', 'border-green-300':'border-csc-light/35',
   'text-emerald-600':'text-csc-light', 'text-emerald-700':'text-csc-verde-texto',
   'text-emerald-800':'text-csc-verde-texto', 'text-emerald-900':'text-csc-verde-texto',
   'border-emerald-200':'border-csc-light/25', 'border-emerald-300':'border-csc-light/35',
   # dourado — atenção, rascunho, golo
   'bg-amber-50':'bg-csc-gold/10', 'bg-amber-100':'bg-csc-gold/15',
+  'bg-amber-200':'bg-csc-gold/25',
   'bg-yellow-50':'bg-csc-gold/10', 'bg-yellow-100':'bg-csc-gold/15',
   'text-amber-500':'text-csc-gold', 'text-amber-600':'text-csc-gold',
   'text-amber-700':'text-csc-gold', 'text-amber-800':'text-csc-gold',
@@ -61,6 +68,7 @@ ESTADOS = {
   'border-yellow-300':'border-csc-gold/35', 'border-yellow-500':'border-csc-gold/50',
   # azul — assistência, informação
   'bg-blue-50':'bg-csc-blue/12', 'bg-blue-100':'bg-csc-blue/20',
+  'bg-blue-200':'bg-csc-blue/30', 'text-blue-950':'text-csc-azul-texto',
   'bg-indigo-50':'bg-csc-blue/12', 'bg-indigo-100':'bg-csc-blue/20',
   'text-blue-600':'text-csc-azul-texto', 'text-blue-700':'text-csc-azul-texto',
   'text-blue-800':'text-csc-azul-texto', 'text-blue-900':'text-csc-azul-texto',
@@ -70,6 +78,7 @@ ESTADOS = {
   'border-indigo-200':'border-csc-blue/30', 'border-indigo-300':'border-csc-blue/40',
   # vermelho — falta, recusa, dívida
   'bg-red-50':'bg-csc-red/10', 'bg-red-100':'bg-csc-red/15',
+  'bg-red-200':'bg-csc-red/25', 'text-red-950':'text-csc-vermelho-texto',
   'text-red-600':'text-csc-vermelho-texto', 'text-red-700':'text-csc-vermelho-texto',
   'text-red-800':'text-csc-vermelho-texto', 'text-red-900':'text-csc-vermelho-texto',
   'border-red-200':'border-csc-red/25', 'border-red-300':'border-csc-red/35',
@@ -86,7 +95,16 @@ COM_ESTADOS = '--estados' in sys.argv
 ALVOS = [a for a in sys.argv[1:] if not a.startswith('--')]
 
 TODOS = dict(MAPA, **ESTADOS) if COM_ESTADOS else MAPA
-padrao = re.compile(r'((?:[a-z-]+:)*)(' + '|'.join(map(re.escape, sorted(TODOS, key=len, reverse=True))) + r')\b')
+# O `(/\d+)?` no fim engole o sufixo de opacidade da classe de origem e
+# deita-o fora: o token de destino já traz a sua. `bg-amber-50/80` passa a
+# `bg-csc-gold/10`, e não a `bg-csc-gold/10/80`, que não é classe nenhuma —
+# sem isto o `\b` casava entre o `0` e a barra e deixava o resto pendurado, o
+# Tailwind não gerava nada, e o elemento ficava sem fundo sem se dar por isso.
+padrao = re.compile(
+    r'((?:[a-z-]+:)*)('
+    + '|'.join(map(re.escape, sorted(TODOS, key=len, reverse=True)))
+    + r')(/\d+)?\b'
+)
 
 for p in ALVOS:
     s = io.open(p, encoding='utf-8').read()

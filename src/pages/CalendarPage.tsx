@@ -2735,7 +2735,7 @@ const CalendarPage: React.FC = () => {
                           className={CAMPO_FORM}
                         >
                           <option value="">-- Selecionar Adversário --</option>
-                          <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo adversário…</option>
+                          <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo adversário…</option>
                           {opponents.map(o => (
                             <option key={o.id} value={o.id}>{o.name}</option>
                           ))}
@@ -2817,7 +2817,7 @@ const CalendarPage: React.FC = () => {
                       <label className="font-bold text-white/80 flex items-center gap-1.5">
                         <span>Campo / Instalação *</span>
                         {editLocation && (
-                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
+                          <span className="text-[10px] text-csc-verde-texto font-bold bg-csc-light/15 px-2 py-0.5 rounded-full truncate max-w-[200px]">
                             {editLocation}
                           </span>
                         )}
@@ -2842,7 +2842,7 @@ const CalendarPage: React.FC = () => {
                       className={CAMPO_FORM}
                     >
                       <option value="">-- Escolher Campo / Instalação do Clube --</option>
-                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo campo…</option>
+                      <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo campo…</option>
                       {fields.map(f => (
                         <option key={f.id} value={f.id}>
                           {f.name} {f.address ? `(${f.address})` : ''}
@@ -3126,7 +3126,7 @@ const CalendarPage: React.FC = () => {
                           type="button"
                           onClick={handleEditAddOnlyPlayers}
                           disabled={editUncalledPlayers.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
-                          className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
+                          className="min-h-11 px-3 bg-csc-light/15 hover:bg-csc-light/25 text-csc-verde-texto border border-csc-light/35 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
                         >
                           <span>Jogadores</span>
                         </button>
@@ -3135,7 +3135,7 @@ const CalendarPage: React.FC = () => {
                           type="button"
                           onClick={handleEditAddStaff}
                           disabled={editUncalledPlayers.filter(p => ['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
-                          className="px-2 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
+                          className="min-h-11 px-3 bg-csc-blue/20 hover:bg-csc-blue/30 text-csc-azul-texto border border-csc-blue/40 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
                         >
                           <span>Staff</span>
                         </button>
@@ -3144,7 +3144,7 @@ const CalendarPage: React.FC = () => {
                           type="button"
                           onClick={handleEditRemoveAll}
                           disabled={currentCallups.length === 0 || isEditBatchCalling}
-                          className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-900 border border-red-200 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
+                          className="min-h-11 px-3 bg-csc-red/15 hover:bg-csc-red/25 text-csc-vermelho-texto border border-csc-red/25 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
                         >
                           <span>Limpar</span>
                         </button>
@@ -3175,9 +3175,9 @@ const CalendarPage: React.FC = () => {
                               onClick={() => isEligible && handleToggleCallup(p)}
                               className={`flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer border ${
                                 !isEligible 
-                                  ? 'bg-red-50/60 border-red-200 text-red-700 opacity-60 cursor-not-allowed'
+                                  ? 'bg-csc-red/10 border-csc-red/25 text-csc-vermelho-texto opacity-60 cursor-not-allowed'
                                   : isCalled 
-                                    ? 'bg-amber-50/80 font-black text-white border-amber-300 shadow-2xs' 
+                                    ? 'bg-csc-gold/10 font-black text-white border-csc-gold/35 shadow-2xs' 
                                     : 'bg-white/6 border-white/12 text-white/80 hover:bg-white/10'
                               }`}
                             >
@@ -3201,9 +3201,9 @@ const CalendarPage: React.FC = () => {
                                       <span
                                         key={r}
                                         className={`text-[8.5px] font-black px-1 rounded ${
-                                          r === 'admin' ? 'bg-amber-100 text-amber-900' :
-                                          r === 'coach' ? 'bg-blue-100 text-blue-900' :
-                                          'bg-emerald-100 text-emerald-900'
+                                          r === 'admin' ? 'bg-csc-gold/15 text-csc-gold' :
+                                          r === 'coach' ? 'bg-csc-blue/20 text-csc-azul-texto' :
+                                          'bg-csc-light/15 text-csc-verde-texto'
                                         }`}
                                       >
                                         {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
@@ -3214,7 +3214,7 @@ const CalendarPage: React.FC = () => {
                               </div>
 
                               {p.status === 'injured' && (
-                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
+                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-csc-red/15 text-csc-vermelho-texto shrink-0 ml-1">
                                   {editType === 'gathering' ? 'Lesionado (Pode ir)' : 'Lesionado'}
                                 </span>
                               )}

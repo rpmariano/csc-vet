@@ -2003,16 +2003,16 @@ const AdminDashboard: React.FC = () => {
                         const playerPositions = p.position ? p.position.split(',').map((pos: string) => pos.trim()).filter(Boolean) : []
 
                         return (
-                          <label key={p.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-green-300 bg-green-50' : 'border-white/12 bg-white'} ${isInvalid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/6'} transition-colors`}>
+                          <label key={p.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-csc-light/45 bg-csc-light/15' : 'border-white/12 bg-white/5'} ${isInvalid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/10'} transition-colors`}>
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 bg-green-700 rounded-full overflow-hidden shrink-0 flex items-center justify-center">
-                                <span className="text-sm font-black text-amber-400">{p.jersey_number || '-'}</span>
+                              <div className="w-9 h-9 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 overflow-hidden shrink-0 flex items-center justify-center">
+                                <span className="font-display text-sm font-black text-csc-gold">{p.jersey_number || '-'}</span>
                               </div>
                               <div>
                                 <p className="text-xs font-black text-white">{p.shirt_name || p.name}</p>
                                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                   {age !== null && (
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isTooYoung ? (isExceptionButValid ? 'bg-csc-gold/15 text-csc-gold' : 'bg-csc-red/15 text-csc-vermelho-texto') : 'bg-green-100 text-green-700'}`}>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isTooYoung ? (isExceptionButValid ? 'bg-csc-gold/15 text-csc-gold' : 'bg-csc-red/15 text-csc-vermelho-texto') : 'bg-csc-light/16 text-csc-verde-texto'}`}>
                                       {age} anos
                                     </span>
                                   )}

@@ -510,7 +510,7 @@ const AnnouncementsPage: React.FC = () => {
                         {isCoachOrAdmin && (
                           <div>
                             {isActive ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-csc-light/15 text-csc-verde-texto border border-csc-light/35">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
                                 <span>Ativo na Home</span>
                               </span>
@@ -537,19 +537,19 @@ const AnnouncementsPage: React.FC = () => {
                             onClick={() => handleToggleActive(ann)}
                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                               isActive
-                                ? 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
-                                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 font-black'
+                                ? 'bg-csc-gold/10 text-csc-gold hover:bg-csc-gold/15 border border-csc-gold/25'
+                                : 'bg-csc-light/10 text-csc-verde-texto hover:bg-csc-light/15 border border-csc-light/25 font-black'
                             }`}
                             title={isActive ? 'Ocultar da Homepage' : 'Mostrar na Homepage'}
                           >
                             {isActive ? (
                               <>
-                                <EyeOff size={13} className="text-amber-600" />
+                                <EyeOff size={13} className="text-csc-gold" />
                                 <span>Desativar</span>
                               </>
                             ) : (
                               <>
-                                <Eye size={13} className="text-emerald-600" />
+                                <Eye size={13} className="text-csc-light" />
                                 <span>Ativar na Home</span>
                               </>
                             )}
@@ -706,7 +706,7 @@ const AnnouncementsPage: React.FC = () => {
             className="bg-csc-fundo text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
           >
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-csc-red/15 text-csc-vermelho-texto flex items-center justify-center shrink-0">
                 <Trash2 size={24} />
               </div>
               <div>

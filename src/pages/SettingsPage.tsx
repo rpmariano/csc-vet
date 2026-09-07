@@ -633,10 +633,10 @@ const SettingsPage: React.FC = () => {
                   key={r}
                   className={`px-3 py-1.5 rounded-xl font-black text-xs border flex items-center gap-1.5 shadow-2xs ${
                     r === 'admin'
-                      ? 'bg-amber-100 text-amber-900 border-amber-300'
+                      ? 'bg-csc-gold/15 text-csc-gold border-csc-gold/35'
                       : r === 'coach'
-                      ? 'bg-blue-100 text-blue-900 border-blue-300'
-                      : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                      ? 'bg-csc-blue/20 text-csc-azul-texto border-csc-blue/40'
+                      : 'bg-csc-light/15 text-csc-verde-texto border-csc-light/35'
                   }`}
                 >
                   <span>{r === 'admin' ? 'Administrador / Direção' : r === 'coach' ? 'Treinador' : 'Jogador'}</span>
@@ -696,7 +696,7 @@ const SettingsPage: React.FC = () => {
         {/* 6. SAÚDE & CONTACTO DE EMERGÊNCIA */}
         <div className="space-y-3.5">
           <h3 className={SECCAO}>
-            <HeartPulse size={16} className="text-red-600" />
+            <HeartPulse size={16} className="text-csc-vermelho-texto" />
             <span>6. Saúde & Contacto de Emergência</span>
           </h3>
 
@@ -772,7 +772,7 @@ const SettingsPage: React.FC = () => {
                 className="text-xs w-full"
               />
               {idDocUrl && (
-                <a href={idDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-blue-700 font-bold hover:underline flex items-center gap-1">
+                <a href={idDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
                   <ExternalLink size={11} /> Ver Documento CC anexado
                 </a>
               )}
@@ -789,7 +789,7 @@ const SettingsPage: React.FC = () => {
                 className="text-xs w-full"
               />
               {insuranceDocUrl && (
-                <a href={insuranceDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-purple-700 font-bold hover:underline flex items-center gap-1">
+                <a href={insuranceDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
                   <ExternalLink size={11} /> Ver Seguro anexado
                 </a>
               )}
@@ -806,7 +806,7 @@ const SettingsPage: React.FC = () => {
                 className="text-xs w-full"
               />
               {medicalExamDocUrl && (
-                <a href={medicalExamDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-emerald-700 font-bold hover:underline flex items-center gap-1">
+                <a href={medicalExamDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-verde-texto font-bold hover:underline flex items-center gap-1">
                   <ExternalLink size={11} /> Ver Atestado anexado
                 </a>
               )}
