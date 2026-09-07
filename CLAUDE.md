@@ -104,6 +104,13 @@ A função `public.financial_season(date)` espelha `getSeasonLabel()` de `src/li
 qualquer mudança à regra da época tem de ser feita **nos dois sítios**.
 Ver `docs/financeiro-campos-reporting.md`.
 
+`callups.responded_at` (`supabase_callups_responded_at_migration.sql`) guarda quando
+o atleta confirmou ou recusou — `created_at` é de quando foi *convocado*, e não servia.
+É preenchida pelo gatilho `callups_marcar_resposta` e nunca pelo cliente: a política de
+UPDATE deixa o jogador escrever a sua própria linha e o `WITH CHECK` só olha ao `status`,
+por isso uma hora enviada pelo cliente era uma hora falsificável. As respostas anteriores
+à migração ficaram a NULL.
+
 `announcement_reads` (`supabase_announcement_reads_migration.sql`) guarda que comunicados
 cada pessoa já leu. Estava em `localStorage`, que é por dispositivo — o badge de por ler
 não sincronizava entre o telemóvel e o desktop. Cada um só vê e escreve as suas linhas,

@@ -59,8 +59,21 @@ mas **nunca é escrita em lado nenhum da app** — zero `insert`, zero `update`,
 isso mostrava sempre um traço.
 
 O que existe de facto é `callups.status`: `called` (convocado, sem resposta),
-`confirmed` (disse que sim), `declined` (disse que não). São **1252 linhas** em
-produção — há história a sério para mostrar.
+`confirmed` (disse que sim), `declined` (disse que não).
+
+**⚠️ E quase ninguém responde.** Das 1252 convocatórias em produção,
+**1243 estão em `called`** — sem resposta. Há **8 "sim" e 1 "não"** em toda a
+base. Uma taxa de resposta de 0,7%.
+
+Isto muda o que se pode desenhar. "Últimos 5 jogos" não tem cinco respostas
+para mostrar em atleta nenhum; a percentagem de "sim" é 100% para as oito
+pessoas que responderam uma vez, e nada para as outras. **Estes ecrãs precisam
+de um estado vazio que seja a norma e não a exceção** — "ainda sem respostas" —
+e não de um gráfico bonito com dados a fingir.
+
+Vale a pena perguntar porquê antes de desenhar em cima disto: as pessoas sabem
+que podem responder na app? Se a resposta à convocatória não é usada, um ecrã
+que a mostra em detalhe está a resolver o problema errado.
 
 **A regra, para desenhar:**
 
@@ -76,8 +89,8 @@ produção — há história a sério para mostrar.
 **No 4a**, o handoff desenha "P P F P P — últimos 5 jogos". A tradução é as
 últimas cinco convocatórias respondidas, com dois estados em vez de três (sim /
 não), e as por responder simplesmente não entram. Cabe ao desenho decidir a
-forma — pontos, letras, barras — mas o vocabulário tem de ser o da resposta,
-não o da presença.
+forma — pontos, letras, barras — mas o vocabulário tem de ser o da resposta e
+não o da presença, e o caso normal hoje é **nenhuma resposta**.
 
 ## Os seis ecrãs
 
@@ -98,9 +111,16 @@ ação de 44px (confirmar, recusar, repor sem resposta, remover). **A linha não
 abre nada**: não há ficha rápida.
 
 **Dados disponíveis:**
-- Resposta: `callups.status`, `callups.created_at`, `callups.notes`.
-  ⚠️ Não há coluna com o instante da *resposta* — o `created_at` é de quando
-  foi convocado. O "ontem, 21:14" do handoff não existe sem uma coluna nova.
+- Resposta: `callups.status`, `callups.responded_at`, `callups.notes`.
+  A coluna **`responded_at` foi acrescentada** (migração
+  `supabase_callups_responded_at_migration.sql`, aplicada a 2026-09-07),
+  preenchida por um gatilho no servidor e nunca pelo cliente. O "ontem, 21:14"
+  do handoff passa a ser possível.
+  ⚠️ **As nove respostas que já existiam ficaram sem hora** — não havia como
+  saber quando foram dadas. O desenho tem de aguentar a falta: "Confirmou
+  presença" sem o "· ontem, 21:14" ao lado.
+- `callups.created_at` é de quando a pessoa foi **convocada**, não de quando
+  respondeu. Não confundir.
 - Disciplina: `stats.yellow_cards`, `stats.red_cards` por jogo (11 linhas em
   produção — pouca história).
 - Suspensões: `tournament_suspensions` (`player_id, tournament_id, reason,
@@ -118,8 +138,8 @@ abre nada**: não há ficha rápida.
 1. Vale a pena a tira de convocados no topo para saltar entre atletas, ou
    fecha-se e abre-se o seguinte? A tira é bonita mas obriga a carregar a
    convocatória inteira.
-2. "Confirmou presença · ontem, 21:14" precisa de uma coluna nova
-   (`callups.responded_at`). Desenhar com ou sem?
+2. Com 9 respostas em toda a base, o bloco de histórico vale a pena, ou o ecrã
+   deve ser sobretudo o contacto e as ações? Aqui o estado vazio é o normal.
 
 ---
 
@@ -300,7 +320,7 @@ conteúdo conforme o mês, o que pode confundir.
 | Ecrã | Prioridade | Porquê | Bloqueio |
 |---|---|---|---|
 | **4e** Evento em falta na Agenda | Alta | Fecha o par com o alerta que já existe | — |
-| **4a** Toque num convocado | Alta | Uso diário de quem convoca | Hora da resposta não existe |
+| **4a** Toque num convocado | Alta | Uso diário de quem convoca | 9 respostas em toda a base |
 | **11a** Ficha por ligar | Alta | 1 das 8 contas está neste estado hoje | Texto do handoff não serve |
 | **11b** Agenda vazia | Média | Barato, e a agenda passa semanas vazia | — |
 | **9h** Ficha de adversário | Média | Ecrã novo, com história de confrontos | Jornadas vazias |
