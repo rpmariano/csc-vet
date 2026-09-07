@@ -123,3 +123,52 @@ test.describe('Alerta de eventos por convocar', () => {
     await expect(faixa(page)).toHaveCount(0)
   })
 })
+
+/**
+ * A assimetria entre os dois avisos, que é deliberada.
+ *
+ * A Agenda é onde se trabalha: um rascunho por convocar é trabalho por acabar
+ * e fica à vista de quem o criou, marcado como rascunho. A Home é o aviso que
+ * insiste, e não deve insistir com uma coisa que a equipa técnica pôs de lado
+ * de propósito.
+ */
+test.describe('Rascunho por convocar', () => {
+  const rascunho = {
+    ...base, id: 'rs', title: 'Jogo', type: 'match',
+    date_time: DAQUI_A_DIAS(20), is_active: false,
+  }
+
+  test('aparece na Agenda, marcado como rascunho', async ({ page }) => {
+    await montarSupabaseFalso(page, { events: [rascunho], callups: [] })
+    await page.goto('/csc-vet/calendar')
+    await page.waitForLoadState('networkidle')
+
+    await expect(page.getByText('Ninguém foi convocado')).toBeVisible()
+    await expect(page.getByText('Rascunho', { exact: true })).toBeVisible()
+    await expect(page.getByText(/não avisa ninguém nem entra no alerta da Home/)).toBeVisible()
+  })
+
+  test('não aparece no alerta da Home', async ({ page }) => {
+    await montarSupabaseFalso(page, { events: [rascunho], callups: [] })
+    await page.goto('/csc-vet/')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(400)
+
+    await expect(page.getByRole('button', { name: /evento[s]? sem convocatória/ })).toHaveCount(0)
+  })
+
+  test('publicado, aparece nos dois', async ({ page }) => {
+    const publicado = { ...rascunho, is_active: true }
+
+    await montarSupabaseFalso(page, { events: [publicado], callups: [] })
+    await page.goto('/csc-vet/calendar')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Ninguém foi convocado')).toBeVisible()
+    await expect(page.getByText('Rascunho', { exact: true })).toHaveCount(0)
+
+    await page.goto('/csc-vet/')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(400)
+    await expect(page.getByRole('button', { name: /evento[s]? sem convocatória/ })).toBeVisible()
+  })
+})

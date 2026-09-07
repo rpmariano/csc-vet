@@ -1371,16 +1371,22 @@ const CalendarPage: React.FC = () => {
   /*
     Ecrã 4e: os eventos por convocar sobem ao topo, fora da lista.
 
-    A regra é a mesma do alerta flutuante da Home (4c), e por isso está escrita
-    do mesmo modo: jogos e convívios — os treinos convocam sozinhos todos os
-    aptos —, no futuro, não rascunhos, e sem uma única linha em `callups`. A
-    mesma regra do alerta da Home, que também deixou de ter janela de dias:
-    e um jogo daqui a três semanas sem ninguém chamado é para tratar quando se
-    reparar nele, não só quando ficar urgente.
+    Quase a mesma regra do alerta da Home (4c) — jogos e convívios, que os
+    treinos convocam sozinhos todos os aptos; no futuro; sem uma única linha
+    em `callups` — com **uma diferença de propósito: aqui os rascunhos entram**.
+
+    A Agenda é onde se trabalha, e um rascunho por convocar é trabalho por
+    acabar: convém estar à vista de quem o criou. A Home é o aviso que insiste,
+    e não deve insistir com uma coisa que a equipa técnica pôs de lado de
+    propósito. Por isso o cartão marca o rascunho, para se perceber porque é
+    que este aparece aqui e não lá.
+
+    Nenhum dos dois tem janela de dias: um jogo daqui a três semanas sem
+    ninguém chamado é para tratar quando se repara nele, não só quando fica
+    urgente.
   */
   const eventosPorConvocar = !isCoachOrAdmin ? [] : filteredEvents.filter(e =>
     (e.type === 'match' || e.type === 'gathering') &&
-    e.is_active !== false &&
     new Date(e.date_time).getTime() >= Date.now() &&
     (eventCallups[e.id] || []).length === 0,
   )
@@ -1394,6 +1400,7 @@ const CalendarPage: React.FC = () => {
       ? `${formatClubSigla(clubSettings?.initials)} vs ${event.opponent?.name ?? 'adversário por definir'}`
       : (event.title || 'Convívio')
     const prova = event.is_friendly ? 'Amigável' : event.tournament?.name
+    const eRascunho = event.is_active === false
 
     return (
       <div key={event.id} className="cartao-vidro overflow-hidden border-csc-gold/35">
@@ -1413,6 +1420,14 @@ const CalendarPage: React.FC = () => {
               {prova ? ` · ${prova}` : ''}
             </span>
           </span>
+          {eRascunho && (
+            <span
+              className="font-display font-extrabold text-[9px] tracking-[0.12em] uppercase px-2.5 py-1 rounded-full
+                bg-white/10 border border-white/20 text-white/70 shrink-0"
+            >
+              Rascunho
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3 px-4 py-3.5 mt-3.5 bg-csc-gold/10 border-t border-csc-gold/25">
@@ -1421,7 +1436,9 @@ const CalendarPage: React.FC = () => {
               Ninguém foi convocado
             </span>
             <span className="block text-[10.5px] leading-snug text-white/60 mt-0.5">
-              Sem convocatória o plantel não recebe pedido de resposta
+              {eRascunho
+                ? 'Em rascunho: fica só aqui, não avisa ninguém nem entra no alerta da Home'
+                : 'Sem convocatória o plantel não recebe pedido de resposta'}
             </span>
           </span>
           <Link
