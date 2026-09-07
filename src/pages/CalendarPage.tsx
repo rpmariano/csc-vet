@@ -1374,7 +1374,7 @@ const CalendarPage: React.FC = () => {
     A regra é a mesma do alerta flutuante da Home (4c), e por isso está escrita
     do mesmo modo: jogos e convívios — os treinos convocam sozinhos todos os
     aptos —, no futuro, não rascunhos, e sem uma única linha em `callups`. A
-    diferença é que aqui não há janela de sete dias: na Agenda vê-se o mês todo,
+    mesma regra do alerta da Home, que também deixou de ter janela de dias:
     e um jogo daqui a três semanas sem ninguém chamado é para tratar quando se
     reparar nele, não só quando ficar urgente.
   */

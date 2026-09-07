@@ -11,7 +11,7 @@ import { Botao } from '../ui'
  *
  * Antes a convocatória era um bloco no meio do formulário de criação: quem
  * criava um jogo às pressas guardava e ia à sua vida, e o evento ficava na
- * agenda sem ninguém chamado — que é a origem do alerta a sete dias (4c).
+ * agenda sem ninguém chamado — que é a origem do alerta de convocatórias (4c).
  * Agora guardar leva sempre aqui, e o passo tem nome: "falta convocar".
  *
  * **Num treino não há escolha a fazer** (4g): entram todos os aptos, ficam de
@@ -126,7 +126,7 @@ export const ConvocatoriaAoCriar: React.FC<{
       }
       toast.success(
         ids.length === 0
-          ? 'Evento guardado sem convocatória. Aparece no alerta a sete dias.'
+          ? 'Evento guardado sem convocatória. Fica no alerta até alguém ser convocado.'
           : evento.ativo
             ? `${ids.length} ${ids.length === 1 ? 'atleta convocado' : 'atletas convocados'}.`
             : `${ids.length} ${ids.length === 1 ? 'atleta guardado' : 'atletas guardados'} no rascunho — ninguém foi avisado.`,
@@ -311,7 +311,7 @@ export const ConvocatoriaAoCriar: React.FC<{
         <p className="text-[10.5px] leading-relaxed text-white/50">
           {evento.ativo
             ? 'Convocar avisa logo os escolhidos.'
-            : 'Em rascunho o evento fica só para a equipa técnica: ninguém é avisado e não entra no alerta a sete dias.'}
+            : 'Em rascunho o evento fica só para a equipa técnica: ninguém é avisado e não entra no alerta de convocatórias.'}
         </p>
       </div>
     </BottomSheet>

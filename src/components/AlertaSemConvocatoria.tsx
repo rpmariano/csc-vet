@@ -7,7 +7,7 @@ import { BottomSheet } from './BottomSheet'
 import { Botao } from './ui'
 
 /**
- * Eventos a menos de sete dias sem ninguém convocado (ecrãs 4c e 4d).
+ * Eventos por convocar (ecrãs 4c e 4d).
  *
  * Um jogo marcado e sem convocatória é o erro caro desta app: chega o sábado
  * e ninguém apareceu porque ninguém foi chamado. O aviso vive na Home de quem
@@ -21,7 +21,22 @@ import { Botao } from './ui'
  * foi avisado porque ainda não se quis avisar.
  */
 
-const DIAS_DE_ALERTA = 7
+/*
+  Não há janela de dias.
+
+  Havia: só entravam os eventos a menos de sete dias, para o aviso não andar
+  a chatear meses antes. Na prática deixava passar precisamente o que se quer
+  apanhar — um jogo marcado com duas semanas de antecedência ficava sem
+  convocatória e sem aviso, e o aviso só chegava quando já faltava pouco.
+
+  E era incoerente: o cartão da Agenda (ecrã 4e) sempre avisou sem janela
+  nenhuma, portanto o mesmo evento aparecia por convocar num ecrã e não no
+  outro.
+
+  Se algum dia isto ficar ruidoso — muitos eventos longínquos criados sem
+  convocatória de propósito — o remédio é o rascunho, que já os deixa de fora,
+  e não uma janela de tempo.
+*/
 
 export interface EventoEmFalta {
   id: string
@@ -44,14 +59,12 @@ export function useEventosSemConvocatoria(ativo: boolean): EventoEmFalta[] {
 
     const carregar = async () => {
       const agora = new Date()
-      const limite = new Date(agora.getTime() + DIAS_DE_ALERTA * 24 * 60 * 60 * 1000)
 
       const { data, error } = await supabase
         .from('events')
         .select('id, title, type, date_time, is_active, opponent:opponents(name, initials)')
         .in('type', ['match', 'gathering'])
         .gte('date_time', agora.toISOString())
-        .lte('date_time', limite.toISOString())
         .order('date_time', { ascending: true })
 
       if (cancelado) return
@@ -164,7 +177,7 @@ export const PersianaSemConvocatoria: React.FC<{
     isOpen={aberto}
     onClose={aoFechar}
     title="A precisar de convocatória"
-    description={`Eventos nos próximos ${DIAS_DE_ALERTA} dias sem ninguém convocado`}
+    description="Eventos marcados sem ninguém convocado"
     icon={
       <div className="w-9 h-9 rounded-xl bg-csc-red/20 text-csc-vermelho-texto flex items-center justify-center shrink-0">
         <TriangleAlert size={17} />
@@ -229,8 +242,8 @@ export const PersianaSemConvocatoria: React.FC<{
       })}
 
       <p className="text-[10.5px] leading-relaxed text-white/50 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
-        Os treinos não entram aqui — convocam automaticamente todos os aptos. O aviso volta a
-        aparecer enquanto houver eventos em falta.
+        Os treinos não entram aqui — convocam automaticamente todos os aptos, e os rascunhos
+        também não. O aviso fica enquanto houver eventos por convocar.
       </p>
     </div>
   </BottomSheet>

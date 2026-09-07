@@ -46,7 +46,7 @@ const DO_ATLETA: readonly { chave: keyof Preferencias; titulo: string; nota: str
 ]
 
 const DE_QUEM_GERE: readonly { chave: keyof Preferencias; titulo: string; nota: string }[] = [
-  { chave: 'eventos_sem_convocatoria', titulo: 'Evento sem convocatória', nota: 'A sete dias da data' },
+  { chave: 'eventos_sem_convocatoria', titulo: 'Evento sem convocatória', nota: 'Enquanto ninguém estiver convocado' },
   { chave: 'fichas_por_preencher', titulo: 'Ficha de jogo por preencher', nota: 'No dia seguinte ao jogo' },
 ]
 

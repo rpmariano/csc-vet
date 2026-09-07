@@ -156,12 +156,26 @@ export async function montarSupabaseFalso(page: Page, fixtures: Fixtures = {}) {
         de uma ficha só devolvia a tabela inteira e o cliente ficava com a
         primeira linha, fosse ela quem fosse — o `maybeSingle()` do
         AuthContext trazia o primeiro do plantel em vez de quem tem sessão.
-        É o único filtro que se imita, e é o que basta.
       */
       const filtroId = /[?&]id=eq\.([^&]+)/.exec(url)
       if (filtroId) {
         const alvo = decodeURIComponent(filtroId[1])
         linhas = linhas.filter(l => String((l as { id?: unknown }).id) === alvo)
+      }
+
+      /*
+        E por `<coluna>=in.(a,b)`, que é como o PostgREST escreve o `.in()`.
+
+        Sem isto o mock devolvia as linhas todas e o teste via um treino num
+        sítio que os exclui do lado do servidor — dava um falso positivo no
+        alerta de eventos por convocar. São os dois filtros que se imitam:
+        os que decidem *quais* linhas voltam, e não só a ordem.
+      */
+      // O URL vem percent-encoded (`type=in.%28match%2Cgathering%29`), por isso
+      // a comparação é feita sobre a versão descodificada.
+      for (const [, coluna, lista] of decodeURIComponent(url).matchAll(/[?&]([a-z_]+)=in\.\(([^)]*)\)/g)) {
+        const aceites = new Set(lista.split(',').map(v => v.trim().replace(/^"|"$/g, '')))
+        linhas = linhas.filter(l => aceites.has(String((l as Record<string, unknown>)[coluna])))
       }
 
       // Escritas: devolver a linha como se tivesse sido gravada, por cima da

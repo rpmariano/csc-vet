@@ -1665,7 +1665,7 @@ const EventsPage: React.FC = () => {
                   <p className="text-[11px] text-white/60 mt-0.5">
                     {isActiveOnCreate 
                       ? 'Ao guardar, escolhes quem convocas. O evento fica visível na agenda.' 
-                      : 'O evento fica em rascunho: ninguém é avisado e não entra no alerta a sete dias. A convocatória fica guardada.'}
+                      : 'O evento fica em rascunho: ninguém é avisado e não entra no alerta de convocatórias. A convocatória fica guardada.'}
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">

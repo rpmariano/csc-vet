@@ -332,7 +332,7 @@ const Home: React.FC = () => {
       ) : (
       <>
       {/*
-        Eventos a menos de sete dias sem ninguém convocado (ecrã 4c). Só a
+        Eventos marcados sem ninguém convocado (ecrã 4c). Só a
         quem gere: é o erro caro desta app — chega o sábado e ninguém apareceu
         porque ninguém foi chamado.
       */}
