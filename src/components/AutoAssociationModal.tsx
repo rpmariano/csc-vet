@@ -152,7 +152,7 @@ export const AutoAssociationModal: React.FC = () => {
             <div className="bg-gradient-to-br from-amber-50/80 via-white to-amber-100/30 p-4 rounded-2xl border-2 border-amber-300 shadow-sm relative overflow-hidden">
               <div className="flex items-center gap-3.5">
                 <div className="w-14 h-14 rounded-2xl bg-csc-dark text-csc-gold flex items-center justify-center font-black text-2xl shadow-md border-2 border-white shrink-0">
-                  {matchedPlayer.jersey_number ? `#${matchedPlayer.jersey_number}` : '⚽'}
+                  {matchedPlayer.jersey_number ? `#${matchedPlayer.jersey_number}` : '–'}
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -202,7 +202,7 @@ export const AutoAssociationModal: React.FC = () => {
                 className="w-full py-3.5 bg-csc-dark hover:bg-csc-dark/85 text-white font-black rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
               >
                 <CheckCircle2 size={18} className="text-csc-gold" />
-                <span>{loading ? 'A associar...' : '✓ Confirmar e Associar à Minha Ficha'}</span>
+                <span>{loading ? 'A associar…' : 'Confirmar e associar à minha ficha'}</span>
               </button>
 
               <button
@@ -225,9 +225,9 @@ export const AutoAssociationModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsManualSelect(false)}
-                className="text-xs text-csc-dark font-black hover:underline"
+                className="min-h-11 text-xs text-csc-gold font-black hover:underline cursor-pointer"
               >
-                ← Voltar à sugestão
+                Voltar à sugestão
               </button>
             </div>
 

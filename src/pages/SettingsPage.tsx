@@ -576,7 +576,7 @@ const SettingsPage: React.FC = () => {
                       : 'bg-emerald-100 text-emerald-900 border-emerald-300'
                   }`}
                 >
-                  <span>{r === 'admin' ? '🛡️ Administrador / Direção' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}</span>
+                  <span>{r === 'admin' ? 'Administrador / Direção' : r === 'coach' ? 'Treinador' : 'Jogador'}</span>
                 </span>
               ))}
             </div>
@@ -693,7 +693,7 @@ const SettingsPage: React.FC = () => {
               {photoUrl && (
                 <div className="flex items-center gap-2 pt-1">
                   <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover border border-csc-gold" />
-                  <span className="text-[11px] text-green-700 font-bold">✓ Foto anexada</span>
+                  <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
                 </div>
               )}
             </div>

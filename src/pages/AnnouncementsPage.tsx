@@ -460,7 +460,7 @@ const AnnouncementsPage: React.FC = () => {
               </div>
             ) : filteredAnnouncements.length === 0 ? (
               <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6 space-y-2">
-                <span className="text-3xl">📭</span>
+                <Megaphone size={34} className="mx-auto text-white/20" />
                 <p className="text-xs font-bold text-white/70">Nenhum comunicado encontrado.</p>
                 <p className="text-[11px] text-white/65">
                   {searchTerm
@@ -614,8 +614,8 @@ const AnnouncementsPage: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
-              <div className="w-10 h-10 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center text-lg font-black shadow-xs">
-                ✏️
+              <div className="w-10 h-10 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center shadow-xs">
+                <Edit3 size={17} />
               </div>
               <div>
                 <h3 id="editar-comunicado-titulo" className="text-base font-black text-white">Editar Comunicado</h3>
@@ -655,7 +655,7 @@ const AnnouncementsPage: React.FC = () => {
                 <div>
                   <span className="text-xs font-bold text-white/80 block">Estado de Publicação</span>
                   <span className="text-[10.5px] text-white/70 block">
-                    {editIsActive ? '🟢 Ativo (Visível na Homepage)' : '⚪ Inativo (Oculto)'}
+                    {editIsActive ? 'Ativo (visível para a equipa)' : 'Inativo (oculto)'}
                   </span>
                 </div>
                 <button
@@ -686,7 +686,7 @@ const AnnouncementsPage: React.FC = () => {
                   disabled={isSavingEdit || !editTitle.trim() || !editContent.trim()}
                   className="flex-1 px-4 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark font-black text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-md"
                 >
-                  {isSavingEdit ? 'A guardar...' : '💾 Guardar Alterações'}
+                  {isSavingEdit ? 'A guardar...' : 'Guardar alterações'}
                 </button>
               </div>
             </form>

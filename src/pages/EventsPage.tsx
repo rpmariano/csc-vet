@@ -22,7 +22,9 @@ import {
   Trophy,
   Edit,
   Send,
-  AlertTriangle
+  AlertTriangle,
+  ClipboardList,
+  SlidersHorizontal
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -41,6 +43,9 @@ import { formatClubSigla, formatOpponentSigla, hasMatchReport } from './Calendar
 import { useModalA11y } from '../hooks/useModalA11y'
 import { VistaDetalhe } from '../components/VistaDetalhe'
 import { useSearchParams } from 'react-router-dom'
+import { BottomSheet } from '../components/BottomSheet'
+import { Pastilha, Botao, CampoEntrada } from '../components/ui'
+import { triggerHaptic } from '../utils/haptics'
 
 /** Campo branco dos formulários de evento (ecrã 2e), o mesmo da Agenda. */
 const CAMPO_FORM =
@@ -49,6 +54,21 @@ const CAMPO_FORM =
 
 const ETIQUETA_FORM =
   'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+
+/**
+ * Como se lê cada filtro escondido, na linha de resumo por baixo das pastilhas.
+ * Espelha o `ROTULOS_ESTADO` da Agenda — aqui o eixo do tempo e o de rascunho
+ * são dois, porque na Gestão de Eventos há rascunhos e na Agenda não.
+ */
+const ROTULOS_TEMPO: Record<string, string> = {
+  upcoming: 'Por realizar',
+  past: 'Realizados',
+}
+
+const ROTULOS_PUBLICACAO: Record<string, string> = {
+  active: 'Ativos',
+  inactive: 'Rascunhos',
+}
 
 export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: string | null; nickname?: string | null } | null): string => {
   if (!player) return 'Atleta'
@@ -307,6 +327,7 @@ const EventsPage: React.FC = () => {
   const [eventListTypeFilter, setEventListTypeFilter] = useState<'all' | 'match' | 'practice' | 'gathering'>('all')
   const [eventListTimeFilter, setEventListTimeFilter] = useState<'upcoming' | 'past' | 'all'>('upcoming')
   const [eventListStatusFilter, setEventListStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [filtrosListaAbertos, setFiltrosListaAbertos] = useState(false)
   const [viewModeTab, setViewModeTab] = useState<'create' | 'list'>('list')
 
   const handleAttemptCloseEditModal = () => {
@@ -374,7 +395,7 @@ const EventsPage: React.FC = () => {
       setIsQuickFieldModalOpen(false)
       setQuickFieldName('')
       setQuickFieldAddress('')
-      toast.success('🏟️ Campo criado e selecionado com sucesso!')
+      toast.success('Campo criado e selecionado com sucesso!')
     } catch (err: any) {
       console.error(err)
       toast.error('Erro ao criar campo: ' + (err.message || 'Erro de ligação'))
@@ -438,7 +459,7 @@ const EventsPage: React.FC = () => {
       setQuickOppHomeFieldId('')
       setQuickOppContactName('')
       setQuickOppContactPhone('')
-      toast.success('🛡️ Adversário registado com sucesso!')
+      toast.success('Adversário registado com sucesso!')
     } catch (err: any) {
       console.error(err)
       toast.error('Erro ao criar adversário: ' + (err.message || 'Erro de ligação'))
@@ -557,8 +578,8 @@ const EventsPage: React.FC = () => {
       setIsResendPromptOpen(false)
       setEditingEvent(null)
       const successText = resendCallups 
-        ? '✨ Evento atualizado e pedidos de confirmação reenviados aos atletas!' 
-        : '✨ Evento atualizado com sucesso!'
+        ? 'Evento atualizado e pedidos de confirmação reenviados aos atletas!' 
+        : 'Evento atualizado com sucesso!'
       setSuccessMessage(successText)
       toast.success(successText)
       await fetchData()
@@ -587,7 +608,7 @@ const EventsPage: React.FC = () => {
 
     setConfirmModalConfig({
       isOpen: true,
-      title: '📢 Ativar Evento e Enviar Convocatória',
+      title: 'Ativar Evento e Enviar Convocatória',
       description: `Desejas ativar este evento e disparar a convocatória para os ${countToNotify} membros selecionados? O evento ficará imediatamente visível para todos os atletas na agenda e página principal.`,
       confirmText: 'Sim, Ativar e Enviar Convocatória',
       cancelText: 'Cancelar',
@@ -626,7 +647,7 @@ const EventsPage: React.FC = () => {
             setActiveCallupModalEvent(prev => prev ? { ...prev, is_active: true } : null)
           }
           await fetchData()
-          toast.success(`🎉 Evento ativado com sucesso! Convocatória enviada a ${countToNotify} membros.`)
+          toast.success(`Evento ativado com sucesso! Convocatória enviada a ${countToNotify} membros.`)
         } catch (err: any) {
           console.error(err)
           toast.error('Erro ao ativar evento: ' + (err.message || 'Erro'))
@@ -1074,8 +1095,8 @@ const EventsPage: React.FC = () => {
         }
 
         const successText = isActiveOnCreate
-          ? `✨ ${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
-          : `📝 ${createdEventsList.length} eventos guardados como Rascunho (Inativos) até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
+          ? `${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
+          : `${createdEventsList.length} eventos guardados como Rascunho (Inativos) até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
         setSuccessMessage(successText)
         toast.success(successText)
       } else {
@@ -1146,8 +1167,8 @@ const EventsPage: React.FC = () => {
         }
 
         const successText = isActiveOnCreate
-          ? '🎉 Evento criado e convocatória enviada aos membros!'
-          : '📝 Evento guardado como Rascunho (Inativo). A convocatória foi guardada e será enviada quando ativares o evento.'
+          ? 'Evento criado e convocatória enviada aos membros!'
+          : 'Evento guardado como Rascunho (Inativo). A convocatória foi guardada e será enviada quando ativares o evento.'
         setSuccessMessage(successText)
         toast.success(successText)
       }
@@ -1386,8 +1407,8 @@ const EventsPage: React.FC = () => {
       {/* Page Header removido a pedido do utilizador */}
 
       {successMessage && (
-        <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl border-2 border-emerald-300 text-sm font-bold flex items-center gap-2.5 shadow-sm">
-          <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
+        <div className="bg-csc-light/12 text-csc-verde-texto p-4 rounded-2xl border border-csc-light/30 text-sm font-bold flex items-center gap-2.5 shadow-sm">
+          <CheckCircle2 size={20} className="text-csc-light shrink-0" />
           <span>{successMessage}</span>
         </div>
       )}
@@ -1422,7 +1443,7 @@ const EventsPage: React.FC = () => {
                 <span>Novo Evento / Atividade</span>
               </h3>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 hidden sm:block">
+                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold border border-csc-gold/35">
                   CSC Organizer
                 </span>
                 <button
@@ -1446,9 +1467,9 @@ const EventsPage: React.FC = () => {
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'gathering', label: 'Convívio', icon: PartyPopper, color: 'text-purple-700 bg-purple-50 border-purple-300' },
-                  { id: 'practice', label: 'Treino', icon: TrainingIcon, color: 'text-emerald-700 bg-emerald-50 border-emerald-300' },
-                  { id: 'match', label: 'Jogo', icon: Trophy, color: 'text-amber-800 bg-amber-50 border-amber-300' },
+                  { id: 'gathering', label: 'Convívio', icon: PartyPopper, color: 'text-csc-azul-texto bg-csc-blue/12 border-csc-blue/35' },
+                  { id: 'practice', label: 'Treino', icon: TrainingIcon, color: 'text-csc-verde-texto bg-csc-light/12 border-csc-light/35' },
+                  { id: 'match', label: 'Jogo', icon: Trophy, color: 'text-csc-gold bg-csc-gold/12 border-csc-gold/35' },
                 ].map(t => {
                   const Icon = t.icon
                   const isSelected = type === t.id
@@ -1490,7 +1511,7 @@ const EventsPage: React.FC = () => {
 
             {/* Específico de Jogo */}
             {type === 'match' && (
-              <div className="p-3.5 bg-amber-50/50 border border-amber-200 rounded-2xl space-y-3">
+              <div className="p-3.5 bg-csc-gold/8 border border-csc-gold/22 rounded-2xl space-y-3">
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -1539,7 +1560,7 @@ const EventsPage: React.FC = () => {
                       className={CAMPO_FORM}
                     >
                       <option value="">-- Selecionar Adversário --</option>
-                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
+                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo adversário…</option>
                       {opponents.map(o => (
                         <option key={o.id} value={o.id}>{o.name}</option>
                       ))}
@@ -1553,9 +1574,9 @@ const EventsPage: React.FC = () => {
                       onChange={(e) => setHomeAway(e.target.value as any)}
                       className={CAMPO_FORM}
                     >
-                      <option value="home">🏠 Casa</option>
-                      <option value="away">✈️ Fora</option>
-                      <option value="neutral">⚖️ Campo Neutro</option>
+                      <option value="home">Casa</option>
+                      <option value="away">Fora</option>
+                      <option value="neutral">Campo neutro</option>
                     </select>
                   </div>
                 </div>
@@ -1580,14 +1601,14 @@ const EventsPage: React.FC = () => {
 
             {/* 4. Localização / Campo */}
             {type === 'match' && homeAway === 'home' ? (
-              <div className="p-3.5 bg-emerald-50/80 border-2 border-emerald-300 rounded-2xl flex items-center justify-between shadow-2xs">
+              <div className="p-3.5 bg-csc-light/10 border border-csc-light/30 rounded-2xl flex items-center justify-between">
                 <div className="space-y-1 min-w-0 flex-1 pr-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-                    <MapPin size={13} className="text-emerald-700 shrink-0" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-csc-verde-texto flex items-center gap-1.5">
+                    <MapPin size={13} className="text-csc-light shrink-0" />
                     <span>Campo do Jogo (Automático - Em Casa)</span>
                   </span>
                   <p className="text-xs font-black text-white truncate">
-                    🏟️ {(() => {
+                    {(() => {
                       const cascais = getCascaisHomeField()
                       return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
                     })()}
@@ -1611,14 +1632,14 @@ const EventsPage: React.FC = () => {
               <div className="p-3.5 bg-white/6 border border-white/12 rounded-2xl space-y-2.5">
                 <label className="block text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5"><MapPin size={14} className="text-red-600" /> Campo / Instalação</span>
-                  {currentLocationStr && <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {currentLocationStr}</span>}
+                  {currentLocationStr && <span className="text-[10px] text-csc-verde-texto font-bold bg-csc-light/15 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {currentLocationStr}</span>}
                 </label>
                 <select required value={fieldId} onChange={(e) => {
                     if (e.target.value === '__new__') { setQuickFieldTarget('create'); setIsQuickFieldModalOpen(true) } else { setFieldId(e.target.value); const sel = fields.find(f => f.id === e.target.value); setLocationText(sel ? (sel.address ? `${sel.name} (${sel.address})` : sel.name) : '') }
                   }} className={CAMPO_FORM}>
                   <option value="">-- Escolher Campo / Instalação --</option>
-                  <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
-                  {fields.map(f => <option key={f.id} value={f.id}>🏟️ {f.name} {f.address ? `(${f.address})` : ''}</option>)}
+                  <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo campo…</option>
+                  {fields.map(f => <option key={f.id} value={f.id}>{f.name} {f.address ? `(${f.address})` : ''}</option>)}
                 </select>
                 {currentLocationStr && (
                   <div className="pt-1">
@@ -1626,7 +1647,7 @@ const EventsPage: React.FC = () => {
                       href={getGoogleMapsUrl(currentLocationStr)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-black text-csc-dark bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1.5 rounded-xl transition-all shadow-2xs active:scale-95"
+                      className="inline-flex items-center gap-1.5 text-xs font-black text-csc-tinta bg-csc-gold hover:brightness-95 border border-csc-gold px-3 min-h-11 rounded-xl transition-all shadow-2xs active:scale-95"
                     >
                       <MapPin size={13} className="text-red-600" />
                       <span>Ver no Google Maps: "{currentLocationStr}"</span>
@@ -1651,7 +1672,7 @@ const EventsPage: React.FC = () => {
 
             {/* 6. Recorrência (Treinos) */}
             {type === 'practice' && (
-              <div className="p-3.5 bg-amber-50/60 border border-amber-200 rounded-2xl space-y-2.5">
+              <div className="p-3.5 bg-csc-gold/8 border border-csc-gold/22 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
@@ -1739,7 +1760,7 @@ const EventsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleSelectAll}
-                    className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                    className="px-2.5 min-h-11 bg-csc-light/15 hover:bg-csc-light/25 text-csc-verde-texto border border-csc-light/35 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-97"
                   >
                     <span>✓ Todos ({totalCount})</span>
                   </button>
@@ -1747,7 +1768,7 @@ const EventsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleSelectOnlyPlayers}
-                    className="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                    className="px-2.5 min-h-11 bg-csc-gold/15 hover:bg-csc-gold/25 text-csc-gold border border-csc-gold/35 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-97"
                   >
                     <span>⚽ Jogadores ({playersCount})</span>
                   </button>
@@ -1755,7 +1776,7 @@ const EventsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleSelectStaff}
-                    className="px-2.5 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                    className="px-2.5 min-h-11 bg-csc-blue/20 hover:bg-csc-blue/30 text-csc-azul-texto border border-csc-blue/40 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-97"
                     title="Convocar equipa técnica e direção"
                   >
                     <span>📋 Staff ({staffCount})</span>
@@ -1806,9 +1827,9 @@ const EventsPage: React.FC = () => {
                           onClick={() => togglePlayer(p.id)}
                           className={`flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer pt-2 ${
                             !isEligible 
-                              ? 'bg-red-50/60 text-red-700 opacity-60'
+                              ? 'bg-csc-red/10 text-csc-vermelho-texto opacity-70'
                               : isSel 
-                                ? 'bg-amber-50/80 font-black text-white border border-amber-200' 
+                                ? 'bg-csc-gold/15 font-black text-white border border-csc-gold/35' 
                                 : 'text-white/80 hover:bg-white/6'
                           }`}
                         >
@@ -1835,12 +1856,12 @@ const EventsPage: React.FC = () => {
                                   <span
                                     key={r}
                                     className={`text-[8.5px] font-black px-1 rounded ${
-                                      r === 'admin' ? 'bg-amber-100 text-amber-900' :
-                                      r === 'coach' ? 'bg-blue-100 text-blue-900' :
-                                      'bg-emerald-100 text-emerald-900'
+                                      r === 'admin' ? 'bg-csc-gold/18 text-csc-gold' :
+                                      r === 'coach' ? 'bg-csc-blue/20 text-csc-azul-texto' :
+                                      'bg-csc-light/18 text-csc-verde-texto'
                                     }`}
                                   >
-                                    {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
+                                    {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
                                   </span>
                                 ))}
                               </div>
@@ -1848,7 +1869,7 @@ const EventsPage: React.FC = () => {
                           </div>
 
                           {p.status === 'injured' && (
-                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-100 text-red-800 shrink-0 ml-1">
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-csc-red/15 text-csc-vermelho-texto shrink-0 ml-1">
                               {type === 'gathering' ? 'Lesionado (Pode ir)' : 'Lesionado'}
                             </span>
                           )}
@@ -1860,17 +1881,17 @@ const EventsPage: React.FC = () => {
             )}
 
             {/* 8. Opção de Ativação / Envio de Convocatória */}
-            <div className="p-4 bg-gradient-to-r from-gray-50 to-amber-50/40 rounded-2xl border-2 border-white/12 space-y-2">
+            <div className="p-4 bg-csc-gold/8 rounded-2xl border border-csc-gold/22 space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
-                    <Send size={15} className={isActiveOnCreate ? 'text-emerald-600' : 'text-amber-600'} />
+                    <Send size={15} className={isActiveOnCreate ? 'text-csc-light' : 'text-csc-gold'} />
                     <span>Ativar Evento e Enviar Convocatória</span>
                   </label>
                   <p className="text-[11px] text-white/60 mt-0.5">
                     {isActiveOnCreate 
-                      ? '✓ O evento fica imediatamente visível na agenda e a convocatória é enviada aos membros.' 
-                      : '⏸️ O evento fica guardado em modo Rascunho (Inativo). A convocatória só será disparada quando o ativares.'}
+                      ? 'O evento fica imediatamente visível na agenda e a convocatória é enviada aos membros.' 
+                      : 'O evento fica guardado em modo Rascunho (Inativo). A convocatória só será disparada quando o ativares.'}
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -1958,112 +1979,191 @@ const EventsPage: React.FC = () => {
           return timeA - timeB
         })
 
+        /**
+         * O que a persiana de filtros esconde, para o cabeçalho poder acender e
+         * a linha de resumo poder dizê-lo. As pastilhas de tipo não entram no
+         * resumo — essas estão à vista — mas entram no "tem filtros", senão o
+         * botão "Limpar" não as limpava.
+         */
+        const temFiltrosLista =
+          eventListSearch.trim() !== '' ||
+          eventListTimeFilter !== 'upcoming' ||
+          eventListStatusFilter !== 'all' ||
+          eventListTypeFilter !== 'all'
+
+        const resumoFiltrosLista = [
+          eventListSearch.trim() ? `"${eventListSearch.trim()}"` : null,
+          eventListTimeFilter !== 'upcoming' ? (ROTULOS_TEMPO[eventListTimeFilter] ?? 'Todas as datas') : null,
+          eventListStatusFilter !== 'all' ? ROTULOS_PUBLICACAO[eventListStatusFilter] : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || 'Filtrado'
+
         return (
           <div className="w-full space-y-4">
-            {/* Barra de Filtros e Pesquisa de Eventos */}
-            <div className="cartao-simples p-4 space-y-3">
-              <div className="flex flex-col sm:flex-row items-center gap-3">
-                <div className="relative flex-1 w-full">
-                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
-                  <input
-                    type="text"
-                    value={eventListSearch}
-                    onChange={e => setEventListSearch(e.target.value)}
-                    placeholder="Pesquisar por título, adversário, local..."
-                    className={`${CAMPO_FORM} pl-10 pr-9`}
-                  />
-                  {eventListSearch && (
-                    <button
-                      onClick={() => setEventListSearch('')}
-                      aria-label="Limpar pesquisa"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 cursor-pointer"
-                    >
-                      <X size={15} />
-                    </button>
-                  )}
-                </div>
+            {/*
+              Filtros da lista (ecrã 4a). Estavam aqui três filas de botões
+              empilhadas — publicação, tempo e tipo — e o handoff tem uma. Fica
+              à vista a do tipo de evento, que é a que se usa a cada minuto; a
+              pesquisa e as outras duas passam para a persiana atrás do funil,
+              o mesmo gesto da Agenda.
 
-                {/* Filtro de Estado (Ativos / Rascunhos) para Treinadores/Admins */}
-                {isCoachOrAdmin && (
-                  <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl w-full sm:w-auto shrink-0">
-                    {[
-                      { id: 'all', label: 'Todos' },
-                      { id: 'active', label: '🟢 Ativos' },
-                      { id: 'inactive', label: '⏸️ Rascunhos' }
-                    ].map(sf => (
-                      <button
-                        key={sf.id}
-                        type="button"
-                        onClick={() => setEventListStatusFilter(sf.id as any)}
-                        className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                          eventListStatusFilter === sf.id
-                            ? 'bg-csc-gold text-csc-tinta'
-                            : 'text-white/60 hover:text-white'
-                        }`}
-                      >
-                        {sf.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Filtro Temporal (Próximos / Anteriores / Todos) */}
-                <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl w-full sm:w-auto shrink-0">
-                  {[
-                    { id: 'upcoming', label: 'Por realizar' },
-                    { id: 'past', label: 'Realizados' },
-                    { id: 'all', label: 'Todos' }
-                  ].map(tf => (
-                    <button
-                      key={tf.id}
-                      type="button"
-                      onClick={() => setEventListTimeFilter(tf.id as any)}
-                      className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                        eventListTimeFilter === tf.id
-                          ? 'bg-csc-gold text-csc-tinta'
-                          : 'text-white/60 hover:text-white'
-                      }`}
-                    >
-                      {tf.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Filtro de Tipo de Evento (Todos / Jogos / Treinos / Convívios) */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-white/10">
-                {[
-                  { id: 'all', label: 'Todos os Tipos', emoji: '📋' },
-                  { id: 'match', label: 'Jogos', emoji: '⚽' },
-                  { id: 'practice', label: 'Treinos', emoji: '🏃' },
-                  { id: 'gathering', label: 'Convívios', emoji: '🎉' }
-                ].map(item => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setEventListTypeFilter(item.id as any)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
-                      eventListTypeFilter === item.id
-                        ? 'bg-csc-gold text-csc-tinta border border-csc-gold'
-                        : 'bg-white/6 hover:bg-white/10 text-white/80 border border-white/12'
-                    }`}
+              O que a persiana esconde acende o funil e escreve-se por baixo:
+              um filtro que não se vê é um filtro que se esquece, e depois a
+              lista parece vazia sem razão.
+            */}
+            <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
+                {([
+                  ['all', 'Todos'],
+                  ['match', 'Jogos'],
+                  ['practice', 'Treinos'],
+                  ['gathering', 'Convívios'],
+                ] as const).map(([valor, etiqueta]) => (
+                  <Pastilha
+                    key={valor}
+                    ativa={eventListTypeFilter === valor}
+                    onClick={() => { triggerHaptic('selection'); setEventListTypeFilter(valor) }}
+                    className="flex-none"
                   >
-                    <span>{item.emoji}</span>
-                    <span>{item.label}</span>
-                  </button>
+                    {etiqueta}
+                  </Pastilha>
                 ))}
-              </div>
             </div>
 
-            <div className="cartao-simples text-white p-5">
-              <div className="flex items-center justify-between pb-3 mb-5 border-b border-white/10">
-                <h3 className="text-lg font-black text-white flex items-center gap-2">
-                  <CalendarRange size={20} className="text-csc-gold" />
-                  <span>Lista de Eventos & Quórum RSVP</span>
-                </h3>
-                <span className="text-xs font-bold text-white/70">
-                  A apresentar {filteredScheduledEvents.length} de {events.length} registados
+            {temFiltrosLista && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEventListSearch('')
+                  setEventListTimeFilter('upcoming')
+                  setEventListStatusFilter('all')
+                  setEventListTypeFilter('all')
+                }}
+                className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
+                  bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
+              >
+                <SlidersHorizontal size={14} className="text-csc-gold shrink-0" />
+                <span className="flex-1 font-display font-bold text-[11px] text-white/80">
+                  {resumoFiltrosLista} · {filteredScheduledEvents.length}{' '}
+                  {filteredScheduledEvents.length === 1 ? 'evento' : 'eventos'}
                 </span>
+                <span className="font-display font-bold text-[11px] text-csc-gold">Limpar</span>
+              </button>
+            )}
+
+            <BottomSheet
+              isOpen={filtrosListaAbertos}
+              onClose={() => setFiltrosListaAbertos(false)}
+              title="Procurar nos eventos"
+              description="Sobre os eventos do tipo escolhido em cima"
+              tone="dark"
+              icon={
+                <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
+                  <SlidersHorizontal size={17} />
+                </div>
+              }
+              footer={
+                <>
+                  <Botao
+                    aparencia="vidro"
+                    onClick={() => {
+                      setEventListSearch('')
+                      setEventListTimeFilter('upcoming')
+                      setEventListStatusFilter('all')
+                      setEventListTypeFilter('all')
+                    }}
+                    disabled={!temFiltrosLista}
+                  >
+                    Limpar
+                  </Botao>
+                  <Botao onClick={() => setFiltrosListaAbertos(false)}>
+                    Ver {filteredScheduledEvents.length}{' '}
+                    {filteredScheduledEvents.length === 1 ? 'evento' : 'eventos'}
+                  </Botao>
+                </>
+              }
+            >
+              <div className="space-y-4">
+                <CampoEntrada
+                  etiqueta="Procurar"
+                  type="search"
+                  value={eventListSearch}
+                  onChange={e => setEventListSearch(e.target.value)}
+                  placeholder="Título, adversário ou local"
+                />
+
+                <div>
+                  <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+                    Quando
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      ['upcoming', 'Por realizar'],
+                      ['past', 'Realizados'],
+                      ['all', 'Todos'],
+                    ] as const).map(([valor, etiqueta]) => (
+                      <Pastilha
+                        key={valor}
+                        ativa={eventListTimeFilter === valor}
+                        onClick={() => { triggerHaptic('selection'); setEventListTimeFilter(valor) }}
+                      >
+                        {etiqueta}
+                      </Pastilha>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Rascunhos são coisa de quem gere: um atleta nunca os vê. */}
+                {isCoachOrAdmin && (
+                  <div>
+                    <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+                      Publicação
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        ['all', 'Todos'],
+                        ['active', 'Ativos'],
+                        ['inactive', 'Rascunhos'],
+                      ] as const).map(([valor, etiqueta]) => (
+                        <Pastilha
+                          key={valor}
+                          ativa={eventListStatusFilter === valor}
+                          onClick={() => { triggerHaptic('selection'); setEventListStatusFilter(valor) }}
+                        >
+                          {etiqueta}
+                        </Pastilha>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </BottomSheet>
+
+            <div className="cartao-simples text-white p-5">
+              <div className="flex items-center gap-2.5 pb-3 mb-5 border-b border-white/10">
+                <CalendarRange size={18} className="text-csc-gold shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display font-black text-[13.5px] text-white leading-tight">
+                    Eventos &amp; quórum
+                  </h3>
+                  <p className="text-[10px] text-white/55 mt-0.5">
+                    A mostrar {filteredScheduledEvents.length} de {events.length} registados
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic('light'); setFiltrosListaAbertos(true) }}
+                  aria-label={temFiltrosLista ? 'Pesquisa e filtros (ativos)' : 'Pesquisa e filtros'}
+                  className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
+                    transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      temFiltrosLista
+                        ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                        : 'bg-white/10 border-white/15 text-white/75'
+                    }`}
+                >
+                  <SlidersHorizontal size={16} />
+                </button>
               </div>
 
               {loading ? (
@@ -2104,8 +2204,8 @@ const EventsPage: React.FC = () => {
                               {getEventHeading(event)}
                             </h4>
                             {event.is_active === false && (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                                <span>⏸️ Rascunho / Inativo</span>
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-csc-gold/18 text-csc-gold border border-csc-gold/35 flex items-center gap-1">
+                                <span>Rascunho / Inativo</span>
                               </span>
                             )}
                           </div>
@@ -2141,7 +2241,7 @@ const EventsPage: React.FC = () => {
                             {new Date(event.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' })}, {new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           {event.meeting_time && (
-                            <span className="bg-amber-100 text-amber-900 text-[10.5px] font-extrabold px-1.5 py-0.2 rounded-md border border-amber-200">
+                            <span className="bg-csc-gold/18 text-csc-gold text-[10.5px] font-extrabold px-1.5 py-0.5 rounded-md border border-csc-gold/35">
                               Conc: {event.meeting_time.substring(0, 5)}
                             </span>
                           )}
@@ -2171,18 +2271,18 @@ const EventsPage: React.FC = () => {
                       {/* RSVP Summary Bar & Action Button */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-white/10">
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="flex items-center gap-1 font-black text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-lg">
+                          <span className="flex items-center gap-1 font-black text-csc-verde-texto bg-csc-light/15 border border-csc-light/35 px-2 py-0.5 rounded-lg">
                             <CheckCircle2 size={12} className="text-emerald-700" />
                             <span>{confirmedList.length}</span>
                           </span>
 
-                          <span className="flex items-center gap-1 font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-lg">
+                          <span className="flex items-center gap-1 font-bold text-csc-gold bg-csc-gold/15 border border-csc-gold/35 px-2 py-0.5 rounded-lg">
                             <HelpCircle size={12} className="text-amber-700" />
                             <span>{pendingList.length}</span>
                           </span>
 
                           {declinedList.length > 0 && (
-                            <span className="flex items-center gap-1 font-bold text-red-800 bg-red-100 border border-red-300 px-2 py-0.5 rounded-lg">
+                            <span className="flex items-center gap-1 font-bold text-csc-vermelho-texto bg-csc-red/15 border border-csc-red/35 px-2 py-0.5 rounded-lg">
                               <XCircle size={12} className="text-red-700" />
                               <span>{declinedList.length} Indisponíveis</span>
                             </span>
@@ -2275,7 +2375,7 @@ const EventsPage: React.FC = () => {
                           ? 'bg-emerald-700 text-white' 
                           : 'bg-purple-700 text-white'
                       }`}>
-                        {activeCallupModalEvent.type === 'match' ? '⚽ Jogo' : activeCallupModalEvent.type === 'practice' ? '🏃 Treino' : '🎉 Convívio'}
+                        {activeCallupModalEvent.type === 'match' ? 'Jogo' : activeCallupModalEvent.type === 'practice' ? 'Treino' : 'Convívio'}
                       </span>
                     </div>
 
@@ -2295,7 +2395,8 @@ const EventsPage: React.FC = () => {
                     onClick={() => setIsMatchReportOpen(true)}
                     className="px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-dark font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
                   >
-                    <span>📋 Ficha de Jogo</span>
+                    <ClipboardList size={13} />
+                    <span>Ficha de Jogo</span>
                   </button>
                 )}
 
@@ -2390,7 +2491,7 @@ const EventsPage: React.FC = () => {
                             key={p.id}
                             type="button"
                             onClick={() => handleAddPlayerToCallup(activeCallupModalEvent.id, p.id)}
-                            className="bg-white/8 border border-white/16 text-xs px-2.5 py-1 rounded-xl font-bold text-white flex items-center gap-1 shadow-2xs hover:bg-amber-50 cursor-pointer active:scale-95"
+                            className="bg-white/8 border border-white/16 text-xs px-2.5 py-1 rounded-xl font-bold text-white flex items-center gap-1 shadow-2xs hover:bg-white/15 cursor-pointer active:scale-97"
                           >
                             <span>+ {p.name}</span>
                             {p.jersey_number && <span className="text-csc-dark font-black">#{p.jersey_number}</span>}
@@ -2448,7 +2549,7 @@ const EventsPage: React.FC = () => {
             className="bg-csc-fundo text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10 outline-none"
           >
             <div className="sticky top-0 bg-csc-fundo border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
-              <h3 id="editar-evento-titulo" className="text-lg font-black text-white">✏️ Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
+              <h3 id="editar-evento-titulo" className="text-lg font-black text-white">Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
               <button onClick={handleAttemptCloseEditModal} aria-label="Fechar" className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 shrink-0"><X size={16} className="stroke-[2.5]" /></button>
             </div>
 
@@ -2458,10 +2559,10 @@ const EventsPage: React.FC = () => {
                 <label className={ETIQUETA_FORM}>Tipo de Evento</label>
                 <div className="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-white rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
                   <span className="flex items-center gap-1.5">
-                    <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
+                    <span>{editType === 'match' ? 'Jogo' : editType === 'practice' ? 'Treino' : 'Convívio'}</span>
                   </span>
                   <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-md">
-                    🔒 Tipo Bloqueado
+                    Tipo bloqueado
                   </span>
                 </div>
               </div>
@@ -2534,7 +2635,7 @@ const EventsPage: React.FC = () => {
                         className={CAMPO_FORM}
                       >
                         <option value="">-- Selecionar Adversário --</option>
-                        <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
+                        <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo adversário…</option>
                         {opponents.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                       </select>
                     </div>
@@ -2542,9 +2643,9 @@ const EventsPage: React.FC = () => {
                     <div>
                       <label className={ETIQUETA_FORM}>Condição de Jogo</label>
                       <select value={editHomeAway} onChange={e => setEditHomeAway(e.target.value as any)} className={CAMPO_FORM}>
-                        <option value="home">🏠 Casa</option>
-                        <option value="away">✈️ Fora</option>
-                        <option value="neutral">⚖️ Campo Neutro</option>
+                        <option value="home">Casa</option>
+                        <option value="away">Fora</option>
+                        <option value="neutral">Campo neutro</option>
                       </select>
                     </div>
                   </div>
@@ -2560,7 +2661,7 @@ const EventsPage: React.FC = () => {
                       <span>Campo do Jogo (Automático - Em Casa)</span>
                     </span>
                     <p className="text-xs font-black text-white truncate">
-                      🏟️ {(() => {
+                      {(() => {
                         const cascais = getCascaisHomeField()
                         return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
                       })()}
@@ -2583,8 +2684,8 @@ const EventsPage: React.FC = () => {
               ) : (
                 <div className="space-y-2">
                   <label className="block text-xs font-bold text-white/70 flex items-center justify-between">
-                    <span>📍 Campo / Instalação</span>
-                    {editLocationText && <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {editLocationText}</span>}
+                    <span>Campo / Instalação</span>
+                    {editLocationText && <span className="text-[10px] text-csc-verde-texto font-bold bg-csc-light/15 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {editLocationText}</span>}
                   </label>
                   <select
                     required
@@ -2606,9 +2707,9 @@ const EventsPage: React.FC = () => {
                     className={CAMPO_FORM}
                   >
                     <option value="">-- Escolher Campo / Instalação --</option>
-                    <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
+                    <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo campo…</option>
                     {fields.map(f => (
-                      <option key={f.id} value={f.id}>🏟️ {f.name} {f.address ? `(${f.address})` : ''}</option>
+                      <option key={f.id} value={f.id}>{f.name} {f.address ? `(${f.address})` : ''}</option>
                     ))}
                   </select>
                 </div>
@@ -2751,7 +2852,7 @@ const EventsPage: React.FC = () => {
                         className="px-2.5 py-1.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 disabled:opacity-40"
                       >
                         <Sparkles size={12} className="text-csc-dark" />
-                        <span>{isBatchCalling ? 'A processar...' : `✨ Convocar Todos (${editUncalledPlayers.length})`}</span>
+                        <span>{isBatchCalling ? 'A processar...' : `Convocar todos (${editUncalledPlayers.length})`}</span>
                       </button>
 
                       <button
@@ -2760,7 +2861,8 @@ const EventsPage: React.FC = () => {
                         disabled={currentCallups.length === 0 || isBatchCalling}
                         className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
                       >
-                        <span>✕ Remover Todos</span>
+                        <X size={12} />
+                        <span>Remover todos</span>
                       </button>
                     </div>
 
@@ -2801,7 +2903,7 @@ const EventsPage: React.FC = () => {
                             }}
                             className={`flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer ${
                               isCalled
-                                ? 'bg-amber-50/80 font-black text-white border border-amber-200'
+                                ? 'bg-csc-gold/15 font-black text-white border border-csc-gold/35'
                                 : 'text-white/80 hover:bg-white/6'
                             }`}
                           >
@@ -2817,8 +2919,8 @@ const EventsPage: React.FC = () => {
                               </div>
                               <span className="truncate">{getPlayerDisplayName(p)}</span>
                             </div>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isCalled ? 'bg-emerald-100 text-emerald-800' : 'bg-white/10 text-white/50'}`}>
-                              {isCalled ? '✓ Convocado' : '+ Convocar'}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isCalled ? 'bg-csc-light/18 text-csc-verde-texto' : 'bg-white/10 text-white/50'}`}>
+                              {isCalled ? 'Convocado' : 'Convocar'}
                             </span>
                           </div>
                         )
@@ -2862,7 +2964,7 @@ const EventsPage: React.FC = () => {
                   Cancelar
                 </button>
                 <button type="submit" disabled={isSavingEdit} className="flex-1 px-4 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50">
-                  {isSavingEdit ? 'A guardar...' : '💾 Guardar Alterações'}
+                  {isSavingEdit ? 'A guardar...' : 'Guardar alterações'}
                 </button>
               </div>
             </form>

@@ -924,8 +924,8 @@ const CalendarPage: React.FC = () => {
       await fetchEventsAndData()
 
       toast.success(resendCallups 
-        ? '✨ Evento atualizado e pedidos de confirmação reenviados aos atletas!' 
-        : '✨ Evento atualizado com sucesso!'
+        ? 'Evento atualizado e pedidos de confirmação reenviados aos atletas!' 
+        : 'Evento atualizado com sucesso!'
       )
     } catch (err: any) {
       toast.error('Erro ao atualizar evento: ' + (err.message || 'Erro'))
@@ -1008,7 +1008,7 @@ const CalendarPage: React.FC = () => {
         }
         return { ...prev, [eventId]: curList }
       })
-      toast.success(status === 'confirmed' ? '✓ Presença confirmada!' : '✕ Presença recusada.')
+      toast.success(status === 'confirmed' ? 'Presença confirmada!' : 'Presença recusada.')
     } catch (err: any) {
       console.error('Erro ao atualizar resposta:', err)
       toast.error('Erro ao atualizar resposta: ' + (err.message || 'Erro'))
@@ -1962,14 +1962,14 @@ const CalendarPage: React.FC = () => {
                       type="button"
                       onClick={prevEvent}
                       className="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-white/10 hover:bg-white/20 text-white"
-                      title="Convocatória Anterior (ou desliza para a direita 👉)"
+                      title="Convocatória anterior (ou desliza para a direita)"
                     >
                       <ChevronLeft size={16} />
                     </button>
 
                     <div className="flex items-center gap-2 select-none min-w-0">
                       <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
-                        <span>🔔 Convocatória Pendente</span>
+                        <span>Convocatória pendente</span>
                         <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-white/20 text-white tracking-wider">
                           {activeIndex + 1}/{myPendingEvents.length}
                         </span>
@@ -2174,7 +2174,7 @@ const CalendarPage: React.FC = () => {
                         <div className="bg-[rgba(11,45,11,.55)] border-t border-csc-light/35 px-4 py-3.5 flex flex-col items-center justify-center gap-2.5">
                           <span className="font-display font-extrabold text-[13px] text-white">
                             {myCallup.status === 'called' ? 'Vais estar presente?' :
-                              myCallup.status === 'confirmed' ? '✓ Confirmaste presença' : '✕ Recusaste presença'}
+                              myCallup.status === 'confirmed' ? 'Confirmaste presença' : 'Recusaste presença'}
                           </span>
                           <div className="flex items-center gap-2.5 w-full">
                             <button
@@ -2519,10 +2519,10 @@ const CalendarPage: React.FC = () => {
                   <label className={ETIQUETA_FORM}>Tipo de Evento</label>
                   <div className="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-white rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
                     <span className="flex items-center gap-1.5">
-                      <span>{editType === 'match' ? '⚽ Jogo' : editType === 'practice' ? '🏃 Treino' : '🍻 Convívio'}</span>
+                      <span>{editType === 'match' ? 'Jogo' : editType === 'practice' ? 'Treino' : 'Convívio'}</span>
                     </span>
                     <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-md">
-                      🔒 Tipo Bloqueado
+                      Tipo bloqueado
                     </span>
                   </div>
                 </div>
@@ -2555,7 +2555,7 @@ const CalendarPage: React.FC = () => {
                           <option value="">-- Selecionar Torneio --</option>
                           {tournaments.map(t => (
                             <option key={t.id} value={t.id}>
-                              🏆 {t.name} {t.season ? `(${t.season})` : ''}
+                              {t.name} {t.season ? `(${t.season})` : ''}
                             </option>
                           ))}
                         </select>
@@ -2577,7 +2577,7 @@ const CalendarPage: React.FC = () => {
                           className={CAMPO_FORM}
                         >
                           <option value="">-- Selecionar Adversário --</option>
-                          <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Adversário...</option>
+                          <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo adversário…</option>
                           {opponents.map(o => (
                             <option key={o.id} value={o.id}>{o.name}</option>
                           ))}
@@ -2591,9 +2591,9 @@ const CalendarPage: React.FC = () => {
                           onChange={(e) => setEditHomeAway(e.target.value as any)}
                           className={CAMPO_FORM}
                         >
-                          <option value="home">🏠 Casa</option>
-                          <option value="away">✈️ Fora</option>
-                          <option value="neutral">⚖️ Campo Neutro</option>
+                          <option value="home">Casa</option>
+                          <option value="away">Fora</option>
+                          <option value="neutral">Campo neutro</option>
                         </select>
                       </div>
                     </div>
@@ -2633,7 +2633,7 @@ const CalendarPage: React.FC = () => {
                         <span>Campo do Jogo (Automático - Em Casa)</span>
                       </span>
                       <p className="text-xs font-black text-white truncate">
-                        🏟️ {(() => {
+                        {(() => {
                           const cascais = getCascaisHomeField()
                           return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
                         })()}
@@ -2657,10 +2657,10 @@ const CalendarPage: React.FC = () => {
                   <div className="p-3.5 bg-white/5 border border-white/10 rounded-xl space-y-2 text-xs">
                     <div className="flex items-center justify-between">
                       <label className="font-bold text-white/80 flex items-center gap-1.5">
-                        <span>🏟️ Campo / Instalação *</span>
+                        <span>Campo / Instalação *</span>
                         {editLocation && (
                           <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full truncate max-w-[200px]">
-                            ✓ {editLocation}
+                            {editLocation}
                           </span>
                         )}
                       </label>
@@ -2684,10 +2684,10 @@ const CalendarPage: React.FC = () => {
                       className={CAMPO_FORM}
                     >
                       <option value="">-- Escolher Campo / Instalação do Clube --</option>
-                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">➕ Criar Novo Campo...</option>
+                      <option value="__new__" className="font-bold text-amber-800 bg-amber-50">Criar novo campo…</option>
                       {fields.map(f => (
                         <option key={f.id} value={f.id}>
-                          🏟️ {f.name} {f.address ? `(${f.address})` : ''}
+                          {f.name} {f.address ? `(${f.address})` : ''}
                         </option>
                       ))}
                     </select>
@@ -2961,7 +2961,7 @@ const CalendarPage: React.FC = () => {
                           className="px-2 py-1.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer active:scale-95 disabled:opacity-40"
                         >
                           <Sparkles size={11} className="text-csc-dark" />
-                          <span>✨ Todos ({editUncalledPlayers.length})</span>
+                          <span>Todos ({editUncalledPlayers.length})</span>
                         </button>
 
                         <button
@@ -2970,7 +2970,7 @@ const CalendarPage: React.FC = () => {
                           disabled={editUncalledPlayers.filter(p => p.role === 'player' || !['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
                           className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
                         >
-                          <span>⚽ Jogadores</span>
+                          <span>Jogadores</span>
                         </button>
 
                         <button
@@ -2979,7 +2979,7 @@ const CalendarPage: React.FC = () => {
                           disabled={editUncalledPlayers.filter(p => ['coach', 'admin'].includes(p.role)).length === 0 || isEditBatchCalling}
                           className="px-2 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
                         >
-                          <span>📋 Staff</span>
+                          <span>Staff</span>
                         </button>
 
                         <button
@@ -2988,7 +2988,7 @@ const CalendarPage: React.FC = () => {
                           disabled={currentCallups.length === 0 || isEditBatchCalling}
                           className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-900 border border-red-200 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
                         >
-                          <span>✕ Limpar</span>
+                          <span>Limpar</span>
                         </button>
                       </div>
 
@@ -3048,7 +3048,7 @@ const CalendarPage: React.FC = () => {
                                           'bg-emerald-100 text-emerald-900'
                                         }`}
                                       >
-                                        {r === 'admin' ? '🛡️ Admin' : r === 'coach' ? '📋 Treinador' : '⚽ Jogador'}
+                                        {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
                                       </span>
                                     ))}
                                   </div>
