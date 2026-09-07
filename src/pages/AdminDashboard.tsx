@@ -1299,8 +1299,16 @@ const AdminDashboard: React.FC = () => {
             <div className="space-y-4">
               {/* Barra de Filtros e Criação */}
               <div className="flex items-center gap-2">
-                <div className="flex flex-col sm:flex-row items-center gap-2.5 flex-1">
-                  <div className="relative w-full sm:flex-1">
+                {/*
+                  `min-w-0` não é decoração: sem ele o `flex-1` não encolhe
+                  abaixo da largura intrínseca do `<input>`, e o separador dos
+                  torneios era o único do Backoffice a empurrar a página para
+                  fora da janela estreita. Os dos campos e dos adversários já o
+                  tinham. Os `sm:` saíram porque não geram nada — os pontos de
+                  corte estão desligados no `@theme`.
+                */}
+                <div className="flex flex-col items-center gap-2.5 flex-1 min-w-0">
+                  <div className="relative w-full">
                     <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
                     <input
                       type="text"
@@ -1320,12 +1328,12 @@ const AdminDashboard: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl w-full sm:w-auto">
+                  <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl w-full">
                     {(['all', 'ativo', 'agendado', 'terminado'] as const).map(st => (
                       <button
                         key={st}
                         onClick={() => setTourStatusFilter(st)}
-                        className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-black capitalize transition-all cursor-pointer ${
+                        className={`flex-1 min-h-11 px-3 rounded-lg text-xs font-black capitalize transition-all cursor-pointer ${
                           tourStatusFilter === st 
                             ? 'bg-white text-csc-tinta shadow-xs' 
                             : 'text-white/60 hover:text-white'

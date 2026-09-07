@@ -277,7 +277,18 @@ const CalendarPage: React.FC = () => {
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
   const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [modalCallupStatusFilter, setModalCallupStatusFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
-  const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 640 : true)
+  /*
+    A convocatória, no detalhe do evento, começa recolhida.
+
+    Começava aberta ou fechada conforme `window.innerWidth >= 640` — resto do
+    tempo em que havia duas UIs. Com uma só, isso passou a ser um bug: o mesmo
+    evento mostrava a lista de convocados numa janela larga e escondia-a num
+    telemóvel, e a regra é que as duas larguras têm de mostrar a mesma coisa.
+    Fica o comportamento do telemóvel, que é o que toda a gente vê: a persiana
+    abre curta, com a hora, o local e a resposta do próprio à vista, e a lista
+    do plantel a um toque.
+  */
+  const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(false)
   const [isMatchReportOpen, setIsMatchReportOpen] = useState(false)
 
 
@@ -302,10 +313,9 @@ const CalendarPage: React.FC = () => {
   const modalScrollRef = React.useRef<HTMLDivElement>(null)
   const carouselDragRef = React.useRef<{ startX: number; startY: number; lastDeltaX: number; lastDeltaY: number } | null>(null)
 
+  // Abrir outro evento repõe a convocatória recolhida.
   useEffect(() => {
-    if (selectedEvent) {
-      setIsModalCallupsExpanded(typeof window !== 'undefined' ? window.innerWidth >= 640 : true)
-    }
+    if (selectedEvent) setIsModalCallupsExpanded(false)
   }, [selectedEvent])
 
   // Retroceder no browser (ou qualquer coisa que tire o ?event= do endereço)
