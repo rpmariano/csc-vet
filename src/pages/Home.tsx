@@ -14,7 +14,7 @@ import {
   FaixaSemConvocatoria,
   PersianaSemConvocatoria,
 } from '../components/AlertaSemConvocatoria'
-import { FichaPorLigar, fichaPorLigar } from '../components/FichaPorLigar'
+import { FichaPorLigar, useFichaPorLigar } from '../components/FichaPorLigar'
 import {
   comOmissoes,
   getSeasonLabel,
@@ -119,7 +119,8 @@ const Home: React.FC = () => {
     há golos e não há percentagem de respostas — os mosaicos todos mostrariam
     um traço, e nenhum deles diria porquê.
   */
-  const semFicha = fichaPorLigar(profile, assignedRoles)
+  const estadoDaFicha = useFichaPorLigar(profile, assignedRoles)
+  const semFicha = estadoDaFicha === 'por-ligar'
 
   /* O alerta de convocatórias em falta é de quem gere; ver 4c/4d. */
   const eGestao = profile?.role === 'coach' || profile?.role === 'admin'
@@ -143,7 +144,7 @@ const Home: React.FC = () => {
   }, [profile])
 
   useEffect(() => {
-    if (!profile || semFicha) return
+    if (!profile || estadoDaFicha !== 'ligada') return
     let cancelado = false
 
     const carregar = async () => {
@@ -262,7 +263,7 @@ const Home: React.FC = () => {
     return () => {
       cancelado = true
     }
-  }, [profile, semFicha])
+  }, [profile, estadoDaFicha])
 
   const responder = async (status: 'confirmed' | 'declined') => {
     if (!minhaConvocatoria || !proximo) return
@@ -327,7 +328,9 @@ const Home: React.FC = () => {
         a Home toda, e mais nada corre. O cabeçalho fica — a fotografia leva às
         Definições, e ler comunicados é uma das coisas que se pode fazer.
       */}
-      {semFicha && profile ? (
+      {estadoDaFicha === 'a-verificar' ? (
+        <CartaoVidro className="h-40 animate-pulse" />
+      ) : semFicha && profile ? (
         <FichaPorLigar perfil={profile} />
       ) : (
       <>

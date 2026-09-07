@@ -86,7 +86,8 @@ próprio — mesma repartição de `dues`), `notification_preferences` e
 `notification_deliveries` (ambas privadas do próprio, como `announcement_reads`; a
 segunda **sem política de INSERT** de propósito, porque quem envia é o lado do
 servidor). Mais a coluna `profiles.preferred_foot` e a função
-`admin_contas_sem_atleta()`, para o ecrã de associação manual de conta a atleta.
+`admin_contas_por_ligar()` (criada como `admin_contas_sem_atleta()` e reescrita a
+2026-09-07 — ver abaixo), para o ecrã de associação manual de conta a ficha.
 
 Quatro campos que o handoff pede como novos **já existiam**:
 `profiles.quota_start_date`/`quota_end_date` e `tournaments.organizer_name`/`image_url`.
@@ -294,15 +295,28 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    **Uma página nova que abra um detalhe pelo endereço não pode ser `lazy`.**
    Sobram ~7% de falhas, que continuam a passar à segunda pelo `retries: 1`.
 
-**A condição de "conta sem ficha de atleta" tem duas metades.** A RPC
-`admin_contas_sem_atleta()` procura contas sem `jersey_number`, `member_number`,
-`birth_date` nem `position`. Isso chega para uma lista de admin, mas **não** para
-decidir o que o próprio vê: o ecrã 11a (`src/components/FichaPorLigar.tsx`)
-substitui a Home inteira, e a única conta que a condição em cru apanha hoje é a
-de um treinador — sem camisola nem posição porque não joga, com 48 convocatórias
-e a ficha ligada. Daí o `fichaPorLigar()` excluir quem tem papel de `coach` ou
-`admin`. **A RPC continua a listar esse treinador no ecrã 3d** — é um incómodo,
-não um erro, mas está por corrigir do lado da base de dados.
+**`profiles` são as pessoas do clube, não os atletas.** Há quem jogue, quem jogue
+e treine, quem jogue e dirija, e quem não jogue de todo — um treinador, alguém da
+direção. Uma ficha sem número de camisola nem posição **não** é uma ficha por
+ligar: pode muito bem ser a de quem não entra em campo.
+
+Isto tem consequência em dois sítios, e nos dois a regra é a mesma: **decidir só
+por colunas que o próprio não pode escrever.** São elas `role` e `roles` (a
+política de UPDATE da própria ficha impede mudá-los) e `jersey_number` e
+`position` (o bloco desportivo das Definições é só de leitura). `birth_date` e
+`member_number` **não servem**, por muito que pareçam: as Definições deixam o
+próprio escrevê-los, e bastava preencher o aniversário para se deixar de ser
+contado. Idem telefone, fotografia e alcunha.
+
+- `public.admin_contas_por_ligar()` (`supabase_contas_por_ligar_migration.sql`,
+  aplicada a 2026-09-07) alimenta o ecrã 3d. Chamava-se `admin_contas_sem_atleta()`
+  e olhava a camisola, o sócio, o nascimento e a posição — listava o treinador do
+  clube como "conta sem atleta". Hoje exige também que o clube nunca tenha contado
+  com a pessoa: sem convocatórias, sem estatísticas, sem quotas.
+- `useFichaPorLigar()` (`src/components/FichaPorLigar.tsx`) decide se o ecrã 11a
+  substitui a Home. Faz o teste das colunas de graça e, só para quem passa, vai
+  confirmar à rede que não há convocatórias — porque aqui um falso positivo não é
+  uma linha a mais numa lista, é a app inteira que desaparece.
 
 **Sobre o `.env` e a chave anónima.** O `.env` deixou de ser versionado (`cdf2187`) mas
 continua no histórico, e a chave que lá está tem `role: anon` — é pública por desenho:

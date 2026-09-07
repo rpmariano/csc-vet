@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Unlink } from 'lucide-react'
 import type { Profile } from '../context/AuthContext'
+import { supabase } from '../lib/supabaseClient'
 import { CartaoVidro, CartaoSimples, EtiquetaSeccao } from './ui'
 
 /**
@@ -14,8 +15,9 @@ import { CartaoVidro, CartaoSimples, EtiquetaSeccao } from './ui'
  * O caso que faltava é o terceiro: registou-se com um email que não está na
  * ficha, e nem o telefone nem o nome deram correspondência. Aí não aparecia
  * mensagem nenhuma — a pessoa via a app normal, sem convocatórias e sem
- * aparecer no plantel, sem uma linha que explicasse porquê. Hoje, uma das oito
- * contas registadas está exatamente neste estado.
+ * aparecer no plantel, sem uma linha que explicasse porquê. Hoje não há
+ * nenhuma conta assim, mas o caso repete-se sempre que a associação
+ * automática falhar.
  *
  * **Sem ação nenhuma para o próprio**, e em especial sem o "Preencher o meu
  * perfil" que o handoff desenhava: preencher dados numa ficha órfã cria uma
@@ -25,36 +27,83 @@ import { CartaoVidro, CartaoSimples, EtiquetaSeccao } from './ui'
  */
 
 /**
- * A conta ficou sem ficha de atleta?
+ * Esta conta ficou por ligar a alguma pessoa do clube?
  *
- * A base da condição é a que a RPC `admin_contas_sem_atleta()` usa do lado da
- * direção: sem número de camisola, sem número de sócio, sem data de nascimento
- * e sem posição é uma ficha que só a criação automática da conta escreveu —
- * nome e email, e mais nada.
+ * É a mesma pergunta da RPC `admin_contas_por_ligar()`, feita do lado do
+ * próprio — e com o mesmo cuidado, por uma razão que se aprendeu à custa:
+ * **`profiles` são as pessoas do clube e não os atletas.** Há quem jogue, quem
+ * jogue e treine ou dirija, e quem não jogue de todo. Uma ficha sem camisola
+ * nem posição pode ser a de um treinador, e listá-lo a mais num ecrã de admin
+ * é um incómodo — substituir-lhe a Home é tirar-lhe a app.
  *
- * **Mas essa condição sozinha não chega aqui, e a diferença é cara.** Listar
- * alguém a mais num ecrã de admin é um incómodo; substituir-lhe a Home é
- * tirar-lhe a app. Em produção há exatamente uma conta que a condição da RPC
- * apanha, e é a de um treinador — sem camisola nem posição porque não joga,
- * com 48 convocatórias e a ficha perfeitamente ligada. Com a condição em cru,
- * essa pessoa abria a app e via "a tua ficha não está ligada".
+ * A condição olha **só para colunas que o próprio não pode escrever**:
  *
- * Daí a segunda metade: quem tem papel de treinador ou de direção tem a ficha
- * que quer ter. O ecrã 11a é para o jogador que se registou e não bateu certo
- * com nenhuma ficha do plantel.
+ * - `role` e `roles` — a política de UPDATE da própria ficha impede mudá-los.
+ *   Quem tem papel atribuído para lá do `player` por omissão é alguém que a
+ *   direção reconheceu.
+ * - `jersey_number` e `position` — o bloco desportivo das Definições é só de
+ *   leitura; nenhum dos dois vai no que o próprio guarda.
+ *
+ * Ficaram de fora `birth_date` e `member_number`, que a condição antiga usava:
+ * as Definições deixam o próprio escrevê-los, e com eles aqui bastava preencher
+ * o aniversário para o aviso desaparecer sem nada estar resolvido.
+ *
+ * O `useFichaPorLigar` acrescenta a última verificação, que precisa da rede: se
+ * a pessoa já foi convocada alguma vez, o clube conta com ela e a ficha está
+ * ligada, digam as colunas o que disserem.
  */
-export function fichaPorLigar(
+function pareceFichaPorLigar(
   perfil: Profile | null | undefined,
   papeis: readonly string[],
 ): boolean {
   if (!perfil) return false
-  if (papeis.some(p => p === 'coach' || p === 'admin')) return false
-  return !(
-    perfil.jersey_number ||
-    perfil.member_number ||
-    perfil.birth_date ||
-    perfil.position
-  )
+  if (perfil.role !== 'player') return false
+  if (papeis.some(p => p !== 'player')) return false
+  return !perfil.jersey_number && !perfil.position?.trim()
+}
+
+/**
+ * O estado da conta, para a Home decidir o que mostrar.
+ *
+ * `'a-verificar'` só acontece a quem passa no teste das colunas — para toda a
+ * gente é `'ligada'` de imediato, sem ir à rede. A Home espera nesse instante
+ * em vez de piscar entre os dois ecrãs.
+ */
+export type EstadoDaFicha = 'ligada' | 'por-ligar' | 'a-verificar'
+
+export function useFichaPorLigar(
+  perfil: Profile | null | undefined,
+  papeis: readonly string[],
+): EstadoDaFicha {
+  const candidata = pareceFichaPorLigar(perfil, papeis)
+  // Pelo id e não pelo objeto: o `profile` do contexto muda de identidade a
+  // cada render, e no array de dependências repetia a consulta sem fim.
+  const idDoPerfil = perfil?.id ?? null
+  const [estado, setEstado] = useState<EstadoDaFicha>(candidata ? 'a-verificar' : 'ligada')
+
+  useEffect(() => {
+    if (!candidata || !idDoPerfil) {
+      setEstado('ligada')
+      return
+    }
+    let cancelado = false
+    setEstado('a-verificar')
+
+    supabase
+      .from('callups')
+      .select('id', { count: 'exact', head: true })
+      .eq('player_id', idDoPerfil)
+      .then(({ count, error }) => {
+        if (cancelado) return
+        // Perante um erro, dar a ficha por ligada: é o estado que deixa a app
+        // funcionar, e o aviso volta a aparecer no carregamento seguinte.
+        setEstado(!error && (count ?? 0) === 0 ? 'por-ligar' : 'ligada')
+      })
+
+    return () => { cancelado = true }
+  }, [candidata, idDoPerfil])
+
+  return estado
 }
 
 const ENTRETANTO = [

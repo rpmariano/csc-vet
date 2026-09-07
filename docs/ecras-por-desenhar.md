@@ -285,10 +285,14 @@ classificações e os comunicados — que é verdade e continua a valer.
 
 **O que existe hoje:** nada. Nem faixa, nem ecrã, nem mensagem.
 
-**Dados disponíveis:** a condição é a mesma que a RPC `admin_contas_sem_atleta()`
-já usa, do lado da direção: um perfil que tem conta em `auth.users` e não tem
-`jersey_number`, nem `member_number`, nem `birth_date`, nem `position`. Do lado
-do próprio, lê-se o seu perfil e verifica-se o mesmo — sem RPC nenhuma.
+**Dados disponíveis:** a condição é a mesma que a RPC `admin_contas_por_ligar()`
+usa do lado da direção (`supabase_contas_por_ligar_migration.sql`). ⚠️ **Não é a
+que aqui estava.** A anterior — sem `jersey_number`, `member_number`,
+`birth_date` nem `position` — chamava-se "contas sem atleta" e estava errada:
+`profiles` são as **pessoas** do clube e nem todas jogam. A condição de hoje usa
+só colunas que o próprio não pode escrever (`role`, `roles`, `jersey_number`,
+`position`) e exige que o clube nunca tenha contado com a pessoa — sem
+convocatórias, sem estatísticas, sem quotas.
 
 **Decisões em aberto:**
 1. **Ecrã inteiro ou faixa?** Um ecrã que substitui a Home é claro mas

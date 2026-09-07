@@ -247,19 +247,28 @@ const TeamManagementPage: React.FC = () => {
   // para o merge de fichas nunca poder apagar o lado que tem sessão.
   const [linkedProfileIds, setLinkedProfileIds] = useState<Set<string>>(new Set())
 
-  /* As contas registadas sem ficha de atleta (ecrã 3d). Só o admin as pode
-     ler: a RPC recusa a quem não for. */
-  const [contasSemAtleta, setContasSemAtleta] = useState<
+  /*
+    As contas de login que não correspondem a pessoa nenhuma do clube (ecrã 3d).
+    Só o admin as pode ler: a RPC recusa a quem não for.
+
+    Chamava-se "contas sem atleta", e isso estava errado nas duas pontas:
+    `profiles` são as **pessoas** do clube — há quem jogue, quem jogue e treine,
+    e quem não jogue de todo —, e uma ficha sem camisola nem posição pode ser
+    simplesmente a de um treinador. A condição está agora em
+    `supabase_contas_por_ligar_migration.sql` e olha só para colunas que o
+    próprio não pode escrever.
+  */
+  const [contasPorLigar, setContasPorLigar] = useState<
     { id: string; name: string | null; email: string | null; photo_url: string | null; created_at: string | null }[]
   >([])
   useEffect(() => {
     if (!isAdmin) return
-    supabase.rpc('admin_contas_sem_atleta').then(({ data, error }) => {
+    supabase.rpc('admin_contas_por_ligar').then(({ data, error }) => {
       if (error) {
-        console.error('Erro ao carregar as contas sem atleta:', error.message)
+        console.error('Erro ao carregar as contas por ligar:', error.message)
         return
       }
-      setContasSemAtleta((data as typeof contasSemAtleta) ?? [])
+      setContasPorLigar((data as typeof contasPorLigar) ?? [])
     })
   }, [isAdmin])
   useEffect(() => {
@@ -2475,10 +2484,10 @@ const TeamManagementPage: React.FC = () => {
 
       {/* MODAL 3: ASSOCIAR UTILIZADOR A JOGADOR */}
       {associatingPlayer && (() => {
-        // As contas que se registaram e ainda não têm ficha de atleta — é o
-        // que o handoff pede em 3d, e o que na prática se quer ligar. Vêm da
-        // RPC `admin_contas_sem_atleta`, que só o admin pode chamar.
-        const semAtleta = contasSemAtleta.filter(c => c.id !== associatingPlayer.id)
+        // As contas que se registaram e ficaram sem ficha — é o que o handoff
+        // pede em 3d, e o que na prática se quer ligar. Vêm da RPC
+        // `admin_contas_por_ligar`, que só o admin pode chamar.
+        const porLigar = contasPorLigar.filter(c => c.id !== associatingPlayer.id)
 
         // Encontrar potenciais coincidências por email ou telefone
         const potentialMatches = profiles.filter(p => 
@@ -2584,23 +2593,23 @@ const TeamManagementPage: React.FC = () => {
               )}
 
               {/*
-                Contas sem atleta (ecrã 3d). São as pessoas que se registaram
-                na app e ainda não estão ligadas a nenhuma ficha do plantel —
-                que é o caso que se vem cá resolver. A lista de baixo, com o
-                plantel inteiro, fica para o caso raro de haver duas fichas da
-                mesma pessoa.
+                Contas por ligar (ecrã 3d). São as pessoas que se registaram na
+                app e não ficaram ligadas a nenhuma ficha do clube — que é o
+                caso que se vem cá resolver. A lista de baixo, com o plantel
+                inteiro, fica para o caso raro de haver duas fichas da mesma
+                pessoa.
               */}
-              {semAtleta.length > 0 && (
+              {porLigar.length > 0 && (
                 <div className="mt-5 space-y-2">
                   <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
-                    Contas sem atleta ({semAtleta.length})
+                    Contas por ligar ({porLigar.length})
                   </h4>
                   <p className="text-[10.5px] leading-relaxed text-white/50">
-                    Registaram-se na app e ainda não têm ficha. Ao ligar, as respostas e os
-                    pagamentos já lançados ficam nesta ficha.
+                    Registaram-se na app e a ficha que têm só tem o nome e o email. Ao ligar, as
+                    respostas e os pagamentos já lançados ficam nesta ficha.
                   </p>
 
-                  {semAtleta.map(conta => (
+                  {porLigar.map(conta => (
                     <button
                       key={conta.id}
                       type="button"
