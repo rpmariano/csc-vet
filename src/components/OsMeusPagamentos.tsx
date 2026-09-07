@@ -38,6 +38,11 @@ interface MesQuota {
   monthYear: string
   etiqueta: string
   valor: number
+  /**
+   * O `computeQuotaMonthStatus` devolve 'paid' | 'late' | 'pending'. Aqui o
+   * 'pending' abre-se em dois, porque ao jogador dizem coisas diferentes: o
+   * mês corrente é o que está a correr, e um mês futuro ainda nem venceu.
+   */
   estado: 'paid' | 'late' | 'current' | 'future'
 }
 
@@ -99,12 +104,17 @@ export const OsMeusPagamentos: React.FC<{
           ).map(m => {
             const estaPaga = pagas.has(m.monthYear)
             const estado = computeQuotaMonthStatus(m, estaPaga, definicoes, hoje)
+            const eCorrente = m.year === hoje.getFullYear() && m.month === hoje.getMonth() + 1
             return {
               monthYear: m.monthYear,
               etiqueta: formatMonthYear(m.monthYear),
               valor: definicoes.quota_amount,
-              estado: (estaPaga ? 'paid' : estado) as MesQuota['estado'],
-            }
+              estado: estado === 'paid'
+                ? 'paid'
+                : estado === 'late'
+                  ? 'late'
+                  : eCorrente ? 'current' : 'future',
+            } satisfies MesQuota
           }),
         )
 

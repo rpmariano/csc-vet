@@ -12,7 +12,6 @@ import {
   X, 
   UserPlus, 
   Search, 
-  RotateCcw, 
   ExternalLink, 
   Repeat, 
   CalendarRange, 
@@ -38,6 +37,8 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal, parseMatchReportMetadata, buildDescriptionWithMatchReport } from '../components/MatchReportModal'
 import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
+import { ConvocatoriaAoCriar } from '../components/callups/ConvocatoriaAoCriar'
+import type { EventoCriado } from '../components/callups/ConvocatoriaAoCriar'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla, hasMatchReport } from './CalendarPage'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -227,7 +228,6 @@ const EventsPage: React.FC = () => {
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
-  const [playerSearchTerm, setPlayerSearchTerm] = useState('')
   const [rsvpTabFilter, setRsvpTabFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
   const [isMatchReportOpen, setIsMatchReportOpen] = useState(false)
 
@@ -328,6 +328,10 @@ const EventsPage: React.FC = () => {
   const [eventListTimeFilter, setEventListTimeFilter] = useState<'upcoming' | 'past' | 'all'>('upcoming')
   const [eventListStatusFilter, setEventListStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [filtrosListaAbertos, setFiltrosListaAbertos] = useState(false)
+
+  /* O evento acabado de criar, à espera de convocatória (ecrãs 4f/4g). */
+  const [eventoAConvocar, setEventoAConvocar] = useState<EventoCriado | null>(null)
+  const [preEscolhidos, setPreEscolhidos] = useState<string[]>([])
   const [viewModeTab, setViewModeTab] = useState<'create' | 'list'>('list')
 
   const handleAttemptCloseEditModal = () => {
@@ -608,7 +612,7 @@ const EventsPage: React.FC = () => {
 
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Ativar Evento e Enviar Convocatória',
+      title: 'Ativar evento e enviar convocatória',
       description: `Desejas ativar este evento e disparar a convocatória para os ${countToNotify} membros selecionados? O evento ficará imediatamente visível para todos os atletas na agenda e página principal.`,
       confirmText: 'Sim, Ativar e Enviar Convocatória',
       cancelText: 'Cancelar',
@@ -874,107 +878,6 @@ const EventsPage: React.FC = () => {
     }
   }, [editingEvent, editType, editHomeAway, editOpponentId, opponents, fields, clubSettings])
 
-  const handleSelectAll = () => {
-    const eligible = allPlayers.filter(p => isPlayerEligible(p, type, tournamentId))
-    setSelectedPlayerIds(eligible.map(p => p.id))
-  }
-
-  const handleSelectOnlyPlayers = () => {
-    const players = allPlayers.filter(p => {
-      const roles = extractRolesFromProfile(p)
-      return roles.includes('player') && isPlayerEligible(p, type, tournamentId)
-    })
-    setSelectedPlayerIds(players.map(p => p.id))
-  }
-
-  const handleSelectStaff = () => {
-    const staff = allPlayers.filter(p => {
-      const roles = extractRolesFromProfile(p)
-      return (roles.includes('coach') || roles.includes('admin')) && isPlayerEligible(p, type, tournamentId)
-    })
-    setSelectedPlayerIds(staff.map(p => p.id))
-  }
-
-  const handleClearAll = () => setSelectedPlayerIds([])
-
-  const handleRepeatLastCallup = () => {
-    const sortedEvents = [...events].sort((a, b) => new Date(b.date_time).getTime() - new Date(a.date_time).getTime())
-    const lastEventWithCallups = sortedEvents.find(e => (eventCallups[e.id] || []).length > 0)
-    
-    if (lastEventWithCallups && eventCallups[lastEventWithCallups.id]) {
-      const lastPlayerIds = eventCallups[lastEventWithCallups.id].map(c => c.player_id)
-      const validLastIds = lastPlayerIds.filter(id => {
-        const p = allPlayers.find(pl => pl.id === id)
-        return p ? isPlayerEligible(p, type, tournamentId) : false
-      })
-      setSelectedPlayerIds(validLastIds)
-      toast.success('Convocatória anterior repetida com sucesso!')
-    } else {
-      toast.info('Ainda não existem convocatórias anteriores para repetir.')
-    }
-  }
-
-  const togglePlayer = (id: string) => {
-    const p = allPlayers.find(pl => pl.id === id)
-    if (p && !isPlayerEligible(p, type, tournamentId)) {
-      toast.warning('Este membro não pode ser convocado (lesionado, não inscrito no torneio ou inativo).')
-      return
-    }
-
-    const willSelect = !selectedPlayerIds.includes(id)
-
-    if (willSelect && type === 'match' && tournamentId) {
-      const tour = tournaments.find(t => t.id === tournamentId)
-      if (tour?.rules) {
-        const { rules } = tour
-        
-        // 1. Validar limite de jogadores do torneio
-        if (rules.max_match_players && selectedPlayerIds.length >= rules.max_match_players) {
-          toast.error(`Esta convocatória atingiu o limite do torneio (${rules.max_match_players} convocados).`)
-          return
-        }
-
-        // 2. Validar limite de exceções de idade
-        if (p?.birth_date && rules.min_age && rules.exceptions_allowed) {
-          const age = Math.floor((new Date().getTime() - new Date(p.birth_date).getTime()) / 3.15576e+10)
-          if (age < rules.min_age) {
-            const currentExceptions = selectedPlayerIds.filter(sId => {
-              const selP = allPlayers.find(pl => pl.id === sId)
-              if (selP?.birth_date) {
-                const sAge = Math.floor((new Date().getTime() - new Date(selP.birth_date).getTime()) / 3.15576e+10)
-                return sAge < rules.min_age
-              }
-              return false
-            }).length
-
-            if (currentExceptions >= rules.exceptions_count) {
-              toast.error(`Não podes convocar mais jogadores abaixo dos ${rules.min_age} anos. O limite do torneio (${rules.exceptions_count}) já foi atingido.`)
-              return
-            }
-          }
-        }
-      }
-    }
-
-    if (willSelect && maxPlayers !== '' && selectedPlayerIds.length >= Number(maxPlayers)) {
-      setConfirmModalConfig({
-        isOpen: true,
-        title: 'Limite de Convocatória Atingido',
-        description: `A convocatória já atingiu o limite manual definido de ${maxPlayers} membros (${selectedPlayerIds.length} selecionados). Desejas convocar este elemento mesmo assim?`,
-        confirmText: 'Sim, Convocar Membro',
-        cancelText: 'Cancelar',
-        variant: 'warning',
-        onConfirm: () => {
-          setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
-          setSelectedPlayerIds(prev => [...prev, id])
-        }
-      })
-      return
-    }
-
-    setSelectedPlayerIds(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id])
-  }
-
   const getActiveLocationString = () => {
     if (fieldId) {
       const f = fields.find(item => item.id === fieldId)
@@ -1150,27 +1053,30 @@ const EventsPage: React.FC = () => {
 
         const createdEvent = createdEventResult as Event
 
-        const playerIdsToCall = type === 'practice'
-          ? allPlayers.filter(p => isPlayerEligible(p, 'practice')).map(p => p.id)
-          : selectedPlayerIds
-
-        if (createdEvent && playerIdsToCall.length > 0) {
-          const validIds = await ensurePlayerIdsForSupabase(playerIdsToCall, allPlayers)
-          const rows = validIds.map(pId => ({
-            event_id: createdEvent.id,
-            player_id: pId,
-            status: 'called'
-          }))
-          if (rows.length > 0) {
-            await supabase.from('callups').insert(rows)
-          }
+        /*
+          Guardar leva à convocatória (ecrãs 4f e 4g). A inserção das linhas
+          de `callups` acontece lá e não aqui: antes era um bloco no meio do
+          formulário, e quem criava um jogo às pressas guardava e ia à sua
+          vida — o evento ficava na agenda sem ninguém chamado.
+        */
+        if (createdEvent) {
+          const preEscolha = type === 'practice'
+            ? allPlayers.filter(p => isPlayerEligible(p, 'practice')).map(p => p.id)
+            : selectedPlayerIds
+          setEventoAConvocar({
+            id: createdEvent.id,
+            tipo: type as 'match' | 'practice' | 'gathering',
+            // `getEventHeading` devolve JSX (o placar com as siglas); aqui
+            // quer-se uma linha de texto.
+            titulo: type === 'match'
+              ? `${formatClubSigla(clubSettings?.initials)} vs ${formatOpponentSigla(opponents.find(o => o.id === opponentId))}`
+              : (createdEvent.title || (type === 'practice' ? 'Treino' : 'Convívio')),
+            quando: createdEvent.date_time,
+            local: createdEvent.field_id ? getFieldName(createdEvent.field_id) : (createdEvent.location || null),
+            ativo: isActiveOnCreate,
+          })
+          setPreEscolhidos(await ensurePlayerIdsForSupabase(preEscolha, allPlayers))
         }
-
-        const successText = isActiveOnCreate
-          ? 'Evento criado e convocatória enviada aos membros!'
-          : 'Evento guardado como Rascunho (Inativo). A convocatória foi guardada e será enviada quando ativares o evento.'
-        setSuccessMessage(successText)
-        toast.success(successText)
       }
 
       await fetchData()
@@ -1363,13 +1269,6 @@ const EventsPage: React.FC = () => {
 
   const currentLocationStr = getActiveLocationString()
 
-  const totalCount = allPlayers.filter(p => isPlayerEligible(p, type, tournamentId)).length
-  const playersCount = allPlayers.filter(p => extractRolesFromProfile(p).includes('player') && isPlayerEligible(p, type, tournamentId)).length
-  const staffCount = allPlayers.filter(p => {
-    const roles = extractRolesFromProfile(p)
-    return (roles.includes('coach') || roles.includes('admin')) && isPlayerEligible(p, type, tournamentId)
-  }).length
-
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
   const painelCriarEventoRef = useModalA11y({ isOpen: viewModeTab === 'create', onClose: () => setViewModeTab('list') })
   const painelEditarEventoRef = useModalA11y({ isOpen: !!editingEvent, onClose: handleAttemptCloseEditModal })
@@ -1439,7 +1338,7 @@ const EventsPage: React.FC = () => {
             {/* Header fixo do modal */}
             <div className="sticky top-0 bg-csc-fundo z-10 flex items-center justify-between px-5 py-4 border-b border-white/10 rounded-t-3xl">
               <h3 id="criar-evento-titulo" className="text-lg font-black text-white flex items-center gap-2">
-                <Plus size={20} className="text-csc-dark" />
+                <Plus size={20} className="text-csc-tinta" />
                 <span>Novo Evento / Atividade</span>
               </h3>
               <div className="flex items-center gap-2">
@@ -1521,7 +1420,7 @@ const EventsPage: React.FC = () => {
                       setIsFriendly(e.target.checked)
                       if (e.target.checked) setTournamentId('')
                     }}
-                    className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-white/15 rounded cursor-pointer"
+                    className="h-4 w-4 text-csc-tinta focus:ring-csc-dark border-white/15 rounded cursor-pointer"
                   />
                   <label htmlFor="isFriendly" className="ml-2 text-xs font-bold text-white cursor-pointer">
                     Jogo Amigável / Treino Conjunto
@@ -1679,7 +1578,7 @@ const EventsPage: React.FC = () => {
                       type="checkbox"
                       checked={isRecurring}
                       onChange={(e) => setIsRecurring(e.target.checked)}
-                      className="h-4 w-4 text-csc-dark focus:ring-csc-dark border-white/15 rounded cursor-pointer"
+                      className="h-4 w-4 text-csc-tinta focus:ring-csc-dark border-white/15 rounded cursor-pointer"
                     />
                     <span className="text-xs font-bold text-white flex items-center gap-1">
                       <Repeat size={14} className="text-csc-gold" />
@@ -1742,143 +1641,13 @@ const EventsPage: React.FC = () => {
               </div>
             )}
 
-            {/* 7. Convocatória & Notificação dos Membros */}
-            {type !== 'practice' && (
-              <div className="p-3.5 bg-white/6 border border-white/12 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                    <Users size={15} className="text-csc-dark" />
-                    <span>Convocatória ({selectedPlayerIds.length})</span>
-                  </label>
-                  <span className="text-[10px] text-white/50 font-bold">
-                    {selectedPlayerIds.length === 0 ? 'Nenhum selecionado' : `${selectedPlayerIds.length} selecionados`}
-                  </span>
-                </div>
+            {/*
+              A convocatória saiu daqui. Era um bloco no meio do formulário com
+              a lista inteira do plantel, e depois de guardar havia um segundo
+              sítio — a persiana 4f/4g — a escrever a mesma tabela. Fica um só:
+              guardar leva à convocatória, e é lá que se escolhe.
+            */}
 
-                {/* Ações Rápidas de Seleção */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handleSelectAll}
-                    className="px-2.5 min-h-11 bg-csc-light/15 hover:bg-csc-light/25 text-csc-verde-texto border border-csc-light/35 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-97"
-                  >
-                    <span>✓ Todos ({totalCount})</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSelectOnlyPlayers}
-                    className="px-2.5 min-h-11 bg-csc-gold/15 hover:bg-csc-gold/25 text-csc-gold border border-csc-gold/35 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-97"
-                  >
-                    <span>⚽ Jogadores ({playersCount})</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSelectStaff}
-                    className="px-2.5 min-h-11 bg-csc-blue/20 hover:bg-csc-blue/30 text-csc-azul-texto border border-csc-blue/40 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-97"
-                    title="Convocar equipa técnica e direção"
-                  >
-                    <span>📋 Staff ({staffCount})</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleRepeatLastCallup}
-                    className="px-2.5 py-1.5 bg-white/8 text-white/80 border border-white/15 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
-                  >
-                    <RotateCcw size={11} />
-                    <span>Repetir</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleClearAll}
-                    className="px-2.5 py-1.5 bg-white/15 hover:bg-white/20 text-white/80 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 col-span-2 sm:col-span-1"
-                  >
-                    <span>✕ Limpar</span>
-                  </button>
-                </div>
-
-                {/* Barra de Pesquisa de Membros */}
-                <div className="relative">
-                  <Search size={13} className="absolute left-3 top-2.5 text-white/40" />
-                  <input
-                    type="text"
-                    value={playerSearchTerm}
-                    onChange={(e) => setPlayerSearchTerm(e.target.value)}
-                    placeholder="Pesquisar por nome ou nº camisola..."
-                    className={`${CAMPO_FORM} pl-9`}
-                  />
-                </div>
-
-                {/* Lista Selecionável Um a Um */}
-                <div className="grid grid-cols-1 gap-1.5 max-h-56 overflow-y-auto p-1.5 bg-white/5 border border-white/12 rounded-2xl divide-y divide-white/8">
-                  {allPlayers
-                    .filter(p => p.name.toLowerCase().includes(playerSearchTerm.toLowerCase()))
-                    .map(p => {
-                      const isSel = selectedPlayerIds.includes(p.id)
-                      const isEligible = isPlayerEligible(p, type)
-                      const roles = extractRolesFromProfile(p)
-
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => togglePlayer(p.id)}
-                          className={`flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer pt-2 ${
-                            !isEligible 
-                              ? 'bg-csc-red/10 text-csc-vermelho-texto opacity-70'
-                              : isSel 
-                                ? 'bg-csc-gold/15 font-black text-white border border-csc-gold/35' 
-                                : 'text-white/80 hover:bg-white/6'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <input
-                              type="checkbox"
-                              checked={isSel}
-                              disabled={!isEligible}
-                              onChange={() => {}}
-                              className="h-4 w-4 text-csc-dark rounded border-white/15 pointer-events-none"
-                            />
-
-                            {/* Avatar / Number */}
-                            <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
-                              {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-xs font-bold leading-tight">
-                                {p.name}
-                              </p>
-                              <div className="flex items-center gap-1 mt-0.5">
-                                {roles.map(r => (
-                                  <span
-                                    key={r}
-                                    className={`text-[8.5px] font-black px-1 rounded ${
-                                      r === 'admin' ? 'bg-csc-gold/18 text-csc-gold' :
-                                      r === 'coach' ? 'bg-csc-blue/20 text-csc-azul-texto' :
-                                      'bg-csc-light/18 text-csc-verde-texto'
-                                    }`}
-                                  >
-                                    {r === 'admin' ? 'Admin' : r === 'coach' ? 'Treinador' : 'Jogador'}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-
-                          {p.status === 'injured' && (
-                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-csc-red/15 text-csc-vermelho-texto shrink-0 ml-1">
-                              {type === 'gathering' ? 'Lesionado (Pode ir)' : 'Lesionado'}
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })}
-                </div>
-              </div>
-            )}
 
             {/* 8. Opção de Ativação / Envio de Convocatória */}
             <div className="p-4 bg-csc-gold/8 rounded-2xl border border-csc-gold/22 space-y-2">
@@ -1886,12 +1655,12 @@ const EventsPage: React.FC = () => {
                 <div>
                   <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
                     <Send size={15} className={isActiveOnCreate ? 'text-csc-light' : 'text-csc-gold'} />
-                    <span>Ativar Evento e Enviar Convocatória</span>
+                    <span>Publicar já na agenda</span>
                   </label>
                   <p className="text-[11px] text-white/60 mt-0.5">
                     {isActiveOnCreate 
-                      ? 'O evento fica imediatamente visível na agenda e a convocatória é enviada aos membros.' 
-                      : 'O evento fica guardado em modo Rascunho (Inativo). A convocatória só será disparada quando o ativares.'}
+                      ? 'Ao guardar, escolhes quem convocas. O evento fica visível na agenda.' 
+                      : 'O evento fica em rascunho: ninguém é avisado e não entra no alerta a sete dias. A convocatória fica guardada.'}
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -1909,23 +1678,26 @@ const EventsPage: React.FC = () => {
             <button
               type="submit"
               disabled={isCreatingEvent}
-              className={`w-full py-3.5 text-white rounded-2xl font-black transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-98 text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
-                isActiveOnCreate
-                  ? 'bg-csc-dark hover:bg-csc-dark/85'
-                  : 'bg-amber-700 hover:bg-amber-800'
-              }`}
+              className={`w-full min-h-12 rounded-3xl font-display font-extrabold text-[12.5px]
+                flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
+                disabled:opacity-45 disabled:cursor-not-allowed
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                  isActiveOnCreate
+                    ? 'bg-csc-gold text-csc-tinta'
+                    : 'bg-white/9 border border-white/20 text-white'
+                }`}
             >
               {isCreatingEvent ? (
-                <span>A processar...</span>
+                <span>A processar…</span>
               ) : isActiveOnCreate ? (
                 <>
-                  <Check size={18} className="text-csc-gold" />
-                  <span>Publicar Evento e Enviar Convocatória</span>
+                  <Check size={18} />
+                  <span>Guardar e convocar</span>
                 </>
               ) : (
                 <>
-                  <Clock size={18} className="text-amber-200" />
-                  <span>Guardar Evento como Rascunho (Inativo)</span>
+                  <Clock size={18} />
+                  <span>Guardar como rascunho</span>
                 </>
               )}
             </button>
@@ -2305,11 +2077,10 @@ const EventsPage: React.FC = () => {
                             onClick={() => {
                               abrirDossier(event)
                               setRsvpTabFilter('all')
-                              setPlayerSearchTerm('')
                             }}
-                            className="w-full sm:w-auto px-4 py-2 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
+                            className="w-full sm:w-auto px-4 py-2 bg-csc-gold hover:brightness-95 text-csc-tinta rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
                           >
-                            <Users size={14} className="text-csc-dark" />
+                            <Users size={14} className="text-csc-tinta" />
                             <span>Ver Detalhes & RSVP ({callups.length})</span>
                           </button>
                         </div>
@@ -2393,7 +2164,7 @@ const EventsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsMatchReportOpen(true)}
-                    className="px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-dark font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
+                    className="px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-tinta font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
                   >
                     <ClipboardList size={13} />
                     <span>Ficha de Jogo</span>
@@ -2494,7 +2265,7 @@ const EventsPage: React.FC = () => {
                             className="bg-white/8 border border-white/16 text-xs px-2.5 py-1 rounded-xl font-bold text-white flex items-center gap-1 shadow-2xs hover:bg-white/15 cursor-pointer active:scale-97"
                           >
                             <span>+ {p.name}</span>
-                            {p.jersey_number && <span className="text-csc-dark font-black">#{p.jersey_number}</span>}
+                            {p.jersey_number && <span className="text-csc-tinta font-black">#{p.jersey_number}</span>}
                           </button>
                         ))}
                       </div>
@@ -2849,9 +2620,9 @@ const EventsPage: React.FC = () => {
                         type="button"
                         onClick={handleEditAddAll}
                         disabled={editUncalledPlayers.length === 0 || isBatchCalling}
-                        className="px-2.5 py-1.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 disabled:opacity-40"
+                        className="px-2.5 py-1.5 bg-csc-gold hover:brightness-95 text-csc-tinta rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 disabled:opacity-40"
                       >
-                        <Sparkles size={12} className="text-csc-dark" />
+                        <Sparkles size={12} className="text-csc-tinta" />
                         <span>{isBatchCalling ? 'A processar...' : `Convocar todos (${editUncalledPlayers.length})`}</span>
                       </button>
 
@@ -2912,7 +2683,7 @@ const EventsPage: React.FC = () => {
                                 type="checkbox"
                                 checked={isCalled}
                                 onChange={() => {}}
-                                className="h-4 w-4 text-csc-dark rounded border-white/15 pointer-events-none"
+                                className="h-4 w-4 text-csc-tinta rounded border-white/15 pointer-events-none"
                               />
                               <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
                                 {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
@@ -2963,7 +2734,7 @@ const EventsPage: React.FC = () => {
                 <button type="button" onClick={handleAttemptCloseEditModal} className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer">
                   Cancelar
                 </button>
-                <button type="submit" disabled={isSavingEdit} className="flex-1 px-4 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50">
+                <button type="submit" disabled={isSavingEdit} className="flex-1 px-4 py-2.5 bg-csc-gold hover:brightness-95 text-csc-tinta font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50">
                   {isSavingEdit ? 'A guardar...' : 'Guardar alterações'}
                 </button>
               </div>
@@ -3072,6 +2843,16 @@ const EventsPage: React.FC = () => {
         variant={confirmModalConfig.variant}
         onConfirm={confirmModalConfig.onConfirm}
         onCancel={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Guardar leva à convocatória (ecrãs 4f e 4g). */}
+      <ConvocatoriaAoCriar
+        evento={eventoAConvocar}
+        aoFechar={() => setEventoAConvocar(null)}
+        aptos={allPlayers.filter(p => isPlayerEligible(p, eventoAConvocar?.tipo ?? 'match'))}
+        todos={allPlayers}
+        preEscolhidos={preEscolhidos}
+        aoConvocar={() => { fetchData() }}
       />
 
     </div>
