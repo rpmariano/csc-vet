@@ -1182,6 +1182,18 @@ const CalendarPage: React.FC = () => {
 
   // Filtered events
   const filteredEvents = events.filter(e => {
+    /*
+      0. Rascunhos: só para quem gere.
+
+      Um rascunho é um evento que a equipa técnica ainda não quis anunciar —
+      aparecia na Agenda de toda a gente sem nada a dizer que não é oficial, e
+      um jogador podia contar com um jogo que ainda não está marcado a sério.
+      Para quem gere fica, com a pastilha "Rascunho" no cartão.
+    */
+    if (e.is_active === false && !isCoachOrAdmin) {
+      return false
+    }
+
     // 1. Type Filter
     if (typeFilter !== 'all' && e.type !== typeFilter) {
       return false
@@ -1546,6 +1558,13 @@ const CalendarPage: React.FC = () => {
               <TipoIcon size={14} />
               <span>{isMatch ? 'Jogo' : isPractice ? 'Treino' : 'Convívio'}</span>
             </span>
+
+            {/* Só chega aqui a quem gere: os rascunhos são filtrados antes. */}
+            {event.is_active === false && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white/12 border border-white/25 text-white/75 uppercase tracking-wider">
+                Rascunho
+              </span>
+            )}
 
             {isMatch && event.is_friendly && (
               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white/10 text-white">

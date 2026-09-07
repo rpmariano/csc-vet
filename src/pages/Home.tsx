@@ -207,6 +207,9 @@ const Home: React.FC = () => {
 
         if (cancelado) return
 
+        // Os rascunhos ficam de fora para toda a gente, inclusive para quem
+        // gere: a Home mostra o que está marcado a sério, e um rascunho ainda
+        // não foi anunciado a ninguém. Quem o quer ver tem-no na Agenda.
         const ativos = ((proximos as Evento[]) ?? []).filter(e => e.is_active !== false)
         const seguinte = ativos[0] ?? null
         setProximo(seguinte)

@@ -172,3 +172,39 @@ test.describe('Rascunho por convocar', () => {
     await expect(page.getByRole('button', { name: /evento[s]? sem convocatória/ })).toBeVisible()
   })
 })
+
+/**
+ * Um rascunho não é um evento anunciado, e a Agenda tem de o dizer.
+ *
+ * Aparecia na Agenda de toda a gente como um evento normal — um jogador podia
+ * contar com um jogo que a equipa técnica ainda não tinha marcado a sério.
+ */
+test.describe('Rascunho na lista da Agenda', () => {
+  const rascunho = {
+    ...base, id: 'rs', title: 'Jantar por confirmar', type: 'gathering',
+    date_time: DAQUI_A_DIAS(10), is_active: false,
+  }
+
+  /** O mock cria um admin; para o caso do jogador troca-se o perfil. */
+  const comoJogador = {
+    profiles: [{ ...(FIXTURES_BASE.profiles[0] as Record<string, unknown>), role: 'player', roles: ['player'] }],
+  }
+
+  test('quem gere vê-o, marcado', async ({ page }) => {
+    await montarSupabaseFalso(page, { events: [rascunho], callups: [] })
+    await page.goto('/csc-vet/calendar')
+    await page.waitForLoadState('networkidle')
+
+    await expect(page.getByText('Rascunho', { exact: true }).first()).toBeVisible()
+  })
+
+  test('quem não gere não o vê de todo', async ({ page }) => {
+    await montarSupabaseFalso(page, { events: [rascunho], callups: [], ...comoJogador })
+    await page.goto('/csc-vet/calendar')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(400)
+
+    await expect(page.getByText('Jantar por confirmar')).toHaveCount(0)
+    await expect(page.getByText('Rascunho', { exact: true })).toHaveCount(0)
+  })
+})
