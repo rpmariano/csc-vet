@@ -2,6 +2,7 @@
 Passa as classes do tema claro para o escuro, num ficheiro ou vários.
 
     python scripts/escurecer-tema.py src/pages/FinancePage.tsx
+    python scripts/escurecer-tema.py --estados src/pages/FinancePage.tsx
 
 O redesenho de 2026 inverteu o tema, e as páginas por redesenhar têm centenas
 de `text-gray-700`, `bg-gray-50` e `border-gray-300` espalhados. Traduzi-los à
@@ -31,14 +32,68 @@ MAPA = {
   'divide-gray-100':'divide-white/8', 'divide-gray-200':'divide-white/12',
   'placeholder:text-gray-400':'placeholder:text-black/40',
 }
-padrao = re.compile(r'((?:[a-z-]+:)*)(' + '|'.join(map(re.escape, sorted(MAPA, key=len, reverse=True))) + r')\b')
 
-for p in sys.argv[1:]:
+# As cores de estado do tema claro — os `bg-emerald-100`, `text-amber-900`,
+# `border-blue-200` — não são cinzento e por isso escapavam ao mapa de cima.
+# Sobre fundo preto ficam a brilhar: uma pastilha verde-menta com texto
+# verde-escuro é o que se via em cada ecrã por redesenhar. Passam para o token
+# do clube na variante translúcida, que é como o handoff as desenha.
+#
+# Ficam de fora, de propósito, os tons a partir de 400 usados como cor de
+# ícone sobre fundo escuro (o `text-red-500` de um alfinete de mapa, por
+# exemplo): esses já se leem, e trocá-los era decidir o que não tem decisão
+# feita.
+ESTADOS = {
+  # verde — presente, pago, apto
+  'bg-emerald-50':'bg-csc-light/10', 'bg-emerald-100':'bg-csc-light/15',
+  'text-emerald-600':'text-csc-light', 'text-emerald-700':'text-csc-verde-texto',
+  'text-emerald-800':'text-csc-verde-texto', 'text-emerald-900':'text-csc-verde-texto',
+  'border-emerald-200':'border-csc-light/25', 'border-emerald-300':'border-csc-light/35',
+  # dourado — atenção, rascunho, golo
+  'bg-amber-50':'bg-csc-gold/10', 'bg-amber-100':'bg-csc-gold/15',
+  'bg-yellow-50':'bg-csc-gold/10', 'bg-yellow-100':'bg-csc-gold/15',
+  'text-amber-500':'text-csc-gold', 'text-amber-600':'text-csc-gold',
+  'text-amber-700':'text-csc-gold', 'text-amber-800':'text-csc-gold',
+  'text-amber-900':'text-csc-gold', 'text-amber-950':'text-csc-gold',
+  'text-yellow-800':'text-csc-gold', 'text-yellow-900':'text-csc-gold',
+  'text-yellow-950':'text-csc-gold',
+  'border-amber-200':'border-csc-gold/25', 'border-amber-300':'border-csc-gold/35',
+  'border-yellow-300':'border-csc-gold/35', 'border-yellow-500':'border-csc-gold/50',
+  # azul — assistência, informação
+  'bg-blue-50':'bg-csc-blue/12', 'bg-blue-100':'bg-csc-blue/20',
+  'bg-indigo-50':'bg-csc-blue/12', 'bg-indigo-100':'bg-csc-blue/20',
+  'text-blue-600':'text-csc-azul-texto', 'text-blue-700':'text-csc-azul-texto',
+  'text-blue-800':'text-csc-azul-texto', 'text-blue-900':'text-csc-azul-texto',
+  'text-indigo-600':'text-csc-azul-texto', 'text-indigo-700':'text-csc-azul-texto',
+  'text-indigo-800':'text-csc-azul-texto', 'text-indigo-900':'text-csc-azul-texto',
+  'border-blue-200':'border-csc-blue/30', 'border-blue-300':'border-csc-blue/40',
+  'border-indigo-200':'border-csc-blue/30', 'border-indigo-300':'border-csc-blue/40',
+  # vermelho — falta, recusa, dívida
+  'bg-red-50':'bg-csc-red/10', 'bg-red-100':'bg-csc-red/15',
+  'text-red-600':'text-csc-vermelho-texto', 'text-red-700':'text-csc-vermelho-texto',
+  'text-red-800':'text-csc-vermelho-texto', 'text-red-900':'text-csc-vermelho-texto',
+  'border-red-200':'border-csc-red/25', 'border-red-300':'border-csc-red/35',
+  # o roxo não existe no manual do clube: cai no azul
+  'bg-purple-50':'bg-csc-blue/12', 'bg-purple-100':'bg-csc-blue/20',
+  'text-purple-700':'text-csc-azul-texto', 'text-purple-800':'text-csc-azul-texto',
+  'text-purple-900':'text-csc-azul-texto',
+  'border-purple-200':'border-csc-blue/30', 'border-purple-300':'border-csc-blue/40',
+}
+
+# `--estados` é opção e não omissão: dentro de um `<option>`, que o sistema
+# operativo desenha sempre claro, a pastilha clara é o que está certo.
+COM_ESTADOS = '--estados' in sys.argv
+ALVOS = [a for a in sys.argv[1:] if not a.startswith('--')]
+
+TODOS = dict(MAPA, **ESTADOS) if COM_ESTADOS else MAPA
+padrao = re.compile(r'((?:[a-z-]+:)*)(' + '|'.join(map(re.escape, sorted(TODOS, key=len, reverse=True))) + r')\b')
+
+for p in ALVOS:
     s = io.open(p, encoding='utf-8').read()
     antes = s
     # `placeholder:text-gray-400` tem de ser tratado antes do genérico.
     s = s.replace('placeholder:text-gray-400', 'placeholder:text-black/40')
-    s = padrao.sub(lambda m: m.group(1) + MAPA[m.group(2)], s)
+    s = padrao.sub(lambda m: m.group(1) + TODOS[m.group(2)], s)
     if s != antes:
         io.open(p, 'w', encoding='utf-8', newline='').write(s)
     restantes = re.findall(r'className="[^"]*\bbg-white[" ][^"]*"', s)

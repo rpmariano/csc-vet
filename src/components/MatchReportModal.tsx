@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { X, ShieldAlert, Award, Footprints, Save, CheckCircle2, Lock, Flame, Users, Pencil } from 'lucide-react'
+import { X, Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../pages/CalendarPage'
 import { toast } from '../context/ToastContext'
@@ -383,55 +383,56 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         <button
           onClick={onClose}
           aria-label="Fechar"
-          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white text-csc-dark hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer z-20 active:scale-90 shadow-md border-2 border-white/40"
+          className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer z-20 transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           title="Fechar"
         >
           <X size={19} className="stroke-[2.5]" />
         </button>
 
-        {/* Modal Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10 pr-10">
+        {/*
+          Cabeçalho da ficha (ecrã 2a): a sobrancelha dourada diz o que isto é,
+          a prova em baixo diz de que jogo se trata, e o confronto é o título.
+
+          Estava tudo em pastilhas na mesma linha — "Ficha Oficial de Jogo",
+          "Amigável", o nome do torneio — três etiquetas a competir pela mesma
+          atenção. Só uma delas é o assunto.
+        */}
+        <div className="pb-3 border-b border-white/10 pr-12 space-y-2">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
-                Ficha Oficial de Jogo
-              </span>
-              {event?.is_friendly && (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                  Amigável
-                </span>
-              )}
-              {event?.tournament && (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300">
-                  {event.tournament.name}
-                </span>
-              )}
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
-              {leftSigla} Vs {rightSigla}
-            </h2>
-            <p className="text-xs text-white/70 font-medium">
-              {event?.date_time && new Date(event.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+            <p className="font-display font-extrabold text-[9px] tracking-[0.16em] uppercase text-csc-gold">
+              Ficha oficial de jogo
+            </p>
+            <p className="text-[11px] text-white/55 mt-0.5">
+              {event?.tournament?.name ?? (event?.is_friendly ? 'Jogo amigável' : 'Sem prova associada')}
             </p>
           </div>
 
+          <h2 className="font-display font-black text-[26px] leading-none text-white tracking-[-0.02em]">
+            {leftSigla} <span className="text-white/35">vs</span> {rightSigla}
+          </h2>
+
+          <p className="text-[11px] text-white/55">
+            {event?.date_time && new Date(event.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+          </p>
+
           {isCoachOrAdmin && !isFutureMatch && !loading && (
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsEditModalOpen(true)}
-                className="px-4 py-2 rounded-xl text-xs font-black bg-csc-gold text-csc-dark border border-csc-gold hover:brightness-95 transition-all cursor-pointer shadow-xs flex items-center gap-1.5 active:scale-95"
-              >
-                <Pencil size={14} className="text-csc-dark" />
-                <span>Editar Ficha</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(true)}
+              className="w-full min-h-12 mt-1 px-5 rounded-3xl bg-csc-gold text-csc-tinta border border-csc-gold
+                font-display font-extrabold text-[12.5px] flex items-center justify-center gap-2 cursor-pointer
+                transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+            >
+              <Pencil size={14} />
+              <span>Editar ficha de jogo</span>
+            </button>
           )}
         </div>
 
         {saveSuccess && (
-          <div className="p-3 bg-emerald-500/10 border-2 border-emerald-400/40 rounded-2xl text-emerald-200 text-xs font-black flex items-center gap-2 animate-bounce-short">
-            <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+          <div className="p-3 bg-csc-light/12 border border-csc-light/30 rounded-2xl text-csc-verde-texto text-xs font-black flex items-center gap-2">
+            <CheckCircle2 size={18} className="text-csc-light shrink-0" />
             <span>Ficha de jogo e estatísticas atualizadas com sucesso!</span>
           </div>
         )}
@@ -443,8 +444,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           </div>
         ) : isFutureMatch ? (
           <div className="p-6 sm:p-8 bg-white/5 border border-white/10 rounded-3xl text-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center mx-auto text-2xl">
-              ⏳
+            <div className="w-12 h-12 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center mx-auto">
+              <Clock size={22} />
             </div>
             <h3 className="text-sm font-black text-white">Este jogo ainda não se realizou</h3>
             <p className="text-xs text-white/70 max-w-sm mx-auto leading-relaxed">
@@ -461,7 +462,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 
                 {/* Equipa 1 */}
                 <div className="col-span-4 flex flex-col items-center gap-1">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white p-1.5 shadow-md border border-white/30 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white p-1.5 border border-white/30 flex items-center justify-center shrink-0">
                     {isAway ? (
                       event?.opponent?.logo_url ? (
                         <img src={event.opponent.logo_url} alt={leftSigla} className="w-full h-full object-contain" />
@@ -473,7 +474,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                     )}
                   </div>
                   <span className="text-base sm:text-lg font-black uppercase text-white tracking-wide">{leftSigla}</span>
-                  <span className="text-[11px] text-gray-300 truncate max-w-[120px] sm:max-w-[150px]">{leftName}</span>
+                  <span className="text-[11px] text-white/30 truncate max-w-[120px] sm:max-w-[150px]">{leftName}</span>
                 </div>
 
                 {/* Placar Central */}
@@ -494,7 +495,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
                 {/* Equipa 2 */}
                 <div className="col-span-4 flex flex-col items-center gap-1">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white p-1.5 shadow-md border border-white/30 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white p-1.5 border border-white/30 flex items-center justify-center shrink-0">
                     {!isAway ? (
                       event?.opponent?.logo_url ? (
                         <img src={event.opponent.logo_url} alt={rightSigla} className="w-full h-full object-contain" />
@@ -506,45 +507,53 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                     )}
                   </div>
                   <span className="text-base sm:text-lg font-black uppercase text-white tracking-wide">{rightSigla}</span>
-                  <span className="text-[11px] text-gray-300 truncate max-w-[120px] sm:max-w-[150px]">{rightName}</span>
+                  <span className="text-[11px] text-white/30 truncate max-w-[120px] sm:max-w-[150px]">{rightName}</span>
                 </div>
 
               </div>
             </div>
 
-            {/* 2. ESQUEMA TÁTICO & RESUMO GERAL */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="bg-white/[0.07] border border-white/10 border-t-white/20 p-3.5 rounded-2xl shadow-md shadow-black/20">
-                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
-                  Esquema Tático
-                </label>
-                <p className="text-base font-black text-white flex items-center gap-1.5">
-                  <span>⚡ {(tacticalFormation || '4-3-3').replace(/^1-/, '')}</span>
+            {/*
+              Tático, golos e disciplina (ecrã 2a): três mosaicos numa fila,
+              não três cartões empilhados. Estavam com `sm:grid-cols-3`, e os
+              pontos de corte do Tailwind estão desligados nesta app — o que
+              quer dizer que eram sempre uma coluna só.
+            */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="cartao-simples p-3">
+                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+                  Tático
+                </p>
+                <p className="font-display font-black text-[17px] text-white mt-1 tabular-nums leading-none">
+                  {(tacticalFormation || '4-3-3').replace(/^1-/, '')}
                 </p>
               </div>
 
-              <div className="bg-white/[0.07] border border-white/10 border-t-white/20 p-3.5 rounded-2xl shadow-md shadow-black/20">
-                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
-                  Golos da Equipa
-                </label>
-                <p className="text-base font-black text-amber-700 flex items-center gap-1.5">
-                  <Flame size={18} className="text-amber-500" />
-                  <span>{totalGoals} {totalGoals === 1 ? 'Golo' : 'Golos'}</span>
+              <div className="cartao-simples p-3">
+                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+                  Golos
+                </p>
+                <p className="font-display font-black text-[17px] text-csc-gold mt-1 tabular-nums leading-none">
+                  {totalGoals}
                 </p>
               </div>
 
-              <div className="bg-white/[0.07] border border-white/10 border-t-white/20 p-3.5 rounded-2xl shadow-md shadow-black/20">
-                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
-                  Ações Disciplinares
-                </label>
-                <div className="flex items-center gap-3 text-xs font-black mt-1">
-                  <span className="flex items-center gap-1 text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg border border-amber-300">
-                    <ShieldAlert size={14} /> {totalYellows} Amarelos
+              <div className="cartao-simples p-3">
+                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+                  Disciplina
+                </p>
+                <p className="flex items-center gap-2 mt-1">
+                  <span className="flex items-center gap-1 font-display font-black text-[15px] text-csc-gold tabular-nums leading-none">
+                    <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-gold" aria-hidden="true" />
+                    <span className="sr-only">Cartões amarelos:</span>
+                    {totalYellows}
                   </span>
-                  <span className="flex items-center gap-1 text-red-700 bg-red-100 px-2 py-0.5 rounded-lg border border-red-300">
-                    <ShieldAlert size={14} /> {totalReds} Vermelhos
+                  <span className="flex items-center gap-1 font-display font-black text-[15px] text-csc-vermelho-texto tabular-nums leading-none">
+                    <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-red" aria-hidden="true" />
+                    <span className="sr-only">Cartões vermelhos:</span>
+                    {totalReds}
                   </span>
-                </div>
+                </p>
               </div>
             </div>
 
@@ -561,7 +570,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                   {/* Titulares */}
                   <div className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 overflow-hidden shadow-lg shadow-black/20">
                     <div className="bg-emerald-800 text-white px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center justify-between">
-                      <span>⭐ Titulares ({starters.length})</span>
+                      <span>Titulares ({starters.length})</span>
                       <span className="text-[10px] bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-700">{(tacticalFormation || '4-3-3').replace(/^1-/, '')}</span>
                     </div>
                     {starters.length === 0 ? (
@@ -571,24 +580,24 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         {starters.map(p => {
                           const displayName = p.shirt_name || p.name
                           return (
-                          <div key={p.player_id} className="p-3 sm:px-4 flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                          <div key={p.player_id} className="px-3 py-2.5 flex items-center justify-between gap-2 bg-white/5 border border-white/10 rounded-xl">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-8 h-8 rounded-full bg-csc-dark text-csc-gold border border-csc-gold/40 text-sm font-black flex items-center justify-center shrink-0 shadow-xs">
                                 {p.jersey_number || '—'}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-xs sm:text-sm font-black text-gray-900 truncate flex items-center gap-1.5">
+                                <p className="text-xs sm:text-sm font-black text-white truncate flex items-center gap-1.5">
                                   <span>{displayName}</span>
                                   {p.is_mvp && (
-                                    <span className="text-[10px] font-black bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded border border-amber-300 flex items-center gap-0.5">
-                                      <Award size={10} className="text-amber-600" /> MVP
+                                    <span className="text-[10px] font-black bg-csc-gold/15 text-csc-gold px-1.5 py-0.5 rounded border border-csc-gold/35 flex items-center gap-0.5">
+                                      <Award size={10} className="text-csc-gold" /> MVP
                                     </span>
                                   )}
                                 </p>
                                 {p.position && (
                                   <div className="flex items-center gap-1 flex-wrap mt-0.5">
                                     {p.position.split(',').map((pos: string, idx: number) => (
-                                      <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{pos.trim()}</span>
+                                      <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-csc-blue/20 text-csc-azul-texto">{pos.trim()}</span>
                                     ))}
                                   </div>
                                 )}
@@ -598,23 +607,23 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                             {/* Estatísticas do Atleta */}
                             <div className="flex items-center gap-2 shrink-0 text-xs font-black">
                               {p.goals > 0 && (
-                                <span className="px-2 py-0.5 bg-amber-100 text-amber-950 rounded-lg border border-amber-300 flex items-center gap-1">
-                                  ⚽ {p.goals} {p.goals > 1 ? 'golos' : 'golo'}
+                                <span className="px-2 py-0.5 bg-csc-gold/15 text-csc-gold rounded-lg border border-csc-gold/35 flex items-center gap-1">
+                                  {p.goals} {p.goals > 1 ? 'golos' : 'golo'}
                                 </span>
                               )}
                               {p.assists > 0 && (
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-900 rounded-lg border border-blue-200 flex items-center gap-1">
-                                  <Footprints size={12} className="text-blue-600" /> {p.assists} ass
+                                <span className="px-2 py-0.5 bg-csc-blue/12 text-csc-azul-texto rounded-lg border border-csc-blue/30 flex items-center gap-1">
+                                  <Footprints size={12} className="text-csc-azul-texto" /> {p.assists} ass
                                 </span>
                               )}
                               {p.yellow_cards > 0 && (
-                                <span className="px-2 py-0.5 bg-yellow-100 text-yellow-900 rounded-lg border border-yellow-300 flex items-center gap-1">
-                                  🟨 {p.yellow_cards === 2 ? '🟨' : ''}
+                                <span className="px-2 py-0.5 bg-csc-gold/15 text-csc-gold rounded-lg border border-csc-gold/35 flex items-center gap-1">
+                                  <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-gold" aria-hidden="true" /><span className="sr-only">Cartões amarelos:</span>{p.yellow_cards}
                                 </span>
                               )}
                               {p.red_cards > 0 && (
-                                <span className="px-2 py-0.5 bg-red-100 text-red-900 rounded-lg border border-red-300 flex items-center gap-1">
-                                  🟥
+                                <span className="px-2 py-0.5 bg-csc-red/15 text-csc-vermelho-texto rounded-lg border border-csc-red/35 flex items-center gap-1">
+                                  <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-red" aria-hidden="true" /><span className="sr-only">Cartão vermelho</span>
                                 </span>
                               )}
                             </div>
@@ -628,25 +637,25 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                   {subs.length > 0 && (
                     <div className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 overflow-hidden shadow-lg shadow-black/20">
                       <div className="bg-blue-900 text-white px-4 py-2 text-xs font-black uppercase tracking-wider">
-                        <span>🔄 Suplentes Utilizados ({subs.length})</span>
+                        <span>Suplentes utilizados ({subs.length})</span>
                       </div>
                       <div className="p-2.5 space-y-2">
                         {subs.map(p => {
                           const displayName = p.shirt_name || p.name
                           return (
-                          <div key={p.player_id} className="p-3 sm:px-4 flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                          <div key={p.player_id} className="px-3 py-2.5 flex items-center justify-between gap-2 bg-white/5 border border-white/10 rounded-xl">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="w-8 h-8 rounded-full bg-csc-dark text-csc-gold border border-csc-gold/40 text-sm font-black flex items-center justify-center shrink-0 shadow-xs">
                                 {p.jersey_number || '—'}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-xs sm:text-sm font-black text-gray-900 truncate">
+                                <p className="text-xs sm:text-sm font-black text-white truncate">
                                   {displayName}
                                 </p>
                                 {p.position && (
                                   <div className="flex items-center gap-1 flex-wrap mt-0.5">
                                     {p.position.split(',').map((pos: string, idx: number) => (
-                                      <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{pos.trim()}</span>
+                                      <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-csc-blue/20 text-csc-azul-texto">{pos.trim()}</span>
                                     ))}
                                   </div>
                                 )}
@@ -655,23 +664,23 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
                             <div className="flex items-center gap-2 shrink-0 text-xs font-black">
                               {p.goals > 0 && (
-                                <span className="px-2 py-0.5 bg-amber-100 text-amber-950 rounded-lg border border-amber-300 flex items-center gap-1">
-                                  ⚽ {p.goals}
+                                <span className="px-2 py-0.5 bg-csc-gold/15 text-csc-gold rounded-lg border border-csc-gold/35 flex items-center gap-1">
+                                  {p.goals}
                                 </span>
                               )}
                               {p.assists > 0 && (
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-900 rounded-lg border border-blue-200 flex items-center gap-1">
-                                  <Footprints size={12} className="text-blue-600" /> {p.assists} ass
+                                <span className="px-2 py-0.5 bg-csc-blue/12 text-csc-azul-texto rounded-lg border border-csc-blue/30 flex items-center gap-1">
+                                  <Footprints size={12} className="text-csc-azul-texto" /> {p.assists} ass
                                 </span>
                               )}
                               {p.yellow_cards > 0 && (
-                                <span className="px-2 py-0.5 bg-yellow-100 text-yellow-900 rounded-lg border border-yellow-300 flex items-center gap-1">
-                                  🟨
+                                <span className="px-2 py-0.5 bg-csc-gold/15 text-csc-gold rounded-lg border border-csc-gold/35 flex items-center gap-1">
+                                  <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-gold" aria-hidden="true" /><span className="sr-only">Cartões amarelos:</span>{p.yellow_cards}
                                 </span>
                               )}
                               {p.red_cards > 0 && (
-                                <span className="px-2 py-0.5 bg-red-100 text-red-900 rounded-lg border border-red-300 flex items-center gap-1">
-                                  🟥
+                                <span className="px-2 py-0.5 bg-csc-red/15 text-csc-vermelho-texto rounded-lg border border-csc-red/35 flex items-center gap-1">
+                                  <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-red" aria-hidden="true" /><span className="sr-only">Cartão vermelho</span>
                                 </span>
                               )}
                             </div>
@@ -686,21 +695,21 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
             {/* 4. OCORRÊNCIAS & NOTAS TÉCNICAS (ÁREA PRIVADA: APENAS COACH / ADMIN) */}
             {isCoachOrAdmin && (
-              <div className="p-4 sm:p-5 bg-amber-500/10 border-2 border-amber-400/40 rounded-3xl space-y-2.5 shadow-lg shadow-black/20">
+              <div className="p-4 sm:p-5 bg-csc-gold/10 border border-csc-gold/35 rounded-3xl space-y-2.5 shadow-lg shadow-black/20">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-amber-200 font-black text-xs uppercase tracking-wider">
-                    <Lock size={15} className="text-amber-400" />
+                  <div className="flex items-center gap-2 text-csc-gold font-black text-xs uppercase tracking-wider">
+                    <Lock size={15} className="text-csc-gold" />
                     <span>Ocorrências & Notas da Equipa Técnica</span>
                   </div>
-                  <span className="text-[10px] font-extrabold text-amber-200 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-400/30">
-                    🔒 Confidencial / Privado
+                  <span className="text-[10px] font-extrabold text-csc-gold bg-csc-gold/18 px-2 py-0.5 rounded-full border border-csc-gold/30">
+                    Confidencial
                   </span>
                 </div>
-                <p className="text-[11px] text-amber-200/70 font-medium">
+                <p className="text-[11px] text-white/60 font-medium">
                   Registo interno de lesões, comportamento, observações táticas ou incidências do jogo. <strong>Os jogadores não têm acesso a estas notas.</strong>
                 </p>
 
-                <div className="p-3 bg-white/5 rounded-2xl border border-amber-400/20 text-xs font-semibold text-white/80">
+                <div className="p-3 bg-white/5 rounded-2xl border border-csc-gold/22 text-xs font-semibold text-white/80">
                   {occurrences ? (
                     <p className="whitespace-pre-wrap">{occurrences}</p>
                   ) : (
@@ -722,10 +731,9 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     <Modal
       isOpen={isEditModalOpen && !loading && !isFutureMatch}
       onClose={() => setIsEditModalOpen(false)}
-      tone="dark"
       size="3xl"
       stacked
-      title="Editar Ficha de Jogo"
+      title="Editar ficha de jogo"
       description={`${leftSigla} vs ${rightSigla}`}
       icon={<Pencil size={20} className="text-csc-gold" />}
       closeOnOverlayClick={false}
@@ -745,7 +753,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             className="px-5 py-2.5 text-xs font-black text-csc-dark bg-csc-gold hover:brightness-95 rounded-xl cursor-pointer shadow-md flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
           >
             <Save size={16} className="text-csc-dark" />
-            <span>{saving ? 'A guardar...' : 'Guardar Ficha de Jogo'}</span>
+            <span>{saving ? 'A guardar…' : 'Guardar ficha de jogo'}</span>
           </button>
         </>
       }
@@ -761,7 +769,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               value={homeScore ?? ''}
               onChange={e => setHomeScore(e.target.value === '' ? null : parseInt(e.target.value, 10))}
               placeholder="0"
-              className="w-full text-center py-2.5 bg-white text-csc-dark text-xl font-black rounded-xl border-2 border-csc-gold outline-none shadow-inner"
+              className="w-full h-[52px] text-center bg-white text-csc-tinta font-display text-[22px] font-black rounded-[14px] border-2 border-csc-gold outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
             />
           </div>
           <div>
@@ -772,7 +780,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               value={awayScore ?? ''}
               onChange={e => setAwayScore(e.target.value === '' ? null : parseInt(e.target.value, 10))}
               placeholder="0"
-              className="w-full text-center py-2.5 bg-white text-csc-dark text-xl font-black rounded-xl border-2 border-csc-gold outline-none shadow-inner"
+              className="w-full h-[52px] text-center bg-white text-csc-tinta font-display text-[22px] font-black rounded-[14px] border-2 border-csc-gold outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
             />
           </div>
         </div>
@@ -783,7 +791,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           <select
             value={tacticalFormation}
             onChange={e => setTacticalFormation(e.target.value)}
-            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-black text-gray-900 outline-none focus:ring-2 focus:ring-csc-dark"
+            className="w-full h-[46px] px-3.5 bg-white text-csc-tinta rounded-[14px] font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
           >
             {TACTICAL_FORMATIONS.map(f => (
               <option key={f} value={f}>{f}</option>
@@ -802,148 +810,146 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               {playerStats.map(p => {
                 const displayName = p.shirt_name || p.name
                 return (
-                <div key={p.player_id} className="p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                <div key={p.player_id} className="p-3 flex flex-col gap-2.5 bg-white/5 border border-white/10 rounded-2xl">
 
-                  {/* Identificação e Seletor de Titularidade */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="w-8 h-8 rounded-full bg-csc-dark text-csc-gold font-black text-sm flex items-center justify-center shrink-0 shadow-xs border border-csc-gold/40">
-                      {p.jersey_number || '—'}
+                  {/* Quem é, e se foi MVP. */}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-8 h-8 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 text-csc-gold font-display font-extrabold text-[11px] flex items-center justify-center shrink-0">
+                      {p.jersey_number || '–'}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-gray-900 truncate">{displayName}</p>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-display font-black text-[13px] text-white truncate">{displayName}</span>
                       {p.position && (
-                        <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                          {p.position.split(',').map((pos: string, idx: number) => (
-                            <span key={idx} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{pos.trim()}</span>
-                          ))}
-                        </div>
+                        <span className="block text-[9.5px] text-white/40 truncate mt-0.5">
+                          {p.position.split(',').map((pos: string) => pos.trim()).filter(Boolean).join(' · ')}
+                        </span>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Controlos de Estado, Golos e Cartões */}
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-                    {/* Seletor de Estado */}
-                    <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 text-[11px] font-black">
-                      <button
-                        type="button"
-                        onClick={() => handleSetStarter(p.player_id)}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                          p.lineup_status === 'starter' ? 'bg-emerald-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
-                        }`}
-                      >
-                        Titular
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleStatChange(p.player_id, 'lineup_status', 'sub')}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                          p.lineup_status === 'sub' ? 'bg-blue-600 text-white shadow-xs' : 'text-gray-500 hover:text-gray-900'
-                        }`}
-                      >
-                        Suplente
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleStatChange(p.player_id, 'lineup_status', 'none')}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                          p.lineup_status === 'none' ? 'bg-gray-300 text-gray-900' : 'text-gray-500 hover:text-gray-700'
-                        }`}
-                      >
-                        Não Jogou
-                      </button>
-                    </div>
-
-                    {/* Contador de Golos (⚽) */}
-                    <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-xl px-2 py-1">
-                      <span className="text-xs font-bold text-amber-900">⚽</span>
-                      <button
-                        type="button"
-                        onClick={() => handleStatChange(p.player_id, 'goals', Math.max(0, p.goals - 1))}
-                        className="w-5 h-5 rounded-lg bg-amber-200 text-amber-900 text-xs font-black flex items-center justify-center hover:bg-amber-300 cursor-pointer"
-                      >
-                        -
-                      </button>
-                      <span className="text-xs font-black text-amber-950 w-4 text-center">{p.goals}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleStatChange(p.player_id, 'goals', p.goals + 1)
-                          if (p.lineup_status === 'none') handlePromoteIfNone(p.player_id)
-                        }}
-                        className="w-5 h-5 rounded-lg bg-amber-200 text-amber-900 text-xs font-black flex items-center justify-center hover:bg-amber-300 cursor-pointer"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    {/* Contador de Assistências (👟) */}
-                    <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-xl px-2 py-1">
-                      <Footprints size={13} className="text-blue-600 shrink-0" />
-                      <button
-                        type="button"
-                        onClick={() => handleStatChange(p.player_id, 'assists', Math.max(0, p.assists - 1))}
-                        className="w-5 h-5 rounded-lg bg-blue-200 text-blue-900 text-xs font-black flex items-center justify-center hover:bg-blue-300 cursor-pointer"
-                      >
-                        -
-                      </button>
-                      <span className="text-xs font-black text-blue-950 w-4 text-center">{p.assists}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleStatChange(p.player_id, 'assists', p.assists + 1)
-                          if (p.lineup_status === 'none') handlePromoteIfNone(p.player_id)
-                        }}
-                        className="w-5 h-5 rounded-lg bg-blue-200 text-blue-900 text-xs font-black flex items-center justify-center hover:bg-blue-300 cursor-pointer"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    {/* Cartões Amarelos (🟨) */}
-                    <button
-                      type="button"
-                      onClick={() => handleStatChange(p.player_id, 'yellow_cards', (p.yellow_cards + 1) % 3)}
-                      className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
-                        p.yellow_cards === 1
-                          ? 'bg-yellow-200 border-yellow-400 text-yellow-950 ring-1 ring-yellow-400'
-                          : p.yellow_cards === 2
-                          ? 'bg-yellow-300 border-yellow-500 text-yellow-950 font-extrabold ring-2 ring-yellow-500'
-                          : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
-                      }`}
-                      title="Alternar Cartões Amarelos (0 -> 1 -> 2)"
-                    >
-                      🟨 {p.yellow_cards > 0 ? (p.yellow_cards === 2 ? 'x2' : 'x1') : '0'}
-                    </button>
-
-                    {/* Cartão Vermelho (🟥) */}
-                    <button
-                      type="button"
-                      onClick={() => handleStatChange(p.player_id, 'red_cards', p.red_cards === 1 ? 0 : 1)}
-                      className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
-                        p.red_cards === 1
-                          ? 'bg-red-500 text-white border-red-600 ring-2 ring-red-400'
-                          : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
-                      }`}
-                      title="Alternar Cartão Vermelho Direto"
-                    >
-                      🟥 {p.red_cards === 1 ? '✓' : '0'}
-                    </button>
-
-                    {/* MVP: pílula com texto, como os cartões ao lado — mais claro do que um ícone sozinho */}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleToggleMvp(p.player_id)}
-                      className={`px-2 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
-                        p.is_mvp
-                          ? 'bg-amber-400 text-csc-dark border-amber-500 ring-2 ring-amber-300'
-                          : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700'
-                      }`}
-                      title="Melhor em Campo (MVP)"
+                      aria-pressed={p.is_mvp}
+                      title="Melhor em campo"
+                      className={`min-h-11 px-3 rounded-[18px] border font-display font-black text-[10.5px] shrink-0 cursor-pointer
+                        transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                          p.is_mvp
+                            ? 'bg-csc-gold text-csc-tinta border-csc-gold'
+                            : 'bg-white/6 border-white/12 text-white/50'
+                        }`}
                     >
                       MVP
                     </button>
+                  </div>
 
+                  {/* Titular, suplente ou não jogou — os três lados da mesma escolha. */}
+                  <div className="grid grid-cols-3 gap-1 bg-white/6 p-1 rounded-2xl border border-white/10">
+                    {([
+                      ['starter', 'Titular'],
+                      ['sub', 'Suplente'],
+                      ['none', 'Não jogou'],
+                    ] as const).map(([valor, etiqueta]) => (
+                      <button
+                        key={valor}
+                        type="button"
+                        onClick={() => valor === 'starter'
+                          ? handleSetStarter(p.player_id)
+                          : handleStatChange(p.player_id, 'lineup_status', valor)}
+                        aria-pressed={p.lineup_status === valor}
+                        className={`min-h-11 rounded-[14px] font-display font-black text-[11px] cursor-pointer
+                          transition-transform duration-150 active:scale-97
+                          focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
+                            p.lineup_status === valor
+                              ? 'bg-csc-gold text-csc-tinta'
+                              : 'text-white/55'
+                          }`}
+                      >
+                        {etiqueta}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Golos e assistências, ao passo de um. */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      ['goals', 'Golos', p.goals, 'text-csc-gold'],
+                      ['assists', 'Ass.', p.assists, 'text-csc-azul-texto'],
+                    ] as const).map(([campo, etiqueta, valor, cor]) => (
+                      /* A etiqueta vai por cima e não ao lado: com ela na
+                         mesma linha, os dois botões de 36px e o número não
+                         cabiam em meia coluna e o "+" saía da caixa. */
+                      <div key={campo} className="bg-white/6 border border-white/10 rounded-2xl px-2 py-1.5">
+                        <span className={`block text-center font-display font-black text-[8.5px] tracking-[0.12em] uppercase ${cor}`}>
+                          {etiqueta}
+                        </span>
+                        <span className="flex items-center justify-between gap-1 mt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleStatChange(p.player_id, campo, Math.max(0, valor - 1))}
+                          aria-label={`Menos um em ${etiqueta.toLowerCase()} de ${displayName}`}
+                          disabled={valor === 0}
+                          className="w-9 h-9 rounded-xl bg-white/8 text-white font-display font-black flex items-center justify-center shrink-0 cursor-pointer
+                            transition-transform duration-150 active:scale-97 disabled:opacity-30 disabled:cursor-not-allowed
+                            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                        >
+                          −
+                        </button>
+                        <span className={`flex-1 text-center font-display font-black text-[15px] tabular-nums ${cor}`}>
+                          {valor}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleStatChange(p.player_id, campo, valor + 1)
+                            if (p.lineup_status === 'none') handlePromoteIfNone(p.player_id)
+                          }}
+                          aria-label={`Mais um em ${etiqueta.toLowerCase()} de ${displayName}`}
+                          className="w-9 h-9 rounded-xl bg-white/8 text-white font-display font-black flex items-center justify-center shrink-0 cursor-pointer
+                            transition-transform duration-150 active:scale-97
+                            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                        >
+                          +
+                        </button>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Os dois cartões. O amarelo dá a volta 0 → 1 → 2 → 0. */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleStatChange(p.player_id, 'yellow_cards', (p.yellow_cards + 1) % 3)}
+                      aria-label={`Cartões amarelos de ${displayName}: ${p.yellow_cards}`}
+                      title="Alternar cartões amarelos (0 → 1 → 2)"
+                      className={`min-h-11 rounded-2xl border font-display font-black text-[11px] flex items-center justify-center gap-1.5 cursor-pointer
+                        transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                          p.yellow_cards > 0
+                            ? 'bg-csc-gold/18 border-csc-gold/45 text-csc-gold'
+                            : 'bg-white/6 border-white/12 text-white/40'
+                        }`}
+                    >
+                      <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-gold" aria-hidden="true" />
+                      {p.yellow_cards > 0 ? `x${p.yellow_cards}` : '0'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleStatChange(p.player_id, 'red_cards', p.red_cards === 1 ? 0 : 1)}
+                      aria-label={`Cartão vermelho de ${displayName}: ${p.red_cards === 1 ? 'sim' : 'não'}`}
+                      title="Alternar cartão vermelho direto"
+                      className={`min-h-11 rounded-2xl border font-display font-black text-[11px] flex items-center justify-center gap-1.5 cursor-pointer
+                        transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                          p.red_cards === 1
+                            ? 'bg-csc-red/20 border-csc-red/45 text-csc-vermelho-texto'
+                            : 'bg-white/6 border-white/12 text-white/40'
+                        }`}
+                    >
+                      <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-red" aria-hidden="true" />
+                      {p.red_cards === 1 ? 'x1' : '0'}
+                    </button>
                   </div>
 
                 </div>
@@ -956,8 +962,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         {/* Ocorrências & Notas Técnicas (privado) */}
         {isCoachOrAdmin && (
           <div>
-            <div className="flex items-center gap-2 text-amber-200 font-black text-xs uppercase tracking-wider mb-1">
-              <Lock size={14} className="text-amber-400" />
+            <div className="flex items-center gap-2 text-csc-gold font-black text-xs uppercase tracking-wider mb-1">
+              <Lock size={14} className="text-csc-gold" />
               <span>Ocorrências & Notas da Equipa Técnica (Confidencial)</span>
             </div>
             <textarea
@@ -965,7 +971,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               value={occurrences}
               onChange={e => setOccurrences(e.target.value)}
               placeholder="Ex: O atleta #7 saiu lesionado aos 35 min (entorse tornozelo). Bom comportamento coletivo na segunda parte..."
-              className="w-full p-3 bg-white/5 border border-amber-400/30 rounded-2xl text-xs font-semibold text-white outline-none focus:ring-2 focus:ring-amber-400 shadow-inner"
+              className="w-full p-3 bg-white/5 border border-csc-gold/30 rounded-2xl text-xs font-semibold text-white outline-none focus:ring-2 focus-visible:ring-csc-gold shadow-inner"
             />
           </div>
         )}

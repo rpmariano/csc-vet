@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { Trophy, Trash2, Shield, Plus, Users } from 'lucide-react'
+import { Trophy, Trash2, Shield, Plus, Users, X } from 'lucide-react'
 import { toast } from '../context/ToastContext'
 import { ConfirmModal } from './ConfirmModal'
 import { Modal } from './Modal'
@@ -130,10 +130,10 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        <div className="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between bg-gradient-to-r from-gray-50 to-white gap-4">
+      <div className="bg-csc-fundo border border-white/12 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="p-4 sm:p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-csc-dark/10 text-csc-dark flex items-center justify-center overflow-hidden shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center overflow-hidden shrink-0">
               {tournament?.image_url ? (
                 <img src={tournament.image_url} alt="" className="w-full h-full object-contain" />
               ) : (
@@ -141,52 +141,53 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
               )}
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-black text-gray-900 leading-tight">
+              <h2 className="text-lg sm:text-xl font-black text-white leading-tight">
                 Grupos e Equipas
               </h2>
-              <p className="text-sm font-bold text-gray-500">{tournament?.name} {tournament?.season}</p>
+              <p className="text-sm font-bold text-white/50">{tournament?.name} {tournament?.season}</p>
               {tournament?.organizer_name && (
-                <p className="text-xs font-semibold text-gray-400">Organização: {tournament.organizer_name}</p>
+                <p className="text-xs font-semibold text-white/40">Organização: {tournament.organizer_name}</p>
               )}
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors shrink-0 self-end sm:self-auto"
+            aria-label="Fechar"
+            className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
-            ✕
+            <X size={17} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {loading ? (
-            <div className="text-center py-10 text-gray-500 font-bold">A carregar...</div>
+            <div className="text-center py-10 text-white/50 font-bold">A carregar...</div>
           ) : (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-black text-gray-800 flex items-center gap-2">
-                  <Users size={18} className="text-blue-500" />
+                <h3 className="text-lg font-black text-white flex items-center gap-2">
+                  <Users size={18} className="text-csc-gold" />
                   Grupos e Equipas
                 </h3>
-                <button onClick={() => setIsNewGroupModalOpen(true)} className="text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg font-bold hover:bg-blue-200 transition-colors cursor-pointer">
+                <button onClick={() => setIsNewGroupModalOpen(true)} className="text-xs px-3 py-1.5 bg-csc-blue/20 text-csc-azul-texto rounded-lg font-bold hover:bg-csc-blue/30 transition-colors cursor-pointer">
                   + Novo Grupo
                 </button>
               </div>
 
-              <p className="text-xs text-gray-500 -mt-2">
+              <p className="text-xs text-white/50 -mt-2">
                 As jornadas (jogos, datas e resultados) gerem-se na página de Classificações, depois de criares aqui os grupos e as equipas.
               </p>
 
               {/* Add Team UI */}
               {groups.length > 0 && (
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-3 items-end">
+                <div className="cartao-simples p-4 flex flex-wrap gap-3 items-end">
                   <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Grupo</label>
+                    <label className="block text-xs font-bold text-white/60 mb-1">Grupo</label>
                     <select
                       value={selectedGroupForTeam}
                       onChange={e => setSelectedGroupForTeam(e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 bg-white/6 border border-white/12 rounded-lg text-sm"
                     >
                       <option value="">Selecione o Grupo</option>
                       {groups.map(g => (
@@ -195,14 +196,14 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                     </select>
                   </div>
                   <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs font-bold text-gray-600 mb-1">Equipa</label>
+                    <label className="block text-xs font-bold text-white/60 mb-1">Equipa</label>
                     <select
                       value={selectedOpponentToAdd}
                       onChange={e => setSelectedOpponentToAdd(e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 bg-white/6 border border-white/12 rounded-lg text-sm"
                     >
                       <option value="">Selecione a Equipa</option>
-                      <option value="csc">🛡️ {CLUBE_SIGLA} (Nós)</option>
+                      <option value="csc">{CLUBE_SIGLA} (nós)</option>
                       {opponents.map(o => (
                         <option key={o.id} value={o.id}>{o.name}</option>
                       ))}
@@ -219,37 +220,37 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
               )}
 
               {groups.length === 0 ? (
-                <div className="text-center py-6 bg-white rounded-xl border border-dashed border-gray-300 text-gray-500 text-sm">
+                <div className="text-center py-6 bg-white/4 rounded-xl border border-dashed border-white/15 text-white/50 text-sm">
                   Nenhum grupo configurado. Cria o "Grupo Único" ou "Grupo A", "Grupo B".
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {groups.map(g => (
-                    <div key={g.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                      <h4 className="font-black text-gray-900 mb-3">{g.name} <span className="text-xs text-gray-400 font-medium">(Fase {g.phase})</span></h4>
+                    <div key={g.id} className="cartao-simples p-4">
+                      <h4 className="font-black text-white mb-3">{g.name} <span className="text-xs text-white/40 font-medium">(Fase {g.phase})</span></h4>
                       <div className="space-y-2">
                         {teams.filter(t => t.group_id === g.id).map(t => (
-                          <div key={t.id} className="text-sm font-medium text-gray-700 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 flex justify-between items-center">
+                          <div key={t.id} className="text-sm font-medium text-white/80 bg-white/6 px-3 py-2 rounded-lg border border-white/10 flex justify-between items-center">
                             <span className="flex items-center gap-2">
                               {t.opponent_id ? (
                                 <>
-                                  {t.opponent?.logo_url ? <img src={t.opponent.logo_url} alt="" className="w-5 h-5 rounded-full object-cover" /> : <Shield size={16} className="text-gray-400" />}
+                                  {t.opponent?.logo_url ? <img src={t.opponent.logo_url} alt="" className="w-5 h-5 rounded-full object-cover" /> : <Shield size={16} className="text-white/40" />}
                                   {t.opponent?.name}
                                 </>
                               ) : (
                                 <>
                                   <img src="/csc-vet/cascais-emblem.png" alt="" className="w-5 h-5 object-contain" />
-                                  <span className="font-bold text-blue-800">{CLUBE_SIGLA}</span>
+                                  <span className="font-bold text-csc-azul-texto">{CLUBE_SIGLA}</span>
                                 </>
                               )}
                             </span>
-                            <button onClick={() => handleRemoveTeam(t.id)} className="text-red-500 hover:bg-red-50 p-1 rounded cursor-pointer">
+                            <button onClick={() => handleRemoveTeam(t.id)} className="text-red-500 hover:bg-csc-red/10 p-1 rounded cursor-pointer">
                               <Trash2 size={14} />
                             </button>
                           </div>
                         ))}
                         {teams.filter(t => t.group_id === g.id).length === 0 && (
-                          <div className="text-xs text-gray-400 italic">Sem equipas neste grupo.</div>
+                          <div className="text-xs text-white/40 italic">Sem equipas neste grupo.</div>
                         )}
                       </div>
                     </div>
@@ -275,7 +276,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
             <button
               type="button"
               onClick={() => setIsNewGroupModalOpen(false)}
-              className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer"
+              className="px-4 py-2 text-sm font-bold text-white/60 bg-white/10 rounded-xl hover:bg-white/15 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -292,24 +293,24 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="novo-grupo-nome">Nome do Grupo *</label>
+            <label className="block text-xs font-bold text-white/60 mb-1" htmlFor="novo-grupo-nome">Nome do Grupo *</label>
             <input
               id="novo-grupo-nome"
               type="text"
               value={newGroupName}
               onChange={e => setNewGroupName(e.target.value)}
               placeholder="Ex: Grupo A, Apuramento Campeão"
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+              className="w-full h-[46px] px-3.5 bg-white text-csc-tinta border-0 rounded-[14px] font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
               autoFocus
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="novo-grupo-fase">Fase</label>
+            <label className="block text-xs font-bold text-white/60 mb-1" htmlFor="novo-grupo-fase">Fase</label>
             <select
               id="novo-grupo-fase"
               value={newGroupPhase}
               onChange={e => setNewGroupPhase(e.target.value)}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-csc-dark outline-none"
+              className="w-full h-[46px] px-3.5 bg-white text-csc-tinta border-0 rounded-[14px] font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
             >
               <option value="1">Fase 1 (Fase Inicial)</option>
               <option value="2">Fase 2 (Fase Final)</option>

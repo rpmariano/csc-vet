@@ -123,9 +123,11 @@ test.describe('Dossier de convocatória', () => {
 test.describe('Ficha de jogo', () => {
   test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'competicao?ver=fichas', { events: [jogo] })
-    await page.locator('div.cursor-pointer').first().click()
+    // Pelo papel e pelo nome, não pela classe: o cartão já se partiu duas vezes
+    // por o seletor estar preso ao aspeto (ver a convenção no CLAUDE.md).
+    await page.getByRole('button', { name: /ficha do jogo com/ }).click()
 
-    await verificaDetalhe(page, /^Ficha de jogo: /, 'Ficha Oficial de Jogo', /ver=fichas&jogo=j1$/)
+    await verificaDetalhe(page, /^Ficha de jogo: /, 'Ficha oficial de jogo', /ver=fichas&jogo=j1$/)
 
     await page.goBack()
     await expect(page).toHaveURL(/ver=fichas$/)

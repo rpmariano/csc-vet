@@ -1,6 +1,70 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { Award, Sparkles, Footprints, Flame, Filter, Users } from 'lucide-react'
+import { Award, Footprints, Flame, Users } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { Pastilha } from '../components/ui'
+import { triggerHaptic } from '../utils/haptics'
+
+/** Campo, etiqueta e sobrancelha de mosaico — o desenho do resto da app. */
+const CAMPO =
+  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold'
+
+const ETIQUETA =
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+
+const ETIQUETA_MOSAICO =
+  'font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/50 leading-tight'
+
+interface LinhaPodio {
+  id: string
+  nome: string
+  valor: string
+}
+
+/**
+ * Um pódio das estatísticas (ecrã 1d): título, e até três nomes numerados com
+ * o número em destaque no primeiro.
+ *
+ * Eram três blocos escritos três vezes, cada um com a sua paleta e a sua
+ * pequena diferença — o dos MVP usava o dourado do primeiro lugar dos golos e
+ * o índigo para o resto, cor que não existe no manual do clube. Aqui é um só,
+ * com a cor à entrada.
+ */
+const Podio: React.FC<{
+  titulo: string
+  icone: React.ReactNode
+  cor: string
+  corDestaque: string
+  vazio: string
+  linhas: LinhaPodio[]
+}> = ({ titulo, icone, cor, corDestaque, vazio, linhas }) => (
+  <div className="cartao-simples p-4 space-y-3">
+    <h4 className={`flex items-center gap-2 font-display font-extrabold text-[9.5px] tracking-[0.14em] uppercase ${cor}`}>
+      {icone}
+      {titulo}
+    </h4>
+
+    {linhas.length === 0 ? (
+      <p className="text-[11px] text-white/45 italic">{vazio}</p>
+    ) : (
+      <ol className="space-y-2">
+        {linhas.map((l, idx) => (
+          <li key={l.id} className="flex items-center gap-2.5 min-w-0">
+            <span
+              className={`w-6 h-6 rounded-full flex items-center justify-center font-display font-black text-[10.5px] shrink-0 ${
+                idx === 0 ? corDestaque : 'bg-white/10 text-white/60'
+              }`}
+            >
+              {idx + 1}
+            </span>
+            <span className="flex-1 font-display font-bold text-[12.5px] text-white truncate">{l.nome}</span>
+            <span className={`font-display font-black text-[11px] shrink-0 tabular-nums ${cor}`}>{l.valor}</span>
+          </li>
+        ))}
+      </ol>
+    )}
+  </div>
+)
 
 interface Tournament {
   id: string
@@ -186,20 +250,20 @@ const StatsPage: React.FC = () => {
   }, [filteredRawStats])
 
   const activeFilterLabel = useMemo(() => {
-    if (filterType === 'global_official') return '🏆 Competições Oficiais (Global)'
-    if (filterType === 'friendly') return '⚽ Jogos Amigáveis'
+    if (filterType === 'global_official') return 'Competições oficiais'
+    if (filterType === 'friendly') return 'Jogos amigáveis'
     if (filterType === 'tournament') {
       const t = tournaments.find(t => t.id === selectedTournamentId)
-      return t ? `🏅 Torneio: ${t.name}` : '🏅 Torneio Específico'
+      return t ? t.name : 'Torneio específico'
     }
-    return '🌐 Todos os Jogos'
+    return 'Todos os jogos'
   }, [filterType, selectedTournamentId, tournaments])
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh]">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark mb-3"></div>
-        <p className="text-xs font-bold text-gray-500">A carregar estatísticas desportivas...</p>
+        <p className="text-xs font-bold text-white/50">A carregar estatísticas desportivas...</p>
       </div>
     )
   }
@@ -207,179 +271,132 @@ const StatsPage: React.FC = () => {
   return (
     <div className="space-y-4 pb-12">
 
-      {/* 2. Barra de Filtros Redesenhada */}
-      <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-200 space-y-3">
-        {/* Linha 1: Pílulas de contexto */}
-        <div className="flex flex-wrap gap-2">
-          {[
-            { id: 'all', label: 'Todos os Jogos', emoji: '🌐' },
-            { id: 'global_official', label: 'Competições Oficiais', emoji: '🏆' },
-            { id: 'tournament', label: 'Por Torneio', emoji: '🏅' },
-            { id: 'friendly', label: 'Amigáveis', emoji: '⚽' },
-          ].map(opt => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setFilterType(opt.id as StatsFilterType)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-                filterType === opt.id
-                  ? 'bg-csc-dark text-white shadow-sm ring-2 ring-csc-gold/40'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
-              }`}
-            >
-              <span>{opt.emoji}</span>
-              <span>{opt.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Linha 2: Dropdown de torneio (só aparece quando "Por Torneio" está ativo) */}
-        {filterType === 'tournament' && (
-          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-            <Filter size={14} className="text-csc-gold shrink-0" />
-            <label className="text-xs font-bold text-gray-600 shrink-0">Selecionar torneio:</label>
-            <select
-              value={selectedTournamentId}
-              onChange={(e) => setSelectedTournamentId(e.target.value)}
-              className="flex-1 py-2 px-3 rounded-xl text-xs font-black outline-none cursor-pointer border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark focus:border-csc-dark"
-            >
-              {tournaments.length === 0 ? (
-                <option value="">Sem torneios registados</option>
-              ) : (
-                tournaments.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}{t.season ? ` (${t.season})` : ''}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
-        )}
+      {/*
+        Filtros das estatísticas (ecrã 1d): quatro pastilhas, e o torneio a
+        aparecer só quando se filtra por ele. Não há persiana aqui — ao
+        contrário das fichas, não há ano nem mês, e um `select` a mais não
+        justifica escondê-lo.
+      */}
+      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
+        {([
+          ['all', 'Todos'],
+          ['global_official', 'Oficiais'],
+          ['tournament', 'Por torneio'],
+          ['friendly', 'Amigáveis'],
+        ] as const).map(([valor, etiqueta]) => (
+          <Pastilha
+            key={valor}
+            ativa={filterType === valor}
+            onClick={() => { triggerHaptic('selection'); setFilterType(valor) }}
+            className="flex-none"
+          >
+            {etiqueta}
+          </Pastilha>
+        ))}
       </div>
 
-      {/* 3. Cards Resumo Rápidos */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-csc-dark p-4 rounded-2xl border border-white/10 shadow-2xs">
-          <p className="text-[10px] font-black uppercase text-white/70 tracking-wider">Jogos Registados</p>
-          <p className="text-xl sm:text-2xl font-black text-white mt-1 flex items-center gap-1.5">
-            <span>🏟️ {distinctMatches}</span>
+      {filterType === 'tournament' && (
+        <div>
+          <label className={ETIQUETA} htmlFor="stats-torneio">Torneio</label>
+          <select
+            id="stats-torneio"
+            value={selectedTournamentId}
+            onChange={e => setSelectedTournamentId(e.target.value)}
+            className={CAMPO}
+          >
+            {tournaments.length === 0 ? (
+              <option value="">Sem torneios registados</option>
+            ) : (
+              tournaments.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.name}{t.season ? ` (${t.season})` : ''}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+      )}
+
+      {/* Os quatro números da época, dois a dois. */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="cartao-simples p-3.5">
+          <p className={ETIQUETA_MOSAICO}>Jogos registados</p>
+          <p className="font-display font-black text-[26px] text-white mt-1 tabular-nums leading-none">
+            {distinctMatches}
           </p>
         </div>
 
-        <div className="bg-csc-dark p-4 rounded-2xl border border-white/10 shadow-2xs">
-          <p className="text-[10px] font-black uppercase text-white/70 tracking-wider">Golos Marcados</p>
-          <p className="text-xl sm:text-2xl font-black text-amber-400 mt-1 flex items-center gap-1.5">
-            <Flame size={22} className="text-amber-400" />
-            <span>{totalGoals}</span>
+        <div className="cartao-simples p-3.5">
+          <p className={ETIQUETA_MOSAICO}>Golos marcados</p>
+          <p className="font-display font-black text-[26px] text-csc-gold mt-1 tabular-nums leading-none">
+            {totalGoals}
           </p>
         </div>
 
-        <div className="bg-csc-dark p-4 rounded-2xl border border-white/10 shadow-2xs">
-          <p className="text-[10px] font-black uppercase text-white/70 tracking-wider">Assistências</p>
-          <p className="text-xl sm:text-2xl font-black text-blue-400 mt-1 flex items-center gap-1.5">
-            <Footprints size={22} className="text-blue-400" />
-            <span>{totalAssists}</span>
+        <div className="cartao-simples p-3.5">
+          <p className={ETIQUETA_MOSAICO}>Assistências</p>
+          <p className="font-display font-black text-[26px] text-csc-azul-texto mt-1 tabular-nums leading-none">
+            {totalAssists}
           </p>
         </div>
 
-        <div className="bg-csc-dark p-4 rounded-2xl border border-white/10 shadow-2xs">
-          <p className="text-[10px] font-black uppercase text-white/70 tracking-wider">Disciplina Total</p>
-          <p className="text-xl sm:text-2xl font-black text-white mt-1 flex items-center gap-2">
-            <span className="text-amber-200 text-sm sm:text-base bg-amber-500/20 px-2 py-0.5 rounded-lg border border-amber-400/30">🟨 {totalYellows}</span>
-            <span className="text-red-200 text-sm sm:text-base bg-red-500/20 px-2 py-0.5 rounded-lg border border-red-400/30">🟥 {totalReds}</span>
+        <div className="cartao-simples p-3.5">
+          <p className={ETIQUETA_MOSAICO}>Disciplina</p>
+          <p className="flex items-center gap-2 mt-1.5">
+            <span className="flex items-center gap-1.5 font-display font-black text-[19px] text-csc-gold tabular-nums leading-none">
+              <span className="w-3 h-4 rounded-[2px] bg-csc-gold" aria-hidden="true" />
+              <span className="sr-only">Cartões amarelos:</span>
+              {totalYellows}
+            </span>
+            <span className="flex items-center gap-1.5 font-display font-black text-[19px] text-csc-vermelho-texto tabular-nums leading-none">
+              <span className="w-3 h-4 rounded-[2px] bg-csc-red" aria-hidden="true" />
+              <span className="sr-only">Cartões vermelhos:</span>
+              {totalReds}
+            </span>
           </p>
         </div>
       </div>
 
-      {/* 4. Destaques Top 3 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-        {/* Melhores Marcadores */}
-        <div className="bg-csc-dark rounded-3xl shadow-sm border border-white/10 p-5 space-y-4">
-          <div className="flex items-center space-x-2 text-amber-400 font-black border-b border-white/10 pb-3">
-            <Flame size={20} className="text-amber-400" />
-            <h4 className="text-sm font-black uppercase tracking-wider">Melhores Marcadores</h4>
-          </div>
-          <div className="space-y-2.5">
-            {topScorers.length === 0 ? (
-              <p className="text-xs text-white/65 font-semibold italic py-2">Sem registo de golos neste contexto.</p>
-            ) : (
-              topScorers.map((player, idx) => (
-                <div key={player.id} className="flex justify-between items-center p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-400/40 transition-all">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                      idx === 0 ? 'bg-amber-400 text-csc-dark shadow-xs' : idx === 1 ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-200'
-                    }`}>
-                      {idx + 1}
-                    </span>
-                    <span className="text-xs sm:text-sm font-black text-white truncate">{player.name}</span>
-                  </div>
-                  <span className="text-xs font-black text-amber-100 bg-amber-500/20 border border-amber-400/30 px-2.5 py-0.5 rounded-xl shrink-0">
-                    ⚽ {player.goals} {player.goals === 1 ? 'Golo' : 'Golos'}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+      {/* Os três pódios. */}
+      <div className="space-y-3">
+        <Podio
+          titulo="Melhores marcadores"
+          icone={<Flame size={15} />}
+          cor="text-csc-gold"
+          corDestaque="bg-csc-gold text-csc-tinta"
+          vazio="Sem registo de golos neste contexto."
+          linhas={topScorers.map(p => ({
+            id: p.id,
+            nome: p.shirt_name || p.name,
+            valor: `${p.goals} ${p.goals === 1 ? 'golo' : 'golos'}`,
+          }))}
+        />
 
-        {/* Melhores Assistentes */}
-        <div className="bg-csc-dark rounded-3xl shadow-sm border border-white/10 p-5 space-y-4">
-          <div className="flex items-center space-x-2 text-blue-400 font-black border-b border-white/10 pb-3">
-            <Footprints size={20} className="text-blue-400" />
-            <h4 className="text-sm font-black uppercase tracking-wider">Líderes de Assistências</h4>
-          </div>
-          <div className="space-y-2.5">
-            {topAssists.length === 0 ? (
-              <p className="text-xs text-white/65 font-semibold italic py-2">Sem registo de assistências neste contexto.</p>
-            ) : (
-              topAssists.map((player, idx) => (
-                <div key={player.id} className="flex justify-between items-center p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:border-blue-400/40 transition-all">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                      idx === 0 ? 'bg-blue-500 text-white shadow-xs' : idx === 1 ? 'bg-blue-400/40 text-white' : 'bg-blue-500/20 text-blue-200'
-                    }`}>
-                      {idx + 1}
-                    </span>
-                    <span className="text-xs sm:text-sm font-black text-white truncate">{player.name}</span>
-                  </div>
-                  <span className="text-xs font-black text-blue-100 bg-blue-500/20 border border-blue-400/30 px-2.5 py-0.5 rounded-xl shrink-0">
-                    👟 {player.assists} Ass.
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        <Podio
+          titulo="Líderes de assistências"
+          icone={<Footprints size={15} />}
+          cor="text-csc-azul-texto"
+          corDestaque="bg-csc-blue text-white"
+          vazio="Sem registo de assistências neste contexto."
+          linhas={topAssists.map(p => ({
+            id: p.id,
+            nome: p.shirt_name || p.name,
+            valor: `${p.assists} ${p.assists === 1 ? 'assistência' : 'assistências'}`,
+          }))}
+        />
 
-        {/* Prémios MVP */}
-        <div className="bg-csc-dark rounded-3xl shadow-sm border border-white/10 p-5 space-y-4">
-          <div className="flex items-center space-x-2 text-indigo-400 font-black border-b border-white/10 pb-3">
-            <Sparkles size={20} className="text-indigo-400" />
-            <h4 className="text-sm font-black uppercase tracking-wider">Prémios MVP (Homem do Jogo)</h4>
-          </div>
-          <div className="space-y-2.5">
-            {topMvps.length === 0 ? (
-              <p className="text-xs text-white/65 font-semibold italic py-2">Sem registo de MVPs neste contexto.</p>
-            ) : (
-              topMvps.map((player, idx) => (
-                <div key={player.id} className="flex justify-between items-center p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:border-indigo-400/40 transition-all">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                      idx === 0 ? 'bg-amber-400 text-csc-dark shadow-xs' : idx === 1 ? 'bg-white/20 text-white' : 'bg-indigo-500/20 text-indigo-200'
-                    }`}>
-                      {idx + 1}
-                    </span>
-                    <span className="text-xs sm:text-sm font-black text-white truncate">{player.shirt_name || player.name}</span>
-                  </div>
-                  <span className="text-xs font-black text-indigo-100 bg-indigo-500/20 border border-indigo-400/30 px-2.5 py-0.5 rounded-xl shrink-0 flex items-center gap-1">
-                    <Award size={13} className="text-indigo-300" />
-                    <span>{player.mvp_count} MVP</span>
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        <Podio
+          titulo="MVP do jogo"
+          icone={<Award size={15} />}
+          cor="text-csc-verde-texto"
+          corDestaque="bg-csc-light text-white"
+          vazio="Sem registo de MVPs neste contexto."
+          linhas={topMvps.map(p => ({
+            id: p.id,
+            nome: p.shirt_name || p.name,
+            valor: `${p.mvp_count} MVP`,
+          }))}
+        />
       </div>
 
       {/* 5. Tabela Completa de Rendimento do Plantel */}
@@ -429,144 +446,115 @@ function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats:
     })
   }, [aggregatedStats, sortKey, sortDir])
 
-  const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col) return <span className="text-gray-300 ml-1">↕</span>
-    return <span className="text-csc-gold ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>
-  }
-
-  const thClass = (col: SortKey) =>
-    `cursor-pointer select-none transition-colors hover:text-gray-900 hover:bg-gray-100 ${
-      sortKey === col ? 'text-csc-dark bg-csc-gold/10' : 'text-gray-500'
-    }`
+  /**
+   * O cabeçalho de cada coluna ordena a tabela. Era um `onClick` no `<th>` —
+   * o rato chegava lá, o teclado não. Passa a `<button>` dentro do `<th>`,
+   * com `aria-sort` a dizer por onde está ordenada.
+   */
+  const Coluna = ({ col, children, largura }: { col: SortKey; children: React.ReactNode; largura?: string }) => (
+    <th
+      scope="col"
+      aria-sort={sortKey === col ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={`p-0 ${largura ?? ''}`}
+    >
+      <button
+        type="button"
+        onClick={() => handleSort(col)}
+        className={`w-full min-h-11 px-2 flex items-center justify-center gap-1 cursor-pointer
+          font-display font-black text-[9px] tracking-[0.1em] uppercase
+          focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
+            sortKey === col ? 'text-csc-gold' : 'text-white/45'
+          }`}
+      >
+        {children}
+        <span aria-hidden="true" className={sortKey === col ? 'text-csc-gold' : 'text-white/25'}>
+          {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </button>
+    </th>
+  )
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-4 sm:p-5 bg-csc-dark text-white border-b-4 border-csc-gold flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h3 className="text-base font-black text-white flex items-center gap-2">
-          <Users size={18} className="text-csc-gold" />
-          <span>Tabela Geral de Rendimento do Plantel ({aggregatedStats.length} Atletas)</span>
-        </h3>
-        <span className="text-xs text-white/60 font-bold">
-          Filtro ativo: <strong className="text-white">{activeFilterLabel}</strong>
-        </span>
+    <div className="cartao-simples overflow-hidden">
+      <div className="px-4 py-3 bg-csc-dark border-b-2 border-csc-gold flex items-center gap-2.5">
+        <Users size={16} className="text-csc-gold shrink-0" />
+        <div className="min-w-0">
+          <h3 className="font-display font-black text-[13.5px] text-white leading-tight">
+            Rendimento do plantel
+          </h3>
+          <p className="text-[10px] text-white/55 mt-0.5 truncate">
+            {aggregatedStats.length} {aggregatedStats.length === 1 ? 'atleta' : 'atletas'} · {activeFilterLabel}
+          </p>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs sm:text-sm">
-          <thead className="bg-gray-50 font-black uppercase text-[10px] tracking-wider border-b border-gray-200">
+      <div className="sem-barra-rolagem overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-white/5">
             <tr>
-              <th
-                className={`px-4 sm:px-6 py-3.5 ${thClass('name')}`}
-                onClick={() => handleSort('name')}
-              >
-                Jogador <SortIcon col="name" />
-              </th>
-              <th
-                className={`px-3 sm:px-4 py-3.5 text-center ${thClass('games_played')}`}
-                onClick={() => handleSort('games_played')}
-              >
-                Jogos <SortIcon col="games_played" />
-              </th>
-              <th
-                className={`px-3 sm:px-4 py-3.5 text-center ${thClass('goals')}`}
-                onClick={() => handleSort('goals')}
-              >
-                Golos ⚽ <SortIcon col="goals" />
-              </th>
-              <th
-                className={`px-3 sm:px-4 py-3.5 text-center ${thClass('assists')}`}
-                onClick={() => handleSort('assists')}
-              >
-                Ass. 👟 <SortIcon col="assists" />
-              </th>
-              <th
-                className={`px-3 sm:px-4 py-3.5 text-center ${thClass('mvp_count')}`}
-                onClick={() => handleSort('mvp_count')}
-              >
-                MVP ⭐ <SortIcon col="mvp_count" />
-              </th>
-              <th
-                className={`px-4 sm:px-6 py-3.5 text-center ${thClass('red_cards')}`}
-                onClick={() => handleSort('red_cards')}
-              >
-                Disciplina <SortIcon col="red_cards" />
-              </th>
+              <Coluna col="name" largura="text-left">Jogador</Coluna>
+              <Coluna col="games_played">J</Coluna>
+              <Coluna col="goals">G</Coluna>
+              <Coluna col="assists">A</Coluna>
+              <Coluna col="mvp_count">MVP</Coluna>
+              <Coluna col="red_cards">Disc.</Coluna>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 font-semibold">
+          <tbody>
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-400 italic text-xs">
-                  Sem registos estatísticos para o filtro selecionado ({activeFilterLabel}).
+                <td colSpan={6} className="px-4 py-8 text-center text-white/40 italic text-xs">
+                  Sem registos para {activeFilterLabel.toLowerCase()}.
                 </td>
               </tr>
             ) : (
-              sorted.map((player) => (
-                <tr key={player.id} className="hover:bg-gray-50/80 transition-colors">
-                  <td className="px-4 sm:px-6 py-3.5">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-7 h-7 rounded-full bg-csc-dark text-csc-gold text-xs font-black flex items-center justify-center shrink-0 border border-csc-gold/40 shadow-xs">
-                        {player.jersey_number || '—'}
+              sorted.map(player => (
+                <tr key={player.id} className="border-t border-white/7">
+                  <td className="pl-3.5 pr-2 py-2.5">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="w-6 h-6 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 text-csc-gold font-display font-extrabold text-[10px] flex items-center justify-center shrink-0">
+                        {player.jersey_number || '–'}
                       </span>
-                      <div className="min-w-0">
-                        <p className="font-black text-gray-900 truncate">
-                          {player.shirt_name || player.name}
-                        </p>
-                        {player.shirt_name && (
-                          <p className="text-[10px] text-gray-400 font-bold truncate">
-                            {player.name}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                      <span className="font-display font-bold text-[12px] text-white truncate">
+                        {player.shirt_name || player.name}
+                      </span>
+                    </span>
                   </td>
-                  <td className="px-3 sm:px-4 py-3.5 text-center text-gray-700 font-black">
+                  <td className="px-2 py-2.5 text-center font-bold text-[11.5px] text-white/70 tabular-nums">
                     {player.games_played}
                   </td>
-                  <td className="px-3 sm:px-4 py-3.5 text-center">
-                    {player.goals > 0 ? (
-                      <span className="font-black text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-lg">
-                        {player.goals}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">0</span>
-                    )}
+                  <td className={`px-2 py-2.5 text-center font-display font-black text-[12px] tabular-nums ${player.goals > 0 ? 'text-csc-gold' : 'text-white/30'}`}>
+                    {player.goals}
                   </td>
-                  <td className="px-3 sm:px-4 py-3.5 text-center">
-                    {player.assists > 0 ? (
-                      <span className="font-black text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">
-                        {player.assists}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">0</span>
-                    )}
+                  <td className={`px-2 py-2.5 text-center font-display font-black text-[12px] tabular-nums ${player.assists > 0 ? 'text-csc-azul-texto' : 'text-white/30'}`}>
+                    {player.assists}
                   </td>
-                  <td className="px-3 sm:px-4 py-3.5 text-center">
-                    {player.mvp_count > 0 ? (
-                      <span className="inline-flex items-center gap-0.5 text-xs font-black text-indigo-900 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg">
-                        <Award size={12} className="text-indigo-600" />
-                        <span>{player.mvp_count}</span>
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
+                  <td className={`px-2 py-2.5 text-center font-display font-black text-[12px] tabular-nums ${player.mvp_count > 0 ? 'text-csc-verde-texto' : 'text-white/30'}`}>
+                    {player.mvp_count || '–'}
                   </td>
-                  <td className="px-4 sm:px-6 py-3.5">
-                    <div className="flex items-center justify-center gap-1.5">
-                      {player.yellow_cards > 0 && (
-                        <span className="flex items-center gap-0.5 bg-yellow-100 text-yellow-900 border border-yellow-300 px-1.5 py-0.5 rounded text-xs font-black">
-                          🟨 {player.yellow_cards}
-                        </span>
+                  <td className="pl-2 pr-3.5 py-2.5">
+                    <span className="flex items-center justify-center gap-1.5">
+                      {player.yellow_cards === 0 && player.red_cards === 0 ? (
+                        <span className="text-[10.5px] text-csc-verde-texto font-bold">Limpo</span>
+                      ) : (
+                        <>
+                          {player.yellow_cards > 0 && (
+                            <span className="flex items-center gap-1 font-display font-black text-[11px] text-csc-gold tabular-nums">
+                              <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-gold" aria-hidden="true" />
+                              <span className="sr-only">Cartões amarelos:</span>
+                              {player.yellow_cards}
+                            </span>
+                          )}
+                          {player.red_cards > 0 && (
+                            <span className="flex items-center gap-1 font-display font-black text-[11px] text-csc-vermelho-texto tabular-nums">
+                              <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-red" aria-hidden="true" />
+                              <span className="sr-only">Cartões vermelhos:</span>
+                              {player.red_cards}
+                            </span>
+                          )}
+                        </>
                       )}
-                      {player.red_cards > 0 && (
-                        <span className="flex items-center gap-0.5 bg-red-100 text-red-900 border border-red-300 px-1.5 py-0.5 rounded text-xs font-black">
-                          🟥 {player.red_cards}
-                        </span>
-                      )}
-                      {player.yellow_cards === 0 && player.red_cards === 0 && (
-                        <span className="text-[11px] text-emerald-600 font-bold">Limpo</span>
-                      )}
-                    </div>
+                    </span>
                   </td>
                 </tr>
               ))

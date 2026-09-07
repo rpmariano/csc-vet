@@ -205,7 +205,8 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
   // A persiana escura é a superfície do redesenho — o fundo da app com um véu
   // claro por cima, não o verde `csc-dark` de antes, que sobre o fundo escuro
   // lia como um cartão verde a flutuar em vez de uma camada acima do ecrã.
-  const corFundo = tone === 'dark' ? 'bg-csc-fundo text-white' : 'bg-white'
+  /* O 'light' era `bg-white`: um resto do tema claro. Ver a nota no Modal. */
+  const corFundo = 'bg-csc-fundo text-white'
   const corBordo = tone === 'dark' ? 'border-white/10' : 'border-white/10'
   const corTitulo = tone === 'dark' ? 'text-white' : 'text-white'
   const corDescricao = tone === 'dark' ? 'text-white/60' : 'text-white/50'
