@@ -2,8 +2,9 @@
 
 Estado em 2026-09-07. O redesenho de 2026 cobriu **49 dos 58 ecrãs** do handoff
 (`Redesign UI app futebol veteranos/design_handoff_app_veteranos/Ecrãs Jogador.dc.html`).
-Faltam **nove**. Este documento é o que precisas de saber para os desenhar sem
-inventar dados que a app não tem.
+Faltam nove, e **seis deles vão ser desenhados** — três foram postos de lado
+por decisão do cliente (ver o fim do documento). Este documento é o que
+precisas de saber para os desenhar sem inventar dados que a app não tem.
 
 ---
 
@@ -48,7 +49,7 @@ resposta**.
 
 ---
 
-## Uma lacuna de dados que atravessa dois destes ecrãs
+## Uma lacuna de dados, antes de tudo o resto
 
 **As presenças nunca são registadas.** A tabela `attendances` existe
 (`id, event_id, player_id, present, excuse_reason`), é lida num sítio
@@ -71,7 +72,7 @@ de produto, não de desenho:
 
 ---
 
-## Os nove ecrãs
+## Os seis ecrãs
 
 ### 4a · Toque num convocado
 **Prioridade: alta.** É de uso diário para quem gere.
@@ -205,90 +206,61 @@ campo do clube não se elimina sem escolher outro em Clube".
 1. Mapa embebido ou só o botão que abre o Maps? (implica custo e chave)
 2. "Copiar morada" faz sentido quando 1 dos 2 campos não tem morada?
 
----
-
-### 5c · Tesouraria (só direção)
-**Prioridade: média-baixa.** Sobrepõe-se ao que já existe.
-
-**O handoff mostra:** um ecrã curto: **SALDO EM CAIXA 1 019,00 €**, três
-números (Recebido +2 080 €, Despesas −1 061 €, Em atraso 120 €), dois
-separadores (Quotas · Movimentos). Em Quotas: "SETEMBRO · 18 ATLETAS · 15 em
-dia", e uma linha por atleta com o estado e um botão **Receber** para quem
-está em atraso. Depois "Ver os 18 atletas →". Em baixo, **ÚLTIMOS
-MOVIMENTOS**.
-
-**O que existe hoje:** a página financeira completa
-(`src/pages/FinancePage.tsx`, `/finance?ver=…`) com seis separadores — Visão
-Geral, Quotas, Encargos, Despesas/Receitas, Movimentos, Definições. Tudo o que
-o 5c mostra já lá está, mais completo.
-
-**Dados disponíveis:** tudo. `v_financial_movements` e `v_quota_status` (a
-matriz jogador × mês, o único sítio onde existe a quota **por pagar** — em
-`dues` só há linha para as pagas).
-
-**Decisão em aberto — e é a principal:** o 5c é um ecrã novo ou uma **entrada
-mais curta** para o que já existe? O handoff põe-no no Clube, ao lado dos
-outros destinos; a app hoje tem lá "Financeiro e quotas", que abre a página
-completa. Desenhar um segundo ecrã de tesouraria cria dois sítios para a mesma
-verdade. Alternativa: o 5c é a Visão Geral (8a) com um caminho mais curto.
 
 ---
 
-### 6b · Gestão (treinador e direção)
-**Prioridade: média-baixa.** Sobrepõe-se ao Clube.
-
-**O handoff mostra:** sobrancelha "TREINADOR", título "Gestão", e por cima de
-tudo **"3 COISAS A TRATAR"** com o primeiro em destaque ("1 jogo sem
-convocatória · Sesimbra, sábado · faltam 6 dias"). Depois três blocos: **EQUIPA**
-(Convocatórias "13 confirmados · 7 sem resposta", Eventos, Plantel "18 atletas ·
-1 lesionado"), **COMPETIÇÃO** (Torneios "2 a decorrer · jornada 8 por lançar",
-Fichas de jogo "1 por preencher"), **CLUBE** (Tesouraria, Comunicados) com
-🔒 SÓ DIREÇÃO.
-
-**O que existe hoje:** `src/pages/ClubePage.tsx` — o Clube, com os mesmos
-destinos organizados em Equipa e Gestão, e já com contagens ("18 atletas", "2 a
-decorrer"). O que **não** tem é o bloco "coisas a tratar" com as pendências.
-
-**Dados disponíveis:**
-- Eventos sem convocatória: já calculado em
-  `src/components/AlertaSemConvocatoria.tsx` (`useEventosSemConvocatoria`).
-- Convocatórias por responder: `callups.status = 'called'` nos eventos futuros.
-- Fichas por preencher: `events` do tipo `match` já passados com `home_score`
-  nulo.
-- Jornada por lançar: `tournament_matches` com `status != 'finished'`. ⚠️
-  tabela **vazia**.
-- Quotas em atraso: `v_quota_status`.
-
-**Decisão em aberto:** o 6b substitui o Clube para quem gere, ou é um bloco de
-pendências **dentro** do Clube que já existe? A segunda hipótese evita dois
-ecrãs quase iguais e é pouco trabalho: o Clube ganha "3 coisas a tratar" no
-topo. A primeira é mais fiel ao handoff mas duplica a lista de destinos.
 
 ---
 
 ### 11a · Conta criada, ficha por ligar
-**Prioridade: depende de como as contas nascem.**
+**Prioridade: alta — e o texto do handoff está errado para este clube.**
 
-**O handoff mostra:** "Bem-vindo, Nuno", um cartão grande **"À espera da
-direção"** com a explicação ("a tua conta está criada, mas ainda não está
-ligada a uma ficha de atleta. Enquanto isso não acontecer, não recebes
-convocatórias nem apareces no plantel"), um botão **Preencher o meu perfil**, e
-**ENTRETANTO PODES**: ver a agenda e as classificações, completar os dados e
-documentos, ler os comunicados.
+**Como funciona aqui.** As fichas do plantel são criadas pela direção **antes**
+de as pessoas se registarem. Quando alguém se regista, a app tenta ligar
+sozinha: o `AuthContext` chama `find_my_profile_match({ p_email_only: true })`
+e, se o email do registo bater certo com o da ficha, a associação acontece sem
+ninguém dar por ela. Se o email não bater mas o telefone ou o nome baterem, o
+`AutoAssociationModal` propõe a ficha e pede confirmação.
 
-**O que existe hoje:** nada. Quem se regista e não tem ficha vê a app normal,
-sem convocatórias e sem explicação. Existe o `AutoAssociationModal`, que salta
-quando a app *encontra* uma correspondência por email — mas quando não
-encontra, não há mensagem nenhuma.
+**O caso que falta é o terceiro:** registou-se com um email que não está na
+ficha, e nem o telefone nem o nome deram correspondência. Aí não aparece
+mensagem nenhuma — a pessoa vê a app normal, sem convocatórias, sem aparecer no
+plantel, e sem uma linha que explique porquê.
 
-**Dados disponíveis:** um perfil sem dados de atleta é o que a RPC
-`admin_contas_sem_atleta()` já identifica: sem `jersey_number`, sem
-`member_number`, sem `birth_date` e sem `position`. A mesma condição serve do
-lado do próprio.
+**Não é um caso raro.** Em produção, hoje: **28 fichas, 8 contas registadas, e
+1 dessas 8 está exatamente neste estado.** Uma em oito.
 
-**Decisão em aberto:** com que frequência isto acontece? Se a direção cria as
-fichas antes de as pessoas se registarem, é raro. **Tu sabes melhor do que eu**
-— se for raro, este ecrã vale pouco.
+**⚠️ O texto do handoff não serve.** O 11a diz *"a tua conta está criada, mas
+ainda não está ligada a uma ficha de atleta"* e põe o utilizador **"À espera da
+direção"**, com um botão "Preencher o meu perfil". Isso descreve um clube onde
+a ficha ainda não existe. Aqui a ficha **existe** — o que falta é a ligação, e
+quem a pode fazer é a direção, com o ecrã 3d (já feito), ou o próprio, se
+alguém lhe disser qual é o email certo. "Preencher o meu perfil" é o conselho
+errado: preencher dados numa ficha órfã só cria uma segunda ficha da mesma
+pessoa, que é precisamente o problema que o 3d existe para desfazer.
+
+**O que a mensagem deve dizer** (a decidir no desenho, mas esta é a substância):
+a conta está criada; há uma ficha tua no plantel mas não conseguimos ligá-la,
+provavelmente porque te registaste com outro email; fala com a direção, que
+liga em dois toques. E o que se pode fazer entretanto — ver a agenda, as
+classificações e os comunicados — que é verdade e continua a valer.
+
+**O que existe hoje:** nada. Nem faixa, nem ecrã, nem mensagem.
+
+**Dados disponíveis:** a condição é a mesma que a RPC `admin_contas_sem_atleta()`
+já usa, do lado da direção: um perfil que tem conta em `auth.users` e não tem
+`jersey_number`, nem `member_number`, nem `birth_date`, nem `position`. Do lado
+do próprio, lê-se o seu perfil e verifica-se o mesmo — sem RPC nenhuma.
+
+**Decisões em aberto:**
+1. **Ecrã inteiro ou faixa?** Um ecrã que substitui a Home é claro mas
+   bloqueante; uma faixa no topo da Home deixa a pessoa usar o que pode usar.
+   O handoff desenha um ecrã. A app já tem faixas para coisas do género (o
+   aviso de quotas em atraso, o alerta de convocatórias) — há linguagem
+   estabelecida para as duas hipóteses.
+2. Deve haver uma ação que o próprio possa fazer, ou só "fala com a direção"?
+   Uma hipótese: um botão que mostre o email com que se registou, para ele o
+   passar a quem liga as contas.
 
 ---
 
@@ -313,24 +285,6 @@ código feito; é reaproveitável.
 ou sempre? Se sempre, competem com os eventos; se só no vazio, o ecrã muda de
 conteúdo conforme o mês, o que pode confundir.
 
----
-
-### 11c · Clube no primeiro dia
-**Prioridade: baixa.** Provavelmente já não se aplica.
-
-**O handoff mostra:** "PRIMEIRA VEZ · Vamos montar a época", quatro passos
-numerados com estado (Dados do clube ✓, Campo do clube, Plantel "nenhum atleta
-ainda", Torneio e quotas), "podes fazê-los por qualquer ordem", e um aviso de
-que "as quotas começam a contar quando definires a época e o valor mensal".
-
-**O que existe hoje:** nada.
-
-**Dados disponíveis:** contagens simples de `profiles`, `fields`, `tournaments`
-e `financial_settings`.
-
-**Decisão em aberto:** este clube tem **28 fichas, 52 eventos, 2 campos e a
-época montada**. O ecrã só se veria numa instalação nova. Vale desenhar? Se a
-app for para servir outros clubes, sim; se é só para o GDS Cascais, não.
 
 ---
 
@@ -340,13 +294,24 @@ app for para servir outros clubes, sim; se é só para o GDS Cascais, não.
 |---|---|---|---|
 | **4e** Evento em falta na Agenda | Alta | Fecha o par com o alerta que já existe | — |
 | **4a** Toque num convocado | Alta | Uso diário de quem convoca | Presenças não existem |
+| **11a** Ficha por ligar | Alta | 1 das 8 contas está neste estado hoje | Texto do handoff não serve |
 | **11b** Agenda vazia | Média | Barato, e a agenda passa semanas vazia | — |
 | **9h** Ficha de adversário | Média | Ecrã novo, com história de confrontos | Jornadas vazias |
 | **9i** Ficha de campo | Média | Ecrã novo | Não há mapa embebido |
-| **6b** Gestão | Média-baixa | Sobrepõe-se ao Clube | Decidir se é ecrã ou bloco |
-| **5c** Tesouraria | Média-baixa | Sobrepõe-se ao Financeiro | Decidir se é ecrã ou atalho |
-| **11a** Ficha por ligar | ? | Depende da frequência do caso | — |
-| **11c** Primeiro dia | Baixa | O clube já está montado | — |
+
+## Postos de lado — não desenhar
+
+Três ecrãs do handoff que o cliente decidiu não fazer. Ficam aqui registados
+para não parecerem esquecimento:
+
+- **5c · Tesouraria (só direção).** Tudo o que mostra já está na página
+  financeira, que tem seis separadores e é mais completa. Um segundo ecrã de
+  tesouraria criava dois sítios para a mesma verdade.
+- **6b · Gestão (treinador e direção).** Sobrepõe-se ao Clube (6a), que já tem
+  os mesmos destinos com as contagens. A parte que não existe — o bloco "3
+  coisas a tratar" — pode um dia entrar no Clube sem precisar de um ecrã novo.
+- **11c · Clube no primeiro dia.** O clube tem 28 fichas, 52 eventos e a época
+  montada; este ecrã só se veria numa instalação nova.
 
 ## O que **não** falta
 
