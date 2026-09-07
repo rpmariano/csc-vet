@@ -78,7 +78,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
         </button>
 
         <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-900 flex items-center justify-center text-lg font-black shadow-xs" aria-hidden="true">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-csc-gold flex items-center justify-center text-lg font-black shadow-xs" aria-hidden="true">
             🛡️
           </div>
           <div>

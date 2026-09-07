@@ -99,9 +99,11 @@ const App: React.FC = () => {
                       onde o handoff os põe. Deixá-lo aberto a todos dava uma
                       página sem nenhum link para o jogador. */}
                   <Route path="/announcements" element={<AnnouncementsPage />} />
-                  {/* O Clube é a porta de entrada da gestão. O `/admin` fica a
-                      servir os torneios, adversários e campos até a fase 6 os
-                      trazer para aqui — por isso ainda não é um redirecionamento. */}
+                  {/* O Clube é a porta de entrada da gestão, e o `/admin` é a
+                      página de dados que ele abre: cada entrada do Clube leva
+                      ao seu separador pelo `?ver=` (club, fields, opponents,
+                      tournaments). O nome da rota ficou — mudá-lo partia os
+                      links que já andam por aí. */}
                   <Route path="/clube" element={<ClubePage />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/team-management" element={<TeamManagementPage />} />

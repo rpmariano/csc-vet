@@ -57,10 +57,10 @@ test.describe('Painel de administração', () => {
     await verificaDialogo(page, () => page.getByRole('button', { name: 'Novo Campo' }).first().click())
 
     await page.getByRole('button', { name: /^Adversários/ }).click()
-    await verificaDialogo(page, () => page.getByRole('button', { name: /Novo Adversário/ }).first().click())
+    await verificaDialogo(page, () => page.getByRole('button', { name: 'Criar adversário' }).click())
 
     await page.getByRole('button', { name: /^Torneios/ }).click()
-    await verificaDialogo(page, () => page.getByRole('button', { name: /Novo Torneio/ }).first().click())
+    await verificaDialogo(page, () => page.getByRole('button', { name: 'Criar torneio' }).click())
   })
 
   test('Escape num formulário sujo pede confirmação, e só fecha essa', async ({ page }) => {
