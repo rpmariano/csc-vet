@@ -141,7 +141,11 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   julgamento: um painel de diálogo passa a `bg-csc-fundo`, o fundo de um
   emblema fica branco. **Correr sem `--estados` não chega:** foi assim que a
   página de Eventos ficou dada por escura com 28 pastilhas verde-menta e
-  amarelo-pálido ainda a brilhar sobre o fundo preto.
+  amarelo-pálido ainda a brilhar sobre o fundo preto. **E a seguir grepar por
+  `bg-white text-white`:** o script traduz o `text-gray-900` de dentro de uma
+  caixa que fica branca, e o campo passa a ter texto branco sobre branco — o
+  Plantel tinha dezoito assim, todos ilegíveis e nenhum visível numa leitura
+  do diff.
 - **Um `Modal` não tem tom.** O painel é sempre `bg-csc-fundo`. Havia um
   `tone` cujo `'dark'` dava o verde do clube, ao contrário do `BottomSheet`,
   onde a mesma palavra dá o fundo escuro — um modal escrito por analogia com
