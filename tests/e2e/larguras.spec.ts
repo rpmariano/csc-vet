@@ -215,15 +215,20 @@ test('sobrepostos iguais em janela estreita e larga', async ({ page }) => {
   O relógio é fixado porque um minuto a virar entre as duas fotografias mudava
   uma hora no ecrã e dava uma diferença falsa.
 
-  **Cada ecrã é medido até três vezes, e fica a menor diferença.** Não é para
-  esconder falhas: é porque a coisa medida tem ruído que não vem da largura.
-  Ao fim de dezoito navegações seguidas, uma das persianas assentava de maneira
-  diferente e dava sempre 0,2241% — e fotografá-la duas vezes na *mesma* janela
-  dava exatamente o mesmo valor, ou seja, não era diferença de largura nenhuma.
-  Em isolamento nunca reproduz. Uma diferença a sério está lá em todas as
-  medições, e a menor continua acima do limite; foi verificado ao contrário,
-  pondo uma cor que só aparecia acima de 900px de janela — o teste acusou 4,69%
-  e apontou a faixa certa.
+  **Cada ecrã é medido até três vezes, e fica a menor diferença.** Foi o que
+  levou a apanhar uma diferença que parecia de largura e não era: uma das
+  persianas dava sempre 0,2241%, e fotografá-la duas vezes na *mesma* janela
+  dava o mesmo valor. A caixa da diferença — 480px de largura por 22 de altura,
+  no topo do painel — levou ao culpado: numa captura o botão da alça tinha foco
+  e desenhava o anel, na outra o foco tinha ficado no `<body>`. Era o
+  `useModalA11y` a desistir de focar enquanto a ref do painel ainda não
+  existia; está corrigido, e `dialogos.spec.ts` trava a regressão.
+
+  A repetição fica. Hoje nenhum ecrã precisa dela — zero repetições em três
+  corridas —, mas é barata, e uma diferença a sério está lá em todas as
+  medições, portanto não mascara nada. Verificado ao contrário, que um teste
+  que nunca falha não serve de nada: com uma cor que só aparecia acima de 900px
+  de janela, acusou 4,69%, apontou a faixa certa e persistiu pelas três.
 
 */
 
