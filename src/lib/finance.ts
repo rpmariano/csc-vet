@@ -97,9 +97,27 @@ export const getSeasonMonths = (settings: FinancialSettings, seasonLabel: string
   return meses
 }
 
+/**
+ * Junta o que veio da base com as omissões, coluna a coluna.
+ *
+ * O `{ ...DEFAULT, ...linha }` que se fazia em quatro sítios não chega: uma
+ * coluna a `NULL` na base sobrepõe-se à omissão com `null`, e a página
+ * financeira rebentava inteira no `quota_excluded_months.includes(...)`.
+ * Aqui só entram os valores que existem mesmo.
+ */
+export const comOmissoes = (linha: Partial<FinancialSettings> | null | undefined): FinancialSettings => {
+  const juntas = { ...DEFAULT_FINANCIAL_SETTINGS }
+  for (const [chave, valor] of Object.entries(linha ?? {})) {
+    if (valor !== null && valor !== undefined) {
+      (juntas as Record<string, unknown>)[chave] = valor
+    }
+  }
+  return juntas
+}
+
 /** Os meses de quota da época (todos os meses da época menos os excluídos, ex.: Agosto). */
 export const getQuotaMonthsForSeason = (settings: FinancialSettings, seasonLabel: string): SeasonMonth[] =>
-  getSeasonMonths(settings, seasonLabel).filter(m => !settings.quota_excluded_months.includes(m.month))
+  getSeasonMonths(settings, seasonLabel).filter(m => !(settings.quota_excluded_months ?? []).includes(m.month))
 
 /**
  * Os meses de quota que um jogador em concreto deve pagar nesta época — os meses

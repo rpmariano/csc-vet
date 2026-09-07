@@ -35,7 +35,9 @@ import { usePlayerQuotaDebt } from '../hooks/usePlayerQuotaDebt'
  * ecrã Clube, como o handoff manda, e não numa lista lateral.
  */
 
-const fmtEuro = (n: number) => `${n.toFixed(2)}€`
+/* Euros em português — a mesma notação do Financeiro. */
+const EUROS = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
+const fmtEuro = (n: number) => EUROS.format(n)
 
 /** Barra de três lugares: quem só consulta. */
 const ITENS_JOGADOR: readonly ItemNavegacao[] = [

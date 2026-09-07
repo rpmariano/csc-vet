@@ -38,8 +38,7 @@ import { CLUBE_NOME } from '../lib/clube'
 import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
-import { getSeasonLabel, DEFAULT_FINANCIAL_SETTINGS } from '../lib/finance'
-import type { FinancialSettings } from '../lib/finance'
+import { getSeasonLabel, comOmissoes } from '../lib/finance'
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
 const CAMPO =
@@ -213,7 +212,7 @@ const TeamManagementPage: React.FC = () => {
   const [epoca, setEpoca] = useState<string>('')
   useEffect(() => {
     supabase.from('financial_settings').select('*').maybeSingle().then(({ data }) => {
-      const definicoes: FinancialSettings = { ...DEFAULT_FINANCIAL_SETTINGS, ...(data ?? {}) }
+      const definicoes = comOmissoes(data)
       setEpoca(getSeasonLabel(definicoes))
     })
   }, [])

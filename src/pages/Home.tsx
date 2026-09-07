@@ -10,11 +10,10 @@ import { triggerHaptic } from '../utils/haptics'
 import { AvatarPerfil, CartaoVidro, CartaoSimples, EtiquetaSeccao } from '../components/ui'
 import { AnnouncementsInboxButton } from '../components/AnnouncementsInbox'
 import {
-  DEFAULT_FINANCIAL_SETTINGS,
+  comOmissoes,
   getSeasonLabel,
   getSeasonMonths,
 } from '../lib/finance'
-import type { FinancialSettings } from '../lib/finance'
 
 /**
  * Hoje — o primeiro ecrã, e o único que responde a "o que é que me diz
@@ -138,7 +137,7 @@ const Home: React.FC = () => {
         // porque foi lá que primeiro fez falta, mas é a época do clube e não
         // uma noção de contabilidade.
         const { data: defs } = await supabase.from('financial_settings').select('*').maybeSingle()
-        const definicoes: FinancialSettings = { ...DEFAULT_FINANCIAL_SETTINGS, ...(defs ?? {}) }
+        const definicoes = comOmissoes(defs)
         const meses = getSeasonMonths(definicoes, getSeasonLabel(definicoes))
         const inicioEpoca = meses.length
           ? new Date(meses[0].year, meses[0].month - 1, 1)

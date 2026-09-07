@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import {
-  DEFAULT_FINANCIAL_SETTINGS, getSeasonLabel, getPlayerQuotaMonths,
+  comOmissoes, getSeasonLabel, getPlayerQuotaMonths,
   computeQuotaMonthStatus, formatMonthYear,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaEligiblePlayer } from '../lib/finance'
@@ -55,7 +55,7 @@ export function usePlayerQuotaDebt(
         ])
         if (cancelado) return
 
-        const settings: FinancialSettings = (settingsData as FinancialSettings) || DEFAULT_FINANCIAL_SETTINGS
+        const settings = comOmissoes(settingsData as Partial<FinancialSettings> | null)
         const today = new Date()
         const seasonLabel = getSeasonLabel(settings, today)
         const paidMonths = new Set((duesData || []).map(d => d.month_year))

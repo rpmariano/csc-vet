@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  Landmark, TrendingUp, TrendingDown, Plus, Settings, Wallet,
-  ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check
+  Landmark, TrendingUp, Plus, Settings, Wallet,
+  ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check, AlertTriangle
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -14,9 +14,22 @@ import { Modal } from '../components/Modal'
 // das vistas v_quota_status e v_financial_movements. De finance.ts só sobra o
 // que é regra de negócio pura — a época e o prazo do seguro.
 import {
-  DEFAULT_FINANCIAL_SETTINGS, getSeasonLabel, nomeMes, getInsuranceDeadline,
+  DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes, getInsuranceDeadline,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
+import { useSearchParams } from 'react-router-dom'
+import { CabecalhoEcra, Pastilha } from '../components/ui'
+
+/** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
+const ETIQUETA =
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+
+const ETIQUETA_SECCAO =
+  'font-display font-extrabold text-[9.5px] tracking-[0.14em] uppercase text-csc-gold'
+
+const CAMPO =
+  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -157,6 +170,16 @@ const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: numbe
   { id: 'settings', label: 'Definições', Icon: Settings },
 ]
 
+/** O título do ecrã muda com o separador — o "Financeiro" está no Clube. */
+const TITULO_SEPARADOR: Record<TabId, string> = {
+  overview: 'Visão geral',
+  quotas: 'Quotas',
+  charges: 'Encargos',
+  expenses: 'Despesas e receitas',
+  movements: 'Movimentos',
+  settings: 'Definições',
+}
+
 // Cores por categoria, tanto para receitas como despesas — a 6ª categoria em
 // diante recolhe-se em "Outras", para o gráfico não crescer sem limite.
 const RECEITA_CORES = ['bg-csc-light', 'bg-sky-400', 'bg-csc-gold', 'bg-emerald-400', 'bg-indigo-400']
@@ -164,7 +187,13 @@ const RECEITA_COR_OUTRAS = 'bg-gray-400'
 const DESPESA_CORES = ['bg-red-500', 'bg-purple-500', 'bg-amber-500', 'bg-blue-500', 'bg-emerald-500']
 const DESPESA_COR_OUTRAS = 'bg-gray-400'
 
-const fmtEuro = (n: number) => `${n.toFixed(2)}€`
+/*
+  Euros em português: vírgula decimal, espaço fino antes do símbolo e ponto
+  nos milhares. Era `n.toFixed(2) + '€'`, que dava "1019.00€" — a notação
+  inglesa, num ecrã onde tudo o resto está em português.
+*/
+const EUROS = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
+const fmtEuro = (n: number) => EUROS.format(n)
 
 // Agrupa os movimentos pela categoria já resolvida na vista (v_financial_movements
 // dá a categoria específica de cada um — Quotas, Seguro Desportivo, Material
@@ -193,7 +222,16 @@ const FinancePage: React.FC = () => {
   const isAdmin = profile?.role === 'admin'
 
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<TabId>('overview')
+  const [params, setParams] = useSearchParams()
+
+  /* O separador vai no endereço; ver a nota no cabeçalho. */
+  const verAtual = (params.get('ver') ?? '') as TabId
+  const activeTab: TabId = TABS.some(t => t.id === verAtual) ? verAtual : 'overview'
+  const setActiveTab = (seguinte: TabId) => {
+    const seguintes = new URLSearchParams(params)
+    seguintes.set('ver', seguinte)
+    setParams(seguintes, { replace: true })
+  }
 
   const [settings, setSettings] = useState<FinancialSettings>(DEFAULT_FINANCIAL_SETTINGS)
   const [players, setPlayers] = useState<PlayerRow[]>([])
@@ -233,7 +271,9 @@ const FinancePage: React.FC = () => {
         supabase.from('tournaments').select('id, name, season, rules'),
       ])
 
-      if (settingsData) setSettings(settingsData as FinancialSettings)
+      // Coluna a coluna, e não `as FinancialSettings`: uma coluna a `NULL`
+      // na base derrubava a página inteira (ver `comOmissoes`).
+      if (settingsData) setSettings(comOmissoes(settingsData as Partial<FinancialSettings>))
       setPlayers((playersData || []) as PlayerRow[])
       setQuotaRows((quotaData || []) as QuotaStatusRow[])
       setMovements((movementsData || []) as MovementRow[])
@@ -1121,59 +1161,57 @@ const FinancePage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4 pb-12">
-      {/* Cabeçalho + Separadores */}
-      <div className="bg-white rounded-2xl p-2 shadow-sm border border-gray-200 flex flex-wrap gap-1">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 min-w-[100px] flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === tab.id ? 'bg-csc-dark text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <tab.Icon size={14} className={activeTab === tab.id ? 'text-csc-gold' : ''} />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
+    <div className="space-y-4">
+      {/*
+        Cabeçalho do Financeiro (ecrãs 8a–8g). O separador escolhido vai no
+        endereço (`?ver=`), como na Competição e nos dados do clube: dá link
+        próprio e faz o retroceder do browser funcionar.
+      */}
+      <CabecalhoEcra
+        titulo={TITULO_SEPARADOR[activeTab]}
+        sobrancelha={`Época ${seasonLabel}`}
+        className="mb-3"
+      />
 
-      <div className="flex items-center justify-between px-1">
-        <p className="text-xs font-bold text-gray-500">Época financeira: <span className="text-gray-800">{seasonLabel}</span></p>
+      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
+        {TABS.map(tab => (
+          <Pastilha
+            key={tab.id}
+            ativa={activeTab === tab.id}
+            onClick={() => { triggerHaptic('selection'); setActiveTab(tab.id) }}
+            className="flex-none"
+          >
+            {tab.label}
+          </Pastilha>
+        ))}
       </div>
 
       {/* ================= VISÃO GERAL ================= */}
       {activeTab === 'overview' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className={`bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 border-l-4 ${netBalance >= 0 ? 'border-l-csc-gold' : 'border-l-red-400'} p-4 flex items-center justify-between`}>
-              <div>
-                <p className="text-xs font-bold text-white/70">Saldo Disponível</p>
-                <p className={`text-2xl font-black mt-1 ${netBalance >= 0 ? 'text-white' : 'text-red-400'}`}>{fmtEuro(netBalance)}</p>
+          {/*
+            Os quatro números da época (ecrã 8a). Eram três cartões em linha,
+            cada um com o rótulo, o valor e um ícone dentro de um círculo de
+            44px — e numa coluna de 480px o círculo saltava para fora do
+            cartão e o rótulo partia em duas linhas. Sem o ícone, e a dois por
+            fila, cabem os quatro que o handoff pede.
+          */}
+          <div className="grid grid-cols-2 gap-2.5">
+            {([
+              ['Saldo disponível', fmtEuro(netBalance), netBalance >= 0 ? 'text-white' : 'text-csc-vermelho-texto'],
+              ['Total recebido', `+${fmtEuro(totalReceived)}`, 'text-csc-verde-texto'],
+              ['Total pago', `−${fmtEuro(totalExpenses)}`, 'text-csc-vermelho-texto'],
+              ['Previsto no fim', fmtEuro(projectedNetBalance), projectedNetBalance >= 0 ? 'text-csc-gold' : 'text-csc-vermelho-texto'],
+            ] as const).map(([etiqueta, valor, cor]) => (
+              <div key={etiqueta} className="cartao-simples p-3.5">
+                <p className="font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+                  {etiqueta}
+                </p>
+                <p className={`font-display font-black text-[19px] mt-1.5 tabular-nums leading-none ${cor}`}>
+                  {valor}
+                </p>
               </div>
-              <div className="w-11 h-11 bg-white/10 text-csc-gold rounded-full flex items-center justify-center shrink-0">
-                <Landmark size={22} />
-              </div>
-            </div>
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 border-l-4 border-l-emerald-400 p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-white/70">Total Recebido</p>
-                <p className="text-2xl font-black text-emerald-400 mt-1">+{fmtEuro(totalReceived)}</p>
-              </div>
-              <div className="w-11 h-11 bg-emerald-500/15 text-emerald-400 rounded-full flex items-center justify-center shrink-0">
-                <TrendingUp size={22} />
-              </div>
-            </div>
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 border-l-4 border-l-red-400 p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-white/70">Total Despesas</p>
-                <p className="text-2xl font-black text-red-400 mt-1">-{fmtEuro(totalExpenses)}</p>
-              </div>
-              <div className="w-11 h-11 bg-red-500/15 text-red-400 rounded-full flex items-center justify-center shrink-0">
-                <TrendingDown size={22} />
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Alerta de Pagamentos Programados — despesas já certas mas ainda por
@@ -1181,14 +1219,14 @@ const FinancePage: React.FC = () => {
               topo, antes da Previsão, para o admin ver ao abrir a página; a ação de
               pagar continua só em Despesas/Receitas. */}
           {pendingScheduledPayments.length > 0 && (
-            <div className={`bg-csc-dark text-white rounded-2xl shadow-sm border p-4 space-y-2.5 ${overdueScheduledPayments.length > 0 ? 'border-red-400/40' : 'border-amber-400/30'}`}>
+            <div className={`cartao-simples text-white p-4 space-y-2.5 ${overdueScheduledPayments.length > 0 ? 'border-csc-red/40' : 'border-csc-gold/30'}`}>
               <div className="flex items-center justify-between gap-3 flex-wrap">
-                <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <h3 className={`${ETIQUETA_SECCAO} flex items-center gap-2`}>
                   <Receipt size={16} className={overdueScheduledPayments.length > 0 ? 'text-red-400' : 'text-amber-400'} />
                   <span>Pagamentos Programados</span>
                 </h3>
                 <button type="button" onClick={() => setActiveTab('expenses')} className="text-[11px] font-black text-csc-gold hover:brightness-110 cursor-pointer">
-                  Ver e registar pagamento →
+                  Ver e registar pagamento
                 </button>
               </div>
               <p className="text-xs text-white/70">
@@ -1213,9 +1251,9 @@ const FinancePage: React.FC = () => {
 
           {/* Previsão da Época + Situação de Quotas — lado a lado no desktop, para não
               alongar o ecrã num scroll só vertical de cartões largos com pouco conteúdo cada. */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            <div className="lg:col-span-3 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
-              <h3 className="text-sm font-black text-white flex items-center gap-2">
+          <div className="space-y-3">
+            <div className="cartao-simples text-white p-4 space-y-3">
+              <h3 className={`${ETIQUETA_SECCAO} flex items-center gap-2`}>
                 <TrendingUp size={16} className="text-csc-gold" />
                 <span>Previsão da Época {seasonLabel}</span>
               </h3>
@@ -1258,8 +1296,8 @@ const FinancePage: React.FC = () => {
 
             {/* Situação de Quotas — coluna estreita ao lado; estatísticas em linhas
                 empilhadas (não grelha 3-colunas) porque a coluna aqui é mais estreita. */}
-            <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-2.5">
-              <h3 className="text-sm font-black text-white">Situação de Quotas dos Atletas</h3>
+            <div className="cartao-simples text-white p-4 space-y-2.5">
+              <h3 className={ETIQUETA_SECCAO}>Situação de Quotas dos Atletas</h3>
               <div className="space-y-2">
                 <div className="flex items-center justify-between rounded-xl bg-emerald-500/10 border border-emerald-400/30 pl-3 pr-3.5 py-2 border-l-4 border-l-emerald-400">
                   <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider">Meses Pagos</span>
@@ -1291,9 +1329,9 @@ const FinancePage: React.FC = () => {
 
           {/* Receita e despesa por categoria — lado a lado no desktop; a receita ocupa a
               largura toda quando ainda não há despesas com categoria para mostrar ao lado. */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className={`${despesaPorCategoria.length === 0 ? 'lg:col-span-2' : ''} bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3`}>
-              <h3 className="text-sm font-black text-white">Valor Recebido por Categoria</h3>
+          <div className="space-y-3">
+            <div className={`${despesaPorCategoria.length === 0 ? 'lg:col-span-2' : ''} cartao-simples text-white p-4 space-y-3`}>
+              <h3 className={ETIQUETA_SECCAO}>Valor Recebido por Categoria</h3>
               <div className="space-y-3">
                 {receitaPorCategoria.map(([label, valor], idx) => {
                   const objetivo = objetivoPorCategoria.get(label)
@@ -1330,8 +1368,8 @@ const FinancePage: React.FC = () => {
 
             {/* Gráfico: Despesa por Categoria */}
             {despesaPorCategoria.length > 0 && (
-              <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
-                <h3 className="text-sm font-black text-white">Despesa por Categoria</h3>
+              <div className="cartao-simples text-white p-4 space-y-3">
+                <h3 className={ETIQUETA_SECCAO}>Despesa por Categoria</h3>
                 <div className="space-y-3">
                   {despesaPorCategoria.map(([label, valor], idx) => {
                     const pct = Math.round((valor / maxDespesa) * 100)
@@ -1362,8 +1400,8 @@ const FinancePage: React.FC = () => {
               (encargos-intermediário + inscrições em torneio): pago vs por pagar,
               por categoria, para o saldo de cada uma se ver a tender a zero. */}
           {pagarPorCategoria.length > 0 && (
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-3">
-              <h3 className="text-sm font-black text-white">Valor a Pagar por Categoria</h3>
+            <div className="cartao-simples text-white p-4 space-y-3">
+              <h3 className={ETIQUETA_SECCAO}>Valor a Pagar por Categoria</h3>
               <div className="space-y-3">
                 {pagarPorCategoria.map(r => {
                   const total = r.pago + r.porPagar
@@ -1393,21 +1431,21 @@ const FinancePage: React.FC = () => {
 
       {/* ================= QUOTAS ================= */}
       {activeTab === 'quotas' && (
-        <div className="rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="bg-csc-dark px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
-            <h3 className="text-sm font-black text-white">Controlo de Quotas — Época {seasonLabel}</h3>
+        <div className="rounded-2xl shadow-sm border border-white/12 overflow-hidden">
+          <div className="bg-csc-dark px-4 py-3 border-b-2 border-csc-gold flex items-center justify-between gap-3 flex-wrap">
+            <h3 className={ETIQUETA_SECCAO}>Controlo de Quotas — Época {seasonLabel}</h3>
             <span className="text-[11px] text-white/70">{fmtEuro(settings.quota_amount)}/mês · incumprimento a partir do dia {settings.quota_due_day}</span>
           </div>
           {/* Fundo cinzento para as fichas de cada jogador se destacarem como cartões
               elevados (sombra + faixa de cor do estado), em vez de linhas lisas sobre branco. */}
-          <div className="bg-gray-100 p-3 space-y-2">
+          <div className="bg-white/10 p-3 space-y-2">
             {quotaOverview.map(q => {
               const expanded = expandedPlayerId === q.player.id
               const accent = q.lateCount > 0 ? 'border-l-red-400' : q.pendingCount > 0 ? 'border-l-amber-400' : 'border-l-emerald-400'
               return (
                 <div
                   key={q.player.id}
-                  className={`bg-white rounded-xl border border-gray-200 border-l-4 ${accent} transition-shadow ${expanded ? 'shadow-md ring-1 ring-csc-dark/10' : 'shadow-sm hover:shadow-md'}`}
+                  className={`bg-white rounded-xl border border-white/12 border-l-4 ${accent} transition-shadow ${expanded ? 'shadow-md ring-1 ring-csc-dark/10' : 'shadow-sm hover:shadow-md'}`}
                 >
                   <button
                     type="button"
@@ -1415,22 +1453,22 @@ const FinancePage: React.FC = () => {
                     className="w-full flex items-center justify-between gap-3 cursor-pointer px-3.5 py-3"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-8 h-8 rounded-full bg-csc-dark text-white text-xs font-black flex items-center justify-center shrink-0">
+                      <span className="w-8 h-8 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 text-csc-gold font-display font-extrabold text-[11px] flex items-center justify-center shrink-0">
                         {q.player.jersey_number || '—'}
                       </span>
-                      <span className="font-bold text-sm text-gray-900 truncate">{q.player.shirt_name || q.player.name}</span>
+                      <span className="font-bold text-sm text-white truncate">{q.player.shirt_name || q.player.name}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {q.lateCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-100 text-red-700">{q.lateCount} em atraso</span>}
-                      {q.pendingCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{q.pendingCount} pendentes</span>}
-                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{q.paidCount} pagos</span>
-                      <ChevronDown size={16} className={`text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                      {q.lateCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-red/15 text-csc-vermelho-texto">{q.lateCount} em atraso</span>}
+                      {q.pendingCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold">{q.pendingCount} pendentes</span>}
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-light/15 text-csc-verde-texto">{q.paidCount} pagos</span>
+                      <ChevronDown size={16} className={`text-white/40 transition-transform ${expanded ? 'rotate-180' : ''}`} />
                     </div>
                   </button>
 
                   {expanded && (
-                    <div className="px-3.5 pb-3.5 pt-0.5 space-y-2 border-t border-gray-100 mt-0.5">
-                      <p className="text-[10px] text-gray-400 pt-2.5">Clique num mês para marcar como pago; clique outra vez para corrigir. Pode selecionar vários meses seguidos.</p>
+                    <div className="px-3.5 pb-3.5 pt-0.5 space-y-2 border-t border-white/10 mt-0.5">
+                      <p className="text-[10px] text-white/40 pt-2.5">Clique num mês para marcar como pago; clique outra vez para corrigir. Pode selecionar vários meses seguidos.</p>
                       <div className="flex flex-wrap gap-1.5">
                         {q.months.map(m => {
                           const isPaid = m.statusCalc === 'paid'
@@ -1444,13 +1482,15 @@ const FinancePage: React.FC = () => {
                               title={isPaid ? 'Clique para remover o pagamento' : 'Clique para marcar como pago'}
                               className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
                                 isPaid
-                                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700'
+                                  ? 'bg-csc-light/10 border-csc-light/35 text-csc-verde-texto hover:bg-csc-red/10 hover:border-csc-red/35 hover:text-csc-vermelho-texto'
                                   : m.statusCalc === 'late'
-                                    ? 'bg-red-50 border-red-300 text-red-700 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-dark'
-                                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-dark'
+                                    ? 'bg-csc-red/10 border-csc-red/35 text-csc-vermelho-texto hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
+                                    : 'bg-white/6 border-white/12 text-white/60 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
                               }`}
                             >
-                              {nomeMes(m.month).slice(0, 3)}/{String(m.year).slice(2)} {isPaid ? '✓' : m.statusCalc === 'late' ? '⚠' : ''}
+                              {nomeMes(m.month).slice(0, 3)}/{String(m.year).slice(2)}
+                              {isPaid && <Check size={11} className="inline ml-1 -mt-0.5" />}
+                              {!isPaid && m.statusCalc === 'late' && <AlertTriangle size={11} className="inline ml-1 -mt-0.5" />}
                             </button>
                           )
                         })}
@@ -1461,7 +1501,7 @@ const FinancePage: React.FC = () => {
               )
             })}
             {quotaOverview.length === 0 && (
-              <p className="text-xs text-gray-400 py-6 text-center">Sem jogadores elegíveis para quota nesta época.</p>
+              <p className="text-xs text-white/40 py-6 text-center">Sem jogadores elegíveis para quota nesta época.</p>
             )}
           </div>
         </div>
@@ -1472,11 +1512,11 @@ const FinancePage: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h3 className="text-sm font-black text-gray-900 flex items-center gap-2">
-                <ShieldCheck size={16} className="text-csc-dark" />
+              <h3 className={`${ETIQUETA_SECCAO} flex items-center gap-2`}>
+                <ShieldCheck size={16} className="text-csc-tinta" />
                 Encargos
               </h3>
-              <p className="text-xs text-gray-500 mt-0.5">Cobranças a jogadores escolhidos — Seguro, equipamento, inscrição/viagem de torneio, etc.</p>
+              <p className="text-xs text-white/50 mt-0.5">Cobranças a jogadores escolhidos — Seguro, equipamento, inscrição/viagem de torneio, etc.</p>
             </div>
             {isAdmin && (
               <button
@@ -1484,7 +1524,7 @@ const FinancePage: React.FC = () => {
                 onClick={openNewChargeModal}
                 disabled={incomeCategories.length === 0}
                 title={incomeCategories.length === 0 ? 'Cria primeiro uma categoria que possa ser usada para receitas (aba Despesas/Receitas)' : undefined}
-                className="flex items-center gap-1.5 px-4 py-2 bg-csc-dark text-white rounded-xl text-xs font-black hover:bg-csc-dark/90 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 min-h-11 px-4 bg-csc-gold text-csc-tinta rounded-[22px] font-display font-extrabold text-[11.5px] cursor-pointer transition-transform duration-150 active:scale-97 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               >
                 <Plus size={14} />
                 Novo Encargo
@@ -1493,13 +1533,13 @@ const FinancePage: React.FC = () => {
           </div>
 
           {isAdmin && incomeCategories.length === 0 && (
-            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+            <p className="text-[11px] text-csc-gold bg-csc-gold/10 border border-csc-gold/25 rounded-lg px-2.5 py-1.5">
               Ainda não há nenhuma categoria marcada para receitas. Cria ou edita uma em Despesas/Receitas → Categorias, assinalando "Também pode ser usada para receitas".
             </p>
           )}
 
           {chargesWithStats.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-400">
+            <div className="bg-white/4 rounded-2xl border border-dashed border-white/15 p-8 text-center text-sm text-white/40">
               Ainda não há encargos criados.
             </div>
           ) : (
@@ -1508,33 +1548,33 @@ const FinancePage: React.FC = () => {
                 const expanded = expandedChargeId === c.id
                 const pct = c.totalExpected > 0 ? Math.min(100, Math.round((c.totalPaid / c.totalExpected) * 100)) : 0
                 return (
-                  <div key={c.id} className={`bg-white rounded-2xl shadow-sm border border-gray-100 border-l-4 ${pct >= 100 ? 'border-l-emerald-400' : pct > 0 ? 'border-l-csc-gold' : 'border-l-gray-300'} overflow-hidden`}>
+                  <div key={c.id} className={`bg-white rounded-2xl shadow-sm border border-white/10 border-l-4 ${pct >= 100 ? 'border-l-emerald-400' : pct > 0 ? 'border-l-csc-gold' : 'border-l-gray-300'} overflow-hidden`}>
                     <button
                       type="button"
                       onClick={() => setExpandedChargeId(expanded ? null : c.id)}
-                      className="w-full px-5 py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="w-full px-5 py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/6 transition-colors"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <ChevronDown size={16} className={`text-gray-400 transition-transform shrink-0 ${expanded ? 'rotate-180' : ''}`} />
+                        <ChevronDown size={16} className={`text-white/40 transition-transform shrink-0 ${expanded ? 'rotate-180' : ''}`} />
                         <div className="min-w-0 text-left">
-                          <p className="font-black text-sm text-gray-900 truncate">{c.title}</p>
-                          <p className="text-[10px] text-gray-400 flex items-center gap-1.5 flex-wrap">
-                            {c.categoryName && <span className="px-1.5 py-0.5 rounded bg-gray-100">{c.categoryName}</span>}
+                          <p className="font-black text-sm text-white truncate">{c.title}</p>
+                          <p className="text-[10px] text-white/40 flex items-center gap-1.5 flex-wrap">
+                            {c.categoryName && <span className="px-1.5 py-0.5 rounded bg-white/10">{c.categoryName}</span>}
                             <span>{fmtEuro(c.amount)}/jogador · {c.participantIds.length} {c.participantIds.length === 1 ? 'participante' : 'participantes'}</span>
-                            {c.pendingCount > 0 && <span className="text-amber-600 font-bold">· {c.pendingCount} por pagar</span>}
+                            {c.pendingCount > 0 && <span className="text-csc-gold font-bold">· {c.pendingCount} por pagar</span>}
                             {c.due_date && <span>· prazo {new Date(c.due_date).toLocaleDateString('pt-PT')}</span>}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <div className="text-right">
-                          <p className="text-xs font-black text-gray-900">
+                          <p className="text-xs font-black text-white">
                             {fmtEuro(c.totalPaid)} / {fmtEuro(c.totalExpected)}
                             {c.surplusAmount > 0 && (
-                              <span className="ml-1 text-[10px] font-black text-emerald-600">+{fmtEuro(c.surplusAmount)}</span>
+                              <span className="ml-1 text-[10px] font-black text-csc-light">+{fmtEuro(c.surplusAmount)}</span>
                             )}
                           </p>
-                          <div className="w-16 sm:w-24 h-1.5 rounded-full bg-gray-100 overflow-hidden mt-1">
+                          <div className="w-16 sm:w-24 h-1.5 rounded-full bg-white/10 overflow-hidden mt-1">
                             <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-csc-gold'}`} style={{ width: `${pct}%` }} />
                           </div>
                         </div>
@@ -1543,7 +1583,7 @@ const FinancePage: React.FC = () => {
                             <span
                               role="button"
                               onClick={(e) => { e.stopPropagation(); openEditChargeModal(c) }}
-                              className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg cursor-pointer"
+                              className="p-1.5 text-blue-500 hover:bg-csc-blue/12 rounded-lg cursor-pointer"
                               title="Editar encargo"
                             >
                               <Pencil size={14} />
@@ -1551,7 +1591,7 @@ const FinancePage: React.FC = () => {
                             <span
                               role="button"
                               onClick={(e) => { e.stopPropagation(); setChargeToDelete(c.id) }}
-                              className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg cursor-pointer"
+                              className="p-1.5 text-red-400 hover:bg-csc-red/10 rounded-lg cursor-pointer"
                               title="Apagar encargo"
                             >
                               <Trash2 size={14} />
@@ -1562,7 +1602,7 @@ const FinancePage: React.FC = () => {
                     </button>
 
                     {expanded && (
-                      <div className="border-t border-gray-200 bg-gray-100 p-2 space-y-1.5">
+                      <div className="border-t border-white/12 bg-white/10 p-2 space-y-1.5">
                         {c.participantIds.map(playerId => {
                           const p = players.find(pl => pl.id === playerId)
                           const payments = c.payments.filter(pay => pay.player_id === playerId)
@@ -1572,23 +1612,23 @@ const FinancePage: React.FC = () => {
                           const isPayingHere = payFormKey === `${c.id}:${playerId}`
                           const accent = remaining <= 0 ? 'border-l-emerald-400' : paidTotal > 0 ? 'border-l-amber-400' : isPastDeadline ? 'border-l-red-400' : 'border-l-gray-300'
                           return (
-                            <div key={playerId} className={`bg-white shadow-sm rounded-lg border border-gray-200 border-l-4 ${accent} px-3 py-2.5 space-y-2`}>
+                            <div key={playerId} className={`bg-white shadow-sm rounded-lg border border-white/12 border-l-4 ${accent} px-3 py-2.5 space-y-2`}>
                               <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm font-bold text-gray-900 truncate">{p?.shirt_name || p?.name || 'Jogador'}</span>
+                                <span className="text-sm font-bold text-white truncate">{p?.shirt_name || p?.name || 'Jogador'}</span>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {remaining <= 0 ? (
-                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-light/15 text-csc-verde-texto">
                                       Pago ({fmtEuro(paidTotal)}{paidTotal > c.amount ? ` · +${fmtEuro(paidTotal - c.amount)}` : ''})
                                     </span>
                                   ) : paidTotal > 0 ? (
-                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Falta {fmtEuro(remaining)}</span>
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold">Falta {fmtEuro(remaining)}</span>
                                   ) : (
-                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isPastDeadline ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isPastDeadline ? 'bg-csc-red/15 text-csc-vermelho-texto' : 'bg-white/10 text-white/50'}`}>
                                       {isPastDeadline ? `Em atraso — deve ${fmtEuro(remaining)}` : `Por pagar (${fmtEuro(remaining)})`}
                                     </span>
                                   )}
                                   {isAdmin && (
-                                    <button type="button" onClick={() => isPayingHere ? setPayFormKey(null) : openPayForm(c.id, playerId)} className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer">
+                                    <button type="button" onClick={() => isPayingHere ? setPayFormKey(null) : openPayForm(c.id, playerId)} className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-blue/12 text-csc-azul-texto hover:bg-csc-blue/20 cursor-pointer">
                                       {isPayingHere ? 'Cancelar' : '+ Pagamento'}
                                     </button>
                                   )}
@@ -1598,23 +1638,23 @@ const FinancePage: React.FC = () => {
                               {payments.length > 0 && (
                                 <div className="space-y-1 pl-1">
                                   {payments.map(pay => (
-                                    <div key={pay.id} className="flex items-center gap-2 text-[11px] text-gray-500">
+                                    <div key={pay.id} className="flex items-center gap-2 text-[11px] text-white/50">
                                       {editingPaymentId === pay.id ? (
                                         <>
-                                          <input type="number" step="0.01" value={editPaymentAmount} onChange={e => setEditPaymentAmount(e.target.value)} className="w-16 px-1.5 py-1 border border-gray-300 rounded-md text-xs bg-white text-gray-900" />
-                                          <input type="date" value={editPaymentDate} onChange={e => setEditPaymentDate(e.target.value)} className="px-1.5 py-1 border border-gray-300 rounded-md text-xs bg-white text-gray-900" />
-                                          <button type="button" onClick={handleSaveEditedPayment} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer"><Check size={12} /></button>
-                                          <button type="button" onClick={() => setEditingPaymentId(null)} className="p-1 text-gray-400 hover:bg-gray-100 rounded cursor-pointer"><X size={12} /></button>
+                                          <input type="number" step="0.01" value={editPaymentAmount} onChange={e => setEditPaymentAmount(e.target.value)} className={`${CAMPO} w-16 px-2`} />
+                                          <input type="date" value={editPaymentDate} onChange={e => setEditPaymentDate(e.target.value)} className={`${CAMPO} w-auto px-2`} />
+                                          <button type="button" onClick={handleSaveEditedPayment} className="p-1 text-csc-light hover:bg-csc-light/10 rounded cursor-pointer"><Check size={12} /></button>
+                                          <button type="button" onClick={() => setEditingPaymentId(null)} className="p-1 text-white/40 hover:bg-white/10 rounded cursor-pointer"><X size={12} /></button>
                                         </>
                                       ) : (
                                         <>
-                                          <span className="font-bold text-gray-700">{fmtEuro(pay.amount)}</span>
+                                          <span className="font-bold text-white/80">{fmtEuro(pay.amount)}</span>
                                           <span>{new Date(pay.paid_at).toLocaleDateString('pt-PT')}</span>
                                           {pay.notes && <span className="italic truncate">({pay.notes})</span>}
                                           {isAdmin && (
                                             <span className="ml-auto flex items-center gap-1">
-                                              <button type="button" onClick={() => startEditPayment(pay)} className="p-1 text-blue-500 hover:bg-blue-50 rounded cursor-pointer" title="Corrigir valor"><Pencil size={11} /></button>
-                                              <button type="button" onClick={() => setPaymentToDelete(pay.id)} className="p-1 text-red-400 hover:bg-red-50 rounded cursor-pointer" title="Apagar"><Trash2 size={11} /></button>
+                                              <button type="button" onClick={() => startEditPayment(pay)} className="p-1 text-blue-500 hover:bg-csc-blue/12 rounded cursor-pointer" title="Corrigir valor"><Pencil size={11} /></button>
+                                              <button type="button" onClick={() => setPaymentToDelete(pay.id)} className="p-1 text-red-400 hover:bg-csc-red/10 rounded cursor-pointer" title="Apagar"><Trash2 size={11} /></button>
                                             </span>
                                           )}
                                         </>
@@ -1630,10 +1670,10 @@ const FinancePage: React.FC = () => {
                                 // botão Guardar saía do cartão, escondido pelo overflow-hidden
                                 // do cartão do encargo — a linha passa a quebrar antes disso.
                                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                                  <input type="number" step="0.01" placeholder="Valor (€)" value={payFormAmount} onChange={e => setPayFormAmount(e.target.value)} className="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900 shrink-0" />
-                                  <input type="date" value={payFormDate} onChange={e => setPayFormDate(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900 shrink-0" />
-                                  <input type="text" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className="flex-1 min-w-[100px] px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900" />
-                                  <button type="button" onClick={() => handleAddChargePayment(c.id, playerId)} className="px-3 py-1.5 bg-csc-gold text-csc-dark rounded-lg text-xs font-black hover:brightness-95 cursor-pointer shrink-0">
+                                  <input type="number" step="0.01" placeholder="Valor (€)" value={payFormAmount} onChange={e => setPayFormAmount(e.target.value)} className={`${CAMPO} w-20 px-2 shrink-0`} />
+                                  <input type="date" value={payFormDate} onChange={e => setPayFormDate(e.target.value)} className={`${CAMPO} w-auto px-2 shrink-0`} />
+                                  <input type="text" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className={`${CAMPO} flex-1 min-w-[100px]`} />
+                                  <button type="button" onClick={() => handleAddChargePayment(c.id, playerId)} className="px-3 py-1.5 bg-csc-gold text-csc-tinta rounded-lg text-xs font-black hover:brightness-95 cursor-pointer shrink-0">
                                     Guardar
                                   </button>
                                 </div>
@@ -1665,7 +1705,7 @@ const FinancePage: React.FC = () => {
             <button
               type="button"
               onClick={fecharModalEncargo}
-              className="px-4 py-2 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors cursor-pointer"
+              className="px-4 py-2 text-sm font-bold text-white/60 bg-white/10 rounded-xl hover:bg-white/15 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -1673,7 +1713,7 @@ const FinancePage: React.FC = () => {
               type="button"
               onClick={handleSaveCharge}
               disabled={savingCharge}
-              className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer"
+              className="min-h-11 px-4 font-display font-extrabold text-[12px] text-csc-tinta bg-csc-gold rounded-[22px] transition-transform duration-150 active:scale-97 disabled:opacity-40 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
             >
               {savingCharge ? 'A guardar...' : editingChargeId ? 'Guardar Alterações' : 'Criar Encargo'}
             </button>
@@ -1682,24 +1722,24 @@ const FinancePage: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="encargo-titulo">Título *</label>
-            <input id="encargo-titulo" type="text" value={newChargeTitle} onChange={e => setNewChargeTitle(e.target.value)} placeholder="Ex: Equipamento Inverno 2026, Viagem Torneio Faro" className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none" autoFocus />
+            <label className={ETIQUETA} htmlFor="encargo-titulo">Título *</label>
+            <input id="encargo-titulo" type="text" value={newChargeTitle} onChange={e => setNewChargeTitle(e.target.value)} placeholder="Ex: Equipamento Inverno 2026, Viagem Torneio Faro" className={CAMPO} autoFocus />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="encargo-categoria">Categoria</label>
-              <select id="encargo-categoria" value={newChargeCategoryId} onChange={e => handleChargeCategoryChange(e.target.value)} className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none">
+              <label className={ETIQUETA} htmlFor="encargo-categoria">Categoria</label>
+              <select id="encargo-categoria" value={newChargeCategoryId} onChange={e => handleChargeCategoryChange(e.target.value)} className={CAMPO}>
                 {incomeCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="encargo-valor">Valor por jogador (€) *</label>
-              <input id="encargo-valor" type="number" step="0.01" value={newChargeAmount} onChange={e => setNewChargeAmount(e.target.value)} placeholder="0.00" className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none" />
+              <label className={ETIQUETA} htmlFor="encargo-valor">Valor por jogador (€) *</label>
+              <input id="encargo-valor" type="number" step="0.01" value={newChargeAmount} onChange={e => setNewChargeAmount(e.target.value)} placeholder="0.00" className={CAMPO} />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-600 mb-1" htmlFor="encargo-prazo">Prazo (opcional)</label>
-            <input id="encargo-prazo" type="date" value={newChargeDueDate} onChange={e => setNewChargeDueDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none" />
+            <label className={ETIQUETA} htmlFor="encargo-prazo">Prazo (opcional)</label>
+            <input id="encargo-prazo" type="date" value={newChargeDueDate} onChange={e => setNewChargeDueDate(e.target.value)} className={CAMPO} />
           </div>
 
           {/* Encargo-intermediário: o clube recebe isto dos jogadores mas tem de
@@ -1710,41 +1750,41 @@ const FinancePage: React.FC = () => {
             const editingCharge = editingChargeId ? chargesWithStats.find(c => c.id === editingChargeId) : undefined
             const payableLocked = !!editingCharge?.payable_paid
             return (
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2.5">
-                <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+              <div className="p-3 bg-white/6 border border-white/12 rounded-xl space-y-2.5">
+                <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={newChargeIsIntermediary}
                     disabled={payableLocked}
                     onChange={e => handleToggleChargeIntermediary(e.target.checked)}
-                    className="w-4 h-4 text-csc-dark rounded"
+                    className="w-4 h-4 text-csc-tinta rounded"
                   />
                   O clube funciona como intermediário (recebe dos jogadores e depois paga a um terceiro)
                 </label>
                 {newChargeIsIntermediary && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-gray-600 mb-1" htmlFor="encargo-payable-valor">Valor a pagar ao terceiro (€) *</label>
+                      <label className={ETIQUETA} htmlFor="encargo-payable-valor">Valor a pagar ao terceiro (€) *</label>
                       <input
                         id="encargo-payable-valor" type="number" step="0.01"
                         value={newChargePayableAmount}
                         disabled={payableLocked}
                         onChange={e => setNewChargePayableAmount(e.target.value)}
                         placeholder="0.00"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none disabled:bg-gray-100"
+                        className={`${CAMPO} disabled:opacity-50`}
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-gray-600 mb-1" htmlFor="encargo-payable-prazo">Prazo de pagamento</label>
+                      <label className={ETIQUETA} htmlFor="encargo-payable-prazo">Prazo de pagamento</label>
                       <input
                         id="encargo-payable-prazo" type="date"
                         value={newChargePayableDueDate}
                         disabled={payableLocked}
                         onChange={e => setNewChargePayableDueDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:ring-2 focus:ring-csc-dark outline-none disabled:bg-gray-100"
+                        className={`${CAMPO} disabled:opacity-50`}
                       />
                     </div>
-                    <p className="col-span-2 text-[10px] text-gray-500">
+                    <p className="col-span-2 text-[10px] text-white/50">
                       {payableLocked
                         ? 'Já pago ao terceiro.'
                         : 'Entra logo em Pagamentos Programados e na Previsão da Época, mesmo antes de ser pago.'}
@@ -1757,22 +1797,22 @@ const FinancePage: React.FC = () => {
 
           <div>
             <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="block text-xs font-bold text-gray-600">Jogadores participantes * ({newChargePlayerIds.size})</span>
+              <span className="block text-xs font-bold text-white/60">Jogadores participantes * ({newChargePlayerIds.size})</span>
               <div className="flex items-center gap-2 shrink-0">
-                <button type="button" onClick={() => setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))} className="text-[11px] font-bold text-csc-dark hover:text-csc-light cursor-pointer">Todos os ativos</button>
-                <button type="button" onClick={() => setNewChargePlayerIds(new Set())} className="text-[11px] font-bold text-gray-400 hover:text-gray-600 cursor-pointer">Limpar</button>
+                <button type="button" onClick={() => setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))} className="text-[11px] font-bold text-csc-tinta hover:text-csc-light cursor-pointer">Todos os ativos</button>
+                <button type="button" onClick={() => setNewChargePlayerIds(new Set())} className="text-[11px] font-bold text-white/40 hover:text-white/60 cursor-pointer">Limpar</button>
               </div>
             </div>
-            <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
+            <div className="max-h-48 overflow-y-auto border border-white/12 rounded-xl divide-y divide-white/8">
               {players.map(p => {
                 const editingCharge = editingChargeId ? chargesWithStats.find(c => c.id === editingChargeId) : undefined
                 const lockedIn = editingChargeId ? newChargePlayerIds.has(p.id) && chargeParticipantHasPayments(editingCharge, p.id) : false
                 return (
-                  <label key={p.id} className={`flex items-center gap-2 px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50 ${lockedIn ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
+                  <label key={p.id} className={`flex items-center gap-2 px-3 py-1.5 text-sm text-white hover:bg-white/6 ${lockedIn ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                     <input type="checkbox" checked={newChargePlayerIds.has(p.id)} disabled={lockedIn} onChange={() => toggleNewChargePlayer(p.id)} className={lockedIn ? '' : 'cursor-pointer'} />
                     <span className="truncate">{p.shirt_name || p.name}</span>
-                    {lockedIn && <span className="text-[9px] text-gray-400 ml-auto shrink-0" title="Já tem pagamentos registados — não pode ser removido">tem pagamentos</span>}
-                    {!lockedIn && p.status === 'inactive' && <span className="text-[9px] text-gray-400 ml-auto shrink-0">inativo</span>}
+                    {lockedIn && <span className="text-[9px] text-white/40 ml-auto shrink-0" title="Já tem pagamentos registados — não pode ser removido">tem pagamentos</span>}
+                    {!lockedIn && p.status === 'inactive' && <span className="text-[9px] text-white/40 ml-auto shrink-0">inativo</span>}
                   </label>
                 )
               })}
@@ -1798,31 +1838,31 @@ const FinancePage: React.FC = () => {
 
       {/* ================= DESPESAS ================= */}
       {activeTab === 'expenses' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="space-y-3">
           <div className="space-y-4 h-fit">
-            <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4">
-              <h3 className="text-sm font-black text-white mb-3 flex items-center gap-2">
+            <div className="cartao-simples text-white p-4">
+              <h3 className={`${ETIQUETA_SECCAO} mb-3 flex items-center gap-2`}>
                 <Receipt size={16} className="text-csc-gold" />
                 <span>Registar Despesa/Receita</span>
               </h3>
               <form onSubmit={handleAddTransaction} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Descrição</label>
-                  <input type="text" required value={txDesc} onChange={e => setTxDesc(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" placeholder="Ex: Bolas novas" />
+                  <label className={ETIQUETA}>Descrição</label>
+                  <input type="text" required value={txDesc} onChange={e => setTxDesc(e.target.value)} className={CAMPO} placeholder="Ex: Bolas novas" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Valor (€)</label>
-                    <input type="number" step="0.01" required value={txAmount} onChange={e => setTxAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" placeholder="0.00" />
+                    <label className={ETIQUETA}>Valor (€)</label>
+                    <input type="number" step="0.01" required value={txAmount} onChange={e => setTxAmount(e.target.value)} className={CAMPO} placeholder="0.00" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-white/70 mb-1">Data</label>
-                    <input type="date" required value={txDate} onChange={e => setTxDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
+                    <label className={ETIQUETA}>Data</label>
+                    <input type="date" required value={txDate} onChange={e => setTxDate(e.target.value)} className={CAMPO} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Tipo</label>
-                  <select value={txType} onChange={e => handleTxTypeChange(e.target.value as 'income' | 'expense')} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                  <label className={ETIQUETA}>Tipo</label>
+                  <select value={txType} onChange={e => handleTxTypeChange(e.target.value as 'income' | 'expense')} className={CAMPO}>
                     <option value="expense">Despesa (Saída)</option>
                     <option value="income">Receita (Entrada)</option>
                   </select>
@@ -1831,8 +1871,8 @@ const FinancePage: React.FC = () => {
                   {/* Numa receita só se oferecem as categorias marcadas com
                       "também pode ser usada para receitas" — é o que permite ver
                       o saldo de uma categoria (recebido − gasto) tender para zero. */}
-                  <label className="block text-xs font-bold text-white/70 mb-1">Categoria</label>
-                  <select value={txCategoryId} onChange={e => setTxCategoryId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                  <label className={ETIQUETA}>Categoria</label>
+                  <select value={txCategoryId} onChange={e => setTxCategoryId(e.target.value)} className={CAMPO}>
                     <option value="">-- Sem categoria --</option>
                     {(txType === 'income' ? incomeCategories : categories).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
@@ -1841,15 +1881,15 @@ const FinancePage: React.FC = () => {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-white/70 mb-1">Documento comprovativo (opcional)</label>
+                  <label className={ETIQUETA}>Documento comprovativo (opcional)</label>
                   <input
                     type="file"
                     accept="image/*,.pdf"
                     onChange={e => setTxFile(e.target.files ? e.target.files[0] : null)}
-                    className="w-full px-3 py-2 border border-white/15 rounded-xl text-[11px] bg-white/5 text-white/70 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-csc-gold file:text-csc-dark"
+                    className="w-full px-3 py-2 border border-white/15 rounded-xl text-[11px] bg-white/5 text-white/70 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-csc-gold file:text-csc-tinta"
                   />
                 </div>
-                <button type="submit" disabled={txSaving} className="w-full flex items-center justify-center gap-2 bg-csc-gold text-csc-dark py-2.5 rounded-xl text-xs font-black hover:brightness-95 transition-colors cursor-pointer disabled:opacity-60">
+                <button type="submit" disabled={txSaving} className="w-full flex items-center justify-center gap-2 bg-csc-gold text-csc-tinta py-2.5 rounded-xl text-xs font-black hover:brightness-95 transition-colors cursor-pointer disabled:opacity-60">
                   <Plus size={16} />
                   <span>{txSaving ? 'A guardar...' : 'Registar'}</span>
                 </button>
@@ -1858,8 +1898,8 @@ const FinancePage: React.FC = () => {
           </div>
 
           {pendingScheduledPayments.length > 0 && (
-            <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-amber-400/30 p-4">
-              <h3 className="text-sm font-black text-white mb-3">Pagamentos Programados</h3>
+            <div className="cartao-simples text-white border-csc-gold/30 p-4">
+              <h3 className={`${ETIQUETA_SECCAO} mb-3`}>Pagamentos Programados</h3>
               <div className="space-y-4">
                 {scheduledPaymentsByCategory.map(([label, items]) => (
                   <div key={label}>
@@ -1876,7 +1916,7 @@ const FinancePage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handlePayScheduled(p)}
-                              className="px-3 py-1.5 bg-csc-gold text-csc-dark rounded-lg text-[11px] font-black hover:brightness-95 transition-all cursor-pointer"
+                              className="px-3 py-1.5 bg-csc-gold text-csc-tinta rounded-lg text-[11px] font-black hover:brightness-95 transition-all cursor-pointer"
                             >
                               Registar Pagamento
                             </button>
@@ -1890,8 +1930,8 @@ const FinancePage: React.FC = () => {
             </div>
           )}
 
-          <div className="lg:col-span-2 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4">
-            <h3 className="text-sm font-black text-white mb-3">Últimas Despesas e Receitas</h3>
+          <div className="cartao-simples text-white p-4">
+            <h3 className={`${ETIQUETA_SECCAO} mb-3`}>Últimas Despesas e Receitas</h3>
             <div className="space-y-2">
               {transactions.map(t => {
                 const cat = categories.find(c => c.id === t.category_id)
@@ -1928,17 +1968,17 @@ const FinancePage: React.FC = () => {
 
       {/* ================= MOVIMENTOS (relatório) ================= */}
       {activeTab === 'movements' && (
-        <div className="bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-4">
+        <div className="cartao-simples text-white p-4 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <h3 className="text-sm font-black text-white">Relatório de Movimentos</h3>
+            <h3 className={ETIQUETA_SECCAO}>Relatório de Movimentos</h3>
             <div className="flex items-center gap-2">
-              <select value={movFilterMonth} onChange={e => setMovFilterMonth(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white font-bold text-gray-900">
+              <select value={movFilterMonth} onChange={e => setMovFilterMonth(e.target.value)} className={`${CAMPO} w-auto px-2.5`}>
                 <option value="all">Todos os meses</option>
                 {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                   <option key={m} value={m}>{nomeMes(m)}</option>
                 ))}
               </select>
-              <select value={movFilterYear} onChange={e => setMovFilterYear(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white font-bold text-gray-900">
+              <select value={movFilterYear} onChange={e => setMovFilterYear(e.target.value)} className={`${CAMPO} w-auto px-2.5`}>
                 <option value="all">Todos os anos</option>
                 {movementYears.map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -2019,20 +2059,20 @@ const FinancePage: React.FC = () => {
 
       {/* ================= DEFINIÇÕES ================= */}
       {activeTab === 'settings' && isAdmin && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 max-w-5xl items-start">
-        <div className="lg:col-span-7 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4 space-y-4">
+        <div className="space-y-3">
+        <div className="cartao-simples text-white p-4 space-y-4">
           <div>
-            <h3 className="text-sm font-black text-white mb-3">Época Desportiva</h3>
+            <h3 className={`${ETIQUETA_SECCAO} mb-3`}>Época Desportiva</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Mês de Início</label>
-                <select value={settingsForm.season_start_month} onChange={e => setSettingsForm(s => ({ ...s, season_start_month: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                <label className={ETIQUETA}>Mês de Início</label>
+                <select value={settingsForm.season_start_month} onChange={e => setSettingsForm(s => ({ ...s, season_start_month: Number(e.target.value) }))} className={CAMPO}>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{nomeMes(m)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Mês de Fim</label>
-                <select value={settingsForm.season_end_month} onChange={e => setSettingsForm(s => ({ ...s, season_end_month: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white font-medium text-gray-900">
+                <label className={ETIQUETA}>Mês de Fim</label>
+                <select value={settingsForm.season_end_month} onChange={e => setSettingsForm(s => ({ ...s, season_end_month: Number(e.target.value) }))} className={CAMPO}>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{nomeMes(m)}</option>)}
                 </select>
               </div>
@@ -2040,18 +2080,18 @@ const FinancePage: React.FC = () => {
           </div>
 
           <div>
-            <h3 className="text-sm font-black text-white mb-3">Quotas</h3>
+            <h3 className={`${ETIQUETA_SECCAO} mb-3`}>Quotas</h3>
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Valor da Quota (€)</label>
-                <input type="number" step="0.01" value={settingsForm.quota_amount} onChange={e => setSettingsForm(s => ({ ...s, quota_amount: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
+                <label className={ETIQUETA}>Valor da Quota (€)</label>
+                <input type="number" step="0.01" value={settingsForm.quota_amount} onChange={e => setSettingsForm(s => ({ ...s, quota_amount: Number(e.target.value) }))} className={CAMPO} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-white/70 mb-1">Incumprimento a partir do dia</label>
-                <input type="number" min={1} max={28} value={settingsForm.quota_due_day} onChange={e => setSettingsForm(s => ({ ...s, quota_due_day: Number(e.target.value) }))} className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
+                <label className={ETIQUETA}>Incumprimento a partir do dia</label>
+                <input type="number" min={1} max={28} value={settingsForm.quota_due_day} onChange={e => setSettingsForm(s => ({ ...s, quota_due_day: Number(e.target.value) }))} className={CAMPO} />
               </div>
             </div>
-            <label className="block text-xs font-bold text-white/70 mb-1.5">Meses sem quota</label>
+            <label className={ETIQUETA}>Meses sem quota</label>
             <div className="flex flex-wrap gap-1.5">
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
                 const excluded = settingsForm.quota_excluded_months.includes(m)
@@ -2074,17 +2114,17 @@ const FinancePage: React.FC = () => {
             </div>
           </div>
 
-          <button type="button" onClick={handleSaveSettings} disabled={savingSettings} className="px-5 py-2.5 bg-csc-gold text-csc-dark rounded-xl text-xs font-black hover:brightness-95 transition-all cursor-pointer disabled:opacity-60">
+          <button type="button" onClick={handleSaveSettings} disabled={savingSettings} className="px-5 py-2.5 bg-csc-gold text-csc-tinta rounded-xl text-xs font-black hover:brightness-95 transition-all cursor-pointer disabled:opacity-60">
             {savingSettings ? 'A guardar...' : 'Guardar Definições'}
           </button>
         </div>
 
         {/* Categorias — bloco à parte, ao lado no desktop; gravam logo ao criar/apagar,
             sem passar pelo botão "Guardar Definições" do bloco anterior. */}
-        <div className="lg:col-span-5 bg-csc-dark text-white rounded-2xl shadow-sm border border-white/10 p-4">
-          <h3 className="text-sm font-black text-white mb-3">Categorias</h3>
+        <div className="cartao-simples text-white p-4">
+          <h3 className={`${ETIQUETA_SECCAO} mb-3`}>Categorias</h3>
           <div className="flex gap-2 mb-2">
-            <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nova categoria" className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs bg-white text-gray-900" />
+            <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Nova categoria" className={`${CAMPO} flex-1`} />
             <button type="button" onClick={handleAddCategory} className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors">
               <Plus size={14} />
             </button>
