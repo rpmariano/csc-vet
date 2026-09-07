@@ -160,6 +160,17 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   origem), mas o grep custa um segundo. **E o script traduz comentários**, que
   não sabe distinguir de classes: um comentário que cite `bg-red-50` fica a
   dizer `bg-csc-red/10` e passa a mentir.
+- **Um diálogo tem de levar o foco lá para dentro ao abrir**, e o
+  `useModalA11y` trata disso — mas insistindo por `requestAnimationFrame` até o
+  painel existir, e não uma vez só. A versão anterior tentava com
+  `setTimeout(…, 0)` e desistia em silêncio se a ref ainda fosse nula: chegava
+  para os diálogos que abrem de um clique, e falhava nas persianas abertas
+  **pelo endereço**, porque o `BottomSheet` monta o painel num segundo passo
+  para animar a entrada. Medido antes da correção: a ficha do adversário ficava
+  com o foco no `<body>` em 10 de 12 aberturas — quem navega por teclado abria o
+  diálogo e continuava do lado de fora dele. `dialogos.spec.ts` cobre agora as
+  persianas abertas por navegação direta, e repete cada uma quatro vezes: era
+  uma corrida, e uma passagem única dava verde com o bug lá.
 - **Um `Modal` não tem tom.** O painel é sempre `bg-csc-fundo`. Havia um
   `tone` cujo `'dark'` dava o verde do clube, ao contrário do `BottomSheet`,
   onde a mesma palavra dá o fundo escuro — um modal escrito por analogia com

@@ -46,8 +46,10 @@ async function abrePagina(page: Page, caminho: string, fixtures = {}) {
   await montarSupabaseFalso(page, fixtures)
   await page.goto(caminho)
   await page.waitForLoadState('networkidle')
-  // Continuar na rota pedida (e não em /login) é a prova de que a sessão falsa pegou.
-  await expect(page).toHaveURL(new RegExp(`/${caminho}$`))
+  // Continuar na rota pedida (e não em /login) é a prova de que a sessão falsa
+  // pegou. O caminho vai escapado: os que trazem `?` e `&` são metacaracteres
+  // de expressão regular e davam um teste que nunca casava.
+  await expect(page).toHaveURL(url => url.pathname + url.search === `/csc-vet/${caminho}`)
 }
 
 test.describe('Painel de administração', () => {
@@ -176,4 +178,50 @@ test.describe('Calendário', () => {
     await page.keyboard.press('Escape')
     await expect(dialogos(page)).toHaveCount(base)
   })
+})
+
+/**
+ * Persianas abertas pelo endereço, e não por um clique.
+ *
+ * O `verificaContrato` já exigia o foco lá dentro, mas todos os casos acima
+ * abrem com um clique — e por um clique o foco sempre entrou. Estas abrem por
+ * navegação direta, que é o caminho de um link partilhado ou de um retroceder,
+ * e é aí que falhava: o `useModalA11y` tentava focar uma vez com
+ * `setTimeout(…, 0)` e desistia em silêncio se a ref do painel ainda não
+ * existisse. Como o `BottomSheet` monta o painel num segundo passo para animar
+ * a entrada, isso acontecia a maior parte das vezes: medido em 12 aberturas, a
+ * ficha do adversário deixava o foco no `<body>` em 10 e a do campo em 7.
+ *
+ * Repete-se cada uma **quatro vezes** de propósito: era uma corrida, e uma
+ * passagem única voltaria a dar verde com o bug lá.
+ */
+test.describe('Persianas abertas pelo endereço', () => {
+  const campo = { id: 'f1', name: 'Estádio Municipal', address: 'Rua da Bela Vista, 2750-343 Cascais' }
+  const adversario = {
+    id: 'o1', name: 'Sesimbra Veteranos', initials: 'SES', logo_url: null,
+    contact_name: 'João', contact_phone: '967 000 111', home_field_id: 'f1',
+  }
+
+  const evento = {
+    id: 'e1', title: 'Treino de teste', type: 'practice',
+    date_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    location: 'Campo de Teste', description: null, field_id: null, opponent_id: null,
+    tournament_id: null, home_away: 'home', is_friendly: false, max_players: null,
+    meeting_time: null, home_score: null, away_score: null,
+  }
+
+  const casos: [string, string][] = [
+    ['ficha do adversário', 'admin?ver=opponents&adversario=o1'],
+    ['ficha do campo', 'admin?ver=fields&campo=f1'],
+    ['detalhe do evento', 'calendar?event=e1'],
+  ]
+
+  for (const [nome, caminho] of casos) {
+    test(`o foco entra na ${nome}`, async ({ page }) => {
+      for (let i = 0; i < 4; i++) {
+        await abrePagina(page, caminho, { fields: [campo], opponents: [adversario], events: [evento] })
+        await verificaContrato(page, dialogos(page).last())
+      }
+    })
+  }
 })
