@@ -12,6 +12,14 @@ Os ficheiros HTML deste pacote são **referências de design**, não código de 
 
 A tarefa é **recriar estes ecrãs no ambiente existente da app** — React + TypeScript + Vite + Tailwind + Supabase, com as convenções que já lá estão (`src/pages`, `src/components`, `src/context`, `supabase` client, `AuthContext`, `ClubContext`) — e não copiar o HTML. As classes utilitárias, os componentes e o router já existem; o que muda é o aspeto, a estrutura de navegação e alguns fluxos novos.
 
+## Restrições do ambiente
+
+**Uma só UI, a de telemóvel.** Num ecrã largo é a mesma app numa coluna de 480px ao meio. Não há layout de desktop, e os pontos de corte responsivos do Tailwind estão desligados (`--breakpoint-*: 9999px`) — um `sm:grid-cols-2` não gera nada. Desenhar para 393px de largura útil.
+
+**Detalhe é persiana, e vai no endereço.** Ver uma entidade abre uma `BottomSheet` e põe o item no endereço (`?event=`, `?atleta=`, `?jogo=`), para haver link próprio e o retroceder do browser fechar. Modais ficam para inserções curtas.
+
+**Primitivos que já existem** (`src/components/ui`): `CartaoVidro`, `CartaoSimples`, `Botao`, `Pastilha`, `CabecalhoEcra`, `EtiquetaSeccao`, `FilaSeparadores`, `AvatarPerfil`, `CampoEntrada`, mais `BottomSheet`, `Modal` e `ConfirmModal`. O redesenho já cobre 49 dos 58 ecrãs em código; estes seis são o que falta.
+
 ## Fidelidade
 
 **Alta fidelidade.** Cores, tipografia, espaçamentos, raios, sombras e animações estão definidos e devem ser reproduzidos com fidelidade, usando Tailwind e os tokens abaixo. O conteúdo é de exemplo (nomes, valores, datas) — os dados vêm do Supabase.
@@ -36,7 +44,7 @@ Cada ecrã tem um código, visível como crachá no canto superior esquerdo do c
 | 3b | Ficha do atleta | treinador |
 | 3c | Editar atleta | treinador |
 | 3d | Ligar conta ao atleta (popup) | direção |
-| 4a | Persiana de um convocado | treinador |
+| 4a | Toque num convocado (persiana) | treinador |
 | 4b | Folha do [+] | treinador |
 | 4c | Alerta de evento sem convocatória | treinador |
 | 4d | Persiana do alerta | treinador |
@@ -62,10 +70,11 @@ Cada ecrã tem um código, visível como crachá no canto superior esquerdo do c
 | 9h | Ficha do adversário | treinador |
 | 9i | Ficha do campo | treinador |
 | 10a–10d | Entrar, registar, recuperar, nova palavra-passe | todos |
-| 11a–11c | Conta por ligar, agenda vazia, primeiro dia | todos |
+| 11a | Conta criada, ficha por ligar | todos |
+| 11b | Agenda sem nada marcado | todos |
 | 12a–12c | Notificações, preferências, os meus pagamentos | todos |
 
-Ecrãs substituídos, a ignorar: 5c, 6b, 6c, 6d (versões antigas da tesouraria e do hub de gestão).
+Ecrãs substituídos ou postos de lado, a ignorar: 5c e 6b (a tesouraria e o hub de gestão duplicavam o Financeiro e o Clube), 6c e 6d (versões antigas da tesouraria), 11c (o clube no primeiro dia — só se veria numa instalação nova) e 12a (não é um ecrã da app, é a ilustração de uma notificação no ecrã bloqueado).
 
 `Mapa de Navegação.dc.html` mostra, por área, o que cada ecrã abre — é o documento a usar para garantir que nenhum botão fica sem destino.
 
@@ -141,6 +150,20 @@ Archivo (Google Fonts, pesos 500–900) para títulos, números e etiquetas; Hel
 
 Botões: `transform: scale(.96–.97)` ao premir, `transition .16s`.
 
+## Presença, nesta app, é a resposta à convocatória
+
+Não há presenças marcadas no dia do jogo, e não vai haver. A tabela `attendances` existe mas nunca é escrita em lado nenhum da app — zero `insert`, zero `update`, zero linhas em produção. O que existe é `callups.status`: `called` (convocado, sem resposta), `confirmed` (disse que sim), `declined` (disse que não).
+
+**E quase ninguém responde**: de 1252 convocatórias em produção, 1243 estão em `called`. Oito "sim" e um "não" em toda a base — 0,7% de taxa de resposta.
+
+Daí três regras que o desenho já segue e a implementação tem de manter:
+
+- **Não escrever "presenças" no ecrã.** Ninguém marcou presença; o que se sabe é quem disse que ia. A Home diz "Disse que sim" e lê `callups`.
+- Só `confirmed` e `declined` contam para percentagens. Quem foi convocado ontem e ainda não respondeu **não é uma falta** — é um terceiro estado com nome próprio, "sem resposta".
+- **O estado vazio é a norma, não a exceção.** Um histórico de respostas está quase sempre vazio; desenhá-lo cheio é desenhar dados a fingir.
+
+A coluna `callups.responded_at` foi acrescentada (migração de 2026-09-07) e é preenchida por um gatilho no servidor. As nove respostas antigas ficaram sem hora, por isso o desenho tem de aguentar "Disse que sim" sem o "· ontem, 21:14" ao lado.
+
 ## Fluxos novos ou alterados
 
 1. **Guardar evento leva à convocatória.** Jogo e convívio: ao guardar (2e) abre a convocatória (4f), com "Todos os aptos", "Repetir última" e "Limpar"; lesionados e inativos entram desmarcados. Treino: a convocatória é automática (todos os aptos) e o que aparece é a confirmação (4g). Em qualquer dos casos existe **guardar como rascunho** — ninguém é avisado e o evento não entra no alerta.
@@ -172,7 +195,19 @@ Vem do código e deve ser mantido:
 - Nome mostrado: alcunha em destaque, nome completo abaixo.
 - Tipos de evento: jogo, treino, convívio; estados ativo e rascunho.
 - Participação na ficha de jogo: titular, suplente usado, suplente não usado, não convocado.
+- Convocatória: Confirmado / Recusou / Sem resposta — nunca "presente" ou "falta".
 - Confirmações de eliminar usam a linguagem do código: "Todas as convocatórias e respostas associadas serão apagadas."
+
+## Revisão dos seis ecrãs contra os dados reais (setembro 2026)
+
+Seis ecrãs foram revistos depois de se medir o que a base de dados tem de facto. As decisões estão fechadas:
+
+- **4a Toque num convocado.** "Confirmou presença" passou a **"Disse que sim"**. O bloco de presenças (P P F P P) foi substituído por **"Respostas anteriores"**, com a contagem de respondidas sobre o total de convocatórias, os quadrados por responder a tracejado e a linha "as convocatórias por responder não contam como falta". A tira de convocados no topo fica, para saltar entre atletas. A disciplina mantém-se (`stats.yellow_cards`, `red_cards`); as suspensões vêm de `tournament_suspensions`, hoje vazia. O telefone é `profiles.phone` — só a equipa técnica o lê, por RLS, e este ecrã é de quem convoca.
+- **4e Agenda com o evento em falta.** O evento sem convocatória **sobe ao topo, fora da lista**. Cada evento normal mostra "16 convocados · 15 sem resp." — a contagem **só aparece a treinador e direção**; na Agenda do jogador as linhas mostram hora e local. Os números do desenho refletem a taxa de resposta real.
+- **9h Ficha do adversário.** O bloco "Torneios e posições" **desenha-se com estado vazio**: `tournament_matches` tem zero linhas, por isso a posição fica a tracejado, com "sem jornadas lançadas" e um atalho para lançar. Os jogos entre nós vêm de `events` e contam sempre. "Mudar campo principal" abre a lista de campos.
+- **9i Ficha do campo.** **Sem mapa embebido** — não há componente nem chave de API. Fica um cartão de morada, "Ver no Maps" (abre o Google Maps por URL, como o `CalendarPage` já faz) e "Copiar morada". Quando o campo não tem morada, os dois botões ficam desativados.
+- **11a Conta criada, ficha por ligar.** O texto anterior estava errado para este clube. As fichas são criadas pela direção **antes** de as pessoas se registarem, e a app tenta ligar sozinha por email, telefone ou nome. O caso que falta é o terceiro: registou-se com um email que não está na ficha e nada mais bateu — hoje, **1 das 8 contas registadas está neste estado**. O ecrã é **inteiro, e substitui a Home** até estar resolvido; diz que a ficha existe e não foi ligada, mostra o email do registo em leitura, e manda falar com a direção, que resolve no 3d. **Sem ação nenhuma para o próprio** — em especial sem "preencher o meu perfil", que criaria uma segunda ficha da mesma pessoa. A condição é a mesma da RPC `admin_contas_sem_atleta()`: conta em `auth.users` sem `jersey_number`, `member_number`, `birth_date` nem `position`.
+- **11b Agenda sem nada marcado.** Os aniversários **só aparecem quando não há eventos** — assim a página nunca fica em branco e num mês cheio não competem com os eventos. Saem de `v_players_public.birth_date` (25 das 28 fichas), reaproveitando o código que a Home já tem.
 
 ## Campos novos na base de dados
 
@@ -199,6 +234,7 @@ Estes ecrãs pressupõem colunas que hoje não existem:
 - `public/cascais-emblem.png` — brasão do clube, usado nos placares, no cabeçalho e no ecrã de entrada. Vem do próprio repositório.
 - `public/logo-clube.png` — logótipo vertical.
 - Sem ícones de biblioteca: os ícones do protótipo são formas geométricas em CSS. Na implementação, usar o `lucide-react` que já está no projeto, mantendo o traço fino e o tamanho.
+- **Sem emoji.** Desenham-se de forma diferente em cada telemóvel e os leitores de ecrã leem-nos por extenso ("quadrado grande amarelo" para um cartão amarelo). Um cartão é um `<span>` com fundo dourado e texto escondido a dizer o que é.
 
 ## Ficheiros neste pacote
 
