@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
-import { montarSupabaseFalso } from './supabase-mock'
+import { montarSupabaseFalso, UTILIZADOR_TESTE } from './supabase-mock'
 
 /**
  * Teste de fumo dos diálogos: cada um tem de se anunciar como diálogo, ter um
@@ -20,16 +20,24 @@ function nomeAcessivel(painel: Locator) {
   })
 }
 
-const focoDentroDoDialogo = (page: Page) =>
-  page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))
+/**
+ * O foco está dentro **deste** painel?
+ *
+ * Media antes se estava dentro de *algum* `[role="dialog"]`, o que com
+ * diálogos empilhados dava verde mesmo que o foco tivesse ficado no de baixo —
+ * e é aí que interessa: quem abre uma confirmação por cima de um formulário
+ * tem de continuar a navegar na confirmação, não no que está por trás.
+ */
+const focoDentro = (painel: Locator) =>
+  painel.evaluate(el => el === document.activeElement || el.contains(document.activeElement))
 
 /** O contrato que todos partilham, sem assumir o que o Escape faz a seguir. */
-async function verificaContrato(page: Page, painel: Locator) {
+async function verificaContrato(painel: Locator) {
   await expect(painel).toBeVisible()
   await expect(painel).toHaveAttribute('aria-modal', 'true')
   expect(await nomeAcessivel(painel), 'o diálogo tem de ter nome acessível').not.toBe('')
   // O foco entra no diálogo: sem isto o teclado continuava na página por baixo.
-  await expect.poll(() => focoDentroDoDialogo(page), { timeout: 2000 }).toBe(true)
+  await expect.poll(() => focoDentro(painel), { timeout: 2000 }).toBe(true)
 }
 
 /** Diálogo simples: abre, cumpre o contrato e fecha com Escape. */
@@ -37,7 +45,7 @@ async function verificaDialogo(page: Page, abrir: () => Promise<void>) {
   const antes = await dialogos(page).count()
   await abrir()
   await expect(dialogos(page)).toHaveCount(antes + 1)
-  await verificaContrato(page, dialogos(page).last())
+  await verificaContrato(dialogos(page).last())
   await page.keyboard.press('Escape')
   await expect(dialogos(page)).toHaveCount(antes)
 }
@@ -151,7 +159,7 @@ test.describe('Calendário', () => {
     await abreEdicaoDoEvento(page)
 
     const base = await dialogos(page).count()
-    await verificaContrato(page, dialogos(page).last())
+    await verificaContrato(dialogos(page).last())
 
     // A edição fecha-se sempre de forma deliberada: o Escape pede confirmação.
     await page.keyboard.press('Escape')
@@ -171,7 +179,7 @@ test.describe('Calendário', () => {
     await page.locator('select').filter({ hasText: 'Criar Novo Campo' }).first().selectOption('__new__')
     await expect(dialogos(page)).toHaveCount(base + 1)
     const painelCampo = dialogos(page).last()
-    await verificaContrato(page, painelCampo)
+    await verificaContrato(painelCampo)
     await expect(painelCampo).toContainText('Criar Novo Campo / Instalação')
 
     // Escape fecha só a janela de cima; a edição continua aberta por baixo.
@@ -202,6 +210,14 @@ test.describe('Persianas abertas pelo endereço', () => {
     contact_name: 'João', contact_phone: '967 000 111', home_field_id: 'f1',
   }
 
+  const jogo = {
+    id: 'j1', title: 'Jogo de teste', type: 'match',
+    date_time: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    location: 'Campo de Teste', description: null, field_id: null, opponent_id: 'o1',
+    tournament_id: null, home_away: 'home', is_friendly: false, max_players: null,
+    meeting_time: null, home_score: 2, away_score: 1, is_active: true,
+  }
+
   const evento = {
     id: 'e1', title: 'Treino de teste', type: 'practice',
     date_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
@@ -214,13 +230,16 @@ test.describe('Persianas abertas pelo endereço', () => {
     ['ficha do adversário', 'admin?ver=opponents&adversario=o1'],
     ['ficha do campo', 'admin?ver=fields&campo=f1'],
     ['detalhe do evento', 'calendar?event=e1'],
+    ['ficha de atleta', `team-management?atleta=${UTILIZADOR_TESTE.id}`],
+    ['dossier de convocatória', 'events?convocatoria=e1'],
+    ['ficha de jogo', 'competicao?ver=fichas&jogo=j1'],
   ]
 
   for (const [nome, caminho] of casos) {
     test(`o foco entra na ${nome}`, async ({ page }) => {
       for (let i = 0; i < 4; i++) {
-        await abrePagina(page, caminho, { fields: [campo], opponents: [adversario], events: [evento] })
-        await verificaContrato(page, dialogos(page).last())
+        await abrePagina(page, caminho, { fields: [campo], opponents: [adversario], events: [evento, jogo] })
+        await verificaContrato(dialogos(page).last())
       }
     })
   }
