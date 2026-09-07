@@ -136,3 +136,45 @@ test.describe('Ficha de jogo', () => {
     await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
   })
 })
+
+/*
+  As fichas do adversário (9h) e do campo (9i) entraram no mesmo contrato, e é
+  por causa delas que o `AdminDashboard` deixou de ser `React.lazy` — ver o
+  ponto 6 dos riscos no CLAUDE.md.
+*/
+const campo = { id: 'f1', name: 'Estádio Municipal', address: 'Rua da Bela Vista, 2750-343 Cascais' }
+const adversario = {
+  id: 'o1',
+  name: 'Sesimbra Veteranos',
+  initials: 'SES',
+  logo_url: null,
+  contact_name: 'João',
+  contact_phone: '967 000 111',
+  home_field_id: 'f1',
+}
+
+test.describe('Ficha do adversário', () => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
+    await abrePagina(page, 'admin?ver=opponents', { opponents: [adversario], fields: [campo] })
+    await page.getByRole('button', { name: /^Ver a ficha do adversário / }).first().click()
+
+    await verificaDetalhe(page, /Sesimbra Veteranos/, 'Jogos entre nós', /adversario=o1/)
+
+    await page.goBack()
+    await expect(page).toHaveURL(/ver=opponents$/)
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
+  })
+})
+
+test.describe('Ficha do campo', () => {
+  test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
+    await abrePagina(page, 'admin?ver=fields', { fields: [campo] })
+    await page.getByRole('button', { name: /^Ver a ficha do campo / }).first().click()
+
+    await verificaDetalhe(page, /Estádio Municipal/, 'Próximos eventos aqui', /campo=f1/)
+
+    await page.goBack()
+    await expect(page).toHaveURL(/ver=fields$/)
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
+  })
+})

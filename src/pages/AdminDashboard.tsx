@@ -27,6 +27,9 @@ import { useModalA11y } from '../hooks/useModalA11y'
 import { useSearchParams } from 'react-router-dom'
 import { CabecalhoEcra, Pastilha } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
+import { FichaAdversario } from '../components/clube/FichaAdversario'
+import { FichaCampo } from '../components/clube/FichaCampo'
+import { formatClubSigla } from './CalendarPage'
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
 const CAMPO =
@@ -806,6 +809,30 @@ const AdminDashboard: React.FC = () => {
     setParams(seguintes, { replace: true })
   }
 
+  /*
+    As fichas do adversário (9h) e do campo (9i) vão no endereço, como o
+    detalhe de evento e a ficha de atleta: `?adversario=<id>` e `?campo=<id>`.
+    É o que lhes dá link próprio e faz o retroceder do browser fechá-las.
+
+    Foi por causa disto que esta página deixou de ser `React.lazy` no
+    `src/App.tsx` — ver o ponto 6 dos riscos no CLAUDE.md.
+  */
+  const adversarioAberto = opponents.find(o => o.id === params.get('adversario')) ?? null
+  const campoAberto = fields.find(f => f.id === params.get('campo')) ?? null
+
+  const abrirDetalhe = (chave: 'adversario' | 'campo', id: string) => {
+    triggerHaptic('light')
+    const seguintes = new URLSearchParams(params)
+    seguintes.set(chave, id)
+    setParams(seguintes)
+  }
+
+  const fecharDetalhe = (chave: 'adversario' | 'campo') => {
+    const seguintes = new URLSearchParams(params)
+    seguintes.delete(chave)
+    setParams(seguintes, { replace: true })
+  }
+
   const SEPARADORES: readonly { chave: TabType; etiqueta: string }[] = [
     { chave: 'club', etiqueta: 'Clube' },
     { chave: 'fields', etiqueta: `Campos (${fields.length})` },
@@ -1046,7 +1073,14 @@ const AdminDashboard: React.FC = () => {
                           key={f.id} 
                           className="flex flex-col justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all gap-3"
                         >
-                          <div className="space-y-1">
+                          <button
+                            type="button"
+                            onClick={() => abrirDetalhe('campo', f.id)}
+                            aria-label={`Ver a ficha do campo ${f.name}`}
+                            className="space-y-1 text-left min-h-11 cursor-pointer rounded-xl
+                              transition-transform duration-150 active:scale-97
+                              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                          >
                             <div className="flex items-center gap-2">
                               <MapPin size={14} className="text-csc-gold shrink-0" />
                               <h4 className="font-black text-sm text-white">{f.name}</h4>
@@ -1061,7 +1095,7 @@ const AdminDashboard: React.FC = () => {
                             ) : (
                               <p className="text-xs text-white/65 italic pl-6">Sem morada definida</p>
                             )}
-                          </div>
+                          </button>
 
                           <div className="flex items-center justify-between pt-2 border-t border-white/10 mt-1">
                             <a
@@ -1162,7 +1196,14 @@ const AdminDashboard: React.FC = () => {
                           key={o.id} 
                           className="flex flex-col justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all gap-3"
                         >
-                          <div className="flex items-start gap-3.5">
+                          <button
+                            type="button"
+                            onClick={() => abrirDetalhe('adversario', o.id)}
+                            aria-label={`Ver a ficha do adversário ${o.name}`}
+                            className="flex items-start gap-3.5 text-left w-full min-h-11 cursor-pointer rounded-xl
+                              transition-transform duration-150 active:scale-97
+                              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                          >
                             {o.logo_url ? (
                               <img 
                                 src={o.logo_url} 
@@ -1187,6 +1228,9 @@ const AdminDashboard: React.FC = () => {
                                 </p>
                               )}
 
+                              {/* O telefone era um `<a href="tel:">` dentro do que passou a
+                                  ser o botão que abre a ficha — um interativo dentro de
+                                  outro. Fica como texto; ligar faz-se na ficha (9h). */}
                               {(o.contact_name || o.contact_phone) && (
                                 <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-white/60 font-medium">
                                   {o.contact_name && (
@@ -1196,18 +1240,15 @@ const AdminDashboard: React.FC = () => {
                                     </span>
                                   )}
                                   {o.contact_phone && (
-                                    <a 
-                                      href={`tel:${o.contact_phone}`}
-                                      className="flex items-center gap-1 text-csc-gold font-bold hover:underline"
-                                    >
+                                    <span className="flex items-center gap-1 text-csc-gold font-bold">
                                       <Phone size={12} className="text-csc-gold" />
                                       <span>{o.contact_phone}</span>
-                                    </a>
+                                    </span>
                                   )}
                                 </div>
                               )}
                             </div>
-                          </div>
+                          </button>
 
                           <div className="flex items-center justify-between pt-2.5 border-t border-white/10 mt-1">
                             {homeField ? (
@@ -2064,6 +2105,47 @@ const AdminDashboard: React.FC = () => {
         variant={confirmModalConfig.variant}
         onConfirm={confirmModalConfig.onConfirm}
         onCancel={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Ficha do adversário (9h) e ficha do campo (9i), ambas no endereço. */}
+      <FichaAdversario
+        adversario={adversarioAberto}
+        campoPrincipal={
+          adversarioAberto ? (fields.find(f => f.id === adversarioAberto.home_field_id) ?? null) : null
+        }
+        siglaClube={formatClubSigla(clubSettings?.initials)}
+        aoFechar={() => fecharDetalhe('adversario')}
+        aoEditar={() => {
+          if (!adversarioAberto) return
+          const alvo = adversarioAberto
+          fecharDetalhe('adversario')
+          handleStartEditOpponent(alvo)
+        }}
+        aoEliminar={() => {
+          if (!adversarioAberto) return
+          const alvo = adversarioAberto
+          fecharDetalhe('adversario')
+          handleDeleteOpponent(alvo.id, alvo.name)
+        }}
+      />
+
+      <FichaCampo
+        campo={campoAberto}
+        eCampoDoClube={Boolean(campoAberto && clubSettings?.home_field_id === campoAberto.id)}
+        siglaClube={formatClubSigla(clubSettings?.initials)}
+        aoFechar={() => fecharDetalhe('campo')}
+        aoEditar={() => {
+          if (!campoAberto) return
+          const alvo = campoAberto
+          fecharDetalhe('campo')
+          handleStartEditField(alvo)
+        }}
+        aoEliminar={() => {
+          if (!campoAberto) return
+          const alvo = campoAberto
+          fecharDetalhe('campo')
+          handleDeleteField(alvo.id, alvo.name)
+        }}
       />
     </div>
   )

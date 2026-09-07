@@ -23,7 +23,7 @@ import {
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
 import { VistaDetalhe } from '../components/VistaDetalhe'
@@ -35,6 +35,8 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
 import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
+import { AniversariosDoMes } from '../components/AniversariosDoMes'
+import { FichaConvocado } from '../components/callups/FichaConvocado'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -217,6 +219,8 @@ interface CallupWithPlayer {
   event_id: string
   player_id: string
   status: 'called' | 'confirmed' | 'declined'
+  /** Quando o atleta respondeu. Escrito por gatilho no servidor; NULL nas respostas anteriores a set/2026. */
+  responded_at?: string | null
   player: Profile
 }
 
@@ -260,6 +264,10 @@ const CalendarPage: React.FC = () => {
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
+  /* A ficha rápida do convocado (4a), por cima da persiana do evento. Guarda-se
+     o id da convocatória e não a linha, para a ficha acompanhar as alterações
+     de estado feitas nos seus próprios botões. */
+  const [convocadoAberto, setConvocadoAberto] = useState<string | null>(null)
   const [typeFilter, setTypeFilter] = useState<'all' | 'match' | 'practice' | 'gathering'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'past' | 'my_confirmed' | 'my_declined' | 'my_pending' | 'my_called'>('all')
@@ -619,7 +627,7 @@ const CalendarPage: React.FC = () => {
       const myCallupsPromise = profile?.id
         ? supabase
             .from('callups')
-            .select('id, event_id, player_id, status, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)')
+            .select('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)')
             .eq('player_id', profile.id)
         : Promise.resolve({ data: [] } as any)
 
@@ -628,7 +636,7 @@ const CalendarPage: React.FC = () => {
           .from('events')
           .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season, image_url, organizer_name), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
-        fetchAllCallups('id, event_id, player_id, status, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
+        fetchAllCallups('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
         myCallupsPromise,
         // Plantel: a vista traz só as colunas de equipa (sem IBAN, NIF, morada,
         // contactos ou notas médicas), por isso qualquer membro a pode ler.
@@ -1287,6 +1295,76 @@ const CalendarPage: React.FC = () => {
 
   const selectedDayEvents = selectedDate ? getEventsForDate(selectedDate) : []
 
+  /*
+    Ecrã 4e: os eventos por convocar sobem ao topo, fora da lista.
+
+    A regra é a mesma do alerta flutuante da Home (4c), e por isso está escrita
+    do mesmo modo: jogos e convívios — os treinos convocam sozinhos todos os
+    aptos —, no futuro, não rascunhos, e sem uma única linha em `callups`. A
+    diferença é que aqui não há janela de sete dias: na Agenda vê-se o mês todo,
+    e um jogo daqui a três semanas sem ninguém chamado é para tratar quando se
+    reparar nele, não só quando ficar urgente.
+  */
+  const eventosPorConvocar = !isCoachOrAdmin ? [] : filteredEvents.filter(e =>
+    (e.type === 'match' || e.type === 'gathering') &&
+    e.is_active !== false &&
+    new Date(e.date_time).getTime() >= Date.now() &&
+    (eventCallups[e.id] || []).length === 0,
+  )
+  const idsPorConvocar = new Set(eventosPorConvocar.map(e => e.id))
+  const eventosDaLista = filteredEvents.filter(e => !idsPorConvocar.has(e.id))
+
+  /** O cartão destacado de um evento sem ninguém convocado (4e). */
+  const renderCartaoPorConvocar = (event: Event) => {
+    const quando = new Date(event.date_time)
+    const titulo = event.type === 'match'
+      ? `${formatClubSigla(clubSettings?.initials)} vs ${event.opponent?.name ?? 'adversário por definir'}`
+      : (event.title || 'Convívio')
+    const prova = event.is_friendly ? 'Amigável' : event.tournament?.name
+
+    return (
+      <div key={event.id} className="cartao-vidro overflow-hidden border-csc-gold/35">
+        <div className="flex items-center gap-3.5 px-4 pt-4">
+          <span className="w-11 shrink-0 text-center">
+            <span className="block font-display font-black text-[19px] text-csc-gold leading-none tabular-nums">
+              {String(quando.getDate()).padStart(2, '0')}
+            </span>
+            <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/45 mt-0.5">
+              {quando.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, '')}
+            </span>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display font-extrabold text-[15px] text-white truncate">{titulo}</span>
+            <span className="block text-[11px] text-white/55 mt-0.5 truncate">
+              {quando.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+              {prova ? ` · ${prova}` : ''}
+            </span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3 px-4 py-3.5 mt-3.5 bg-csc-gold/10 border-t border-csc-gold/25">
+          <span className="min-w-0 flex-1">
+            <span className="block font-display font-extrabold text-[12.5px] text-csc-gold">
+              Ninguém foi convocado
+            </span>
+            <span className="block text-[10.5px] leading-snug text-white/60 mt-0.5">
+              Sem convocatória o plantel não recebe pedido de resposta
+            </span>
+          </span>
+          <Link
+            to={`/events?convocatoria=${event.id}`}
+            onClick={() => triggerHaptic('light')}
+            className="h-11 px-4 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[11.5px]
+              flex items-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+          >
+            Convocar
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const renderEventCard = (event: Event) => {
     const callups = eventCallups[event.id] || []
     let myCallup = profile ? callups.find(c => c.player_id === profile.id || c.player?.id === profile.id || (c.player?.email && profile.email && c.player.email.toLowerCase().trim() === profile.email.toLowerCase().trim())) : null
@@ -1300,6 +1378,7 @@ const CalendarPage: React.FC = () => {
       }
     }
     const confirmedCount = callups.filter(c => c.status === 'confirmed').length
+    const semRespostaCount = callups.filter(c => c.status === 'called').length
 
     const isMatch = event.type === 'match'
     const isPractice = event.type === 'practice'
@@ -1394,10 +1473,30 @@ const CalendarPage: React.FC = () => {
             )}
           </div>
 
-          {callups.length > 0 && (
-            <span className="text-xs font-bold flex items-center gap-1 bg-white/10 text-white px-2.5 py-1 rounded-full shrink-0">
-              <Users size={13} />
-              <span><strong>{confirmedCount}</strong>/{callups.length}</span>
+          {/*
+            Quantos foram chamados e quantos responderam (ecrã 4e). **Só a quem
+            gere**: para o jogador é ruído — o que lhe diz respeito é a hora, o
+            local e a sua própria resposta, que estão mais abaixo no cartão.
+            Mostra-se o número de "sim" enquanto houver algum, e só quando não
+            há nenhum é que passa a dizer quantos faltam responder: com 0,7% de
+            respostas em toda a base, um "0 sim" em cada cartão seria a única
+            coisa que a Agenda dizia.
+          */}
+          {isCoachOrAdmin && callups.length > 0 && (
+            <span className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[11px] font-bold flex items-center gap-1 bg-white/10 text-white/70 px-2.5 py-1 rounded-full">
+                <Users size={13} />
+                {callups.length} convocados
+              </span>
+              <span
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                  confirmedCount > 0
+                    ? 'bg-csc-light/16 border-csc-light/30 text-csc-verde-texto'
+                    : 'bg-csc-gold/16 border-csc-gold/30 text-csc-gold'
+                }`}
+              >
+                {confirmedCount > 0 ? `${confirmedCount} sim` : `${semRespostaCount} sem resp.`}
+              </span>
             </span>
           )}
         </div>
@@ -1516,7 +1615,7 @@ const CalendarPage: React.FC = () => {
                   onClick={(e) => e.stopPropagation()}
                   className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap"
                 >
-                  <span className="text-xs font-bold text-white/70">Presença:</span>
+                  <span className="text-xs font-bold text-white/70">A tua resposta:</span>
                   {closedByReport ? (
                     <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
                       Jogo com ficha lançada — convocatória fechada
@@ -1799,7 +1898,13 @@ const CalendarPage: React.FC = () => {
 
           {/* Coluna Direita: Eventos do Dia Selecionado Diretamente */}
           <div className="lg:col-span-5 space-y-3 lg:sticky lg:top-6">
-            {selectedDate && (
+            {/*
+              Com a agenda toda vazia (ecrã 11b) este painel calava-se: dizia
+              "Sem eventos neste dia" logo por cima de "Nada marcado ainda", e
+              duas mensagens de vazio seguidas leem-se como uma avaria. O
+              painel do dia só faz sentido quando há eventos noutros dias.
+            */}
+            {selectedDate && !(filteredEvents.length === 0 && !temFiltros) && (
               selectedDayEvents.length === 0 ? (
                 <div className="cartao-simples border-dashed text-center px-5 py-8">
                   <CalendarDaysIcon size={26} className="mx-auto text-white/25 mb-2.5" />
@@ -1820,14 +1925,37 @@ const CalendarPage: React.FC = () => {
         {/* A lista deixou de ser uma vista alternativa: no handoff vem sempre
             por baixo do calendário, com os eventos do filtro em curso. */}
         <div className="grid grid-cols-1 gap-3">
-          {filteredEvents.length === 0 ? (
-            <div className="cartao-simples border-dashed text-center px-5 py-10">
-              <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
-              <p className="font-display font-extrabold text-sm text-white">Nenhum evento encontrado.</p>
-              <p className="text-[11px] text-white/50 mt-1.5">Limpa os filtros, ou marca alguma coisa no [+].</p>
-            </div>
+          {eventosPorConvocar.map(event => renderCartaoPorConvocar(event))}
+
+          {eventosDaLista.length === 0 && eventosPorConvocar.length === 0 ? (
+            /*
+              Dois vazios diferentes, e a diferença importa: com filtro posto o
+              que falta é tirá-lo; sem filtro nenhum não há mesmo nada marcado,
+              e é o ecrã 11b — a frase que diz que o próximo evento aparece
+              aqui, mais os aniversários do mês para a página não ficar em
+              branco.
+            */
+            temFiltros ? (
+              <div className="cartao-simples border-dashed text-center px-5 py-10">
+                <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
+                <p className="font-display font-extrabold text-sm text-white">Nenhum evento encontrado.</p>
+                <p className="text-[11px] text-white/50 mt-1.5">Limpa os filtros para ver o resto da agenda.</p>
+              </div>
+            ) : (
+              <>
+                <div className="cartao-vidro text-center px-5 py-10">
+                  <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
+                  <p className="font-display font-extrabold text-sm text-white">Nada marcado ainda</p>
+                  <p className="text-[11px] leading-relaxed text-white/50 mt-1.5">
+                    O próximo jogo ou treino aparece aqui assim que a equipa técnica o criar.
+                    Recebes aviso quando houver convocatória.
+                  </p>
+                </div>
+                <AniversariosDoMes mes={currentDate.getMonth()} />
+              </>
+            )
           ) : (
-            filteredEvents.map((event) => renderEventCard(event))
+            eventosDaLista.map((event) => renderEventCard(event))
           )}
         </div>
         </>
@@ -2173,8 +2301,8 @@ const CalendarPage: React.FC = () => {
                         // até à hora de concentração o jogador pode sempre mudar de ideias.
                         <div className="bg-[rgba(11,45,11,.55)] border-t border-csc-light/35 px-4 py-3.5 flex flex-col items-center justify-center gap-2.5">
                           <span className="font-display font-extrabold text-[13px] text-white">
-                            {myCallup.status === 'called' ? 'Vais estar presente?' :
-                              myCallup.status === 'confirmed' ? 'Confirmaste presença' : 'Recusaste presença'}
+                            {myCallup.status === 'called' ? 'Contamos contigo?' :
+                              myCallup.status === 'confirmed' ? 'Disseste que sim' : 'Disseste que não'}
                           </span>
                           <div className="flex items-center gap-2.5 w-full">
                             <button
@@ -2219,8 +2347,8 @@ const CalendarPage: React.FC = () => {
                                 myCallup.status === 'confirmed' ? 'text-emerald-300' :
                                 myCallup.status === 'declined' ? 'text-red-300' : 'text-csc-gold'
                               }>
-                                {myCallup.status === 'confirmed' ? 'Confirmaste presença' :
-                                 myCallup.status === 'declined' ? 'Recusaste presença' : 'Aguarda a tua resposta'}
+                                {myCallup.status === 'confirmed' ? 'Disseste que sim' :
+                                 myCallup.status === 'declined' ? 'Disseste que não' : 'Aguarda a tua resposta'}
                               </span>
                             </p>
                           </div>
@@ -2270,9 +2398,12 @@ const CalendarPage: React.FC = () => {
                 return (
                   <div className="lg:col-span-7 bg-white/[0.07] p-4 sm:p-5 rounded-3xl space-y-3.5 transition-all border border-white/10 border-t-white/20 shadow-lg shadow-black/20">
                     {/* Topo da Convocatória com Botão de Colapsar / Expandir */}
-                    <div
+                    <button
+                      type="button"
                       onClick={() => setIsModalCallupsExpanded(prev => !prev)}
-                      className="flex items-center justify-between cursor-pointer select-none group"
+                      aria-expanded={isModalCallupsExpanded}
+                      className="w-full min-h-11 flex items-center justify-between cursor-pointer select-none group text-left
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold rounded-xl"
                     >
                       <div className="flex-1 pr-2">
                         <div className="flex items-center gap-2">
@@ -2311,7 +2442,7 @@ const CalendarPage: React.FC = () => {
                           )}
                         </div>
                       </div>
-                    </div>
+                    </button>
 
                     {/* Conteúdo Expandido da Convocatória */}
                     {isModalCallupsExpanded && (
@@ -2385,6 +2516,7 @@ const CalendarPage: React.FC = () => {
                                   onDecline={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'declined')}
                                   onSetPending={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'called')}
                                   onRemove={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)}
+                                  onOpen={isCoachOrAdmin ? () => setConvocadoAberto(c.id) : undefined}
                                 />
                               ))}
                             </div>
@@ -2460,6 +2592,32 @@ const CalendarPage: React.FC = () => {
           </div>
         </VistaDetalhe>
       )}
+
+      {/*
+        A ficha rápida do convocado (4a), empilhada por cima da persiana do
+        evento — o `useModalA11y` trata da pilha. Fica fora da `VistaDetalhe`
+        para não ser desmontada quando ela anima a saída.
+      */}
+      {selectedEvent && (() => {
+        const tira = (eventCallups[selectedEvent.id] || []) as CallupWithPlayer[]
+        const aberta = tira.find(c => c.id === convocadoAberto) ?? null
+        return (
+          <FichaConvocado
+            convocatoria={aberta}
+            tira={tira}
+            displayName={aberta ? getPlayerDisplayName(aberta.player) : ''}
+            aoEscolher={setConvocadoAberto}
+            aoFechar={() => setConvocadoAberto(null)}
+            aoConfirmar={() => aberta && handleUpdateCallupStatus(aberta.id, selectedEvent.id, 'confirmed')}
+            aoRecusar={() => aberta && handleUpdateCallupStatus(aberta.id, selectedEvent.id, 'declined')}
+            aoRemover={() => {
+              if (!aberta) return
+              handleRemovePlayerFromCallup(aberta.id, selectedEvent.id)
+              setConvocadoAberto(null)
+            }}
+          />
+        )
+      })()}
       </div>
 
       {/* MODAL 3: EDITAR EVENTO ESPECÍFICO (Versão Larga 2 Colunas) */}

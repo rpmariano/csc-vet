@@ -164,6 +164,15 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   Espaço, e um `aria-label` que diga o que abre. É também o que dá aos testes
   um seletor estável: procurar por `div.bg-csc-dark` partiu-se duas vezes num
   dia, à segunda e à terceira vez que um cartão mudou de aspeto.
+- **Presença, nesta app, é a resposta à convocatória — e não se lhe chama
+  presença.** A tabela `attendances` existe e nunca foi escrita: zero linhas.
+  O que há é `callups.status` — `called` (sem resposta), `confirmed`,
+  `declined` — e `callups.responded_at`. Daí o vocabulário dos ecrãs: "Disse
+  que sim", "Disse que não", "Sem resposta", nunca "presente", "falta" ou
+  "presenças". Só `confirmed` e `declined` entram em percentagens: quem foi
+  convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
+  a norma, não a exceção — em produção há 1243 convocatórias por responder para
+  9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
 - Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
 - **O plantel lê-se de `v_players_public`, não de `profiles`.** Tudo o que mostre
   colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a
@@ -274,14 +283,26 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    falhava sempre; com `React.lazy` e só o `<Suspense>` do `App`, ~50%; sem
    `React.lazy` nas rotas que abrem detalhe, ~7%. Mover o `<Suspense>` do `App` para
    dentro do `Layout` piora.
-   **Por isso `CalendarPage`, `EventsPage`, `TeamManagementPage` e `CompeticaoPage`
-   são importadas diretamente em `src/App.tsx`** — são as quatro que abrem um detalhe
-   com endereço próprio. O resto continua em `React.lazy`. A poupança perdida é
-   pequena: o service worker da PWA já pré-carrega todos os pedaços à primeira
+   **Por isso `CalendarPage`, `EventsPage`, `TeamManagementPage`, `CompeticaoPage`
+   e `AdminDashboard` são importadas diretamente em `src/App.tsx`** — são as cinco que
+   abrem um detalhe com endereço próprio (`?event=`, `?atleta=`, `?convocatoria=`,
+   `?jogo=`, `?adversario=`, `?campo=`). O resto continua em `React.lazy`. A poupança
+   perdida é pequena: o service worker da PWA já pré-carrega todos os pedaços à primeira
    visita, por isso a divisão só valia nos primeiros segundos da primeiríssima
-   abertura. Arranque: ~87 kB → ~156 kB comprimidos.
+   abertura. Arranque: ~87 kB → ~156 kB → ~161 kB comprimidos (o último salto é o
+   `AdminDashboard`, que entrou em 2026-09-07 com as fichas 9h e 9i).
    **Uma página nova que abra um detalhe pelo endereço não pode ser `lazy`.**
    Sobram ~7% de falhas, que continuam a passar à segunda pelo `retries: 1`.
+
+**A condição de "conta sem ficha de atleta" tem duas metades.** A RPC
+`admin_contas_sem_atleta()` procura contas sem `jersey_number`, `member_number`,
+`birth_date` nem `position`. Isso chega para uma lista de admin, mas **não** para
+decidir o que o próprio vê: o ecrã 11a (`src/components/FichaPorLigar.tsx`)
+substitui a Home inteira, e a única conta que a condição em cru apanha hoje é a
+de um treinador — sem camisola nem posição porque não joga, com 48 convocatórias
+e a ficha ligada. Daí o `fichaPorLigar()` excluir quem tem papel de `coach` ou
+`admin`. **A RPC continua a listar esse treinador no ecrã 3d** — é um incómodo,
+não um erro, mas está por corrigir do lado da base de dados.
 
 **Sobre o `.env` e a chave anónima.** O `.env` deixou de ser versionado (`cdf2187`) mas
 continua no histórico, e a chave que lá está tem `role: anon` — é pública por desenho:

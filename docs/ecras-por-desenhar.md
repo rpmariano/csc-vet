@@ -126,7 +126,7 @@ abre nada**: não há ficha rápida.
 - Suspensões: `tournament_suspensions` (`player_id, tournament_id, reason,
   status`) — existe e é escrita pelo lançamento de vermelho na ficha de jogo,
   mas está **vazia** em produção.
-- Contactos: `profiles.phone` (25 de 28 fichas preenchidas). ⚠️ **RLS:** só a
+- Contactos: `profiles.phone` (25 de 27 fichas preenchidas). ⚠️ **RLS:** só a
   equipa técnica e o próprio leem `profiles`; os colegas leem
   `v_players_public`, que **não tem telefone**. Como este ecrã é de quem
   convoca (coach/admin), o telefone está acessível — mas o desenho não pode ser
@@ -254,8 +254,19 @@ ficha, e nem o telefone nem o nome deram correspondência. Aí não aparece
 mensagem nenhuma — a pessoa vê a app normal, sem convocatórias, sem aparecer no
 plantel, e sem uma linha que explique porquê.
 
-**Não é um caso raro.** Em produção, hoje: **28 fichas, 8 contas registadas, e
-1 dessas 8 está exatamente neste estado.** Uma em oito.
+**Quantas contas estão neste estado, hoje: nenhuma.** ⚠️ Corrigido a
+2026-09-07, ao implementar. A contagem anterior deste documento dizia "1 das 8
+contas" — era a condição da RPC aplicada em cru, e a conta que ela apanhava é
+a de um **treinador**: sem camisola nem posição porque não joga, com 48
+convocatórias e a ficha ligada como deve ser. Em produção há 27 fichas, 8
+contas registadas e **zero** contas de jogador por ligar.
+
+O ecrã continua a valer a pena — a associação automática falha sempre que
+alguém se regista com outro email, e é a direção que cria as fichas antes de as
+pessoas se registarem —, mas é um estado que **hoje ninguém vê**, e não um
+problema a arder. E a lição para a implementação é que a condição da RPC
+sozinha não serve deste lado: listar alguém a mais num ecrã de admin é um
+incómodo, substituir-lhe a Home é tirar-lhe a app.
 
 **⚠️ O texto do handoff não serve.** O 11a diz *"a tua conta está criada, mas
 ainda não está ligada a uma ficha de atleta"* e põe o utilizador **"À espera da
@@ -304,7 +315,7 @@ plantel — não fica uma página em branco"*.
 "Nenhum evento encontrado. / Limpa os filtros, ou marca alguma coisa no [+]".
 Não há aniversários na Agenda (zero ocorrências).
 
-**Dados disponíveis:** `v_players_public.birth_date` — 25 das 28 fichas
+**Dados disponíveis:** `v_players_public.birth_date` — 25 das 27 fichas
 preenchidas. A **Home já mostra aniversários** (`src/pages/Home.tsx`), com o
 código feito; é reaproveitável.
 
@@ -321,7 +332,7 @@ conteúdo conforme o mês, o que pode confundir.
 |---|---|---|---|
 | **4e** Evento em falta na Agenda | Alta | Fecha o par com o alerta que já existe | — |
 | **4a** Toque num convocado | Alta | Uso diário de quem convoca | 9 respostas em toda a base |
-| **11a** Ficha por ligar | Alta | 1 das 8 contas está neste estado hoje | Texto do handoff não serve |
+| **11a** Ficha por ligar | Média | Nenhuma conta neste estado hoje, mas recorre | Texto do handoff não serve |
 | **11b** Agenda vazia | Média | Barato, e a agenda passa semanas vazia | — |
 | **9h** Ficha de adversário | Média | Ecrã novo, com história de confrontos | Jornadas vazias |
 | **9i** Ficha de campo | Média | Ecrã novo | Não há mapa embebido |
@@ -337,7 +348,7 @@ para não parecerem esquecimento:
 - **6b · Gestão (treinador e direção).** Sobrepõe-se ao Clube (6a), que já tem
   os mesmos destinos com as contagens. A parte que não existe — o bloco "3
   coisas a tratar" — pode um dia entrar no Clube sem precisar de um ecrã novo.
-- **11c · Clube no primeiro dia.** O clube tem 28 fichas, 52 eventos e a época
+- **11c · Clube no primeiro dia.** O clube tem 27 fichas, 52 eventos e a época
   montada; este ecrã só se veria numa instalação nova.
 
 ## O que **não** falta

@@ -37,6 +37,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal, parseMatchReportMetadata, buildDescriptionWithMatchReport } from '../components/MatchReportModal'
 import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
+import { FichaConvocado } from '../components/callups/FichaConvocado'
 import { ConvocatoriaAoCriar } from '../components/callups/ConvocatoriaAoCriar'
 import type { EventoCriado } from '../components/callups/ConvocatoriaAoCriar'
 import { toast } from '../context/ToastContext'
@@ -209,6 +210,8 @@ interface CallupWithPlayer {
   event_id: string
   player_id: string
   status: 'called' | 'confirmed' | 'declined' | 'pending'
+  /** Quando o atleta respondeu. Escrito por gatilho no servidor; NULL nas respostas anteriores a set/2026. */
+  responded_at?: string | null
   player: Profile
 }
 
@@ -228,6 +231,8 @@ const EventsPage: React.FC = () => {
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
+  /* A ficha rápida do convocado (4a), por cima do dossier de convocatória. */
+  const [convocadoAberto, setConvocadoAberto] = useState<string | null>(null)
   const [rsvpTabFilter, setRsvpTabFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
   const [isMatchReportOpen, setIsMatchReportOpen] = useState(false)
 
@@ -712,7 +717,7 @@ const EventsPage: React.FC = () => {
         // Plantel: a vista traz só as colunas de equipa (sem IBAN, NIF, morada,
         // contactos ou notas médicas), por isso qualquer membro a pode ler.
         supabase.from('v_players_public').select('*').order('name', { ascending: true }),
-        fetchAllCallups('id, event_id, player_id, status, player:v_players_public(id, name, photo_url, jersey_number, role, roles, position)'),
+        fetchAllCallups('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, jersey_number, role, roles, position)'),
         supabase.from('tournament_players').select('tournament_id, player_id'),
         supabase.from('tournament_suspensions').select('*').eq('status', 'active')
       ])
@@ -1193,7 +1198,7 @@ const EventsPage: React.FC = () => {
         event_id: eventId,
         player_id: targetId,
         status: 'called'
-      }], { onConflict: 'event_id, player_id' }).select('id, event_id, player_id, status, player:v_players_public(id, name, photo_url, jersey_number, role, roles, position)').single()
+      }], { onConflict: 'event_id, player_id' }).select('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, jersey_number, role, roles, position)').single()
 
       if (error) throw error
 
@@ -2290,6 +2295,7 @@ const EventsPage: React.FC = () => {
                           onDecline={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'declined')}
                           onSetPending={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'called')}
                           onRemove={() => handleRemovePlayerFromCallup(c.id, activeCallupModalEvent.id)}
+                          onOpen={isCoachOrAdmin ? () => setConvocadoAberto(c.id) : undefined}
                         />
                       ))
                     )}
@@ -2301,6 +2307,28 @@ const EventsPage: React.FC = () => {
           </div>
         </VistaDetalhe>
       )}
+
+      {/* A ficha rápida do convocado (4a), empilhada sobre o dossier. */}
+      {activeCallupModalEvent && (() => {
+        const tira = (eventCallups[activeCallupModalEvent.id] || []) as CallupWithPlayer[]
+        const aberta = tira.find(c => c.id === convocadoAberto) ?? null
+        return (
+          <FichaConvocado
+            convocatoria={aberta}
+            tira={tira}
+            displayName={aberta ? getPlayerDisplayName(aberta.player) : ''}
+            aoEscolher={setConvocadoAberto}
+            aoFechar={() => setConvocadoAberto(null)}
+            aoConfirmar={() => aberta && handleUpdateCallupStatus(aberta.id, activeCallupModalEvent.id, 'confirmed')}
+            aoRecusar={() => aberta && handleUpdateCallupStatus(aberta.id, activeCallupModalEvent.id, 'declined')}
+            aoRemover={() => {
+              if (!aberta) return
+              handleRemovePlayerFromCallup(aberta.id, activeCallupModalEvent.id)
+              setConvocadoAberto(null)
+            }}
+          />
+        )
+      })()}
       </div>
       {/* ====== MODAL DE EDIÇÃO DE EVENTO ====== */}
       {editingEvent && (

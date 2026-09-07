@@ -14,6 +14,7 @@ import {
   FaixaSemConvocatoria,
   PersianaSemConvocatoria,
 } from '../components/AlertaSemConvocatoria'
+import { FichaPorLigar, fichaPorLigar } from '../components/FichaPorLigar'
 import {
   comOmissoes,
   getSeasonLabel,
@@ -101,7 +102,7 @@ const DATA_LONGA = new Intl.DateTimeFormat('pt-PT', {
 })
 
 const Home: React.FC = () => {
-  const { profile } = useAuth()
+  const { profile, assignedRoles } = useAuth()
   const { clubSettings } = useClub()
 
   const [proximo, setProximo] = useState<Evento | null>(null)
@@ -111,6 +112,14 @@ const Home: React.FC = () => {
   const [presencas, setPresencas] = useState<number | null>(null)
   const [aniversariantes, setAniversariantes] = useState<Aniversariante[]>([])
   const [aCarregar, setACarregar] = useState(true)
+
+  /*
+    Conta registada que nunca chegou a ser ligada a uma ficha de atleta
+    (ecrã 11a). Substitui a Home inteira: sem ficha não há convocatória, não
+    há golos e não há percentagem de respostas — os mosaicos todos mostrariam
+    um traço, e nenhum deles diria porquê.
+  */
+  const semFicha = fichaPorLigar(profile, assignedRoles)
 
   /* O alerta de convocatórias em falta é de quem gere; ver 4c/4d. */
   const eGestao = profile?.role === 'coach' || profile?.role === 'admin'
@@ -134,7 +143,7 @@ const Home: React.FC = () => {
   }, [profile])
 
   useEffect(() => {
-    if (!profile) return
+    if (!profile || semFicha) return
     let cancelado = false
 
     const carregar = async () => {
@@ -253,7 +262,7 @@ const Home: React.FC = () => {
     return () => {
       cancelado = true
     }
-  }, [profile])
+  }, [profile, semFicha])
 
   const responder = async (status: 'confirmed' | 'declined') => {
     if (!minhaConvocatoria || !proximo) return
@@ -304,7 +313,7 @@ const Home: React.FC = () => {
           className="w-[42px] h-[42px] rounded-full bg-white object-contain p-[3px] flex-none"
         />
         <div className="flex-1 min-w-0">
-          <p className="text-[10.5px] text-white/55">{saudacao()}</p>
+          <p className="text-[10.5px] text-white/55">{semFicha ? 'Bem-vindo,' : saudacao()}</p>
           <p className="font-display font-extrabold text-lg text-white truncate mt-0.5">
             {primeiroNome(profile)}
           </p>
@@ -313,6 +322,15 @@ const Home: React.FC = () => {
         <AvatarPerfil tamanho={46} comLapis />
       </header>
 
+      {/*
+        A conta não está ligada a nenhuma ficha de atleta: o ecrã 11a substitui
+        a Home toda, e mais nada corre. O cabeçalho fica — a fotografia leva às
+        Definições, e ler comunicados é uma das coisas que se pode fazer.
+      */}
+      {semFicha && profile ? (
+        <FichaPorLigar perfil={profile} />
+      ) : (
+      <>
       {/*
         Eventos a menos de sete dias sem ninguém convocado (ecrã 4c). Só a
         quem gere: é o erro caro desta app — chega o sábado e ninguém apareceu
@@ -521,6 +539,8 @@ const Home: React.FC = () => {
           </span>
         </CartaoSimples>
       ))}
+      </>
+      )}
     </div>
   )
 }

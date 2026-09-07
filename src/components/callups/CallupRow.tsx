@@ -16,6 +16,11 @@ interface CallupRowProps {
   onDecline: () => void
   onSetPending: () => void
   onRemove: () => void
+  /**
+   * Abrir a ficha rápida do convocado (ecrã 4a). Quando existe, o número e o
+   * nome passam a ser um botão; as ações da direita ficam como estavam.
+   */
+  onOpen?: () => void
 }
 
 /**
@@ -50,6 +55,7 @@ export function CallupRow({
   onDecline,
   onSetPending,
   onRemove,
+  onOpen,
 }: CallupRowProps) {
   const confirmado = status === 'confirmed'
   const recusou = status === 'declined'
@@ -83,8 +89,13 @@ export function CallupRow({
     </button>
   )
 
-  return (
-    <div className="flex items-center gap-2.5 px-3.5 py-2.5 border-t border-white/7 first:border-t-0">
+  /*
+    O número e o nome. Com `onOpen` são um `<button>` a sério — e não um `div`
+    com `onClick` — para chegarem ao teclado e ao leitor de ecrã; as ações
+    rápidas ficam de fora dele, senão era um botão dentro de outro.
+  */
+  const identidade = (
+    <>
       <span
         className="w-7 h-7 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 flex items-center justify-center
           font-display font-extrabold text-[10px] text-csc-gold flex-none"
@@ -92,12 +103,31 @@ export function CallupRow({
         {player?.jersey_number ?? '–'}
       </span>
 
-      <span className="flex-1 min-w-0">
+      <span className="flex-1 min-w-0 text-left">
         <span className="block font-display font-bold text-xs text-white truncate">{displayName}</span>
         {posicoes.length > 0 && (
           <span className="block text-[9px] text-white/40 truncate mt-0.5">{posicoes.join(' · ')}</span>
         )}
       </span>
+    </>
+  )
+
+  return (
+    <div className="flex items-center gap-2.5 px-3.5 py-2.5 border-t border-white/7 first:border-t-0">
+      {onOpen ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`Ver ${displayName} na convocatória`}
+          className="flex-1 min-w-0 min-h-11 flex items-center gap-2.5 cursor-pointer text-left
+            transition-transform duration-150 active:scale-97
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold rounded-xl"
+        >
+          {identidade}
+        </button>
+      ) : (
+        <span className="flex-1 min-w-0 flex items-center gap-2.5">{identidade}</span>
+      )}
 
       {isCoachOrAdmin ? (
         <span className="flex items-center gap-1 flex-none">

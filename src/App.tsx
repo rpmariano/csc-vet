@@ -16,9 +16,9 @@ import Layout from './components/Layout'
 // no arranque, para não haver um spinner a preceder o ecrã de entrada.
 import Login from './pages/Login'
 
-// Estas quatro não são carregadas a pedido, ao contrário das outras: são as
+// Estas cinco não são carregadas a pedido, ao contrário das outras: são as
 // que abrem um detalhe com endereço próprio (`?event=`, `?atleta=`,
-// `?convocatoria=`, `?jogo=`), e com `React.lazy` a atualização de localização
+// `?convocatoria=`, `?jogo=`, `?adversario=`, `?campo=`), e com `React.lazy` a atualização de localização
 // do React Router deixa de ser confirmada — o endereço muda ao retroceder mas
 // a persiana fica aberta, em cerca de metade das vezes. Medido: sem `lazy`, as
 // falhas caem para quase nenhuma. Ver o risco P2 no CLAUDE.md.
@@ -30,12 +30,12 @@ import CalendarPage from './pages/CalendarPage'
 import EventsPage from './pages/EventsPage'
 import TeamManagementPage from './pages/TeamManagementPage'
 import CompeticaoPage from './pages/CompeticaoPage'
+import AdminDashboard from './pages/AdminDashboard'
 
 const Home = React.lazy(() => import('./pages/Home'))
 const AnnouncementsPage = React.lazy(() => import('./pages/AnnouncementsPage'))
 const FinancePage = React.lazy(() => import('./pages/FinancePage'))
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'))
-const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'))
 const ClubePage = React.lazy(() => import('./pages/ClubePage'))
 const NovaPalavraPasse = React.lazy(() => import('./pages/NovaPalavraPasse'))
 
