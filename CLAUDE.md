@@ -162,6 +162,11 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a
   vista, que só tem colunas de equipa. `profiles` fica para a própria ficha e para o
   Plantel (treinador/admin), onde os dados pessoais são o assunto.
+- **Guardar um evento leva à convocatória**, e é lá que as linhas de `callups`
+  são escritas — em mais lado nenhum do fluxo de criação
+  (`ConvocatoriaAoCriar`, ecrãs 4f/4g). Era um bloco no meio do formulário, e
+  ter dois sítios a escrever a mesma tabela é como se perde a conta de quem
+  está chamado.
 - **Detalhe é persiana, e vai no endereço.** Ver um evento ou uma ficha de atleta
   abre o `<VistaDetalhe>` e põe o item no endereço (`?event=`, `?atleta=`), portanto
   há link próprio e o retroceder do browser fecha (ver Riscos, ponto 6). Modais ficam
