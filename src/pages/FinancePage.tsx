@@ -14,7 +14,7 @@ import { Modal } from '../components/Modal'
 // das vistas v_quota_status e v_financial_movements. De finance.ts só sobra o
 // que é regra de negócio pura — a época e o prazo do seguro.
 import {
-  DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes, getInsuranceDeadline,
+  DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
@@ -499,16 +499,22 @@ const FinancePage: React.FC = () => {
     return next
   })
 
-  // Ao escolher a categoria "Seguro Desportivo" pré-preenche valor e prazo a
-  // partir das Definições — só sugestões, não obrigam a nada.
+  /*
+    Escolher a categoria de um encargo, e mais nada.
+    
+    Havia aqui um caso especial: se a categoria se chamasse exatamente
+    "Seguro Desportivo", o título, o valor e o prazo eram pré-preenchidos a
+    partir de três definições próprias. O seguro passa a ser uma categoria
+    como as outras — é o que o handoff pede em 8c e 8g ("o seguro é uma
+    delas, sem tratamento especial") — e o comportamento dependia de uma
+    string escrita à mão: bastava alguém renomear a categoria para "Seguro
+    desportivo" e a magia deixava de acontecer, sem aviso nenhum.
+
+    As colunas `insurance_*` continuam na base e nas Definições; o que sai é
+    a mágica de as aplicar sozinhas a uma categoria com um nome em concreto.
+  */
   const handleChargeCategoryChange = (categoryId: string) => {
     setNewChargeCategoryId(categoryId)
-    const cat = categories.find(c => c.id === categoryId)
-    if (cat?.name === 'Seguro Desportivo') {
-      if (!newChargeTitle.trim()) setNewChargeTitle(`Seguro Desportivo ${seasonLabel}`)
-      if (!newChargeAmount) setNewChargeAmount(String(settings.insurance_amount))
-      if (!newChargeDueDate) setNewChargeDueDate(getInsuranceDeadline(settings, seasonLabel).toISOString().split('T')[0])
-    }
   }
 
   // Ao marcar "o clube funciona como intermediário", sugere como valor a
