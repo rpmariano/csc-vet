@@ -7,17 +7,16 @@ import { CartaoVidro, CartaoSimples, EtiquetaSeccao } from './ui'
 /**
  * Conta criada, ficha por ligar (ecrã 11a).
  *
- * Neste clube as fichas do plantel são criadas pela direção **antes** de as
- * pessoas se registarem. Quando alguém se regista, o `AuthContext` tenta ligar
- * sozinho por email (`find_my_profile_match({ p_email_only: true })`), e o
- * `AutoAssociationModal` propõe a ficha quando bate o telefone ou o nome.
+ * Neste clube as fichas são criadas pela direção **antes** de as pessoas se
+ * registarem, e a ligação faz-se pelo **endereço de email**: o `AuthContext`
+ * procura a ficha com o email da sessão e liga-a sozinho. Se não houver
+ * nenhuma com esse email, a conta fica por ligar — é a regra, e não uma
+ * falha da correspondência.
  *
- * O caso que faltava é o terceiro: registou-se com um email que não está na
- * ficha, e nem o telefone nem o nome deram correspondência. Aí não aparecia
- * mensagem nenhuma — a pessoa via a app normal, sem convocatórias e sem
- * aparecer no plantel, sem uma linha que explicasse porquê. Hoje não há
- * nenhuma conta assim, mas o caso repete-se sempre que a associação
- * automática falhar.
+ * Sem este ecrã não aparecia mensagem nenhuma: a pessoa via a app normal, sem
+ * convocatórias e sem aparecer no plantel, e sem uma linha que explicasse
+ * porquê. Hoje não há nenhuma conta assim, mas o caso repete-se sempre que
+ * alguém se registar com um email diferente do que a direção lhe pôs na ficha.
  *
  * **Sem ação nenhuma para o próprio**, e em especial sem o "Preencher o meu
  * perfil" que o handoff desenhava: preencher dados numa ficha órfã cria uma
@@ -128,9 +127,8 @@ export const FichaPorLigar: React.FC<{ perfil: Profile }> = ({ perfil }) => (
       </div>
 
       <p className="text-[11.5px] leading-relaxed text-white/70 mt-3">
-        Há uma ficha tua no plantel, mas a app não conseguiu ligá-la a esta conta — quase
-        sempre porque o email do registo é diferente do que está na ficha. Até estar ligada
-        não recebes convocatórias nem apareces no plantel.
+        O clube liga as contas pelo endereço de email, e nenhuma ficha tem o email com que
+        te registaste. Até estar ligada não recebes convocatórias nem apareces no plantel.
       </p>
 
       {/*
@@ -147,8 +145,8 @@ export const FichaPorLigar: React.FC<{ perfil: Profile }> = ({ perfil }) => (
       </div>
 
       <p className="text-[11.5px] leading-relaxed text-white/70 mt-3">
-        Diz este email a alguém da direção: liga a ficha em dois toques, e a app fica
-        normal logo a seguir.
+        Diz este email a alguém da direção: ou o põe na tua ficha, ou liga as duas à mão. A
+        app fica normal logo a seguir.
       </p>
     </CartaoVidro>
 

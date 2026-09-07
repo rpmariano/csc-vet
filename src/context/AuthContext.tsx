@@ -169,27 +169,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .maybeSingle()
 
-      // 2. Se o utilizador ainda não tem dados de atleta, procurar a ficha do
-      // plantel que lhe corresponde e reclamá-la.
+      // 2. Ligar esta conta à ficha que o clube já lhe tinha criado.
       //
-      // Isto era feito aqui: lia-se a tabela `profiles` inteira à procura do
-      // email, copiavam-se os dados no cliente e apagava-se a ficha órfã. Com a
-      // RLS fechada o cliente já não lê as fichas dos outros — e ainda bem, que
-      // elas têm NIF e IBAN. As duas operações passaram para o servidor:
-      // find_my_profile_match (só campos não sensíveis) e associate_my_profile,
-      // que faz a cópia, transfere as referências e apaga a ficha numa
-      // transação só. Aqui a correspondência é estritamente por email
-      // (p_email_only), porque é automática e sem confirmação de ninguém; o
-      // modal de associação é que oferece também telefone e nome.
-      const jaTemDadosDeAtleta = Boolean(data?.jersey_number || data?.shirt_name)
-      if (userEmail && !jaTemDadosDeAtleta) {
+      // **A identidade é o email, e mais nada.** Se não houver ficha com o
+      // email do registo, a conta fica por ligar e é a direção que resolve no
+      // ecrã 3d — ver `supabase_identidade_por_email_migration.sql`. Antes
+      // valiam também o telefone e o primeiro-e-último nome, e o telefone da
+      // própria ficha é auto-editável: dava para reclamar a ficha de outra
+      // pessoa, com o NIF e o IBAN lá dentro.
+      //
+      // As duas operações correm no servidor: `find_my_profile_match` (que só
+      // devolve campos não sensíveis) e `associate_my_profile`, que faz a
+      // cópia, transfere as referências e apaga a ficha antiga numa transação
+      // só. Com a RLS fechada o cliente já não lê as fichas dos outros — e
+      // ainda bem, que elas têm NIF e IBAN.
+      //
+      // `p_email_only` continua a ser passado porque a função ainda o aceita,
+      // mas é ignorado: hoje a correspondência é sempre só por email.
+      const jaTemFichaDoClube = Boolean(data?.jersey_number || data?.shirt_name)
+      if (userEmail && !jaTemFichaDoClube) {
         const { data: matches } = await supabase.rpc('find_my_profile_match', { p_email_only: true })
         const alvo = Array.isArray(matches) ? matches[0] : matches
 
         if (alvo?.id) {
           const { data: associado, error: assocErr } = await supabase.rpc('associate_my_profile', { target_id: alvo.id })
           if (assocErr) {
-            console.error('Erro ao associar a ficha de atleta:', assocErr.message)
+            console.error('Erro ao ligar a conta à ficha do clube:', assocErr.message)
           } else if (associado) {
             data = (Array.isArray(associado) ? associado[0] : associado) as Profile
           }

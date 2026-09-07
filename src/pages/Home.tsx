@@ -114,10 +114,10 @@ const Home: React.FC = () => {
   const [aCarregar, setACarregar] = useState(true)
 
   /*
-    Conta registada que nunca chegou a ser ligada a uma ficha de atleta
-    (ecrã 11a). Substitui a Home inteira: sem ficha não há convocatória, não
-    há golos e não há percentagem de respostas — os mosaicos todos mostrariam
-    um traço, e nenhum deles diria porquê.
+    Conta registada que nunca chegou a ser ligada à ficha que o clube já lhe
+    tinha (ecrã 11a). Substitui a Home inteira: sem ficha não há convocatória,
+    não há golos e não há percentagem de respostas — os mosaicos todos
+    mostrariam um traço, e nenhum deles diria porquê.
   */
   const estadoDaFicha = useFichaPorLigar(profile, assignedRoles)
   const semFicha = estadoDaFicha === 'por-ligar'
@@ -324,7 +324,7 @@ const Home: React.FC = () => {
       </header>
 
       {/*
-        A conta não está ligada a nenhuma ficha de atleta: o ecrã 11a substitui
+        A conta não está ligada a nenhuma ficha do clube: o ecrã 11a substitui
         a Home toda, e mais nada corre. O cabeçalho fica — a fotografia leva às
         Definições, e ler comunicados é uma das coisas que se pode fazer.
       */}

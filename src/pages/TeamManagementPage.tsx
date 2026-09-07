@@ -776,7 +776,7 @@ const TeamManagementPage: React.FC = () => {
     setConfirmModalConfig({
       isOpen: true,
       title: 'Fundir Fichas',
-      description: `Vais fundir "${apagar.name}" em "${manter.name}": os dados em falta em "${manter.name}" são preenchidos a partir de "${apagar.name}", todo o histórico (convocatórias, presenças, estatísticas, quotas, encargos, seguros) passa para "${manter.name}", e a ficha "${apagar.name}" é apagada. Tens a certeza?`,
+      description: `Vais fundir "${apagar.name}" em "${manter.name}": os dados em falta em "${manter.name}" são preenchidos a partir de "${apagar.name}", todo o histórico (convocatórias e respostas, estatísticas, quotas, encargos, seguros) passa para "${manter.name}", e a ficha "${apagar.name}" é apagada. Tens a certeza?`,
       confirmText: 'Sim, Fundir Fichas',
       cancelText: 'Cancelar',
       variant: 'warning',
@@ -806,7 +806,22 @@ const TeamManagementPage: React.FC = () => {
     })
   }
 
-  // Procura de sugestões inteligentes de associação
+  /*
+    Sugestões de ligação para a direção (ecrã 3d).
+
+    **Só por email.** Procurava também por telefone e por primeiro-e-último
+    nome, e isso é adivinhar: ligar duas fichas apaga uma delas, e dois
+    homónimos — ou um número de telefone reaproveitado — davam uma sugestão que
+    parecia certa e destruía dados. A identidade de uma pessoa neste clube é o
+    endereço de email, como na
+    `supabase_identidade_por_email_migration.sql`.
+
+    Por isto raramente aparece alguma coisa, e é assim que deve ser: quando o
+    email bate certo, o `AuthContext` já ligou sozinho no arranque. Sobra o caso
+    em que a ficha foi criada **depois** de a pessoa se registar. Quando o email
+    não bate, não há sugestão nenhuma a fazer — é a direção que decide, à mão,
+    na lista de baixo.
+  */
   const associationSuggestions = React.useMemo(() => {
     if (!isAdmin) return []
     const registeredUsersWithoutKit = profiles.filter(p => linkedProfileIds.has(p.id) && (!p.jersey_number || !p.kit_size))
@@ -816,33 +831,11 @@ const TeamManagementPage: React.FC = () => {
 
     registeredUsersWithoutKit.forEach(userP => {
       const uEmail = (userP.email || '').toLowerCase().trim()
-      const uPhone = (userP.phone || '').trim().replace(/\D/g, '')
-      const uName = (userP.name || '').toLowerCase().trim()
-      const uWords = uName.split(' ').filter(w => w.length > 2)
+      if (!uEmail) return
 
-      const match = unlinkedSquadProfiles.find(squadP => {
-        const sEmail = (squadP.email || '').toLowerCase().trim()
-        const sPhone = (squadP.phone || '').trim().replace(/\D/g, '')
-        const sName = (squadP.name || '').toLowerCase().trim()
-        const sWords = sName.split(' ').filter(w => w.length > 2)
-
-        // 1. Email idêntico
-        if (uEmail && sEmail && uEmail === sEmail) return true
-
-        // 2. Telefone idêntico (>= 9 dígitos)
-        if (uPhone && sPhone && uPhone.length >= 9 && uPhone === sPhone) return true
-
-        // 3. Se a ficha tiver outro email atribuído, não associar por nome
-        if (sEmail && uEmail && sEmail !== uEmail) return false
-
-        // 4. Nome completo idêntico ou Primeiro + Último Nome
-        if (uName && sName && uName === sName) return true
-        if (uWords.length >= 2 && sWords.length >= 2) {
-          return uWords[0] === sWords[0] && uWords[uWords.length - 1] === sWords[sWords.length - 1]
-        }
-
-        return false
-      })
+      const match = unlinkedSquadProfiles.find(
+        squadP => (squadP.email || '').toLowerCase().trim() === uEmail,
+      )
 
       if (match) {
         suggestions.push({ user: userP, player: match })
@@ -974,7 +967,7 @@ const TeamManagementPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Sparkles size={15} className="text-csc-gold shrink-0" />
             <h3 className="font-display font-extrabold text-[9.5px] tracking-[0.14em] uppercase text-csc-gold">
-              Contas por ligar ({associationSuggestions.length})
+              Mesmo email, por ligar ({associationSuggestions.length})
             </h3>
           </div>
 
@@ -2284,7 +2277,7 @@ const TeamManagementPage: React.FC = () => {
                       </p>
                     </div>
                     {selectedProfile.iban && (
-                      <span className="text-[10px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-bold bg-csc-light/16 border border-csc-light/30 text-csc-verde-texto px-2 py-0.5 rounded">
                         Ativo
                       </span>
                     )}
@@ -2327,7 +2320,7 @@ const TeamManagementPage: React.FC = () => {
                       <FileText size={14} className="text-csc-gold" />
                       <span>5. Documentação Oficial & RGPD</span>
                     </h4>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-100 text-green-800 flex items-center gap-1">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-csc-light/16 border border-csc-light/30 text-csc-verde-texto flex items-center gap-1">
                       <CheckCircle2 size={11} /> RGPD Consentido
                     </span>
                   </div>
@@ -2490,11 +2483,12 @@ const TeamManagementPage: React.FC = () => {
         const porLigar = contasPorLigar.filter(c => c.id !== associatingPlayer.id)
 
         // Encontrar potenciais coincidências por email ou telefone
-        const potentialMatches = profiles.filter(p => 
-          p.id !== associatingPlayer.id && (
-            (p.email && associatingPlayer.email && p.email.trim().toLowerCase() === associatingPlayer.email.trim().toLowerCase()) ||
-            (p.phone && associatingPlayer.phone && p.phone.trim() === associatingPlayer.phone.trim())
-          )
+        // Só por email: é a identidade de uma pessoa neste clube. O telefone
+        // saiu — é auto-editável, e fundir duas fichas apaga uma delas.
+        const potentialMatches = profiles.filter(p =>
+          p.id !== associatingPlayer.id &&
+          p.email && associatingPlayer.email &&
+          p.email.trim().toLowerCase() === associatingPlayer.email.trim().toLowerCase()
         )
 
         const otherUsers = profiles.filter(p => 
@@ -2558,22 +2552,21 @@ const TeamManagementPage: React.FC = () => {
               {/* 1. Sugestões Automáticas / Coincidências Encontradas */}
               {potentialMatches.length > 0 && (
                 <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-emerald-300">
-                    <Sparkles size={16} className="text-emerald-400" />
-                    <span>Coincidência Automática Detetada por Email/Contacto!</span>
+                  <div className="flex items-center gap-1.5 text-xs font-black text-csc-verde-texto">
+                    <Sparkles size={16} className="text-csc-verde-texto" />
+                    <span>Mesmo email — é a mesma pessoa</span>
                   </div>
                   {potentialMatches.map(match => {
                     const matchTemConta = linkedProfileIds.has(match.id)
                     return (
                       <div
                         key={match.id}
-                        className="p-3.5 bg-green-50/80 border-2 border-green-400 rounded-xl flex items-center justify-between gap-3 shadow-xs"
+                        className="p-3.5 cartao-simples bg-csc-light/12 border-csc-light/32 flex items-center justify-between gap-3"
                       >
-                        <div className="text-xs">
-                          <p className="font-bold text-green-950 text-sm">{match.name}</p>
-                          <p className="text-green-800 font-medium">{match.email}</p>
-                          {match.phone && <p className="text-green-700 text-[11px]">Tel: {match.phone}</p>}
-                          <p className="text-green-700 text-[10px] font-bold mt-0.5">
+                        <div className="text-xs min-w-0">
+                          <p className="font-display font-bold text-white text-sm truncate">{match.name}</p>
+                          <p className="text-white/70 font-medium truncate">{match.email}</p>
+                          <p className="text-csc-verde-texto text-[10px] font-bold mt-0.5">
                             {matchTemConta ? 'Tem conta de acesso — vai ser a ficha que fica' : 'Sem conta de acesso'}
                           </p>
                         </div>
@@ -2581,7 +2574,9 @@ const TeamManagementPage: React.FC = () => {
                           type="button"
                           disabled={associatingLoading}
                           onClick={() => handleConfirmAssociate(associatingPlayer, match, !matchTemConta)}
-                          className="px-3.5 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-xs font-bold transition-colors shadow-xs shrink-0 flex items-center gap-1"
+                          className="min-h-11 px-3.5 rounded-[18px] bg-csc-light text-white text-xs font-display font-extrabold
+                            shrink-0 flex items-center gap-1.5 cursor-pointer transition-transform duration-150 active:scale-97
+                            disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                         >
                           <UserCheck size={14} />
                           <span>Fundir Imediatamente</span>
@@ -2605,8 +2600,10 @@ const TeamManagementPage: React.FC = () => {
                     Contas por ligar ({porLigar.length})
                   </h4>
                   <p className="text-[10.5px] leading-relaxed text-white/50">
-                    Registaram-se na app e a ficha que têm só tem o nome e o email. Ao ligar, as
-                    respostas e os pagamentos já lançados ficam nesta ficha.
+                    Registaram-se com um email que não está em ficha nenhuma — é por aí que a app
+                    liga as contas —, por isso a ficha que têm só tem o nome e o email. Ao ligar,
+                    as respostas e os pagamentos já lançados ficam nesta ficha. Corrigir o email
+                    na ficha resolve o mesmo, e resolve-o para a próxima vez.
                   </p>
 
                   {porLigar.map(conta => (

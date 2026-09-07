@@ -21,7 +21,7 @@ import { triggerHaptic } from '../../utils/haptics'
  * histórico conta convocatórias respondidas, e diz em letra pequena que as por
  * responder não são falta de ninguém.
  *
- * **O estado vazio é a norma.** Em produção há 1243 convocatórias por responder
+ * **O estado vazio é a norma.** Em produção há 1191 convocatórias por responder
  * para 9 respostas: o normal, ao abrir esta ficha, é não haver histórico
  * nenhum. É por isso que o bloco diz "1 de 34 convocatórias" e não uma
  * percentagem — a percentagem de uma resposta é 100%, e não significa nada.

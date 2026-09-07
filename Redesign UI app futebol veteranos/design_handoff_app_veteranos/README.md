@@ -154,7 +154,7 @@ Botões: `transform: scale(.96–.97)` ao premir, `transition .16s`.
 
 Não há presenças marcadas no dia do jogo, e não vai haver. A tabela `attendances` existe mas nunca é escrita em lado nenhum da app — zero `insert`, zero `update`, zero linhas em produção. O que existe é `callups.status`: `called` (convocado, sem resposta), `confirmed` (disse que sim), `declined` (disse que não).
 
-**E quase ninguém responde**: de 1252 convocatórias em produção, 1243 estão em `called`. Oito "sim" e um "não" em toda a base — 0,7% de taxa de resposta.
+**E quase ninguém responde**: de 1200 convocatórias em produção, 1191 estão em `called`. Oito "sim" e um "não" em toda a base — 0,7% de taxa de resposta.
 
 Daí três regras que o desenho já segue e a implementação tem de manter:
 
@@ -169,7 +169,7 @@ A coluna `callups.responded_at` foi acrescentada (migração de 2026-09-07) e é
 1. **Guardar evento leva à convocatória.** Jogo e convívio: ao guardar (2e) abre a convocatória (4f), com "Todos os aptos", "Repetir última" e "Limpar"; lesionados e inativos entram desmarcados. Treino: a convocatória é automática (todos os aptos) e o que aparece é a confirmação (4g). Em qualquer dos casos existe **guardar como rascunho** — ninguém é avisado e o evento não entra no alerta.
 2. **Alerta de evento sem convocatória.** A menos de sete dias, quem gere vê ao entrar uma barra flutuante (4c) que abre uma persiana (4d) com os eventos em falta e o atalho para convocar. Rascunhos não entram.
 3. **Quotas por atleta.** No editar atleta (3c), bloco "Quotas deste atleta": data de início de atividade (preenchida automaticamente ao passar a ativo, editável), data de fim (gravada ao inativar — as quotas seguintes deixam de ser devidas e os totais são recalculados) e meses dispensados de quota.
-4. **Ligação de conta.** Automática pelo email do registo. Quando falha, a direção resolve na ficha do atleta (3b → 3d): escolhe entre as contas por ligar. Ligar substitui a anterior, que volta à lista; existe também desligar.
+4. **Ligação de conta.** Pelo endereço de email, que é a identidade de uma pessoa neste clube — o telefone e o nome não servem de prova. Quando não há ficha com o email do registo, a conta fica por ligar e a direção resolve na ficha (3b → 3d): escolhe entre as contas por ligar, ou corrige o email na ficha. Ligar substitui a anterior, que volta à lista; existe também desligar.
 5. **Seguro desportivo deixou de ser especial** — é uma categoria como as outras, e os encargos criam-se na página de encargos (8c → 8e), escolhendo a categoria definida em Definições (8g).
 6. **Recuperar palavra-passe** (10c → 10d): não existe hoje. Pedido por email, link de uso único válido uma hora, ecrã de nova palavra-passe. Quem entrou com Google não tem palavra-passe.
 7. **Notificações** (12a, 12b): não existem hoje. Convocatória (com resposta no próprio aviso), comunicado, quota em atraso; para quem gere, evento sem convocatória e ficha por preencher. Preferências no Perfil, com silêncio das 23h às 8h.

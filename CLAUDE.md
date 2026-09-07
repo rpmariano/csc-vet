@@ -172,7 +172,7 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   que sim", "Disse que não", "Sem resposta", nunca "presente", "falta" ou
   "presenças". Só `confirmed` e `declined` entram em percentagens: quem foi
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
-  a norma, não a exceção — em produção há 1243 convocatórias por responder para
+  a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
 - Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
 - **O plantel lê-se de `v_players_public`, não de `profiles`.** Tudo o que mostre
@@ -294,6 +294,30 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    `AdminDashboard`, que entrou em 2026-09-07 com as fichas 9h e 9i).
    **Uma página nova que abra um detalhe pelo endereço não pode ser `lazy`.**
    Sobram ~7% de falhas, que continuam a passar à segunda pelo `retries: 1`.
+
+**A identidade de uma pessoa é o endereço de email, e mais nada.** Uma conta liga-se
+à ficha que a direção criou quando — e só quando — o email do registo é igual ao
+email da ficha; se não houver ficha com esse email, a conta fica por ligar e é a
+direção que resolve no ecrã 3d (ou corrige o email na ficha, que resolve também
+para a próxima vez). `supabase_identidade_por_email_migration.sql`, aplicada a
+2026-09-07.
+
+O email que conta é o de **`auth.users`**, verificado pelo Supabase. Nunca o de
+`public.profiles`: a política de UPDATE da própria ficha só guarda `role` e
+`roles`, por isso o `email` e o `phone` da própria ficha são escrevíveis pelo
+cliente e não provam identidade nenhuma. Era por aí que entrava a falha que esta
+migração fechou — `associate_my_profile()` aceitava também o telefone como prova,
+e bastava pôr no telefone da própria ficha o número de um sócio, ir buscar o `id`
+dele a `v_players_public` e chamar a função para lhe absorver a ficha (NIF, IBAN,
+morada, notas médicas) e apagar a original. Saiu também a prova pelo primeiro e
+último nome, que confundia homónimos.
+
+**Consequências no cliente, para não voltarem a aparecer:** o `AutoAssociationModal`
+foi apagado — com o email como chave a correspondência é certa e o `AuthContext`
+liga-a sozinho, não há nada para confirmar, e o modal oferecia escolher *qualquer*
+ficha do plantel. As sugestões de fusão do Plantel e as coincidências do ecrã 3d
+também são só por email. **Nenhum caminho de ligação pode voltar a usar telefone
+ou nome.**
 
 **`profiles` são as pessoas do clube, não os atletas.** Há quem jogue, quem jogue
 e treine, quem jogue e dirija, e quem não jogue de todo — um treinador, alguém da

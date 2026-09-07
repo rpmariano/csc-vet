@@ -10,7 +10,6 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { AutoAssociationModal } from './AutoAssociationModal'
 import { BottomSheet } from './BottomSheet'
 import { FaixaTopo } from './ui'
 import { BarraNavegacao, type ItemNavegacao } from './nav/BarraNavegacao'
@@ -188,8 +187,18 @@ const Layout: React.FC = () => {
         </Link>
       </BottomSheet>
 
-      {/* Associação automática de conta a ficha de atleta, no primeiro acesso. */}
-      <AutoAssociationModal />
+      {/*
+        Aqui vivia o `AutoAssociationModal`, que propunha uma ficha ao primeiro
+        acesso e pedia confirmação. Saiu quando a identidade passou a ser o
+        email e mais nada (`supabase_identidade_por_email_migration.sql`): com
+        o email como chave a correspondência é certa, o `AuthContext` liga-a
+        sozinho e não há nada para confirmar.
+
+        O modal propunha também, quando a sugestão não servia, escolher
+        **qualquer** ficha do plantel — que é precisamente o que a regra nova
+        proíbe. O servidor recusava as que não batessem certo, mas a porta que
+        ele abria era o telefone, que é auto-editável.
+      */}
     </div>
   )
 }

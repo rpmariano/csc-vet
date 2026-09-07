@@ -61,8 +61,8 @@ isso mostrava sempre um traço.
 O que existe de facto é `callups.status`: `called` (convocado, sem resposta),
 `confirmed` (disse que sim), `declined` (disse que não).
 
-**⚠️ E quase ninguém responde.** Das 1252 convocatórias em produção,
-**1243 estão em `called`** — sem resposta. Há **8 "sim" e 1 "não"** em toda a
+**⚠️ E quase ninguém responde.** Das 1200 convocatórias em produção,
+**1191 estão em `called`** — sem resposta. Há **8 "sim" e 1 "não"** em toda a
 base. Uma taxa de resposta de 0,7%.
 
 Isto muda o que se pode desenhar. "Últimos 5 jogos" não tem cinco respostas
@@ -242,17 +242,20 @@ campo do clube não se elimina sem escolher outro em Clube".
 ### 11a · Conta criada, ficha por ligar
 **Prioridade: alta — e o texto do handoff está errado para este clube.**
 
-**Como funciona aqui.** As fichas do plantel são criadas pela direção **antes**
-de as pessoas se registarem. Quando alguém se regista, a app tenta ligar
-sozinha: o `AuthContext` chama `find_my_profile_match({ p_email_only: true })`
-e, se o email do registo bater certo com o da ficha, a associação acontece sem
-ninguém dar por ela. Se o email não bater mas o telefone ou o nome baterem, o
-`AutoAssociationModal` propõe a ficha e pede confirmação.
+**Como funciona aqui.** As fichas são criadas pela direção **antes** de as
+pessoas se registarem, e **a identidade é o endereço de email**: o `AuthContext`
+chama `find_my_profile_match()`, que procura a ficha com o email da sessão, e a
+associação acontece sem ninguém dar por ela. Se não houver ficha com esse email,
+a conta fica por ligar — é a regra, e não uma falha da correspondência.
 
-**O caso que falta é o terceiro:** registou-se com um email que não está na
-ficha, e nem o telefone nem o nome deram correspondência. Aí não aparece
-mensagem nenhuma — a pessoa vê a app normal, sem convocatórias, sem aparecer no
-plantel, e sem uma linha que explique porquê.
+⚠️ **Atualizado a 2026-09-07.** Até aí valiam também o telefone e o primeiro-e-
+último nome, e o `AutoAssociationModal` propunha a ficha nesses casos. Saíram os
+dois: o telefone da própria ficha é auto-editável, e servia para reclamar a ficha
+de outra pessoa. O modal foi apagado com eles.
+
+**O caso que este ecrã cobre:** registou-se com um email que não está em ficha
+nenhuma. Sem ele não aparece mensagem — a pessoa vê a app normal, sem
+convocatórias, sem aparecer no plantel, e sem uma linha que explique porquê.
 
 **Quantas contas estão neste estado, hoje: nenhuma.** ⚠️ Corrigido a
 2026-09-07, ao implementar. A contagem anterior deste documento dizia "1 das 8
