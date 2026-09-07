@@ -87,7 +87,7 @@ test.describe('Painel de administração', () => {
 test.describe('Plantel', () => {
   test('criar ficha de membro', async ({ page }) => {
     await abrePagina(page, 'team-management')
-    await verificaDialogo(page, () => page.getByRole('button', { name: /Adicionar Membro/ }).first().click())
+    await verificaDialogo(page, () => page.getByRole('button', { name: /Adicionar membro ao plantel/ }).first().click())
   })
 })
 

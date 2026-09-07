@@ -118,22 +118,22 @@ export const AutoAssociationModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-      <div className="bg-csc-fundo rounded-3xl max-w-lg w-full p-6 relative max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-amber-300">
+      <div className="bg-csc-fundo rounded-3xl max-w-lg w-full p-5 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/12">
         <button
           onClick={handleDismiss}
           aria-label="Fechar"
-          className="absolute top-4 right-4 text-white/40 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 cursor-pointer"
+          className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
         >
           <X size={20} />
         </button>
 
         {/* Top Icon & Badge */}
         <div className="flex items-center gap-2 mb-3">
-          <span className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-csc-gold to-amber-300 text-csc-dark flex items-center justify-center shadow-xs">
-            <Sparkles size={20} className="animate-pulse" />
+          <span className="w-10 h-10 rounded-2xl bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0">
+            <Sparkles size={19} />
           </span>
           <div>
-            <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+            <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
               Associação Inteligente
             </span>
             <h2 className="text-xl font-black text-white leading-tight">
@@ -149,9 +149,9 @@ export const AutoAssociationModal: React.FC = () => {
             </p>
 
             {/* Cartão de Correspondência Sugerida */}
-            <div className="bg-gradient-to-br from-amber-50/80 via-white to-amber-100/30 p-4 rounded-2xl border-2 border-amber-300 shadow-sm relative overflow-hidden">
+            <div className="cartao-simples bg-csc-gold/8 border-csc-gold/28 p-4 relative overflow-hidden">
               <div className="flex items-center gap-3.5">
-                <div className="w-14 h-14 rounded-2xl bg-csc-dark text-csc-gold flex items-center justify-center font-black text-2xl shadow-md border-2 border-white shrink-0">
+                <div className="w-14 h-14 rounded-2xl bg-[rgba(11,45,11,.9)] border border-csc-gold/35 text-csc-gold flex items-center justify-center font-display font-black text-[20px] shrink-0">
                   {matchedPlayer.jersey_number ? `#${matchedPlayer.jersey_number}` : '–'}
                 </div>
 
@@ -160,12 +160,12 @@ export const AutoAssociationModal: React.FC = () => {
                     {matchedPlayer.name}
                   </h3>
                   {matchedPlayer.shirt_name && (
-                    <p className="text-xs font-bold text-amber-900">
+                    <p className="text-xs font-bold text-csc-gold">
                       Nome na Camisola: "{matchedPlayer.shirt_name}"
                     </p>
                   )}
                   <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px]">
-                    <span className="bg-amber-200/80 text-amber-900 font-extrabold px-2 py-0.5 rounded-md">
+                    <span className="bg-csc-gold/18 text-csc-gold font-extrabold px-2 py-0.5 rounded-md">
                       {matchedPlayer.position}
                     </span>
                     {matchedPlayer.kit_size && (
@@ -177,7 +177,7 @@ export const AutoAssociationModal: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-3 pt-3 border-t border-amber-200/60 grid grid-cols-2 gap-2 text-[11px] text-white/60 font-medium">
+              <div className="mt-3 pt-3 border-t border-white/10 grid grid-cols-2 gap-2 text-[11px] text-white/60 font-medium">
                 <div>
                   <span className="text-white/40 block text-[9px] uppercase font-bold">Email Ficha:</span>
                   <span className="truncate block font-semibold text-white">{matchedPlayer.email}</span>
@@ -251,7 +251,7 @@ export const AutoAssociationModal: React.FC = () => {
                   type="button"
                   onClick={() => handleConfirmAssociation(p)}
                   disabled={loading}
-                  className="w-full p-3 hover:bg-amber-50/80 transition-colors flex items-center justify-between text-left gap-2 cursor-pointer group"
+                  className="w-full min-h-11 p-3 hover:bg-white/8 transition-colors flex items-center justify-between text-left gap-2 cursor-pointer group"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="w-8 h-8 rounded-lg bg-csc-dark text-white font-black text-xs flex items-center justify-center shrink-0">

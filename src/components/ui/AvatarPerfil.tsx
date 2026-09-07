@@ -31,7 +31,13 @@ export const AvatarPerfil: React.FC<AvatarPerfilProps> = ({
   const { profile } = useAuth()
   if (!profile) return null
 
-  const dentro = profile.jersey_number ?? profile.name.charAt(0).toUpperCase()
+  /*
+    O `name` é `NOT NULL` na base mas pode não estar aqui: um registo pelo
+    Google sem nome no perfil, ou o instante entre a sessão chegar e a ficha
+    ser lida. Sem esta guarda o avatar rebentava, e o avatar está em todos os
+    ecrãs — a app inteira ficava num ecrã preto sem saída.
+  */
+  const dentro = profile.jersey_number ?? profile.name?.trim().charAt(0).toUpperCase() ?? '·'
 
   return (
     <Link

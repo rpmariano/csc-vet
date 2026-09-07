@@ -73,11 +73,21 @@ function saudacao(agora = new Date()): string {
   return 'Boa noite,'
 }
 
-/** O nome por que a pessoa é tratada: alcunha ou nome da camisola, e só depois o próprio. */
-function primeiroNome(p: { name: string; nickname?: string | null; shirt_name?: string | null }): string {
-  const preferido = p.nickname?.trim() || p.shirt_name?.trim()
+/**
+ * O nome por que a pessoa é tratada: alcunha ou nome da camisola, e só depois
+ * o próprio.
+ *
+ * O `name` é `NOT NULL` na base, mas não está sempre lá quando esta função
+ * corre: uma conta criada com o Google sem nome no perfil, ou um instante em
+ * que o contexto ainda devolve a sessão sem a ficha, chegavam aqui com
+ * `undefined` e derrubavam a Home inteira — ecrã preto, e sem forma de sair.
+ * Um cumprimento genérico é melhor do que uma app que não abre.
+ */
+function primeiroNome(p?: { name?: string | null; nickname?: string | null; shirt_name?: string | null } | null): string {
+  const preferido = p?.nickname?.trim() || p?.shirt_name?.trim()
   if (preferido) return preferido
-  return p.name.trim().split(/\s+/)[0]
+  const proprio = p?.name?.trim()
+  return proprio ? proprio.split(/\s+/)[0] : 'atleta'
 }
 
 const DATA_LONGA = new Intl.DateTimeFormat('pt-PT', {

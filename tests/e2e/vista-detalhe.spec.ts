@@ -95,9 +95,11 @@ test.describe('Detalhe do evento', () => {
 test.describe('Ficha de atleta', () => {
   test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'team-management')
-    await page.locator('div.cursor-pointer.bg-csc-dark').first().click()
+    // Pelo papel e pelo nome: o seletor por classe partiu-se em cada
+    // redesenho da linha (ver a convenção no CLAUDE.md).
+    await page.getByRole('button', { name: /^Ver a ficha de / }).first().click()
 
-    await verificaDetalhe(page, /^Ficha de /, 'Ficha Oficial de Atleta', /\?atleta=/)
+    await verificaDetalhe(page, /^Ficha de /, 'Gestão do atleta', /\?atleta=/)
 
     await page.goBack()
     await expect(page).toHaveURL(/team-management$/)
