@@ -12,7 +12,8 @@ import {
   AlertCircle,
   Lock,
   LogOut,
-  ChevronLeft
+  ChevronLeft,
+  Bell,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
@@ -22,6 +23,8 @@ import { supabase } from '../lib/supabaseClient'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
+import { OsMeusPagamentos } from '../components/OsMeusPagamentos'
+import { PreferenciasAvisos } from '../components/PreferenciasAvisos'
 
 /** Campo branco de 44px do handoff (ecrã 5b). */
 const CAMPO =
@@ -83,6 +86,8 @@ const SettingsPage: React.FC = () => {
 
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [pagamentosAbertos, setPagamentosAbertos] = useState(false)
+  const [avisosAbertos, setAvisosAbertos] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -308,6 +313,64 @@ const SettingsPage: React.FC = () => {
       <p className="text-[10px] leading-snug text-white/40 px-1 -mt-1">
         A atividade é gerida pela direção. O estado físico alternas tu, entre apto e lesionado.
       </p>
+
+      {/*
+        As duas coisas da conta que não são a ficha: o que devo, e o que quero
+        que a app me avise (ecrãs 12c e 12b). Ficam aqui em cima, antes do
+        formulário, porque são consulta e não preenchimento — quem vem ver
+        quanto deve não devia ter de passar por sete secções de dados
+        pessoais.
+      */}
+      <div className="flex gap-2.5">
+        <button
+          type="button"
+          onClick={() => { triggerHaptic('light'); setPagamentosAbertos(true) }}
+          className="cartao-simples flex-1 min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
+            transition-transform duration-150 active:scale-97
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+        >
+          <span className="w-8 h-8 rounded-xl bg-csc-gold/18 text-csc-gold flex items-center justify-center shrink-0 font-display font-black text-[14px]">
+            €
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display font-extrabold text-[12.5px] text-white">
+              Os meus pagamentos
+            </span>
+            <span className="block text-[10px] text-white/50 mt-0.5">Quotas e encargos</span>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => { triggerHaptic('light'); setAvisosAbertos(true) }}
+          className="cartao-simples flex-1 min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
+            transition-transform duration-150 active:scale-97
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+        >
+          <span className="w-8 h-8 rounded-xl bg-white/10 text-csc-gold flex items-center justify-center shrink-0">
+            <Bell size={15} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display font-extrabold text-[12.5px] text-white">
+              Avisos
+            </span>
+            <span className="block text-[10px] text-white/50 mt-0.5">O que quero saber</span>
+          </span>
+        </button>
+      </div>
+
+      <OsMeusPagamentos
+        aberto={pagamentosAbertos}
+        aoFechar={() => setPagamentosAbertos(false)}
+        jogador={profile}
+      />
+
+      <PreferenciasAvisos
+        aberto={avisosAbertos}
+        aoFechar={() => setAvisosAbertos(false)}
+        perfilId={profile?.id}
+        eEquipaTecnica={profile?.role === 'coach' || profile?.role === 'admin'}
+      />
 
       {/*
         Alternar entre os perfis atribuídos. Vivia na pílula de cargo do

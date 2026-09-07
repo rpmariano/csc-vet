@@ -10,6 +10,11 @@ import { triggerHaptic } from '../utils/haptics'
 import { AvatarPerfil, CartaoVidro, CartaoSimples, EtiquetaSeccao } from '../components/ui'
 import { AnnouncementsInboxButton } from '../components/AnnouncementsInbox'
 import {
+  useEventosSemConvocatoria,
+  FaixaSemConvocatoria,
+  PersianaSemConvocatoria,
+} from '../components/AlertaSemConvocatoria'
+import {
   comOmissoes,
   getSeasonLabel,
   getSeasonMonths,
@@ -106,6 +111,11 @@ const Home: React.FC = () => {
   const [presencas, setPresencas] = useState<number | null>(null)
   const [aniversariantes, setAniversariantes] = useState<Aniversariante[]>([])
   const [aCarregar, setACarregar] = useState(true)
+
+  /* O alerta de convocatórias em falta é de quem gere; ver 4c/4d. */
+  const eGestao = profile?.role === 'coach' || profile?.role === 'admin'
+  const eventosSemConvocatoria = useEventosSemConvocatoria(Boolean(eGestao))
+  const [alertaAberto, setAlertaAberto] = useState(false)
 
   // Alertas de suspensão — deixados por quem lança fichas de jogo, em
   // localStorage, e só visíveis a quem gere. Continuam como estavam: são um
@@ -291,6 +301,18 @@ const Home: React.FC = () => {
         <AnnouncementsInboxButton tone="dark" size="md" />
         <AvatarPerfil tamanho={46} comLapis />
       </header>
+
+      {/*
+        Eventos a menos de sete dias sem ninguém convocado (ecrã 4c). Só a
+        quem gere: é o erro caro desta app — chega o sábado e ninguém apareceu
+        porque ninguém foi chamado.
+      */}
+      <FaixaSemConvocatoria eventos={eventosSemConvocatoria} aoAbrir={() => setAlertaAberto(true)} />
+      <PersianaSemConvocatoria
+        aberto={alertaAberto}
+        aoFechar={() => setAlertaAberto(false)}
+        eventos={eventosSemConvocatoria}
+      />
 
       {alertasSuspensao.map(alerta => (
         <CartaoSimples
