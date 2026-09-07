@@ -54,7 +54,20 @@ export function useEventosSemConvocatoria(ativo: boolean): EventoEmFalta[] {
         .lte('date_time', limite.toISOString())
         .order('date_time', { ascending: true })
 
-      if (cancelado || error || !data) return
+      if (cancelado) return
+      /*
+        Um erro aqui calava a faixa inteira sem deixar rasto, e foi assim que
+        passou despercebido durante semanas: `events.is_active` não existia na
+        base, o PostgREST recusava a consulta toda por causa de uma coluna no
+        `select`, e o alerta nunca aparecia para evento nenhum. A coluna foi
+        criada (`supabase_events_is_active_migration.sql`); o erro passa a
+        aparecer na consola, que é o mínimo para a próxima se ver.
+      */
+      if (error) {
+        console.error('Erro ao procurar eventos sem convocatória:', error.message)
+        return
+      }
+      if (!data) return
 
       const candidatos = (data as unknown as {
         id: string
