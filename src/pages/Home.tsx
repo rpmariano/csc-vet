@@ -180,9 +180,16 @@ const Home: React.FC = () => {
             .select('goals, event:events!inner(date_time)')
             .eq('player_id', profile.id)
             .gte('event.date_time', inicioEpoca.toISOString()),
+          /*
+            A "presença" desta app é a resposta à convocatória, e não a
+            presença marcada no dia. A tabela `attendances` existe e era lida
+            aqui, mas nunca é escrita em lado nenhum — estava vazia, e este
+            número mostrava sempre um traço. Contam-se as convocatórias
+            respondidas, e a percentagem é a dos "sim".
+          */
           supabase
-            .from('attendances')
-            .select('present, event:events!inner(date_time)')
+            .from('callups')
+            .select('status, event:events!inner(date_time)')
             .eq('player_id', profile.id)
             .gte('event.date_time', inicioEpoca.toISOString()),
           supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date'),
@@ -210,10 +217,14 @@ const Home: React.FC = () => {
 
         setGolos(((statsMeus as { goals: number | null }[]) ?? []).reduce((t, s) => t + (s.goals ?? 0), 0))
 
-        const listaPresencas = (presencasMinhas as { present: boolean }[]) ?? []
+        // Só as convocatórias a que se respondeu entram na conta: quem ainda
+        // não respondeu não confirmou nem recusou, e contá-lo como falta era
+        // castigar quem foi convocado ontem.
+        const respostas = ((presencasMinhas as { status: string }[]) ?? [])
+          .filter(c => c.status === 'confirmed' || c.status === 'declined')
         setPresencas(
-          listaPresencas.length
-            ? Math.round((listaPresencas.filter(p => p.present).length / listaPresencas.length) * 100)
+          respostas.length
+            ? Math.round((respostas.filter(c => c.status === 'confirmed').length / respostas.length) * 100)
             : null,
         )
 
@@ -487,7 +498,7 @@ const Home: React.FC = () => {
           </p>
         </CartaoSimples>
         <CartaoSimples className="flex-1 px-4 py-3.5">
-          <EtiquetaSeccao como="p" className="tracking-[0.12em] text-[8.5px]">Presenças</EtiquetaSeccao>
+          <EtiquetaSeccao como="p" className="tracking-[0.12em] text-[8.5px]">Disse que sim</EtiquetaSeccao>
           <p className="font-display font-black text-[26px] leading-none text-white mt-2 tabular-nums">
             {presencas === null ? '—' : <>{presencas}<span className="text-[15px] text-white/45">%</span></>}
           </p>

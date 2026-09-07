@@ -49,28 +49,35 @@ resposta**.
 
 ---
 
-## Uma lacuna de dados, antes de tudo o resto
+## Presença, nesta app, é a resposta à convocatória
 
-**As presenças nunca são registadas.** A tabela `attendances` existe
-(`id, event_id, player_id, present, excuse_reason`), é lida num sítio
-(`src/pages/Home.tsx:184`, para o número "Presenças") e **nunca é escrita em
-lado nenhum da app** — zero `insert`, zero `update`. Está vazia: 0 linhas em
-produção. O número de presenças na Home mostra sempre um traço.
+**Decidido.** Não há presenças marcadas no dia do jogo, e não vai haver.
 
-O que existe de facto é a **resposta à convocatória**: `callups.status` com
-`called` / `confirmed` / `declined`, 1252 linhas em produção. Isso é intenção
-antes do jogo, não presença depois dele.
+A tabela `attendances` existe (`event_id, player_id, present, excuse_reason`)
+mas **nunca é escrita em lado nenhum da app** — zero `insert`, zero `update`,
+0 linhas em produção. Era lida num sítio, o número "Presenças" da Home, que por
+isso mostrava sempre um traço.
 
-Isto afeta o **4a** (que o handoff desenha com "P P F P P — últimos 5 jogos") e
-qualquer ideia de estatística de assiduidade. Há duas saídas, e é uma decisão
-de produto, não de desenho:
+O que existe de facto é `callups.status`: `called` (convocado, sem resposta),
+`confirmed` (disse que sim), `declined` (disse que não). São **1252 linhas** em
+produção — há história a sério para mostrar.
 
-- **Desenhar com o que existe:** mostrar as últimas cinco *respostas* à
-  convocatória, e chamar-lhes isso. Honesto, sem trabalho de backend.
-- **Desenhar a presença a sério:** implica um fluxo novo de marcar presenças no
-  dia do jogo, que não existe em ecrã nenhum do handoff.
+**A regra, para desenhar:**
 
----
+- Uma convocatória **respondida** é `confirmed` ou `declined`. Só essas contam
+  para percentagens: quem foi convocado ontem e ainda não respondeu não deve ser
+  contado como falta.
+- O `called` é um terceiro estado com nome próprio — "sem resposta" — e não um
+  "não".
+- **Não escrever "presenças" no ecrã.** Ninguém marcou presença nenhuma; o que
+  se sabe é quem disse que ia. Já mudei o mosaico da Home de "Presenças" para
+  **"Disse que sim"**, e o número passou a ler `callups`.
+
+**No 4a**, o handoff desenha "P P F P P — últimos 5 jogos". A tradução é as
+últimas cinco convocatórias respondidas, com dois estados em vez de três (sim /
+não), e as por responder simplesmente não entram. Cabe ao desenho decidir a
+forma — pontos, letras, barras — mas o vocabulário tem de ser o da resposta,
+não o da presença.
 
 ## Os seis ecrãs
 
@@ -104,14 +111,14 @@ abre nada**: não há ficha rápida.
   `v_players_public`, que **não tem telefone**. Como este ecrã é de quem
   convoca (coach/admin), o telefone está acessível — mas o desenho não pode ser
   reaproveitado para o jogador comum.
-- Presenças: ver a lacuna acima.
+- Presenças: ver a secção acima — são as respostas à convocatória, e é assim
+  que se lhes deve chamar.
 
 **Decisões em aberto:**
-1. Presenças ou respostas? (ver a secção acima)
-2. Vale a pena a tira de convocados no topo para saltar entre atletas, ou
+1. Vale a pena a tira de convocados no topo para saltar entre atletas, ou
    fecha-se e abre-se o seguinte? A tira é bonita mas obriga a carregar a
    convocatória inteira.
-3. "Confirmou presença · ontem, 21:14" precisa de uma coluna nova
+2. "Confirmou presença · ontem, 21:14" precisa de uma coluna nova
    (`callups.responded_at`). Desenhar com ou sem?
 
 ---
@@ -293,7 +300,7 @@ conteúdo conforme o mês, o que pode confundir.
 | Ecrã | Prioridade | Porquê | Bloqueio |
 |---|---|---|---|
 | **4e** Evento em falta na Agenda | Alta | Fecha o par com o alerta que já existe | — |
-| **4a** Toque num convocado | Alta | Uso diário de quem convoca | Presenças não existem |
+| **4a** Toque num convocado | Alta | Uso diário de quem convoca | Hora da resposta não existe |
 | **11a** Ficha por ligar | Alta | 1 das 8 contas está neste estado hoje | Texto do handoff não serve |
 | **11b** Agenda vazia | Média | Barato, e a agenda passa semanas vazia | — |
 | **9h** Ficha de adversário | Média | Ecrã novo, com história de confrontos | Jornadas vazias |
