@@ -148,7 +148,10 @@ test.describe('Calendário', () => {
 
   /** Cartão do evento (abre a persiana) → botão Modificar. */
   async function abreEdicaoDoEvento(page: Page) {
-    await page.getByRole('button', { name: /^Ver / }).first().click()
+    /* Ao pé do topo do cartão, e não no centro: o centro é a linha do
+       campo, que é um link para o Maps e pára o clique de subir. */
+    await page.getByRole('button', { name: /^Ver / }).first()
+      .click({ position: { x: 30, y: 12 } })
     await page.getByRole('button', { name: 'Editar evento' }).click()
   }
 

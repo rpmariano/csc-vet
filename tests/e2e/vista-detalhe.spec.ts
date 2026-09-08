@@ -73,7 +73,10 @@ test.describe('Detalhe do evento', () => {
     await abrePagina(page, 'calendar', { events: [treino] })
 
     await expect(page).toHaveURL(/calendar$/)
-    await page.getByRole('button', { name: /^Ver / }).first().click()
+    /* Ao pé do topo do cartão, e não no centro: o centro é a linha do
+       campo, que é um link para o Maps e pára o clique de subir. */
+    await page.getByRole('button', { name: /^Ver / }).first()
+      .click({ position: { x: 30, y: 12 } })
 
     await verificaDetalhe(page, 'Detalhe do evento', 'Campo de Teste', /\?event=e1$/)
 

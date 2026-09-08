@@ -191,6 +191,17 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **Tudo se responde, treinos incluídos — mas o treino tem janela.**
+  `convocatoriaFechada()` é o único sítio onde a regra vive. Um evento aceita
+  resposta assim que deixa de ser rascunho e tem gente convocada; fecha com a
+  ficha de jogo lançada ou passada a hora limite. **O treino abre
+  `DIAS_JANELA_TREINO` (6) dias antes e fecha à hora a que começa** — não à de
+  concentração, como os outros. São semanais e convocam automaticamente todos
+  os aptos: sem janela, a Agenda e a Home tinham sempre um treino por
+  responder e a pergunta perdia o efeito. Fora da janela o estado é
+  `'ainda-nao-abriu'` e o texto di-lo, para ninguém pensar que perdeu o prazo.
+  **E um treino nunca sobe ao cartão de cima da Home** — esse é dos jogos.
+  (Regra revista a 2026-09-08: até aí os treinos não se respondiam de todo.)
 - **O canto do cabeçalho é o mesmo em todos os ecrãs**: estado clínico
   (`<PastilhaEstado>`), sino dos comunicados e fotografia, por esta ordem,
   dentro do `<CabecalhoEcra>` — a Home tem o seu próprio cabeçalho (o clube e a

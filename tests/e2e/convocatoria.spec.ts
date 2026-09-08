@@ -7,12 +7,12 @@ import { montarSupabaseFalso, FIXTURES_BASE, UTILIZADOR_TESTE, type Fixtures } f
  * A regra vive em `convocatoriaFechada()`, no CalendarPage, e estava escrita
  * por extenso em quatro sítios que já divergiam entre si. Em resumo:
  *
- * - **Os treinos não se respondem**, nunca. São semanais e convocam
- *   automaticamente todos os aptos; pedir confirmação semana após semana só
- *   ensinava a ignorar o pedido. Antes abriam seis dias antes.
- * - **Tudo o resto abre** assim que o evento deixa de ser rascunho e tem gente
- *   convocada.
- * - E fecha com a ficha de jogo lançada, ou passada a hora de concentração.
+ * - **Tudo se responde, treinos incluídos**, assim que o evento deixa de ser
+ *   rascunho e tem gente convocada.
+ * - **O treino tem janela**: abre seis dias antes e fecha à hora a que começa,
+ *   e não à de concentração. São semanais e convocam automaticamente todos os
+ *   aptos: sem janela havia sempre um treino por responder na lista.
+ * - E qualquer um fecha com a ficha de jogo lançada, ou passada a hora limite.
  */
 
 const DAQUI_A_DIAS = (d: number) => new Date(Date.now() + d * 864e5).toISOString()
@@ -40,13 +40,31 @@ async function abre(page: import('@playwright/test').Page, fixtures: Fixtures, i
   await expect(page.getByRole('dialog')).toBeVisible()
 }
 
-test('num treino não se pergunta nada, mesmo à porta', async ({ page }) => {
+test('num treino perto, pergunta-se como em tudo o resto', async ({ page }) => {
   const treino = { ...base, id: 'tr', title: 'Treino', type: 'practice', date_time: DAQUI_A_DIAS(1) }
   await abre(page, { events: [treino], callups: [convocatoriaMinha('tr')] }, 'tr')
 
+  await expect(perguntaDaConvocatoria(page)).toBeVisible()
+})
+
+test('um treino longe ainda não abriu — e diz isso, não que fechou', async ({ page }) => {
+  const treino = { ...base, id: 'tr', title: 'Treino', type: 'practice', date_time: DAQUI_A_DIAS(9) }
+  await abre(page, { events: [treino], callups: [convocatoriaMinha('tr')] }, 'tr')
+
   await expect(perguntaDaConvocatoria(page)).toHaveCount(0)
-  // E também não fica um estado a dizer que está fechada: não se mostra nada.
-  await expect(page.getByRole('dialog').getByText(/A tua convocatória para este evento/)).toHaveCount(0)
+  await expect(page.getByRole('dialog').getByText(/A resposta abre 6 dias antes do treino/)).toBeVisible()
+})
+
+test('um treino fecha à hora a que começa, e não à de concentração', async ({ page }) => {
+  // Começou há uma hora; a concentração seria antes disso.
+  const treino = {
+    ...base, id: 'tr', title: 'Treino', type: 'practice',
+    date_time: new Date(Date.now() - 3600e3).toISOString(), meeting_time: '08:00',
+  }
+  await abre(page, { events: [treino], callups: [convocatoriaMinha('tr')] }, 'tr')
+
+  await expect(perguntaDaConvocatoria(page)).toHaveCount(0)
+  await expect(page.getByRole('dialog').getByText(/o treino já começou/)).toBeVisible()
 })
 
 test('num jogo publicado e com convocados, pergunta-se', async ({ page }) => {
@@ -511,5 +529,43 @@ test.describe('A Home leva ao evento', () => {
       .click()
     await page.waitForTimeout(400)
     await expect(page).toHaveURL(/\/csc-vet\/$/)
+  })
+})
+
+
+/**
+ * O treino responde-se, mas nunca sobe ao cartão de cima.
+ *
+ * O carrossel do topo da Home é dos jogos: um treino semanal a ocupar o lugar
+ * do próximo jogo tirava à Home o que ela tem de dizer primeiro.
+ */
+test.describe('O treino na Home', () => {
+  const meu = (id: string) => ({
+    id: 'k-' + id, event_id: id, player_id: UTILIZADOR_TESTE.id,
+    status: 'called', responded_at: null, player: FIXTURES_BASE.profiles[0],
+  })
+
+  test('dentro da janela, entra em "Por responder"', async ({ page }) => {
+    const treino = { ...base, id: 'tr', title: 'Treino de terça', type: 'practice', date_time: DAQUI_A_DIAS(3) }
+    await montarSupabaseFalso(page, { events: [treino], callups: [meu('tr')] })
+    await page.goto('/csc-vet/')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(600)
+
+    const porResponder = page.getByRole('group', { name: 'Compromissos por responder' })
+    await expect(porResponder.getByText('Treino de terça')).toBeVisible()
+
+    // E não há carrossel de jogos: o treino não sobe lá.
+    await expect(page.getByRole('group', { name: 'Próximos jogos' })).toHaveCount(0)
+  })
+
+  test('fora da janela, não entra', async ({ page }) => {
+    const treino = { ...base, id: 'tr', title: 'Treino de terça', type: 'practice', date_time: DAQUI_A_DIAS(12) }
+    await montarSupabaseFalso(page, { events: [treino], callups: [meu('tr')] })
+    await page.goto('/csc-vet/')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(600)
+
+    await expect(page.getByText('Treino de terça')).toHaveCount(0)
   })
 })

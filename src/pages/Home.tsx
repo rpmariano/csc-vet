@@ -227,22 +227,27 @@ const Home: React.FC = () => {
           prática sobram os convívios, e os jogos que ficarem de fora do
           carrossel por serem mais do que cinco.
 
-          E **nunca treinos**, ao contrário do que o cartão 4a desenha: um
-          treino não pede resposta nenhuma nesta app.
+          Os treinos entram, mas só dentro da janela deles — seis dias antes,
+          e isso quem decide é o `convocatoriaFechada`. Fora dela não são
+          "por responder": são uma pergunta que ainda não foi feita, e a lista
+          teria sempre lá o treino da semana seguinte. O que **nunca** acontece
+          é um treino subir ao cartão de cima: esse é dos jogos.
         */
         const idsEmCima = new Set(jogosEmCima.map(e => e.id))
         setPendentes(
           marcados
             .filter(e => !idsEmCima.has(e.id))
-            .filter(e => e.type !== 'practice' && minha.get(e.id) === 'called')
+            .filter(e => minha.get(e.id) === 'called')
             .filter(e => !convocatoriaFechada(e, true))
             .slice(0, 6)
             .map(e => ({
               id: e.id,
               titulo: e.type === 'match'
                 ? `Jogo com ${e.opponent?.name ?? 'adversário por definir'}`
-                : (e.title || 'Convívio'),
-              tipo: e.type as 'match' | 'gathering',
+                : e.type === 'practice'
+                  ? (e.title || 'Treino')
+                  : (e.title || 'Convívio'),
+              tipo: e.type as 'match' | 'practice' | 'gathering',
               date_time: e.date_time,
               local: ondeE(e),
               prova: e.tournament?.name ?? null,

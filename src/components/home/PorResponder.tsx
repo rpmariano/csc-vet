@@ -8,11 +8,11 @@ import { CarrosselCartoes } from './CarrosselCartoes'
  * "Por responder" (bloco 3 da Home): os compromissos que ainda esperam a
  * resposta do próprio, um por página do carrossel.
  *
- * **Os treinos não entram**, ao contrário do que o cartão 4a do handoff
- * desenha. A regra da app é que um treino não pede resposta: são semanais,
- * convocam automaticamente todos os aptos, e perguntar semana após semana só
- * ensinava a ignorar o pedido. O desenho é anterior a essa decisão. Sobram
- * jogos e convívios — que é onde a resposta muda alguma coisa.
+ * **Os treinos entram, mas só dentro da janela deles** — seis dias antes,
+ * decidido pelo `convocatoriaFechada`. São semanais e convocam
+ * automaticamente todos os aptos: sem janela, esta lista tinha sempre o treino
+ * da semana seguinte, e a pergunta perdia o efeito. O que nunca acontece é um
+ * treino subir ao cartão de cima — esse é dos jogos.
  *
  * O bloco desaparece quando não há nada por responder, que é o estado normal:
  * de 1200 convocatórias em produção, 9 tiveram resposta.
@@ -21,13 +21,13 @@ import { CarrosselCartoes } from './CarrosselCartoes'
 export interface PendenteDaHome {
   id: string
   titulo: string
-  tipo: 'match' | 'gathering'
+  tipo: 'match' | 'practice' | 'gathering'
   date_time: string
   local: string
   prova: string | null
 }
 
-const TIPO = { match: 'Jogo', gathering: 'Convívio' } as const
+const TIPO = { match: 'Jogo', practice: 'Treino', gathering: 'Convívio' } as const
 
 const DIA = new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: 'short' })
 const DIA_SEMANA = new Intl.DateTimeFormat('pt-PT', { weekday: 'long' })

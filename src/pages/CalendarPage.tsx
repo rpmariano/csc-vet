@@ -161,32 +161,36 @@ export const getRsvpDeadline = (ev?: { date_time?: string | null; meeting_time?:
   return prazo.getTime()
 }
 
+/** Dias de antecedência com que a convocatória de um treino abre. */
+export const DIAS_JANELA_TREINO = 6
+
 /**
  * Porque é que a convocatória de um evento não aceita respostas — ou `null`
  * quando aceita.
  *
  * A regra é uma só e vive aqui, porque estava escrita por extenso em quatro
- * sítios (o cartão da Agenda, a persiana do evento, o guarda do `handleCallupResponse`
- * e a Home) e já divergia entre eles.
+ * sítios (o cartão da Agenda, a persiana do evento, o guarda do
+ * `handleCallupResponse` e a Home) e já divergia entre eles.
  *
- * **Os treinos não se respondem.** É o único tipo de evento assim: são
- * semanais, convocam automaticamente todos os aptos, e pedir confirmação
- * semana após semana só ensinava toda a gente a ignorar o pedido. Antes
- * abriam seis dias antes, o que era a mesma pergunta feita mais tarde.
+ * **Tudo se responde, treinos incluídos**, assim que o evento deixa de ser
+ * rascunho e tem gente convocada. Sem convocatória feita não há a quem
+ * perguntar; em rascunho o evento ainda é da equipa técnica.
  *
- * **Tudo o resto abre assim que o evento deixa de ser rascunho e tem gente
- * convocada.** Sem convocatória feita não há a quem perguntar; em rascunho o
- * evento ainda é da equipa técnica.
+ * **O treino tem janela**: abre `DIAS_JANELA_TREINO` dias antes e fecha à hora
+ * a que se realiza — não à de concentração, como os outros. São semanais e
+ * convocam automaticamente todos os aptos: sem janela, a lista tinha sempre um
+ * treino por responder, e a pergunta perdia o efeito antes de chegar a ser
+ * útil. Fora da janela não é "fechada", é "ainda não abriu" — e o texto
+ * di-lo, para ninguém pensar que perdeu o prazo.
  *
- * E fecha quando a ficha de jogo é lançada — as estatísticas já dependem
- * daquele estado — ou quando passa a hora de concentração, ou a de início se
- * não houver concentração.
+ * E qualquer um fecha quando a ficha de jogo é lançada — as estatísticas já
+ * dependem daquele estado — ou quando passa a hora limite.
  */
 export type ConvocatoriaFechada =
-  | 'treino'
   | 'rascunho'
   | 'sem-convocados'
   | 'ficha-lancada'
+  | 'ainda-nao-abriu'
   | 'passou-a-hora'
 
 export function convocatoriaFechada(
@@ -200,31 +204,42 @@ export function convocatoriaFechada(
   temConvocados = true,
 ): ConvocatoriaFechada | null {
   if (!ev) return 'sem-convocados'
-  if (ev.type === 'practice') return 'treino'
   if (ev.is_active === false) return 'rascunho'
   if (!temConvocados) return 'sem-convocados'
   if (hasMatchReport(ev)) return 'ficha-lancada'
+
+  if (ev.type === 'practice') {
+    if (!ev.date_time) return null
+    const comeca = new Date(ev.date_time).getTime()
+    const agora = Date.now()
+    if (agora >= comeca) return 'passou-a-hora'
+    if (comeca - agora > DIAS_JANELA_TREINO * 864e5) return 'ainda-nao-abriu'
+    return null
+  }
+
   const prazo = getRsvpDeadline(ev)
   if (prazo !== null && Date.now() >= prazo) return 'passou-a-hora'
   return null
 }
 
-/** A frase a mostrar no lugar dos botões. O treino não tem: não se mostra nada. */
+/** A frase a mostrar no lugar dos botões. */
 export function textoConvocatoriaFechada(
   motivo: ConvocatoriaFechada,
-  ev?: { meeting_time?: string | null } | null,
+  ev?: { type?: string; meeting_time?: string | null } | null,
 ): string {
   switch (motivo) {
-    case 'treino':
-      return 'Os treinos não pedem resposta'
     case 'rascunho':
       return 'Em rascunho — a convocatória abre quando o evento for publicado'
     case 'sem-convocados':
       return 'Convocatória por fazer'
     case 'ficha-lancada':
       return 'Jogo com ficha lançada — convocatória fechada'
+    case 'ainda-nao-abriu':
+      return `A resposta abre ${DIAS_JANELA_TREINO} dias antes do treino`
     case 'passou-a-hora':
-      return `Convocatória fechada — já passou a hora de ${ev?.meeting_time ? 'concentração' : 'início'}`
+      return ev?.type === 'practice'
+        ? 'Convocatória fechada — o treino já começou'
+        : `Convocatória fechada — já passou a hora de ${ev?.meeting_time ? 'concentração' : 'início'}`
   }
 }
 
@@ -1905,8 +1920,6 @@ const CalendarPage: React.FC = () => {
           {/* O pedido de resposta, na faixa dourada do cartão da Home. */}
           {myCallup && (() => {
             const fechada = convocatoriaFechada(event, callups.length > 0)
-            // Num treino não se mostra linha nenhuma: não há pergunta a fazer.
-            if (fechada === 'treino') return null
 
             return (
               <div
@@ -2661,8 +2674,6 @@ const CalendarPage: React.FC = () => {
                     selectedEvent,
                     (eventCallups[selectedEvent.id] || []).length > 0,
                   )
-                  // Num treino não há pergunta a fazer nem estado a mostrar.
-                  if (fechada === 'treino') return null
 
                   return (
                     <div className={!fechada ? 'rounded-2xl overflow-hidden shadow-lg shadow-black/20' : 'p-4 bg-white/[0.07] rounded-2xl space-y-3 border border-white/10 border-t-white/20 shadow-md shadow-black/20'}>
