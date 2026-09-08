@@ -1,5 +1,5 @@
 import React from 'react'
-import { MapPin, ExternalLink, CheckCircle2, XCircle } from 'lucide-react'
+import { MapPin, ExternalLink, CheckCircle2, XCircle, Shield } from 'lucide-react'
 import { CartaoVidro } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 
@@ -71,7 +71,7 @@ export const CartaoProximoJogo: React.FC<{
   const equipaCasa = fora ? sigla : siglaClube
   const equipaFora = fora ? siglaClube : sigla
 
-  const emblema = (url: string | null, alt: string, texto: string) =>
+  const emblema = (url: string | null, alt: string) =>
     url ? (
       <img
         src={url}
@@ -79,20 +79,26 @@ export const CartaoProximoJogo: React.FC<{
         className="w-[58px] h-[58px] rounded-full bg-white object-contain p-1 flex-none"
       />
     ) : (
-      <span className="w-[58px] h-[58px] rounded-full bg-white/95 flex items-center justify-center font-display font-extrabold text-[12.5px] text-csc-dark flex-none">
-        {texto}
+      /* Sem emblema fica um escudo. As iniciais estão no título, em 44px,
+         três linhas acima — repeti-las aqui era dizer "GDPCC" duas vezes. */
+      <span
+        aria-label={alt}
+        role="img"
+        className="w-[58px] h-[58px] rounded-full bg-white/95 flex items-center justify-center text-csc-dark flex-none"
+      >
+        <Shield size={26} />
       </span>
     )
 
   const nos = (
     <span className="w-[100px] flex flex-col items-center gap-2">
-      {emblema(emblemaClube, siglaClube, siglaClube)}
+      {emblema(emblemaClube, siglaClube)}
       <span className="font-display font-bold text-[12px] text-white/85">{fora ? 'Fora' : 'Casa'}</span>
     </span>
   )
   const eles = (
     <span className="w-[100px] flex flex-col items-center gap-2">
-      {emblema(jogo.opponent?.logo_url ?? null, jogo.opponent?.name ?? 'Adversário', sigla)}
+      {emblema(jogo.opponent?.logo_url ?? null, jogo.opponent?.name ?? 'Adversário')}
       <span className="font-display font-bold text-[12px] text-white/85">{fora ? 'Casa' : 'Fora'}</span>
     </span>
   )

@@ -42,7 +42,7 @@ import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, CampoEntrada, Botao, EtiquetaSeccao } from '../components/ui'
-import { SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal, Shield } from 'lucide-react'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -764,6 +764,22 @@ const CalendarPage: React.FC = () => {
     }
   }
 
+
+  /**
+   * O mesmo que `getEventLocation`, mas com o nome e a morada separados —
+   * é assim que o cartão os desenha, um por linha, como no cartão do jogo da
+   * Home. A precedência é a mesma: um local escrito à mão ganha ao campo.
+   */
+  const getEventLocationParts = (
+    ev: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null | undefined,
+  ): { nome: string; morada: string } => {
+    if (!ev) return { nome: '', morada: '' }
+    const solto = ev.location?.trim()
+    if (solto) return { nome: solto, morada: '' }
+    const campo = ev.field ?? (ev.field_id ? fields.find(item => item.id === ev.field_id) ?? null : null)
+    if (campo?.name) return { nome: campo.name, morada: campo.address?.trim() || '' }
+    return { nome: '', morada: '' }
+  }
 
   const getEventLocation = (ev: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null | undefined) => {
     if (!ev) return ''
@@ -1622,40 +1638,49 @@ const CalendarPage: React.FC = () => {
     const oppSigla = formatOpponentSigla(event.opponent)
 
     // Bloco equipa Cascais
-    const cscBlock = (isRight: boolean) => (
-      <div className={`flex-1 flex items-center ${isRight ? 'justify-start' : 'justify-end'} min-w-0`}>
-        <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
-          {clubSettings?.logo_url ? (
-            <img src={clubSettings.logo_url} alt={cscSigla} className="w-8 h-8 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
-          ) : (
-            <div className="w-8 h-8 bg-white text-csc-dark rounded-full flex items-center justify-center text-xs font-black shrink-0">
-              {cscSigla}
-            </div>
-          )}
-          <span className="font-black text-sm text-white uppercase tracking-tight whitespace-nowrap">
-            {cscSigla}
-          </span>
-        </div>
+    /*
+      O confronto, com o mesmo desenho do cartão do jogo da Home: o emblema
+      grande em cima, a sigla por baixo e a condição — Casa, Fora, Neutro —
+      em terceiro. Era uma linha de emblema de 32px com a sigla ao lado, mais
+      uma frase "Condição: Visitante" numa linha própria por baixo; o cartão
+      da Agenda e o da Home mostravam o mesmo jogo de duas maneiras.
+
+      Aqui os emblemas são de 46px e não de 58px: na Home há um jogo por
+      ecrã, na Agenda há uma lista.
+    */
+    const condicao = event.home_away === 'neutral' ? 'Neutro' : null
+
+    const blocoEquipa = (logo: string | null | undefined, sigla: string, emCasa: boolean) => (
+      <div className="w-[92px] flex flex-col items-center gap-1.5 min-w-0">
+        {logo ? (
+          <img
+            src={logo}
+            alt={sigla}
+            className="w-[46px] h-[46px] rounded-full bg-white object-contain p-0.5 flex-none"
+          />
+        ) : (
+          /* Sem emblema fica um escudo, não as iniciais: quem identifica o
+             clube é a linha de baixo, e a bola a repetir "GDPCC" por cima do
+             "GDPCC" lia-se duas vezes. Tirar antes a linha de baixo também
+             não servia — com um clube de emblema e outro sem, os dois blocos
+             ficavam com alturas diferentes e desencontravam-se. */
+          <div className="w-[46px] h-[46px] rounded-full bg-white/95 text-csc-dark flex items-center justify-center flex-none">
+            <Shield size={20} />
+          </div>
+        )}
+
+        <span className="font-display font-extrabold text-[13px] text-white uppercase tracking-tight truncate max-w-full">
+          {sigla}
+        </span>
+
+        <span className="font-display font-bold text-[10px] text-white/62">
+          {condicao ?? (emCasa ? 'Casa' : 'Fora')}
+        </span>
       </div>
     )
 
-    // Bloco equipa Adversário
-    const opponentBlock = (isRight: boolean) => (
-      <div className={`flex-1 flex items-center ${isRight ? 'justify-start' : 'justify-end'} min-w-0`}>
-        <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
-          {event.opponent?.logo_url ? (
-            <img src={event.opponent.logo_url} alt={oppSigla} className="w-8 h-8 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
-          ) : (
-            <div className="w-8 h-8 bg-white/15 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-              {oppSigla}
-            </div>
-          )}
-          <span className="font-black text-sm text-white uppercase tracking-tight whitespace-nowrap">
-            {oppSigla}
-          </span>
-        </div>
-      </div>
-    )
+    const cscBlock = () => blocoEquipa(clubSettings?.logo_url, cscSigla, !isAway)
+    const opponentBlock = () => blocoEquipa(event.opponent?.logo_url, oppSigla, isAway)
 
     const TipoIcon = isMatch ? Trophy : isPractice ? TrainingIcon : PartyPopper
     const cores = CORES_TIPO[event.type]
@@ -1753,155 +1778,167 @@ const CalendarPage: React.FC = () => {
           )}
         </div>
 
-        <div className="p-5 space-y-3.5 flex-1 flex flex-col justify-between">
-          <div className="space-y-3">
-            {/* Duelo de equipas (quando é jogo com adversário definido) */}
-            {isMatch && event.opponent && (
-              <div className="space-y-2.5">
-                {/* Os dois blocos encostam ao "VS", não às margens do cartão:
-                    com `justify-between` os emblemas iam para os cantos e
-                    ficava um vão vazio no meio, com o "VS" a boiar lá dentro. */}
-                <div className="flex items-center justify-center gap-2">
-                  {isAway ? opponentBlock(false) : cscBlock(false)}
-                  <div className="shrink-0 flex items-center justify-center">
-                    <span className="px-2.5 py-1 rounded-[9px] bg-white/10 font-display font-bold text-[11px] text-white/62">
-                      VS
-                    </span>
-                  </div>
-                  {isAway ? cscBlock(true) : opponentBlock(true)}
-                </div>
-
-                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-white/60">
-                  <span className="font-bold">
-                    Condição: <strong className="text-white">{event.home_away === 'neutral' ? 'Neutro' : isAway ? 'Visitante' : 'Visitado'}</strong>
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Title (apenas exibido para convívios) */}
-            {event.type === 'gathering' && (
-              <div>
-                <h4 className="text-base font-black text-white leading-snug">
-                  {event.title}
-                </h4>
-              </div>
-            )}
-
-            {/* As duas horas lado a lado, divididas por uma linha: a de
-                concentração à esquerda (quando existe) e a de início à
-                direita, esta em dourado, porque é a que não se pode falhar. */}
-            <div className="flex items-stretch -mx-5 border-y border-white/13">
-              {event.meeting_time && (
-                <>
-                  <div className="flex-none px-5 py-2.5">
-                    <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/62">
-                      Concentração
-                    </p>
-                    <p className="font-display font-extrabold text-[17px] text-white mt-0.5">
-                      {event.meeting_time.substring(0, 5)}
-                    </p>
-                  </div>
-                  <div className="w-px bg-white/13" />
-                </>
-              )}
-              <div className="flex-1 px-5 py-2.5">
-                <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-csc-gold">
-                  Início
-                </p>
-                <p className="font-display font-extrabold text-[17px] text-white mt-0.5">
-                  {new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
+        {/*
+          O corpo, em bandas de largura inteira separadas por uma linha — o
+          desenho do cartão do jogo da Home. Era um bloco com `p-5` e caixas
+          arredondadas soltas lá dentro (o local numa pastilha truncada, a
+          descrição numa caixa cinzenta), e o mesmo jogo aparecia de duas
+          maneiras conforme o ecrã em que se estava.
+        */}
+        <div className="flex flex-col">
+          {/* O confronto (só num jogo com adversário definido). */}
+          {isMatch && event.opponent && (
+            <div className="flex items-center justify-center gap-4 px-5 pt-3 pb-4">
+              {isAway ? opponentBlock() : cscBlock()}
+              <span
+                className="flex-none font-display font-black text-[22px] mb-5 text-transparent"
+                style={{ WebkitTextStroke: '1.3px var(--color-csc-gold)' }}
+                aria-hidden="true"
+              >
+                VS
+              </span>
+              {isAway ? cscBlock() : opponentBlock()}
             </div>
+          )}
 
-            {/* Horas e Localização / Endereço à frente */}
-            {(() => {
-              const locStr = getEventLocation(event)
-              return (
-                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                  {/* Localização & Maps */}
-                  {locStr && (
-                    <div className="inline-flex items-center gap-1 text-xs text-white/80 bg-white/10 px-2.5 py-1 rounded-full max-w-full truncate min-w-0">
-                      <MapPin size={13} className="text-csc-gold shrink-0" />
-                      <span className="truncate">{locStr}</span>
-                      <a
-                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locStr)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="ml-1 p-0.5 text-white/60 hover:text-white shrink-0"
-                        title="Ver no Google Maps"
-                      >
-                        <ExternalLink size={12} />
-                      </a>
-                    </div>
-                  )}
+          {/* O título, que num convívio é o assunto do cartão. */}
+          {event.type === 'gathering' && (
+            <h4 className="px-5 pt-1 pb-4 font-display font-black text-base text-white leading-snug">
+              {event.title}
+            </h4>
+          )}
+
+          {/* As duas horas lado a lado, divididas por uma linha: a de
+              concentração à esquerda (quando existe) e a de início à
+              direita, esta em dourado, porque é a que não se pode falhar. */}
+          <div className="flex items-stretch border-t border-white/13">
+            {event.meeting_time && (
+              <>
+                <div className="flex-none px-5 py-3">
+                  <p className="font-display font-bold text-[9.5px] tracking-[0.16em] uppercase text-white/55">
+                    Concentração
+                  </p>
+                  <p className="font-display font-extrabold text-[20px] text-white mt-1">
+                    {event.meeting_time.substring(0, 5)}
+                  </p>
                 </div>
-              )
-            })()}
+                <div className="w-px bg-white/13" />
+              </>
+            )}
+            <div className="flex-1 px-5 py-3">
+              <p className="font-display font-bold text-[9.5px] tracking-[0.16em] uppercase text-csc-gold">
+                {isMatch ? 'Pontapé de saída' : 'Início'}
+              </p>
+              <p className="font-display font-extrabold text-[20px] text-white mt-1">
+                {new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
           </div>
 
-          <div className="space-y-3">
-            {/* Observações / Descrição (diretamente acima da confirmação) */}
-            {(() => {
-              const clean = parseMatchReportMetadata(event.description).cleanDescription
-              if (!clean) return null
-              return (
-                <div className="text-xs text-white/70 bg-white/5 p-2.5 rounded-xl">
-                  <p className="whitespace-pre-line leading-relaxed">{clean}</p>
-                </div>
-              )
-            })()}
+          {/* O campo: o nome em cima da morada, e o caminho para o Maps. */}
+          {(() => {
+            const { nome, morada } = getEventLocationParts(event)
+            if (!nome) return null
+            return (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  morada ? `${nome}, ${morada}` : nome,
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => { e.stopPropagation(); triggerHaptic('light') }}
+                className="flex items-center gap-2.5 px-5 py-3.5 min-h-11 border-t border-white/13
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+              >
+                <MapPin size={14} className="text-csc-gold shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="block font-display font-bold text-[12.5px] text-white truncate">{nome}</span>
+                  {morada && (
+                    <span className="block text-[11.5px] leading-snug text-white/70 truncate">{morada}</span>
+                  )}
+                </span>
+                <ExternalLink size={14} className="text-white/40 shrink-0" />
+              </a>
+            )
+          })()}
 
-            {/* Ação rápida de Presença (RSVP) */}
-            {myCallup && (() => {
-              const fechada = convocatoriaFechada(event, callups.length > 0)
-              // Num treino não se mostra linha nenhuma: não há pergunta a fazer.
-              if (fechada === 'treino') return null
+          {/* Observações da equipa técnica. */}
+          {(() => {
+            const clean = parseMatchReportMetadata(event.description).cleanDescription
+            if (!clean) return null
+            return (
+              <p className="px-5 py-3 border-t border-white/13 text-[11.5px] leading-relaxed text-white/70 whitespace-pre-line">
+                {clean}
+              </p>
+            )
+          })()}
 
-              return (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap"
-                >
-                  <span className="text-xs font-bold text-white/70">A tua resposta:</span>
-                  {fechada ? (
-                    <span className="text-[11px] font-bold text-white/60 bg-white/10 px-2.5 py-1 rounded-full">
-                      {textoConvocatoriaFechada(fechada, event)}
-                    </span>
-                  ) : (
-                    <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* O pedido de resposta, na faixa dourada do cartão da Home. */}
+          {myCallup && (() => {
+            const fechada = convocatoriaFechada(event, callups.length > 0)
+            // Num treino não se mostra linha nenhuma: não há pergunta a fazer.
+            if (fechada === 'treino') return null
+
+            return (
+              <div
+                onClick={e => e.stopPropagation()}
+                className="px-5 py-3.5 bg-csc-gold/13 border-t border-csc-gold/24"
+              >
+                {fechada ? (
+                  <p className="text-[11.5px] text-white/80 text-center">
+                    {textoConvocatoriaFechada(fechada, event)}
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-baseline justify-between gap-2.5">
+                      <span className="font-display font-extrabold text-[14px] text-white">
+                        {myCallup.status === 'confirmed'
+                          ? 'Contamos contigo.'
+                          : myCallup.status === 'declined'
+                            ? 'Ficas de fora.'
+                            : 'Contamos contigo?'}
+                      </span>
+                      <span className="text-[11px] text-white/60 flex-none">
+                        {confirmedCount} {confirmedCount === 1 ? 'confirmado' : 'confirmados'}
+                      </span>
+                    </div>
+                    <div className="flex gap-2.5 mt-3">
                       <button
                         type="button"
                         onClick={() => handleCallupResponse(event.id, 'confirmed')}
-                        className={`text-xs font-black px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
-                          myCallup.status === 'confirmed'
-                            ? 'bg-csc-gold text-csc-dark ring-2 ring-csc-gold/40'
-                            : 'bg-white/10 text-white/60 hover:bg-white/20'
-                        }`}
+                        aria-pressed={myCallup.status === 'confirmed'}
+                        className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
+                          flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                            myCallup.status === 'confirmed'
+                              ? 'bg-csc-light border-csc-light text-white'
+                              : 'bg-white/9 border-white/20 text-white'
+                          }`}
                       >
-                        <CheckCircle2 size={13} />
-                        <span>Confirmar</span>
+                        {myCallup.status === 'confirmed' && <CheckCircle2 size={14} />}
+                        Sim, vou
                       </button>
                       <button
                         type="button"
                         onClick={() => handleCallupResponse(event.id, 'declined')}
-                        className={`text-xs font-black px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
-                          myCallup.status === 'declined'
-                            ? 'bg-white text-csc-dark ring-2 ring-white/40'
-                            : 'border border-white/30 text-white/60 hover:bg-white/10'
-                        }`}
+                        aria-pressed={myCallup.status === 'declined'}
+                        className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
+                          flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                            myCallup.status === 'declined'
+                              ? 'bg-white/90 border-white/90 text-csc-tinta'
+                              : 'bg-white/9 border-white/20 text-white'
+                          }`}
                       >
-                        <XCircle size={13} />
-                        <span>Recusar</span>
+                        {myCallup.status === 'declined' && <XCircle size={14} />}
+                        Não posso
                       </button>
                     </div>
-                  )}
-                </div>
-              )
-            })()}
-          </div>
+                  </>
+                )}
+              </div>
+            )
+          })()}
         </div>
       </div>
     )

@@ -200,6 +200,15 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   `<FaixaTopo>` da Home é mais alta — 340px contra os 250px do resto —, altura
   que vem do `Layout` pela rota e não de uma segunda faixa desenhada pela Home,
   que sobreporia dois conjuntos de blocos inclinados.
+- **O cartão de evento da Agenda desenha-se como o cartão do jogo da Home**:
+  bandas de largura inteira separadas por uma linha — emblemas com o "VS"
+  vazado a dourado, as duas horas divididas, o campo com a morada por baixo do
+  nome, e o pedido de resposta na faixa dourada com "Sim, vou / Não posso". Não
+  são caixas arredondadas soltas dentro de um `p-5`: o mesmo jogo aparecia de
+  duas maneiras conforme o ecrã. Um emblema em falta desenha um escudo e nunca
+  as iniciais — quem identifica o clube é a linha de baixo, e repeti-las era
+  ler a sigla duas vezes; tirar a linha de baixo desalinhava os dois blocos
+  quando só um dos clubes tem emblema.
 - **A convocatória é o que está em `callups`, e mais nada — não se filtra por
   elegibilidade.** Quem foi convocado apto e ficou lesionado ou inativo antes do
   jogo continua na lista, marcado com o seu estado (`impedimento` no
