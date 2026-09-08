@@ -1,11 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ChevronRight, ShieldAlert, X, Cake, MapPin } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { ShieldAlert, X, Cake } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
-import { formatClubSigla, formatOpponentSigla, convocatoriaFechada, textoConvocatoriaFechada } from './CalendarPage'
+import {
+  formatClubSigla,
+  convocatoriaFechada,
+  textoConvocatoriaFechada,
+} from './CalendarPage'
 import { triggerHaptic } from '../utils/haptics'
 import { AvatarPerfil, CartaoVidro, CartaoSimples, EtiquetaSeccao } from '../components/ui'
 import { AnnouncementsInboxButton } from '../components/AnnouncementsInbox'
@@ -15,59 +18,38 @@ import {
   PersianaSemConvocatoria,
 } from '../components/AlertaSemConvocatoria'
 import { FichaPorLigar, useFichaPorLigar } from '../components/FichaPorLigar'
-import {
-  comOmissoes,
-  getSeasonLabel,
-  getSeasonMonths,
-} from '../lib/finance'
+import { CarrosselCartoes } from '../components/home/CarrosselCartoes'
+import { CartaoProximoJogo, type JogoDaHome } from '../components/home/CartaoProximoJogo'
+import { PorResponder, type PendenteDaHome } from '../components/home/PorResponder'
+import { UltimoJogo, type UltimoJogoDaHome } from '../components/home/UltimoJogo'
+import { ProvasEmCurso, type ProvaDaHome } from '../components/home/ProvasEmCurso'
+import { comOmissoes, getSeasonLabel } from '../lib/finance'
 
 /**
  * Hoje — o primeiro ecrã, e o único que responde a "o que é que me diz
  * respeito agora".
  *
- * O redesenho tirou-lhe o carrossel de jogos e a lista de treinos: isso é a
- * Agenda. Fica **um** compromisso, o próximo, com a resposta à convocatória no
- * próprio cartão; depois o estado da competição, os dois números do próprio, e
- * os anos de quem faz hoje.
+ * Segue o cartão **4a** do `Home Redesign.dc.html`, por blocos: cabeçalho,
+ * próximo jogo em carrossel, o que está por responder, o último jogo, as
+ * provas a decorrer, e os anos de quem faz este mês.
  *
- * A resposta à convocatória existe uma vez só na app, e é aqui.
+ * Três coisas do desenho não estão aqui, e nenhuma por esquecimento:
+ *
+ * - **A meteorologia** do cartão do jogo ("19° · vento 24 km/h"): a app não
+ *   tem fonte nenhuma, e um número inventado num cartão que diz a que horas é
+ *   a concentração seria pior do que a ausência dele.
+ * - **A cronologia dos golos** no último jogo: `stats` guarda contagens por
+ *   jogador e por jogo, não golos ao minuto com a assistência emparelhada.
+ * - **A tabela de classificação**: `tournament_matches` está vazia, e o
+ *   algoritmo dos desempates vive na `StandingsPage`.
+ *
+ * Cada uma fica registada em `docs/ecras-por-desenhar.md` com o que precisaria.
  */
-
-interface Evento {
-  id: string
-  title: string
-  type: 'practice' | 'match' | 'gathering'
-  date_time: string
-  meeting_time?: string | null
-  location: string
-  field_id?: string | null
-  home_away?: 'home' | 'away' | 'neutral'
-  is_friendly?: boolean
-  is_active?: boolean
-  home_score?: number | null
-  away_score?: number | null
-  tournament_id?: string | null
-  tournament?: { id: string; name: string } | null
-  field?: { name: string; address?: string | null } | null
-  opponent?: { name: string; initials: string; logo_url: string } | null
-}
-
-interface Convocatoria {
-  id: string
-  event_id: string
-  status: 'called' | 'confirmed' | 'declined'
-}
 
 interface Aniversariante {
   id: string
   nome: string
-  anos: number
-}
-
-const TIPO_ETIQUETA: Record<Evento['type'], string> = {
-  match: 'Jogo',
-  practice: 'Treino',
-  gathering: 'Convívio',
+  dia: number
 }
 
 /** Bom dia até às 12h, boa tarde até às 20h, boa noite depois disso. */
@@ -83,41 +65,57 @@ function saudacao(agora = new Date()): string {
  * o próprio.
  *
  * O `name` é `NOT NULL` na base, mas não está sempre lá quando esta função
- * corre: uma conta criada com o Google sem nome no perfil, ou um instante em
- * que o contexto ainda devolve a sessão sem a ficha, chegavam aqui com
- * `undefined` e derrubavam a Home inteira — ecrã preto, e sem forma de sair.
- * Um cumprimento genérico é melhor do que uma app que não abre.
+ * corre: uma conta criada com o Google sem nome no perfil chegava aqui com
+ * `undefined` e derrubava a Home inteira.
  */
-function primeiroNome(p?: { name?: string | null; nickname?: string | null; shirt_name?: string | null } | null): string {
+function primeiroNome(
+  p?: { name?: string | null; nickname?: string | null; shirt_name?: string | null } | null,
+): string {
   const preferido = p?.nickname?.trim() || p?.shirt_name?.trim()
   if (preferido) return preferido
   const proprio = p?.name?.trim()
   return proprio ? proprio.split(/\s+/)[0] : 'atleta'
 }
 
-const DATA_LONGA = new Intl.DateTimeFormat('pt-PT', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-})
+const ESTADO_CLINICO: Record<string, { texto: string; classe: string }> = {
+  active: { texto: 'Apto', classe: 'bg-csc-light/20 border-csc-light/35 text-csc-verde-texto' },
+  injured: { texto: 'Lesionado', classe: 'bg-csc-red/15 border-csc-red/32 text-csc-vermelho-texto' },
+  inactive: { texto: 'Inativo', classe: 'bg-white/10 border-white/20 text-white/62' },
+}
+
+interface EventoBruto {
+  id: string
+  type: 'match' | 'practice' | 'gathering'
+  title: string | null
+  date_time: string
+  meeting_time: string | null
+  location: string | null
+  is_friendly: boolean | null
+  is_active: boolean | null
+  home_away: 'home' | 'away' | 'neutral' | null
+  home_score: number | null
+  away_score: number | null
+  tournament: { id?: string; name: string } | null
+  field: { name: string; address: string | null } | null
+  opponent: { name: string; initials: string | null; logo_url: string | null } | null
+}
 
 const Home: React.FC = () => {
   const { profile, assignedRoles } = useAuth()
   const { clubSettings } = useClub()
 
-  const [proximo, setProximo] = useState<Evento | null>(null)
-  const [minhaConvocatoria, setMinhaConvocatoria] = useState<Convocatoria | null>(null)
-  const [ultimoJogo, setUltimoJogo] = useState<Evento | null>(null)
-  const [golos, setGolos] = useState<number | null>(null)
-  const [presencas, setPresencas] = useState<number | null>(null)
+  const [jogos, setJogos] = useState<JogoDaHome[]>([])
+  const [pendentes, setPendentes] = useState<PendenteDaHome[]>([])
+  const [ultimo, setUltimo] = useState<UltimoJogoDaHome | null>(null)
+  const [provas, setProvas] = useState<ProvaDaHome[]>([])
   const [aniversariantes, setAniversariantes] = useState<Aniversariante[]>([])
+  const [epoca, setEpoca] = useState<string | null>(null)
   const [aCarregar, setACarregar] = useState(true)
 
   /*
     Conta registada que nunca chegou a ser ligada à ficha que o clube já lhe
-    tinha (ecrã 11a). Substitui a Home inteira: sem ficha não há convocatória,
-    não há golos e não há percentagem de respostas — os mosaicos todos
-    mostrariam um traço, e nenhum deles diria porquê.
+    tinha (ecrã 11a). Substitui a Home inteira: sem ficha não há convocatória
+    nem nada que mostrar, e nenhum dos blocos diria porquê.
   */
   const estadoDaFicha = useFichaPorLigar(profile, assignedRoles)
   const semFicha = estadoDaFicha === 'por-ligar'
@@ -128,11 +126,10 @@ const Home: React.FC = () => {
   const [alertaAberto, setAlertaAberto] = useState(false)
 
   // Alertas de suspensão — deixados por quem lança fichas de jogo, em
-  // localStorage, e só visíveis a quem gere. Continuam como estavam: são um
-  // aviso pontual, não um ecrã.
+  // localStorage, e só visíveis a quem gere.
   const [alertasSuspensao, setAlertasSuspensao] = useState<{ chave: string; texto: string }[]>([])
   useEffect(() => {
-    if (!profile || (profile.role !== 'coach' && profile.role !== 'admin')) return
+    if (!eGestao) return
     const encontrados: { chave: string; texto: string }[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const chave = localStorage.key(i)
@@ -141,7 +138,7 @@ const Home: React.FC = () => {
       }
     }
     setAlertasSuspensao(encontrados)
-  }, [profile])
+  }, [eGestao])
 
   useEffect(() => {
     if (!profile || estadoDaFicha !== 'ligada') return
@@ -150,110 +147,171 @@ const Home: React.FC = () => {
     const carregar = async () => {
       setACarregar(true)
       try {
-        const inicioDeHoje = new Date()
-        inicioDeHoje.setHours(0, 0, 0, 0)
-
-        // A época do clube é a mesma regra do módulo financeiro — está lá
-        // porque foi lá que primeiro fez falta, mas é a época do clube e não
-        // uma noção de contabilidade.
-        const { data: defs } = await supabase.from('financial_settings').select('*').maybeSingle()
-        const definicoes = comOmissoes(defs)
-        const meses = getSeasonMonths(definicoes, getSeasonLabel(definicoes))
-        const inicioEpoca = meses.length
-          ? new Date(meses[0].year, meses[0].month - 1, 1)
-          : new Date(new Date().getFullYear(), 0, 1)
+        const agora = new Date().toISOString()
 
         const [
-          { data: proximos },
+          { data: defs },
+          { data: futuros },
           { data: ultimos },
-          { data: statsMeus },
-          { data: presencasMinhas },
+          { data: torneios },
           { data: plantel },
         ] = await Promise.all([
-          // O próximo compromisso, seja jogo, treino ou convívio.
+          supabase.from('financial_settings').select('*').maybeSingle(),
           supabase
             .from('events')
             .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name), field:fields(name, address)')
-            .gte('date_time', inicioDeHoje.toISOString())
+            .gte('date_time', agora)
             .order('date_time', { ascending: true })
-            .limit(4),
-          // O último jogo com resultado, para a linha da competição.
+            .limit(12),
           supabase
             .from('events')
-            .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name)')
+            .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name), field:fields(name, address)')
             .eq('type', 'match')
             .not('home_score', 'is', null)
             .order('date_time', { ascending: false })
             .limit(1),
-          supabase
-            .from('stats')
-            .select('goals, event:events!inner(date_time)')
-            .eq('player_id', profile.id)
-            .gte('event.date_time', inicioEpoca.toISOString()),
-          /*
-            A "presença" desta app é a resposta à convocatória, e não a
-            presença marcada no dia. A tabela `attendances` existe e era lida
-            aqui, mas nunca é escrita em lado nenhum — estava vazia, e este
-            número mostrava sempre um traço. Contam-se as convocatórias
-            respondidas, e a percentagem é a dos "sim".
-          */
-          supabase
-            .from('callups')
-            .select('status, event:events!inner(date_time)')
-            .eq('player_id', profile.id)
-            .gte('event.date_time', inicioEpoca.toISOString()),
-          supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date'),
+          supabase.from('tournaments').select('id, name, season, status').neq('status', 'terminado'),
+          supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date, status'),
         ])
 
         if (cancelado) return
 
-        // Os rascunhos ficam de fora para toda a gente, inclusive para quem
-        // gere: a Home mostra o que está marcado a sério, e um rascunho ainda
-        // não foi anunciado a ninguém. Quem o quer ver tem-no na Agenda.
-        const ativos = ((proximos as Evento[]) ?? []).filter(e => e.is_active !== false)
-        const seguinte = ativos[0] ?? null
-        setProximo(seguinte)
-        setUltimoJogo(((ultimos as Evento[]) ?? [])[0] ?? null)
+        setEpoca(getSeasonLabel(comOmissoes(defs)))
 
-        // A minha convocatória para esse evento, se existir.
-        if (seguinte) {
-          const { data: conv } = await supabase
-            .from('callups')
-            .select('id, event_id, status')
-            .eq('player_id', profile.id)
-            .eq('event_id', seguinte.id)
-            .maybeSingle()
-          if (!cancelado) setMinhaConvocatoria((conv as Convocatoria) ?? null)
-        } else {
-          setMinhaConvocatoria(null)
+        // Rascunhos ficam de fora: a Home mostra o que está marcado a sério.
+        const marcados = ((futuros as unknown as EventoBruto[]) ?? []).filter(e => e.is_active !== false)
+
+        /* As convocatórias destes eventos, numa consulta só: preciso da minha
+           resposta e de quantos já confirmaram. */
+        const ids = marcados.map(e => e.id)
+        const { data: convocatorias } = ids.length
+          ? await supabase.from('callups').select('event_id, player_id, status').in('event_id', ids)
+          : { data: [] as { event_id: string; player_id: string; status: string }[] }
+
+        if (cancelado) return
+        const linhas = (convocatorias ?? []) as { event_id: string; player_id: string; status: string }[]
+        const minha = new Map(linhas.filter(c => c.player_id === profile.id).map(c => [c.event_id, c.status]))
+        const confirmados = new Map<string, number>()
+        const total = new Map<string, number>()
+        for (const c of linhas) {
+          total.set(c.event_id, (total.get(c.event_id) ?? 0) + 1)
+          if (c.status === 'confirmed') confirmados.set(c.event_id, (confirmados.get(c.event_id) ?? 0) + 1)
         }
 
-        setGolos(((statsMeus as { goals: number | null }[]) ?? []).reduce((t, s) => t + (s.goals ?? 0), 0))
+        const ondeE = (e: EventoBruto) => e.location?.trim() || e.field?.name || ''
 
-        // Só as convocatórias a que se respondeu entram na conta: quem ainda
-        // não respondeu não confirmou nem recusou, e contá-lo como falta era
-        // castigar quem foi convocado ontem.
-        const respostas = ((presencasMinhas as { status: string }[]) ?? [])
-          .filter(c => c.status === 'confirmed' || c.status === 'declined')
-        setPresencas(
-          respostas.length
-            ? Math.round((respostas.filter(c => c.status === 'confirmed').length / respostas.length) * 100)
-            : null,
+        setJogos(
+          marcados
+            .filter(e => e.type === 'match')
+            .slice(0, 5)
+            .map(e => {
+              const fechada = convocatoriaFechada(e, (total.get(e.id) ?? 0) > 0)
+              return {
+                id: e.id,
+                date_time: e.date_time,
+                meeting_time: e.meeting_time,
+                is_friendly: Boolean(e.is_friendly),
+                home_away: e.home_away,
+                local: ondeE(e),
+                morada: e.field?.address ?? null,
+                prova: e.tournament?.name ?? null,
+                opponent: e.opponent,
+                minhaResposta: (minha.get(e.id) as JogoDaHome['minhaResposta']) ?? null,
+                confirmados: confirmados.get(e.id) ?? 0,
+                fechada: fechada ? textoConvocatoriaFechada(fechada, e) : null,
+              }
+            }),
         )
 
+        /* Por responder: o que ainda espera resposta minha, e **nunca treinos**
+           — um treino não pede resposta nenhuma nesta app, ao contrário do que
+           o cartão 4a desenha. */
+        setPendentes(
+          marcados
+            .filter(e => e.type !== 'practice' && minha.get(e.id) === 'called')
+            .filter(e => !convocatoriaFechada(e, true))
+            .slice(0, 6)
+            .map(e => ({
+              id: e.id,
+              titulo: e.type === 'match'
+                ? `Jogo com ${e.opponent?.name ?? 'adversário por definir'}`
+                : (e.title || 'Convívio'),
+              tipo: e.type as 'match' | 'gathering',
+              date_time: e.date_time,
+              local: ondeE(e),
+              prova: e.tournament?.name ?? null,
+            })),
+        )
+
+        // O último jogo, com quem marcou. Sem minuto: `stats` guarda contagens.
+        const jogo = ((ultimos as unknown as EventoBruto[]) ?? [])[0]
+        if (jogo && jogo.home_score !== null && jogo.away_score !== null) {
+          const { data: fichas } = await supabase
+            .from('stats')
+            .select('player_id, goals, assists, player:v_players_public(id, name, nickname, shirt_name)')
+            .eq('event_id', jogo.id)
+          if (cancelado) return
+          const marcadores = ((fichas ?? []) as unknown as {
+            player_id: string
+            goals: number | null
+            assists: number | null
+            player: { name?: string | null; nickname?: string | null; shirt_name?: string | null } | null
+          }[])
+            .filter(f => (f.goals ?? 0) > 0 || (f.assists ?? 0) > 0)
+            .map(f => ({
+              playerId: f.player_id,
+              nome: primeiroNome(f.player),
+              golos: f.goals ?? 0,
+              assistencias: f.assists ?? 0,
+            }))
+            .sort((a, b) => b.golos - a.golos || b.assistencias - a.assistencias)
+
+          setUltimo({
+            id: jogo.id,
+            date_time: jogo.date_time,
+            home_score: jogo.home_score,
+            away_score: jogo.away_score,
+            home_away: jogo.home_away,
+            adversario: jogo.opponent?.name ?? 'adversário',
+            prova: jogo.tournament?.name ?? null,
+            marcadores,
+          })
+        } else {
+          setUltimo(null)
+        }
+
+        // Provas a decorrer, com quantas jornadas já foram lançadas.
+        const provasBrutas = (torneios ?? []) as { id: string; name: string; season: string | null }[]
+        const { data: jornadas } = provasBrutas.length
+          ? await supabase
+              .from('tournament_matches')
+              .select('tournament_id')
+              .in('tournament_id', provasBrutas.map(t => t.id))
+          : { data: [] as { tournament_id: string }[] }
+        if (cancelado) return
+        const porProva = new Map<string, number>()
+        for (const j of (jornadas ?? []) as { tournament_id: string }[]) {
+          porProva.set(j.tournament_id, (porProva.get(j.tournament_id) ?? 0) + 1)
+        }
+        setProvas(provasBrutas.map(t => ({
+          id: t.id,
+          nome: t.name,
+          epoca: t.season,
+          jornadas: porProva.get(t.id) ?? 0,
+        })))
+
+        // Aniversários deste mês, e não só de hoje: é o que o 4a mostra.
         const hoje = new Date()
         setAniversariantes(
-          ((plantel as { id: string; name: string; nickname?: string | null; shirt_name?: string | null; birth_date?: string | null }[]) ?? [])
-            .filter(p => {
-              if (!p.birth_date) return false
-              const d = new Date(p.birth_date)
-              return d.getDate() === hoje.getDate() && d.getMonth() === hoje.getMonth()
-            })
-            .map(p => ({
-              id: p.id,
-              nome: primeiroNome(p),
-              anos: hoje.getFullYear() - new Date(p.birth_date as string).getFullYear(),
-            })),
+          ((plantel ?? []) as {
+            id: string; name: string | null; nickname: string | null
+            shirt_name: string | null; birth_date: string | null; status: string | null
+          }[])
+            .filter(p => p.birth_date && p.status !== 'inactive')
+            .map(p => ({ p, d: new Date(p.birth_date as string) }))
+            .filter(({ d }) => d.getMonth() === hoje.getMonth())
+            .sort((a, b) => a.d.getDate() - b.d.getDate())
+            .map(({ p, d }) => ({ id: p.id, nome: primeiroNome(p), dia: d.getDate() })),
         )
       } catch (erro) {
         console.error('Erro a carregar a Home:', erro)
@@ -263,53 +321,43 @@ const Home: React.FC = () => {
     }
 
     carregar()
-    return () => {
-      cancelado = true
-    }
+    return () => { cancelado = true }
   }, [profile, estadoDaFicha])
 
-  const responder = async (status: 'confirmed' | 'declined') => {
-    if (!minhaConvocatoria || !proximo) return
-
-    // A regra de quando a convocatória aceita respostas vive no CalendarPage,
-    // uma vez só. Aqui há sempre convocados: se a pessoa tem linha, alguém foi
-    // chamado.
-    const fechada = convocatoriaFechada(proximo, true)
-    if (fechada) {
-      toast.error(textoConvocatoriaFechada(fechada, proximo) + '.')
-      return
-    }
-
+  const responder = async (eventId: string, status: 'confirmed' | 'declined') => {
+    if (!profile) return
     triggerHaptic(status === 'confirmed' ? 'success' : 'warning')
-    const anterior = minhaConvocatoria.status
-    setMinhaConvocatoria({ ...minhaConvocatoria, status })
-    const { error } = await supabase.from('callups').update({ status }).eq('id', minhaConvocatoria.id)
+
+    // Otimista nos dois blocos que mostram a resposta.
+    setJogos(prev => prev.map(j => (j.id === eventId ? { ...j, minhaResposta: status } : j)))
+    setPendentes(prev => prev.filter(p => p.id !== eventId))
+
+    const { error } = await supabase
+      .from('callups')
+      .update({ status })
+      .eq('event_id', eventId)
+      .eq('player_id', profile.id)
+
     if (error) {
-      setMinhaConvocatoria({ ...minhaConvocatoria, status: anterior })
       toast.error('Não foi possível guardar a resposta: ' + error.message)
       return
     }
     toast.success(status === 'confirmed' ? 'Contamos contigo.' : 'Resposta registada.')
   }
 
-  const local = useMemo(() => {
-    if (!proximo) return ''
-    if (proximo.location?.trim()) return proximo.location.trim()
-    if (proximo.field?.name) {
-      return proximo.field.address ? `${proximo.field.name} · ${proximo.field.address}` : proximo.field.name
-    }
-    return ''
-  }, [proximo])
-
   if (!profile) return null
+
+  const estado = ESTADO_CLINICO[profile.status ?? 'active'] ?? ESTADO_CLINICO.active
+  const emblema = clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'
+  const sigla = formatClubSigla(clubSettings?.initials)
+  const hojeDia = new Date().getDate()
 
   return (
     <div className="space-y-4 pb-2">
-      {/* Saudação: o cabeçalho da Home. É o único ecrã com o sino dos
-          comunicados — nos outros a fotografia é a única coisa que se repete. */}
+      {/* Cabeçalho: quem sou, e o sino dos comunicados — que só existe aqui. */}
       <header className="flex items-center gap-3 pt-safe">
         <img
-          src={clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'}
+          src={emblema}
           alt=""
           className="w-[42px] h-[42px] rounded-full bg-white object-contain p-[3px] flex-none"
         />
@@ -323,227 +371,105 @@ const Home: React.FC = () => {
         <AvatarPerfil tamanho={46} comLapis />
       </header>
 
-      {/*
-        A conta não está ligada a nenhuma ficha do clube: o ecrã 11a substitui
-        a Home toda, e mais nada corre. O cabeçalho fica — a fotografia leva às
-        Definições, e ler comunicados é uma das coisas que se pode fazer.
-      */}
       {estadoDaFicha === 'a-verificar' ? (
         <CartaoVidro className="h-40 animate-pulse" />
-      ) : semFicha && profile ? (
+      ) : semFicha ? (
         <FichaPorLigar perfil={profile} />
       ) : (
-      <>
-      {/*
-        Eventos marcados sem ninguém convocado (ecrã 4c). Só a
-        quem gere: é o erro caro desta app — chega o sábado e ninguém apareceu
-        porque ninguém foi chamado.
-      */}
-      <FaixaSemConvocatoria eventos={eventosSemConvocatoria} aoAbrir={() => setAlertaAberto(true)} />
-      <PersianaSemConvocatoria
-        aberto={alertaAberto}
-        aoFechar={() => setAlertaAberto(false)}
-        eventos={eventosSemConvocatoria}
-      />
-
-      {alertasSuspensao.map(alerta => (
-        <CartaoSimples
-          key={alerta.chave}
-          className="flex items-start gap-3 px-4 py-3.5 border-csc-red/35 bg-csc-red/12"
-        >
-          <ShieldAlert size={18} className="text-csc-vermelho-texto shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <EtiquetaSeccao como="p" className="text-csc-vermelho-suave">Alerta de suspensão</EtiquetaSeccao>
-            <p className="text-[13px] font-bold text-white mt-1">{alerta.texto}</p>
+        <>
+          {/* Clube, época e estado clínico — a segunda linha do cabeçalho no 4a. */}
+          <div className="flex items-center gap-2">
+            <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62">
+              {sigla} Veteranos{epoca ? ` · Época ${epoca}` : ''}
+            </span>
+            <span
+              className={`ml-auto font-display font-bold text-[9.5px] px-2.5 py-1 rounded-[9px] border flex-none ${estado.classe}`}
+            >
+              {estado.texto}
+            </span>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              localStorage.removeItem(alerta.chave)
-              setAlertasSuspensao(prev => prev.filter(a => a.chave !== alerta.chave))
-            }}
-            aria-label="Dispensar alerta"
-            className="w-11 h-11 -m-2 rounded-full flex items-center justify-center text-white/62 cursor-pointer shrink-0"
-          >
-            <X size={16} />
-          </button>
-        </CartaoSimples>
-      ))}
 
-      {/* O próximo compromisso — o único elemento alto do ecrã. */}
-      {aCarregar ? (
-        <CartaoVidro className="h-40 animate-pulse" />
-      ) : proximo ? (
-        <CartaoVidro className="overflow-hidden">
-          <div className="p-[17px]">
-            <p className="font-display font-extrabold text-[9.5px] tracking-[0.18em] text-csc-gold uppercase">
-              {DATA_LONGA.format(new Date(proximo.date_time))}
-            </p>
+          {/* Eventos por convocar, só a quem gere (4c). */}
+          <FaixaSemConvocatoria eventos={eventosSemConvocatoria} aoAbrir={() => setAlertaAberto(true)} />
+          <PersianaSemConvocatoria
+            aberto={alertaAberto}
+            aoFechar={() => setAlertaAberto(false)}
+            eventos={eventosSemConvocatoria}
+          />
 
-            {proximo.type === 'match' ? (
-              <div className="flex items-center gap-3 mt-3.5">
-                <img
-                  src={clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'}
-                  alt={formatClubSigla(clubSettings?.initials)}
-                  className="w-11 h-11 rounded-full bg-white object-contain p-0.5 flex-none"
+          {alertasSuspensao.map(alerta => (
+            <CartaoSimples
+              key={alerta.chave}
+              className="flex items-start gap-3 px-4 py-3.5 border-csc-red/35 bg-csc-red/12"
+            >
+              <ShieldAlert size={18} className="text-csc-vermelho-texto shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <EtiquetaSeccao como="p" className="text-csc-vermelho-suave">Alerta de suspensão</EtiquetaSeccao>
+                <p className="text-[13px] font-bold text-white mt-1">{alerta.texto}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem(alerta.chave)
+                  setAlertasSuspensao(prev => prev.filter(a => a.chave !== alerta.chave))
+                }}
+                aria-label="Dispensar alerta"
+                className="w-11 h-11 -m-2 rounded-full flex items-center justify-center text-white/62 cursor-pointer shrink-0"
+              >
+                <X size={16} />
+              </button>
+            </CartaoSimples>
+          ))}
+
+          {/* O próximo jogo, uma página por jogo marcado. */}
+          {aCarregar ? (
+            <CartaoVidro className="h-56 animate-pulse" />
+          ) : jogos.length > 0 ? (
+            <CarrosselCartoes
+              etiqueta="Próximos jogos"
+              paginas={jogos.map(jogo => (
+                <CartaoProximoJogo
+                  key={jogo.id}
+                  jogo={jogo}
+                  siglaClube={sigla}
+                  emblemaClube={emblema}
+                  aoResponder={responder}
                 />
-                <span className="font-display font-black text-[22px] text-white tracking-[-0.02em]">vs</span>
-                {proximo.opponent?.logo_url ? (
-                  <img
-                    src={proximo.opponent.logo_url}
-                    alt={proximo.opponent.name}
-                    className="w-11 h-11 rounded-full bg-white/90 object-contain p-0.5 flex-none"
-                  />
-                ) : (
-                  <span className="w-11 h-11 rounded-full bg-white/90 flex items-center justify-center font-display font-extrabold text-[10px] text-csc-dark flex-none">
-                    {formatOpponentSigla(proximo.opponent)}
-                  </span>
-                )}
-                <span className="flex-1 min-w-0 text-right">
-                  <span className="block font-display font-bold text-xs text-white">
-                    {new Date(proximo.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <span className="block text-[10.5px] text-white/62 mt-0.5 truncate">
-                    {proximo.is_friendly ? 'Jogo amigável' : proximo.tournament?.name || 'Jogo oficial'}
-                  </span>
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 mt-3.5">
-                <span className="flex-1 min-w-0">
-                  <span className="block font-display font-extrabold text-[17px] text-white truncate">
-                    {proximo.title || TIPO_ETIQUETA[proximo.type]}
-                  </span>
-                  <span className="block text-[10.5px] text-white/62 mt-0.5">
-                    {TIPO_ETIQUETA[proximo.type]}
-                  </span>
-                </span>
-                <span className="font-display font-bold text-xs text-white flex-none">
-                  {new Date(proximo.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            )}
-
-            {local && (
-              <p className="flex items-center gap-1.5 text-[10.5px] text-white/62 mt-3">
-                <MapPin size={12} className="shrink-0" />
-                <span className="truncate">{local}</span>
+              ))}
+            />
+          ) : (
+            <CartaoVidro className="px-[17px] py-6 text-center">
+              <p className="font-display font-extrabold text-sm text-white">Sem jogos marcados</p>
+              <p className="text-[11px] text-white/62 mt-1.5">
+                Quando houver jogo, aparece aqui com a hora e o campo.
               </p>
-            )}
-          </div>
-
-          {/* A resposta à convocatória. Só a quem foi convocado, e só quando o
-              evento a aceita — nos treinos não se pergunta nada. */}
-          {minhaConvocatoria && !convocatoriaFechada(proximo, true) && (
-            <div className="flex items-center gap-3 px-[17px] py-3.5 bg-[rgba(11,45,11,.55)] border-t border-csc-light/35">
-              <span className="flex-1 font-display font-extrabold text-[13px] text-white">
-                {minhaConvocatoria.status === 'confirmed'
-                  ? 'Contamos contigo.'
-                  : minhaConvocatoria.status === 'declined'
-                    ? 'Ficas de fora.'
-                    : 'Contamos contigo?'}
-              </span>
-              <div className="flex gap-2 flex-none w-[168px]">
-                <button
-                  type="button"
-                  onClick={() => responder('confirmed')}
-                  aria-pressed={minhaConvocatoria.status === 'confirmed'}
-                  className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
-                    transition-transform duration-150 active:scale-97
-                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                      minhaConvocatoria.status === 'confirmed'
-                        ? 'bg-csc-light border-csc-light text-white'
-                        : 'bg-white/9 border-white/20 text-white'
-                    }`}
-                >
-                  Vou
-                </button>
-                <button
-                  type="button"
-                  onClick={() => responder('declined')}
-                  aria-pressed={minhaConvocatoria.status === 'declined'}
-                  className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
-                    transition-transform duration-150 active:scale-97
-                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                      minhaConvocatoria.status === 'declined'
-                        ? 'bg-white/90 border-white/90 text-csc-tinta'
-                        : 'bg-white/9 border-white/20 text-white'
-                    }`}
-                >
-                  Não
-                </button>
-              </div>
-            </div>
+            </CartaoVidro>
           )}
-        </CartaoVidro>
-      ) : (
-        <CartaoVidro className="px-[17px] py-6 text-center">
-          <p className="font-display font-extrabold text-sm text-white">Nada marcado para já</p>
-          <p className="text-[11px] text-white/62 mt-1.5">
-            Quando houver jogo, treino ou convívio, aparece aqui.
-          </p>
-        </CartaoVidro>
-      )}
 
-      {/* Competição: o estado da época, num toque. */}
-      {ultimoJogo && ultimoJogo.home_score !== null && ultimoJogo.away_score !== null && (
-        <CartaoSimples
-          como={Link}
-          to="/competicao"
-          onClick={() => triggerHaptic('light')}
-          className="flex items-center gap-3.5 px-4 py-3.5 min-h-14 cursor-pointer
-            transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-        >
-          <span className="w-9 h-9 rounded-xl bg-csc-gold/15 border border-csc-gold/30 flex items-center justify-center
-            font-display font-extrabold text-[13px] text-csc-gold flex-none tabular-nums">
-            {ultimoJogo.home_score}–{ultimoJogo.away_score}
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block font-display font-extrabold text-[13px] text-white truncate">
-              {ultimoJogo.tournament?.name || 'Competição'}
-            </span>
-            <span className="block text-[10.5px] text-white/62 mt-0.5 truncate">
-              Último jogo com {ultimoJogo.opponent?.name ?? 'adversário'}
-            </span>
-          </span>
-          <ChevronRight size={16} className="text-white/35 flex-none" />
-        </CartaoSimples>
-      )}
+          <PorResponder pendentes={pendentes} aoResponder={responder} />
 
-      {/* Os dois números do próprio, na época em curso. */}
-      <div className="flex gap-3">
-        <CartaoSimples className="flex-1 px-4 py-3.5">
-          <EtiquetaSeccao como="p" className="tracking-[0.12em] text-[8.5px]">Os meus golos</EtiquetaSeccao>
-          <p className="font-display font-black text-[26px] leading-none text-white mt-2 tabular-nums">
-            {golos ?? '—'}
-          </p>
-        </CartaoSimples>
-        <CartaoSimples className="flex-1 px-4 py-3.5">
-          <EtiquetaSeccao como="p" className="tracking-[0.12em] text-[8.5px]">Disse que sim</EtiquetaSeccao>
-          <p className="font-display font-black text-[26px] leading-none text-white mt-2 tabular-nums">
-            {presencas === null ? '—' : <>{presencas}<span className="text-[15px] text-white/62">%</span></>}
-          </p>
-        </CartaoSimples>
-      </div>
+          {ultimo && <UltimoJogo jogo={ultimo} siglaClube={sigla} />}
 
-      {aniversariantes.map(pessoa => (
-        <CartaoSimples
-          key={pessoa.id}
-          className="flex items-center gap-3 px-4 py-3.5 bg-csc-blue/15 border-csc-blue/30"
-        >
-          <span className="w-8 h-8 rounded-[10px] bg-csc-blue/25 border border-csc-blue/35 flex items-center justify-center text-csc-azul-texto flex-none">
-            <Cake size={15} />
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block font-display font-extrabold text-[12.5px] text-white">
-              Hoje é dia do {pessoa.nome}
-            </span>
-            <span className="block text-[10.5px] text-white/60 mt-0.5">faz {pessoa.anos} anos</span>
-          </span>
-        </CartaoSimples>
-      ))}
-      </>
+          <ProvasEmCurso provas={provas} />
+
+          {aniversariantes.length > 0 && (
+            <CartaoSimples className="flex items-center gap-3 px-4 py-3.5 bg-csc-blue/15 border-csc-blue/30">
+              <span className="w-8 h-8 rounded-[10px] bg-csc-blue/25 border border-csc-blue/35 flex items-center justify-center text-csc-azul-texto flex-none">
+                <Cake size={15} />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-display font-extrabold text-[12.5px] text-white">
+                  Aniversários deste mês
+                </span>
+                <span className="block text-[10.5px] text-white/62 mt-0.5">
+                  {aniversariantes
+                    .map(p => (p.dia === hojeDia ? `${p.nome} faz anos hoje` : `${p.nome} a ${p.dia}`))
+                    .join(' · ')}
+                </span>
+              </span>
+            </CartaoSimples>
+          )}
+        </>
       )}
     </div>
   )

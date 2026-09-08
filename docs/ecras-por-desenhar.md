@@ -364,3 +364,81 @@ Para não haver dúvidas: 1a–1d, 2a–2f, 3a–3d, 4b, 4c, 4d, 4f, 4g, 5a, 5b,
 7a, 7b, 8a–8i, 9a–9g, 10a–10d, 12b e 12c **estão feitos**. O 12a não é um ecrã
 da app — é a ilustração de uma notificação no ecrã bloqueado do telemóvel, e
 depende de um sistema de envio que não existe.
+
+---
+
+# Setembro de 2026 — a paleta e a Home
+
+O handoff trouxe um `PROMPT.md` com dois trabalhos. Ficam os dois feitos, e
+aqui o que deles não coube.
+
+## Paleta
+
+Troca de tokens, sem mexer em estrutura: fundo `#0e1011` → `#262d2b`, a faixa
+do topo e a moldura da entrada nos tons novos, os cartões um degrau mais
+claros, e a barra de navegação em `rgba(53,61,58,.9)`.
+
+Duas coisas que a troca obrigou:
+
+- **Persianas e modais ganharam token próprio** (`--color-csc-superficie`,
+  `#2d3532`). Usavam a cor da página; com o fundo aclarado ficavam *mais
+  escuros* do que aquilo sobre que flutuam, e a elevação lia-se ao contrário.
+- **Os alfas de leitura subiram** de `/40`–`/55` para `/62`, em 231 sítios. O
+  pior caso era a barra de navegação, onde `text-white/62` levava
+  `opacity-90` por cima — a opacidade multiplica o alfa e punha o rótulo em
+  3,65:1. Passou a `/82` com opacidade cheia.
+
+## A Home (cartão 4a)
+
+Feita por blocos: cabeçalho com época e estado clínico, próximo jogo em
+carrossel, "por responder" em carrossel, último jogo, provas a decorrer em
+carrossel, e os anos de quem faz este mês. Os três carrosséis levam o realce
+deslizante da barra de navegação, em `src/components/home/CarrosselCartoes.tsx`.
+
+### O que ficou de fora, e porquê
+
+Três coisas do desenho não têm como ser feitas com os dados que existem. Não
+foram inventadas.
+
+**1. A meteorologia no cartão do jogo** ("19° · vento 24 km/h"). Não há fonte
+nenhuma na app — nem serviço, nem chave. Precisa de uma API de meteorologia
+com chave (a maioria é paga acima de um limite), de guardar a última resposta
+para o cartão não ficar vazio sem rede, e de uma decisão sobre o que mostrar
+quando a previsão não chega. Um número inventado num cartão que diz a que
+horas é a concentração seria pior do que não o ter.
+
+**2. A cronologia dos golos no último jogo** ("12' Nuno Aleixo, as. Paulo").
+`stats` guarda **contagens por jogador e por jogo** — `goals`, `assists` —, não
+golos como acontecimentos: não há minuto, e não há forma de dizer quem assistiu
+qual golo. Precisa de uma tabela nova, algo como:
+
+```sql
+create table public.match_goals (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete cascade,
+  scorer_id uuid references public.profiles(id) on delete set null,
+  assist_id uuid references public.profiles(id) on delete set null,
+  minute smallint,
+  own_goal boolean not null default false,
+  created_at timestamptz not null default now()
+);
+```
+
+e, sobretudo, de mudar a ficha de jogo: hoje lança-se "2 golos do Nuno", e
+passaria a lançar-se cada golo. É trabalho de UI, não só de esquema. Até lá a
+Home mostra o resultado e quem marcou e assistiu, com as contagens.
+
+**3. A tabela de classificação.** `tournament_matches` tem **zero linhas** —
+sem jornadas lançadas não há classificação para calcular. E o algoritmo, com os
+desempates por confronto direto e diferença de golos, vive dentro da
+`StandingsPage` com mais de cem linhas: duplicá-lo para a Home criava duas
+classificações que podiam discordar. O caminho é extraí-lo para `src/lib`, e só
+depois a Home mostra a tabela. Por agora mostra a prova e leva às
+classificações, que é onde a conta é feita.
+
+### Uma diferença deliberada face ao desenho
+
+O cartão 4a põe **Vou / Não num treino**, no bloco "por responder". A app não
+faz isso: um treino não pede resposta — são semanais, convocam automaticamente
+todos os aptos, e perguntar semana após semana ensina a ignorar o pedido. O
+desenho é anterior a essa decisão. O bloco leva jogos e convívios.
