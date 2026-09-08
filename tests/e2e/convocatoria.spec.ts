@@ -310,3 +310,78 @@ test('um jogo do cartão de cima não se repete em "Por responder"', async ({ pa
   await expect(porResponder.getByText('Jantar Reentré')).toBeVisible()
   await expect(porResponder.getByText(/^Jogo com/)).toHaveCount(0)
 })
+
+/**
+ * A Agenda abre no que está por realizar.
+ *
+ * A lista por baixo do calendário é ordenada por data, e a época tem meses
+ * feitos: abrir em "Todos" era abrir num jogo de janeiro, com o próximo a
+ * dezenas de cartões de distância.
+ *
+ * O calendário do mês fica **de fora** deste filtro, de propósito: se o tempo
+ * se aplicasse também aos pontos, o mês em curso perdia os dias já passados e
+ * escolher o dia de um jogo da semana anterior respondia "Sem eventos neste
+ * dia" — que é falso.
+ */
+test.describe('A Agenda abre no que está por realizar', () => {
+  const passado = { ...base, id: 'v', title: 'Convívio Antigo', type: 'gathering', date_time: DAQUI_A_DIAS(-9) }
+  const futuro = { ...base, id: 'n', title: 'Convívio Novo', type: 'gathering', date_time: DAQUI_A_DIAS(9) }
+
+  async function agenda(page: import('@playwright/test').Page, eventos: Record<string, unknown>[]) {
+    await montarSupabaseFalso(page, {
+      events: eventos,
+      callups: eventos.map(e => convocatoriaMinha(e.id as string)),
+    })
+    await page.goto('/csc-vet/calendar')
+    await page.waitForLoadState('networkidle')
+  }
+
+  test('a lista mostra o futuro e não o passado', async ({ page }) => {
+    await agenda(page, [passado, futuro])
+
+    await expect(page.getByRole('heading', { name: /por realizar/i })).toBeVisible()
+    await expect(page.getByText('Convívio Novo')).toBeVisible()
+    await expect(page.getByText('Convívio Antigo')).toHaveCount(0)
+  })
+
+  test('e o funil não acende: é o ponto de partida, não um filtro posto', async ({ page }) => {
+    await agenda(page, [passado, futuro])
+
+    await expect(page.getByRole('button', { name: 'Pesquisa e filtros', exact: true })).toBeVisible()
+  })
+
+  test('"Ver realizados" leva ao passado sem abrir a persiana', async ({ page }) => {
+    await agenda(page, [passado, futuro])
+
+    await page.getByRole('button', { name: 'Ver realizados' }).click()
+    await expect(page.getByText('Convívio Antigo')).toBeVisible()
+    await expect(page.getByText('Convívio Novo')).toHaveCount(0)
+    // Agora sim, é um filtro escolhido — e o cabeçalho tem de o dizer.
+    await expect(page.getByRole('button', { name: /Pesquisa e filtros \(ativos\)/ })).toBeVisible()
+  })
+
+  test('só com passado, o vazio oferece o histórico em vez de mentir', async ({ page }) => {
+    await agenda(page, [passado])
+
+    await expect(page.getByText('Nada por realizar.')).toBeVisible()
+    await expect(page.getByText('Nada marcado ainda')).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Ver os realizados' }).click()
+    await expect(page.getByText('Convívio Antigo')).toBeVisible()
+  })
+
+  test('o calendário do mês continua a marcar os dias já passados', async ({ page }) => {
+    const quando = new Date(Date.now() - 14 * 864e5)
+    quando.setHours(11, 0, 0, 0)
+    await agenda(page, [{ ...base, id: 'ps', title: 'Convívio Antigo', type: 'gathering', date_time: quando.toISOString() }])
+
+    await page.getByLabel('Ano').selectOption(String(quando.getFullYear()))
+    await page.getByLabel('Mês', { exact: true }).selectOption(String(quando.getMonth()))
+
+    // O ponto está lá — e o dia abre o evento, em vez de dizer que não há nada.
+    const dia = page.getByRole('button', { name: `${quando.getDate()} — 1 evento` })
+    await expect(dia).toBeVisible()
+    await dia.click()
+    await expect(page.getByText('Convívio Antigo')).toBeVisible()
+  })
+})

@@ -191,6 +191,22 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **A Agenda abre no que está por realizar** (`ESTADO_POR_OMISSAO`), não em
+  "Todos": a lista é ordenada por data e a época tem meses feitos, por isso
+  abrir em tudo era abrir num jogo de janeiro. Isto é o ponto de partida e não
+  um filtro posto por alguém — o `temFiltros` mede-se a partir daqui, o funil
+  não acende só por a app ter aberto, e o "Limpar" volta a este estado.
+  **O filtro de tempo é da lista e não do calendário do mês:** o mês desenha
+  `eventosDoCalendario` (todos os filtros menos o tempo) e a lista
+  `filteredEvents`. Aplicá-lo aos dois apagava os pontos dos dias já passados
+  do próprio mês que se está a ver, e escolher o dia de um jogo da semana
+  anterior respondia "Sem eventos neste dia". Como o passado deixa de estar na
+  lista, há duas saídas para ele que têm de continuar a existir: o "Ver
+  realizados" ao lado do título e o vazio "Nada por realizar" — sem eles o
+  histórico fica sem porta, com o filtro escondido atrás do funil.
+- **A cor de um tipo de evento vive em `CORES_TIPO`**, num sítio só. O ponto do
+  calendário e a pastilha do cartão diziam a mesma coisa em tons diferentes —
+  o convívio era `csc-azul-texto` no ponto e `blue-300` no rótulo.
 - Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
 - **O plantel lê-se de `v_players_public`, não de `profiles`.** Tudo o que mostre
   colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a

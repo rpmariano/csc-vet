@@ -41,18 +41,60 @@ import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, CampoEntrada, Botao } from '../components/ui'
+import { CabecalhoEcra, Pastilha, CampoEntrada, Botao, EtiquetaSeccao } from '../components/ui'
 import { SlidersHorizontal } from 'lucide-react'
 
-/** Como se lê cada filtro escondido, na linha de resumo do cabeçalho. */
+/** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
-  upcoming: 'Próximos',
+  all: 'Todos os eventos',
+  upcoming: 'Por realizar',
   past: 'Realizados',
   my_confirmed: 'Confirmados por mim',
   my_pending: 'Por responder',
   my_declined: 'Recusados por mim',
   my_called: 'Fui convocado',
 }
+
+/**
+ * A Agenda abre no que está **por realizar**, e não em tudo.
+ *
+ * A lista por baixo do calendário é ordenada por data e a época tem meses
+ * feitos: abrir em "Todos" era abrir num jogo de janeiro, com o próximo a
+ * dezenas de cartões de distância. Isto é o ponto de partida, não um filtro
+ * posto por alguém — daí o `temFiltros` medir-se a partir daqui, e o funil não
+ * acender só por a app ter aberto.
+ */
+const ESTADO_POR_OMISSAO = 'upcoming'
+
+/**
+ * A cor de cada tipo de evento, num sítio só.
+ *
+ * O ponto do calendário e o rótulo do cartão diziam a mesma coisa em tons
+ * diferentes — o convívio era `csc-azul-texto` no ponto e `blue-300` no
+ * rótulo — e nenhum dos dois se via bem: pontos de 4px e uma palavra de 10px
+ * sem fundo. O ponto passa a 6px e o rótulo a pastilha da mesma cor, para o
+ * tipo de evento se ler de relance no calendário e no cartão.
+ */
+const CORES_TIPO = {
+  match: {
+    ponto: 'bg-csc-gold',
+    halo: 'shadow-csc-gold/70',
+    texto: 'text-csc-gold',
+    pastilha: 'bg-csc-gold/18 border-csc-gold/45',
+  },
+  practice: {
+    ponto: 'bg-csc-verde-texto',
+    halo: 'shadow-csc-verde-texto/70',
+    texto: 'text-csc-verde-texto',
+    pastilha: 'bg-csc-light/22 border-csc-verde-texto/45',
+  },
+  gathering: {
+    ponto: 'bg-csc-azul-texto',
+    halo: 'shadow-csc-azul-texto/70',
+    texto: 'text-csc-azul-texto',
+    pastilha: 'bg-csc-blue/28 border-csc-azul-texto/45',
+  },
+} as const
 
 /**
  * Campo branco dos formulários de evento (ecrã 2e) — 46px, como no handoff.
@@ -359,7 +401,7 @@ const CalendarPage: React.FC = () => {
   const [convocadoAberto, setConvocadoAberto] = useState<string | null>(null)
   const [typeFilter, setTypeFilter] = useState<'all' | 'match' | 'practice' | 'gathering'>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'past' | 'my_confirmed' | 'my_declined' | 'my_pending' | 'my_called'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'past' | 'my_confirmed' | 'my_declined' | 'my_pending' | 'my_called'>(ESTADO_POR_OMISSAO)
 
   // Callups state
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
@@ -1221,8 +1263,18 @@ const CalendarPage: React.FC = () => {
     setSelectedDate(today)
   }
 
-  // Filtered events
-  const filteredEvents = events.filter(e => {
+  /*
+    Os eventos que passam os filtros **menos o do tempo** — é o que o
+    calendário do mês mostra, e o que se vê ao escolher um dia.
+
+    O tempo fica de fora de propósito. Com "Por realizar" por omissão, aplicá-lo
+    aqui apagava os pontos dos dias já passados do próprio mês que se está a
+    ver, e escolher o dia de um jogo da semana passada respondia "Sem eventos
+    neste dia" — que é falso. Um calendário que esconde metade do mês que
+    desenha não é um calendário. O filtro de tempo é da lista, que é onde a
+    pergunta "o que vem a seguir?" se faz.
+  */
+  const eventosDoCalendario = events.filter(e => {
     /*
       0. Rascunhos: só para quem gere.
 
@@ -1283,16 +1335,9 @@ const CalendarPage: React.FC = () => {
       return null
     }
 
-    // 3. Status Filter
+    // 3. Status Filter — a parte da resposta à convocatória; o tempo é abaixo.
     if (statusFilter !== 'all') {
-      const eventDate = new Date(e.date_time)
-      const now = new Date()
-
-      if (statusFilter === 'upcoming') {
-        if (eventDate < now) return false
-      } else if (statusFilter === 'past') {
-        if (eventDate >= now) return false
-      } else if (statusFilter === 'my_confirmed') {
+      if (statusFilter === 'my_confirmed') {
         const myCallup = getMyCallupForEvent(e.id)
         if (!myCallup || myCallup.status !== 'confirmed') return false
       } else if (statusFilter === 'my_declined') {
@@ -1309,6 +1354,18 @@ const CalendarPage: React.FC = () => {
 
     return true
   })
+
+  /** Já sem os que ficaram para trás (ou só com esses): é a lista do fundo. */
+  const filteredEvents = eventosDoCalendario.filter(e => {
+    if (statusFilter !== 'upcoming' && statusFilter !== 'past') return true
+    const passou = new Date(e.date_time).getTime() < Date.now()
+    return statusFilter === 'past' ? passou : !passou
+  })
+
+  /** Há passado para ver? É o que decide se vale a pena oferecer o atalho. */
+  const haRealizados = eventosDoCalendario.some(
+    e => new Date(e.date_time).getTime() < Date.now(),
+  )
 
   // Helper centralizado fora do filter para obter a convocatória do utilizador atual
   const getMyCallupForEvent = (eventId: string): CallupWithPlayer | null => {
@@ -1363,7 +1420,7 @@ const CalendarPage: React.FC = () => {
   // Get events for a specific date
   const getEventsForDate = (d: Date) => {
     const key = formatDateKey(d)
-    return filteredEvents.filter(e => formatDateKey(e.date_time) === key)
+    return eventosDoCalendario.filter(e => formatDateKey(e.date_time) === key)
   }
 
   // Generate calendar days matrix
@@ -1587,9 +1644,8 @@ const CalendarPage: React.FC = () => {
       </div>
     )
 
-    const tipoIcon = isMatch ? Trophy : isPractice ? TrainingIcon : PartyPopper
-    const tipoCor = isMatch ? 'text-csc-gold' : isPractice ? 'text-emerald-300' : 'text-blue-300'
-    const TipoIcon = tipoIcon
+    const TipoIcon = isMatch ? Trophy : isPractice ? TrainingIcon : PartyPopper
+    const cores = CORES_TIPO[event.type]
 
     return (
       <div
@@ -1619,11 +1675,17 @@ const CalendarPage: React.FC = () => {
           {formatDataCurta(event.date_time)}
         </p>
 
-        {/* Cabeçalho: tipo de evento por ícone + rótulo, não por cor de fundo */}
+        {/* Cabeçalho: o tipo de evento numa pastilha da sua cor — a mesma do
+            ponto no calendário. Continua a não ser o cartão inteiro a mudar de
+            cor (o fundo é o vidro, sempre), mas uma palavra de 10px sem fundo
+            perdia-se entre as outras pastilhas da linha. */}
         <div className="px-5 pt-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${tipoCor}`}>
-              <TipoIcon size={14} />
+            <span
+              className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5
+                px-2.5 py-1 rounded-full border ${cores.texto} ${cores.pastilha}`}
+            >
+              <TipoIcon size={13} />
               <span>{isMatch ? 'Jogo' : isPractice ? 'Treino' : 'Convívio'}</span>
             </span>
 
@@ -1838,10 +1900,11 @@ const CalendarPage: React.FC = () => {
    * isso o cabeçalho acende e uma linha por baixo diz o que está a filtrar.
    * As pastilhas de tipo não entram: essas estão à vista.
    */
-  const temFiltros = searchQuery.trim() !== '' || statusFilter !== 'all' || typeFilter !== 'all'
+  const temFiltros =
+    searchQuery.trim() !== '' || statusFilter !== ESTADO_POR_OMISSAO || typeFilter !== 'all'
   const resumoFiltros = [
     searchQuery.trim() ? `"${searchQuery.trim()}"` : null,
-    statusFilter !== 'all' ? ROTULOS_ESTADO[statusFilter] : null,
+    statusFilter !== ESTADO_POR_OMISSAO ? ROTULOS_ESTADO[statusFilter] : null,
     typeFilter !== 'all' ? ROTULOS_TIPO[typeFilter] : null,
   ]
     .filter(Boolean)
@@ -1927,7 +1990,7 @@ const CalendarPage: React.FC = () => {
       {temFiltros && (
         <button
           type="button"
-          onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all') }}
+          onClick={() => { setSearchQuery(''); setStatusFilter(ESTADO_POR_OMISSAO); setTypeFilter('all') }}
           className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
             bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
         >
@@ -2037,18 +2100,16 @@ const CalendarPage: React.FC = () => {
                     </span>
 
                     {dayEvents.length > 0 && (
-                      <span className="flex items-center gap-0.5 h-1">
+                      <span className="flex items-center gap-[3px] h-1.5">
                         {dayEvents.slice(0, 3).map(ev => (
                           <span
                             key={ev.id}
-                            className={`w-1 h-1 rounded-full ${
+                            className={`w-1.5 h-1.5 rounded-full ${
                               cell.isSelected
                                 ? 'bg-csc-tinta'
-                                : ev.type === 'match'
-                                  ? 'bg-csc-gold'
-                                  : ev.type === 'practice'
-                                    ? 'bg-csc-verde-texto'
-                                    : 'bg-csc-azul-texto'
+                                // O halo da própria cor: seis pixels sobre o vidro
+                                // escuro ainda se perdem, e é a cor que diz o tipo.
+                                : `${CORES_TIPO[ev.type].ponto} shadow-[0_0_5px] ${CORES_TIPO[ev.type].halo}`
                             }`}
                           />
                         ))}
@@ -2068,7 +2129,7 @@ const CalendarPage: React.FC = () => {
               duas mensagens de vazio seguidas leem-se como uma avaria. O
               painel do dia só faz sentido quando há eventos noutros dias.
             */}
-            {selectedDate && !(filteredEvents.length === 0 && !temFiltros) && (
+            {selectedDate && !(eventosDoCalendario.length === 0 && !temFiltros) && (
               selectedDayEvents.length === 0 ? (
                 <div className="cartao-simples border-dashed text-center px-5 py-8">
                   <CalendarDaysIcon size={26} className="mx-auto text-white/25 mb-2.5" />
@@ -2089,6 +2150,27 @@ const CalendarPage: React.FC = () => {
         {/* A lista deixou de ser uma vista alternativa: no handoff vem sempre
             por baixo do calendário, com os eventos do filtro em curso. */}
         <div className="grid grid-cols-1 gap-3">
+          {/* O que a lista está a mostrar, dito por extenso. A Agenda abre em
+              "Por realizar" e o passado fica de fora: sem esta linha, quem
+              procura o jogo do mês passado não tem como saber que ele existe
+              — o filtro está atrás do funil e não se vê. */}
+          {(eventosDaLista.length > 0 || eventosPorConvocar.length > 0) && (
+            <div className="flex items-center gap-2">
+              <EtiquetaSeccao className="flex-1">{ROTULOS_ESTADO[statusFilter]}</EtiquetaSeccao>
+              {statusFilter === ESTADO_POR_OMISSAO && haRealizados && (
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic('selection'); setStatusFilter('past') }}
+                  className="flex-none min-h-11 -my-2 px-2 font-display font-bold text-[11px] text-csc-gold cursor-pointer
+                    transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold rounded-xl"
+                >
+                  Ver realizados
+                </button>
+              )}
+            </div>
+          )}
+
           {eventosPorConvocar.map(event => renderCartaoPorConvocar(event))}
 
           {eventosDaLista.length === 0 && eventosPorConvocar.length === 0 ? (
@@ -2104,6 +2186,28 @@ const CalendarPage: React.FC = () => {
                 <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
                 <p className="font-display font-extrabold text-sm text-white">Nenhum evento encontrado.</p>
                 <p className="text-[11px] text-white/62 mt-1.5">Limpa os filtros para ver o resto da agenda.</p>
+              </div>
+            ) : haRealizados ? (
+              /*
+                Nada por realizar, mas a época tem jogos feitos — o vazio de
+                fora de época. Dizer "Nada marcado ainda" aqui era mentira, e
+                deixava o histórico sem porta de entrada.
+              */
+              <div className="cartao-simples border-dashed text-center px-5 py-10">
+                <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
+                <p className="font-display font-extrabold text-sm text-white">Nada por realizar.</p>
+                <p className="text-[11px] leading-relaxed text-white/62 mt-1.5">
+                  Não há nada marcado para os próximos dias. O que já se jogou continua na agenda.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic('selection'); setStatusFilter('past') }}
+                  className="mt-3.5 min-h-11 px-4 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-bold text-[13px] cursor-pointer
+                    transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                >
+                  Ver os realizados
+                </button>
               </div>
             ) : (
               <>
@@ -2146,7 +2250,7 @@ const CalendarPage: React.FC = () => {
           <>
             <Botao
               aparencia="vidro"
-              onClick={() => { setSearchQuery(''); setStatusFilter('all'); setTypeFilter('all') }}
+              onClick={() => { setSearchQuery(''); setStatusFilter(ESTADO_POR_OMISSAO); setTypeFilter('all') }}
               disabled={!temFiltros}
             >
               Limpar
@@ -2171,21 +2275,14 @@ const CalendarPage: React.FC = () => {
               Estado
             </p>
             <div className="flex flex-wrap gap-2">
-              {([
-                ['all', 'Todos'],
-                ['upcoming', 'Próximos'],
-                ['past', 'Realizados'],
-                ['my_confirmed', 'Confirmados por mim'],
-                ['my_pending', 'Por responder'],
-                ['my_declined', 'Recusados por mim'],
-                ['my_called', 'Fui convocado'],
-              ] as const).map(([valor, etiqueta]) => (
+              {/* "Por realizar" à cabeça: é onde a Agenda abre. */}
+              {(['upcoming', 'past', 'all', 'my_confirmed', 'my_pending', 'my_declined', 'my_called'] as const).map(valor => (
                 <Pastilha
                   key={valor}
                   ativa={statusFilter === valor}
                   onClick={() => { triggerHaptic('selection'); setStatusFilter(valor) }}
                 >
-                  {etiqueta}
+                  {ROTULOS_ESTADO[valor]}
                 </Pastilha>
               ))}
             </div>
