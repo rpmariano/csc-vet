@@ -13,11 +13,11 @@ name: Enviar avisos
 # para não acordar o servidor de madrugada à toa.
 #
 # Precisa de dois segredos no repositório:
-#   SUPABASE_FUNCTION_URL   https://<projeto>.supabase.co/functions/v1/enviar-avisos
+#   SUPABASE_FUNCTION_URL   https://vwvsfrzwcwdvbuaxftoh.supabase.co/functions/v1/enviar-avisos
 #   SUPABASE_SERVICE_ROLE_KEY
 #
 # A chave de serviço dá acesso total à base: é só do repositório, e nunca vai
-# para o bundle da app.
+# para o bundle da app. Ver `docs/avisos-push.md`.
 
 on:
   schedule:
@@ -28,11 +28,45 @@ jobs:
   enviar:
     runs-on: ubuntu-latest
     steps:
-      - name: Chamar a função de envio
+      # Um segredo que falta chega ao `curl` como string vazia, e o curl
+      # responde "exit code 3" (URL malformada) — que não diz a ninguém o que
+      # é preciso fazer. Mais vale dizê-lo.
+      - name: Confirmar os segredos
+        env:
+          URL: ${{ secrets.SUPABASE_FUNCTION_URL }}
+          CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          resposta=$(curl --silent --show-error --fail-with-body \
-            --max-time 120 \
-            -X POST "${{ secrets.SUPABASE_FUNCTION_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+          falta=0
+          if [ -z "$URL" ]; then
+            echo "::error::Falta o segredo SUPABASE_FUNCTION_URL."
+            echo "   Settings → Secrets and variables → Actions → New repository secret"
+            echo "   Nome:  SUPABASE_FUNCTION_URL"
+            echo "   Valor: https://vwvsfrzwcwdvbuaxftoh.supabase.co/functions/v1/enviar-avisos"
+            falta=1
+          fi
+          if [ -z "$CHAVE" ]; then
+            echo "::error::Falta o segredo SUPABASE_SERVICE_ROLE_KEY."
+            echo "   É a chave service_role, em Project Settings → API Keys no Supabase."
+            falta=1
+          fi
+          [ "$falta" -eq 0 ] || exit 1
+          echo "Os dois segredos estão postos."
+
+      - name: Chamar a função de envio
+        env:
+          URL: ${{ secrets.SUPABASE_FUNCTION_URL }}
+          CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # `-w` no fim para o código HTTP aparecer no log mesmo quando corre
+          # bem: sem ele, um 200 com `{"enviados":0}` e um 401 são igualmente
+          # silenciosos.
+          resposta=$(curl --silent --show-error --max-time 120 \
+            -w '\nHTTP %{http_code}\n' \
+            -X POST "$URL" \
+            -H "Authorization: Bearer $CHAVE" \
             -H "Content-Type: application/json")
           echo "$resposta"
+          echo "$resposta" | grep -q 'HTTP 200' || {
+            echo "::error::A função respondeu com erro. Vê a resposta acima."
+            exit 1
+          }
