@@ -208,3 +208,27 @@ test.describe('Rascunho na lista da Agenda', () => {
     await expect(page.getByText('Rascunho', { exact: true })).toHaveCount(0)
   })
 })
+
+/**
+ * O cartão da Agenda tem de dizer *quando*.
+ *
+ * Mostrava a hora e nunca o dia: a data só existia no `aria-label`, invisível.
+ * Numa lista que percorre o mês inteiro, "18:00" sozinho não diz nada.
+ */
+test('o cartão da Agenda mostra o dia, e não só a hora', async ({ page }) => {
+  const daquiATresDias = new Date(Date.now() + 3 * 864e5)
+  const jogo = {
+    ...base, id: 'dt', title: 'Jogo', type: 'match',
+    date_time: daquiATresDias.toISOString(),
+  }
+  // Com convocados, para sair o cartão normal e não o de "Ninguém foi
+  // convocado", que tem a data noutra forma.
+  await montarSupabaseFalso(page, { events: [jogo], callups: [convocatoriaMinha('dt')] })
+  await page.goto('/csc-vet/calendar')
+  await page.waitForLoadState('networkidle')
+
+  const esperado = new Intl.DateTimeFormat('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' })
+    .format(daquiATresDias).replace(/\./g, '').toUpperCase()
+
+  await expect(page.getByText(esperado, { exact: true }).first()).toBeVisible()
+})

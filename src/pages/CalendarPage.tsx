@@ -173,6 +173,28 @@ export function textoConvocatoriaFechada(
   }
 }
 
+/**
+ * A data no cartão da Agenda: "QUARTA, 16/09".
+ *
+ * O cartão mostrava a hora e nunca o dia — a data só existia no `aria-label`,
+ * portanto lia-se "18:00" sem saber de quando. Numa lista que percorre o mês
+ * inteiro, é a informação que mais falta.
+ *
+ * O `weekday: 'short'` em pt-PT dá "quarta" e não "qua", e o `month: 'short'`
+ * acaba em "16/09" — verificado, não suposto. Fica assim: o dia da semana por
+ * extenso é o que se lê primeiro numa agenda, e o resto cabe em cinco
+ * caracteres.
+ */
+const DATA_CURTA = new Intl.DateTimeFormat('pt-PT', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+})
+
+/** "quarta, 16/09" → "QUARTA, 16/09". O `replace` tira o ponto de abreviaturas. */
+export const formatDataCurta = (iso: string): string =>
+  DATA_CURTA.format(new Date(iso)).replace(/\./g, '').toUpperCase()
+
 export const formatClubSigla = (initials?: string | null): string => {
   if (!initials) return 'CSC'
   const trimmed = initials.trim()
@@ -1551,8 +1573,14 @@ const CalendarPage: React.FC = () => {
         }, ${new Date(event.date_time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })}`}
         className="cartao-vidro text-white overflow-hidden cursor-pointer flex flex-col justify-between transition-transform duration-150 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
       >
+        {/* Quando é. A data vinha só no `aria-label`, e o cartão dizia a hora
+            sem dizer o dia — numa lista que percorre o mês, é o que mais falta. */}
+        <p className="px-5 pt-4 font-display font-extrabold text-[9.5px] tracking-[0.18em] text-csc-gold">
+          {formatDataCurta(event.date_time)}
+        </p>
+
         {/* Cabeçalho: tipo de evento por ícone + rótulo, não por cor de fundo */}
-        <div className="px-5 pt-5 flex items-center justify-between gap-2">
+        <div className="px-5 pt-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${tipoCor}`}>
               <TipoIcon size={14} />
