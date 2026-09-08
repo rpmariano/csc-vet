@@ -247,3 +247,30 @@ test.describe('Persianas abertas pelo endereço', () => {
     })
   }
 })
+
+/**
+ * Uma persiana sobe sempre até meio do ecrã.
+ *
+ * Sem altura mínima o painel agarrava-se ao conteúdo: uma persiana curta —
+ * dois comunicados, três pagamentos — abria uma tira colada ao fundo do
+ * telemóvel, com o título à altura dos botões do sistema e a lista dentro do
+ * bezel. O `max-h` continua a limitar as compridas.
+ */
+test.describe('Altura da persiana', () => {
+  const campo = { id: 'f1', name: 'Campo de Teste', address: 'R. do Teste' }
+
+  test('mesmo com pouco conteúdo, ocupa metade do ecrã', async ({ page }) => {
+    await abrePagina(page, 'admin?ver=fields&campo=f1', { fields: [campo] })
+
+    const painel = page.getByRole('dialog').last()
+    await expect(painel).toBeVisible()
+
+    const caixa = await painel.boundingBox()
+    const janela = page.viewportSize()
+    if (!caixa || !janela) throw new Error('sem medidas')
+
+    expect(caixa.height / janela.height).toBeGreaterThanOrEqual(0.5)
+    // E o topo do painel fica acima do meio do ecrã.
+    expect(caixa.y).toBeLessThanOrEqual(janela.height / 2)
+  })
+})

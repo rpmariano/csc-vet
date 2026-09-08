@@ -171,6 +171,12 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   diálogo e continuava do lado de fora dele. `dialogos.spec.ts` cobre agora as
   persianas abertas por navegação direta, e repete cada uma quatro vezes: era
   uma corrida, e uma passagem única dava verde com o bug lá.
+- **Uma persiana sobe sempre até meio do ecrã** (`min-h-[55dvh]` no
+  `BottomSheet`). Sem isso o painel agarrava-se ao conteúdo, e uma persiana
+  curta abria uma tira colada ao fundo do telemóvel — o título à altura dos
+  botões do sistema e a lista dentro do bezel. As alturas são em `dvh` e não
+  em `vh`: no telemóvel a barra do browser entra e sai, e `vh` conta com ela
+  sempre escondida.
 - **Um `Modal` não tem tom.** O painel é sempre `bg-csc-fundo`. Havia um
   `tone` cujo `'dark'` dava o verde do clube, ao contrário do `BottomSheet`,
   onde a mesma palavra dá o fundo escuro — um modal escrito por analogia com

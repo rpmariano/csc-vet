@@ -47,6 +47,21 @@ export type BottomSheetSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' 
  */
 const LARGURA_COLUNA = 'max-w-[480px]'
 
+/**
+ * Altura mínima: a persiana sobe sempre até meio do ecrã.
+ *
+ * Sem isto o painel agarrava-se ao conteúdo, e uma persiana curta — dois
+ * comunicados, três pagamentos — abria uma tira colada ao fundo do telemóvel:
+ * o título ficava à altura dos botões do sistema e a lista dentro do bezel.
+ * Com `min-h`, o pouco conteúdo respira e o muito continua a crescer até aos
+ * 90vh do `max-h`.
+ *
+ * `55dvh` e não `55vh`: no telemóvel a barra do browser entra e sai, e `vh`
+ * conta com ela sempre escondida — a persiana ficava mais alta do que o ecrã
+ * disponível e o fundo saía por baixo.
+ */
+const ALTURA_MINIMA = 'min-h-[55dvh]'
+
 /** Distância arrastada para baixo, em px, a partir da qual a persiana fecha. */
 const DISTANCIA_FECHO = 110
 
@@ -250,7 +265,7 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
         }}
         className={`${corFundo} w-full ${LARGURA_COLUNA} rounded-t-[30px] ${
           tone === 'dark' ? 'border-t border-x border-white/10 sombra-persiana' : 'shadow-2xl'
-        } relative max-h-[90vh] flex flex-col outline-none overscroll-contain ${className}`}
+        } relative ${ALTURA_MINIMA} max-h-[90dvh] flex flex-col outline-none overscroll-contain ${className}`}
       >
         {/* Alça de arrasto; também funciona como botão de fecho */}
         <button
