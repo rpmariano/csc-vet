@@ -67,7 +67,10 @@ em vez de mostrar um botão que não faz nada.
 A chave de serviço dá acesso total à base. Vive só nos segredos do
 repositório e nunca no bundle.
 
-**5. Correr uma vez à mão** — Actions → "Enviar avisos" → Run workflow — e ver
+**5. Reconstruir a app.** Um segredo só entra no bundle quando a app é
+construída de novo. Actions → **Deploy to GitHub Pages** → Run workflow.
+
+**6. Correr uma vez à mão** — Actions → "Enviar avisos" → Run workflow — e ver
 a resposta: `{"enviados":N,"falhados":0,"caixas_apagadas":0}`.
 
 ## O que cada aviso é

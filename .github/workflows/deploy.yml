@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  # Correr à mão, do separador Actions.
+  #
+  # Um segredo do repositório só entra na app quando ela é construída de novo,
+  # e mudar um segredo não é um commit: sem isto, para pôr a chave VAPID a
+  # valer era preciso inventar uma alteração ao código só para haver push.
+  workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
