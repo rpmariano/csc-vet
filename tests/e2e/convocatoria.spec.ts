@@ -232,3 +232,45 @@ test('o cartão da Agenda mostra o dia, e não só a hora', async ({ page }) => 
 
   await expect(page.getByText(esperado, { exact: true }).first()).toBeVisible()
 })
+
+/**
+ * O cartão de "Ninguém foi convocado" também é um evento.
+ *
+ * Só o botão "Convocar" era acionável: não havia como abrir o evento para o
+ * ver ou editar, e é justamente o evento que mais precisa de ser mexido.
+ */
+test.describe('O cartão por convocar abre o evento', () => {
+  const jogo = { ...base, id: 'pc', title: 'Jogo', type: 'match', date_time: DAQUI_A_DIAS(9) }
+
+  test('tocar no cartão abre o detalhe', async ({ page }) => {
+    await montarSupabaseFalso(page, { events: [jogo], callups: [] })
+    await page.goto('/csc-vet/calendar')
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('button', { name: /Ver jogo por convocar/ }).click()
+    await expect(page).toHaveURL(/\?event=pc/)
+    await expect(page.getByRole('dialog')).toBeVisible()
+  })
+
+  test('o "Convocar" não abre o detalhe por baixo', async ({ page }) => {
+    await montarSupabaseFalso(page, { events: [jogo], callups: [] })
+    await page.goto('/csc-vet/calendar')
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('link', { name: 'Convocar' }).click()
+    await expect(page).toHaveURL(/\/events\?convocatoria=pc/)
+  })
+})
+
+/** Editar a partir da Agenda tem de poder pôr e tirar o rascunho. */
+test('a edição na Agenda tem o rascunho', async ({ page }) => {
+  const jogo = { ...base, id: 'ed', title: 'Jogo', type: 'match', date_time: DAQUI_A_DIAS(9) }
+  await montarSupabaseFalso(page, { events: [jogo], callups: [convocatoriaMinha('ed')] })
+  await page.goto('/csc-vet/calendar?event=ed')
+  await page.waitForLoadState('networkidle')
+
+  await page.getByRole('button', { name: 'Editar evento' }).click()
+  const caixa = page.getByLabel(/Guardar como rascunho/)
+  await expect(caixa).toBeVisible()
+  await expect(caixa).not.toBeChecked()
+})

@@ -493,6 +493,9 @@ const CalendarPage: React.FC = () => {
   const [editOpponentId, setEditOpponentId] = useState('')
   const [editHomeAway, setEditHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
   const [editIsFriendly, setEditIsFriendly] = useState(false)
+  /* Rascunho: existia só na Gestão de Eventos, e quem edita a partir da Agenda
+     não tinha como pôr ou tirar um evento de rascunho. */
+  const [editIsActive, setEditIsActive] = useState(true)
   const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
   const [isEditBatchCalling, setIsEditBatchCalling] = useState(false)
   // Guarda síncrona (não é estado) contra duplo-clique: entre o clique e o próximo repaint,
@@ -961,6 +964,7 @@ const CalendarPage: React.FC = () => {
     setEditOpponentId(ev.opponent_id || '')
     setEditHomeAway(ev.home_away || 'home')
     setEditIsFriendly(Boolean(ev.is_friendly))
+    setEditIsActive(ev.is_active !== false)
     setEditPlayerSearchTerm('')
     setIsEditModalOpen(true)
   }
@@ -968,6 +972,20 @@ const CalendarPage: React.FC = () => {
   const handleSaveEditedEvent = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedEvent) return
+
+    /*
+      A pergunta "reenviar o pedido de resposta a todos os convocados?" só faz
+      sentido quando há convocados e quando alguém vai ser avisado. Aparecia
+      sempre — inclusive ao guardar um rascunho, que por definição não avisa
+      ninguém, e num evento sem convocatória feita, onde não há a quem
+      reenviar. Nesses dois casos guarda-se logo, mantendo as respostas.
+    */
+    const temConvocados = (eventCallups[selectedEvent.id] || []).length > 0
+    if (!temConvocados || !editIsActive) {
+      handleConfirmSaveEditedEvent(false)
+      return
+    }
+
     setIsResendPromptOpen(true)
   }
 
@@ -1000,7 +1018,8 @@ const CalendarPage: React.FC = () => {
         tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
         opponent_id: editType === 'match' ? (editOpponentId || null) : null,
         home_away: editType === 'match' ? editHomeAway : null,
-        is_friendly: editType === 'match' ? editIsFriendly : false
+        is_friendly: editType === 'match' ? editIsFriendly : false,
+        is_active: editIsActive,
       }
 
       const { error } = await supabase
@@ -1437,7 +1456,28 @@ const CalendarPage: React.FC = () => {
     const eRascunho = event.is_active === false
 
     return (
-      <div key={event.id} className="cartao-vidro overflow-hidden border-csc-gold/35">
+      /*
+        Clicável, como qualquer outro cartão de evento: abria só o "Convocar" e
+        não havia como chegar ao evento para o ver ou editar. Leva o botão do
+        Maps e o "Convocar" lá dentro, portanto não pode ser um `<button>` —
+        fica o papel e o tratamento das teclas à mão, a convenção do CLAUDE.md.
+      */
+      <div
+        key={event.id}
+        role="button"
+        tabIndex={0}
+        onClick={() => abrirEvento(event)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            abrirEvento(event)
+          }
+        }}
+        aria-label={`Ver ${event.type === 'match' ? 'jogo' : 'convívio'} por convocar: ${titulo}, ${formatDataCurta(event.date_time)}`}
+        className="cartao-vidro overflow-hidden border-csc-gold/35 cursor-pointer
+          transition-transform duration-150 active:scale-[0.99]
+          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+      >
         <div className="flex items-center gap-3.5 px-4 pt-4">
           <span className="w-11 shrink-0 text-center">
             <span className="block font-display font-black text-[19px] text-csc-gold leading-none tabular-nums">
@@ -1477,7 +1517,7 @@ const CalendarPage: React.FC = () => {
           </span>
           <Link
             to={`/events?convocatoria=${event.id}`}
-            onClick={() => triggerHaptic('light')}
+            onClick={e => { e.stopPropagation(); triggerHaptic('light') }}
             className="h-11 px-4 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[11.5px]
               flex items-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -3338,6 +3378,32 @@ const CalendarPage: React.FC = () => {
                     </div>
                   )
                 })()}
+              </div>
+
+              {/* Rascunho: quem edita a partir da Agenda também tem de o poder
+                  publicar ou voltar a guardar sem avisar ninguém. */}
+              <div className="col-span-full">
+                <label
+                  htmlFor="editIsActive"
+                  className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 cursor-pointer min-h-14"
+                >
+                  <input
+                    type="checkbox"
+                    id="editIsActive"
+                    checked={!editIsActive}
+                    onChange={e => setEditIsActive(!e.target.checked)}
+                    className="mt-0.5 w-5 h-5 shrink-0 accent-csc-gold cursor-pointer"
+                  />
+                  <span className="min-w-0">
+                    <span className="block font-display font-bold text-[12.5px] text-white">
+                      Guardar como rascunho
+                    </span>
+                    <span className="block text-[10.5px] leading-snug text-white/55 mt-0.5">
+                      Fica só para a equipa técnica: não aparece na Agenda de quem não gere, não
+                      aceita respostas à convocatória e não entra no alerta da Home.
+                    </span>
+                  </span>
+                </label>
               </div>
 
               {/* FOOTER */}
