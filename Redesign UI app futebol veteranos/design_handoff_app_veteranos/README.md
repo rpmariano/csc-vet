@@ -1,5 +1,27 @@
 # Handoff: redesenho da app do CSC Veteranos
 
+> ### ⚠️ Este ficheiro foi corrigido contra o repositório e a base de dados
+>
+> A versão de setembro de 2026 chegou aqui a desfazer correções feitas
+> anteriormente — números de produção, a regra de ligação de conta, e duas
+> secções que descreviam como pendente o que já estava feito. Foram repostas.
+>
+> **Quem regerar este README a partir da ferramenta de design tem de trazer
+> estas correções outra vez**, senão voltam a perder-se:
+>
+> | O que | Estava | Está |
+> |---|---|---|
+> | Convocatórias em produção | 1252 / 1243 sem resposta | **1200 / 1191** |
+> | Fichas no plantel | 28 | **27** |
+> | Ligação de conta | automática por email, telefone ou nome | **só por email** — o telefone é auto-editável e permitia reclamar a ficha de outra pessoa |
+> | Contas por ligar | "1 das 8 contas" | **nenhuma**; a contagem antiga apanhava um treinador |
+> | RPC do ecrã 3d | `admin_contas_sem_atleta()` | **`admin_contas_por_ligar()`** — `profiles` são pessoas do clube, e nem todas jogam |
+> | "Campos novos na base de dados" | por criar | **criados na fase 1** |
+> | "Estado atual da app" | descrição corrente | **retrato de antes do redesenho** |
+>
+> A regra é simples: o que aqui estiver sobre a **base de dados** ou sobre o
+> **código** vale menos do que a base e o código. Em caso de dúvida, medir.
+
 ## Visão geral
 
 Redesenho completo do interface da app de gestão do clube de veteranos (repositório `rpmariano/csc-vet`, branch `main`, commit de referência `29840edf4061`). Cobre a entrada na app, os ecrãs do jogador, os do treinador, os da direção, a gestão de dados (adversários, campos, torneios), o módulo financeiro completo, os estados vazios e as notificações.
@@ -179,7 +201,7 @@ Para quem gere, a Home leva ainda o **alerta flutuante de evento sem convocatór
 
 Não há presenças marcadas no dia do jogo, e não vai haver. A tabela `attendances` existe mas nunca é escrita em lado nenhum da app — zero `insert`, zero `update`, zero linhas em produção. O que existe é `callups.status`: `called` (convocado, sem resposta), `confirmed` (disse que sim), `declined` (disse que não).
 
-**E quase ninguém responde**: de 1252 convocatórias em produção, 1243 estão em `called`. Oito "sim" e um "não" em toda a base — 0,7% de taxa de resposta.
+**E quase ninguém responde**: de 1200 convocatórias em produção, 1191 estão em `called`. Oito "sim" e um "não" em toda a base — 0,7% de taxa de resposta.
 
 Daí três regras que o desenho já segue e a implementação tem de manter:
 
@@ -194,7 +216,7 @@ A coluna `callups.responded_at` foi acrescentada (migração de 2026-09-07) e é
 1. **Guardar evento leva à convocatória.** Jogo e convívio: ao guardar (2e) abre a convocatória (4f), com "Todos os aptos", "Repetir última" e "Limpar"; lesionados e inativos entram desmarcados. Treino: a convocatória é automática (todos os aptos) e o que aparece é a confirmação (4g). Em qualquer dos casos existe **guardar como rascunho** — ninguém é avisado e o evento não entra no alerta.
 2. **Alerta de evento sem convocatória.** A menos de sete dias, quem gere vê ao entrar uma barra flutuante (4c) que abre uma persiana (4d) com os eventos em falta e o atalho para convocar. Rascunhos não entram.
 3. **Quotas por atleta.** No editar atleta (3c), bloco "Quotas deste atleta": data de início de atividade (preenchida automaticamente ao passar a ativo, editável), data de fim (gravada ao inativar — as quotas seguintes deixam de ser devidas e os totais são recalculados) e meses dispensados de quota.
-4. **Ligação de conta.** Automática pelo email do registo. Quando falha, a direção resolve na ficha do atleta (3b → 3d): escolhe entre as contas sem atleta. Ligar substitui a anterior, que volta à lista; existe também desligar.
+4. **Ligação de conta.** Pelo endereço de email, que é a identidade de uma pessoa neste clube — o telefone e o nome não servem de prova (aceitá-los permitia reclamar a ficha de outra pessoa, com o NIF e o IBAN lá dentro). Quando não há ficha com o email do registo, a conta fica por ligar e a direção resolve na ficha (3b → 3d): escolhe entre as contas por ligar, ou corrige o email na ficha. Ligar substitui a anterior, que volta à lista; existe também desligar.
 5. **Seguro desportivo deixou de ser especial** — é uma categoria como as outras, e os encargos criam-se na página de encargos (8c → 8e), escolhendo a categoria definida em Definições (8g).
 6. **Recuperar palavra-passe** (10c → 10d): não existe hoje. Pedido por email, link de uso único válido uma hora, ecrã de nova palavra-passe. Quem entrou com Google não tem palavra-passe.
 7. **Notificações** (12a, 12b): não existem hoje. Convocatória (com resposta no próprio aviso), comunicado, quota em atraso; para quem gere, evento sem convocatória e ficha por preencher. Preferências no Perfil, com silêncio das 23h às 8h.
@@ -231,20 +253,33 @@ Seis ecrãs foram revistos depois de se medir o que a base de dados tem de facto
 - **4e Agenda com o evento em falta.** O evento sem convocatória **sobe ao topo, fora da lista**. Cada evento normal mostra "16 convocados · 15 sem resp." — a contagem **só aparece a treinador e direção**; na Agenda do jogador as linhas mostram hora e local. Os números do desenho refletem a taxa de resposta real.
 - **9h Ficha do adversário.** O bloco "Torneios e posições" **desenha-se com estado vazio**: `tournament_matches` tem zero linhas, por isso a posição fica a tracejado, com "sem jornadas lançadas" e um atalho para lançar. Os jogos entre nós vêm de `events` e contam sempre. "Mudar campo principal" abre a lista de campos.
 - **9i Ficha do campo.** **Sem mapa embebido** — não há componente nem chave de API. Fica um cartão de morada, "Ver no Maps" (abre o Google Maps por URL, como o `CalendarPage` já faz) e "Copiar morada". Quando o campo não tem morada, os dois botões ficam desativados.
-- **11a Conta criada, ficha por ligar.** O texto anterior estava errado para este clube. As fichas são criadas pela direção **antes** de as pessoas se registarem, e a app tenta ligar sozinha por email, telefone ou nome. O caso que falta é o terceiro: registou-se com um email que não está na ficha e nada mais bateu — hoje, **1 das 8 contas registadas está neste estado**. O ecrã é **inteiro, e substitui a Home** até estar resolvido; diz que a ficha existe e não foi ligada, mostra o email do registo em leitura, e manda falar com a direção, que resolve no 3d. **Sem ação nenhuma para o próprio** — em especial sem "preencher o meu perfil", que criaria uma segunda ficha da mesma pessoa. A condição é a mesma da RPC `admin_contas_sem_atleta()`: conta em `auth.users` sem `jersey_number`, `member_number`, `birth_date` nem `position`.
-- **11b Agenda sem nada marcado.** Os aniversários **só aparecem quando não há eventos** — assim a página nunca fica em branco e num mês cheio não competem com os eventos. Saem de `v_players_public.birth_date` (25 das 28 fichas), reaproveitando o código que a Home já tem.
+- **11a Conta criada, ficha por ligar.** O texto anterior estava errado para este clube. As fichas são criadas pela direção **antes** de as pessoas se registarem, e a app liga-a sozinha quando o email do registo bate certo com o da ficha — e só por email. O caso que falta: registou-se com um email que não está em ficha nenhuma — e **hoje nenhuma conta está neste estado** (a contagem de "1 em 8" que aqui esteve era a condição da RPC em cru, e a conta que ela apanhava é a de um treinador, com a ficha ligada). O ecrã é **inteiro, e substitui a Home** até estar resolvido; diz que a ficha existe e não foi ligada, mostra o email do registo em leitura, e manda falar com a direção, que resolve no 3d. **Sem ação nenhuma para o próprio** — em especial sem "preencher o meu perfil", que criaria uma segunda ficha da mesma pessoa. A condição é a da RPC `admin_contas_por_ligar()`. **Não é "não tem dados de atleta"**: `profiles` são as pessoas do clube e nem todas jogam — um treinador não tem camisola nem posição, e a ficha dele está ligada. Decide-se por colunas que o próprio não pode escrever (`role`, `roles`, `jersey_number`, `position`), mais a prova de que o clube nunca contou com a pessoa: sem convocatórias, sem estatísticas, sem quotas.
+- **11b Agenda sem nada marcado.** Os aniversários **só aparecem quando não há eventos** — assim a página nunca fica em branco e num mês cheio não competem com os eventos. Saem de `v_players_public.birth_date` (25 das 27 fichas), reaproveitando o código que a Home já tem.
 
-## Campos novos na base de dados
+## Campos novos na base de dados — **já criados**
 
-Estes ecrãs pressupõem colunas que hoje não existem:
+Esta secção era a lista do que faltava. Foi tudo criado na fase 1 do redesenho
+(`supabase_redesign_migration.sql`) e fica aqui como registo:
 
-- `profiles`: pé preferido; data de início e de fim de atividade para efeito de quotas; meses dispensados de quota.
-- `tournaments`: entidade organizadora; imagem do torneio.
-- Notificações: tabela de preferências por utilizador e registo de envios.
-- Recuperação de palavra-passe: usar o fluxo do Supabase (`resetPasswordForEmail`), sem tabela nova.
-- Contas sem atleta: já é possível listar perfis sem ligação, mas convém uma vista para o ecrã 3d.
+- `profiles.preferred_foot` (pé preferido). As datas de início e fim de quota
+  (`quota_start_date`/`quota_end_date`) já existiam.
+- Meses dispensados de quota: tabela `quota_exemptions`, e não um array na ficha,
+  para caber na RLS por linha.
+- `tournaments.organizer_name` e `image_url` já existiam.
+- Notificações: `notification_preferences` e `notification_deliveries`. A segunda
+  não tem política de INSERT de propósito — quem envia é o lado do servidor, que
+  ainda não existe.
+- Recuperação de palavra-passe: `resetPasswordForEmail` do Supabase, sem tabela.
+- Contas por ligar: função `admin_contas_por_ligar()` (ver 11a acima).
+- `events.is_active` (rascunho) foi criada a 2026-09-08: existia no cliente há
+  meses e nunca na base, e o "Guardar como rascunho" criava um evento normal.
 
-## Estado atual da app (referência)
+## Estado atual da app — **retrato de antes do redesenho**
+
+⚠️ Esta secção descreve a app como estava quando o handoff foi escrito, e já não
+corresponde ao código: o nome do clube já vem de `club_settings`, o
+`AdminDashboard` já deu lugar ao ecrã Clube, e todos os ecrãs passaram ao tema
+escuro. Fica como contexto histórico.
 
 - `src/pages/Login.tsx` — email e palavra-passe, Google, alternador de registo. O nome do clube está fixo em código; passa a vir de `club_settings`.
 - `src/pages/SettingsPage.tsx` — as sete secções da ficha do atleta; o bloco desportivo é só de leitura.
