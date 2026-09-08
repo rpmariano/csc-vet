@@ -171,6 +171,13 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   diálogo e continuava do lado de fora dele. `dialogos.spec.ts` cobre agora as
   persianas abertas por navegação direta, e repete cada uma quatro vezes: era
   uma corrida, e uma passagem única dava verde com o bug lá.
+- **Um cabeçalho de grupo escreve-se como etiqueta; a linha, como conteúdo.**
+  Numa lista agrupada — "Os meus pagamentos" — o cabeçalho leva maiúsculas
+  pequenas e espaçadas (`9.5px`, `tracking-[0.16em]`, `text-white/70`) sobre
+  uma banda mais clara, e as linhas ficam a `13px font-extrabold` com um recuo
+  e uma barra de cor à esquerda com o seu estado. Tinham os dois o mesmo peso,
+  e a categoria "Seguro Desportivo" aparecia colada ao encargo "Seguro
+  Desportivo 26/27" sem nada a dizer que um era o título do outro.
 - **Uma persiana sobe sempre até meio do ecrã** (`min-h-[55dvh]` no
   `BottomSheet`). Sem isso o painel agarrava-se ao conteúdo, e uma persiana
   curta abria uma tira colada ao fundo do telemóvel — o título à altura dos

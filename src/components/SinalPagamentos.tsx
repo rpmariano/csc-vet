@@ -104,19 +104,30 @@ export const SinalPagamentos: React.FC = () => {
             return (
               <div
                 key={item.chave}
-                className={`flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border ${
+                className={`flex items-center gap-3 pl-2.5 pr-4 py-3 rounded-2xl border ${
                   atrasado
                     ? 'bg-csc-red/12 border-csc-red/25'
                     : 'bg-amber-500/10 border-amber-400/25'
                 }`}
               >
+                {/* A mesma barra de estado de "Os meus pagamentos": a cor diz
+                    o que é antes de se ler a linha. */}
+                <span
+                  aria-hidden="true"
+                  className={`w-[3px] self-stretch rounded-full shrink-0 ${atrasado ? 'bg-csc-red' : 'bg-amber-400'}`}
+                />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold text-white capitalize truncate">{item.etiqueta}</span>
+                  <span className="block font-display font-extrabold text-[13px] text-white capitalize truncate">
+                    {item.etiqueta}
+                  </span>
+                  <span className="block text-[10px] tracking-[0.1em] uppercase text-white/45 mt-0.5">
+                    {item.categoria}
+                  </span>
                   <span className="block text-[10.5px] text-white/62 mt-0.5">
-                    {item.categoria} · {prazoPorExtenso(item)}
+                    {prazoPorExtenso(item)}
                   </span>
                 </span>
-                <span className={`font-display text-sm font-black tabular-nums shrink-0 ${
+                <span className={`font-display text-[15px] font-black tabular-nums shrink-0 ${
                   atrasado ? 'text-csc-vermelho-texto' : 'text-amber-300'
                 }`}>
                   {fmt(item.valor)}

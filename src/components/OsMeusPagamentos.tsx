@@ -26,11 +26,27 @@ import { triggerHaptic } from '../utils/haptics'
 const EUROS = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
 const fmt = (n: number) => EUROS.format(n)
 
-const ESTADO: Record<ItemPagamento['estado'], { texto: string; classe: string }> = {
-  pago: { texto: 'pago', classe: 'bg-csc-light/15 border-csc-light/30 text-csc-verde-texto' },
-  atraso: { texto: 'em atraso', classe: 'bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto' },
-  'a-vencer': { texto: 'a vencer', classe: 'bg-amber-500/15 border-amber-400/35 text-amber-300' },
-  'por-vencer': { texto: 'a haver', classe: 'bg-white/6 border-white/12 text-white/62' },
+const ESTADO: Record<ItemPagamento['estado'], { texto: string; classe: string; barra: string }> = {
+  pago: {
+    texto: 'pago',
+    classe: 'bg-csc-light/15 border-csc-light/30 text-csc-verde-texto',
+    barra: 'bg-csc-light/60',
+  },
+  atraso: {
+    texto: 'em atraso',
+    classe: 'bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto',
+    barra: 'bg-csc-red',
+  },
+  'a-vencer': {
+    texto: 'a vencer',
+    classe: 'bg-amber-500/15 border-amber-400/35 text-amber-300',
+    barra: 'bg-amber-400',
+  },
+  'por-vencer': {
+    texto: 'a haver',
+    classe: 'bg-white/6 border-white/12 text-white/62',
+    barra: 'bg-white/15',
+  },
 }
 
 interface Grupo {
@@ -156,7 +172,18 @@ export const OsMeusPagamentos: React.FC<{
             </p>
           )}
 
-          {/* Um bloco por categoria, que abre e fecha. */}
+          {/*
+            Um bloco por categoria, que abre e fecha.
+
+            **O cabeçalho e as linhas têm de se distinguir a olho.** Tinham o
+            mesmo peso e o mesmo tamanho, e por isso "Seguro Desportivo"
+            (categoria) aparecia colado a "Seguro Desportivo 26/27" (o encargo)
+            sem nada a dizer que um era o título do outro. O cabeçalho passa a
+            etiqueta — maiúsculas pequenas e espaçadas, sobre uma banda mais
+            clara —, que é como a app escreve rótulos em todo o lado; as linhas
+            ficam com o corpo do texto, uma barra de cor à esquerda com o seu
+            estado, e um recuo que as põe por dentro do grupo.
+          */}
           {grupos.map(g => {
             const aberto = estaAberto(g)
             return (
@@ -165,14 +192,17 @@ export const OsMeusPagamentos: React.FC<{
                   type="button"
                   onClick={() => alternar(g.nome)}
                   aria-expanded={aberto}
-                  className="w-full min-h-11 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
-                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                  className={`w-full min-h-11 flex items-center gap-2.5 px-3.5 py-2.5 text-left cursor-pointer
+                    bg-white/[0.06] transition-colors
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      aberto ? 'border-b border-white/12' : ''
+                    }`}
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block font-display font-extrabold text-[12.5px] text-white truncate">
+                    <span className="block font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase text-white/70 truncate">
                       {g.nome}
                     </span>
-                    <span className="block text-[10px] text-white/62 mt-0.5">
+                    <span className="block text-[10.5px] text-white/50 mt-1">
                       {g.pagos} de {g.itens.length} {g.itens.length === 1 ? 'pago' : 'pagos'}
                       {g.emFalta > 0 && ` · falta ${fmt(g.emFalta)}`}
                     </span>
@@ -195,18 +225,23 @@ export const OsMeusPagamentos: React.FC<{
                 </button>
 
                 {aberto && (
-                  <div className="border-t border-white/10">
+                  <div>
                     {g.itens.map(item => (
                       <div
                         key={item.chave}
-                        className="flex items-center justify-between gap-3 px-3.5 py-2.5 border-t border-white/7 first:border-t-0"
+                        className="flex items-center gap-3 pl-2.5 pr-3.5 py-3 border-t border-white/7 first:border-t-0"
                       >
+                        {/* A barra diz o estado sem se ler nada. */}
+                        <span
+                          aria-hidden="true"
+                          className={`w-[3px] self-stretch rounded-full shrink-0 ${ESTADO[item.estado].barra}`}
+                        />
                         <span className="min-w-0 flex-1">
-                          <span className="block font-display font-bold text-[12.5px] text-white capitalize truncate">
+                          <span className="block font-display font-extrabold text-[13px] text-white capitalize truncate">
                             {item.etiqueta}
                           </span>
                           {item.limite && (
-                            <span className="block text-[10px] text-white/62 mt-0.5">
+                            <span className="block text-[10.5px] text-white/55 mt-0.5">
                               {item.estado === 'pago' ? 'pago' : 'vence'} a{' '}
                               {/* Dia e mês em números: `month: 'short'` depende dos dados
                                   de localização do browser e nem sempre os há. */}
@@ -214,14 +249,14 @@ export const OsMeusPagamentos: React.FC<{
                             </span>
                           )}
                         </span>
-                        <span className="flex items-center gap-2 shrink-0">
-                          {item.estado !== 'pago' && (
-                            <span className="font-display font-black text-[12px] text-white/70 tabular-nums">
-                              {fmt(item.valor)}
-                            </span>
-                          )}
+                        <span className="flex flex-col items-end gap-1 shrink-0">
+                          <span className={`font-display font-black text-[13px] tabular-nums ${
+                            item.estado === 'pago' ? 'text-white/40 line-through' : 'text-white'
+                          }`}>
+                            {fmt(item.valor)}
+                          </span>
                           <span
-                            className={`font-display font-black text-[8.5px] tracking-[0.1em] uppercase px-2 py-1 rounded-full border ${ESTADO[item.estado].classe}`}
+                            className={`font-display font-black text-[8.5px] tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border ${ESTADO[item.estado].classe}`}
                           >
                             {ESTADO[item.estado].texto}
                           </span>
