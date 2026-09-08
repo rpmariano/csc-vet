@@ -191,6 +191,21 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **Mudar o mês de início da época obriga a mexer nas fichas.** A época vive em
+  `financial_settings.season_start_month`, mas quem já cá estava tem uma
+  `quota_start_date` fixa — e um mês da época anterior a essa data não é devido
+  por ninguém. A 2026-09-08 a direção pôs a época a começar em Agosto e tirou
+  Agosto dos `quota_excluded_months`: a app continuou a começar em Setembro,
+  não porque estivesse errada, mas porque as 22 fichas tinham `2026-09-02`.
+  Passaram para `2026-08-01` e o mês entrou (previsão 2420 € → 2640 €, com
+  220 € já vencidos). **A alternativa que não deriva é `quota_start_date` a
+  NULL** — sem limite inferior, quem já cá estava deve a época toda, seja qual
+  for. Ficou a data por ser visível na ficha; se a época voltar a mudar, as
+  fichas têm de acompanhar.
+- **A dívida de quotas mostra-se a quem tem o papel de jogador**, e não a quem
+  "não é da equipa técnica". A faixa do `Layout` testava `!eAdmin &&
+  !eTreinador`: metade da direção deste clube também joga, e essa gente nunca
+  via a própria dívida — a faixa é a única coisa na app que a diz.
 - **A janela de atividade escreve-se sozinha, a partir do estado.** O gatilho
   `profiles_janela_de_atividade` (`supabase_janela_atividade_trigger_migration.sql`,
   aplicada a 2026-09-08) põe `quota_end_date` ao passar a **Inativo**, e ao

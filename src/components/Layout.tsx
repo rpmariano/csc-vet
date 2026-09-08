@@ -61,7 +61,7 @@ const ITENS_GESTAO: readonly ItemNavegacao[] = [
 ]
 
 const Layout: React.FC = () => {
-  const { profile } = useAuth()
+  const { profile, assignedRoles } = useAuth()
   const location = useLocation()
 
   const [dividaAberta, setDividaAberta] = useState(false)
@@ -69,10 +69,18 @@ const Layout: React.FC = () => {
 
   const eAdmin = profile?.role === 'admin'
   const eTreinador = profile?.role === 'coach'
-  const eJogador = !eAdmin && !eTreinador
+  /*
+    Quem vê a faixa de quotas em atraso é **quem tem o papel de jogador**, e
+    não quem "não é da equipa técnica". Estava `!eAdmin && !eTreinador`, e por
+    isso um jogador que também dirige ou treina nunca via a própria dívida:
+    esta faixa é a única coisa na app que a diz, e ele era justamente o único a
+    quem não aparecia. As quotas são de quem joga, seja qual for o outro
+    chapéu que use.
+  */
+  const temPapelDeJogador = assignedRoles.includes('player')
   const gere = eAdmin || eTreinador
 
-  const dividaQuotas = usePlayerQuotaDebt(profile, eJogador)
+  const dividaQuotas = usePlayerQuotaDebt(profile, temPapelDeJogador)
 
   // A barra flutua sobre o conteúdo, por isso o fim da coluna tem de acabar
   // acima dela — com `margin-bottom`, não `padding-bottom`: com padding, o
@@ -97,7 +105,7 @@ const Layout: React.FC = () => {
         desapareceu com ela. Fica à vista até a fase 8 lhe dar casa própria
         em "Os meus pagamentos" (12c), no Perfil.
       */}
-      {eJogador && dividaQuotas.hasDebt && (
+      {temPapelDeJogador && dividaQuotas.hasDebt && (
         <button
           type="button"
           onClick={() => {
