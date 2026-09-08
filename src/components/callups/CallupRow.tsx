@@ -21,6 +21,15 @@ interface CallupRowProps {
    * nome passam a ser um botão; as ações da direita ficam como estavam.
    */
   onOpen?: () => void
+  /**
+   * O estado que impede este convocado de entrar neste evento — "Lesionado",
+   * "Inativo" — ou `null` se está disponível.
+   *
+   * A convocatória não os esconde: quem foi chamado apto e ficou lesionado
+   * continua na lista, marcado, porque é a equipa técnica que decide se sai —
+   * e porque a resposta que já tenha dado conta para as contas.
+   */
+  impedimento?: string | null
 }
 
 /**
@@ -56,6 +65,7 @@ export function CallupRow({
   onSetPending,
   onRemove,
   onOpen,
+  impedimento = null,
 }: CallupRowProps) {
   const confirmado = status === 'confirmed'
   const recusou = status === 'declined'
@@ -104,7 +114,17 @@ export function CallupRow({
       </span>
 
       <span className="flex-1 min-w-0 text-left">
-        <span className="block font-display font-bold text-xs text-white truncate">{displayName}</span>
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className="font-display font-bold text-xs text-white truncate">{displayName}</span>
+          {impedimento && (
+            <span
+              className="flex-none font-display font-bold text-[8.5px] uppercase tracking-wider px-1.5 py-0.5 rounded-md
+                bg-csc-red/20 border border-csc-red/40 text-csc-vermelho-texto"
+            >
+              {impedimento}
+            </span>
+          )}
+        </span>
         {posicoes.length > 0 && (
           <span className="block text-[9px] text-white/62 truncate mt-0.5">{posicoes.join(' · ')}</span>
         )}
@@ -118,7 +138,7 @@ export function CallupRow({
         <button
           type="button"
           onClick={onOpen}
-          aria-label={`Ver ${displayName} na convocatória`}
+          aria-label={`Ver ${displayName} na convocatória${impedimento ? `, ${impedimento}` : ''}`}
           className="flex-1 min-w-0 min-h-11 flex items-center gap-2.5 cursor-pointer text-left
             transition-transform duration-150 active:scale-97
             focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold rounded-xl"

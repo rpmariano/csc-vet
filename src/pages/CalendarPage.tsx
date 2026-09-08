@@ -76,11 +76,19 @@ const ESTADO_POR_OMISSAO = 'upcoming'
  * tipo de evento se ler de relance no calendário e no cartão.
  */
 const CORES_TIPO = {
+  /*
+    O jogo é branco, não dourado. O dourado é a cor da moldura — a data no
+    topo do cartão, os títulos, os botões de ação — e um tipo de evento
+    dourado lia-se como mais moldura, não como o tipo. Branco é o contraste
+    mais forte que há sobre o vidro escuro, que é o que o jogo merece, e não
+    colide com o verde do treino, o azul do convívio nem com o vermelho, que
+    nesta app quer sempre dizer que há um problema.
+  */
   match: {
-    ponto: 'bg-csc-gold',
-    halo: 'shadow-csc-gold/70',
-    texto: 'text-csc-gold',
-    pastilha: 'bg-csc-gold/18 border-csc-gold/45',
+    ponto: 'bg-white',
+    halo: 'shadow-white/60',
+    texto: 'text-white',
+    pastilha: 'bg-white/16 border-white/40',
   },
   practice: {
     ponto: 'bg-csc-verde-texto',
@@ -2624,11 +2632,36 @@ const CalendarPage: React.FC = () => {
 
               {/* COLUNA DIREITA (7 Colunas): Convocatória Completa, Filtros Interativos e Gestão */}
               {(() => {
-                const rawCallups = eventCallups[selectedEvent.id] || []
-                const callups = rawCallups.filter(c => {
+                /*
+                  A convocatória é o que está em `callups`, e mais nada.
+
+                  Havia aqui um filtro por elegibilidade que escondia da lista
+                  — e das contagens — quem tivesse ficado lesionado ou inativo
+                  **depois** de ser convocado. Consequências, todas medidas em
+                  produção no jogo de 12/09: a Agenda dizia "22 convocados" e
+                  esta persiana dizia 19; os 3 lesionados não apareciam, e por
+                  isso não havia como os tirar da convocatória; e a recusa de um
+                  deles desaparecia das contas — uma resposta a menos numa base
+                  que tem nove ao todo.
+
+                  Ficam à vista, marcados com o seu estado. Tirá-los é decisão
+                  da equipa técnica, não do filtro: um lesionado pode continuar
+                  convocado para um convívio, ou o treinador pode querer
+                  esperar pela alta.
+                */
+                const callups = eventCallups[selectedEvent.id] || []
+
+                /** `null` se está disponível; senão o estado que o impede. */
+                const estadoQueImpede = (c: CallupWithPlayer): string | null => {
                   const p = allPlayers.find(pl => pl.id === c.player_id) || c.player
-                  return p ? isPlayerEligible(p, selectedEvent.type) : true
-                })
+                  if (!p || isPlayerEligible(p, selectedEvent.type)) return null
+                  if (p.status === 'inactive') return 'Inativo'
+                  if (p.status === 'injured') return 'Lesionado'
+                  // Apto, mas sem o papel de atleta: só entra em convívios.
+                  return 'Não é atleta'
+                }
+                const indisponiveis = callups.filter(c => estadoQueImpede(c) !== null)
+
                 const confirmedList = callups.filter(c => c.status === 'confirmed')
                 const declinedList = callups.filter(c => c.status === 'declined')
                 const pendingList = callups.filter(c => c.status === 'called')
@@ -2677,11 +2710,19 @@ const CalendarPage: React.FC = () => {
                               {declinedList.length} {declinedList.length === 1 ? 'recusado' : 'recusados'}
                             </span>
                           )}
+                          {indisponiveis.length > 0 && (
+                            <span className="text-[10.5px] font-bold text-csc-vermelho-texto bg-csc-red/18 border border-csc-red/35 px-2 py-0.5 rounded-md">
+                              {indisponiveis.length} sem condições
+                            </span>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-xs font-bold text-white/70 group-hover:text-white hidden sm:inline">
+                        {/* O `hidden sm:inline` que aqui estava nunca mostrava
+                            nada: os pontos de corte estão desligados no
+                            `@theme`, e o botão ficava só com a seta. */}
+                        <span className="text-xs font-bold text-white/70 group-hover:text-white">
                           {isModalCallupsExpanded ? 'Recolher' : 'Expandir'}
                         </span>
                         <div className="p-2 rounded-xl bg-white/10 group-hover:bg-white/20 text-white transition-all">
@@ -2733,6 +2774,75 @@ const CalendarPage: React.FC = () => {
                           </div>
                         </div>
 
+                        {/*
+                          A convocatória envelhece: quem foi chamado apto pode
+                          ficar lesionado ou ser desativado antes do jogo. Não
+                          se corrige sozinha — apagar linhas por trás das costas
+                          da equipa técnica apagaria também as respostas já
+                          dadas —, mas tem de se poder atualizar num toque.
+                        */}
+                        {isCoachOrAdmin && indisponiveis.length > 0 && (
+                          <div className="rounded-2xl bg-csc-red/12 border border-csc-red/30 p-3.5 flex items-center gap-3">
+                            <span className="min-w-0 flex-1">
+                              <span className="block font-display font-extrabold text-[12px] text-csc-vermelho-texto">
+                                {indisponiveis.length === 1
+                                  ? '1 convocado sem condições'
+                                  : `${indisponiveis.length} convocados sem condições`}
+                              </span>
+                              <span className="block text-[10.5px] leading-snug text-white/62 mt-0.5">
+                                Ficaram lesionados ou inativos depois de serem convocados. Continuam na
+                                lista até decidires.
+                              </span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('medium')
+                                setConfirmModalConfig({
+                                  isOpen: true,
+                                  title: 'Atualizar a convocatória',
+                                  description:
+                                    indisponiveis.length === 1
+                                      ? 'Tirar da convocatória o convocado que já não tem condições para este evento?'
+                                      : `Tirar da convocatória os ${indisponiveis.length} convocados que já não têm condições para este evento?`,
+                                  confirmText: 'Sim, tirar',
+                                  cancelText: 'Cancelar',
+                                  variant: 'danger',
+                                  onConfirm: async () => {
+                                    setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+                                    try {
+                                      const { error } = await supabase
+                                        .from('callups')
+                                        .delete()
+                                        .in('id', indisponiveis.map(c => c.id))
+                                      if (error) throw error
+                                      setEventCallups(prev => ({
+                                        ...prev,
+                                        [selectedEvent.id]: (prev[selectedEvent.id] || []).filter(
+                                          c => !indisponiveis.some(i => i.id === c.id),
+                                        ),
+                                      }))
+                                      toast.info(
+                                        indisponiveis.length === 1
+                                          ? 'Convocado retirado da convocatória.'
+                                          : `${indisponiveis.length} convocados retirados da convocatória.`,
+                                      )
+                                    } catch (err: any) {
+                                      toast.error('Erro ao atualizar a convocatória: ' + err.message)
+                                    }
+                                  },
+                                })
+                              }}
+                              className="flex-none min-h-11 px-3.5 rounded-[18px] bg-csc-red/20 border border-csc-red/45
+                                text-csc-vermelho-texto font-display font-bold text-[12px] cursor-pointer
+                                transition-transform duration-150 active:scale-97
+                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                            >
+                              Tirar
+                            </button>
+                          </div>
+                        )}
+
                         {/* Lista de Convocados Filtrada */}
                         {callups.length === 0 ? (
                           <div className="text-center py-8 bg-white/5 rounded-2xl border border-dashed border-white/15">
@@ -2767,6 +2877,7 @@ const CalendarPage: React.FC = () => {
                                   onSetPending={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'called')}
                                   onRemove={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)}
                                   onOpen={isCoachOrAdmin ? () => setConvocadoAberto(c.id) : undefined}
+                                  impedimento={estadoQueImpede(c)}
                                 />
                               ))}
                             </div>

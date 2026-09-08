@@ -385,3 +385,76 @@ test.describe('A Agenda abre no que está por realizar', () => {
     await expect(page.getByText('Convívio Antigo')).toBeVisible()
   })
 })
+
+/**
+ * A convocatória não esconde quem entretanto ficou sem condições.
+ *
+ * A persiana filtrava a lista por elegibilidade: quem tivesse sido convocado
+ * apto e ficasse lesionado depois desaparecia — da lista e das contagens. Em
+ * produção, no jogo de 12/09, a Agenda dizia "22 convocados" e a persiana 19,
+ * os 3 lesionados não tinham como ser tirados, e a recusa de um deles não
+ * entrava nas contas.
+ */
+test.describe('Convocados que ficaram sem condições', () => {
+  const LESIONADO = {
+    id: '00000000-0000-4000-8000-0000000000ff',
+    name: 'Rui Sousa', nickname: null, shirt_name: 'Sousa',
+    jersey_number: 7, photo_url: null, position: 'Avançado',
+    status: 'injured', role: 'player', roles: ['player'],
+  }
+
+  const jogo = { ...base, id: 'lz', title: 'Jogo', type: 'match', date_time: DAQUI_A_DIAS(6) }
+
+  const fixtures = {
+    events: [jogo],
+    v_players_public: [
+      ...(FIXTURES_BASE.v_players_public as Record<string, unknown>[]),
+      LESIONADO,
+    ],
+    callups: [
+      convocatoriaMinha('lz'),
+      { id: 'c-lz-2', event_id: 'lz', player_id: LESIONADO.id, status: 'declined', responded_at: null, player: LESIONADO },
+    ],
+  }
+
+  test('o cartão e a persiana dizem o mesmo número', async ({ page }) => {
+    await montarSupabaseFalso(page, fixtures)
+    await page.goto('/csc-vet/calendar')
+    await page.waitForLoadState('networkidle')
+
+    // O cartão da lista conta as duas linhas de `callups`.
+    await expect(page.getByText('2 convocados').first()).toBeVisible()
+
+    await page.goto('/csc-vet/calendar?event=lz')
+    await page.waitForLoadState('networkidle')
+    // E a persiana também — antes dizia 1.
+    await expect(page.getByRole('dialog').getByText(/Convocatória \(2\)/)).toBeVisible()
+  })
+
+  test('o lesionado aparece marcado, e a recusa dele conta', async ({ page }) => {
+    await montarSupabaseFalso(page, fixtures)
+    await page.goto('/csc-vet/calendar?event=lz')
+    await page.waitForLoadState('networkidle')
+
+    const persiana = page.getByRole('dialog')
+    await expect(persiana.getByText('1 sem condições')).toBeVisible()
+    // A resposta que estava a ser engolida pelo filtro.
+    await expect(persiana.getByText('1 recusado')).toBeVisible()
+
+    await persiana.getByRole('button', { name: /Expandir|Recolher/ }).first().click()
+    // A marca na linha do convocado — não o nome dele.
+    await expect(persiana.getByText('Lesionado', { exact: true })).toBeVisible()
+  })
+
+  test('e há como atualizar a convocatória', async ({ page }) => {
+    await montarSupabaseFalso(page, fixtures)
+    await page.goto('/csc-vet/calendar?event=lz')
+    await page.waitForLoadState('networkidle')
+
+    const persiana = page.getByRole('dialog')
+    await persiana.getByRole('button', { name: /Expandir|Recolher/ }).first().click()
+    await expect(persiana.getByText('1 convocado sem condições')).toBeVisible()
+    await persiana.getByRole('button', { name: 'Tirar', exact: true }).click()
+    await expect(page.getByText(/Tirar da convocatória o convocado/)).toBeVisible()
+  })
+})

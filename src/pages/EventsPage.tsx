@@ -2230,6 +2230,20 @@ const EventsPage: React.FC = () => {
 
             {(() => {
               const callups = eventCallups[activeCallupModalEvent.id] || []
+
+              /*
+                Quem foi convocado apto e entretanto ficou lesionado ou inativo
+                continua aqui — a linha existe e a resposta que já deu conta.
+                Fica marcado, para se ver de relance quem já não tem condições.
+              */
+              const estadoQueImpede = (c: { player_id: string; player?: Profile | null }): string | null => {
+                const p = allPlayers.find(pl => pl.id === c.player_id) || c.player
+                if (!p || isPlayerEligible(p, activeCallupModalEvent.type, activeCallupModalEvent.tournament_id)) return null
+                if (p.status === 'inactive') return 'Inativo'
+                if (p.status === 'injured') return 'Lesionado'
+                return 'Não é atleta'
+              }
+
               const confirmedList = callups.filter(c => c.status === 'confirmed')
               const declinedList = callups.filter(c => c.status === 'declined')
               const pendingList = callups.filter(c => c.status === 'called')
@@ -2296,6 +2310,7 @@ const EventsPage: React.FC = () => {
                           onSetPending={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'called')}
                           onRemove={() => handleRemovePlayerFromCallup(c.id, activeCallupModalEvent.id)}
                           onOpen={isCoachOrAdmin ? () => setConvocadoAberto(c.id) : undefined}
+                          impedimento={estadoQueImpede(c)}
                         />
                       ))
                     )}

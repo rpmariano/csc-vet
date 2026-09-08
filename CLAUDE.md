@@ -191,6 +191,16 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **A convocatória é o que está em `callups`, e mais nada — não se filtra por
+  elegibilidade.** Quem foi convocado apto e ficou lesionado ou inativo antes do
+  jogo continua na lista, marcado com o seu estado (`impedimento` no
+  `<CallupRow>`); tirá-lo é decisão da equipa técnica, e há um botão para o
+  fazer de uma vez. A persiana da Agenda tinha aqui um
+  `filter(isPlayerEligible)` e as consequências foram todas medidas no jogo de
+  12/09/2026: o cartão dizia "22 convocados" e a persiana 19; os 3 lesionados
+  não apareciam e por isso não havia como os tirar; e a recusa de um deles
+  sumia das contagens — uma resposta a menos numa base que tem nove.
+  **Esconder linhas nunca é a forma de dizer que estão desatualizadas.**
 - **A Agenda abre no que está por realizar** (`ESTADO_POR_OMISSAO`), não em
   "Todos": a lista é ordenada por data e a época tem meses feitos, por isso
   abrir em tudo era abrir num jogo de janeiro. Isto é o ponto de partida e não
