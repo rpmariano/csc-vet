@@ -25,7 +25,7 @@ const PERFIL = {
   address: 'R. da Torre 12', postal_code: '2750-748', city: 'Cascais',
   iban: 'PT50000000000000000000', kit_size: 'M', preferred_foot: 'Esquerdo',
   gdpr_consent: false, quota_start_date: '2026-09-01', quota_end_date: null,
-  emergency_contact_name: 'Maria (esposa)', emergency_contact_phone: '939999999',
+  emergency_contact_name: 'Maria Silva', emergency_contact_phone: '939999999',
   id_document_url: null, insurance_doc_url: null, medical_exam_doc_url: null,
 }
 
@@ -77,4 +77,56 @@ test('o RGPD diz o que está na base, e não "consentido" a toda a gente', async
 test('o campo tático da ficha não convida a clicar: é só de leitura', async ({ page }) => {
   await abreFicha(page)
   await expect(page.getByRole('dialog').getByText('Clica no campo para alternar')).toHaveCount(0)
+})
+
+/**
+ * A relação com o contacto de emergência é uma lista, não texto livre.
+ *
+ * Vivia dentro do nome — "Maria (esposa)", "Maria - esposa" ou só "Maria",
+ * conforme o dia. Num acidente, quem lê a ficha precisa de saber de imediato
+ * quem é a pessoa a quem vai ligar.
+ */
+test('a relação aparece na ficha, por baixo do nome', async ({ page }) => {
+  await abreFicha(page, { ...PERFIL, emergency_contact_relation: 'Cônjuge' })
+
+  const ficha = page.getByRole('dialog')
+  // O nome e a relação em linhas próprias, e não "Maria (esposa)" num campo só.
+  await expect(ficha.getByText('Maria Silva', { exact: true })).toBeVisible()
+  await expect(ficha.getByText('Cônjuge', { exact: true })).toBeVisible()
+})
+
+test('no Perfil, a relação escolhe-se numa lista fechada', async ({ page }) => {
+  await abreFicha(page)
+  await page.goto('/csc-vet/settings')
+  await page.waitForLoadState('networkidle')
+
+  const relacao = page.getByLabel('Relação', { exact: true })
+  await expect(relacao).toBeVisible()
+  await relacao.selectOption('Irmão/ã')
+  await expect(relacao).toHaveValue('Irmão/ã')
+})
+
+/**
+ * A janela de atividade deixou de estar vazia.
+ *
+ * Quem já cá estava ficou com 02/09/2026, o primeiro dia da época. Daí para a
+ * frente é o gatilho `profiles_janela_de_atividade` que a escreve, a partir do
+ * estado — verificado contra a base, que é onde a regra vive.
+ */
+test('a janela de atividade aparece no Perfil, só de leitura', async ({ page }) => {
+  await abreFicha(page)
+  await page.goto('/csc-vet/settings')
+  await page.waitForLoadState('networkidle')
+
+  await expect(page.getByText('01/09/2026')).toBeVisible()
+  await expect(page.getByText('Sem fim marcado')).toBeVisible()
+})
+
+/** O lugar do meio do campo chama-se "Médio Centro" em toda a app. */
+test('o meio-campo diz "Médio Centro", e não "Médio Defensivo"', async ({ page }) => {
+  await abreFicha(page)
+  const ficha = page.getByRole('dialog')
+
+  await expect(ficha.getByText(/Médio Defensivo/)).toHaveCount(0)
+  await expect(ficha.getByText('Médio Centro').first()).toBeVisible()
 })

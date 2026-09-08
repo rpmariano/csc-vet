@@ -191,6 +191,17 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **A janela de atividade escreve-se sozinha, a partir do estado.** O gatilho
+  `profiles_janela_de_atividade` (`supabase_janela_atividade_trigger_migration.sql`,
+  aplicada a 2026-09-08) põe `quota_end_date` ao passar a **Inativo**, e ao
+  voltar atualiza `quota_start_date` e limpa o fim; uma ficha nova começa a
+  contar no dia em que é criada. **`injured` conta como ativo** — um lesionado
+  continua sócio e continua a pagar. Está num gatilho e não no cliente porque
+  há mais do que um sítio a escrever `status` (o formulário do Plantel e o
+  botão de "Marcar lesionado"), e a quota é calculada a partir desta janela.
+  **Uma data escrita à mão no mesmo UPDATE ganha sempre** — a condição compara
+  `NEW` com `OLD` em vez de olhar só ao estado. Quem já cá estava ficou com
+  2026-09-02, por decisão da direção.
 - **A ficha do atleta mostra tudo o que a base tem; a edição é que é
   restrita.** Ver não é editar: a ficha (`?atleta=`, no Plantel) é de
   treinador/direção, a mesma gente que pode abrir o formulário — esconder-lhe

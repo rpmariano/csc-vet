@@ -22,7 +22,7 @@ export const PITCH_POSITIONS: PitchPosition[] = [
   { id: 'me', name: 'Médio Esquerdo', short: 'ME', category: 'mid', topPercent: 43, leftPercent: 22 },
   { id: 'md', name: 'Médio Direito', short: 'MD', category: 'mid', topPercent: 43, leftPercent: 78 },
   // Vértice Inferior (Trinco / Proteção Defensiva)
-  { id: 'mdc', name: 'Médio Defensivo', short: 'MDC', category: 'mid', topPercent: 55, leftPercent: 50 },
+  { id: 'mdc', name: 'Médio Centro', short: 'MC', category: 'mid', topPercent: 55, leftPercent: 50 },
 
   // Linha Defensiva (4 Defesas - Centrais individualizados)
   { id: 'le', name: 'Lateral Esquerdo', short: 'LE', category: 'def', topPercent: 70, leftPercent: 14 },
@@ -43,11 +43,11 @@ export const normalizePositionName = (raw: string): string => {
   if (s.toLowerCase().includes('central esq') || s.toLowerCase() === 'dce') return 'Defesa Central Esquerdo'
   if (s.toLowerCase().includes('central dir') || s.toLowerCase() === 'dcd') return 'Defesa Central Direito'
   if (s.toLowerCase().includes('defesa central') || s.toLowerCase() === 'central') return 'Defesa Central Esquerdo'
-  if (s.toLowerCase().includes('médio def') || s.toLowerCase().includes('trinco') || s.toLowerCase() === 'mdc') return 'Médio Defensivo'
+  if (s.toLowerCase().includes('médio def') || s.toLowerCase().includes('trinco') || s.toLowerCase() === 'mdc' || s.toLowerCase() === 'mc') return 'Médio Centro'
   if (s.toLowerCase().includes('médio of') || s.toLowerCase().includes('10') || s.toLowerCase() === 'mco') return 'Médio Ofensivo'
   if (s.toLowerCase().includes('médio esq') || s.toLowerCase() === 'me') return 'Médio Esquerdo'
   if (s.toLowerCase().includes('médio dir') || s.toLowerCase() === 'md') return 'Médio Direito'
-  if (s.toLowerCase().includes('médio centro') || s.toLowerCase() === 'médio') return 'Médio Defensivo'
+  if (s.toLowerCase().includes('médio centro') || s.toLowerCase() === 'médio') return 'Médio Centro'
   if (s.toLowerCase().includes('extremo dir') || s.toLowerCase().includes('ala dir') || s.toLowerCase() === 'ed') return 'Médio Direito'
   if (s.toLowerCase().includes('extremo esq') || s.toLowerCase().includes('ala esq') || s.toLowerCase() === 'ee') return 'Médio Esquerdo'
   if (s.toLowerCase().includes('ponta de lança') && s.toLowerCase().includes('esq')) return 'Ponta de Lança (Esq)'
@@ -58,7 +58,7 @@ export const normalizePositionName = (raw: string): string => {
 
 // Converter string de posições guardadas para array
 export const parsePositions = (positionStr?: string | null): string[] => {
-  if (!positionStr || !positionStr.trim()) return ['Médio Defensivo']
+  if (!positionStr || !positionStr.trim()) return ['Médio Centro']
   return positionStr
     .split(',')
     .map(p => p.trim())
@@ -89,7 +89,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
     if (isPosSelected(normalized)) {
       // Remover
       const next = selectedPositions.filter(p => normalizePositionName(p) !== normalized)
-      onChange(next.length > 0 ? next : ['Médio Defensivo'])
+      onChange(next.length > 0 ? next : ['Médio Centro'])
     } else {
       // Adicionar
       onChange([...selectedPositions, normalized])

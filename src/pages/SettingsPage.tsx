@@ -20,6 +20,7 @@ import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { CLUBE_NOME, CLUBE_SIGLA } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
+import { RELACOES_EMERGENCIA } from './TeamManagementPage'
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
@@ -75,6 +76,7 @@ const SettingsPage: React.FC = () => {
   // 6. Saúde & Contacto de Emergência
   const [formEmergencyName, setFormEmergencyName] = useState('')
   const [formEmergencyPhone, setFormEmergencyPhone] = useState('')
+  const [formEmergencyRelation, setFormEmergencyRelation] = useState('')
   const [formMedicalNotes, setFormMedicalNotes] = useState('')
 
   // 7. Documentos & RGPD
@@ -117,6 +119,7 @@ const SettingsPage: React.FC = () => {
 
       setFormEmergencyName(profile.emergency_contact_name || '')
       setFormEmergencyPhone(profile.emergency_contact_phone || '')
+      setFormEmergencyRelation(profile.emergency_contact_relation || '')
       setFormMedicalNotes(cleanNotesFromRolesTag(profile.medical_notes) || '')
 
       setPhotoUrl(profile.photo_url || null)
@@ -198,6 +201,7 @@ const SettingsPage: React.FC = () => {
       member_number: sanitizeText(formMemberNumber),
       emergency_contact_name: sanitizeText(formEmergencyName),
       emergency_contact_phone: sanitizeText(formEmergencyPhone),
+      emergency_contact_relation: formEmergencyRelation ? sanitizeText(formEmergencyRelation) : null,
       medical_notes: medicalNotesEncoded,
       photo_url: photoUrl || null,
       id_document_url: idDocUrl || null,
@@ -730,25 +734,42 @@ const SettingsPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className={ETIQUETA}>Contacto de Emergência (Nome / Relação)</label>
+              <label className={ETIQUETA} htmlFor="perfil-emerg-nome">Contacto de Emergência (Nome)</label>
               <input
+                id="perfil-emerg-nome"
                 type="text"
                 value={formEmergencyName}
                 onChange={(e) => setFormEmergencyName(e.target.value)}
                 className={CAMPO}
-                placeholder="Ex: Maria (Esposa)"
+                placeholder="Ex: Maria Silva"
               />
             </div>
             <div>
-              <label className={ETIQUETA}>Telefone de Emergência</label>
-              <input
-                type="tel"
-                value={formEmergencyPhone}
-                onChange={(e) => setFormEmergencyPhone(e.target.value)}
-                className={`${CAMPO} font-mono`}
-                placeholder="960 000 000"
-              />
+              <label className={ETIQUETA} htmlFor="perfil-emerg-relacao">Relação</label>
+              <select
+                id="perfil-emerg-relacao"
+                value={formEmergencyRelation}
+                onChange={(e) => setFormEmergencyRelation(e.target.value)}
+                className={CAMPO}
+              >
+                <option value="">Por indicar</option>
+                {RELACOES_EMERGENCIA.map(r => (
+                  <option key={r} value={r} className="bg-csc-superficie text-white">{r}</option>
+                ))}
+              </select>
             </div>
+          </div>
+
+          <div>
+            <label className={ETIQUETA} htmlFor="perfil-emerg-tel">Telefone de Emergência</label>
+            <input
+              id="perfil-emerg-tel"
+              type="tel"
+              value={formEmergencyPhone}
+              onChange={(e) => setFormEmergencyPhone(e.target.value)}
+              className={`${CAMPO} font-mono`}
+              placeholder="960 000 000"
+            />
           </div>
 
           <div>

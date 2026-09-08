@@ -71,13 +71,23 @@ const ROTULOS_ORDEM: Record<string, string> = {
   nome: 'por nome',
 }
 
+/**
+ * A relação com o contacto de emergência, em lista fechada.
+ *
+ * Vivia dentro do nome, num campo rotulado "Contacto de Emergência (Nome /
+ * Relação)": quem preenchia escrevia "Maria (esposa)", "Maria - esposa" ou só
+ * "Maria", conforme o dia. Num acidente, quem lê a ficha precisa de saber de
+ * imediato quem é a pessoa a quem vai ligar.
+ */
+export const RELACOES_EMERGENCIA = ['Cônjuge', 'Companheiro/a', 'Pai', 'Mãe', 'Filho/a', 'Irmão/ã', 'Amigo/a', 'Outro'] as const
+
 const POSITIONS = [
   'Guarda-redes',
   'Defesa Central Esquerdo',
   'Defesa Central Direito',
   'Lateral Direito',
   'Lateral Esquerdo',
-  'Médio Defensivo',
+  'Médio Centro',
   'Médio Esquerdo',
   'Médio Direito',
   'Médio Ofensivo',
@@ -138,6 +148,7 @@ const TeamManagementPage: React.FC = () => {
   const [formMemberNumber, setFormMemberNumber] = useState('')
   const [formEmergencyName, setFormEmergencyName] = useState('')
   const [formEmergencyPhone, setFormEmergencyPhone] = useState('')
+  const [formEmergencyRelation, setFormEmergencyRelation] = useState('')
   const [formMedicalNotes, setFormMedicalNotes] = useState('')
   const [formQuotaStart, setFormQuotaStart] = useState('')
   const [formQuotaEnd, setFormQuotaEnd] = useState('')
@@ -400,6 +411,7 @@ const TeamManagementPage: React.FC = () => {
     setFormMemberNumber(p.member_number || '')
     setFormEmergencyName(p.emergency_contact_name || '')
     setFormEmergencyPhone(p.emergency_contact_phone || '')
+    setFormEmergencyRelation(p.emergency_contact_relation || '')
     setFormMedicalNotes(cleanNotesFromRolesTag(p.medical_notes) || '')
     setFormQuotaStart(p.quota_start_date || '')
     setFormQuotaEnd(p.quota_end_date || '')
@@ -653,6 +665,7 @@ const TeamManagementPage: React.FC = () => {
       quota_end_date: sanitizeDate(formQuotaEnd),
       emergency_contact_name: sanitizeText(formEmergencyName),
       emergency_contact_phone: sanitizeText(formEmergencyPhone),
+      emergency_contact_relation: formEmergencyRelation ? sanitizeText(formEmergencyRelation) : null,
       medical_notes: medicalNotesEncoded,
       photo_url: photoUrl || null,
       id_document_url: idDocUrl || null,
@@ -1247,7 +1260,7 @@ const TeamManagementPage: React.FC = () => {
                 {grupo.map(person => {
                   const roles = extractRolesFromProfile(person)
                   // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
-                  // omissão de parsePositions(null) mostrava sempre "Médio Defensivo".
+                  // omissão de parsePositions(null) mostrava sempre "Médio Centro".
                   const positions = roles.includes('player') ? parsePositions(person.position) : []
                   const e = jga(person.id)
                   const inativo = person.status === 'inactive'
@@ -1358,7 +1371,7 @@ const TeamManagementPage: React.FC = () => {
                   {grupo.map(person => {
                     const roles = extractRolesFromProfile(person)
                     // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
-                    // omissão de parsePositions(null) mostrava sempre "Médio Defensivo".
+                    // omissão de parsePositions(null) mostrava sempre "Médio Centro".
                     const positions = roles.includes('player') ? parsePositions(person.position) : []
                     const e = jga(person.id)
 
@@ -1991,14 +2004,29 @@ const TeamManagementPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 gap-3">
                   <div>
-                    <label className={ETIQUETA}>Contacto de Emergência (Nome / Relação)</label>
+                    <label className={ETIQUETA} htmlFor="emerg-nome">Contacto de Emergência (Nome)</label>
                     <input
+                      id="emerg-nome"
                       type="text"
                       value={formEmergencyName}
                       onChange={(e) => setFormEmergencyName(e.target.value)}
                       className={CAMPO}
-                      placeholder="Ex: Maria (Esposa)"
+                      placeholder="Ex: Maria Silva"
                     />
+                  </div>
+                  <div>
+                    <label className={ETIQUETA} htmlFor="emerg-relacao">Relação</label>
+                    <select
+                      id="emerg-relacao"
+                      value={formEmergencyRelation}
+                      onChange={(e) => setFormEmergencyRelation(e.target.value)}
+                      className={CAMPO}
+                    >
+                      <option value="">Por indicar</option>
+                      {RELACOES_EMERGENCIA.map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className={ETIQUETA}>Telefone de Emergência</label>
@@ -2522,6 +2550,9 @@ const TeamManagementPage: React.FC = () => {
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.emergency_contact_name || 'Não registado'}
                       </p>
+                      {selectedProfile.emergency_contact_relation && (
+                        <p className="text-white/70 mt-0.5">{selectedProfile.emergency_contact_relation}</p>
+                      )}
                       {selectedProfile.emergency_contact_phone && (
                         <p className="text-white/60 font-semibold mt-0.5">
                           Tel: {selectedProfile.emergency_contact_phone}

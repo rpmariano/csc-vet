@@ -35,6 +35,8 @@ export interface Profile {
   member_number?: string | null
   emergency_contact_name?: string | null
   emergency_contact_phone?: string | null
+  /** Cônjuge, Pai, Irmão/ã… — lista fechada, ver RELACOES_EMERGENCIA. */
+  emergency_contact_relation?: string | null
   medical_notes?: string | null
   id_document_url?: string | null
   insurance_doc_url?: string | null
