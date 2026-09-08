@@ -10,10 +10,10 @@ const CAMPO =
   'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold'
 
 const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 const ETIQUETA_MOSAICO =
-  'font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/50 leading-tight'
+  'font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/62 leading-tight'
 
 interface LinhaPodio {
   id: string
@@ -45,7 +45,7 @@ const Podio: React.FC<{
     </h4>
 
     {linhas.length === 0 ? (
-      <p className="text-[11px] text-white/45 italic">{vazio}</p>
+      <p className="text-[11px] text-white/62 italic">{vazio}</p>
     ) : (
       <ol className="space-y-2">
         {linhas.map((l, idx) => (
@@ -263,7 +263,7 @@ const StatsPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh]">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark mb-3"></div>
-        <p className="text-xs font-bold text-white/50">A carregar estatísticas desportivas...</p>
+        <p className="text-xs font-bold text-white/62">A carregar estatísticas desportivas...</p>
       </div>
     )
   }
@@ -463,7 +463,7 @@ function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats:
         className={`w-full min-h-11 px-2 flex items-center justify-center gap-1 cursor-pointer
           font-display font-black text-[9px] tracking-[0.1em] uppercase
           focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
-            sortKey === col ? 'text-csc-gold' : 'text-white/45'
+            sortKey === col ? 'text-csc-gold' : 'text-white/62'
           }`}
       >
         {children}
@@ -482,7 +482,7 @@ function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats:
           <h3 className="font-display font-black text-[13.5px] text-white leading-tight">
             Rendimento do plantel
           </h3>
-          <p className="text-[10px] text-white/55 mt-0.5 truncate">
+          <p className="text-[10px] text-white/62 mt-0.5 truncate">
             {aggregatedStats.length} {aggregatedStats.length === 1 ? 'atleta' : 'atletas'} · {activeFilterLabel}
           </p>
         </div>
@@ -503,7 +503,7 @@ function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats:
           <tbody>
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-white/40 italic text-xs">
+                <td colSpan={6} className="px-4 py-8 text-center text-white/62 italic text-xs">
                   Sem registos para {activeFilterLabel.toLowerCase()}.
                 </td>
               </tr>

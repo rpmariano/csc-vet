@@ -37,7 +37,7 @@ const CAMPO =
   'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 // Interfaces
 interface Field {
@@ -1020,7 +1020,7 @@ const AdminDashboard: React.FC = () => {
               {/* Barra de Filtros e Criação */}
               <div className="flex items-center gap-2">
                 <div className="relative flex-1 min-w-0">
-                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/62" />
                   <input
                     type="text"
                     value={fieldSearch}
@@ -1032,7 +1032,7 @@ const AdminDashboard: React.FC = () => {
                     <button
                       onClick={() => setFieldSearch('')}
                       aria-label="Limpar pesquisa"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/62 hover:text-white/60"
                     >
                       <X size={15} />
                     </button>
@@ -1143,7 +1143,7 @@ const AdminDashboard: React.FC = () => {
               {/* Barra de Filtros e Criação */}
               <div className="flex items-center gap-2">
                 <div className="relative flex-1 min-w-0">
-                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                  <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/62" />
                   <input
                     type="text"
                     value={oppSearch}
@@ -1155,7 +1155,7 @@ const AdminDashboard: React.FC = () => {
                     <button
                       onClick={() => setOppSearch('')}
                       aria-label="Limpar pesquisa"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/62 hover:text-white/60"
                     >
                       <X size={15} />
                     </button>
@@ -1223,7 +1223,7 @@ const AdminDashboard: React.FC = () => {
 
                               {homeField && (
                                 <p className="text-xs text-white/60 font-medium flex items-center gap-1 mt-1 truncate">
-                                  <span className="text-white/50">Campo:</span>
+                                  <span className="text-white/62">Campo:</span>
                                   <span className="truncate">{homeField.name}</span>
                                 </p>
                               )}
@@ -1309,7 +1309,7 @@ const AdminDashboard: React.FC = () => {
                 */}
                 <div className="flex flex-col items-center gap-2.5 flex-1 min-w-0">
                   <div className="relative w-full">
-                    <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+                    <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/62" />
                     <input
                       type="text"
                       value={tourSearch}
@@ -1321,7 +1321,7 @@ const AdminDashboard: React.FC = () => {
                       <button
                         onClick={() => setTourSearch('')}
                         aria-label="Limpar pesquisa"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/62 hover:text-white/60"
                       >
                         <X size={15} />
                       </button>
@@ -1439,7 +1439,7 @@ const AdminDashboard: React.FC = () => {
             aria-modal="true"
             aria-labelledby="admin-campo-titulo"
             tabIndex={-1}
-            className="bg-csc-fundo text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in outline-none"
+            className="bg-csc-superficie text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in outline-none"
           >
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -1518,7 +1518,7 @@ const AdminDashboard: React.FC = () => {
             aria-modal="true"
             aria-labelledby="admin-adversario-titulo"
             tabIndex={-1}
-            className="bg-csc-fundo text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in my-8 outline-none"
+            className="bg-csc-superficie text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in my-8 outline-none"
           >
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -1674,7 +1674,7 @@ const AdminDashboard: React.FC = () => {
             aria-modal="true"
             aria-labelledby="admin-torneio-titulo"
             tabIndex={-1}
-            className="bg-csc-fundo text-white w-full max-w-3xl rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in flex flex-col max-h-[90vh] outline-none"
+            className="bg-csc-superficie text-white w-full max-w-3xl rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in flex flex-col max-h-[90vh] outline-none"
           >
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -1765,17 +1765,17 @@ const AdminDashboard: React.FC = () => {
                   onChange={e => setTourImage(e.target.files ? e.target.files[0] : null)}
                   className="w-full px-4 py-2 border border-white/15 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-tinta"
                 />
-                <p className="text-[11px] text-white/50 font-medium mt-1">Acompanha os ecrãs desta competição (Gestão da Liga, Classificações, badges de jogo).</p>
+                <p className="text-[11px] text-white/62 font-medium mt-1">Acompanha os ecrãs desta competição (Gestão da Liga, Classificações, badges de jogo).</p>
               </div>
 
               <details className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden group">
                 <summary className="px-4 py-3 text-sm font-bold text-white/80 cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors">
                   <span>Regras da prova (opcional)</span>
-                  <ChevronDown size={15} className="text-white/50 group-open:rotate-180 transition-transform" />
+                  <ChevronDown size={15} className="text-white/62 group-open:rotate-180 transition-transform" />
                 </summary>
                 <div className="p-4 border-t border-white/10 grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto">
                   
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/40 uppercase tracking-wider mb-[-5px]">Formato da Competição</h4>
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px]">Formato da Competição</h4>
                   <div className="col-span-1 sm:col-span-2">
                     <label className={ETIQUETA}>Modelo de Liga</label>
                     <select 
@@ -1788,7 +1788,7 @@ const AdminDashboard: React.FC = () => {
                     </select>
                   </div>
 
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/40 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
                   <div>
                     <label className={ETIQUETA}>Idade Mínima</label>
                     <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
@@ -1809,7 +1809,7 @@ const AdminDashboard: React.FC = () => {
                     <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" disabled={!tourRules.exceptions_allowed} />
                   </div>
 
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/40 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
                   <div>
                     <label className={ETIQUETA}>Máx. Inscritos (Plantel)</label>
                     <input type="number" min="0" value={tourRules.max_squad_size} onChange={e => setTourRules({...tourRules, max_squad_size: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
@@ -1819,7 +1819,7 @@ const AdminDashboard: React.FC = () => {
                     <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({...tourRules, max_match_players: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
                   </div>
 
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/40 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo & Subs</h4>
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo & Subs</h4>
                   <div>
                     <label className={ETIQUETA}>Duração Total (mins)</label>
                     <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({...tourRules, match_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
@@ -1829,7 +1829,7 @@ const AdminDashboard: React.FC = () => {
                     <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({...tourRules, half_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
                   </div>
                   
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/40 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
                   <div>
                     <label className={ETIQUETA}>Amarelos para Suspensão</label>
                     <input type="number" min="0" value={tourRules.yellow_cards_to_suspension} onChange={e => setTourRules({...tourRules, yellow_cards_to_suspension: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
@@ -1844,7 +1844,7 @@ const AdminDashboard: React.FC = () => {
               <details className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden group">
                 <summary className="px-4 py-3 text-sm font-bold text-white/80 cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors">
                   <span>Inscrição na prova (opcional)</span>
-                  <ChevronDown size={15} className="text-white/50 group-open:rotate-180 transition-transform" />
+                  <ChevronDown size={15} className="text-white/62 group-open:rotate-180 transition-transform" />
                 </summary>
                 <div className="p-4 border-t border-white/10 space-y-3">
                   <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
@@ -1911,7 +1911,7 @@ const AdminDashboard: React.FC = () => {
                           />
                         </div>
                       </div>
-                      <p className="text-[10px] text-white/50 -mt-1">
+                      <p className="text-[10px] text-white/62 -mt-1">
                         Mudar o Valor Total ou o Nº de Tranches reparte o valor em partes iguais pelas tranches ainda por pagar. Depois disso, cada tranche pode ser ajustada à mão abaixo.
                       </p>
 
@@ -1966,7 +1966,7 @@ const AdminDashboard: React.FC = () => {
                           </div>
                         ))}
                       </div>
-                      <p className="text-[10px] text-white/50">
+                      <p className="text-[10px] text-white/62">
                         Ao guardar, cria-se automaticamente a categoria de despesa "Inscrição — {tourName.trim() || 'nome do torneio'}". O valor total já entra na previsão financeira antes de ser pago, e cada tranche pode ser paga depois na página Financeiro & Quotas.
                       </p>
                     </>

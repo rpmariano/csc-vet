@@ -167,7 +167,7 @@ const Layout: React.FC = () => {
         </div>
 
         <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
-          <span className="font-display font-extrabold uppercase text-[9.5px] tracking-[0.18em] text-white/55">
+          <span className="font-display font-extrabold uppercase text-[9.5px] tracking-[0.18em] text-white/62">
             Total em dívida
           </span>
           <span className="font-display text-xl font-black text-csc-vermelho-texto tabular-nums">

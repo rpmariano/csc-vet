@@ -55,7 +55,7 @@ const CAMPO_FORM =
   'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 const ETIQUETA_FORM =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /**
  * Como se lê cada filtro escondido, na linha de resumo por baixo das pastilhas.
@@ -1266,7 +1266,7 @@ const EventsPage: React.FC = () => {
     return (
       <>
         <span>{leftSigla} vs {rightSigla}</span>
-        <span className="text-white/40"> • </span>
+        <span className="text-white/62"> • </span>
         <span className="text-csc-gold">{competitionLabel}</span>
       </>
     )
@@ -1338,10 +1338,10 @@ const EventsPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="criar-evento-titulo"
             tabIndex={-1}
-            className="bg-csc-fundo w-full sm:rounded-3xl sm:max-w-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto shadow-2xl border-0 sm:border-2 sm:border-csc-gold/60 flex flex-col outline-none"
+            className="bg-csc-superficie w-full sm:rounded-3xl sm:max-w-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto shadow-2xl border-0 sm:border-2 sm:border-csc-gold/60 flex flex-col outline-none"
           >
             {/* Header fixo do modal */}
-            <div className="sticky top-0 bg-csc-fundo z-10 flex items-center justify-between px-5 py-4 border-b border-white/10 rounded-t-3xl">
+            <div className="sticky top-0 bg-csc-superficie z-10 flex items-center justify-between px-5 py-4 border-b border-white/10 rounded-t-3xl">
               <h3 id="criar-evento-titulo" className="text-lg font-black text-white flex items-center gap-2">
                 <Plus size={20} className="text-csc-tinta" />
                 <span>Novo Evento / Atividade</span>
@@ -1923,7 +1923,7 @@ const EventsPage: React.FC = () => {
                   <h3 className="font-display font-black text-[13.5px] text-white leading-tight">
                     Eventos &amp; quórum
                   </h3>
-                  <p className="text-[10px] text-white/55 mt-0.5">
+                  <p className="text-[10px] text-white/62 mt-0.5">
                     A mostrar {filteredScheduledEvents.length} de {events.length} registados
                   </p>
                 </div>
@@ -2345,9 +2345,9 @@ const EventsPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="editar-evento-titulo"
             tabIndex={-1}
-            className="bg-csc-fundo text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10 outline-none"
+            className="bg-csc-superficie text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10 outline-none"
           >
-            <div className="sticky top-0 bg-csc-fundo border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
+            <div className="sticky top-0 bg-csc-superficie border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
               <h3 id="editar-evento-titulo" className="text-lg font-black text-white">Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
               <button onClick={handleAttemptCloseEditModal} aria-label="Fechar" className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 shrink-0"><X size={16} className="stroke-[2.5]" /></button>
             </div>
@@ -2667,7 +2667,7 @@ const EventsPage: React.FC = () => {
 
                     {/* Barra de Pesquisa de Membros na Edição */}
                     <div className="relative">
-                      <Search size={13} className="absolute left-3 top-2.5 text-white/40" />
+                      <Search size={13} className="absolute left-3 top-2.5 text-white/62" />
                       <input
                         type="text"
                         value={editPlayerSearchTerm}
@@ -2718,7 +2718,7 @@ const EventsPage: React.FC = () => {
                               </div>
                               <span className="truncate">{getPlayerDisplayName(p)}</span>
                             </div>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isCalled ? 'bg-csc-light/18 text-csc-verde-texto' : 'bg-white/10 text-white/50'}`}>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isCalled ? 'bg-csc-light/18 text-csc-verde-texto' : 'bg-white/10 text-white/62'}`}>
                               {isCalled ? 'Convocado' : 'Convocar'}
                             </span>
                           </div>

@@ -56,13 +56,13 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
         aria-modal="true"
         aria-labelledby="quick-field-titulo"
         tabIndex={-1}
-        className="bg-csc-fundo rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-white/10 space-y-4 outline-none"
+        className="bg-csc-superficie rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-white/10 space-y-4 outline-none"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar"
-          className="absolute top-4 right-4 text-white/40 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-white/62 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
@@ -73,7 +73,7 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
           </div>
           <div>
             <h3 id="quick-field-titulo" className="text-base font-black text-csc-dark">Criar Novo Campo / Instalação</h3>
-            <p className="text-[11px] text-white/50">Regista um novo campo para ser imediatamente selecionado.</p>
+            <p className="text-[11px] text-white/62">Regista um novo campo para ser imediatamente selecionado.</p>
           </div>
         </div>
 
@@ -102,7 +102,7 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
               placeholder="Ex: Av. Amadeu Duarte, Tires, Cascais"
               className={CAMPO_DIALOGO}
             />
-            <p className="text-[10.5px] text-white/50 mt-1">Usada para navegação e rotas com Google Maps.</p>
+            <p className="text-[10.5px] text-white/62 mt-1">Usada para navegação e rotas com Google Maps.</p>
           </div>
 
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/12">

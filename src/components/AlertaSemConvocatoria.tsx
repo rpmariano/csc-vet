@@ -214,7 +214,7 @@ export const PersianaSemConvocatoria: React.FC<{
               <span className="block font-display font-black text-[17px] text-csc-gold leading-none tabular-nums">
                 {quando.getDate()}
               </span>
-              <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/45 mt-0.5">
+              <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/62 mt-0.5">
                 {quando.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, '')}
               </span>
             </span>
@@ -223,7 +223,7 @@ export const PersianaSemConvocatoria: React.FC<{
               <span className="block font-display font-extrabold text-[12.5px] text-white truncate">
                 {e.titulo}
               </span>
-              <span className="block text-[10.5px] text-white/50 mt-0.5">
+              <span className="block text-[10.5px] text-white/62 mt-0.5">
                 {quando.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                 {' · '}
                 {e.diasQueFaltam === 0
@@ -241,7 +241,7 @@ export const PersianaSemConvocatoria: React.FC<{
         )
       })}
 
-      <p className="text-[10.5px] leading-relaxed text-white/50 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
+      <p className="text-[10.5px] leading-relaxed text-white/62 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
         Os treinos não entram aqui — convocam automaticamente todos os aptos, e os rascunhos
         também não. O aviso fica enquanto houver eventos por convocar.
       </p>

@@ -50,7 +50,7 @@ const CAMPO =
   'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /** Como se lê cada filtro escondido, na linha de resumo. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -976,7 +976,7 @@ const TeamManagementPage: React.FC = () => {
               <div key={idx} className="bg-white/5 border border-white/10 p-3 rounded-2xl flex items-center justify-between gap-2.5">
                 <div className="min-w-0">
                   <p className="font-display font-bold text-[12px] text-white truncate">
-                    {u.name} <span className="text-white/40 font-normal">{u.email}</span>
+                    {u.name} <span className="text-white/62 font-normal">{u.email}</span>
                   </p>
                   <p className="text-[10.5px] text-csc-gold font-bold truncate mt-0.5">
                     nº {pl.jersey_number} {pl.name}{pl.shirt_name ? ` (${pl.shirt_name})` : ''}
@@ -1194,7 +1194,7 @@ const TeamManagementPage: React.FC = () => {
             grupo.length === 0 ? null : (
               <div key={titulo || 'plantel'} className="space-y-2">
                 {titulo && (
-                  <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/45 pt-1">
+                  <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 pt-1">
                     {titulo}
                   </p>
                 )}
@@ -1238,7 +1238,7 @@ const TeamManagementPage: React.FC = () => {
                           <span className="block font-display font-black text-[13px] text-white truncate">
                             {nomeCurto}
                           </span>
-                          <span className="block text-[10px] text-white/45 truncate mt-0.5">
+                          <span className="block text-[10px] text-white/62 truncate mt-0.5">
                             {nomeCurto === person.name ? '' : `${person.name} · `}
                             {positions.length > 0
                               ? positions.map(pos => normalizePositionName(pos)).join(' · ')
@@ -1251,7 +1251,7 @@ const TeamManagementPage: React.FC = () => {
                           <span className="text-[9.5px] text-white/35 italic shrink-0">sem jogos</span>
                         ) : (
                           <span className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
-                            <span className="font-display font-bold text-[11px] text-white/55">{e.j}<span className="text-white/30">J</span></span>
+                            <span className="font-display font-bold text-[11px] text-white/62">{e.j}<span className="text-white/30">J</span></span>
                             <span className="font-display font-black text-[11px] text-csc-gold">{e.g}<span className="opacity-60">G</span></span>
                             <span className="font-display font-black text-[11px] text-csc-azul-texto">{e.a}<span className="opacity-60">A</span></span>
                           </span>
@@ -1304,7 +1304,7 @@ const TeamManagementPage: React.FC = () => {
             grupo.length === 0 ? null : (
               <div key={titulo || 'plantel'} className="space-y-2">
                 {titulo && (
-                  <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/45 pt-1">
+                  <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 pt-1">
                     {titulo}
                   </p>
                 )}
@@ -1362,7 +1362,7 @@ const TeamManagementPage: React.FC = () => {
                             <span className="block font-display font-black text-[13px] text-white uppercase truncate">
                               {person.shirt_name || person.nickname || person.name}
                             </span>
-                            <span className="block text-[9.5px] text-white/45 truncate mt-0.5">
+                            <span className="block text-[9.5px] text-white/62 truncate mt-0.5">
                               {positions.length > 0
                                 ? positions.map(pos => normalizePositionName(pos)).join(' · ')
                                 : roles.includes('coach') ? 'Treinador' : roles.includes('admin') ? 'Direção' : ''}
@@ -1370,7 +1370,7 @@ const TeamManagementPage: React.FC = () => {
                           </span>
 
                           <span className="w-full flex items-baseline justify-center gap-2 tabular-nums border-t border-white/8">
-                            <span className="font-display font-bold text-[11px] text-white/55 pt-1.5">{e.j}<span className="text-white/30">J</span></span>
+                            <span className="font-display font-bold text-[11px] text-white/62 pt-1.5">{e.j}<span className="text-white/30">J</span></span>
                             <span className="font-display font-black text-[11px] text-csc-gold pt-1.5">{e.g}<span className="opacity-60">G</span></span>
                             <span className="font-display font-black text-[11px] text-csc-azul-texto pt-1.5">{e.a}<span className="opacity-60">A</span></span>
                           </span>
@@ -1400,7 +1400,7 @@ const TeamManagementPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="ficha-membro-titulo"
             tabIndex={-1}
-            className="bg-csc-fundo text-white rounded-3xl w-full p-4 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/12 outline-none"
+            className="bg-csc-superficie text-white rounded-3xl w-full p-4 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/12 outline-none"
           >
             <button
               type="button"
@@ -1427,7 +1427,7 @@ const TeamManagementPage: React.FC = () => {
                 {isEditing ? (formName || 'Ficha do atleta') : 'Criar ficha'}
               </h2>
               {isEditing && formJerseyNumber !== '' && (
-                <p className="text-[11px] text-white/55 mt-0.5">nº {formJerseyNumber}</p>
+                <p className="text-[11px] text-white/62 mt-0.5">nº {formJerseyNumber}</p>
               )}
             </div>
 
@@ -1457,14 +1457,14 @@ const TeamManagementPage: React.FC = () => {
                               : valor === 'inactive'
                               ? 'bg-white/25 text-white'
                               : 'bg-csc-light text-white'
-                            : 'text-white/55'
+                            : 'text-white/62'
                         }`}
                     >
                       {etiqueta}
                     </button>
                   ))}
                 </div>
-                <p className="text-[10.5px] leading-relaxed text-white/55">
+                <p className="text-[10.5px] leading-relaxed text-white/62">
                   Lesionado ou inativo sai dos treinos futuros; lesionado ainda pode ir a convívios.
                 </p>
               </div>
@@ -1830,7 +1830,7 @@ const TeamManagementPage: React.FC = () => {
                   </div>
                 </div>
 
-                <p className="text-[10.5px] leading-relaxed text-white/50">
+                <p className="text-[10.5px] leading-relaxed text-white/62">
                   Sem datas, a janela infere-se do estado: quem fica inativo deixa de gerar meses
                   novos, mas mantém os que já venceram. Ao preencher o fim, as quotas seguintes
                   deixam de ser devidas.
@@ -1858,7 +1858,7 @@ const TeamManagementPage: React.FC = () => {
                             focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                               dispensado
                                 ? 'bg-csc-gold text-csc-tinta border-csc-gold'
-                                : 'bg-white/5 border-white/12 text-white/55'
+                                : 'bg-white/5 border-white/12 text-white/62'
                             }`}
                         >
                           {MESES_CURTOS[m - 1]}
@@ -1866,7 +1866,7 @@ const TeamManagementPage: React.FC = () => {
                       )
                     })}
                   </div>
-                  <p className="text-[10.5px] leading-relaxed text-white/50 mt-2">
+                  <p className="text-[10.5px] leading-relaxed text-white/62 mt-2">
                     Dourado = dispensado, todos os anos. Os meses que o clube inteiro não paga
                     definem-se no Financeiro, e não aqui.
                   </p>
@@ -2089,7 +2089,7 @@ const TeamManagementPage: React.FC = () => {
                   {selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name}
                 </h2>
                 {(selectedProfile.shirt_name || selectedProfile.nickname) && (
-                  <p className="text-[11px] text-white/55 mt-1">{selectedProfile.name}</p>
+                  <p className="text-[11px] text-white/62 mt-1">{selectedProfile.name}</p>
                 )}
                 <p className="font-display font-bold text-[11.5px] text-csc-gold mt-1">
                   {selectedProfile.jersey_number ? `nº ${selectedProfile.jersey_number}` : 'sem número'}
@@ -2148,7 +2148,7 @@ const TeamManagementPage: React.FC = () => {
                   ['Assistências', jga(selectedProfile.id).a, 'text-csc-azul-texto'],
                 ] as const).map(([etiqueta, valor, cor]) => (
                   <div key={etiqueta} className="cartao-simples p-3">
-                    <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+                    <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/62 leading-tight">
                       {etiqueta}
                     </p>
                     <p className={`font-display font-black text-[22px] mt-1 tabular-nums leading-none ${cor}`}>
@@ -2165,7 +2165,7 @@ const TeamManagementPage: React.FC = () => {
               {extractRolesFromProfile(selectedProfile).includes('player') && (
                 <div className="cartao-simples p-4 space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 flex items-center gap-1.5">
+                    <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 flex items-center gap-1.5">
                       <Shield size={13} className="text-csc-gold" />
                       Posições atribuídas
                     </h4>
@@ -2509,7 +2509,7 @@ const TeamManagementPage: React.FC = () => {
               aria-modal="true"
               aria-labelledby="associar-utilizador-titulo"
               tabIndex={-1}
-              className="bg-csc-fundo text-white rounded-3xl max-w-xl w-full p-5 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/12 outline-none"
+              className="bg-csc-superficie text-white rounded-3xl max-w-xl w-full p-5 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/12 outline-none"
             >
               <button
                 onClick={() => {
@@ -2599,7 +2599,7 @@ const TeamManagementPage: React.FC = () => {
                   <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
                     Contas por ligar ({porLigar.length})
                   </h4>
-                  <p className="text-[10.5px] leading-relaxed text-white/50">
+                  <p className="text-[10.5px] leading-relaxed text-white/62">
                     Registaram-se com um email que não está em ficha nenhuma — é por aí que a app
                     liga as contas —, por isso a ficha que têm só tem o nome e o email. Ao ligar,
                     as respostas e os pagamentos já lançados ficam nesta ficha. Corrigir o email
@@ -2630,7 +2630,7 @@ const TeamManagementPage: React.FC = () => {
                         <span className="block font-display font-bold text-[12.5px] text-white truncate">
                           {conta.name || 'Sem nome'}
                         </span>
-                        <span className="block text-[10px] text-white/45 truncate mt-0.5">
+                        <span className="block text-[10px] text-white/62 truncate mt-0.5">
                           {conta.email}
                           {conta.created_at
                             ? ` · registou-se a ${new Date(conta.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}`
@@ -2653,7 +2653,7 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 <div className="relative">
-                  <Search size={15} className="absolute left-3 top-2.5 text-white/40" />
+                  <Search size={15} className="absolute left-3 top-2.5 text-white/62" />
                   <input
                     type="text"
                     value={associateSearchTerm}

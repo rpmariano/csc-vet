@@ -106,7 +106,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         aria-modal="true"
         aria-labelledby={tituloId}
         tabIndex={-1}
-        className="bg-csc-fundo rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/12 space-y-5 animate-scale-in outline-none"
+        className="bg-csc-superficie rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/12 space-y-5 animate-scale-in outline-none"
       >
         <div className="flex items-center gap-3">
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs ${vStyles.iconBg}`}>
@@ -116,7 +116,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <h3 id={tituloId} className="text-base font-black text-white leading-tight">
               {title}
             </h3>
-            <p className="text-xs text-white/50 mt-0.5">
+            <p className="text-xs text-white/62 mt-0.5">
               Confirmação necessária
             </p>
           </div>

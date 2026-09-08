@@ -106,7 +106,7 @@ export const FolhaCriar: React.FC<FolhaCriarProps> = ({ isOpen, onClose }) => {
             <opcao.Icone size={20} strokeWidth={2} className={`shrink-0 ${opcao.cor}`} />
             <span className="min-w-0 flex-1">
               <span className="block font-display font-extrabold text-sm text-white">{opcao.etiqueta}</span>
-              <span className="block text-[11px] leading-snug text-white/55 mt-0.5">{opcao.descricao}</span>
+              <span className="block text-[11px] leading-snug text-white/62 mt-0.5">{opcao.descricao}</span>
             </span>
           </button>
         ))}

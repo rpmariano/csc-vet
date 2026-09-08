@@ -314,7 +314,7 @@ const Home: React.FC = () => {
           className="w-[42px] h-[42px] rounded-full bg-white object-contain p-[3px] flex-none"
         />
         <div className="flex-1 min-w-0">
-          <p className="text-[10.5px] text-white/55">{semFicha ? 'Bem-vindo,' : saudacao()}</p>
+          <p className="text-[10.5px] text-white/62">{semFicha ? 'Bem-vindo,' : saudacao()}</p>
           <p className="font-display font-extrabold text-lg text-white truncate mt-0.5">
             {primeiroNome(profile)}
           </p>
@@ -363,7 +363,7 @@ const Home: React.FC = () => {
               setAlertasSuspensao(prev => prev.filter(a => a.chave !== alerta.chave))
             }}
             aria-label="Dispensar alerta"
-            className="w-11 h-11 -m-2 rounded-full flex items-center justify-center text-white/50 cursor-pointer shrink-0"
+            className="w-11 h-11 -m-2 rounded-full flex items-center justify-center text-white/62 cursor-pointer shrink-0"
           >
             <X size={16} />
           </button>
@@ -403,7 +403,7 @@ const Home: React.FC = () => {
                   <span className="block font-display font-bold text-xs text-white">
                     {new Date(proximo.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                   </span>
-                  <span className="block text-[10.5px] text-white/50 mt-0.5 truncate">
+                  <span className="block text-[10.5px] text-white/62 mt-0.5 truncate">
                     {proximo.is_friendly ? 'Jogo amigável' : proximo.tournament?.name || 'Jogo oficial'}
                   </span>
                 </span>
@@ -414,7 +414,7 @@ const Home: React.FC = () => {
                   <span className="block font-display font-extrabold text-[17px] text-white truncate">
                     {proximo.title || TIPO_ETIQUETA[proximo.type]}
                   </span>
-                  <span className="block text-[10.5px] text-white/50 mt-0.5">
+                  <span className="block text-[10.5px] text-white/62 mt-0.5">
                     {TIPO_ETIQUETA[proximo.type]}
                   </span>
                 </span>
@@ -425,7 +425,7 @@ const Home: React.FC = () => {
             )}
 
             {local && (
-              <p className="flex items-center gap-1.5 text-[10.5px] text-white/50 mt-3">
+              <p className="flex items-center gap-1.5 text-[10.5px] text-white/62 mt-3">
                 <MapPin size={12} className="shrink-0" />
                 <span className="truncate">{local}</span>
               </p>
@@ -479,7 +479,7 @@ const Home: React.FC = () => {
       ) : (
         <CartaoVidro className="px-[17px] py-6 text-center">
           <p className="font-display font-extrabold text-sm text-white">Nada marcado para já</p>
-          <p className="text-[11px] text-white/55 mt-1.5">
+          <p className="text-[11px] text-white/62 mt-1.5">
             Quando houver jogo, treino ou convívio, aparece aqui.
           </p>
         </CartaoVidro>
@@ -503,7 +503,7 @@ const Home: React.FC = () => {
             <span className="block font-display font-extrabold text-[13px] text-white truncate">
               {ultimoJogo.tournament?.name || 'Competição'}
             </span>
-            <span className="block text-[10.5px] text-white/55 mt-0.5 truncate">
+            <span className="block text-[10.5px] text-white/62 mt-0.5 truncate">
               Último jogo com {ultimoJogo.opponent?.name ?? 'adversário'}
             </span>
           </span>
@@ -522,7 +522,7 @@ const Home: React.FC = () => {
         <CartaoSimples className="flex-1 px-4 py-3.5">
           <EtiquetaSeccao como="p" className="tracking-[0.12em] text-[8.5px]">Disse que sim</EtiquetaSeccao>
           <p className="font-display font-black text-[26px] leading-none text-white mt-2 tabular-nums">
-            {presencas === null ? '—' : <>{presencas}<span className="text-[15px] text-white/45">%</span></>}
+            {presencas === null ? '—' : <>{presencas}<span className="text-[15px] text-white/62">%</span></>}
           </p>
         </CartaoSimples>
       </div>

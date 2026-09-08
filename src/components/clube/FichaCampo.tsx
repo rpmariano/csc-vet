@@ -130,7 +130,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
                 {campo.address}
               </p>
             ) : (
-              <p className="text-[11.5px] text-white/50 mt-2">
+              <p className="text-[11.5px] text-white/62 mt-2">
                 Este campo ainda não tem morada. Sem ela não há como abrir o mapa nem copiar
                 nada — acrescenta-a em Editar campo.
               </p>
@@ -170,8 +170,8 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
           </div>
 
           <div className="cartao-simples flex items-start gap-2.5 px-3.5 py-3">
-            <Info size={15} className="text-white/45 shrink-0 mt-0.5" />
-            <p className="flex-1 text-[10px] leading-normal text-white/50">
+            <Info size={15} className="text-white/62 shrink-0 mt-0.5" />
+            <p className="flex-1 text-[10px] leading-normal text-white/62">
               Não há mapa dentro da app: o "Ver no Maps" abre o Google Maps no telemóvel.
             </p>
           </div>
@@ -183,7 +183,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
               <div className="cartao-simples h-20 animate-pulse" />
             ) : proximos.length === 0 ? (
               <div className="cartao-simples border-dashed px-4 py-6 text-center">
-                <p className="text-[11.5px] text-white/55">Nada marcado neste campo.</p>
+                <p className="text-[11.5px] text-white/62">Nada marcado neste campo.</p>
               </div>
             ) : (
               <div className="cartao-simples overflow-hidden">
@@ -201,13 +201,13 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
                         <span className="block font-display font-black text-[15px] text-csc-gold leading-none tabular-nums">
                           {String(quando.getDate()).padStart(2, '0')}
                         </span>
-                        <span className="block font-display font-bold text-[8px] tracking-[0.1em] uppercase text-white/45 mt-0.5">
+                        <span className="block font-display font-bold text-[8px] tracking-[0.1em] uppercase text-white/62 mt-0.5">
                           {quando.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, '')}
                         </span>
                       </span>
                       <span className="flex-1 min-w-0">
                         <span className="block font-display font-bold text-xs text-white truncate">{titulo}</span>
-                        <span className="block text-[9.5px] text-white/45 mt-0.5 truncate">
+                        <span className="block text-[9.5px] text-white/62 mt-0.5 truncate">
                           {quando.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                           {evento.tournament?.name ? ` · ${evento.tournament.name}` : ''}
                         </span>
@@ -244,7 +244,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
           </div>
 
           {eCampoDoClube && (
-            <p className="flex items-start gap-1.5 text-[10px] leading-normal text-white/42 px-1">
+            <p className="flex items-start gap-1.5 text-[10px] leading-normal text-white/62 px-1">
               <MapPin size={12} className="shrink-0 mt-px" />
               O campo do clube não se elimina sem escolher outro nos dados do clube.
             </p>

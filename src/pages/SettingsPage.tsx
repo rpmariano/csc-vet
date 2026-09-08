@@ -37,7 +37,7 @@ const ETIQUETA =
 
 /** Cabeçalho numerado de secção ("1 · IDENTIFICAÇÃO…"). */
 const SECCAO =
-  'font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 ' +
+  'font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 ' +
   'flex items-center gap-2 mb-2.5'
 
 const SettingsPage: React.FC = () => {
@@ -264,8 +264,8 @@ const SettingsPage: React.FC = () => {
           <p className="font-display font-black text-[26px] leading-[1.05] text-white tracking-[-0.02em] truncate">
             {profile?.nickname?.trim() || formShirtName?.trim() || formName?.split(' ')[0] || 'O meu perfil'}
           </p>
-          <p className="text-[11px] text-white/50 mt-1 truncate">{formName}</p>
-          <p className="text-[10px] leading-snug text-white/40 mt-1">
+          <p className="text-[11px] text-white/62 mt-1 truncate">{formName}</p>
+          <p className="text-[10px] leading-snug text-white/62 mt-1">
             Ficha cadastral de atleta · {clubSettings?.initials ?? CLUBE_SIGLA}
           </p>
         </div>
@@ -275,7 +275,7 @@ const SettingsPage: React.FC = () => {
       <div className="flex gap-2.5">
         <div className="cartao-simples flex-1 flex items-center gap-2.5 px-3.5 py-3">
           <span className="flex-1 min-w-0">
-            <span className="block font-display font-bold text-[8.5px] tracking-[0.12em] uppercase text-white/50">
+            <span className="block font-display font-bold text-[8.5px] tracking-[0.12em] uppercase text-white/62">
               Atividade
             </span>
             <span className="block font-display font-extrabold text-[12.5px] text-white mt-1.5">
@@ -310,7 +310,7 @@ const SettingsPage: React.FC = () => {
         </button>
       </div>
 
-      <p className="text-[10px] leading-snug text-white/40 px-1 -mt-1">
+      <p className="text-[10px] leading-snug text-white/62 px-1 -mt-1">
         A atividade é gerida pela direção. O estado físico alternas tu, entre apto e lesionado.
       </p>
 
@@ -336,7 +336,7 @@ const SettingsPage: React.FC = () => {
             <span className="block font-display font-extrabold text-[12.5px] text-white">
               Os meus pagamentos
             </span>
-            <span className="block text-[10px] text-white/50 mt-0.5">Quotas e encargos</span>
+            <span className="block text-[10px] text-white/62 mt-0.5">Quotas e encargos</span>
           </span>
         </button>
 
@@ -354,7 +354,7 @@ const SettingsPage: React.FC = () => {
             <span className="block font-display font-extrabold text-[12.5px] text-white">
               Avisos
             </span>
-            <span className="block text-[10px] text-white/50 mt-0.5">O que quero saber</span>
+            <span className="block text-[10px] text-white/62 mt-0.5">O que quero saber</span>
           </span>
         </button>
       </div>
@@ -380,7 +380,7 @@ const SettingsPage: React.FC = () => {
       */}
       {(assignedRoles?.length ?? 1) > 1 && (
         <div className="cartao-simples p-4">
-          <p className="font-display font-extrabold uppercase text-[9.5px] tracking-[0.18em] text-white/55">
+          <p className="font-display font-extrabold uppercase text-[9.5px] tracking-[0.18em] text-white/62">
             Ver a app como
           </p>
           <div className="flex flex-wrap gap-2 mt-3">

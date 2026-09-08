@@ -35,7 +35,7 @@ export const FaixaTopo: React.FC<FaixaTopoProps> = ({
   >
     <div
       className="absolute inset-0"
-      style={{ background: 'linear-gradient(155deg,#164f16,#0a2b16 62%,#0e1011)' }}
+      style={{ background: 'linear-gradient(155deg,#22691f,#17452a 62%,#262d2b)' }}
     />
     <div
       className="absolute"
@@ -56,7 +56,7 @@ export const FaixaTopo: React.FC<FaixaTopoProps> = ({
         right: '-100px',
         width: '230px',
         height: '230px',
-        background: 'rgba(11,45,11,.65)',
+        background: 'rgba(23,69,42,.55)',
         transform: 'skewY(12deg)',
         borderRadius: '44px',
       }}
@@ -72,7 +72,7 @@ export const FaixaTopo: React.FC<FaixaTopoProps> = ({
     <div
       className="absolute inset-0"
       style={{
-        background: 'linear-gradient(to top,#0e1011 2%,rgba(14,16,17,.4) 58%,transparent)',
+        background: 'linear-gradient(to top,#262d2b 2%,rgba(38,45,43,.4) 58%,transparent)',
       }}
     />
   </div>

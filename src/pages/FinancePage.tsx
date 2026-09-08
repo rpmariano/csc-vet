@@ -22,7 +22,7 @@ import { CabecalhoEcra, Pastilha } from '../components/ui'
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
 const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 const ETIQUETA_SECCAO =
   'font-display font-extrabold text-[9.5px] tracking-[0.14em] uppercase text-csc-gold'
@@ -1210,7 +1210,7 @@ const FinancePage: React.FC = () => {
               ['Previsto no fim', fmtEuro(projectedNetBalance), projectedNetBalance >= 0 ? 'text-csc-gold' : 'text-csc-vermelho-texto'],
             ] as const).map(([etiqueta, valor, cor]) => (
               <div key={etiqueta} className="cartao-simples p-3.5">
-                <p className="font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+                <p className="font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/62 leading-tight">
                   {etiqueta}
                 </p>
                 <p className={`font-display font-black text-[19px] mt-1.5 tabular-nums leading-none ${cor}`}>
@@ -1468,13 +1468,13 @@ const FinancePage: React.FC = () => {
                       {q.lateCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-red/15 text-csc-vermelho-texto">{q.lateCount} em atraso</span>}
                       {q.pendingCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold">{q.pendingCount} pendentes</span>}
                       <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-light/15 text-csc-verde-texto">{q.paidCount} pagos</span>
-                      <ChevronDown size={16} className={`text-white/40 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={16} className={`text-white/62 transition-transform ${expanded ? 'rotate-180' : ''}`} />
                     </div>
                   </button>
 
                   {expanded && (
                     <div className="px-3.5 pb-3.5 pt-0.5 space-y-2 border-t border-white/10 mt-0.5">
-                      <p className="text-[10px] text-white/40 pt-2.5">Clique num mês para marcar como pago; clique outra vez para corrigir. Pode selecionar vários meses seguidos.</p>
+                      <p className="text-[10px] text-white/62 pt-2.5">Clique num mês para marcar como pago; clique outra vez para corrigir. Pode selecionar vários meses seguidos.</p>
                       <div className="flex flex-wrap gap-1.5">
                         {q.months.map(m => {
                           const isPaid = m.statusCalc === 'paid'
@@ -1507,7 +1507,7 @@ const FinancePage: React.FC = () => {
               )
             })}
             {quotaOverview.length === 0 && (
-              <p className="text-xs text-white/40 py-6 text-center">Sem jogadores elegíveis para quota nesta época.</p>
+              <p className="text-xs text-white/62 py-6 text-center">Sem jogadores elegíveis para quota nesta época.</p>
             )}
           </div>
         </div>
@@ -1522,7 +1522,7 @@ const FinancePage: React.FC = () => {
                 <ShieldCheck size={16} className="text-csc-tinta" />
                 Encargos
               </h3>
-              <p className="text-xs text-white/50 mt-0.5">Cobranças a jogadores escolhidos — Seguro, equipamento, inscrição/viagem de torneio, etc.</p>
+              <p className="text-xs text-white/62 mt-0.5">Cobranças a jogadores escolhidos — Seguro, equipamento, inscrição/viagem de torneio, etc.</p>
             </div>
             {isAdmin && (
               <button
@@ -1545,7 +1545,7 @@ const FinancePage: React.FC = () => {
           )}
 
           {chargesWithStats.length === 0 ? (
-            <div className="bg-white/4 rounded-2xl border border-dashed border-white/15 p-8 text-center text-sm text-white/40">
+            <div className="bg-white/4 rounded-2xl border border-dashed border-white/15 p-8 text-center text-sm text-white/62">
               Ainda não há encargos criados.
             </div>
           ) : (
@@ -1561,10 +1561,10 @@ const FinancePage: React.FC = () => {
                       className="w-full px-5 py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/6 transition-colors"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <ChevronDown size={16} className={`text-white/40 transition-transform shrink-0 ${expanded ? 'rotate-180' : ''}`} />
+                        <ChevronDown size={16} className={`text-white/62 transition-transform shrink-0 ${expanded ? 'rotate-180' : ''}`} />
                         <div className="min-w-0 text-left">
                           <p className="font-black text-sm text-white truncate">{c.title}</p>
-                          <p className="text-[10px] text-white/40 flex items-center gap-1.5 flex-wrap">
+                          <p className="text-[10px] text-white/62 flex items-center gap-1.5 flex-wrap">
                             {c.categoryName && <span className="px-1.5 py-0.5 rounded bg-white/10">{c.categoryName}</span>}
                             <span>{fmtEuro(c.amount)}/jogador · {c.participantIds.length} {c.participantIds.length === 1 ? 'participante' : 'participantes'}</span>
                             {c.pendingCount > 0 && <span className="text-csc-gold font-bold">· {c.pendingCount} por pagar</span>}
@@ -1629,7 +1629,7 @@ const FinancePage: React.FC = () => {
                                   ) : paidTotal > 0 ? (
                                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold">Falta {fmtEuro(remaining)}</span>
                                   ) : (
-                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isPastDeadline ? 'bg-csc-red/15 text-csc-vermelho-texto' : 'bg-white/10 text-white/50'}`}>
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isPastDeadline ? 'bg-csc-red/15 text-csc-vermelho-texto' : 'bg-white/10 text-white/62'}`}>
                                       {isPastDeadline ? `Em atraso — deve ${fmtEuro(remaining)}` : `Por pagar (${fmtEuro(remaining)})`}
                                     </span>
                                   )}
@@ -1644,13 +1644,13 @@ const FinancePage: React.FC = () => {
                               {payments.length > 0 && (
                                 <div className="space-y-1 pl-1">
                                   {payments.map(pay => (
-                                    <div key={pay.id} className="flex items-center gap-2 text-[11px] text-white/50">
+                                    <div key={pay.id} className="flex items-center gap-2 text-[11px] text-white/62">
                                       {editingPaymentId === pay.id ? (
                                         <>
                                           <input type="number" step="0.01" value={editPaymentAmount} onChange={e => setEditPaymentAmount(e.target.value)} className={`${CAMPO} w-16 px-2`} />
                                           <input type="date" value={editPaymentDate} onChange={e => setEditPaymentDate(e.target.value)} className={`${CAMPO} w-auto px-2`} />
                                           <button type="button" onClick={handleSaveEditedPayment} className="p-1 text-csc-light hover:bg-csc-light/10 rounded cursor-pointer"><Check size={12} /></button>
-                                          <button type="button" onClick={() => setEditingPaymentId(null)} className="p-1 text-white/40 hover:bg-white/10 rounded cursor-pointer"><X size={12} /></button>
+                                          <button type="button" onClick={() => setEditingPaymentId(null)} className="p-1 text-white/62 hover:bg-white/10 rounded cursor-pointer"><X size={12} /></button>
                                         </>
                                       ) : (
                                         <>
@@ -1790,7 +1790,7 @@ const FinancePage: React.FC = () => {
                         className={`${CAMPO} disabled:opacity-50`}
                       />
                     </div>
-                    <p className="col-span-2 text-[10px] text-white/50">
+                    <p className="col-span-2 text-[10px] text-white/62">
                       {payableLocked
                         ? 'Já pago ao terceiro.'
                         : 'Entra logo em Pagamentos Programados e na Previsão da Época, mesmo antes de ser pago.'}
@@ -1806,7 +1806,7 @@ const FinancePage: React.FC = () => {
               <span className="block text-xs font-bold text-white/60">Jogadores participantes * ({newChargePlayerIds.size})</span>
               <div className="flex items-center gap-2 shrink-0">
                 <button type="button" onClick={() => setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))} className="text-[11px] font-bold text-csc-tinta hover:text-csc-light cursor-pointer">Todos os ativos</button>
-                <button type="button" onClick={() => setNewChargePlayerIds(new Set())} className="text-[11px] font-bold text-white/40 hover:text-white/60 cursor-pointer">Limpar</button>
+                <button type="button" onClick={() => setNewChargePlayerIds(new Set())} className="text-[11px] font-bold text-white/62 hover:text-white/60 cursor-pointer">Limpar</button>
               </div>
             </div>
             <div className="max-h-48 overflow-y-auto border border-white/12 rounded-xl divide-y divide-white/8">
@@ -1817,8 +1817,8 @@ const FinancePage: React.FC = () => {
                   <label key={p.id} className={`flex items-center gap-2 px-3 py-1.5 text-sm text-white hover:bg-white/6 ${lockedIn ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                     <input type="checkbox" checked={newChargePlayerIds.has(p.id)} disabled={lockedIn} onChange={() => toggleNewChargePlayer(p.id)} className={lockedIn ? '' : 'cursor-pointer'} />
                     <span className="truncate">{p.shirt_name || p.name}</span>
-                    {lockedIn && <span className="text-[9px] text-white/40 ml-auto shrink-0" title="Já tem pagamentos registados — não pode ser removido">tem pagamentos</span>}
-                    {!lockedIn && p.status === 'inactive' && <span className="text-[9px] text-white/40 ml-auto shrink-0">inativo</span>}
+                    {lockedIn && <span className="text-[9px] text-white/62 ml-auto shrink-0" title="Já tem pagamentos registados — não pode ser removido">tem pagamentos</span>}
+                    {!lockedIn && p.status === 'inactive' && <span className="text-[9px] text-white/62 ml-auto shrink-0">inativo</span>}
                   </label>
                 )
               })}
@@ -1883,7 +1883,7 @@ const FinancePage: React.FC = () => {
                     {(txType === 'income' ? incomeCategories : categories).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   {txType === 'income' && incomeCategories.length === 0 && (
-                    <p className="text-[10px] text-white/50 mt-1">Nenhuma categoria aceita receitas — assinala "Também pode ser usada para receitas" numa categoria, abaixo.</p>
+                    <p className="text-[10px] text-white/62 mt-1">Nenhuma categoria aceita receitas — assinala "Também pode ser usada para receitas" numa categoria, abaixo.</p>
                   )}
                 </div>
                 <div>
@@ -1909,7 +1909,7 @@ const FinancePage: React.FC = () => {
               <div className="space-y-4">
                 {scheduledPaymentsByCategory.map(([label, items]) => (
                   <div key={label}>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-white/50 mb-1.5">{label}</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-white/62 mb-1.5">{label}</p>
                     <div className="space-y-2">
                       {items.map(p => (
                         <div key={p.key} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-400/20">
@@ -1957,7 +1957,7 @@ const FinancePage: React.FC = () => {
                           <Paperclip size={13} />
                         </button>
                       )}
-                      <button type="button" onClick={() => handleDeleteTransaction(t.id)} title="Eliminar" className="p-1.5 rounded-lg text-white/50 hover:text-red-400 hover:bg-red-500/10 cursor-pointer transition-colors">
+                      <button type="button" onClick={() => handleDeleteTransaction(t.id)} title="Eliminar" className="p-1.5 rounded-lg text-white/62 hover:text-red-400 hover:bg-red-500/10 cursor-pointer transition-colors">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -2010,7 +2010,7 @@ const FinancePage: React.FC = () => {
                       <span className="flex items-center gap-1.5">
                         <ChevronDown size={14} className={`text-white/60 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
                         <h4 className="text-xs font-black text-white uppercase tracking-wider">{group.label}</h4>
-                        <span className="text-[10px] font-bold text-white/40">({group.rows.length})</span>
+                        <span className="text-[10px] font-bold text-white/62">({group.rows.length})</span>
                       </span>
                       <span className={`text-xs font-black ${groupTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {groupTotal >= 0 ? '+' : ''}{fmtEuro(groupTotal)}
@@ -2151,7 +2151,7 @@ const FinancePage: React.FC = () => {
                   <span>{c.name}</span>
                   {c.allow_income && <span className="text-[9px] font-black uppercase text-sky-300">receita</span>}
                 </button>
-                <button type="button" onClick={() => handleDeleteCategory(c.id)} className="text-white/50 hover:text-red-400 cursor-pointer" title="Eliminar categoria">
+                <button type="button" onClick={() => handleDeleteCategory(c.id)} className="text-white/62 hover:text-red-400 cursor-pointer" title="Eliminar categoria">
                   <X size={11} />
                 </button>
               </span>

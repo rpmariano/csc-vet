@@ -61,7 +61,7 @@ interface FichaConvocadoProps {
 const ESTADO_ATLETA: Record<string, { texto: string; classe: string }> = {
   active: { texto: 'Apto', classe: 'bg-csc-light/16 border-csc-light/30 text-csc-verde-texto' },
   injured: { texto: 'Lesionado', classe: 'bg-csc-red/12 border-csc-red/28 text-csc-vermelho-texto' },
-  inactive: { texto: 'Inativo', classe: 'bg-white/8 border-white/14 text-white/55' },
+  inactive: { texto: 'Inativo', classe: 'bg-white/8 border-white/14 text-white/62' },
 }
 
 /**
@@ -235,7 +235,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
                 {jogador?.name || displayName}
               </span>
               {posicoes.length > 0 && (
-                <span className="block text-[10.5px] text-white/45 mt-0.5 truncate">{posicoes.join(' · ')}</span>
+                <span className="block text-[10.5px] text-white/62 mt-0.5 truncate">{posicoes.join(' · ')}</span>
               )}
             </span>
             <span
@@ -265,14 +265,14 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
             <span className="flex-1 font-display font-bold text-[12.5px] text-white">
               {confirmado ? 'Disse que sim' : recusou ? 'Disse que não' : 'Ainda não respondeu'}
             </span>
-            {hora && <span className="text-[10.5px] text-white/50 flex-none">{hora}</span>}
+            {hora && <span className="text-[10.5px] text-white/62 flex-none">{hora}</span>}
           </div>
 
           {/* Respostas anteriores. As por responder ficam a tracejado. */}
           <div className="cartao-simples px-4 py-3.5">
             <div className="flex items-baseline gap-2">
               <EtiquetaSeccao como="p" className="flex-1">Respostas anteriores</EtiquetaSeccao>
-              <span className="text-[10px] text-white/40 flex-none">
+              <span className="text-[10px] text-white/62 flex-none">
                 {historico
                   ? `${historico.respostas.length} de ${historico.total} ${
                       historico.total === 1 ? 'convocatória' : 'convocatórias'
@@ -282,7 +282,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
             </div>
 
             {historico && historico.total === 0 ? (
-              <p className="text-[11px] text-white/50 mt-2.5">
+              <p className="text-[11px] text-white/62 mt-2.5">
                 Ainda não foi convocado para nenhum evento passado.
               </p>
             ) : (
@@ -312,7 +312,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
                     </span>
                   ))}
                 </span>
-                <span className="flex-1 text-[10px] leading-snug text-white/45 text-right">
+                <span className="flex-1 text-[10px] leading-snug text-white/62 text-right">
                   as convocatórias por responder não contam como falta
                 </span>
               </div>
@@ -338,7 +338,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
             </span>
             <span
               className={`flex-1 text-[10.5px] text-right ${
-                historico?.suspenso ? 'text-csc-vermelho-texto font-bold' : 'text-white/45'
+                historico?.suspenso ? 'text-csc-vermelho-texto font-bold' : 'text-white/62'
               }`}
             >
               {historico?.suspenso ? (

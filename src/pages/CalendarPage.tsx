@@ -60,7 +60,7 @@ const ROTULOS_ESTADO: Record<string, string> = {
  * há menos campos por ecrã e mais dedo a preencher.
  */
 const ETIQUETA_FORM =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 const CAMPO_FORM =
   'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
@@ -1483,13 +1483,13 @@ const CalendarPage: React.FC = () => {
             <span className="block font-display font-black text-[19px] text-csc-gold leading-none tabular-nums">
               {String(quando.getDate()).padStart(2, '0')}
             </span>
-            <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/45 mt-0.5">
+            <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/62 mt-0.5">
               {quando.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, '')}
             </span>
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-display font-extrabold text-[15px] text-white truncate">{titulo}</span>
-            <span className="block text-[11px] text-white/55 mt-0.5 truncate">
+            <span className="block text-[11px] text-white/62 mt-0.5 truncate">
               {quando.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
               {prova ? ` · ${prova}` : ''}
             </span>
@@ -1686,7 +1686,7 @@ const CalendarPage: React.FC = () => {
                 <div className="flex items-center justify-between gap-3">
                   {isAway ? opponentBlock(false) : cscBlock(false)}
                   <div className="shrink-0 px-1 flex items-center justify-center">
-                    <span className="px-2.5 py-1 rounded-[9px] bg-white/10 font-display font-bold text-[11px] text-white/50">
+                    <span className="px-2.5 py-1 rounded-[9px] bg-white/10 font-display font-bold text-[11px] text-white/62">
                       VS
                     </span>
                   </div>
@@ -1717,7 +1717,7 @@ const CalendarPage: React.FC = () => {
               {event.meeting_time && (
                 <>
                   <div className="flex-none px-5 py-2.5">
-                    <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/55">
+                    <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/62">
                       Concentração
                     </p>
                     <p className="font-display font-extrabold text-[17px] text-white mt-0.5">
@@ -1966,7 +1966,7 @@ const CalendarPage: React.FC = () => {
                   outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-csc-gold"
               >
                 {monthNames.map((nome, idx) => (
-                  <option key={nome} value={idx} className="bg-csc-fundo text-white">{nome}</option>
+                  <option key={nome} value={idx} className="bg-csc-superficie text-white">{nome}</option>
                 ))}
               </select>
 
@@ -1978,7 +1978,7 @@ const CalendarPage: React.FC = () => {
                   outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-csc-gold"
               >
                 {anosDisponiveis.map(ano => (
-                  <option key={ano} value={ano} className="bg-csc-fundo text-white">{ano}</option>
+                  <option key={ano} value={ano} className="bg-csc-superficie text-white">{ano}</option>
                 ))}
               </select>
 
@@ -1995,7 +1995,7 @@ const CalendarPage: React.FC = () => {
 
             <div className="grid grid-cols-7 gap-0.5 mb-1.5">
               {weekDayNames.map(w => (
-                <span key={w} className="font-display font-bold text-[9px] text-white/40 text-center">
+                <span key={w} className="font-display font-bold text-[9px] text-white/62 text-center">
                   {w}
                 </span>
               ))}
@@ -2073,7 +2073,7 @@ const CalendarPage: React.FC = () => {
                 <div className="cartao-simples border-dashed text-center px-5 py-8">
                   <CalendarDaysIcon size={26} className="mx-auto text-white/25 mb-2.5" />
                   <p className="font-display font-extrabold text-sm text-white">Sem eventos neste dia.</p>
-                  <p className="text-[11px] text-white/50 mt-1.5">
+                  <p className="text-[11px] text-white/62 mt-1.5">
                     Escolhe outro dia no calendário, ou vê tudo o que vem a seguir mais abaixo.
                   </p>
                 </div>
@@ -2103,14 +2103,14 @@ const CalendarPage: React.FC = () => {
               <div className="cartao-simples border-dashed text-center px-5 py-10">
                 <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
                 <p className="font-display font-extrabold text-sm text-white">Nenhum evento encontrado.</p>
-                <p className="text-[11px] text-white/50 mt-1.5">Limpa os filtros para ver o resto da agenda.</p>
+                <p className="text-[11px] text-white/62 mt-1.5">Limpa os filtros para ver o resto da agenda.</p>
               </div>
             ) : (
               <>
                 <div className="cartao-vidro text-center px-5 py-10">
                   <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
                   <p className="font-display font-extrabold text-sm text-white">Nada marcado ainda</p>
-                  <p className="text-[11px] leading-relaxed text-white/50 mt-1.5">
+                  <p className="text-[11px] leading-relaxed text-white/62 mt-1.5">
                     O próximo jogo ou treino aparece aqui assim que a equipa técnica o criar.
                     Recebes aviso quando houver convocatória.
                   </p>
@@ -2323,9 +2323,9 @@ const CalendarPage: React.FC = () => {
                 <h2 className="font-display font-black text-[30px] leading-[1.05] text-white tracking-[-0.03em]">
                   {selectedEvent.type === 'match' && selectedEvent.opponent ? (
                     selectedEvent.home_away === 'away' ? (
-                      <>{formatOpponentSigla(selectedEvent.opponent)} <span className="text-white/40 text-xl">vs</span> {formatClubSigla(clubSettings?.initials)}</>
+                      <>{formatOpponentSigla(selectedEvent.opponent)} <span className="text-white/62 text-xl">vs</span> {formatClubSigla(clubSettings?.initials)}</>
                     ) : (
-                      <>{formatClubSigla(clubSettings?.initials)} <span className="text-white/40 text-xl">vs</span> {formatOpponentSigla(selectedEvent.opponent)}</>
+                      <>{formatClubSigla(clubSettings?.initials)} <span className="text-white/62 text-xl">vs</span> {formatOpponentSigla(selectedEvent.opponent)}</>
                     )
                   ) : (
                     selectedEvent.title
@@ -2367,7 +2367,7 @@ const CalendarPage: React.FC = () => {
                     {selectedEvent.meeting_time && (
                       <>
                         <div className="flex-none px-4 py-3">
-                          <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/55">
+                          <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/62">
                             Concentração
                           </p>
                           <p className="font-display font-extrabold text-[18px] text-white mt-0.5">
@@ -2414,7 +2414,7 @@ const CalendarPage: React.FC = () => {
                             <span className="block text-[11px] leading-snug text-white/60 truncate">{morada}</span>
                           )}
                         </span>
-                        <ExternalLink size={14} className="text-white/40 shrink-0" />
+                        <ExternalLink size={14} className="text-white/62 shrink-0" />
                       </a>
                     )
                   })()}
@@ -2498,7 +2498,7 @@ const CalendarPage: React.FC = () => {
                             </button>
                           </div>
                           {myCallup.status !== 'called' && (
-                            <span className="text-[10.5px] text-white/55">Toca no outro botão para mudar de resposta.</span>
+                            <span className="text-[10.5px] text-white/62">Toca no outro botão para mudar de resposta.</span>
                           )}
                         </div>
                       ) : (
@@ -2736,7 +2736,7 @@ const CalendarPage: React.FC = () => {
                   </button>
                 </div>
 
-                <p className="text-[10px] leading-snug text-white/45 mt-2.5">
+                <p className="text-[10px] leading-snug text-white/62 mt-2.5">
                   Com ficha de jogo lançada, o evento fecha: deixa de ser editável e a convocatória
                   não aceita respostas.
                 </p>
@@ -3305,7 +3305,7 @@ const CalendarPage: React.FC = () => {
 
                       {/* Barra de Pesquisa de Membros */}
                       <div className="relative">
-                        <Search size={13} className="absolute left-3 top-2.5 text-white/40" />
+                        <Search size={13} className="absolute left-3 top-2.5 text-white/62" />
                         <input
                           type="text"
                           value={editPlayerSearchTerm}
@@ -3398,7 +3398,7 @@ const CalendarPage: React.FC = () => {
                     <span className="block font-display font-bold text-[12.5px] text-white">
                       Guardar como rascunho
                     </span>
-                    <span className="block text-[10.5px] leading-snug text-white/55 mt-0.5">
+                    <span className="block text-[10.5px] leading-snug text-white/62 mt-0.5">
                       Fica só para a equipa técnica: não aparece na Agenda de quem não gere, não
                       aceita respostas à convocatória e não entra no alerta da Home.
                     </span>

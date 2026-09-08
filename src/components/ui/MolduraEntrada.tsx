@@ -22,7 +22,7 @@ export const MolduraEntrada: React.FC<MolduraEntradaProps> = ({ children }) => (
     <div aria-hidden="true" className="absolute inset-0 overflow-hidden -z-10">
       <div
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(165deg,#164f16,#0a2b16 58%,#0e1011)' }}
+        style={{ background: 'linear-gradient(165deg,#22691f,#17452a 58%,#262d2b)' }}
       />
       <div
         className="absolute"
@@ -43,7 +43,7 @@ export const MolduraEntrada: React.FC<MolduraEntradaProps> = ({ children }) => (
           right: '-110px',
           width: '250px',
           height: '250px',
-          background: 'rgba(11,45,11,.6)',
+          background: 'rgba(23,69,42,.6)',
           transform: 'skewY(12deg)',
           borderRadius: '44px',
         }}

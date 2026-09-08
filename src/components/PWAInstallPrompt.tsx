@@ -105,7 +105,7 @@ export const PWAInstallPrompt: React.FC = () => {
               <button
                 type="button"
                 onClick={handleDismissBanner}
-                className="text-white/40 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                className="text-white/62 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
                 title="Fechar"
               >
                 <X size={16} />
@@ -118,11 +118,11 @@ export const PWAInstallPrompt: React.FC = () => {
       {/* Modal com Instruções de Instalação (para iOS / outros browsers) */}
       {showIOSModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-csc-fundo rounded-3xl max-w-sm w-full p-6 text-white shadow-2xl relative border-2 border-csc-gold">
+          <div className="bg-csc-superficie rounded-3xl max-w-sm w-full p-6 text-white shadow-2xl relative border-2 border-csc-gold">
             <button
               onClick={() => setShowIOSModal(false)}
               aria-label="Fechar"
-              className="absolute top-4 right-4 text-white/40 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 cursor-pointer"
+              className="absolute top-4 right-4 text-white/62 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -132,7 +132,7 @@ export const PWAInstallPrompt: React.FC = () => {
                 <img src="/csc-vet/pwa-192x192.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <h3 className="text-lg font-black text-csc-dark">Instalar App nos Veteranos</h3>
-              <p className="text-xs text-white/50 mt-1">Siga os passos simples abaixo para adicionar a app ao seu telemóvel:</p>
+              <p className="text-xs text-white/62 mt-1">Siga os passos simples abaixo para adicionar a app ao seu telemóvel:</p>
             </div>
 
             {isIOS ? (
@@ -254,11 +254,11 @@ export const PWAInstallMenuItem: React.FC<{ onClickExtra?: () => void }> = ({ on
 
       {showModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-csc-fundo rounded-3xl max-w-sm w-full p-6 text-white shadow-2xl relative border-2 border-csc-gold">
+          <div className="bg-csc-superficie rounded-3xl max-w-sm w-full p-6 text-white shadow-2xl relative border-2 border-csc-gold">
             <button
               onClick={() => setShowModal(false)}
               aria-label="Fechar"
-              className="absolute top-4 right-4 text-white/40 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 cursor-pointer"
+              className="absolute top-4 right-4 text-white/62 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -268,7 +268,7 @@ export const PWAInstallMenuItem: React.FC<{ onClickExtra?: () => void }> = ({ on
                 <img src="/csc-vet/pwa-192x192.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <h3 className="text-lg font-black text-csc-dark">Instalar App CSC</h3>
-              <p className="text-xs text-white/50 mt-1">Como instalar a app no seu dispositivo:</p>
+              <p className="text-xs text-white/62 mt-1">Como instalar a app no seu dispositivo:</p>
             </div>
 
             {isIOS ? (

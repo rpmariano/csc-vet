@@ -40,7 +40,7 @@ export const ResendCallupsModal: React.FC<ResendCallupsModalProps> = ({
         aria-modal="true"
         aria-labelledby={tituloId}
         tabIndex={-1}
-        className="bg-csc-fundo rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/10 space-y-5 animate-scale-in outline-none"
+        className="bg-csc-superficie rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/10 space-y-5 animate-scale-in outline-none"
       >
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-csc-gold/15 text-csc-gold flex items-center justify-center shrink-0 shadow-2xs">
@@ -50,7 +50,7 @@ export const ResendCallupsModal: React.FC<ResendCallupsModalProps> = ({
             <h3 id={tituloId} className="text-base font-black text-white leading-tight">
               Reenviar o pedido de resposta?
             </h3>
-            <p className="text-xs text-white/50 mt-0.5">
+            <p className="text-xs text-white/62 mt-0.5">
               Edição de dados do evento
             </p>
           </div>
@@ -66,7 +66,7 @@ export const ResendCallupsModal: React.FC<ResendCallupsModalProps> = ({
               <span><strong className="text-csc-verde-texto">Reenviar Pedidos:</strong> Repõe todas as respostas como <em>Sem resposta</em>, para os convocados responderem de novo.</span>
             </li>
             <li className="flex items-start gap-1.5">
-              <span className="text-white/50 font-bold shrink-0">✓</span>
+              <span className="text-white/62 font-bold shrink-0">✓</span>
               <span><strong className="text-white">Manter Respostas:</strong> Guarda as alterações do evento mantendo as confirmações já registadas.</span>
             </li>
           </ul>
@@ -99,7 +99,7 @@ export const ResendCallupsModal: React.FC<ResendCallupsModalProps> = ({
             type="button"
             disabled={isSaving}
             onClick={onBack}
-            className="w-full py-2 text-white/50 hover:text-white font-semibold text-xs transition-colors cursor-pointer text-center"
+            className="w-full py-2 text-white/62 hover:text-white font-semibold text-xs transition-colors cursor-pointer text-center"
           >
             Voltar ao formulário de edição
           </button>

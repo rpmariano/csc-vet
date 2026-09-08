@@ -230,7 +230,7 @@ const Login: React.FC = () => {
         <>
           <div className="flex items-center gap-3 py-1">
             <span className="flex-1 h-px bg-white/15" />
-            <span className="font-display font-bold text-[9px] tracking-[0.14em] text-white/45">
+            <span className="font-display font-bold text-[9px] tracking-[0.14em] text-white/62">
               OU CONTINUA COM
             </span>
             <span className="flex-1 h-px bg-white/15" />

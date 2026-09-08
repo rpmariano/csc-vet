@@ -23,7 +23,7 @@ const CAMPO =
   'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /** Como se lê cada filtro escondido, na linha de resumo. */
 const ROTULOS_TIPO: Record<string, string> = {
@@ -535,7 +535,7 @@ export const MatchReportsPage: React.FC = () => {
                         </span>
                       </>
                     ) : (
-                      <span className="font-display font-black text-[10px] text-white/55 uppercase tracking-[0.14em] px-2.5 py-1.5 bg-white/10 rounded-lg">
+                      <span className="font-display font-black text-[10px] text-white/62 uppercase tracking-[0.14em] px-2.5 py-1.5 bg-white/10 rounded-lg">
                         vs
                       </span>
                     )}
@@ -557,15 +557,15 @@ export const MatchReportsPage: React.FC = () => {
 
                 {/* Local, casa ou fora, tática — e a entrada para a ficha. */}
                 <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/10">
-                  <span className="flex items-center gap-1.5 min-w-0 text-white/55">
+                  <span className="flex items-center gap-1.5 min-w-0 text-white/62">
                     {isAway
-                      ? <Plane size={12} className="shrink-0 text-white/40" />
-                      : <Home size={12} className="shrink-0 text-white/40" />}
+                      ? <Plane size={12} className="shrink-0 text-white/62" />
+                      : <Home size={12} className="shrink-0 text-white/62" />}
                     <span className="text-[10.5px] font-semibold truncate">
                       {isAway ? 'Fora' : 'Casa'} · {locationStr}
                     </span>
                     {formationDisplay && (
-                      <span className="shrink-0 text-[9px] bg-white/8 text-white/55 px-1.5 py-0.5 rounded font-bold tabular-nums">
+                      <span className="shrink-0 text-[9px] bg-white/8 text-white/62 px-1.5 py-0.5 rounded font-bold tabular-nums">
                         {formationDisplay}
                       </span>
                     )}

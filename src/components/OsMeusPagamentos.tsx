@@ -52,7 +52,7 @@ const ESTADO_MES: Record<MesQuota['estado'], { texto: string; classe: string }> 
   paid: { texto: 'paga', classe: 'bg-csc-light/15 border-csc-light/30 text-csc-verde-texto' },
   late: { texto: 'em atraso', classe: 'bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto' },
   current: { texto: 'este mês', classe: 'bg-csc-gold/15 border-csc-gold/35 text-csc-gold' },
-  future: { texto: 'a haver', classe: 'bg-white/6 border-white/12 text-white/45' },
+  future: { texto: 'a haver', classe: 'bg-white/6 border-white/12 text-white/62' },
 }
 
 export const OsMeusPagamentos: React.FC<{
@@ -214,15 +214,15 @@ export const OsMeusPagamentos: React.FC<{
 
           {/* As quotas da época, mês a mês. */}
           <div>
-            <p className="flex items-baseline justify-between font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/50 mb-2">
+            <p className="flex items-baseline justify-between font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-2">
               <span>Quotas</span>
-              <span className="text-white/40 normal-case tracking-normal text-[10px] font-bold">
+              <span className="text-white/62 normal-case tracking-normal text-[10px] font-bold">
                 {pagas} de {meses.length} pagas
               </span>
             </p>
 
             {meses.length === 0 ? (
-              <p className="text-[11px] text-white/45 italic">
+              <p className="text-[11px] text-white/62 italic">
                 Não há meses de quota para ti nesta época.
               </p>
             ) : (
@@ -256,7 +256,7 @@ export const OsMeusPagamentos: React.FC<{
           {/* Os encargos em que entrei — seguro, equipamento, inscrições. */}
           {encargos.length > 0 && (
             <div>
-              <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/50 mb-2">
+              <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-2">
                 Encargos
               </p>
               <div className="cartao-simples overflow-hidden">
@@ -269,7 +269,7 @@ export const OsMeusPagamentos: React.FC<{
                       <span className="block font-display font-bold text-[12.5px] text-white truncate">
                         {e.titulo}
                       </span>
-                      <span className="block text-[10px] text-white/45 mt-0.5">
+                      <span className="block text-[10px] text-white/62 mt-0.5">
                         {e.pagoEm
                           ? `pago a ${new Date(e.pagoEm).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}`
                           : e.vencimento
@@ -291,7 +291,7 @@ export const OsMeusPagamentos: React.FC<{
 
           {/* Como pagar. */}
           <div>
-            <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/50 mb-2">
+            <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-2">
               Como pagar
             </p>
             <div className="cartao-simples p-3.5 space-y-2.5">
@@ -317,7 +317,7 @@ export const OsMeusPagamentos: React.FC<{
                 </p>
               )}
 
-              <p className="text-[10.5px] leading-relaxed text-white/50">
+              <p className="text-[10.5px] leading-relaxed text-white/62">
                 O pagamento só fica em dia depois de o tesoureiro o registar — é ele que marca
                 o mês como pago.
               </p>

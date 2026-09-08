@@ -67,7 +67,7 @@ const Interruptor: React.FC<{
   >
     <span className="min-w-0 flex-1">
       <span className="block font-display font-bold text-[12.5px] text-white">{titulo}</span>
-      <span className="block text-[10.5px] leading-snug text-white/50 mt-0.5">{nota}</span>
+      <span className="block text-[10.5px] leading-snug text-white/62 mt-0.5">{nota}</span>
     </span>
     <span
       className={`relative w-11 h-6 rounded-full shrink-0 transition-colors duration-200 ${
@@ -163,13 +163,13 @@ export const PreferenciasAvisos: React.FC<{
         </div>
       ) : (
         <div className="space-y-4">
-          <p className="text-[10.5px] leading-relaxed text-white/50 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
+          <p className="text-[10.5px] leading-relaxed text-white/62 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
             Os avisos ainda não estão a ser enviados — o envio é do lado do servidor e está por
             fazer. A escolha fica guardada e passa a valer no dia em que começarem.
           </p>
 
           <div>
-            <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/50 mb-2">
+            <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-2">
               Avisos
             </p>
             <div className="cartao-simples overflow-hidden">
@@ -222,7 +222,7 @@ export const PreferenciasAvisos: React.FC<{
             {silencioLigado && (
               <div className="flex items-center gap-2 px-3.5 py-3 border-t border-white/7">
                 <label className="flex-1">
-                  <span className="block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5">
+                  <span className="block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5">
                     Das
                   </span>
                   <input
@@ -233,7 +233,7 @@ export const PreferenciasAvisos: React.FC<{
                   />
                 </label>
                 <label className="flex-1">
-                  <span className="block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5">
+                  <span className="block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5">
                     Às
                   </span>
                   <input

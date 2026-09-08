@@ -402,7 +402,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             <p className="font-display font-extrabold text-[9px] tracking-[0.16em] uppercase text-csc-gold">
               Ficha oficial de jogo
             </p>
-            <p className="text-[11px] text-white/55 mt-0.5">
+            <p className="text-[11px] text-white/62 mt-0.5">
               {event?.tournament?.name ?? (event?.is_friendly ? 'Jogo amigável' : 'Sem prova associada')}
             </p>
           </div>
@@ -411,7 +411,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             {leftSigla} <span className="text-white/35">vs</span> {rightSigla}
           </h2>
 
-          <p className="text-[11px] text-white/55">
+          <p className="text-[11px] text-white/62">
             {event?.date_time && new Date(event.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
           </p>
 
@@ -521,7 +521,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             */}
             <div className="grid grid-cols-3 gap-2">
               <div className="cartao-simples p-3">
-                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/62 leading-tight">
                   Tático
                 </p>
                 <p className="font-display font-black text-[17px] text-white mt-1 tabular-nums leading-none">
@@ -530,7 +530,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               </div>
 
               <div className="cartao-simples p-3">
-                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/62 leading-tight">
                   Golos
                 </p>
                 <p className="font-display font-black text-[17px] text-csc-gold mt-1 tabular-nums leading-none">
@@ -539,7 +539,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               </div>
 
               <div className="cartao-simples p-3">
-                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/62 leading-tight">
                   Disciplina
                 </p>
                 <p className="flex items-center gap-2 mt-1">
@@ -820,7 +820,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                     <span className="min-w-0 flex-1">
                       <span className="block font-display font-black text-[13px] text-white truncate">{displayName}</span>
                       {p.position && (
-                        <span className="block text-[9.5px] text-white/40 truncate mt-0.5">
+                        <span className="block text-[9.5px] text-white/62 truncate mt-0.5">
                           {p.position.split(',').map((pos: string) => pos.trim()).filter(Boolean).join(' · ')}
                         </span>
                       )}
@@ -835,7 +835,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                           p.is_mvp
                             ? 'bg-csc-gold text-csc-tinta border-csc-gold'
-                            : 'bg-white/6 border-white/12 text-white/50'
+                            : 'bg-white/6 border-white/12 text-white/62'
                         }`}
                     >
                       MVP
@@ -861,7 +861,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                           focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
                             p.lineup_status === valor
                               ? 'bg-csc-gold text-csc-tinta'
-                              : 'text-white/55'
+                              : 'text-white/62'
                           }`}
                       >
                         {etiqueta}
@@ -927,7 +927,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                           p.yellow_cards > 0
                             ? 'bg-csc-gold/18 border-csc-gold/45 text-csc-gold'
-                            : 'bg-white/6 border-white/12 text-white/40'
+                            : 'bg-white/6 border-white/12 text-white/62'
                         }`}
                     >
                       <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-gold" aria-hidden="true" />
@@ -944,7 +944,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                           p.red_cards === 1
                             ? 'bg-csc-red/20 border-csc-red/45 text-csc-vermelho-texto'
-                            : 'bg-white/6 border-white/12 text-white/40'
+                            : 'bg-white/6 border-white/12 text-white/62'
                         }`}
                     >
                       <span className="w-2.5 h-3.5 rounded-[2px] bg-csc-red" aria-hidden="true" />

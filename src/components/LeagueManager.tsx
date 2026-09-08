@@ -130,7 +130,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-csc-fundo border border-white/12 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div className="bg-csc-superficie border border-white/12 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         <div className="p-4 sm:p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center overflow-hidden shrink-0">
@@ -144,9 +144,9 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
               <h2 className="text-lg sm:text-xl font-black text-white leading-tight">
                 Grupos e Equipas
               </h2>
-              <p className="text-sm font-bold text-white/50">{tournament?.name} {tournament?.season}</p>
+              <p className="text-sm font-bold text-white/62">{tournament?.name} {tournament?.season}</p>
               {tournament?.organizer_name && (
-                <p className="text-xs font-semibold text-white/40">Organização: {tournament.organizer_name}</p>
+                <p className="text-xs font-semibold text-white/62">Organização: {tournament.organizer_name}</p>
               )}
             </div>
           </div>
@@ -162,7 +162,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {loading ? (
-            <div className="text-center py-10 text-white/50 font-bold">A carregar...</div>
+            <div className="text-center py-10 text-white/62 font-bold">A carregar...</div>
           ) : (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -175,7 +175,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                 </button>
               </div>
 
-              <p className="text-xs text-white/50 -mt-2">
+              <p className="text-xs text-white/62 -mt-2">
                 As jornadas (jogos, datas e resultados) gerem-se na página de Classificações, depois de criares aqui os grupos e as equipas.
               </p>
 
@@ -220,21 +220,21 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
               )}
 
               {groups.length === 0 ? (
-                <div className="text-center py-6 bg-white/4 rounded-xl border border-dashed border-white/15 text-white/50 text-sm">
+                <div className="text-center py-6 bg-white/4 rounded-xl border border-dashed border-white/15 text-white/62 text-sm">
                   Nenhum grupo configurado. Cria o "Grupo Único" ou "Grupo A", "Grupo B".
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {groups.map(g => (
                     <div key={g.id} className="cartao-simples p-4">
-                      <h4 className="font-black text-white mb-3">{g.name} <span className="text-xs text-white/40 font-medium">(Fase {g.phase})</span></h4>
+                      <h4 className="font-black text-white mb-3">{g.name} <span className="text-xs text-white/62 font-medium">(Fase {g.phase})</span></h4>
                       <div className="space-y-2">
                         {teams.filter(t => t.group_id === g.id).map(t => (
                           <div key={t.id} className="text-sm font-medium text-white/80 bg-white/6 px-3 py-2 rounded-lg border border-white/10 flex justify-between items-center">
                             <span className="flex items-center gap-2">
                               {t.opponent_id ? (
                                 <>
-                                  {t.opponent?.logo_url ? <img src={t.opponent.logo_url} alt="" className="w-5 h-5 rounded-full object-cover" /> : <Shield size={16} className="text-white/40" />}
+                                  {t.opponent?.logo_url ? <img src={t.opponent.logo_url} alt="" className="w-5 h-5 rounded-full object-cover" /> : <Shield size={16} className="text-white/62" />}
                                   {t.opponent?.name}
                                 </>
                               ) : (
@@ -250,7 +250,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                           </div>
                         ))}
                         {teams.filter(t => t.group_id === g.id).length === 0 && (
-                          <div className="text-xs text-white/40 italic">Sem equipas neste grupo.</div>
+                          <div className="text-xs text-white/62 italic">Sem equipas neste grupo.</div>
                         )}
                       </div>
                     </div>

@@ -43,7 +43,7 @@ interface CallupRowProps {
 const PASTILHAS = {
   confirmed: { texto: 'Confirmado', classe: 'bg-csc-light/16 border-csc-light/30 text-csc-verde-texto' },
   declined: { texto: 'Recusou', classe: 'bg-csc-red/12 border-csc-red/28 text-csc-vermelho-texto' },
-  pendente: { texto: 'Sem resposta', classe: 'bg-white/8 border-white/14 text-white/55' },
+  pendente: { texto: 'Sem resposta', classe: 'bg-white/8 border-white/14 text-white/62' },
 } as const
 
 export function CallupRow({
@@ -82,7 +82,7 @@ export function CallupRow({
       className={`w-11 h-11 rounded-xl flex items-center justify-center cursor-pointer shrink-0
         transition-transform duration-150 active:scale-97
         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-          aceso ? classeAceso : 'bg-white/6 text-white/50'
+          aceso ? classeAceso : 'bg-white/6 text-white/62'
         }`}
     >
       <Icone size={15} />
@@ -106,7 +106,7 @@ export function CallupRow({
       <span className="flex-1 min-w-0 text-left">
         <span className="block font-display font-bold text-xs text-white truncate">{displayName}</span>
         {posicoes.length > 0 && (
-          <span className="block text-[9px] text-white/40 truncate mt-0.5">{posicoes.join(' · ')}</span>
+          <span className="block text-[9px] text-white/62 truncate mt-0.5">{posicoes.join(' · ')}</span>
         )}
       </span>
     </>

@@ -48,7 +48,7 @@ export function EtiquetaSeccao<T extends React.ElementType = 'h2'>({
   const Elemento = (como ?? 'h2') as React.ElementType
   return (
     <Elemento
-      className={`font-display font-extrabold uppercase text-[9.5px] tracking-[0.18em] text-white/55 ${className}`}
+      className={`font-display font-extrabold uppercase text-[9.5px] tracking-[0.18em] text-white/62 ${className}`}
       {...resto}
     >
       {children}

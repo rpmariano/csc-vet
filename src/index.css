@@ -17,7 +17,18 @@
    * azul institucional ficam demasiado escuros para uma frase.
    *   csc-tinta — o inverso: texto escuro sobre um botão dourado.
    */
-  --color-csc-fundo: #0e1011;
+  --color-csc-fundo: #262d2b;
+  /*
+    Superfície elevada — persianas, modais, painéis de diálogo.
+
+    Antes eram `csc-fundo`, exatamente a cor da página: com o fundo quase
+    preto passava, porque o que separava a persiana da página era a sombra e
+    o escurecimento do fundo. Com o fundo em `#262d2b` uma persiana da cor da
+    página não se distingue dela, e usar a cor antiga punha-a *mais escura* —
+    a elevação a ler-se ao contrário. É um degrau acima do fundo, e é isso
+    que a faz parecer estar por cima.
+  */
+  --color-csc-superficie: #2d3532;
   --color-csc-tinta: #121415;
   --color-csc-verde-texto: #4ecf9d;
   --color-csc-azul-texto: #7fb3e0;
@@ -205,7 +216,7 @@ body {
  * o que dá profundidade ao ecrã escuro.
  */
 .cartao-vidro {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.11);
   border: 1px solid rgba(255, 255, 255, 0.14);
   -webkit-backdrop-filter: blur(26px) saturate(160%);
   backdrop-filter: blur(26px) saturate(160%);
@@ -217,14 +228,14 @@ body {
  * ecrã, e o `backdrop-filter` repetido dezenas de vezes custa caro a pintar
  * num telemóvel antigo. */
 .cartao-simples {
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 22px;
 }
 
 /* Barra de navegação inferior: flutua sobre o conteúdo, com blur. */
 .vidro-barra {
-  background: rgba(24, 28, 29, 0.86);
+  background: rgba(53, 61, 58, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.14);
   -webkit-backdrop-filter: blur(28px) saturate(160%);
   backdrop-filter: blur(28px) saturate(160%);

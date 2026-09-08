@@ -174,7 +174,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
               <span className="block font-display font-extrabold text-[15px] text-white truncate">
                 {adversario.name}
               </span>
-              <span className="block text-[11px] text-white/50 mt-0.5 truncate">
+              <span className="block text-[11px] text-white/62 mt-0.5 truncate">
                 {campoPrincipal ? campoPrincipal.name : 'Sem campo principal'}
               </span>
             </span>
@@ -189,7 +189,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
               ['D', contagem.derrota],
             ] as const).map(([etiqueta, valor]) => (
               <div key={etiqueta} className="cartao-simples p-3 text-center">
-                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/50">
+                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/62">
                   {etiqueta}
                 </p>
                 <p className="font-display font-black text-[20px] text-white mt-1 tabular-nums leading-none">
@@ -204,7 +204,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
             <div className="cartao-simples flex items-center gap-3 px-4 py-3">
               {adversario.contact_name && (
                 <span className="flex items-center gap-1.5 min-w-0 flex-1 text-[11.5px] text-white/70">
-                  <User size={13} className="text-white/45 shrink-0" />
+                  <User size={13} className="text-white/62 shrink-0" />
                   <span className="truncate">{adversario.contact_name}</span>
                 </span>
               )}
@@ -235,13 +235,13 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
                       {campoPrincipal.name}
                     </span>
                     {campoPrincipal.address && (
-                      <span className="block text-[10.5px] text-white/50 mt-0.5 truncate">
+                      <span className="block text-[10.5px] text-white/62 mt-0.5 truncate">
                         {campoPrincipal.address}
                       </span>
                     )}
                   </>
                 ) : (
-                  <span className="block text-[11.5px] text-white/50">Nenhum campo associado</span>
+                  <span className="block text-[11.5px] text-white/62">Nenhum campo associado</span>
                 )}
               </span>
               {/*
@@ -281,7 +281,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
                     </span>
                     <span className="flex-1 min-w-0">
                       <span className="block font-display font-bold text-xs text-white truncate">{prova.nome}</span>
-                      <span className="block text-[9.5px] text-white/45 mt-0.5 truncate">
+                      <span className="block text-[9.5px] text-white/62 mt-0.5 truncate">
                         {[prova.epoca, prova.estado, 'sem jornadas lançadas'].filter(Boolean).join(' · ')}
                       </span>
                     </span>
@@ -295,7 +295,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
                     </Link>
                   </div>
                 ))}
-                <p className="px-4 py-3 border-t border-white/7 text-[10px] leading-normal text-white/42">
+                <p className="px-4 py-3 border-t border-white/7 text-[10px] leading-normal text-white/62">
                   A posição e os pontos aparecem aqui assim que houver jornadas lançadas na prova.
                   Os jogos contra nós contam sempre, mesmo sem classificação.
                 </p>
@@ -310,7 +310,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
               <div className="cartao-simples h-20 animate-pulse" />
             ) : confrontos.length === 0 ? (
               <div className="cartao-simples border-dashed px-4 py-6 text-center">
-                <p className="text-[11.5px] text-white/55">Ainda não jogámos com este adversário.</p>
+                <p className="text-[11.5px] text-white/62">Ainda não jogámos com este adversário.</p>
               </div>
             ) : (
               <div className="cartao-simples overflow-hidden">
@@ -339,7 +339,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
                               : `${siglaClube} ${jogo.home_score}–${jogo.away_score} ${adversario.initials || adversario.name}`
                             : `${siglaClube} vs ${adversario.initials || adversario.name}`}
                         </span>
-                        <span className="block text-[9.5px] text-white/45 mt-0.5 truncate">
+                        <span className="block text-[9.5px] text-white/62 mt-0.5 truncate">
                           {quando.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
                           {jogo.tournament?.name ? ` · ${jogo.tournament.name}` : ''}
                           {' · '}
@@ -378,7 +378,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
           </div>
 
           {confrontos !== null && confrontos.length > 0 && (
-            <p className="text-[10px] leading-normal text-white/42 px-1">
+            <p className="text-[10px] leading-normal text-white/62 px-1">
               Não se pode eliminar um adversário com jogos registados — nesse caso só se edita.
             </p>
           )}

@@ -75,18 +75,18 @@ export const Modal: React.FC<ModalProps> = ({
   const temCabecalho = Boolean(title || description || icon || showCloseButton)
   const cabecalhoBranded = headerStyle === 'brand'
   /*
-    Havia aqui um `tone` com dois valores: 'light' dava `bg-csc-fundo` e
+    Havia aqui um `tone` com dois valores: 'light' dava `bg-csc-superficie` e
     'dark' dava `bg-csc-dark`, que é o verde do clube. No `BottomSheet` a
-    mesma palavra significa o contrário — lá 'dark' é o `bg-csc-fundo`. Um
+    mesma palavra significa o contrário — lá 'dark' é o `bg-csc-superficie`. Um
     modal escrito por analogia com uma persiana saía verde-garrafa por cima do
     fundo preto, e foi o que aconteceu ao editor da ficha de jogo.
     Sem tom nenhum: o painel é sempre o fundo da app.
   */
-  const corFundo = 'bg-csc-fundo text-white'
+  const corFundo = 'bg-csc-superficie text-white'
   const corBordo = 'border-white/10'
   const corTitulo = 'text-white'
-  const corDescricao = 'text-white/50'
-  const corBotaoFechar = 'text-white/40 hover:text-white/80 hover:bg-white/10'
+  const corDescricao = 'text-white/62'
+  const corBotaoFechar = 'text-white/62 hover:text-white/80 hover:bg-white/10'
 
   return (
     <div

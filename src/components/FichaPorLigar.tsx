@@ -160,7 +160,7 @@ export const FichaPorLigar: React.FC<{ perfil: Profile }> = ({ perfil }) => (
           </li>
         ))}
       </ul>
-      <p className="text-[10px] leading-normal text-white/40 mt-3.5 pt-3 border-t border-white/8">
+      <p className="text-[10px] leading-normal text-white/62 mt-3.5 pt-3 border-t border-white/8">
         Não preenchas os teus dados neste estado: criava uma segunda ficha tua, e depois é
         a direção que tem de as juntar.
       </p>

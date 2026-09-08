@@ -54,7 +54,8 @@ Cada ecrã tem um código, visível como crachá no canto superior esquerdo do c
 | 5a | Comunicados | todos |
 | 5b | Perfil | todos |
 | 6a | Clube | todos (bloco Gestão bloqueado) |
-| 7a | Cabeçalho da Home | jogador |
+| **H** | **Home — ecrã inteiro** (em `Home Redesign.dc.html`, cartão 4a) | jogador |
+| 7a | Cabeçalho da Home (detalhe do topo) | jogador |
 | 7b | Competição | jogador |
 | 8a–8d, 8f, 8g | Financeiro e Quotas (6 separadores) | direção |
 | 8e | Novo encargo (popup) | direção |
@@ -96,9 +97,9 @@ O papel vem de `assignedRoles` (`AuthContext`): `player`, `coach`, `admin`.
 
 | Token | Valor | Uso |
 | --- | --- | --- |
-| Fundo | `#0e1011` | fundo dos ecrãs |
-| Fundo de cartão de vidro | `rgba(255,255,255,.09)` + `backdrop-filter: blur(26px) saturate(160%)` | cartão principal |
-| Fundo de cartão simples | `rgba(255,255,255,.055)`, borda `rgba(255,255,255,.1)` | listas e blocos |
+| Fundo | `#262d2b` | fundo dos ecrãs (grafite verde) |
+| Fundo de cartão de vidro | `rgba(255,255,255,.11)` + `backdrop-filter: blur(26px) saturate(160%)` | cartão principal |
+| Fundo de cartão simples | `rgba(255,255,255,.07)`, borda `rgba(255,255,255,.12)` | listas e blocos |
 | Verde escuro | `#164f16` | faixas, realce dos separadores |
 | Verde do clube | `#009662` | confirmações, estados positivos |
 | Verde claro (texto) | `#4ecf9d` | texto sobre fundo escuro |
@@ -106,9 +107,16 @@ O papel vem de `assignedRoles` (`AuthContext`): `player`, `coach`, `admin`.
 | Azul institucional | `#005296` / texto `#7fb3e0` | convívios, posições, etiquetas |
 | Vermelho | `#ef3223` / texto `#f08a7f`, `#f0b8b0` | atrasos, erros, eliminar |
 | Tinta sobre dourado | `#121415` | texto em botões dourados |
-| Barra de navegação | `rgba(24,28,29,.86)` + `blur(28px) saturate(160%)` | barra inferior |
+| Barra de navegação | `rgba(53,61,58,.9)` + `blur(28px) saturate(160%)` | barra inferior |
 
-Faixa geométrica do topo: `linear-gradient(155deg,#164f16,#0a2b16 62%,#0e1011)` com dois blocos `transform: skewY(±12–14deg); border-radius:44px` e a marca de água "CASCAIS" em `font:900 78px/.8 Archivo; color:rgba(255,255,255,.065)`.
+Faixa geométrica do topo: `linear-gradient(155deg,#22691f,#17452a 62%,#262d2b)` com dois blocos `transform: skewY(±12–14deg); border-radius:44px` e a marca de água "CASCAIS" em `font:900 78px/.8 Archivo; color:rgba(255,255,255,.065)`.
+
+**A paleta foi aclarada** (setembro 2026): o fundo passou de `#0e1011` a `#262d2b` e as transparências dos cartões subiram um degrau. Verde do clube, dourado, azul e vermelho não mudaram. É uma troca de tokens — nenhum ecrã muda de estrutura.
+
+Duas consequências que a implementação tem de acompanhar, senão a app fica pior do que antes:
+
+- **As persianas e os modais têm de subir também**, para `rgba(45,53,50,.96–.98)`. Com o fundo em `#262d2b`, a superfície antiga (`rgba(24,28,29,.96)`) fica mais escura do que a página e a elevação lê-se ao contrário.
+- **O texto secundário é branco com alfa, e num fundo mais claro perde contraste.** Os tons de leitura subiram: `.38`–`.55` passam a **`.62`** e `.5` passa a **`.6`**, o que dá ~4,9:1 dentro de um cartão de vidro (o cartão soma branco ao fundo, por isso é a superfície mais exigente). Os rótulos inativos da barra de navegação vivem na lógica, não no template, e são o pior caso da app: passam a **`.82` com `opacity:1`** — o `opacity:.9` que existia multiplicava o alfa e punha-os em 3,65:1. Na faixa verde do topo, mais clara que a página, o texto pequeno precisa de `.85` ou de tinta cheia. Os alfas decorativos ficam como estão: a marca de água (`.05`–`.08`), os chevrons `›` e os dias fora do mês (`.2`–`.35`) não são texto de leitura.
 
 ### Tipografia
 
@@ -150,11 +158,28 @@ Archivo (Google Fonts, pesos 500–900) para títulos, números e etiquetas; Hel
 
 Botões: `transform: scale(.96–.97)` ao premir, `transition .16s`.
 
+## A Home
+
+A Home aprovada é o cartão **4a** do `Home Redesign.dc.html` — não os cartões dos turnos anteriores, que são explorações. O 7a, no outro ficheiro, é só o detalhe do cabeçalho.
+
+Blocos, de cima para baixo:
+
+1. **Cabeçalho** — data, saudação, fotografia do próprio à direita (abre o Perfil) e ícone de comunicados com contador de não lidos.
+2. **Cartão do próximo jogo, em carrossel.** Uma página por jogo marcado. Vai da data ("Sábado, 12 de setembro") até aos traços do carrossel, e inclui o placar previsto, o local e o pedido de resposta com **Vou / Não**. Os traços ficam centrados em baixo, dentro do cartão.
+3. **Por responder, em carrossel** — os compromissos que ainda esperam resposta (treino, convívio), cada um com Vou / Não. Contador de quantos faltam no canto. Traços centrados, iguais aos do cartão do jogo.
+4. **Último jogo** — resultado e cronologia dos golos com assistências. Abre a ficha de jogo.
+5. **Classificação, em carrossel** — uma tabela por competição a decorrer, com a nossa linha em dourado e a posição no canto. Abre as classificações.
+6. **Aniversários deste mês** — informativo, sem ação.
+
+**Os três carrosséis levam o traço com o mesmo efeito minhoca da barra de navegação**, e o traço não passa por trás da barra: a coluna termina acima dela.
+
+Para quem gere, a Home leva ainda o **alerta flutuante de evento sem convocatória** (4c no outro ficheiro), acima da barra.
+
 ## Presença, nesta app, é a resposta à convocatória
 
 Não há presenças marcadas no dia do jogo, e não vai haver. A tabela `attendances` existe mas nunca é escrita em lado nenhum da app — zero `insert`, zero `update`, zero linhas em produção. O que existe é `callups.status`: `called` (convocado, sem resposta), `confirmed` (disse que sim), `declined` (disse que não).
 
-**E quase ninguém responde**: de 1200 convocatórias em produção, 1191 estão em `called`. Oito "sim" e um "não" em toda a base — 0,7% de taxa de resposta.
+**E quase ninguém responde**: de 1252 convocatórias em produção, 1243 estão em `called`. Oito "sim" e um "não" em toda a base — 0,7% de taxa de resposta.
 
 Daí três regras que o desenho já segue e a implementação tem de manter:
 
@@ -169,7 +194,7 @@ A coluna `callups.responded_at` foi acrescentada (migração de 2026-09-07) e é
 1. **Guardar evento leva à convocatória.** Jogo e convívio: ao guardar (2e) abre a convocatória (4f), com "Todos os aptos", "Repetir última" e "Limpar"; lesionados e inativos entram desmarcados. Treino: a convocatória é automática (todos os aptos) e o que aparece é a confirmação (4g). Em qualquer dos casos existe **guardar como rascunho** — ninguém é avisado e o evento não entra no alerta.
 2. **Alerta de evento sem convocatória.** A menos de sete dias, quem gere vê ao entrar uma barra flutuante (4c) que abre uma persiana (4d) com os eventos em falta e o atalho para convocar. Rascunhos não entram.
 3. **Quotas por atleta.** No editar atleta (3c), bloco "Quotas deste atleta": data de início de atividade (preenchida automaticamente ao passar a ativo, editável), data de fim (gravada ao inativar — as quotas seguintes deixam de ser devidas e os totais são recalculados) e meses dispensados de quota.
-4. **Ligação de conta.** Pelo endereço de email, que é a identidade de uma pessoa neste clube — o telefone e o nome não servem de prova. Quando não há ficha com o email do registo, a conta fica por ligar e a direção resolve na ficha (3b → 3d): escolhe entre as contas por ligar, ou corrige o email na ficha. Ligar substitui a anterior, que volta à lista; existe também desligar.
+4. **Ligação de conta.** Automática pelo email do registo. Quando falha, a direção resolve na ficha do atleta (3b → 3d): escolhe entre as contas sem atleta. Ligar substitui a anterior, que volta à lista; existe também desligar.
 5. **Seguro desportivo deixou de ser especial** — é uma categoria como as outras, e os encargos criam-se na página de encargos (8c → 8e), escolhendo a categoria definida em Definições (8g).
 6. **Recuperar palavra-passe** (10c → 10d): não existe hoje. Pedido por email, link de uso único válido uma hora, ecrã de nova palavra-passe. Quem entrou com Google não tem palavra-passe.
 7. **Notificações** (12a, 12b): não existem hoje. Convocatória (com resposta no próprio aviso), comunicado, quota em atraso; para quem gere, evento sem convocatória e ficha por preencher. Preferências no Perfil, com silêncio das 23h às 8h.
@@ -206,31 +231,20 @@ Seis ecrãs foram revistos depois de se medir o que a base de dados tem de facto
 - **4e Agenda com o evento em falta.** O evento sem convocatória **sobe ao topo, fora da lista**. Cada evento normal mostra "16 convocados · 15 sem resp." — a contagem **só aparece a treinador e direção**; na Agenda do jogador as linhas mostram hora e local. Os números do desenho refletem a taxa de resposta real.
 - **9h Ficha do adversário.** O bloco "Torneios e posições" **desenha-se com estado vazio**: `tournament_matches` tem zero linhas, por isso a posição fica a tracejado, com "sem jornadas lançadas" e um atalho para lançar. Os jogos entre nós vêm de `events` e contam sempre. "Mudar campo principal" abre a lista de campos.
 - **9i Ficha do campo.** **Sem mapa embebido** — não há componente nem chave de API. Fica um cartão de morada, "Ver no Maps" (abre o Google Maps por URL, como o `CalendarPage` já faz) e "Copiar morada". Quando o campo não tem morada, os dois botões ficam desativados.
-- **11a Conta criada, ficha por ligar.** O texto anterior estava errado para este clube. As fichas são criadas pela direção **antes** de as pessoas se registarem, e a app tenta ligar sozinha por email, telefone ou nome. O caso que falta é o terceiro: registou-se com um email que não está na ficha e nada mais bateu — hoje **nenhuma conta está neste estado** (a contagem de "1 em 8" que aqui esteve era a condição da RPC em cru, e a conta que ela apanhava é a de um treinador, com a ficha ligada). O ecrã é **inteiro, e substitui a Home** até estar resolvido; diz que a ficha existe e não foi ligada, mostra o email do registo em leitura, e manda falar com a direção, que resolve no 3d. **Sem ação nenhuma para o próprio** — em especial sem "preencher o meu perfil", que criaria uma segunda ficha da mesma pessoa. A condição é a da RPC `admin_contas_por_ligar()`. **Não é "não tem dados de atleta"**: `profiles` são as pessoas do clube e nem todas jogam — um treinador não tem camisola nem posição, e a ficha dele está perfeitamente ligada. Decide-se só por colunas que o próprio não pode escrever (`role`, `roles`, `jersey_number`, `position`), mais a prova de que o clube nunca contou com a pessoa: sem convocatórias, sem estatísticas, sem quotas.
-- **11b Agenda sem nada marcado.** Os aniversários **só aparecem quando não há eventos** — assim a página nunca fica em branco e num mês cheio não competem com os eventos. Saem de `v_players_public.birth_date` (25 das 27 fichas), reaproveitando o código que a Home já tem.
+- **11a Conta criada, ficha por ligar.** O texto anterior estava errado para este clube. As fichas são criadas pela direção **antes** de as pessoas se registarem, e a app tenta ligar sozinha por email, telefone ou nome. O caso que falta é o terceiro: registou-se com um email que não está na ficha e nada mais bateu — hoje, **1 das 8 contas registadas está neste estado**. O ecrã é **inteiro, e substitui a Home** até estar resolvido; diz que a ficha existe e não foi ligada, mostra o email do registo em leitura, e manda falar com a direção, que resolve no 3d. **Sem ação nenhuma para o próprio** — em especial sem "preencher o meu perfil", que criaria uma segunda ficha da mesma pessoa. A condição é a mesma da RPC `admin_contas_sem_atleta()`: conta em `auth.users` sem `jersey_number`, `member_number`, `birth_date` nem `position`.
+- **11b Agenda sem nada marcado.** Os aniversários **só aparecem quando não há eventos** — assim a página nunca fica em branco e num mês cheio não competem com os eventos. Saem de `v_players_public.birth_date` (25 das 28 fichas), reaproveitando o código que a Home já tem.
 
-## Campos novos na base de dados — **já criados**
+## Campos novos na base de dados
 
-Esta secção era a lista do que faltava. Foi tudo criado na fase 1 do redesenho
-(`supabase_redesign_migration.sql`) e fica aqui só como registo:
+Estes ecrãs pressupõem colunas que hoje não existem:
 
-- `profiles.preferred_foot` (pé preferido). As datas de início e fim de quota
-  (`quota_start_date`/`quota_end_date`) já existiam.
-- Meses dispensados de quota: tabela `quota_exemptions`, e não um array na ficha,
-  para caber na RLS por linha.
-- `tournaments.organizer_name` e `image_url` já existiam.
-- Notificações: `notification_preferences` e `notification_deliveries`. A segunda
-  não tem política de INSERT de propósito — quem envia é o lado do servidor, que
-  ainda não existe.
-- Recuperação de palavra-passe: `resetPasswordForEmail` do Supabase, sem tabela.
-- Contas por ligar: função `admin_contas_por_ligar()` (ver 11a acima).
+- `profiles`: pé preferido; data de início e de fim de atividade para efeito de quotas; meses dispensados de quota.
+- `tournaments`: entidade organizadora; imagem do torneio.
+- Notificações: tabela de preferências por utilizador e registo de envios.
+- Recuperação de palavra-passe: usar o fluxo do Supabase (`resetPasswordForEmail`), sem tabela nova.
+- Contas sem atleta: já é possível listar perfis sem ligação, mas convém uma vista para o ecrã 3d.
 
-## Estado atual da app — **retrato de antes do redesenho**
-
-⚠️ Esta secção descreve a app como estava quando o handoff foi escrito, e já não
-corresponde ao código: o nome do clube já vem de `club_settings`, o
-`AdminDashboard` já deu lugar ao ecrã Clube, e todos os ecrãs passaram ao tema
-escuro. Fica como contexto histórico.
+## Estado atual da app (referência)
 
 - `src/pages/Login.tsx` — email e palavra-passe, Google, alternador de registo. O nome do clube está fixo em código; passa a vir de `club_settings`.
 - `src/pages/SettingsPage.tsx` — as sete secções da ficha do atleta; o bloco desportivo é só de leitura.
@@ -251,7 +265,7 @@ escuro. Fica como contexto histórico.
 
 - `Ecrãs Jogador.dc.html` — todos os ecrãs, agrupados por turnos, cada um com o seu crachá.
 - `Mapa de Navegação.dc.html` — o mapa de navegação e as ligações entre ecrãs.
-- `Home Redesign.dc.html` — as primeiras propostas da Home, com a versão aprovada.
+- `Home Redesign.dc.html` — a Home. **A versão a implementar é o cartão 4a**; os cartões dos turnos 1 a 3 são as explorações que levaram até ela e não se implementam.
 - `support.js` — runtime necessário para abrir os dois ficheiros no browser.
 - `public/` — brasão e logótipo.
 

@@ -124,7 +124,7 @@ const LinhaEntrada: React.FC<{ entrada: Entrada; contagem?: string }> = ({ entra
     <entrada.Icone size={20} strokeWidth={2} className="shrink-0 text-csc-gold" />
     <span className="min-w-0 flex-1">
       <span className="block font-display font-extrabold text-sm text-white">{entrada.titulo}</span>
-      <span className="block text-[11px] leading-snug text-white/55 mt-0.5">
+      <span className="block text-[11px] leading-snug text-white/62 mt-0.5">
         {contagem ?? entrada.descricao}
       </span>
     </span>
@@ -207,7 +207,7 @@ const ClubePage: React.FC = () => {
           ['Torneios', numeros?.torneios],
         ] as const).map(([etiqueta, valor]) => (
           <div key={etiqueta} className="cartao-simples p-3">
-            <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/50 leading-tight">
+            <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/62 leading-tight">
               {etiqueta}
             </p>
             <p className="font-display font-black text-[22px] text-white mt-1 tabular-nums leading-none">
@@ -249,7 +249,7 @@ const ClubePage: React.FC = () => {
                 {campoPrincipal.name}
               </span>
               {campoPrincipal.address && (
-                <span className="block text-[11px] leading-snug text-white/55 mt-0.5 truncate">
+                <span className="block text-[11px] leading-snug text-white/62 mt-0.5 truncate">
                   {campoPrincipal.address}
                 </span>
               )}

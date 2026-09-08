@@ -41,7 +41,7 @@ export const CabecalhoEcra: React.FC<CabecalhoEcraProps> = ({
         </p>
       )}
       <TituloEcra className={sobrancelha ? 'mt-2' : ''}>{titulo}</TituloEcra>
-      {legenda && <p className="text-[11px] text-white/55 mt-1.5">{legenda}</p>}
+      {legenda && <p className="text-[11px] text-white/62 mt-1.5">{legenda}</p>}
     </div>
 
     {acoes}

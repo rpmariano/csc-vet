@@ -602,7 +602,7 @@ const AnnouncementsPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="editar-comunicado-titulo"
             tabIndex={-1}
-            className="bg-csc-fundo text-white rounded-3xl max-w-lg w-full p-6 relative shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
+            className="bg-csc-superficie text-white rounded-3xl max-w-lg w-full p-6 relative shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
           >
             <button
               type="button"
@@ -703,7 +703,7 @@ const AnnouncementsPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="apagar-comunicado-titulo"
             tabIndex={-1}
-            className="bg-csc-fundo text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
+            className="bg-csc-superficie text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-csc-red/15 text-csc-vermelho-texto flex items-center justify-center shrink-0">

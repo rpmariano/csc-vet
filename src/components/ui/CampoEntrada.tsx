@@ -47,7 +47,7 @@ export const CampoEntrada: React.FC<CampoEntradaProps> = ({
         {...resto}
       />
       {nota && (
-        <p id={idNota} className={`text-[10.5px] leading-snug mt-1.5 ${temErro ? 'text-csc-vermelho-suave' : 'text-white/55'}`}>
+        <p id={idNota} className={`text-[10.5px] leading-snug mt-1.5 ${temErro ? 'text-csc-vermelho-suave' : 'text-white/62'}`}>
           {nota}
         </p>
       )}

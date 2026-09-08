@@ -83,7 +83,7 @@ const NovaPalavraPasse: React.FC = () => {
         <h1 className="font-display font-black text-[22px] leading-tight text-white tracking-[-0.02em]">
           Nova palavra-passe
         </h1>
-        <p className="text-[11px] text-white/55 mt-1">
+        <p className="text-[11px] text-white/62 mt-1">
           Escolhe uma que só tu saibas. Ficas logo com sessão iniciada.
         </p>
       </div>

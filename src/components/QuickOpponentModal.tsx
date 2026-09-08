@@ -66,13 +66,13 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
         aria-modal="true"
         aria-labelledby="quick-opp-titulo"
         tabIndex={-1}
-        className="bg-csc-fundo rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-white/10 space-y-4 outline-none"
+        className="bg-csc-superficie rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-white/10 space-y-4 outline-none"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Fechar"
-          className="absolute top-4 right-4 text-white/40 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-white/62 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
@@ -83,7 +83,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
           </div>
           <div>
             <h3 id="quick-opp-titulo" className="text-base font-black text-csc-dark">Criar Novo Adversário</h3>
-            <p className="text-[11px] text-white/50">Regista uma nova equipa/clube adversário para seleção imediata.</p>
+            <p className="text-[11px] text-white/62">Regista uma nova equipa/clube adversário para seleção imediata.</p>
           </div>
         </div>
 

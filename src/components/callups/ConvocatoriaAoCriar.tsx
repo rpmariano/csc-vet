@@ -184,7 +184,7 @@ export const ConvocatoriaAoCriar: React.FC<{
             <span className="block font-display font-black text-[17px] text-csc-gold leading-none tabular-nums">
               {quando.getDate()}
             </span>
-            <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/45 mt-0.5">
+            <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/62 mt-0.5">
               {quando.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, '')}
             </span>
           </span>
@@ -192,7 +192,7 @@ export const ConvocatoriaAoCriar: React.FC<{
             <span className="block font-display font-extrabold text-[13px] text-white truncate">
               {evento.titulo}
             </span>
-            <span className="block text-[10.5px] text-white/50 mt-0.5 truncate">
+            <span className="block text-[10.5px] text-white/62 mt-0.5 truncate">
               {quando.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
               {evento.local ? ` · ${evento.local}` : ''}
             </span>
@@ -206,10 +206,10 @@ export const ConvocatoriaAoCriar: React.FC<{
 
         {eTreino && !aAjustar ? (
           <>
-            <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/50">
+            <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62">
               {escolhidos.size} {escolhidos.size === 1 ? 'apto convocado' : 'aptos convocados'}
             </p>
-            <p className="text-[10.5px] leading-relaxed text-white/55 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
+            <p className="text-[10.5px] leading-relaxed text-white/62 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
               Nos treinos a convocatória é automática: entram todos os atletas aptos, ficam de fora
               lesionados e inativos.
             </p>
@@ -217,7 +217,7 @@ export const ConvocatoriaAoCriar: React.FC<{
         ) : (
           <>
             <div className="flex items-center justify-between gap-2">
-              <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/50">
+              <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62">
                 Quem convocas?
               </p>
               <p className="font-display font-black text-[11px] text-csc-gold shrink-0">
@@ -295,7 +295,7 @@ export const ConvocatoriaAoCriar: React.FC<{
                   <span className="block font-display font-bold text-[12.5px] text-white truncate">
                     {nomeCurto(p)}
                   </span>
-                  <span className="block text-[9.5px] text-white/40 truncate mt-0.5">
+                  <span className="block text-[9.5px] text-white/62 truncate mt-0.5">
                     {p.status === 'injured' ? 'lesionado' : p.status === 'inactive' ? 'inativo' : 'apto'}
                   </span>
                 </span>
@@ -308,7 +308,7 @@ export const ConvocatoriaAoCriar: React.FC<{
           })}
         </div>
 
-        <p className="text-[10.5px] leading-relaxed text-white/50">
+        <p className="text-[10.5px] leading-relaxed text-white/62">
           {evento.ativo
             ? 'Convocar avisa logo os escolhidos.'
             : 'Em rascunho o evento fica só para a equipa técnica: ninguém é avisado e não entra no alerta de convocatórias.'}

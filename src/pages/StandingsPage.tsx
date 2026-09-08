@@ -15,7 +15,7 @@ const CAMPO =
   'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55 mb-1.5'
+  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 const nomeEquipa = (team: any) => team?.opponent_id ? (team.opponent?.name || 'Desconhecida') : CLUBE_SIGLA
 
@@ -341,7 +341,7 @@ export const StandingsPage = () => {
               <ChevronsUpDown size={12} className="opacity-70" />
             </button>
             {selectedTournament?.organizer_name && (
-              <span className="text-[10px] text-white/45 truncate">
+              <span className="text-[10px] text-white/62 truncate">
                 · {selectedTournament.organizer_name}
               </span>
             )}
@@ -366,7 +366,7 @@ export const StandingsPage = () => {
               ))}
             </div>
           ) : (
-            <p className="text-xs font-bold text-white/40">
+            <p className="text-xs font-bold text-white/62">
               {tourViewFilter === 'history' ? 'Sem torneios terminados.' : 'Sem torneios agendados ou ativos.'}
             </p>
           )}
@@ -374,9 +374,9 @@ export const StandingsPage = () => {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-white/50 font-bold">A carregar classificações...</div>
+        <div className="text-center py-12 text-white/62 font-bold">A carregar classificações...</div>
       ) : !visibleTournaments.some(t => t.id === selectedTourId) ? (
-        <div className="text-center py-12 text-white/40 font-bold text-sm">
+        <div className="text-center py-12 text-white/62 font-bold text-sm">
           {tourViewFilter === 'history' ? 'Ainda não há torneios terminados.' : 'Não há torneios agendados ou ativos de momento.'}
         </div>
       ) : groups.length === 0 ? (
@@ -429,7 +429,7 @@ export const StandingsPage = () => {
                   <div className="bg-csc-dark px-4 py-3 border-b-2 border-csc-gold">
                     <h3 className="font-display font-black text-white text-[15px] leading-tight">{g.name}</h3>
                     {selectedTournament && (
-                      <p className="text-[10.5px] text-white/55 mt-0.5">
+                      <p className="text-[10.5px] text-white/62 mt-0.5">
                         {selectedTournament.name}
                         {selectedTournament.season ? ` ${selectedTournament.season}` : ''} · Fase {g.phase}
                       </p>
@@ -437,7 +437,7 @@ export const StandingsPage = () => {
                   </div>
                   <div className="sem-barra-rolagem overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                      <thead className="bg-white/5 text-white/45 text-[9px] font-display font-black uppercase tracking-[0.1em]">
+                      <thead className="bg-white/5 text-white/62 text-[9px] font-display font-black uppercase tracking-[0.1em]">
                         <tr>
                           <th scope="col" className="pl-3.5 pr-1 py-2.5 w-7 text-center">#</th>
                           <th scope="col" className="px-2 py-2.5">Equipa</th>
@@ -463,7 +463,7 @@ export const StandingsPage = () => {
                               key={s.team.id}
                               className={`border-t border-white/7 ${isCSC ? 'bg-csc-gold/12' : ''}`}
                             >
-                              <td className={`pl-3.5 pr-1 py-2.5 text-center font-display font-black text-[11px] ${isCSC ? 'text-csc-gold' : 'text-white/40'}`}>
+                              <td className={`pl-3.5 pr-1 py-2.5 text-center font-display font-black text-[11px] ${isCSC ? 'text-csc-gold' : 'text-white/62'}`}>
                                 {index + 1}
                               </td>
                               <td className="px-2 py-2.5">
@@ -483,13 +483,13 @@ export const StandingsPage = () => {
                               <td className={`px-2 py-2.5 text-center font-display font-black text-[15px] tabular-nums ${isCSC ? 'text-csc-gold' : 'text-white'}`}>
                                 {s.p}
                               </td>
-                              <td className="px-2 py-2.5 text-center font-bold text-[11.5px] text-white/55 tabular-nums">{s.j}</td>
+                              <td className="px-2 py-2.5 text-center font-bold text-[11.5px] text-white/62 tabular-nums">{s.j}</td>
                               <td className="px-2 py-2.5 text-center font-bold text-[11.5px] text-csc-verde-texto tabular-nums">{s.v}</td>
                               <td className="px-2 py-2.5 text-center font-bold text-[11.5px] text-csc-gold tabular-nums">{s.e}</td>
                               <td className="px-2 py-2.5 text-center font-bold text-[11.5px] text-csc-vermelho-texto tabular-nums">{s.d}</td>
-                              <td className="px-2 py-2.5 text-center font-bold text-[11.5px] text-white/55 tabular-nums">{s.gm}</td>
-                              <td className="px-2 py-2.5 text-center font-bold text-[11.5px] text-white/55 tabular-nums">{s.gs}</td>
-                              <td className={`pl-2 pr-3.5 py-2.5 text-center font-display font-black text-[11.5px] tabular-nums ${s.dg > 0 ? 'text-csc-verde-texto' : s.dg < 0 ? 'text-csc-vermelho-texto' : 'text-white/40'}`}>
+                              <td className="px-2 py-2.5 text-center font-bold text-[11.5px] text-white/62 tabular-nums">{s.gm}</td>
+                              <td className="px-2 py-2.5 text-center font-bold text-[11.5px] text-white/62 tabular-nums">{s.gs}</td>
+                              <td className={`pl-2 pr-3.5 py-2.5 text-center font-display font-black text-[11.5px] tabular-nums ${s.dg > 0 ? 'text-csc-verde-texto' : s.dg < 0 ? 'text-csc-vermelho-texto' : 'text-white/62'}`}>
                                 {s.dg > 0 ? `+${s.dg}` : s.dg}
                               </td>
                             </tr>
@@ -497,7 +497,7 @@ export const StandingsPage = () => {
                         })}
                         {standings.length === 0 && (
                           <tr>
-                            <td colSpan={10} className="px-4 py-8 text-center text-xs text-white/40 font-bold italic">
+                            <td colSpan={10} className="px-4 py-8 text-center text-xs text-white/62 font-bold italic">
                               Nenhuma equipa neste grupo.
                             </td>
                           </tr>
@@ -517,7 +517,7 @@ export const StandingsPage = () => {
                   */}
                   <div className="border-t border-white/10 px-3.5 py-3.5 space-y-3 bg-black/20">
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/50 flex items-center gap-1.5">
+                      <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 flex items-center gap-1.5">
                         <CalendarDays size={12} className="text-white/35" />
                         Jornadas
                       </h4>
@@ -548,12 +548,12 @@ export const StandingsPage = () => {
                     )}
 
                     {matchdays.length === 0 ? (
-                      <p className="text-[11px] text-white/40 italic py-1">Ainda não há jornadas criadas para este grupo.</p>
+                      <p className="text-[11px] text-white/62 italic py-1">Ainda não há jornadas criadas para este grupo.</p>
                     ) : (
                       <div className="space-y-2.5">
                         {matchdays.map(md => (
                           <div key={md} className="rounded-2xl border border-white/10 overflow-hidden bg-white/4">
-                            <div className="px-3 py-1.5 bg-white/6 font-display font-extrabold text-[9px] tracking-[0.12em] uppercase text-white/50">
+                            <div className="px-3 py-1.5 bg-white/6 font-display font-extrabold text-[9px] tracking-[0.12em] uppercase text-white/62">
                               Jornada {md}
                             </div>
                             <div>
@@ -566,7 +566,7 @@ export const StandingsPage = () => {
                                   <div key={m.id} className="px-3 py-2 border-t border-white/7 first:border-t-0 space-y-1.5">
                                     <div className="flex items-center gap-2 min-w-0">
                                       {m.match_date && (
-                                        <span className="text-[9.5px] font-bold text-white/40 shrink-0 w-9 tabular-nums">
+                                        <span className="text-[9.5px] font-bold text-white/62 shrink-0 w-9 tabular-nums">
                                           {new Date(m.match_date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}
                                         </span>
                                       )}
@@ -595,7 +595,7 @@ export const StandingsPage = () => {
                                         </span>
                                       ) : (
                                         <span className={`shrink-0 px-2 py-0.5 rounded-lg font-display font-black text-[11.5px] tabular-nums ${
-                                          isFinished ? 'bg-white text-csc-tinta' : 'bg-white/10 text-white/45'
+                                          isFinished ? 'bg-white text-csc-tinta' : 'bg-white/10 text-white/62'
                                         }`}>
                                           {isFinished ? `${m.home_score} - ${m.away_score}` : 'vs'}
                                         </span>
@@ -788,7 +788,7 @@ export const StandingsPage = () => {
             </button>
           </div>
 
-          <p className="text-[11px] text-white/40">Os resultados registam-se depois, à medida que os jogos vão acontecendo — não é preciso saber já o resultado.</p>
+          <p className="text-[11px] text-white/62">Os resultados registam-se depois, à medida que os jogos vão acontecendo — não é preciso saber já o resultado.</p>
         </div>
       </Modal>
 

@@ -73,7 +73,7 @@ export const BarraNavegacao: React.FC<BarraNavegacaoProps> = ({ itens, caminho, 
         <item.Icone
           size={19}
           strokeWidth={2}
-          className={ativo ? 'text-csc-tinta' : 'text-white/50'}
+          className={ativo ? 'text-csc-tinta' : 'text-white/82'}
           style={{
             transform: ativo ? 'translateY(8px)' : 'translateY(0)',
             transition: ativo
@@ -81,9 +81,15 @@ export const BarraNavegacao: React.FC<BarraNavegacaoProps> = ({ itens, caminho, 
               : 'transform .34s ease, color .3s ease',
           }}
         />
+        {/*
+          O rótulo inativo é `/82` com opacidade cheia, e não `/62` com
+          `opacity-90`: a opacidade multiplicava o alfa e punha o texto em
+          3,65:1 — o pior contraste da app. Um alfa só, para se ver o que se
+          está a pedir.
+        */}
         <span
           className={`font-display text-[9px] transition-[color,opacity] duration-400 ${
-            ativo ? 'font-extrabold text-csc-tinta opacity-0' : 'font-semibold text-white/50 opacity-90'
+            ativo ? 'font-extrabold text-csc-tinta opacity-0' : 'font-semibold text-white/82 opacity-100'
           }`}
         >
           {item.etiqueta}

@@ -84,7 +84,7 @@ export const AniversariosDoMes: React.FC<{ mes: number }> = ({ mes }) => {
         <span className="block font-display font-bold text-[12.5px] text-white">
           Aniversários deste mês
         </span>
-        <span className="block text-[10.5px] text-white/55 mt-0.5">
+        <span className="block text-[10.5px] text-white/62 mt-0.5">
           {pessoas.map(p => `${p.nome} a ${p.dia}`).join(', ')}
         </span>
       </span>
