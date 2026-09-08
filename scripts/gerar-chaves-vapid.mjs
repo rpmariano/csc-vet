@@ -44,6 +44,11 @@ if (publica.length !== 87 || privada.length !== 43) {
 }
 
 console.log('')
+console.log('  A chave privada abaixo é um segredo. Copia-a daqui direto para os')
+console.log('  segredos do Supabase — não a partilhes num chat, num email, nem')
+console.log('  numa captura de ecrã. Se isso acontecer, corre este script outra')
+console.log('  vez e usa o par novo.')
+console.log('')
 console.log('VAPID_PUBLIC_KEY  (pública — vai no bundle da app)')
 console.log(publica)
 console.log('')
