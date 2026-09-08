@@ -14,10 +14,13 @@ name: Enviar avisos
 #
 # Precisa de dois segredos no repositório:
 #   SUPABASE_FUNCTION_URL   https://vwvsfrzwcwdvbuaxftoh.supabase.co/functions/v1/enviar-avisos
-#   SUPABASE_SERVICE_ROLE_KEY
+#   AVISOS_TOKEN            uma senha combinada, igual à do segredo AVISOS_TOKEN
+#                           da função no Supabase
 #
-# A chave de serviço dá acesso total à base: é só do repositório, e nunca vai
-# para o bundle da app. Ver `docs/avisos-push.md`.
+# O token é só para esta porta — não é a chave de serviço do Supabase. Era, e
+# dava 401: a chave que a plataforma injeta na função e a que se copia do
+# painel podem não ser a mesma, porque o Supabase está a passar as chaves
+# antigas em JWT para o formato novo `sb_secret_…`. Ver `docs/avisos-push.md`.
 
 on:
   schedule:
@@ -36,7 +39,7 @@ jobs:
       - name: Confirmar os segredos
         env:
           URL: ${{ secrets.SUPABASE_FUNCTION_URL }}
-          CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TOKEN: ${{ secrets.AVISOS_TOKEN }}
         run: |
           falta=0
 
@@ -72,12 +75,18 @@ jobs:
             fi
           fi
 
-          if [ -z "$CHAVE" ]; then
-            echo "::error::Falta o segredo SUPABASE_SERVICE_ROLE_KEY."
-            echo "   E a chave service_role, em Project Settings > API Keys no Supabase."
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Falta o segredo AVISOS_TOKEN."
+            echo "   Inventa uma senha longa e poe a mesma nos dois sitios:"
+            echo "   - aqui, em Settings > Secrets and variables > Actions"
+            echo "   - no Supabase, em Project Settings > Edge Functions > Secrets"
             falta=1
           else
-            echo "SUPABASE_SERVICE_ROLE_KEY tem $(printf %s "$CHAVE" | wc -c) caracteres."
+            echo "AVISOS_TOKEN tem $(printf %s "$TOKEN" | wc -c) caracteres."
+            if [ "$(printf %s "$TOKEN" | wc -l)" -gt 0 ]; then
+              echo "::error::O AVISOS_TOKEN tem uma quebra de linha. Cola-o numa linha so."
+              falta=1
+            fi
           fi
 
           [ "$falta" -eq 0 ] || exit 1
@@ -86,15 +95,15 @@ jobs:
       - name: Chamar a função de envio
         env:
           URL: ${{ secrets.SUPABASE_FUNCTION_URL }}
-          CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TOKEN: ${{ secrets.AVISOS_TOKEN }}
         run: |
           # `-w` no fim para o código HTTP aparecer no log mesmo quando corre
           # bem: sem ele, um 200 com `{"enviados":0}` e um 401 são igualmente
-          # silenciosos.
+          # silenciosos. A função responde em texto o que estiver errado.
           resposta=$(curl --silent --show-error --max-time 120 \
             -w '\nHTTP %{http_code}\n' \
             -X POST "$URL" \
-            -H "Authorization: Bearer $CHAVE" \
+            -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json")
           echo "$resposta"
           echo "$resposta" | grep -q 'HTTP 200' || {

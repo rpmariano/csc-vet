@@ -14,7 +14,7 @@
 // em todas as corridas.
 //
 // `verify_jwt` está desligado de propósito: quem chama é um cron sem sessão de
-// utilizador. A autorização é a chave de serviço, verificada aqui em baixo.
+// utilizador. A autorização é o `AVISOS_TOKEN`, verificado aqui em baixo.
 
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -42,12 +42,51 @@ const env = (nome: string): string => {
   return valor
 }
 
+/*
+  Quem chama tem de provar que é o relógio, e não a internet: a função está
+  exposta (`verify_jwt` desligado, porque quem chama é um cron sem sessão).
+
+  A prova é o `AVISOS_TOKEN`, um segredo só para isto, igual dos dois lados.
+  Era a chave de serviço do Supabase, e isso deu 401 sem se perceber porquê:
+  a chave que a plataforma injeta na função e a que se copia do painel podem
+  não ser a mesma — o Supabase está a passar as chaves antigas em JWT para o
+  formato novo `sb_secret_…`, e um projeto pode ter as duas coisas à vista.
+  Um segredo próprio não depende dessa migração.
+
+  Os valores são aparados: uma quebra de linha colada ao fim de um segredo do
+  GitHub é o engano mais fácil de cometer e o mais difícil de ver.
+*/
+function autorizado(req: Request): { ok: true } | { ok: false; porque: string } {
+  const esperado = (Deno.env.get('AVISOS_TOKEN') ?? '').trim()
+  if (!esperado) {
+    return {
+      ok: false,
+      porque: 'O segredo AVISOS_TOKEN não está definido nesta função. ' +
+        'Cria-o em Project Settings > Edge Functions > Secrets, com o mesmo valor ' +
+        'que puseres no segredo AVISOS_TOKEN do GitHub.',
+    }
+  }
+
+  const cabecalho = (req.headers.get('Authorization') ?? '').trim()
+  const enviado = cabecalho.replace(/^Bearer\s+/i, '').trim()
+  if (!enviado) {
+    return { ok: false, porque: 'Veio sem cabeçalho Authorization.' }
+  }
+  if (enviado !== esperado) {
+    return {
+      ok: false,
+      porque: `O token não corresponde (recebido: ${enviado.length} caracteres; ` +
+        `esperado: ${esperado.length}). Confirma que o AVISOS_TOKEN é igual no ` +
+        'GitHub e no Supabase, sem espaços nem quebras de linha.',
+    }
+  }
+  return { ok: true }
+}
+
 Deno.serve(async (req: Request) => {
-  // Só quem tem a chave de serviço manda enviar. A função está exposta na
-  // internet: sem isto, qualquer pessoa podia disparar avisos a toda a gente.
-  const auth = req.headers.get('Authorization') ?? ''
-  if (auth !== `Bearer ${env('SUPABASE_SERVICE_ROLE_KEY')}`) {
-    return new Response('não autorizado', { status: 401 })
+  const permissao = autorizado(req)
+  if (!permissao.ok) {
+    return new Response(permissao.porque, { status: 401 })
   }
 
   webpush.setVapidDetails(

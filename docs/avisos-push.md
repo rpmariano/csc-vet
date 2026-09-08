@@ -45,6 +45,7 @@ Secrets), para a função `enviar-avisos`:
 | `VAPID_PUBLIC_KEY` | a chave pública |
 | `VAPID_PRIVATE_KEY` | a chave privada — **nunca no repositório** |
 | `VAPID_SUBJECT` | `mailto:` mais um email do clube |
+| `AVISOS_TOKEN` | a senha do passo 4, igual à do GitHub |
 
 **3. Pôr a chave pública no build da app.** No `.env` local e no segredo
 `VITE_VAPID_PUBLIC_KEY` do GitHub (o workflow de deploy tem de o passar ao
@@ -62,10 +63,19 @@ em vez de mostrar um botão que não faz nada.
 | Nome | Valor |
 |---|---|
 | `SUPABASE_FUNCTION_URL` | `https://vwvsfrzwcwdvbuaxftoh.supabase.co/functions/v1/enviar-avisos` |
-| `SUPABASE_SERVICE_ROLE_KEY` | a chave de serviço do projeto |
+| `AVISOS_TOKEN` | uma senha longa à tua escolha — a **mesma** que puseres no `AVISOS_TOKEN` dos segredos da função no Supabase |
 
-A chave de serviço dá acesso total à base. Vive só nos segredos do
-repositório e nunca no bundle.
+O `AVISOS_TOKEN` é só a chave desta porta. **Não uses a chave de serviço do
+Supabase para isto**: foi o que estava, e dava 401 sem se perceber porquê — a
+chave que a plataforma injeta na função e a que se copia do painel podem não
+ser a mesma, porque o Supabase está a passar as chaves antigas em JWT para o
+formato novo `sb_secret_…`. Um segredo próprio não depende dessa migração.
+
+Inventa-o como quiseres; serve, por exemplo:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+```
 
 **5. Reconstruir a app.** Um segredo só entra no bundle quando a app é
 construída de novo. Actions → **Deploy to GitHub Pages** → Run workflow.
