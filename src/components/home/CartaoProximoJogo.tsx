@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { MapPin, ExternalLink, CheckCircle2, XCircle, Shield } from 'lucide-react'
 import { CartaoVidro } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
@@ -63,6 +64,7 @@ export const CartaoProximoJogo: React.FC<{
   emblemaClube: string
   aoResponder: (id: string, status: 'confirmed' | 'declined') => void
 }> = ({ jogo, siglaClube, emblemaClube, aoResponder }) => {
+  const navegar = useNavigate()
   const fora = jogo.home_away === 'away'
   const sigla = jogo.opponent?.initials || jogo.opponent?.name?.slice(0, 3).toUpperCase() || 'ADV'
 
@@ -103,8 +105,29 @@ export const CartaoProximoJogo: React.FC<{
     </span>
   )
 
+  /* Todo o bloco abre o evento na Agenda. Não pode ser um `<button>`: tem lá
+     dentro o link do Maps e os dois botões de resposta. Fica o papel e o
+     tratamento das teclas à mão, a convenção do CLAUDE.md. */
+  const abrirEvento = () => {
+    triggerHaptic('light')
+    navegar(`/calendar?event=${jogo.id}`)
+  }
+
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={abrirEvento}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          abrirEvento()
+        }
+      }}
+      aria-label={`Ver o jogo ${equipaCasa} contra ${equipaFora}, ${DATA_LONGA.format(new Date(jogo.date_time))}`}
+      className="flex flex-col gap-[18px] cursor-pointer rounded-[26px]
+        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+    >
       {/* O herói: a data, o confronto e o que falta — direto sobre a faixa. */}
       <div className="px-0.5 pt-[18px]">
         <p className="font-display font-extrabold text-[10px] tracking-[0.24em] uppercase text-csc-gold">
@@ -172,7 +195,7 @@ export const CartaoProximoJogo: React.FC<{
             )}`}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => triggerHaptic('light')}
+            onClick={e => { e.stopPropagation(); triggerHaptic('light') }}
             className="flex items-center gap-2.5 px-[17px] py-3.5 min-h-11 border-t border-white/13
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
@@ -209,7 +232,7 @@ export const CartaoProximoJogo: React.FC<{
                 <div className="flex gap-[11px] mt-3">
                   <button
                     type="button"
-                    onClick={() => aoResponder(jogo.id, 'confirmed')}
+                    onClick={e => { e.stopPropagation(); aoResponder(jogo.id, 'confirmed') }}
                     aria-pressed={jogo.minhaResposta === 'confirmed'}
                     className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
                       flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
@@ -224,7 +247,7 @@ export const CartaoProximoJogo: React.FC<{
                   </button>
                   <button
                     type="button"
-                    onClick={() => aoResponder(jogo.id, 'declined')}
+                    onClick={e => { e.stopPropagation(); aoResponder(jogo.id, 'declined') }}
                     aria-pressed={jogo.minhaResposta === 'declined'}
                     className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
                       flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97

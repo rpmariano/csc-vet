@@ -1,5 +1,7 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { CartaoSimples, EtiquetaSeccao } from '../ui'
+import { triggerHaptic } from '../../utils/haptics'
 import { CarrosselCartoes } from './CarrosselCartoes'
 
 /**
@@ -34,13 +36,36 @@ export const PorResponder: React.FC<{
   pendentes: PendenteDaHome[]
   aoResponder: (id: string, status: 'confirmed' | 'declined') => void
 }> = ({ pendentes, aoResponder }) => {
+  const navegar = useNavigate()
   if (pendentes.length === 0) return null
 
   const paginas = pendentes.map(p => {
     const quando = new Date(p.date_time)
     const diaSemana = DIA_SEMANA.format(quando)
+    const abrir = () => {
+      triggerHaptic('light')
+      navegar(`/calendar?event=${p.id}`)
+    }
+
     return (
-      <CartaoSimples key={p.id} className="px-4 py-3.5">
+      /* O cartão abre o evento. Tem os dois botões de resposta lá dentro, por
+         isso não pode ser um `<button>` — papel e teclas à mão, como no resto
+         da app. */
+      <CartaoSimples
+        key={p.id}
+        role="button"
+        tabIndex={0}
+        onClick={abrir}
+        onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            abrir()
+          }
+        }}
+        aria-label={`Ver ${TIPO[p.tipo].toLowerCase()}: ${p.titulo}, ${DIA.format(quando).replace('.', '')}`}
+        className="px-4 py-3.5 cursor-pointer transition-transform duration-150 active:scale-97
+          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+      >
         <div className="flex items-baseline gap-2">
           <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
             {TIPO[p.tipo]}
@@ -61,7 +86,7 @@ export const PorResponder: React.FC<{
         <div className="flex gap-2 mt-3">
           <button
             type="button"
-            onClick={() => aoResponder(p.id, 'confirmed')}
+            onClick={e => { e.stopPropagation(); aoResponder(p.id, 'confirmed') }}
             className="flex-1 h-11 rounded-[22px] bg-white/9 border border-white/20 text-white
               font-display font-bold text-[13px] cursor-pointer transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -70,7 +95,7 @@ export const PorResponder: React.FC<{
           </button>
           <button
             type="button"
-            onClick={() => aoResponder(p.id, 'declined')}
+            onClick={e => { e.stopPropagation(); aoResponder(p.id, 'declined') }}
             className="flex-1 h-11 rounded-[22px] bg-white/9 border border-white/20 text-white
               font-display font-bold text-[13px] cursor-pointer transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"

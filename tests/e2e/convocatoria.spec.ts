@@ -458,3 +458,58 @@ test.describe('Convocados que ficaram sem condições', () => {
     await expect(page.getByText(/Tirar da convocatória o convocado/)).toBeVisible()
   })
 })
+
+/**
+ * Da Home chega-se ao evento.
+ *
+ * O cartão do próximo jogo e os cartões de "Por responder" mostravam o evento
+ * e não abriam nada: para o ver ou editar era preciso ir à Agenda e procurá-lo.
+ * Ambos levam agora ao detalhe pelo endereço (`/calendar?event=`), e os botões
+ * de resposta e o link do Maps que têm lá dentro não podem abri-lo por trás.
+ */
+test.describe('A Home leva ao evento', () => {
+  const jogo = { ...base, id: 'hj', title: 'Jogo', type: 'match', date_time: DAQUI_A_DIAS(5) }
+  const convivio = { ...base, id: 'hc', title: 'Jantar Reentré', type: 'gathering', date_time: DAQUI_A_DIAS(7) }
+
+  const fixtures = {
+    events: [jogo, convivio],
+    callups: [convocatoriaMinha('hj'), convocatoriaMinha('hc')],
+  }
+
+  async function home(page: import('@playwright/test').Page) {
+    await montarSupabaseFalso(page, fixtures)
+    await page.goto('/csc-vet/')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(500)
+  }
+
+  test('o cartão do próximo jogo abre o jogo', async ({ page }) => {
+    await home(page)
+
+    await page.getByRole('button', { name: /Ver o jogo/ }).click()
+    await expect(page).toHaveURL(/\/calendar\?event=hj/)
+  })
+
+  test('um cartão de "Por responder" abre o seu evento', async ({ page }) => {
+    await home(page)
+
+    await page.getByRole('button', { name: /Ver convívio: Jantar Reentré/ }).click()
+    await expect(page).toHaveURL(/\/calendar\?event=hc/)
+  })
+
+  test('responder não abre o evento por trás', async ({ page }) => {
+    await home(page)
+
+    // No cartão de cima…
+    await page.getByRole('button', { name: 'Sim, vou' }).click()
+    await page.waitForTimeout(400)
+    await expect(page).toHaveURL(/\/csc-vet\/$/)
+
+    // …e no de baixo.
+    await page.getByRole('group', { name: 'Compromissos por responder' })
+      .getByRole('button', { name: 'Vou' })
+      .click()
+    await page.waitForTimeout(400)
+    await expect(page).toHaveURL(/\/csc-vet\/$/)
+  })
+})
