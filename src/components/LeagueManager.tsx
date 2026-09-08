@@ -5,6 +5,8 @@ import { toast } from '../context/ToastContext'
 import { ConfirmModal } from './ConfirmModal'
 import { Modal } from './Modal'
 import { CLUBE_SIGLA } from '../lib/clube'
+import { useClub } from '../context/ClubContext'
+import { equipaDoTorneio } from '../pages/StandingsPage'
 
 interface LeagueManagerProps {
   tournamentId: string
@@ -15,6 +17,7 @@ interface LeagueManagerProps {
 // resultados passou para a Classificação (StandingsPage) — faz mais sentido
 // ficar junto da tabela que esses resultados alimentam, em vez de aqui.
 export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onClose }) => {
+  const { clubSettings } = useClub()
   const [tournament, setTournament] = useState<any>(null)
   const [groups, setGroups] = useState<any[]>([])
   const [teams, setTeams] = useState<any[]>([])
@@ -231,19 +234,23 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                       <div className="space-y-2">
                         {teams.filter(t => t.group_id === g.id).map(t => (
                           <div key={t.id} className="text-sm font-medium text-white/80 bg-white/6 px-3 py-2 rounded-lg border border-white/10 flex justify-between items-center">
-                            <span className="flex items-center gap-2">
-                              {t.opponent_id ? (
-                                <>
-                                  {t.opponent?.logo_url ? <img src={t.opponent.logo_url} alt="" className="w-5 h-5 rounded-full object-cover" /> : <Shield size={16} className="text-white/62" />}
-                                  {t.opponent?.name}
-                                </>
-                              ) : (
-                                <>
-                                  <img src="/csc-vet/cascais-emblem.png" alt="" className="w-5 h-5 object-contain" />
-                                  <span className="font-bold text-csc-azul-texto">{CLUBE_SIGLA}</span>
-                                </>
-                              )}
-                            </span>
+                            {/* Sigla e emblema, como na classificacao: o nome por
+                                extenso nao cabe, e o emblema do proprio clube
+                                vinha de um ficheiro estatico em vez de
+                                `club_settings`. */}
+                            {(() => {
+                              const { sigla, logo, eOClube } = equipaDoTorneio(t, clubSettings)
+                              return (
+                                <span className="flex items-center gap-2 min-w-0">
+                                  {logo ? (
+                                    <img src={logo} alt="" className="w-5 h-5 rounded-full object-contain bg-white shrink-0" />
+                                  ) : (
+                                    <Shield size={16} className={eOClube ? 'text-csc-gold' : 'text-white/62'} />
+                                  )}
+                                  <span className={`truncate ${eOClube ? 'font-bold text-csc-gold' : ''}`}>{sigla}</span>
+                                </span>
+                              )
+                            })()}
                             <button onClick={() => handleRemoveTeam(t.id)} className="text-red-500 hover:bg-csc-red/10 p-1 rounded cursor-pointer">
                               <Trash2 size={14} />
                             </button>

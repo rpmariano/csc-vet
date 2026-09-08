@@ -6,7 +6,8 @@ import { triggerHaptic } from '../utils/haptics'
 import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, ChevronsUpDown } from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
-import { CLUBE_SIGLA } from '../lib/clube'
+import { useClub } from '../context/ClubContext'
+import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
 import { Pastilha } from '../components/ui'
 
 /** Campo e etiqueta dos formulários, o mesmo desenho da Agenda e dos Eventos. */
@@ -17,10 +18,43 @@ const CAMPO =
 const ETIQUETA =
   'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
-const nomeEquipa = (team: any) => team?.opponent_id ? (team.opponent?.name || 'Desconhecida') : CLUBE_SIGLA
+/*
+  Uma equipa de torneio mostra-se pela sigla e pelo emblema, e nao pelo nome
+  por extenso: numa tabela de classificacao com dez colunas, "Clube Atletismo
+  do Montijo" nao cabe e sai truncado a meio, enquanto "CA MONTIJO" cabe.
+  Sao as mesmas funcoes que a Agenda usa nos placares, para o mesmo adversario
+  nao ter duas siglas conforme o ecra.
+
+  A linha do proprio clube e a que tinha o emblema em falta: o `logo` era
+  `isCSC ? null : ...`, portanto o clube ficava sempre com o escudo generico,
+  mesmo tendo emblema em `club_settings`.
+*/
+export const equipaDoTorneio = (
+  team: any,
+  clube: { initials?: string | null; logo_url?: string | null } | null | undefined,
+): { sigla: string; logo: string | null; eOClube: boolean } => {
+  if (!team?.opponent_id) {
+    return {
+      sigla: formatClubSigla(clube?.initials),
+      logo: clube?.logo_url ?? null,
+      eOClube: true,
+    }
+  }
+  return {
+    /* A sigla como a direção a escreveu — "CA Montijo" —, e não a que o
+       `formatOpponentSigla` reconstrói para os placares, que recusa espaços e
+       corta a seis letras: desse lado "Clube Atletismo do Montijo" dá "CADM",
+       que ninguém escreveu. Numa tabela há largura para a sigla a sério; a
+       reconstrução fica de reserva, para um adversário sem sigla nenhuma. */
+    sigla: team.opponent?.initials?.trim() || formatOpponentSigla(team.opponent),
+    logo: team.opponent?.logo_url ?? null,
+    eOClube: false,
+  }
+}
 
 export const StandingsPage = () => {
   const { profile } = useAuth()
+  const { clubSettings } = useClub()
   const canManage = profile?.role === 'admin' || profile?.role === 'coach'
 
   const [tournaments, setTournaments] = useState<any[]>([])
@@ -453,9 +487,7 @@ export const StandingsPage = () => {
                       </thead>
                       <tbody>
                         {standings.map((s, index) => {
-                          const isCSC = s.team.opponent_id === null
-                          const tName = isCSC ? CLUBE_SIGLA : s.team.opponent?.name || 'Desconhecida'
-                          const logo = isCSC ? null : s.team.opponent?.logo_url
+                          const { sigla: tName, logo, eOClube: isCSC } = equipaDoTorneio(s.team, clubSettings)
 
                           return (
                             /* A linha do clube é a dourada — é a que se procura. */
@@ -470,7 +502,7 @@ export const StandingsPage = () => {
                                 <span className="flex items-center gap-2 min-w-0">
                                   <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
                                     {logo ? (
-                                      <img src={logo} alt="" className="w-full h-full object-cover" />
+                                      <img src={logo} alt="" className="w-full h-full object-contain bg-white" />
                                     ) : (
                                       <Shield size={12} className={isCSC ? 'text-csc-gold' : 'text-white/30'} />
                                     )}
@@ -570,7 +602,7 @@ export const StandingsPage = () => {
                                           {new Date(m.match_date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}
                                         </span>
                                       )}
-                                      <span className="flex-1 text-right font-display font-bold text-[11.5px] text-white/85 truncate">{nomeEquipa(homeTeam)}</span>
+                                      <span className="flex-1 text-right font-display font-bold text-[11.5px] text-white/85 truncate">{equipaDoTorneio(homeTeam, clubSettings).sigla}</span>
                                       {isEditing ? (
                                         <span className="flex items-center gap-1 shrink-0">
                                           <input
@@ -578,7 +610,7 @@ export const StandingsPage = () => {
                                             min="0"
                                             value={editHomeScore}
                                             onChange={e => setEditHomeScore(e.target.value)}
-                                            aria-label={`Golos de ${nomeEquipa(homeTeam)}`}
+                                            aria-label={`Golos de ${equipaDoTorneio(homeTeam, clubSettings).sigla}`}
                                             className="w-10 h-9 px-1 rounded-lg text-center font-display font-black text-[12px] bg-white text-csc-tinta outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
                                             placeholder="-"
                                           />
@@ -588,7 +620,7 @@ export const StandingsPage = () => {
                                             min="0"
                                             value={editAwayScore}
                                             onChange={e => setEditAwayScore(e.target.value)}
-                                            aria-label={`Golos de ${nomeEquipa(awayTeam)}`}
+                                            aria-label={`Golos de ${equipaDoTorneio(awayTeam, clubSettings).sigla}`}
                                             className="w-10 h-9 px-1 rounded-lg text-center font-display font-black text-[12px] bg-white text-csc-tinta outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
                                             placeholder="-"
                                           />
@@ -600,7 +632,7 @@ export const StandingsPage = () => {
                                           {isFinished ? `${m.home_score} - ${m.away_score}` : 'vs'}
                                         </span>
                                       )}
-                                      <span className="flex-1 text-left font-display font-bold text-[11.5px] text-white/85 truncate">{nomeEquipa(awayTeam)}</span>
+                                      <span className="flex-1 text-left font-display font-bold text-[11.5px] text-white/85 truncate">{equipaDoTorneio(awayTeam, clubSettings).sigla}</span>
                                     </div>
 
                                     <div className="flex items-center gap-1.5">
@@ -646,7 +678,7 @@ export const StandingsPage = () => {
                                                 onClick={() => startEditMatch(m)}
                                                 className="w-11 h-11 rounded-xl bg-white/6 text-white/60 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                                                 title={isFinished ? 'Editar resultado' : 'Registar resultado'}
-                                                aria-label={`${isFinished ? 'Editar' : 'Registar'} resultado de ${nomeEquipa(homeTeam)} com ${nomeEquipa(awayTeam)}`}
+                                                aria-label={`${isFinished ? 'Editar' : 'Registar'} resultado de ${equipaDoTorneio(homeTeam, clubSettings).sigla} com ${equipaDoTorneio(awayTeam, clubSettings).sigla}`}
                                               >
                                                 <Pencil size={14} />
                                               </button>
@@ -655,7 +687,7 @@ export const StandingsPage = () => {
                                                 onClick={() => setMatchToDelete(m.id)}
                                                 className="w-11 h-11 rounded-xl bg-white/6 text-white/60 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                                                 title="Apagar jogo"
-                                                aria-label={`Apagar o jogo de ${nomeEquipa(homeTeam)} com ${nomeEquipa(awayTeam)}`}
+                                                aria-label={`Apagar o jogo de ${equipaDoTorneio(homeTeam, clubSettings).sigla} com ${equipaDoTorneio(awayTeam, clubSettings).sigla}`}
                                               >
                                                 <Trash2 size={14} />
                                               </button>
@@ -749,7 +781,7 @@ export const StandingsPage = () => {
                 >
                   <option value="">Casa...</option>
                   {teams.filter(t => t.group_id === jornadaModalGroupId).map(t => (
-                    <option key={t.id} value={t.id}>{nomeEquipa(t)}</option>
+                    <option key={t.id} value={t.id}>{equipaDoTorneio(t, clubSettings).sigla}</option>
                   ))}
                 </select>
                 <span className="text-white/30 font-black text-xs">vs</span>
@@ -761,7 +793,7 @@ export const StandingsPage = () => {
                 >
                   <option value="">Fora...</option>
                   {teams.filter(t => t.group_id === jornadaModalGroupId).map(t => (
-                    <option key={t.id} value={t.id}>{nomeEquipa(t)}</option>
+                    <option key={t.id} value={t.id}>{equipaDoTorneio(t, clubSettings).sigla}</option>
                   ))}
                 </select>
                 {jornadaFixtures.length > 1 ? (

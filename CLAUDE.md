@@ -191,6 +191,16 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **Uma equipa de torneio mostra-se pela sigla e pelo emblema** — nunca pelo
+  nome por extenso, que numa tabela de dez colunas sai truncado a meio. O
+  `equipaDoTorneio()` da `StandingsPage` é o único sítio que decide isso, e a
+  gestão do torneio usa-o também. **A sigla de um adversário é a que a direção
+  escreveu na ficha** (`opponents.initials`), e só na falta dela é que se
+  recorre ao `formatOpponentSigla()`: esse é para os placares apertados, recusa
+  espaços e corta a seis letras — de "Clube Atletismo do Montijo" faz "CADM",
+  que ninguém escreveu. O emblema do próprio clube vem de `club_settings`, e
+  não de um ficheiro estático nem de um `null` fixo, que era o que punha o
+  escudo genérico na linha do clube.
 - **Os controlos do mês vivem dentro do cartão do calendário**, com o "Hoje"
   entre as duas setas — não no cabeçalho do ecrã, longe do que mudam e
   encostados ao funil dos filtros. **E o mês passa com o dedo:** um arrasto
