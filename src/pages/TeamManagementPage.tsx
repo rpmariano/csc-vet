@@ -961,7 +961,9 @@ const TeamManagementPage: React.FC = () => {
       */}
       <CabecalhoEcra
         titulo="Plantel"
-        sobrancelha={`${totalCount} ${totalCount === 1 ? 'membro' : 'membros'}${epoca ? ` · época ${epoca}` : ''}`}
+        /* Só a contagem: com a época atrás, a sobrancelha não cabia ao lado
+           do canto do cabeçalho e saía cortada a meio do ano. */
+        sobrancelha={`${totalCount} ${totalCount === 1 ? 'membro' : 'membros'}`}
         className="mb-1"
         acoes={isCoachOrAdmin ? (
           <button

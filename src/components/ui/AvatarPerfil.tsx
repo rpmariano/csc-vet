@@ -1,6 +1,5 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Pencil } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 /**
@@ -11,21 +10,19 @@ import { useAuth } from '../../context/AuthContext'
  * número a inicial do nome; o círculo nunca fica vazio, porque é ele que
  * marca o canto.
  *
- * O lápis é o convite a editar, e só aparece na Home — nos outros ecrãs a
- * fotografia é um atalho discreto, não uma ação.
+ * Tinha um lápis no canto, na Home, a convidar a editar. Saiu: o cabeçalho é o
+ * mesmo em toda a app, e a fotografia é sempre a mesma porta — um lápis num
+ * ecrã e não nos outros fazia parecer que abriam sitios diferentes.
  */
 
 export interface AvatarPerfilProps {
-  /** 46 na Home, 44 nos cabeçalhos de ecrã. */
+  /** 38 nos cabeçalhos; 44 por omissão. */
   tamanho?: number
-  /** Mostra o lápis no canto inferior. */
-  comLapis?: boolean
   className?: string
 }
 
 export const AvatarPerfil: React.FC<AvatarPerfilProps> = ({
   tamanho = 44,
-  comLapis = false,
   className = '',
 }) => {
   const { profile } = useAuth()
@@ -62,16 +59,6 @@ export const AvatarPerfil: React.FC<AvatarPerfilProps> = ({
         />
       ) : (
         <span>{dentro}</span>
-      )}
-
-      {comLapis && (
-        <span
-          aria-hidden="true"
-          className="absolute -right-1 -bottom-1 w-[18px] h-[18px] rounded-full bg-[#181c1d]
-            border border-white/20 flex items-center justify-center text-white/75"
-        >
-          <Pencil size={9} strokeWidth={2.5} />
-        </span>
       )}
     </Link>
   )

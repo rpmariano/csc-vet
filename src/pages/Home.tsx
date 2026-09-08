@@ -10,7 +10,7 @@ import {
   textoConvocatoriaFechada,
 } from './CalendarPage'
 import { triggerHaptic } from '../utils/haptics'
-import { AvatarPerfil, CartaoVidro, CartaoSimples, EtiquetaSeccao } from '../components/ui'
+import { AvatarPerfil, CartaoVidro, CartaoSimples, EtiquetaSeccao, PastilhaEstado } from '../components/ui'
 import { AnnouncementsInboxButton } from '../components/AnnouncementsInbox'
 import {
   useEventosSemConvocatoria,
@@ -75,12 +75,6 @@ function primeiroNome(
   if (preferido) return preferido
   const proprio = p?.name?.trim()
   return proprio ? proprio.split(/\s+/)[0] : 'atleta'
-}
-
-const ESTADO_CLINICO: Record<string, { texto: string; classe: string }> = {
-  active: { texto: 'Apto', classe: 'bg-csc-light/20 border-csc-light/35 text-csc-verde-texto' },
-  injured: { texto: 'Lesionado', classe: 'bg-csc-red/15 border-csc-red/32 text-csc-vermelho-texto' },
-  inactive: { texto: 'Inativo', classe: 'bg-white/10 border-white/20 text-white/62' },
 }
 
 interface EventoBruto {
@@ -359,7 +353,6 @@ const Home: React.FC = () => {
 
   if (!profile) return null
 
-  const estado = ESTADO_CLINICO[profile.status ?? 'active'] ?? ESTADO_CLINICO.active
   const emblema = clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'
   const sigla = formatClubSigla(clubSettings?.initials)
   const hojeDia = new Date().getDate()
@@ -389,15 +382,9 @@ const Home: React.FC = () => {
             {epoca ? `Época ${epoca}` : saudacao()}
           </p>
         </div>
-        {!semFicha && (
-          <span
-            className={`font-display font-bold text-[11.5px] px-2.5 h-7 flex items-center rounded-[14px] border flex-none ${estado.classe}`}
-          >
-            {estado.texto}
-          </span>
-        )}
+        {!semFicha && <PastilhaEstado />}
         <AnnouncementsInboxButton tone="dark" size="md" />
-        <AvatarPerfil tamanho={38} comLapis />
+        <AvatarPerfil tamanho={38} />
       </header>
 
       {estadoDaFicha === 'a-verificar' ? (

@@ -191,6 +191,16 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **O canto do cabeçalho é o mesmo em todos os ecrãs**: estado clínico
+  (`<PastilhaEstado>`), sino dos comunicados e fotografia, por esta ordem,
+  dentro do `<CabecalhoEcra>` — a Home tem o seu próprio cabeçalho (o clube e a
+  época no lugar do título) mas com o mesmo canto. Estavam só na Home, e nos
+  outros ecrãs ficava a fotografia sozinha: um comunicado novo não tinha por
+  onde ser visto sem passar pela Home. A sobrancelha é `truncate`, numa linha
+  só — com o canto sempre a levar três coisas, uma sobrancelha que quebrasse
+  fazia o cabeçalho mudar de altura de ecrã para ecrã. **A fotografia não leva
+  lápis**: é sempre a mesma porta, e um lápis num ecrã e não nos outros fazia
+  parecer que abriam sítios diferentes.
 - **Uma equipa de torneio mostra-se pela sigla e pelo emblema** — nunca pelo
   nome por extenso, que numa tabela de dez colunas sai truncado a meio. O
   `equipaDoTorneio()` da `StandingsPage` é o único sítio que decide isso, e a

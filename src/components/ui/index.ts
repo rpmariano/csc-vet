@@ -8,6 +8,7 @@
 
 export { CartaoVidro, CartaoSimples } from './Cartoes'
 export { AvatarPerfil } from './AvatarPerfil'
+export { PastilhaEstado } from './PastilhaEstado'
 export { CabecalhoEcra } from './CabecalhoEcra'
 export { FaixaTopo } from './FaixaTopo'
 export { MolduraEntrada } from './MolduraEntrada'

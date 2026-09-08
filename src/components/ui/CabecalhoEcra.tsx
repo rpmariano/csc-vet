@@ -1,15 +1,19 @@
 import React from 'react'
 import { AvatarPerfil } from './AvatarPerfil'
+import { PastilhaEstado } from './PastilhaEstado'
 import { TituloEcra } from './Tipografia'
+import { AnnouncementsInboxButton } from '../AnnouncementsInbox'
 
 /**
- * O cabeçalho de um ecrã: uma sobrancelha dourada, o nome do ecrã em grande e
- * a fotografia no canto.
+ * O cabeçalho de um ecrã: uma sobrancelha dourada, o nome do ecrã em grande e,
+ * no canto, o estado clínico, o sino dos comunicados e a fotografia.
  *
- * No redesenho não há barra de topo comum a todos os ecrãs — cada um tem o seu
- * título, e o que se repete é só a fotografia, que abre o Perfil. A Home é a
- * exceção: em vez de um título tem a saudação, e é o único sítio onde aparece
- * também o sino dos comunicados.
+ * No redesenho não há barra de topo, mas **o canto é o mesmo em todos os
+ * ecrãs**: o estado ("Apto"), o sino e a fotografia que abre o Perfil. Estavam
+ * só na Home, e nos outros ecrãs ficava a fotografia sozinha — um comunicado
+ * novo não tinha por onde ser visto sem passar pela Home, e o estado clínico
+ * só se lia lá. A Home tem o seu próprio cabeçalho (o clube e a época no lugar
+ * do título), mas com o mesmo canto.
  *
  * A sobrancelha ("ÉPOCA 25/26", "GESTÃO") é opcional e serve para situar sem
  * gastar uma linha de texto corrido.
@@ -36,7 +40,10 @@ export const CabecalhoEcra: React.FC<CabecalhoEcraProps> = ({
   <header className={`flex items-center gap-3 pt-safe ${className}`}>
     <div className="flex-1 min-w-0">
       {sobrancelha && (
-        <p className="font-display font-extrabold text-[10px] tracking-[0.24em] text-csc-gold uppercase">
+        /* Numa linha só, e cortada se não couber: com o canto sempre a levar
+           o estado, o sino e a fotografia, uma sobrancelha que quebrasse fazia
+           o cabeçalho mudar de altura de ecrã para ecrã. */
+        <p className="font-display font-extrabold text-[10px] tracking-[0.24em] text-csc-gold uppercase truncate">
           {sobrancelha}
         </p>
       )}
@@ -45,7 +52,9 @@ export const CabecalhoEcra: React.FC<CabecalhoEcraProps> = ({
     </div>
 
     {acoes}
-    <AvatarPerfil />
+    <PastilhaEstado />
+    <AnnouncementsInboxButton tone="dark" size="md" />
+    <AvatarPerfil tamanho={38} />
   </header>
 )
 
