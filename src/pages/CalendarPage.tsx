@@ -1269,6 +1269,35 @@ const CalendarPage: React.FC = () => {
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
   }
 
+  /*
+    Passar o mês com o dedo, sobre o calendário.
+
+    Só conta como arrasto lateral se for mesmo lateral: o gesto natural nesta
+    página é rolar para baixo, e um calendário que mudasse de mês a meio de um
+    scroll era pior do que não ter gesto nenhum. Daí o mínimo de 45px e a
+    exigência de o desvio horizontal valer uma vez e meia o vertical.
+
+    As setas ficam: o gesto não chega ao teclado nem a quem usa leitor de ecrã.
+  */
+  const arrastoRef = useRef<{ x: number; y: number } | null>(null)
+
+  const aoComecarArrasto = (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    arrastoRef.current = t ? { x: t.clientX, y: t.clientY } : null
+  }
+
+  const aoAcabarArrasto = (e: React.TouchEvent) => {
+    const inicio = arrastoRef.current
+    arrastoRef.current = null
+    const t = e.changedTouches[0]
+    if (!inicio || !t) return
+    const dx = t.clientX - inicio.x
+    const dy = t.clientY - inicio.y
+    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    if (dx < 0) handleNextMonth()
+    else handlePrevMonth()
+  }
+
   const handleMonthChange = (newMonth: number) => {
     triggerHaptic('light')
     setCurrentDate(prev => new Date(prev.getFullYear(), newMonth, 1))
@@ -1982,26 +2011,7 @@ const CalendarPage: React.FC = () => {
         className="mb-3"
         acoes={
           <div className="flex items-center gap-2 flex-none">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              aria-label="Mês anterior"
-              className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
-                transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
-              <ChevronLeft size={17} />
-            </button>
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              aria-label="Mês seguinte"
-              className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
-                transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
-              <ChevronRight size={17} />
-            </button>
+            {/* As setas de mês estão no calendário, ao pé do que mudam. */}
             <button
               type="button"
               onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
@@ -2070,15 +2080,22 @@ const CalendarPage: React.FC = () => {
             convívio, dourado jogo — e quando há mais do que um mostram-se até
             três, que é o que cabe.
           */}
-          <div className="cartao-vidro px-3 pt-3.5 pb-3">
-            {/* Saltos longos: mês, ano, ou voltar a hoje. As setas de mês
-                estão no cabeçalho do ecrã. */}
-            <div className="flex items-center gap-2 px-1 pb-3">
+          <div
+            className="cartao-vidro px-3 pt-3.5 pb-3"
+            onTouchStart={aoComecarArrasto}
+            onTouchEnd={aoAcabarArrasto}
+          >
+            {/* Os controlos do mês, ao pé do que mudam: o mês e o ano em
+                saltos longos à esquerda, e à direita as setas com o "Hoje"
+                pelo meio. Estavam no cabeçalho do ecrã, longe do calendário e
+                encostados ao funil dos filtros, que não tem nada a ver com
+                eles. */}
+            <div className="flex items-center gap-1.5 px-1 pb-3">
               <select
                 value={currentDate.getMonth()}
                 onChange={e => handleMonthChange(Number(e.target.value))}
                 aria-label="Mês"
-                className="h-11 px-3 rounded-[18px] bg-white/8 border border-white/15 text-white font-display font-bold text-xs
+                className="h-11 min-w-0 flex-1 px-2.5 rounded-[18px] bg-white/8 border border-white/15 text-white font-display font-bold text-[11px]
                   outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-csc-gold"
               >
                 {monthNames.map((nome, idx) => (
@@ -2090,7 +2107,7 @@ const CalendarPage: React.FC = () => {
                 value={currentDate.getFullYear()}
                 onChange={e => handleYearChange(Number(e.target.value))}
                 aria-label="Ano"
-                className="h-11 px-3 rounded-[18px] bg-white/8 border border-white/15 text-white font-display font-bold text-xs
+                className="h-11 min-w-0 flex-none px-2.5 rounded-[18px] bg-white/8 border border-white/15 text-white font-display font-bold text-[11px]
                   outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-csc-gold"
               >
                 {anosDisponiveis.map(ano => (
@@ -2098,15 +2115,37 @@ const CalendarPage: React.FC = () => {
                 ))}
               </select>
 
-              <button
-                type="button"
-                onClick={handleToday}
-                className="ml-auto min-h-11 px-4 rounded-[18px] bg-csc-gold text-csc-tinta font-display font-bold text-xs cursor-pointer
-                  transition-transform duration-150 active:scale-97
-                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-              >
-                Hoje
-              </button>
+              <div className="ml-auto flex items-center gap-1.5 flex-none">
+                <button
+                  type="button"
+                  onClick={handlePrevMonth}
+                  aria-label="Mês anterior"
+                  className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
+                    transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                >
+                  <ChevronLeft size={17} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToday}
+                  className="min-h-11 px-3 rounded-[18px] bg-csc-gold text-csc-tinta font-display font-bold text-xs cursor-pointer
+                    transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                >
+                  Hoje
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  aria-label="Mês seguinte"
+                  className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
+                    transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                >
+                  <ChevronRight size={17} />
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-7 gap-0.5 mb-1.5">

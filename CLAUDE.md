@@ -191,6 +191,14 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **Os controlos do mês vivem dentro do cartão do calendário**, com o "Hoje"
+  entre as duas setas — não no cabeçalho do ecrã, longe do que mudam e
+  encostados ao funil dos filtros. **E o mês passa com o dedo:** um arrasto
+  lateral sobre o cartão avança ou recua. O gesto exige 45px de desvio
+  horizontal **e** que esse desvio valha uma vez e meia o vertical — o gesto
+  natural nesta página é rolar para baixo, e um calendário que mudasse de mês a
+  meio de um scroll era pior do que não ter gesto nenhum. As setas ficam: um
+  gesto não chega ao teclado nem a quem usa leitor de ecrã.
 - **Meses dispensados de quota (ecrã 3c): a fila segue a época, não o
   calendário.** Começa em `season_start_month` e dá a volta aos doze meses. Os
   que o clube inteiro não paga (`financial_settings.quota_excluded_months`) e os
