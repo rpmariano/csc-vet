@@ -82,9 +82,15 @@ const Layout: React.FC = () => {
   return (
     <div className="relative min-h-dvh flex flex-col">
       {/* A faixa é da moldura, não de cada ecrã: passa por trás do cabeçalho
-          e sangra até às margens da coluna, como no protótipo. Um ecrã que
-          precise de uma capa mais alta desenha a sua por cima. */}
-      <FaixaTopo />
+          e sangra até às margens da coluna, como no protótipo.
+
+          Na Home é mais alta porque lá o confronto do próximo jogo é o título
+          do ecrã — 44px de "GDPCC vs CSC" e a linha do que falta —, e a capa
+          tem de o cobrir até ao cartão de vidro, que começa aos ~260px e é
+          translúcido de propósito para a deixar passar. A altura vem daqui e
+          não de uma segunda faixa desenhada pela Home: duas faixas seriam dois
+          conjuntos de blocos inclinados sobrepostos. */}
+      <FaixaTopo altura={location.pathname === '/' ? 340 : 250} />
 
       {/*
         Aviso de quota em atraso. Estava no cartão de Quotas da gaveta, que

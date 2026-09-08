@@ -191,6 +191,15 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **Na Home, o próximo jogo é o título do ecrã.** A data em sobrancelha
+  dourada, os dois clubes em 44px sobre a faixa verde e a linha do que falta
+  vivem fora do cartão de vidro, que começa nos emblemas — é o cartão 4a, e é
+  o que faz a Home abrir no jogo em vez de abrir num bloco de informação. Duas
+  consequências: o herói vai **dentro** da página do carrossel (com dois jogos
+  marcados, arrastar tem de mudar o título e o cartão ao mesmo tempo), e a
+  `<FaixaTopo>` da Home é mais alta — 340px contra os 250px do resto —, altura
+  que vem do `Layout` pela rota e não de uma segunda faixa desenhada pela Home,
+  que sobreporia dois conjuntos de blocos inclinados.
 - **A convocatória é o que está em `callups`, e mais nada — não se filtra por
   elegibilidade.** Quem foi convocado apto e ficou lesionado ou inativo antes do
   jogo continua na lista, marcado com o seu estado (`impedimento` no

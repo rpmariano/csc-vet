@@ -366,21 +366,38 @@ const Home: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-2">
-      {/* Cabeçalho: quem sou, e o sino dos comunicados — que só existe aqui. */}
+      {/*
+        Cabeçalho: o clube, a época, o estado clínico e o sino dos comunicados
+        — que só existe aqui.
+
+        Eram duas linhas: uma com "Bom dia, Ricardo" e outra, por baixo, com o
+        clube e a época. O desenho junta tudo numa, e é o que liberta a altura
+        para o jogo abrir a página. O nome do próprio ficou onde faz falta:
+        atrás do avatar, que é a porta do perfil.
+      */}
       <header className="flex items-center gap-3 pt-safe">
         <img
           src={emblema}
           alt=""
-          className="w-[42px] h-[42px] rounded-full bg-white object-contain p-[3px] flex-none"
+          className="w-[38px] h-[38px] rounded-full bg-white object-contain p-[3px] flex-none"
         />
         <div className="flex-1 min-w-0">
-          <p className="text-[10.5px] text-white/62">{semFicha ? 'Bem-vindo,' : saudacao()}</p>
-          <p className="font-display font-extrabold text-lg text-white truncate mt-0.5">
-            {primeiroNome(profile)}
+          <p className="font-display font-extrabold text-[13.5px] text-white truncate">
+            {semFicha ? `${sigla} Veteranos` : `${sigla} Veteranos`}
+          </p>
+          <p className="text-[10.5px] text-white/60 truncate mt-px">
+            {epoca ? `Época ${epoca}` : saudacao()}
           </p>
         </div>
+        {!semFicha && (
+          <span
+            className={`font-display font-bold text-[11.5px] px-2.5 h-7 flex items-center rounded-[14px] border flex-none ${estado.classe}`}
+          >
+            {estado.texto}
+          </span>
+        )}
         <AnnouncementsInboxButton tone="dark" size="md" />
-        <AvatarPerfil tamanho={46} comLapis />
+        <AvatarPerfil tamanho={38} comLapis />
       </header>
 
       {estadoDaFicha === 'a-verificar' ? (
@@ -389,18 +406,6 @@ const Home: React.FC = () => {
         <FichaPorLigar perfil={profile} />
       ) : (
         <>
-          {/* Clube, época e estado clínico — a segunda linha do cabeçalho no 4a. */}
-          <div className="flex items-center gap-2">
-            <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62">
-              {sigla} Veteranos{epoca ? ` · Época ${epoca}` : ''}
-            </span>
-            <span
-              className={`ml-auto font-display font-bold text-[9.5px] px-2.5 py-1 rounded-[9px] border flex-none ${estado.classe}`}
-            >
-              {estado.texto}
-            </span>
-          </div>
-
           {/* Eventos por convocar, só a quem gere (4c). */}
           <FaixaSemConvocatoria eventos={eventosSemConvocatoria} aoAbrir={() => setAlertaAberto(true)} />
           <PersianaSemConvocatoria

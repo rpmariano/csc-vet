@@ -6,14 +6,21 @@ import { triggerHaptic } from '../../utils/haptics'
 /**
  * Uma página do carrossel do próximo jogo (bloco 2 da Home).
  *
- * Vai da data até ao pedido de resposta: o confronto com os emblemas e a
- * condição de casa ou fora, quanto falta, a concentração e o pontapé de saída
- * lado a lado, o campo com o caminho para o Maps, e o Sim/Não com a contagem
- * de quem já confirmou.
+ * **O confronto é o título do ecrã, não uma linha dentro do cartão.** No
+ * desenho da Home o jogo abre a página: a data em sobrancelha dourada, os dois
+ * clubes em 44px sobre a faixa verde, e por baixo a pastilha do que falta e a
+ * natureza do jogo. Só depois vem o cartão de vidro, que começa nos emblemas.
+ * Estava tudo lá dentro, em corpo pequeno, e a Home não tinha assunto — abria
+ * num cartão de informação em vez de abrir no jogo.
  *
- * **Sem meteorologia.** O desenho tem "19° · vento 24 km/h" no cartão. A app
- * não tem fonte de meteorologia nenhuma — nem chave, nem serviço — e inventar
- * um número era pior do que não o ter. Fica registado como proposta.
+ * O herói vive dentro da página do carrossel, e não fora dele: com dois jogos
+ * marcados, arrastar tem de mudar o título e o cartão ao mesmo tempo, senão a
+ * data em cima passa a mentir sobre o cartão em baixo.
+ *
+ * **Sem meteorologia.** O desenho tem "19° · vento 24 km/h" ao lado do
+ * pontapé de saída. A app não tem fonte de meteorologia nenhuma — nem chave,
+ * nem serviço — e inventar um número era pior do que não o ter. Fica
+ * registado como proposta em `docs/ecras-por-desenhar.md`.
  */
 
 export interface JogoDaHome {
@@ -59,72 +66,96 @@ export const CartaoProximoJogo: React.FC<{
   const fora = jogo.home_away === 'away'
   const sigla = jogo.opponent?.initials || jogo.opponent?.name?.slice(0, 3).toUpperCase() || 'ADV'
 
+  /* A ordem é a do placar: quem joga em casa à esquerda (e na primeira linha
+     do título), quem visita à direita. */
+  const equipaCasa = fora ? sigla : siglaClube
+  const equipaFora = fora ? siglaClube : sigla
+
   const emblema = (url: string | null, alt: string, texto: string) =>
     url ? (
-      <img src={url} alt={alt} className="w-12 h-12 rounded-full bg-white object-contain p-0.5 flex-none" />
+      <img
+        src={url}
+        alt={alt}
+        className="w-[58px] h-[58px] rounded-full bg-white object-contain p-1 flex-none"
+      />
     ) : (
-      <span className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center font-display font-extrabold text-[11px] text-csc-dark flex-none">
+      <span className="w-[58px] h-[58px] rounded-full bg-white/95 flex items-center justify-center font-display font-extrabold text-[12.5px] text-csc-dark flex-none">
         {texto}
       </span>
     )
 
   const nos = (
-    <span className="flex-1 min-w-0 flex flex-col items-center gap-1.5">
+    <span className="w-[100px] flex flex-col items-center gap-2">
       {emblema(emblemaClube, siglaClube, siglaClube)}
-      <span className="font-display font-extrabold text-[11px] text-white">{siglaClube}</span>
-      <span className="text-[9px] text-white/62">{fora ? 'Fora' : 'Casa'}</span>
+      <span className="font-display font-bold text-[12px] text-white/85">{fora ? 'Fora' : 'Casa'}</span>
     </span>
   )
   const eles = (
-    <span className="flex-1 min-w-0 flex flex-col items-center gap-1.5">
+    <span className="w-[100px] flex flex-col items-center gap-2">
       {emblema(jogo.opponent?.logo_url ?? null, jogo.opponent?.name ?? 'Adversário', sigla)}
-      <span className="font-display font-extrabold text-[11px] text-white truncate max-w-full">{sigla}</span>
-      <span className="text-[9px] text-white/62">{fora ? 'Casa' : 'Fora'}</span>
+      <span className="font-display font-bold text-[12px] text-white/85">{fora ? 'Casa' : 'Fora'}</span>
     </span>
   )
 
   return (
-    <CartaoVidro className="overflow-hidden">
-      <div className="p-[17px]">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="font-display font-extrabold text-[9.5px] tracking-[0.18em] text-csc-gold uppercase">
-            {DATA_LONGA.format(new Date(jogo.date_time))}
-          </p>
-          <p className="text-[10px] text-white/62 flex-none">{quantoFalta(jogo.date_time)}</p>
-        </div>
-
-        <p className="text-[10.5px] text-white/62 mt-1">
-          {jogo.is_friendly ? 'Amigável' : jogo.prova || 'Jogo oficial'}
-          {jogo.home_away === 'neutral' ? ' · campo neutro' : fora ? ' · fora de casa' : ' · em casa'}
+    <div className="flex flex-col gap-[18px]">
+      {/* O herói: a data, o confronto e o que falta — direto sobre a faixa. */}
+      <div className="px-0.5 pt-[18px]">
+        <p className="font-display font-extrabold text-[10px] tracking-[0.24em] uppercase text-csc-gold">
+          {DATA_LONGA.format(new Date(jogo.date_time))}
         </p>
 
-        {/* O confronto. A ordem segue quem joga em casa, como no placar. */}
-        <div className="flex items-center gap-2 mt-4">
+        <h2 className="font-display font-black text-[44px] leading-none tracking-[-0.035em] text-white mt-3">
+          {equipaCasa}
+          <br />
+          <span className="text-[28px] text-white/42">vs</span> {equipaFora}
+        </h2>
+
+        <div className="flex items-center gap-2.5 mt-4">
+          <span className="flex-none inline-flex items-center h-[26px] px-[11px] rounded-[13px] bg-black/35 border border-white/15 font-display font-bold text-[11px] text-white">
+            {quantoFalta(jogo.date_time)}
+          </span>
+          <span className="min-w-0 truncate text-[12.5px] text-white/72">
+            {jogo.is_friendly ? 'Amigável' : jogo.prova || 'Jogo oficial'}
+            {jogo.home_away === 'neutral' ? ' · campo neutro' : fora ? ' · fora de casa' : ' · em casa'}
+          </span>
+        </div>
+      </div>
+
+      <CartaoVidro className="overflow-hidden">
+        {/* Os emblemas, com o "VS" vazado a dourado entre eles. */}
+        <div className="flex items-center justify-center gap-6 px-[18px] pt-[18px] pb-4">
           {fora ? eles : nos}
-          <span className="font-display font-black text-[13px] text-white/50 flex-none px-1">VS</span>
+          <span
+            className="flex-none font-display font-black text-[28px] mb-5 text-transparent"
+            style={{ WebkitTextStroke: '1.5px var(--color-csc-gold)' }}
+            aria-hidden="true"
+          >
+            VS
+          </span>
           {fora ? nos : eles}
         </div>
 
         {/* As duas horas, divididas: a de concentração é a que não se falha. */}
-        <div className="flex items-stretch -mx-[17px] mt-4 border-y border-white/13">
+        <div className="flex items-stretch border-t border-white/13">
           {jogo.meeting_time && (
             <>
-              <div className="flex-none px-[17px] py-2.5">
-                <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/62">
+              <div className="flex-none px-[17px] py-[15px]">
+                <p className="font-display font-bold text-[9.5px] tracking-[0.16em] uppercase text-white/55">
                   Concentração
                 </p>
-                <p className="font-display font-extrabold text-[17px] text-white mt-0.5">
+                <p className="font-display font-extrabold text-[22px] text-white mt-1">
                   {jogo.meeting_time.substring(0, 5)}
                 </p>
               </div>
               <div className="w-px bg-white/13" />
             </>
           )}
-          <div className="flex-1 px-[17px] py-2.5">
-            <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-csc-gold">
+          <div className="flex-1 px-[17px] py-[15px]">
+            <p className="font-display font-bold text-[9.5px] tracking-[0.16em] uppercase text-csc-gold">
               Pontapé de saída
             </p>
-            <p className="font-display font-extrabold text-[17px] text-white mt-0.5">{hora(jogo.date_time)}</p>
+            <p className="font-display font-extrabold text-[22px] text-white mt-1">{hora(jogo.date_time)}</p>
           </div>
         </div>
 
@@ -136,75 +167,77 @@ export const CartaoProximoJogo: React.FC<{
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => triggerHaptic('light')}
-            className="flex items-center gap-2 mt-3 min-h-11 -mb-1
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold rounded-xl"
+            className="flex items-center gap-2.5 px-[17px] py-3.5 min-h-11 border-t border-white/13
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
-            <MapPin size={13} className="text-csc-red shrink-0" />
+            <MapPin size={14} className="text-csc-gold shrink-0" />
             <span className="flex-1 min-w-0">
-              <span className="block text-[11px] font-bold text-white truncate">{jogo.local}</span>
-              {jogo.morada && <span className="block text-[10px] text-white/62 truncate">{jogo.morada}</span>}
+              <span className="block font-display font-bold text-[12.5px] text-white truncate">{jogo.local}</span>
+              {jogo.morada && (
+                <span className="block text-[11.5px] leading-snug text-white/70 truncate">{jogo.morada}</span>
+              )}
             </span>
-            <ExternalLink size={13} className="text-white/62 shrink-0" />
+            <ExternalLink size={14} className="text-white/40 shrink-0" />
           </a>
         )}
-      </div>
 
-      {/* O pedido de resposta. Fechado, diz porquê em vez de oferecer botões. */}
-      {jogo.minhaResposta !== null && (
-        <div className="px-[17px] py-3.5 bg-[rgba(23,69,42,.55)] border-t border-csc-light/35">
-          {jogo.fechada ? (
-            <p className="text-[11.5px] text-white/80 text-center">{jogo.fechada}</p>
-          ) : (
-            <>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-display font-extrabold text-[13px] text-white">
-                  {jogo.minhaResposta === 'confirmed'
-                    ? 'Contamos contigo.'
-                    : jogo.minhaResposta === 'declined'
-                      ? 'Ficas de fora.'
-                      : 'Contamos contigo?'}
-                </span>
-                <span className="text-[10px] text-white/62 flex-none">
-                  {jogo.confirmados} {jogo.confirmados === 1 ? 'confirmado' : 'confirmados'}
-                </span>
-              </div>
-              <div className="flex gap-2 mt-2.5">
-                <button
-                  type="button"
-                  onClick={() => aoResponder(jogo.id, 'confirmed')}
-                  aria-pressed={jogo.minhaResposta === 'confirmed'}
-                  className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
-                    flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                      jogo.minhaResposta === 'confirmed'
-                        ? 'bg-csc-light border-csc-light text-white'
-                        : 'bg-white/9 border-white/20 text-white'
-                    }`}
-                >
-                  {jogo.minhaResposta === 'confirmed' && <CheckCircle2 size={14} />}
-                  Sim, vou
-                </button>
-                <button
-                  type="button"
-                  onClick={() => aoResponder(jogo.id, 'declined')}
-                  aria-pressed={jogo.minhaResposta === 'declined'}
-                  className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
-                    flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                      jogo.minhaResposta === 'declined'
-                        ? 'bg-white/90 border-white/90 text-csc-tinta'
-                        : 'bg-white/9 border-white/20 text-white'
-                    }`}
-                >
-                  {jogo.minhaResposta === 'declined' && <XCircle size={14} />}
-                  Não posso
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </CartaoVidro>
+        {/* O pedido de resposta. Fechado, diz porquê em vez de oferecer botões. */}
+        {jogo.minhaResposta !== null && (
+          <div className="px-[17px] py-[15px] pb-[17px] bg-csc-gold/13 border-t border-csc-gold/24">
+            {jogo.fechada ? (
+              <p className="text-[11.5px] text-white/80 text-center">{jogo.fechada}</p>
+            ) : (
+              <>
+                <div className="flex items-baseline justify-between gap-2.5">
+                  <span className="font-display font-extrabold text-[14px] text-white">
+                    {jogo.minhaResposta === 'confirmed'
+                      ? 'Contamos contigo.'
+                      : jogo.minhaResposta === 'declined'
+                        ? 'Ficas de fora.'
+                        : 'Contamos contigo?'}
+                  </span>
+                  <span className="text-[11px] text-white/60 flex-none">
+                    {jogo.confirmados} {jogo.confirmados === 1 ? 'confirmado' : 'confirmados'}
+                  </span>
+                </div>
+                <div className="flex gap-[11px] mt-3">
+                  <button
+                    type="button"
+                    onClick={() => aoResponder(jogo.id, 'confirmed')}
+                    aria-pressed={jogo.minhaResposta === 'confirmed'}
+                    className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
+                      flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                        jogo.minhaResposta === 'confirmed'
+                          ? 'bg-csc-light border-csc-light text-white'
+                          : 'bg-white/9 border-white/20 text-white'
+                      }`}
+                  >
+                    {jogo.minhaResposta === 'confirmed' && <CheckCircle2 size={14} />}
+                    Sim, vou
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => aoResponder(jogo.id, 'declined')}
+                    aria-pressed={jogo.minhaResposta === 'declined'}
+                    className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
+                      flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                        jogo.minhaResposta === 'declined'
+                          ? 'bg-white/90 border-white/90 text-csc-tinta'
+                          : 'bg-white/9 border-white/20 text-white'
+                      }`}
+                  >
+                    {jogo.minhaResposta === 'declined' && <XCircle size={14} />}
+                    Não posso
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </CartaoVidro>
+    </div>
   )
 }
 
