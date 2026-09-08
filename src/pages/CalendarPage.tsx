@@ -77,18 +77,23 @@ const ESTADO_POR_OMISSAO = 'upcoming'
  */
 const CORES_TIPO = {
   /*
-    O jogo é branco, não dourado. O dourado é a cor da moldura — a data no
-    topo do cartão, os títulos, os botões de ação — e um tipo de evento
-    dourado lia-se como mais moldura, não como o tipo. Branco é o contraste
-    mais forte que há sobre o vidro escuro, que é o que o jogo merece, e não
-    colide com o verde do treino, o azul do convívio nem com o vermelho, que
-    nesta app quer sempre dizer que há um problema.
+    O jogo é vermelho, e chegou lá por eliminação. Dourado é a moldura — a
+    data no topo do próprio cartão, os títulos, os botões —, e branco é o
+    lettering de tudo o resto: os dois liam-se como mais do mesmo, e não como
+    o tipo do evento. Verde é o treino e azul o convívio. Sobra o vermelho do
+    clube, que é o que a paleta tem para o dizer.
+
+    O risco assumido: nesta app o vermelho costuma querer dizer que há um
+    problema (recusou, lesionado, sem condições). No cartão da Agenda não há
+    nenhum desses — as pastilhas de estado ali são verdes ou douradas — e o
+    vermelho fica livre para o que é, à conta do desenho não voltar a pôr um
+    estado vermelho ao lado deste.
   */
   match: {
-    ponto: 'bg-white',
-    halo: 'shadow-white/60',
-    texto: 'text-white',
-    pastilha: 'bg-white/16 border-white/40',
+    ponto: 'bg-csc-vermelho-texto',
+    halo: 'shadow-csc-vermelho-texto/70',
+    texto: 'text-csc-vermelho-texto',
+    pastilha: 'bg-csc-red/20 border-csc-red/50',
   },
   practice: {
     ponto: 'bg-csc-verde-texto',
@@ -1618,7 +1623,7 @@ const CalendarPage: React.FC = () => {
 
     // Bloco equipa Cascais
     const cscBlock = (isRight: boolean) => (
-      <div className={`flex-1 flex items-center ${isRight ? 'justify-end' : 'justify-start'} min-w-0`}>
+      <div className={`flex-1 flex items-center ${isRight ? 'justify-start' : 'justify-end'} min-w-0`}>
         <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {clubSettings?.logo_url ? (
             <img src={clubSettings.logo_url} alt={cscSigla} className="w-8 h-8 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
@@ -1636,7 +1641,7 @@ const CalendarPage: React.FC = () => {
 
     // Bloco equipa Adversário
     const opponentBlock = (isRight: boolean) => (
-      <div className={`flex-1 flex items-center ${isRight ? 'justify-end' : 'justify-start'} min-w-0`}>
+      <div className={`flex-1 flex items-center ${isRight ? 'justify-start' : 'justify-end'} min-w-0`}>
         <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : 'flex-row'}`}>
           {event.opponent?.logo_url ? (
             <img src={event.opponent.logo_url} alt={oppSigla} className="w-8 h-8 object-contain shrink-0 bg-white rounded-full p-0.5 shadow-xs" />
@@ -1753,9 +1758,12 @@ const CalendarPage: React.FC = () => {
             {/* Duelo de equipas (quando é jogo com adversário definido) */}
             {isMatch && event.opponent && (
               <div className="space-y-2.5">
-                <div className="flex items-center justify-between gap-3">
+                {/* Os dois blocos encostam ao "VS", não às margens do cartão:
+                    com `justify-between` os emblemas iam para os cantos e
+                    ficava um vão vazio no meio, com o "VS" a boiar lá dentro. */}
+                <div className="flex items-center justify-center gap-2">
                   {isAway ? opponentBlock(false) : cscBlock(false)}
-                  <div className="shrink-0 px-1 flex items-center justify-center">
+                  <div className="shrink-0 flex items-center justify-center">
                     <span className="px-2.5 py-1 rounded-[9px] bg-white/10 font-display font-bold text-[11px] text-white/62">
                       VS
                     </span>
