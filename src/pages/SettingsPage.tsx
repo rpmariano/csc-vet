@@ -21,6 +21,10 @@ import { useClub } from '../context/ClubContext'
 import { CLUBE_NOME, CLUBE_SIGLA } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
 import { RELACOES_EMERGENCIA } from './TeamManagementPage'
+import { useEstadoPagamentos } from '../hooks/useEstadoPagamentos'
+
+/** Euros em português — a mesma notação do Financeiro. */
+const EUROS_PERFIL = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
 import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
@@ -90,6 +94,9 @@ const SettingsPage: React.FC = () => {
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [pagamentosAbertos, setPagamentosAbertos] = useState(false)
+  /* O estado de pagamentos pinta o cartão; a persiana refaz as contas quando
+     abre, e são as mesmas contas — o `useEstadoPagamentos` é um só. */
+  const pagamentos = useEstadoPagamentos(profile, Boolean(profile?.id))
   const [avisosAbertos, setAvisosAbertos] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -334,21 +341,49 @@ const SettingsPage: React.FC = () => {
         pessoais.
       */}
       <div className="flex gap-2.5">
+        {/* A mesma cor do sinal de € do cabeçalho: vermelho com alguma coisa
+            vencida, laranja a menos de oito dias, neutro em dia. Duas cores
+            diferentes para o mesmo estado, em dois sítios do mesmo ecrã, era
+            deixar o atleta a decidir em qual acreditar. */}
         <button
           type="button"
           onClick={() => { triggerHaptic('light'); setPagamentosAbertos(true) }}
-          className="cartao-simples flex-1 min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
+          className={`cartao-simples flex-1 min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
             transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+              pagamentos.cor === 'vermelho'
+                ? 'bg-csc-red/12 border-csc-red/32'
+                : pagamentos.cor === 'laranja'
+                  ? 'bg-amber-500/12 border-amber-400/32'
+                  : ''
+            }`}
         >
-          <span className="w-8 h-8 rounded-xl bg-csc-gold/18 text-csc-gold flex items-center justify-center shrink-0 font-display font-black text-[14px]">
+          <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-display font-black text-[14px] ${
+            pagamentos.cor === 'vermelho'
+              ? 'bg-csc-red/22 text-csc-vermelho-texto'
+              : pagamentos.cor === 'laranja'
+                ? 'bg-amber-500/22 text-amber-300'
+                : 'bg-csc-gold/18 text-csc-gold'
+          }`}>
             €
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-display font-extrabold text-[12.5px] text-white">
               Os meus pagamentos
             </span>
-            <span className="block text-[10px] text-white/62 mt-0.5">Quotas e encargos</span>
+            <span className={`block text-[10px] mt-0.5 ${
+              pagamentos.cor === 'vermelho'
+                ? 'text-csc-vermelho-texto'
+                : pagamentos.cor === 'laranja'
+                  ? 'text-amber-300'
+                  : 'text-white/62'
+            }`}>
+              {pagamentos.cor === 'vermelho'
+                ? `${pagamentos.emAtraso.length} em atraso · ${EUROS_PERFIL.format(pagamentos.emAtraso.reduce((t, i) => t + i.valor, 0))}`
+                : pagamentos.cor === 'laranja'
+                  ? `${pagamentos.aVencer.length} a vencer · ${EUROS_PERFIL.format(pagamentos.totalEmAviso)}`
+                  : 'Quotas e encargos'}
+            </span>
           </span>
         </button>
 

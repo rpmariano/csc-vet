@@ -3,10 +3,12 @@ import { AvatarPerfil } from './AvatarPerfil'
 import { PastilhaEstado } from './PastilhaEstado'
 import { TituloEcra } from './Tipografia'
 import { AnnouncementsInboxButton } from '../AnnouncementsInbox'
+import { SinalPagamentos } from '../SinalPagamentos'
 
 /**
  * O cabeçalho de um ecrã: uma sobrancelha dourada, o nome do ecrã em grande e,
- * no canto, o estado clínico, o sino dos comunicados e a fotografia.
+ * no canto, o sinal de pagamentos, o estado clínico, o sino dos comunicados e
+ * a fotografia.
  *
  * No redesenho não há barra de topo, mas **o canto é o mesmo em todos os
  * ecrãs**: o estado ("Apto"), o sino e a fotografia que abre o Perfil. Estavam
@@ -52,6 +54,7 @@ export const CabecalhoEcra: React.FC<CabecalhoEcraProps> = ({
     </div>
 
     {acoes}
+    <SinalPagamentos />
     <PastilhaEstado />
     <AnnouncementsInboxButton tone="dark" size="md" />
     <AvatarPerfil tamanho={38} />

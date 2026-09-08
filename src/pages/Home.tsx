@@ -12,6 +12,7 @@ import {
 import { triggerHaptic } from '../utils/haptics'
 import { AvatarPerfil, CartaoVidro, CartaoSimples, EtiquetaSeccao, PastilhaEstado } from '../components/ui'
 import { AnnouncementsInboxButton } from '../components/AnnouncementsInbox'
+import { SinalPagamentos } from '../components/SinalPagamentos'
 import {
   useEventosSemConvocatoria,
   FaixaSemConvocatoria,
@@ -387,6 +388,7 @@ const Home: React.FC = () => {
             {epoca ? `Época ${epoca}` : saudacao()}
           </p>
         </div>
+        {!semFicha && <SinalPagamentos />}
         {!semFicha && <PastilhaEstado />}
         <AnnouncementsInboxButton tone="dark" size="md" />
         <AvatarPerfil tamanho={38} />

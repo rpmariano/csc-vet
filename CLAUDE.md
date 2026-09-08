@@ -202,10 +202,19 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   NULL** — sem limite inferior, quem já cá estava deve a época toda, seja qual
   for. Ficou a data por ser visível na ficha; se a época voltar a mudar, as
   fichas têm de acompanhar.
-- **A dívida de quotas mostra-se a quem tem o papel de jogador**, e não a quem
-  "não é da equipa técnica". A faixa do `Layout` testava `!eAdmin &&
-  !eTreinador`: metade da direção deste clube também joga, e essa gente nunca
-  via a própria dívida — a faixa é a única coisa na app que a diz.
+- **O que se deve ao clube vive no `useEstadoPagamentos`, e mais em lado
+  nenhum.** Quotas *e* encargos, com prazos: devolve a cor (vermelho com algo
+  vencido, laranja a menos de `DIAS_DE_AVISO` — 8 — dias, nada em dia), a
+  contagem e as listas. Alimenta o sinal de € do cabeçalho, a persiana que ele
+  abre e o cartão "Os meus pagamentos" do Perfil — antes eram dois cálculos que
+  podiam discordar, e o `usePlayerQuotaDebt` só via quotas vencidas: um encargo
+  por pagar não aparecia em aviso nenhum.
+  **Com um vencido e outro a aproximar-se manda o vermelho** — é o que precisa
+  de ser tratado primeiro. **E mostra-se a quem tem o papel de jogador**, não a
+  quem "não é da equipa técnica": a faixa antiga testava `!eAdmin &&
+  !eTreinador`, e metade da direção deste clube também joga.
+  O texto de como se paga é o `COMO_PAGAR` do `SinalPagamentos`, um só para os
+  dois sítios que o mostram.
 - **A janela de atividade escreve-se sozinha, a partir do estado.** O gatilho
   `profiles_janela_de_atividade` (`supabase_janela_atividade_trigger_migration.sql`,
   aplicada a 2026-09-08) põe `quota_end_date` ao passar a **Inativo**, e ao

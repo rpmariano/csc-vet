@@ -1,58 +1,45 @@
-import React, { useEffect, useState } from 'react'
-import { Copy, Check, TriangleAlert } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
-import { useClub } from '../context/ClubContext'
-import { toast } from '../context/ToastContext'
-import { triggerHaptic } from '../utils/haptics'
+import React, { useMemo, useState } from 'react'
+import { Check, ChevronDown, TriangleAlert } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
-import {
-  comOmissoes, getSeasonLabel, getPlayerQuotaMonths,
-  computeQuotaMonthStatus, formatMonthYear,
-} from '../lib/finance'
-import type { FinancialSettings, QuotaEligiblePlayer } from '../lib/finance'
+import { COMO_PAGAR } from './SinalPagamentos'
+import { useEstadoPagamentos, DIAS_DE_AVISO, type ItemPagamento } from '../hooks/useEstadoPagamentos'
+import type { QuotaEligiblePlayer } from '../lib/finance'
+import { triggerHaptic } from '../utils/haptics'
 
 /**
- * Os meus pagamentos (ecrã 12c) — o que o jogador deve, e porquê.
+ * Os meus pagamentos (ecrã 12c) — o que o jogador deve, o que já pagou, e como
+ * se paga.
  *
- * O jogador não tem acesso à página financeira, que é da direção, e até aqui
- * a única coisa que via era a faixa de "tens quotas em atraso" no topo de
- * todos os ecrãs. Faltava-lhe o detalhe: que meses, quanto, e como pagar.
+ * O jogador não tem acesso à página financeira, que é da direção. Aqui vê tudo
+ * o que lhe diz respeito **agrupado por categoria** — Quotas, e cada categoria
+ * de encargo —, com o grupo a abrir e a fechar: uma época são doze meses de
+ * quota, e uma lista corrida de doze linhas escondia os encargos no fim.
  *
- * Lê as suas próprias linhas e mais nada — `dues` e `charge_payments` são
- * legíveis pelo próprio pela RLS, e o cálculo dos meses em dívida é o mesmo
- * de `usePlayerQuotaDebt`, que alimenta a faixa. Um mês só sai de dívida
- * quando o tesoureiro o marca como pago: é o que diz a nota no fim, para
- * ninguém ficar à espera que a app se atualize sozinha depois de entregar o
- * dinheiro.
+ * **Abre o que tem dívida.** Um grupo com alguma coisa por pagar começa
+ * aberto; os que estão em dia começam fechados. Quem abre isto está a
+ * perguntar "o que é que falta?", e a resposta tem de estar à vista.
+ *
+ * As contas são as do `useEstadoPagamentos`, as mesmas do sinal de € do
+ * cabeçalho — havia dois cálculos e podiam discordar.
  */
 
-interface Encargo {
-  id: string
-  titulo: string
-  valor: number
-  vencimento: string | null
-  pagoEm: string | null
-}
-
-interface MesQuota {
-  monthYear: string
-  etiqueta: string
-  valor: number
-  /**
-   * O `computeQuotaMonthStatus` devolve 'paid' | 'late' | 'pending'. Aqui o
-   * 'pending' abre-se em dois, porque ao jogador dizem coisas diferentes: o
-   * mês corrente é o que está a correr, e um mês futuro ainda nem venceu.
-   */
-  estado: 'paid' | 'late' | 'current' | 'future'
-}
-
 const EUROS = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
+const fmt = (n: number) => EUROS.format(n)
 
-const ESTADO_MES: Record<MesQuota['estado'], { texto: string; classe: string }> = {
-  paid: { texto: 'paga', classe: 'bg-csc-light/15 border-csc-light/30 text-csc-verde-texto' },
-  late: { texto: 'em atraso', classe: 'bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto' },
-  current: { texto: 'este mês', classe: 'bg-csc-gold/15 border-csc-gold/35 text-csc-gold' },
-  future: { texto: 'a haver', classe: 'bg-white/6 border-white/12 text-white/62' },
+const ESTADO: Record<ItemPagamento['estado'], { texto: string; classe: string }> = {
+  pago: { texto: 'pago', classe: 'bg-csc-light/15 border-csc-light/30 text-csc-verde-texto' },
+  atraso: { texto: 'em atraso', classe: 'bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto' },
+  'a-vencer': { texto: 'a vencer', classe: 'bg-amber-500/15 border-amber-400/35 text-amber-300' },
+  'por-vencer': { texto: 'a haver', classe: 'bg-white/6 border-white/12 text-white/62' },
+}
+
+interface Grupo {
+  nome: string
+  itens: ItemPagamento[]
+  pagos: number
+  emFalta: number
+  temAtraso: boolean
+  temAVencer: boolean
 }
 
 export const OsMeusPagamentos: React.FC<{
@@ -60,145 +47,96 @@ export const OsMeusPagamentos: React.FC<{
   aoFechar: () => void
   jogador: (QuotaEligiblePlayer & { id: string }) | null | undefined
 }> = ({ aberto, aoFechar, jogador }) => {
-  const { clubSettings } = useClub()
-  const [aCarregar, setACarregar] = useState(true)
-  const [meses, setMeses] = useState<MesQuota[]>([])
-  const [encargos, setEncargos] = useState<Encargo[]>([])
-  const [quotaMensal, setQuotaMensal] = useState(0)
-  const [epoca, setEpoca] = useState('')
+  const estado = useEstadoPagamentos(jogador, aberto)
+  const [fechados, setFechados] = useState<Set<string>>(new Set())
 
-  useEffect(() => {
-    if (!aberto || !jogador?.id) return
-    let cancelado = false
-    setACarregar(true)
-
-    const carregar = async () => {
-      try {
-        const [{ data: defs }, { data: quotasPagas }, { data: pagamentos }, { data: dispensados }] = await Promise.all([
-          supabase.from('financial_settings').select('*').eq('id', 1).maybeSingle(),
-          supabase.from('dues').select('month_year, amount, status').eq('player_id', jogador.id),
-          supabase
-            .from('charge_payments')
-            .select('id, amount, paid_at, charge:charges(id, title, amount, due_date)')
-            .eq('player_id', jogador.id),
-          supabase.from('quota_exemptions').select('month_year').eq('profile_id', jogador.id),
-        ])
-        if (cancelado) return
-
-        const definicoes = comOmissoes(defs as Partial<FinancialSettings> | null)
-        const hoje = new Date()
-        const rotulo = getSeasonLabel(definicoes, hoje)
-        const pagas = new Set((quotasPagas ?? []).map(d => (d as { month_year: string }).month_year))
-
-        setQuotaMensal(definicoes.quota_amount)
-        setEpoca(rotulo)
-        setMeses(
-          getPlayerQuotaMonths(
-            {
-              ...jogador,
-              meses_dispensados: ((dispensados ?? []) as { month_year: string }[]).map(l => l.month_year.slice(-2)),
-            },
-            definicoes,
-            rotulo,
-            hoje,
-          ).map(m => {
-            const estaPaga = pagas.has(m.monthYear)
-            const estado = computeQuotaMonthStatus(m, estaPaga, definicoes, hoje)
-            const eCorrente = m.year === hoje.getFullYear() && m.month === hoje.getMonth() + 1
-            return {
-              monthYear: m.monthYear,
-              etiqueta: formatMonthYear(m.monthYear),
-              valor: definicoes.quota_amount,
-              estado: estado === 'paid'
-                ? 'paid'
-                : estado === 'late'
-                  ? 'late'
-                  : eCorrente ? 'current' : 'future',
-            } satisfies MesQuota
-          }),
-        )
-
-        setEncargos(
-          (pagamentos ?? []).map(p => {
-            const linha = p as unknown as {
-              id: string
-              amount: number | null
-              paid_at: string | null
-              charge: { title: string; amount: number; due_date: string | null } | null
-            }
-            return {
-              id: linha.id,
-              titulo: linha.charge?.title ?? 'Encargo',
-              valor: Number(linha.amount ?? linha.charge?.amount ?? 0),
-              vencimento: linha.charge?.due_date ?? null,
-              pagoEm: linha.paid_at,
-            }
-          }),
-        )
-      } catch (err) {
-        console.error('Erro ao carregar os pagamentos do atleta:', err)
-      } finally {
-        if (!cancelado) setACarregar(false)
-      }
+  const grupos = useMemo<Grupo[]>(() => {
+    const porCategoria = new Map<string, ItemPagamento[]>()
+    for (const item of estado.todos) {
+      const lista = porCategoria.get(item.categoria) ?? []
+      lista.push(item)
+      porCategoria.set(item.categoria, lista)
     }
+    return [...porCategoria.entries()].map(([nome, itens]) => ({
+      nome,
+      itens,
+      pagos: itens.filter(i => i.estado === 'pago').length,
+      emFalta: itens.filter(i => i.estado !== 'pago').reduce((s, i) => s + i.valor, 0),
+      temAtraso: itens.some(i => i.estado === 'atraso'),
+      temAVencer: itens.some(i => i.estado === 'a-vencer'),
+    }))
+  }, [estado.todos])
 
-    carregar()
-    return () => { cancelado = true }
-  }, [aberto, jogador?.id, jogador?.status, jogador?.quota_start_date, jogador?.quota_end_date])
+  /* Fechado só se alguém o fechou à mão, ou se está tudo em dia neste grupo. */
+  const estaAberto = (g: Grupo) =>
+    fechados.has(g.nome) ? false : g.temAtraso || g.temAVencer || g.emFalta > 0
 
-  const emDivida = meses.filter(m => m.estado === 'late')
-  const totalDivida = emDivida.reduce((s, m) => s + m.valor, 0)
-  const pagas = meses.filter(m => m.estado === 'paid').length
-
-  /* O IBAN do clube não está em `club_settings`; até estar, mostra-se o aviso
-     de que se entrega ao tesoureiro, que é o que acontece hoje. */
-  const iban = (clubSettings as { iban?: string | null } | null)?.iban ?? null
-
-  const copiarIban = async () => {
-    if (!iban) return
-    try {
-      await navigator.clipboard.writeText(iban)
-      triggerHaptic('light')
-      toast.success('IBAN copiado.')
-    } catch {
-      toast.error('Não foi possível copiar o IBAN.')
-    }
+  const alternar = (nome: string) => {
+    triggerHaptic('selection')
+    setFechados(atual => {
+      const proximo = new Set(atual)
+      if (proximo.has(nome)) proximo.delete(nome)
+      else proximo.add(nome)
+      return proximo
+    })
   }
+
+  const emDivida = estado.emAtraso.reduce((s, i) => s + i.valor, 0)
 
   return (
     <BottomSheet
       isOpen={aberto}
       onClose={aoFechar}
       title="Os meus pagamentos"
-      description={epoca ? `Época ${epoca} · quota ${EUROS.format(quotaMensal)}/mês` : undefined}
+      tone="dark"
       icon={
-        <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0 font-display font-black">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-display font-black ${
+          estado.cor === 'vermelho'
+            ? 'bg-csc-red/20 text-csc-vermelho-texto'
+            : estado.cor === 'laranja'
+              ? 'bg-amber-500/20 text-amber-300'
+              : 'bg-csc-light/18 text-csc-verde-texto'
+        }`}>
           €
         </div>
       }
     >
-      {aCarregar ? (
+      {estado.loading ? (
         <div className="flex justify-center py-10" role="status" aria-live="polite">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-csc-gold border-t-transparent" />
           <span className="sr-only">A carregar…</span>
         </div>
       ) : (
         <div className="space-y-4">
-          {/* O que está em dívida, em grande — ou a confirmação de que não há nada. */}
-          {totalDivida > 0 ? (
+          {/* O estado, em grande: a mesma cor do sinal do cabeçalho. */}
+          {estado.cor === 'vermelho' ? (
             <div className="cartao-simples bg-csc-red/10 border-csc-red/30 p-4">
               <p className="flex items-center gap-1.5 font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-vermelho-texto">
                 <TriangleAlert size={12} />
-                Em dívida
+                Em atraso
               </p>
               <p className="font-display font-black text-[30px] text-white mt-1 tabular-nums leading-none">
-                {EUROS.format(totalDivida)}
+                {fmt(emDivida)}
               </p>
               <p className="text-[11px] leading-relaxed text-white/65 mt-2">
-                {emDivida.length === 1
-                  ? `Falta ${emDivida[0].etiqueta.toLowerCase()}.`
-                  : `Faltam ${emDivida.length} meses de quota.`}{' '}
-                Entrega ao tesoureiro ou transfere para o IBAN do clube.
+                {estado.emAtraso.length === 1
+                  ? '1 pagamento passou do prazo.'
+                  : `${estado.emAtraso.length} pagamentos passaram do prazo.`}
+              </p>
+            </div>
+          ) : estado.cor === 'laranja' ? (
+            <div className="cartao-simples bg-amber-500/10 border-amber-400/30 p-4">
+              <p className="flex items-center gap-1.5 font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-amber-300">
+                <TriangleAlert size={12} />
+                A vencer
+              </p>
+              <p className="font-display font-black text-[30px] text-white mt-1 tabular-nums leading-none">
+                {fmt(estado.totalEmAviso)}
+              </p>
+              <p className="text-[11px] leading-relaxed text-white/65 mt-2">
+                {estado.aVencer.length === 1
+                  ? `1 pagamento vence nos próximos ${DIAS_DE_AVISO} dias.`
+                  : `${estado.aVencer.length} pagamentos vencem nos próximos ${DIAS_DE_AVISO} dias.`}
               </p>
             </div>
           ) : (
@@ -212,111 +150,97 @@ export const OsMeusPagamentos: React.FC<{
             </div>
           )}
 
-          {/* As quotas da época, mês a mês. */}
-          <div>
-            <p className="flex items-baseline justify-between font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-2">
-              <span>Quotas</span>
-              <span className="text-white/62 normal-case tracking-normal text-[10px] font-bold">
-                {pagas} de {meses.length} pagas
-              </span>
+          {grupos.length === 0 && (
+            <p className="text-[11px] text-white/62 italic">
+              Não há pagamentos para ti nesta época.
             </p>
-
-            {meses.length === 0 ? (
-              <p className="text-[11px] text-white/62 italic">
-                Não há meses de quota para ti nesta época.
-              </p>
-            ) : (
-              <div className="cartao-simples overflow-hidden">
-                {meses.map(m => (
-                  <div
-                    key={m.monthYear}
-                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 border-t border-white/7 first:border-t-0"
-                  >
-                    <span className="font-display font-bold text-[12.5px] text-white capitalize">
-                      {m.etiqueta}
-                    </span>
-                    <span className="flex items-center gap-2 shrink-0">
-                      {m.estado !== 'paid' && (
-                        <span className="font-display font-black text-[12px] text-white/70 tabular-nums">
-                          {EUROS.format(m.valor)}
-                        </span>
-                      )}
-                      <span
-                        className={`font-display font-black text-[8.5px] tracking-[0.1em] uppercase px-2 py-1 rounded-full border ${ESTADO_MES[m.estado].classe}`}
-                      >
-                        {ESTADO_MES[m.estado].texto}
-                      </span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Os encargos em que entrei — seguro, equipamento, inscrições. */}
-          {encargos.length > 0 && (
-            <div>
-              <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-2">
-                Encargos
-              </p>
-              <div className="cartao-simples overflow-hidden">
-                {encargos.map(e => (
-                  <div
-                    key={e.id}
-                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 border-t border-white/7 first:border-t-0"
-                  >
-                    <span className="min-w-0">
-                      <span className="block font-display font-bold text-[12.5px] text-white truncate">
-                        {e.titulo}
-                      </span>
-                      <span className="block text-[10px] text-white/62 mt-0.5">
-                        {e.pagoEm
-                          ? `pago a ${new Date(e.pagoEm).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}`
-                          : e.vencimento
-                            ? `vence a ${new Date(e.vencimento).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}`
-                            : 'sem prazo'}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-1.5 shrink-0">
-                      <span className="font-display font-black text-[12px] text-white tabular-nums">
-                        {EUROS.format(e.valor)}
-                      </span>
-                      {e.pagoEm && <Check size={13} className="text-csc-verde-texto" />}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
           )}
 
-          {/* Como pagar. */}
+          {/* Um bloco por categoria, que abre e fecha. */}
+          {grupos.map(g => {
+            const aberto = estaAberto(g)
+            return (
+              <div key={g.nome} className="cartao-simples overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => alternar(g.nome)}
+                  aria-expanded={aberto}
+                  className="w-full min-h-11 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-display font-extrabold text-[12.5px] text-white truncate">
+                      {g.nome}
+                    </span>
+                    <span className="block text-[10px] text-white/62 mt-0.5">
+                      {g.pagos} de {g.itens.length} {g.itens.length === 1 ? 'pago' : 'pagos'}
+                      {g.emFalta > 0 && ` · falta ${fmt(g.emFalta)}`}
+                    </span>
+                  </span>
+
+                  {(g.temAtraso || g.temAVencer) && (
+                    <span
+                      className={`shrink-0 font-display font-black text-[8.5px] tracking-[0.1em] uppercase px-2 py-1 rounded-full border ${
+                        g.temAtraso ? ESTADO.atraso.classe : ESTADO['a-vencer'].classe
+                      }`}
+                    >
+                      {g.temAtraso ? 'em atraso' : 'a vencer'}
+                    </span>
+                  )}
+
+                  <ChevronDown
+                    size={16}
+                    className={`shrink-0 text-white/50 transition-transform duration-200 ${aberto ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {aberto && (
+                  <div className="border-t border-white/10">
+                    {g.itens.map(item => (
+                      <div
+                        key={item.chave}
+                        className="flex items-center justify-between gap-3 px-3.5 py-2.5 border-t border-white/7 first:border-t-0"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-display font-bold text-[12.5px] text-white capitalize truncate">
+                            {item.etiqueta}
+                          </span>
+                          {item.limite && (
+                            <span className="block text-[10px] text-white/62 mt-0.5">
+                              {item.estado === 'pago' ? 'pago' : 'vence'} a{' '}
+                              {/* Dia e mês em números: `month: 'short'` depende dos dados
+                                  de localização do browser e nem sempre os há. */}
+                              {new Date(item.limite).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}
+                            </span>
+                          )}
+                        </span>
+                        <span className="flex items-center gap-2 shrink-0">
+                          {item.estado !== 'pago' && (
+                            <span className="font-display font-black text-[12px] text-white/70 tabular-nums">
+                              {fmt(item.valor)}
+                            </span>
+                          )}
+                          <span
+                            className={`font-display font-black text-[8.5px] tracking-[0.1em] uppercase px-2 py-1 rounded-full border ${ESTADO[item.estado].classe}`}
+                          >
+                            {ESTADO[item.estado].texto}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Como pagar — o mesmo texto do sinal do cabeçalho. */}
           <div>
             <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-2">
               Como pagar
             </p>
             <div className="cartao-simples p-3.5 space-y-2.5">
-              {iban ? (
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 min-w-0 truncate font-mono text-[12px] text-white">{iban}</code>
-                  <button
-                    type="button"
-                    onClick={copiarIban}
-                    aria-label="Copiar o IBAN do clube"
-                    className="min-h-11 px-3 rounded-[18px] bg-white/8 border border-white/15 text-csc-gold
-                      font-display font-extrabold text-[11px] flex items-center gap-1.5 shrink-0 cursor-pointer
-                      transition-transform duration-150 active:scale-97
-                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                  >
-                    <Copy size={12} />
-                    Copiar
-                  </button>
-                </div>
-              ) : (
-                <p className="text-[11.5px] text-white/70 leading-relaxed">
-                  Entrega ao tesoureiro. O clube ainda não tem IBAN registado na app.
-                </p>
-              )}
-
+              <p className="text-[12px] leading-relaxed text-white/80">{COMO_PAGAR}</p>
               <p className="text-[10.5px] leading-relaxed text-white/62">
                 O pagamento só fica em dia depois de o tesoureiro o registar — é ele que marca
                 o mês como pago.

@@ -102,62 +102,9 @@ test('um treinador vê as pastilhas, mas não lhes mexe', async ({ page }) => {
   await expect(page.getByText('Só a direção altera dispensas de quota')).toBeVisible()
 })
 
-/**
- * Quem tem o papel de jogador vê a sua dívida — mesmo que também dirija.
- *
- * A faixa de "quotas em atraso" aparecia a quem **não** fosse admin nem
- * treinador (`!eAdmin && !eTreinador`). Metade da direção deste clube também
- * joga, e essa gente nunca via a própria dívida: a faixa é a única coisa na
- * app que a diz, e eram justamente eles a quem não aparecia.
- */
-test.describe('Faixa de quotas em atraso', () => {
-  const DEFINICOES_AGOSTO = [{
-    id: 1, season_start_month: 8, season_end_month: 7, quota_amount: 10,
-    quota_excluded_months: [], quota_due_day: 8,
-    insurance_amount: 20, insurance_deadline_month: 9, insurance_deadline_day: 30,
-  }]
-
-  /** Um mês da época que já venceu, para haver dívida a sério. */
-  const inicioDaEpoca = () => {
-    const hoje = new Date()
-    const ano = hoje.getMonth() + 1 >= 8 ? hoje.getFullYear() : hoje.getFullYear() - 1
-    return `${ano}-08-01`
-  }
-
-  const perfil = (papeis: string[], papelEfetivo: string) => ({
-    id: '00000000-0000-4000-8000-000000000001',
-    name: 'Utilizador de Teste', email: 'teste@csc-vet.local',
-    role: papelEfetivo, roles: papeis, status: 'active',
-    jersey_number: 99, shirt_name: 'Teste', position: 'Médio Centro',
-    medical_notes: null, photo_url: null, phone: null,
-    quota_start_date: inicioDaEpoca(), quota_end_date: null,
-  })
-
-  async function abre(page: import('@playwright/test').Page, papeis: string[], papelEfetivo: string) {
-    await montarSupabaseFalso(page, {
-      financial_settings: DEFINICOES_AGOSTO,
-      profiles: [perfil(papeis, papelEfetivo)],
-      v_players_public: [perfil(papeis, papelEfetivo)],
-      dues: [],
-      quota_exemptions: [],
-    })
-    await page.goto('/csc-vet/')
-    await page.waitForLoadState('networkidle')
-    await page.waitForTimeout(600)
-  }
-
-  test('um admin que também joga vê a faixa', async ({ page }) => {
-    await abre(page, ['admin', 'player'], 'admin')
-    await expect(page.getByRole('button', { name: /m[êe]s de quota em atraso/ })).toBeVisible()
-  })
-
-  test('um jogador vê a faixa', async ({ page }) => {
-    await abre(page, ['player'], 'player')
-    await expect(page.getByRole('button', { name: /m[êe]s de quota em atraso/ })).toBeVisible()
-  })
-
-  test('quem não joga não tem quotas, e não vê faixa nenhuma', async ({ page }) => {
-    await abre(page, ['coach'], 'coach')
-    await expect(page.getByRole('button', { name: /quota em atraso/ })).toHaveCount(0)
-  })
-})
+/*
+  Os testes da faixa de quotas em atraso que aqui viviam passaram para
+  `pagamentos.spec.ts`: a faixa foi substituída pelo sinal de € do cabeçalho,
+  que conta quotas e encargos e não só quotas. O caso que importava — um admin
+  que também joga vê a sua dívida — está lá, com o mesmo perfil.
+*/
