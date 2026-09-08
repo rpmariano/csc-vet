@@ -191,6 +191,14 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **A ficha do atleta mostra tudo o que a base tem; a edição é que é
+  restrita.** Ver não é editar: a ficha (`?atleta=`, no Plantel) é de
+  treinador/direção, a mesma gente que pode abrir o formulário — esconder-lhe
+  campos ali não protegia nada e obrigava a entrar em modo de edição só para
+  ler um telemóvel. Faltavam-lhe o email, o telemóvel, o tamanho de
+  equipamento, o pé preferido, a janela de quota e os meses dispensados. **A
+  ficha rápida do convocado (4a) e o plantel do jogador continuam pelo
+  `v_players_public`** — essas não têm PII e não mudam.
 - **Tudo se responde, treinos incluídos — mas o treino tem janela.**
   `convocatoriaFechada()` é o único sítio onde a regra vive. Um evento aceita
   resposta assim que deixa de ser rascunho e tem gente convocada; fecha com a

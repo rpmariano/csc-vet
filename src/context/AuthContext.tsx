@@ -19,6 +19,8 @@ export interface Profile {
   status: ProfileStatus
   jersey_number?: number | null
   kit_size?: string | null
+  /** "Direito" | "Esquerdo" | "Ambos" — atribuído pela equipa técnica. */
+  preferred_foot?: string | null
   birth_date?: string | null
   nationality?: string | null
   position?: string | null

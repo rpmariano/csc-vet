@@ -659,6 +659,12 @@ const SettingsPage: React.FC = () => {
                 {formKitSize || 'L'}
               </div>
             </div>
+            <div>
+              <label className={ETIQUETA}>Pé preferido</label>
+              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
+                {profile?.preferred_foot || 'Não indicado'}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -689,6 +695,28 @@ const SettingsPage: React.FC = () => {
                 className={`${CAMPO} font-mono`}
                 placeholder="Ex: 1420"
               />
+            </div>
+          </div>
+
+          {/* A janela de quota, só de leitura: quem a define é a direção, na
+              ficha do atleta. Não aparecia em lado nenhum do lado do próprio,
+              e é o que explica desde quando é que se deve quota. */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label className={ETIQUETA}>Início de atividade</label>
+              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
+                {profile?.quota_start_date
+                  ? new Date(profile.quota_start_date).toLocaleDateString('pt-PT')
+                  : 'Desde o registo'}
+              </div>
+            </div>
+            <div>
+              <label className={ETIQUETA}>Fim de atividade</label>
+              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
+                {profile?.quota_end_date
+                  ? new Date(profile.quota_end_date).toLocaleDateString('pt-PT')
+                  : 'Sem fim marcado'}
+              </div>
             </div>
           </div>
         </div>

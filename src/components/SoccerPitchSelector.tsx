@@ -177,7 +177,11 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
       <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-white/80">Posições Atribuídas ({selectedPositions.length}):</span>
-          <span className="text-[10px] text-white/62 font-semibold">Clica no campo para alternar</span>
+          {/* Só quando dá mesmo para clicar: na ficha do atleta o campo é só
+              de leitura, e a dica convidava a um gesto que não faz nada. */}
+          {!readOnly && (
+            <span className="text-[10px] text-white/62 font-semibold">Clica no campo para alternar</span>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {selectedPositions.map((pos, idx) => (

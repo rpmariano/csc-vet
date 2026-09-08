@@ -107,6 +107,10 @@ const TeamManagementPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null)
+  /* Os meses dispensados vivem noutra tabela; a ficha lê-os ao abrir, como o
+     formulário de edição. `null` enquanto não chegam, para não dizer "Nenhum"
+     antes de saber. */
+  const [dispensasDaFicha, setDispensasDaFicha] = useState<string[] | null>(null)
   const [isEditing, setIsEditing] = useState(false)
 
   // Form State - Expanded with PDF fields
@@ -119,6 +123,7 @@ const TeamManagementPage: React.FC = () => {
   const [formStatus, setFormStatus] = useState<ProfileStatus>('active')
   const [formJerseyNumber, setFormJerseyNumber] = useState<number | ''>('')
   const [formKitSize, setFormKitSize] = useState('L')
+  const [formPreferredFoot, setFormPreferredFoot] = useState('')
   const [formBirthDate, setFormBirthDate] = useState('')
   const [formNationality, setFormNationality] = useState('Portuguesa')
   const [formPositions, setFormPositions] = useState<string[]>(['Médio Centro'])
@@ -236,6 +241,25 @@ const TeamManagementPage: React.FC = () => {
       setEpoca(getSeasonLabel(definicoes))
     })
   }, [])
+
+  useEffect(() => {
+    if (!selectedProfile) return
+    let cancelado = false
+    setDispensasDaFicha(null)
+    supabase
+      .from('quota_exemptions')
+      .select('month_year')
+      .eq('profile_id', selectedProfile.id)
+      .then(({ data }) => {
+        if (cancelado) return
+        setDispensasDaFicha(
+          ((data ?? []) as { month_year: string }[])
+            .map(l => l.month_year.slice(-2))
+            .sort(),
+        )
+      })
+    return () => { cancelado = true }
+  }, [selectedProfile])
 
   const [estatisticas, setEstatisticas] = useState<Record<string, { j: number; g: number; a: number }>>({})
   useEffect(() => {
@@ -361,6 +385,7 @@ const TeamManagementPage: React.FC = () => {
     setFormStatus(p.status || 'active')
     setFormJerseyNumber(p.jersey_number !== undefined && p.jersey_number !== null ? p.jersey_number : '')
     setFormKitSize(p.kit_size || 'L')
+    setFormPreferredFoot(p.preferred_foot || '')
     setFormBirthDate(p.birth_date || '')
     setFormNationality(p.nationality || 'Portuguesa')
     setFormPositions(parsePositions(p.position))
@@ -611,6 +636,7 @@ const TeamManagementPage: React.FC = () => {
       status: formStatus,
       jersey_number: formJerseyNumber !== '' && !isNaN(Number(formJerseyNumber)) ? Number(formJerseyNumber) : null,
       kit_size: sanitizeText(formKitSize),
+      preferred_foot: formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
       birth_date: sanitizeDate(formBirthDate),
       nationality: sanitizeText(formNationality) || 'Portuguesa',
       position: positionStr,
@@ -1776,6 +1802,25 @@ const TeamManagementPage: React.FC = () => {
                     </select>
                   </div>
                 </div>
+
+                {/* O pé preferido: a coluna `preferred_foot` nasceu na fase 1 e
+                    nunca teve onde ser preenchida, por isso as fichas mostravam
+                    um campo que estava sempre vazio. É desportivo, portanto vive
+                    aqui com a camisola e a posicao. */}
+                <div>
+                  <label className={ETIQUETA} htmlFor="pe-preferido">Pé preferido</label>
+                  <select
+                    id="pe-preferido"
+                    value={formPreferredFoot}
+                    onChange={(e) => setFormPreferredFoot(e.target.value)}
+                    className={CAMPO}
+                  >
+                    <option value="">Não indicado</option>
+                    <option value="Direito">Direito</option>
+                    <option value="Esquerdo">Esquerdo</option>
+                    <option value="Ambos">Ambos</option>
+                  </select>
+                </div>
               </div>
 
               {/* 5. DADOS BANCÁRIOS & QUOTAS */}
@@ -2302,6 +2347,84 @@ const TeamManagementPage: React.FC = () => {
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
                     </div>
+
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Consentimento RGPD</p>
+                      <p className="font-extrabold text-white mt-0.5">
+                        {selectedProfile.gdpr_consent === false ? 'Não dado' : 'Dado'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/*
+                  Contactos. A ficha não os mostrava de todo — nem o email nem o
+                  telemóvel —, e é o ecrã de quem precisa de ligar a alguém antes
+                  de um jogo. Estavam só dentro do formulário de edição, que é
+                  outra coisa: ver não é editar.
+
+                  O email é também a chave de identidade da conta (ver CLAUDE.md),
+                  por isso vale a pena estar à vista de quem gere.
+                */}
+                <div className="cartao-simples p-4 space-y-3">
+                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                    <Phone size={14} className="text-csc-gold" />
+                    <span>Contactos</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <a
+                      href={selectedProfile.email ? `mailto:${selectedProfile.email}` : undefined}
+                      className={`${selectedProfile.email ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0 block min-h-11
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
+                    >
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Email de acesso</p>
+                      <p className="font-extrabold text-white mt-0.5 truncate">{selectedProfile.email || '-'}</p>
+                    </a>
+
+                    <a
+                      href={selectedProfile.phone ? `tel:${selectedProfile.phone}` : undefined}
+                      className={`${selectedProfile.phone ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0 block min-h-11
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
+                    >
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Telemóvel</p>
+                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.phone || '-'}</p>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Dados desportivos: o que a equipa técnica atribui. */}
+                <div className="cartao-simples p-4 space-y-3">
+                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                    <Shield size={14} className="text-csc-gold" />
+                    <span>Equipamento & Jogo</span>
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Nº da camisola</p>
+                      <p className="font-extrabold text-white mt-0.5">
+                        {selectedProfile.jersey_number ? `#${selectedProfile.jersey_number}` : 'Sem número'}
+                      </p>
+                    </div>
+
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Tamanho de equipamento</p>
+                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.kit_size || '-'}</p>
+                    </div>
+
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Pé preferido</p>
+                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.preferred_foot || '-'}</p>
+                    </div>
+
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Estado</p>
+                      <p className="font-extrabold text-white mt-0.5">
+                        {selectedProfile.status === 'injured' ? 'Lesionado'
+                          : selectedProfile.status === 'inactive' ? 'Inativo' : 'Apto'}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -2347,6 +2470,43 @@ const TeamManagementPage: React.FC = () => {
                       </span>
                     )}
                   </div>
+
+                  {/* A janela de quota e os meses dispensados — estavam só no
+                      formulário de edição, e são o que explica a dívida de
+                      alguém sem ser preciso abrir a edição para ver. */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Início de atividade</p>
+                      <p className="font-extrabold text-white mt-0.5">
+                        {selectedProfile.quota_start_date
+                          ? new Date(selectedProfile.quota_start_date).toLocaleDateString('pt-PT')
+                          : 'Do estado do perfil'}
+                      </p>
+                    </div>
+
+                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Fim de atividade</p>
+                      <p className="font-extrabold text-white mt-0.5">
+                        {selectedProfile.quota_end_date
+                          ? new Date(selectedProfile.quota_end_date).toLocaleDateString('pt-PT')
+                          : 'Sem fim marcado'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/6 p-2.5 rounded-xl border border-white/10">
+                    <p className="text-white/65 font-bold uppercase text-[9px]">Meses dispensados de quota</p>
+                    <p className="font-extrabold text-white mt-0.5 text-xs">
+                      {dispensasDaFicha === null
+                        ? 'A ler…'
+                        : dispensasDaFicha.length === 0
+                          ? 'Nenhum'
+                          : dispensasDaFicha
+                              .map(m => MESES_CURTOS[Number(m) - 1])
+                              .filter(Boolean)
+                              .join(' · ')}
+                    </p>
+                  </div>
                 </div>
 
                 {/* 4. Saúde & Contacto de Emergência */}
@@ -2385,8 +2545,16 @@ const TeamManagementPage: React.FC = () => {
                       <FileText size={14} className="text-csc-gold" />
                       <span>5. Documentação Oficial & RGPD</span>
                     </h4>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-csc-light/16 border border-csc-light/30 text-csc-verde-texto flex items-center gap-1">
-                      <CheckCircle2 size={11} /> RGPD Consentido
+                    {/* Lia `gdpr_consent`? Não lia: dizia "RGPD Consentido" a toda
+                        a gente, mesmo a quem não tinha dado consentimento. */}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
+                      selectedProfile.gdpr_consent === false
+                        ? 'bg-csc-red/15 border-csc-red/32 text-csc-vermelho-texto'
+                        : 'bg-csc-light/16 border-csc-light/30 text-csc-verde-texto'
+                    }`}>
+                      {selectedProfile.gdpr_consent === false
+                        ? <><XCircle size={11} /> RGPD por consentir</>
+                        : <><CheckCircle2 size={11} /> RGPD consentido</>}
                     </span>
                   </div>
 
