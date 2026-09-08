@@ -41,6 +41,9 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # A chave pública VAPID identifica quem envia as notificações. É
+          # pública por desenho — vai no bundle, como a chave anónima.
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

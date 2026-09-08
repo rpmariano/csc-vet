@@ -215,6 +215,18 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   NULL** — sem limite inferior, quem já cá estava deve a época toda, seja qual
   for. Ficou a data por ser visível na ficha; se a época voltar a mudar, as
   fichas têm de acompanhar.
+- **Os avisos push: as regras vivem em SQL, a Edge Function é só o carteiro.**
+  `public.avisos_pendentes()` diz o que falta enviar a quem — já cruzado com as
+  preferências de cada um, com o silêncio da noite (hora de Lisboa, e a base
+  corre em UTC) e com o que já saiu; a função `enviar-avisos` entrega e chama
+  `registar_envio()`. São regras sobre os dados, e em SQL testam-se com uma
+  consulta. **O mesmo assunto só sai uma vez**, por `(profile_id, tipo,
+  origem_id)` em `notification_deliveries`. As duas funções são só do
+  `service_role`. O relógio é o `.github/workflows/avisos.yml` e não o
+  `pg_cron`, que não está instalado neste projeto.
+  **Falta a chave VAPID**, que só a direção pode criar — ver
+  `docs/avisos-push.md`. Sem ela o ecrã 12b diz que o envio não está
+  configurado, em vez de mostrar um botão que não faz nada.
 - **O que se deve ao clube vive no `useEstadoPagamentos`, e mais em lado
   nenhum.** Quotas *e* encargos, com prazos: devolve a cor (vermelho com algo
   vencido, laranja a menos de `DIAS_DE_AVISO` — 8 — dias, nada em dia), a

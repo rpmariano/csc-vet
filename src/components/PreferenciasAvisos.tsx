@@ -1,19 +1,24 @@
 import React, { useEffect, useState } from 'react'
-import { Lock } from 'lucide-react'
+import { BellRing, BellOff, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from './BottomSheet'
 import { Botao } from './ui'
+import { estadoDoPush, ligarAvisos, desligarAvisos, type EstadoPush } from '../lib/push'
 
 /**
  * Preferências de avisos (ecrã 12b) — o que cada um escolhe receber.
  *
- * As notificações ainda não são enviadas por ninguém: o envio é do lado do
- * servidor e não existe. O que existe é a tabela `notification_preferences`,
- * criada na fase 1 e privada de cada um, e este ecrã, que é onde a escolha
- * fica guardada à espera de quem a leia. Sem ele, o dia em que os avisos
- * começarem a sair encontra toda a gente subscrita a tudo.
+ * São duas coisas diferentes, e o ecrã diz as duas: **este telemóvel recebe
+ * avisos?** (a subscrição push, que é por dispositivo) e **que avisos quero?**
+ * (as preferências, que são da pessoa e valem em todos os dispositivos).
+ * Ligar num telemóvel não liga no outro; desligar um aviso desliga-o em
+ * todos.
+ *
+ * No iPhone o Safari só dá push a uma PWA instalada no ecrã principal
+ * (iOS 16.4+). Quando não dá, o ecrã explica porquê em vez de mostrar um
+ * botão que não faz nada.
  *
  * A secção de gestão só aparece a quem gere: são avisos sobre o trabalho da
  * equipa técnica, e a um jogador não dizem nada.
@@ -93,6 +98,35 @@ export const PreferenciasAvisos: React.FC<{
   const [prefs, setPrefs] = useState<Preferencias>(OMISSOES)
   const [aCarregar, setACarregar] = useState(true)
   const [aGuardar, setAGuardar] = useState(false)
+  const [push, setPush] = useState<EstadoPush | null>(null)
+  const [aLigar, setALigar] = useState(false)
+
+  useEffect(() => {
+    if (!aberto) return
+    estadoDoPush().then(setPush)
+  }, [aberto])
+
+  const alternarPush = async () => {
+    if (!perfilId) return
+    triggerHaptic('medium')
+    setALigar(true)
+    try {
+      if (push === 'ligado') {
+        await desligarAvisos()
+        setPush('desligado')
+        toast.info('Este telemóvel deixa de receber avisos.')
+      } else {
+        const resultado = await ligarAvisos(perfilId)
+        setPush(resultado)
+        if (resultado === 'ligado') toast.success('Este telemóvel passa a receber avisos.')
+        else if (resultado === 'recusado') toast.error('O browser bloqueou as notificações. Dá-as nas definições do site.')
+      }
+    } catch (err) {
+      toast.error('Não foi possível mudar: ' + (err instanceof Error ? err.message : 'erro inesperado'))
+    } finally {
+      setALigar(false)
+    }
+  }
 
   useEffect(() => {
     if (!aberto || !perfilId) return
@@ -163,10 +197,57 @@ export const PreferenciasAvisos: React.FC<{
         </div>
       ) : (
         <div className="space-y-4">
-          <p className="text-[10.5px] leading-relaxed text-white/62 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
-            Os avisos ainda não estão a ser enviados — o envio é do lado do servidor e está por
-            fazer. A escolha fica guardada e passa a valer no dia em que começarem.
-          </p>
+          {/*
+            Este telemóvel recebe ou não — antes de tudo o resto. Sem
+            subscrição, as preferências em baixo não têm a quem chegar, e a
+            pessoa merece saber isso antes de as escolher.
+          */}
+          <div className={`cartao-simples p-3.5 flex items-center gap-3 ${
+            push === 'ligado' ? 'bg-csc-light/10 border-csc-light/28' : ''
+          }`}>
+            <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+              push === 'ligado'
+                ? 'bg-csc-light/20 text-csc-verde-texto'
+                : 'bg-white/8 text-white/60'
+            }`}>
+              {push === 'ligado' ? <BellRing size={17} /> : <BellOff size={17} />}
+            </span>
+
+            <span className="min-w-0 flex-1">
+              <span className="block font-display font-extrabold text-[12.5px] text-white">
+                {push === 'ligado' ? 'Este telemóvel recebe avisos' : 'Este telemóvel não recebe avisos'}
+              </span>
+              <span className="block text-[10.5px] leading-relaxed text-white/62 mt-0.5">
+                {push === 'sem-suporte'
+                  ? 'Este browser não os suporta. No iPhone, instala a app no ecrã principal e volta aqui.'
+                  : push === 'por-configurar'
+                    ? 'O envio ainda não está configurado no servidor. Fala com a direção.'
+                    : push === 'recusado'
+                      ? 'Bloqueaste as notificações para este site. Só nas definições do browser as podes voltar a dar.'
+                      : push === 'ligado'
+                        ? 'Chegam com a app fechada. Vale só para este telemóvel.'
+                        : 'Liga para receberes com a app fechada. Vale só para este telemóvel.'}
+              </span>
+            </span>
+
+            {(push === 'ligado' || push === 'desligado') && (
+              <button
+                type="button"
+                onClick={alternarPush}
+                disabled={aLigar}
+                aria-pressed={push === 'ligado'}
+                className={`shrink-0 min-h-11 px-3.5 rounded-[18px] border font-display font-bold text-[11.5px] cursor-pointer
+                  transition-transform duration-150 active:scale-97 disabled:opacity-50
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                    push === 'ligado'
+                      ? 'bg-white/8 border-white/18 text-white/80'
+                      : 'bg-csc-gold border-csc-gold text-csc-tinta'
+                  }`}
+              >
+                {aLigar ? '…' : push === 'ligado' ? 'Desligar' : 'Ligar'}
+              </button>
+            )}
+          </div>
 
           <div>
             <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-2">

@@ -1,0 +1,38 @@
+name: Enviar avisos
+
+# O relógio dos avisos.
+#
+# A base calcula a fila (`avisos_pendentes()`) e a Edge Function entrega —
+# falta quem lhes bata à porta de tempos a tempos. Fica aqui e não no
+# `pg_cron` porque as extensões `pg_cron`/`pg_net` não estão instaladas neste
+# projeto, e o repositório já usa Actions para o deploy: é menos uma coisa a
+# manter noutro sítio.
+#
+# De 15 em 15 minutos entre as 7h e as 23h (UTC). O silêncio da noite de cada
+# pessoa é respeitado dentro da consulta, com a hora de Lisboa — isto é só
+# para não acordar o servidor de madrugada à toa.
+#
+# Precisa de dois segredos no repositório:
+#   SUPABASE_FUNCTION_URL   https://<projeto>.supabase.co/functions/v1/enviar-avisos
+#   SUPABASE_SERVICE_ROLE_KEY
+#
+# A chave de serviço dá acesso total à base: é só do repositório, e nunca vai
+# para o bundle da app.
+
+on:
+  schedule:
+    - cron: '*/15 7-23 * * *'
+  workflow_dispatch:
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar a função de envio
+        run: |
+          resposta=$(curl --silent --show-error --fail-with-body \
+            --max-time 120 \
+            -X POST "${{ secrets.SUPABASE_FUNCTION_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json")
+          echo "$resposta"

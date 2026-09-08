@@ -13,7 +13,13 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png', 'cascais-emblem.png', 'logo-clube-horizontal.svg'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
-        cleanupOutdatedCaches: true
+        cleanupOutdatedCaches: true,
+        // Os dois eventos que o Workbox não conhece — `push` e
+        // `notificationclick` — vivem num ficheiro à parte em `public/`, que o
+        // service worker gerado importa. Assim mantém-se o `generateSW`, que
+        // trata do cache e das atualizações, sem passar tudo para
+        // `injectManifest` só por causa de trinta linhas.
+        importScripts: ['push-sw.js']
       },
       manifest: {
         id: '/csc-vet/',
