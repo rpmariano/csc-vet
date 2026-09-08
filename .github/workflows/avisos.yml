@@ -28,29 +28,60 @@ jobs:
   enviar:
     runs-on: ubuntu-latest
     steps:
-      # Um segredo que falta chega ao `curl` como string vazia, e o curl
-      # responde "exit code 3" (URL malformada) — que não diz a ninguém o que
-      # é preciso fazer. Mais vale dizê-lo.
+      # Um segredo em falta ou mal colado chega ao `curl` como lixo, e o curl
+      # responde "exit code 3" (URL malformada) — um número que não diz a
+      # ninguém o que é preciso fazer. E o GitHub mascara o valor no log, por
+      # isso nem se vê o que lá está: o que se pode fazer é examinar a forma e
+      # descrever o defeito sem o imprimir.
       - name: Confirmar os segredos
         env:
           URL: ${{ secrets.SUPABASE_FUNCTION_URL }}
           CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           falta=0
+
           if [ -z "$URL" ]; then
             echo "::error::Falta o segredo SUPABASE_FUNCTION_URL."
-            echo "   Settings → Secrets and variables → Actions → New repository secret"
+            echo "   Settings > Secrets and variables > Actions > New repository secret"
             echo "   Nome:  SUPABASE_FUNCTION_URL"
             echo "   Valor: https://vwvsfrzwcwdvbuaxftoh.supabase.co/functions/v1/enviar-avisos"
             falta=1
+          else
+            echo "SUPABASE_FUNCTION_URL tem $(printf %s "$URL" | wc -c) caracteres (devem ser 67)."
+            case "$URL" in
+              https://*) ;;
+              *) echo "::error::Nao comeca por https:// - falta o esquema, ou ficaram aspas coladas ao valor."
+                 falta=1 ;;
+            esac
+            case "$URL" in
+              *" "*) echo "::error::Tem um espaco. Cola a URL sem espacos a volta."
+                     falta=1 ;;
+            esac
+            case "$URL" in
+              *'"'*|*"'"*) echo "::error::Tem aspas no valor. O campo do GitHub nao as leva."
+                           falta=1 ;;
+            esac
+            case "$URL" in
+              */functions/v1/enviar-avisos) ;;
+              *) echo "::error::Nao acaba em /functions/v1/enviar-avisos."
+                 falta=1 ;;
+            esac
+            if [ "$(printf %s "$URL" | wc -l)" -gt 0 ]; then
+              echo "::error::Tem uma quebra de linha. Cola a URL numa linha so."
+              falta=1
+            fi
           fi
+
           if [ -z "$CHAVE" ]; then
             echo "::error::Falta o segredo SUPABASE_SERVICE_ROLE_KEY."
-            echo "   É a chave service_role, em Project Settings → API Keys no Supabase."
+            echo "   E a chave service_role, em Project Settings > API Keys no Supabase."
             falta=1
+          else
+            echo "SUPABASE_SERVICE_ROLE_KEY tem $(printf %s "$CHAVE" | wc -c) caracteres."
           fi
+
           [ "$falta" -eq 0 ] || exit 1
-          echo "Os dois segredos estão postos."
+          echo "Os dois segredos tem a forma certa."
 
       - name: Chamar a função de envio
         env:
@@ -67,6 +98,6 @@ jobs:
             -H "Content-Type: application/json")
           echo "$resposta"
           echo "$resposta" | grep -q 'HTTP 200' || {
-            echo "::error::A função respondeu com erro. Vê a resposta acima."
+            echo "::error::A funcao respondeu com erro. Ve a resposta acima."
             exit 1
           }
