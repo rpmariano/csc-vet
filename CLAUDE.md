@@ -191,6 +191,22 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   convocado ontem e ainda não respondeu **não é uma falta**. E o estado vazio é
   a norma, não a exceção — em produção há 1191 convocatórias por responder para
   9 respostas, por isso um histórico desenhado cheio é um histórico a fingir.
+- **Meses dispensados de quota (ecrã 3c): a fila segue a época, não o
+  calendário.** Começa em `season_start_month` e dá a volta aos doze meses. Os
+  que o clube inteiro não paga (`financial_settings.quota_excluded_months`) e os
+  que caem fora da época ficam **bloqueados e riscados** — ninguém os paga, e
+  antes eram pastilhas normais que gravavam uma dispensa sem efeito nenhum.
+  E **só o admin lhes mexe**: a ficha é de treinador e admin, mas
+  `quota_exemptions` só aceita escrita de admin (RLS), por isso um treinador
+  carregava numa pastilha e levava com 42501 ao gravar.
+  **Uma dispensa desconta na previsão de receita.** O cliente já a respeitava
+  (`getPlayerQuotaMonths`, `usePlayerQuotaDebt`), mas a previsão do Financeiro
+  vem da vista `v_quota_status`, que não conhecia `quota_exemptions` e gerava
+  linha com `expected_amount` para meses dispensados — corrigido a 2026-09-08
+  em `supabase_quota_exemptions_reporting_migration.sql`, aplicada (2530 € →
+  2420 € em produção). **Uma regra de quota escrita no cliente tem de ser
+  escrita também na vista**, como já acontece com `financial_season()` e
+  `getSeasonLabel()`.
 - **Na Home, o próximo jogo é o título do ecrã.** A data em sobrancelha
   dourada, os dois clubes em 44px sobre a faixa verde e a linha do que falta
   vivem fora do cartão de vidro, que começa nos emblemas — é o cartão 4a, e é

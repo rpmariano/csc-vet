@@ -39,7 +39,14 @@ import { CLUBE_NOME } from '../lib/clube'
 import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
-import { getSeasonLabel, comOmissoes } from '../lib/finance'
+import {
+  getSeasonLabel,
+  getSeasonMonths,
+  comOmissoes,
+  nomeMes,
+  DEFAULT_FINANCIAL_SETTINGS,
+  type FinancialSettings,
+} from '../lib/finance'
 
 /** As abreviaturas dos meses, para as pastilhas de quota dispensada. */
 const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -217,9 +224,15 @@ const TeamManagementPage: React.FC = () => {
   /* A época do clube vive nas definições financeiras — está lá porque foi lá
      que primeiro fez falta, mas é a época do clube. Ver a mesma nota na Home. */
   const [epoca, setEpoca] = useState<string>('')
+  /* As definições inteiras, e não só a época: o bloco de quotas da ficha
+     precisa do mês em que a época começa e dos meses que o clube inteiro não
+     paga, para ordenar as pastilhas e bloquear as que não são escolha de
+     ninguém. */
+  const [defFinanceiras, setDefFinanceiras] = useState<FinancialSettings>(DEFAULT_FINANCIAL_SETTINGS)
   useEffect(() => {
     supabase.from('financial_settings').select('*').maybeSingle().then(({ data }) => {
       const definicoes = comOmissoes(data)
+      setDefFinanceiras(definicoes)
       setEpoca(getSeasonLabel(definicoes))
     })
   }, [])
@@ -547,6 +560,10 @@ const TeamManagementPage: React.FC = () => {
     está para isso.
   */
   const guardarMesesDispensados = async (profileId: string) => {
+    /* Só a direção escreve em `quota_exemptions` (RLS). As pastilhas já estão
+       bloqueadas para os outros; isto é a segunda linha, para nunca sair daqui
+       um DELETE que a política deixa passar em silêncio a apagar zero linhas. */
+    if (!isAdmin) return
     const { error: apagou } = await supabase.from('quota_exemptions').delete().eq('profile_id', profileId)
     if (apagou) throw apagou
     if (formMesesDispensados.length === 0) return
@@ -1836,41 +1853,87 @@ const TeamManagementPage: React.FC = () => {
                   deixam de ser devidas.
                 </p>
 
-                <div>
-                  <p className={ETIQUETA}>Meses dispensados de quota</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
-                      const chave = String(m).padStart(2, '0')
-                      const dispensado = formMesesDispensados.includes(chave)
-                      return (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic('selection')
-                            setFormMesesDispensados(atual =>
-                              dispensado ? atual.filter(x => x !== chave) : [...atual, chave],
-                            )
-                          }}
-                          aria-pressed={dispensado}
-                          className={`min-h-11 px-3 rounded-[18px] border font-display font-black text-[11px] cursor-pointer
-                            transition-transform duration-150 active:scale-97
-                            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                              dispensado
-                                ? 'bg-csc-gold text-csc-tinta border-csc-gold'
-                                : 'bg-white/5 border-white/12 text-white/62'
-                            }`}
-                        >
-                          {MESES_CURTOS[m - 1]}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <p className="text-[10.5px] leading-relaxed text-white/62 mt-2">
-                    Dourado = dispensado, todos os anos. Os meses que o clube inteiro não paga
-                    definem-se no Financeiro, e não aqui.
-                  </p>
-                </div>
+                {/*
+                  As pastilhas seguem a ordem da época e não a do calendário:
+                  a época começa em Setembro, e uma fila que abria em Janeiro
+                  obrigava a procurar o início a meio. São sempre doze, para o
+                  ano fechar.
+
+                  Os meses que o clube inteiro não paga — o Agosto de
+                  `quota_excluded_months` — e os que caem fora da época ficam
+                  bloqueados: ninguém os paga, portanto dispensar alguém deles
+                  não quer dizer nada. Antes eram pastilhas normais, e clicar
+                  numa gravava uma dispensa que não mudava conta nenhuma.
+                */}
+                {(() => {
+                  const mesesDaEpoca = new Set(
+                    getSeasonMonths(defFinanceiras, epoca || getSeasonLabel(defFinanceiras)).map(m => m.month),
+                  )
+                  const excluidosDoClube = new Set(defFinanceiras.quota_excluded_months ?? [])
+                  const ordemDaEpoca = Array.from(
+                    { length: 12 },
+                    (_, i) => ((defFinanceiras.season_start_month - 1 + i) % 12) + 1,
+                  )
+
+                  return (
+                    <div>
+                      <p className={ETIQUETA}>Meses dispensados de quota</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {ordemDaEpoca.map(m => {
+                          const chave = String(m).padStart(2, '0')
+                          const dispensado = formMesesDispensados.includes(chave)
+                          const bloqueado = !isAdmin || excluidosDoClube.has(m) || !mesesDaEpoca.has(m)
+                          const porque = !isAdmin
+                            ? 'Só a direção dispensa alguém de quota'
+                            : excluidosDoClube.has(m)
+                              ? 'O clube inteiro não paga quota neste mês'
+                              : 'Fora da época'
+
+                          return (
+                            <button
+                              key={m}
+                              type="button"
+                              disabled={bloqueado}
+                              title={bloqueado ? porque : undefined}
+                              onClick={() => {
+                                triggerHaptic('selection')
+                                setFormMesesDispensados(atual =>
+                                  dispensado ? atual.filter(x => x !== chave) : [...atual, chave],
+                                )
+                              }}
+                              aria-pressed={bloqueado ? undefined : dispensado}
+                              aria-label={bloqueado ? `${MESES_CURTOS[m - 1]} — ${porque}` : undefined}
+                              className={`min-h-11 px-3 rounded-[18px] border font-display font-black text-[11px]
+                                transition-transform duration-150
+                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                                  bloqueado
+                                    ? 'bg-transparent border-dashed border-white/20 text-white/30 cursor-not-allowed line-through'
+                                    : dispensado
+                                      ? 'bg-csc-gold text-csc-tinta border-csc-gold cursor-pointer active:scale-97'
+                                      : 'bg-white/5 border-white/12 text-white/62 cursor-pointer active:scale-97'
+                                }`}
+                            >
+                              {MESES_CURTOS[m - 1]}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <p className="text-[10.5px] leading-relaxed text-white/62 mt-2">
+                        {!isAdmin && (
+                          <>
+                            <strong className="text-white/80">Só a direção altera dispensas de quota</strong> — a
+                            tabela só aceita escrita de admin, e sem isto o treinador carregava numa pastilha e
+                            levava com um erro ao gravar.{' '}
+                          </>
+                        )}
+                        Da esquerda para a direita, a época começa em {nomeMes(defFinanceiras.season_start_month)}.
+                        Dourado = dispensado, todos os anos. Riscado = ninguém paga esse mês, e define-se
+                        no Financeiro. Um mês dispensado sai da dívida do atleta e da previsão de receita
+                        do clube.
+                      </p>
+                    </div>
+                  )
+                })()}
               </div>
               {/* 6. SAÚDE & EMERGÊNCIA */}
               <div className="cartao-simples p-4 space-y-3.5">
