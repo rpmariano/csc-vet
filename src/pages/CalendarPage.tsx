@@ -2009,44 +2009,51 @@ const CalendarPage: React.FC = () => {
         titulo="Agenda"
         sobrancelha={`${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
         className="mb-3"
-        acoes={
-          <div className="flex items-center gap-2 flex-none">
-            {/* As setas de mês estão no calendário, ao pé do que mudam. */}
-            <button
-              type="button"
-              onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
-              aria-label={temFiltros ? 'Pesquisa e filtros (ativos)' : 'Pesquisa e filtros'}
-              className={`relative w-9 h-9 rounded-full border flex items-center justify-center cursor-pointer
-                transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                  temFiltros
-                    ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                    : 'bg-white/10 border-white/15 text-white/75'
-                }`}
-            >
-              <SlidersHorizontal size={16} />
-            </button>
-          </div>
-        }
       />
 
-      {/* Pastilhas de tipo — as do handoff, sem emoji. */}
-      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
-        {([
-          ['all', 'Todos'],
-          ['match', 'Jogos'],
-          ['practice', 'Treinos'],
-          ['gathering', 'Convívios'],
-        ] as const).map(([valor, etiqueta]) => (
-          <Pastilha
-            key={valor}
-            ativa={typeFilter === valor}
-            onClick={() => { triggerHaptic('selection'); setTypeFilter(valor) }}
-            className="flex-none"
-          >
-            {etiqueta}
-          </Pastilha>
-        ))}
+      {/*
+        Pastilhas de tipo (as do handoff, sem emoji) e, no fim da linha, o
+        funil dos filtros escondidos.
+
+        O funil estava no cabeçalho, encostado ao avatar, longe do que faz.
+        Aqui fica ao pé das outras pastilhas de filtro, que é o que é: mais um
+        filtro, só que os dele estão atrás de uma persiana. Fica `flex-none`
+        fora da caixa de scroll, senão fugia para fora do ecrã assim que
+        alguém arrastasse as pastilhas.
+      */}
+      <div className="flex items-center gap-2">
+        <div className="sem-barra-rolagem flex-1 min-w-0 flex gap-2 overflow-x-auto pb-0.5">
+          {([
+            ['all', 'Todos'],
+            ['match', 'Jogos'],
+            ['practice', 'Treinos'],
+            ['gathering', 'Convívios'],
+          ] as const).map(([valor, etiqueta]) => (
+            <Pastilha
+              key={valor}
+              ativa={typeFilter === valor}
+              onClick={() => { triggerHaptic('selection'); setTypeFilter(valor) }}
+              className="flex-none"
+            >
+              {etiqueta}
+            </Pastilha>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
+          aria-label={temFiltros ? 'Pesquisa e filtros (ativos)' : 'Pesquisa e filtros'}
+          className={`flex-none w-11 h-11 rounded-full border flex items-center justify-center cursor-pointer
+            transition-transform duration-150 active:scale-97
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+              temFiltros
+                ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                : 'bg-white/10 border-white/15 text-white/75'
+            }`}
+        >
+          <SlidersHorizontal size={17} />
+        </button>
       </div>
 
       {/* O que a persiana esconde tem de continuar visível como estado. */}
