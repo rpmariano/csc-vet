@@ -2483,15 +2483,25 @@ const CalendarPage: React.FC = () => {
                 o que menos vezes se faz aqui.
               */}
               <div className="flex flex-wrap gap-1.5">
-                <span className={`inline-flex items-center h-[22px] px-2.5 rounded-[11px] border font-display font-bold text-[9.5px] ${
-                  selectedEvent.type === 'match'
-                    ? 'bg-csc-gold/16 border-csc-gold/35 text-csc-gold'
-                    : selectedEvent.type === 'practice'
-                      ? 'bg-csc-light/18 border-csc-light/35 text-csc-verde-texto'
-                      : 'bg-csc-blue/20 border-csc-blue/40 text-csc-azul-texto'
-                }`}>
-                  {selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}
-                </span>
+                {/* A mesma pastilha do cartão da Agenda, com a cor de `CORES_TIPO`.
+                    Aqui o jogo era dourado — a cor da moldura — e o cartão da
+                    lista tinha-o em vermelho: o mesmo jogo mudava de cor conforme
+                    o ecrã em que se estava. */}
+                {(() => {
+                  const cores = CORES_TIPO[selectedEvent.type]
+                  const Icone = selectedEvent.type === 'match'
+                    ? Trophy
+                    : selectedEvent.type === 'practice' ? TrainingIcon : PartyPopper
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1.5 h-[22px] px-2.5 rounded-[11px] border
+                        font-display font-black text-[9.5px] uppercase tracking-widest ${cores.texto} ${cores.pastilha}`}
+                    >
+                      <Icone size={12} />
+                      {selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio'}
+                    </span>
+                  )
+                })()}
 
                 {selectedEvent.type === 'match' && selectedEvent.is_friendly && (
                   <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white">
@@ -2563,7 +2573,7 @@ const CalendarPage: React.FC = () => {
                     {selectedEvent.meeting_time && (
                       <>
                         <div className="flex-none px-4 py-3">
-                          <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-white/62">
+                          <p className="font-display font-bold text-[9.5px] tracking-[0.16em] uppercase text-white/55">
                             Concentração
                           </p>
                           <p className="font-display font-extrabold text-[18px] text-white mt-0.5">
@@ -2574,8 +2584,8 @@ const CalendarPage: React.FC = () => {
                       </>
                     )}
                     <div className="flex-1 px-4 py-3">
-                      <p className="font-display font-bold text-[8.5px] tracking-[0.14em] uppercase text-csc-gold">
-                        Início
+                      <p className="font-display font-bold text-[9.5px] tracking-[0.16em] uppercase text-csc-gold">
+                        {selectedEvent.type === 'match' ? 'Pontapé de saída' : 'Início'}
                       </p>
                       <p className="font-display font-extrabold text-[18px] text-white mt-0.5">
                         {new Date(selectedEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
@@ -2601,7 +2611,7 @@ const CalendarPage: React.FC = () => {
                         className="flex items-center gap-2.5 px-4 py-3 border-t border-white/13 min-h-14
                           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                       >
-                        <MapPin size={15} className="text-csc-red shrink-0" />
+                        <MapPin size={15} className="text-csc-gold shrink-0" />
                         <span className="flex-1 min-w-0">
                           <span className="block font-display font-bold text-xs text-white truncate">
                             {nome || 'Sem local definido'}
@@ -2621,9 +2631,11 @@ const CalendarPage: React.FC = () => {
                   const clean = parseMatchReportMetadata(selectedEvent.description).cleanDescription
                   if (!clean) return null
                   return (
-                    <div className="p-3.5 bg-white/[0.07] rounded-2xl text-xs text-white/70 space-y-1 border border-white/10 border-t-white/20 shadow-md shadow-black/20">
-                      <p className="font-black text-white">Observações & Informações:</p>
-                      <p className="leading-relaxed">{clean}</p>
+                    /* Sem o rótulo a negrito: nos outros cartões a nota da equipa
+                       técnica é uma banda de texto, e "Observações & Informações:"
+                       pesava mais do que o que vinha a seguir. */
+                    <div className="cartao-simples px-4 py-3">
+                      <p className="text-[11.5px] leading-relaxed text-white/70 whitespace-pre-line">{clean}</p>
                     </div>
                   )
                 })()}
@@ -2658,10 +2670,10 @@ const CalendarPage: React.FC = () => {
                         // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home.
                         // Mostra-se sempre que ainda dá para responder, mesmo que já tenha respondido antes —
                         // até à hora de concentração o jogador pode sempre mudar de ideias.
-                        <div className="bg-[rgba(11,45,11,.55)] border-t border-csc-light/35 px-4 py-3.5 flex flex-col items-center justify-center gap-2.5">
-                          <span className="font-display font-extrabold text-[13px] text-white">
+                        <div className="bg-csc-gold/13 border border-csc-gold/24 px-4 py-3.5 flex flex-col items-center justify-center gap-2.5">
+                          <span className="font-display font-extrabold text-[14px] text-white">
                             {myCallup.status === 'called' ? 'Contamos contigo?' :
-                              myCallup.status === 'confirmed' ? 'Disseste que sim' : 'Disseste que não'}
+                              myCallup.status === 'confirmed' ? 'Contamos contigo.' : 'Ficas de fora.'}
                           </span>
                           <div className="flex items-center gap-2.5 w-full">
                             <button
@@ -2676,7 +2688,7 @@ const CalendarPage: React.FC = () => {
                               }`}
                             >
                               {myCallup.status === 'confirmed' && <CheckCircle2 size={15} />}
-                              Sim
+                              Sim, vou
                             </button>
                             <button
                               type="button"
@@ -2690,7 +2702,7 @@ const CalendarPage: React.FC = () => {
                               }`}
                             >
                               {myCallup.status === 'declined' && <XCircle size={15} />}
-                              Não
+                              Não posso
                             </button>
                           </div>
                           {myCallup.status !== 'called' && (
