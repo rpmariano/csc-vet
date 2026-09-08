@@ -40,8 +40,10 @@ import { CartaoVidro, CartaoSimples, EtiquetaSeccao } from './ui'
  * - `role` e `roles` — a política de UPDATE da própria ficha impede mudá-los.
  *   Quem tem papel atribuído para lá do `player` por omissão é alguém que a
  *   direção reconheceu.
- * - `jersey_number` e `position` — o bloco desportivo das Definições é só de
- *   leitura; nenhum dos dois vai no que o próprio guarda.
+ * - `jersey_number` e `position` — no Perfil são só de leitura, e não vão no
+ *   que o próprio guarda. **Atenção:** o tamanho de equipamento e o pé
+ *   preferido estavam no mesmo bloco e passaram a ser editáveis pelo próprio;
+ *   estes dois têm de continuar travados, senão a decisão perde o pé.
  *
  * Ficaram de fora `birth_date` e `member_number`, que a condição antiga usava:
  * as Definições deixam o próprio escrevê-los, e com eles aqui bastava preencher

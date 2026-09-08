@@ -68,18 +68,19 @@ const SettingsPage: React.FC = () => {
   const [formPositions, setFormPositions] = useState<string[]>(['Médio Centro'])
   const [formJerseyNumber, setFormJerseyNumber] = useState<number | ''>('')
   const [formKitSize, setFormKitSize] = useState('L')
+  const [formPreferredFoot, setFormPreferredFoot] = useState('')
 
-  // 5. Dados Bancários & Quotas
+  // 6. Dados Bancários & Quotas
   const [formIban, setFormIban] = useState('')
   const [formMemberNumber, setFormMemberNumber] = useState('')
 
-  // 6. Saúde & Contacto de Emergência
+  // 7. Saúde & Contacto de Emergência
   const [formEmergencyName, setFormEmergencyName] = useState('')
   const [formEmergencyPhone, setFormEmergencyPhone] = useState('')
   const [formEmergencyRelation, setFormEmergencyRelation] = useState('')
   const [formMedicalNotes, setFormMedicalNotes] = useState('')
 
-  // 7. Documentos & RGPD
+  // 8. Documentos & RGPD
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [idDocUrl, setIdDocUrl] = useState<string | null>(null)
   const [insuranceDocUrl, setInsuranceDocUrl] = useState<string | null>(null)
@@ -113,6 +114,7 @@ const SettingsPage: React.FC = () => {
       setFormPositions(parsePositions(profile.position))
       setFormJerseyNumber(profile.jersey_number !== null && profile.jersey_number !== undefined ? profile.jersey_number : '')
       setFormKitSize(profile.kit_size || 'L')
+      setFormPreferredFoot(profile.preferred_foot || '')
 
       setFormIban(profile.iban || '')
       setFormMemberNumber(profile.member_number || '')
@@ -208,6 +210,12 @@ const SettingsPage: React.FC = () => {
       insurance_doc_url: insuranceDocUrl || null,
       medical_exam_doc_url: medicalExamDocUrl || null,
       gdpr_consent: Boolean(formGdprConsent),
+      /* O equipamento e o pé são do próprio: quem sabe que tamanho veste e de
+         que pé joga é ele. A RLS deixa — a política de UPDATE da própria ficha
+         só guarda `role` e `roles`. O que fica travado é o que a equipa técnica
+         atribui: posições, funções e número de camisola. */
+      kit_size: sanitizeText(formKitSize),
+      preferred_foot: formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
     }
 
     try {
@@ -589,16 +597,16 @@ const SettingsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. DADOS DESPORTIVOS, EQUIPAMENTO & FUNÇÃO (SÓ DE VISUALIZAÇÃO COM AVISO DO TREINADOR) */}
+        {/* 4. O QUE A EQUIPA TÉCNICA ATRIBUI — SÓ DE LEITURA */}
         <div className="bg-csc-dark p-5 sm:p-6 rounded-3xl border-2 border-amber-400/40 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-amber-400/20 pb-3">
             <h3 className="text-xs font-black text-amber-200 uppercase tracking-wider flex items-center gap-2">
               <Shield size={16} className="text-amber-400" />
-              <span>4. Dados Desportivos, Equipamento & Função</span>
+              <span>4. Posições, Funções & Camisola</span>
             </h3>
             <span className="text-[11px] font-bold text-amber-200 bg-amber-500/20 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
               <Lock size={12} />
-              <span>Só de Visualização</span>
+              <span>Atribuído pelo clube</span>
             </span>
           </div>
 
@@ -608,7 +616,7 @@ const SettingsPage: React.FC = () => {
             <div>
               <p className="font-extrabold text-amber-200">Nota da Equipa Técnica:</p>
               <p className="mt-0.5">
-                Os dados desta secção (posições no campo, funções no clube, número de camisola e tamanho de equipamento) são atribuídos e geridos exclusivamente pelo <strong>treinador / equipa técnica</strong>.
+                As posições no campo, as funções no clube e o número de camisola são atribuídos pelo <strong>treinador / equipa técnica</strong>. O tamanho de equipamento e o pé preferido são teus — estão mais abaixo e podes mudá-los.
               </p>
             </div>
           </div>
@@ -649,34 +657,62 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Camisola e Equipamento (Read-only) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-3 border-t border-amber-400/20">
-            <div>
-              <label className={ETIQUETA}>Nº da Camisola (Dorsal)</label>
-              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
-                {formJerseyNumber ? `#${formJerseyNumber}` : 'Não atribuído'}
-              </div>
-            </div>
-            <div>
-              <label className={ETIQUETA}>Tamanho de Equipamento</label>
-              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
-                {formKitSize || 'L'}
-              </div>
-            </div>
-            <div>
-              <label className={ETIQUETA}>Pé preferido</label>
-              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
-                {profile?.preferred_foot || 'Não indicado'}
-              </div>
+          {/* O número da camisola é atribuído: fica de leitura, com o resto. */}
+          <div className="pt-3 border-t border-amber-400/20">
+            <label className={ETIQUETA}>Nº da Camisola (Dorsal)</label>
+            <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
+              {formJerseyNumber ? `#${formJerseyNumber}` : 'Não atribuído'}
             </div>
           </div>
         </div>
 
-        {/* 5. DADOS BANCÁRIOS & QUOTAS */}
+        {/*
+          O que o atleta sabe melhor do que o clube: que tamanho veste e de que
+          pé joga. Estavam no bloco travado, junto com as posições e o número —
+          e para mudar de tamanho era preciso pedir a alguém da direção.
+        */}
         <div className="space-y-3.5">
           <h3 className={SECCAO}>
             <Shield size={16} className="text-csc-gold" />
-            <span>5. Dados Bancários & Quotas</span>
+            <span>5. Equipamento & Jogo</span>
+          </h3>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label className={ETIQUETA} htmlFor="perfil-tamanho">Tamanho de Equipamento</label>
+              <select
+                id="perfil-tamanho"
+                value={formKitSize}
+                onChange={(e) => setFormKitSize(e.target.value)}
+                className={CAMPO}
+              >
+                {['S', 'M', 'L', 'XL', 'XXL'].map(t => (
+                  <option key={t} value={t} className="bg-csc-superficie text-white">{t}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={ETIQUETA} htmlFor="perfil-pe">Pé preferido</label>
+              <select
+                id="perfil-pe"
+                value={formPreferredFoot}
+                onChange={(e) => setFormPreferredFoot(e.target.value)}
+                className={CAMPO}
+              >
+                <option value="" className="bg-csc-superficie text-white">Não indicado</option>
+                {['Direito', 'Esquerdo', 'Ambos'].map(pe => (
+                  <option key={pe} value={pe} className="bg-csc-superficie text-white">{pe}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* 6. DADOS BANCÁRIOS & QUOTAS */}
+        <div className="space-y-3.5">
+          <h3 className={SECCAO}>
+            <Shield size={16} className="text-csc-gold" />
+            <span>6. Dados Bancários & Quotas</span>
           </h3>
 
           <div className="grid grid-cols-2 gap-2.5">
@@ -725,11 +761,11 @@ const SettingsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 6. SAÚDE & CONTACTO DE EMERGÊNCIA */}
+        {/* 7. SAÚDE & CONTACTO DE EMERGÊNCIA */}
         <div className="space-y-3.5">
           <h3 className={SECCAO}>
             <HeartPulse size={16} className="text-csc-vermelho-texto" />
-            <span>6. Saúde & Contacto de Emergência</span>
+            <span>7. Saúde & Contacto de Emergência</span>
           </h3>
 
           <div className="grid grid-cols-2 gap-2.5">
@@ -788,7 +824,7 @@ const SettingsPage: React.FC = () => {
         <div className="space-y-3.5">
           <h3 className={SECCAO}>
             <FileText size={16} className="text-csc-gold" />
-            <span>7. Documentos & Proteção de Dados (RGPD)</span>
+            <span>8. Documentos & Proteção de Dados (RGPD)</span>
           </h3>
 
           <div className="grid grid-cols-2 gap-2.5">

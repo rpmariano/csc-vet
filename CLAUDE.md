@@ -462,10 +462,14 @@ ligar: pode muito bem ser a de quem não entra em campo.
 Isto tem consequência em dois sítios, e nos dois a regra é a mesma: **decidir só
 por colunas que o próprio não pode escrever.** São elas `role` e `roles` (a
 política de UPDATE da própria ficha impede mudá-los) e `jersey_number` e
-`position` (o bloco desportivo das Definições é só de leitura). `birth_date` e
-`member_number` **não servem**, por muito que pareçam: as Definições deixam o
-próprio escrevê-los, e bastava preencher o aniversário para se deixar de ser
-contado. Idem telefone, fotografia e alcunha.
+`position` (no Perfil são só de leitura, e não vão no que o próprio guarda).
+`birth_date` e `member_number` **não servem**, por muito que pareçam: as
+Definições deixam o próprio escrevê-los, e bastava preencher o aniversário para
+se deixar de ser contado. Idem telefone, fotografia e alcunha — e, desde
+2026-09-08, **também o tamanho de equipamento e o pé preferido**, que passaram
+a ser editáveis pelo próprio (estavam no mesmo bloco travado, e para mudar de
+tamanho era preciso pedir à direção). O que fica travado no Perfil é só o que a
+equipa técnica atribui: posições, funções e número de camisola.
 
 - `public.admin_contas_por_ligar()` (`supabase_contas_por_ligar_migration.sql`,
   aplicada a 2026-09-07) alimenta o ecrã 3d. Chamava-se `admin_contas_sem_atleta()`

@@ -26,6 +26,7 @@ const PERFIL = {
   iban: 'PT50000000000000000000', kit_size: 'M', preferred_foot: 'Esquerdo',
   gdpr_consent: false, quota_start_date: '2026-09-01', quota_end_date: null,
   emergency_contact_name: 'Maria Silva', emergency_contact_phone: '939999999',
+  emergency_contact_relation: null as string | null,
   id_document_url: null, insurance_doc_url: null, medical_exam_doc_url: null,
 }
 
@@ -129,4 +130,38 @@ test('o meio-campo diz "Médio Centro", e não "Médio Defensivo"', async ({ pag
 
   await expect(ficha.getByText(/Médio Defensivo/)).toHaveCount(0)
   await expect(ficha.getByText('Médio Centro').first()).toBeVisible()
+})
+
+/**
+ * O tamanho de equipamento e o pé preferido são do próprio.
+ *
+ * Estavam no bloco travado do Perfil, junto com as posições, as funções e o
+ * número de camisola: para mudar de tamanho era preciso pedir a alguém da
+ * direção. A RLS sempre deixou — a política de UPDATE da própria ficha só
+ * guarda `role` e `roles`.
+ */
+test('o atleta muda o tamanho e o pé no seu Perfil', async ({ page }) => {
+  await abreFicha(page)
+  await page.goto('/csc-vet/settings')
+  await page.waitForLoadState('networkidle')
+
+  const tamanho = page.getByLabel('Tamanho de Equipamento', { exact: true })
+  await expect(tamanho).toBeEnabled()
+  await tamanho.selectOption('XL')
+  await expect(tamanho).toHaveValue('XL')
+
+  const pe = page.getByLabel('Pé preferido', { exact: true })
+  await expect(pe).toBeEnabled()
+  await pe.selectOption('Ambos')
+  await expect(pe).toHaveValue('Ambos')
+})
+
+test('a camisola e as posições continuam travadas no Perfil', async ({ page }) => {
+  await abreFicha(page)
+  await page.goto('/csc-vet/settings')
+  await page.waitForLoadState('networkidle')
+
+  // O número é texto, não campo: quem o atribui é a equipa técnica.
+  await expect(page.getByText('#99', { exact: true })).toBeVisible()
+  await expect(page.getByLabel(/Nº da Camisola/)).toHaveCount(0)
 })
