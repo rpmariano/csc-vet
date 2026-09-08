@@ -120,6 +120,7 @@ Deno.serve(async (req: Request) => {
 
   let enviados = 0
   let falhados = 0
+  let chaveTrocada = 0
   const mortas: string[] = []
 
   for (const aviso of fila) {
@@ -144,8 +145,20 @@ Deno.serve(async (req: Request) => {
         chegouAAlgures = true
       } catch (err) {
         const estado = (err as { statusCode?: number }).statusCode
-        if (estado === 404 || estado === 410) mortas.push(caixa.endpoint)
-        else console.error('falha a enviar', caixa.endpoint, estado, err)
+        if (estado === 404 || estado === 410) {
+          // App desinstalada, ou browser que apagou os dados.
+          mortas.push(caixa.endpoint)
+        } else if (estado === 403) {
+          /*
+            A subscrição foi criada com outra chave VAPID. Não se apaga: um 403
+            é quase sempre a chave do servidor que mudou, e apagar as
+            subscrições de toda a gente por causa de um segredo mal colado era
+            obrigar o plantel inteiro a voltar a ligar os avisos.
+          */
+          chaveTrocada++
+        } else {
+          console.error('falha a enviar', caixa.endpoint, estado, err)
+        }
         falhados++
       }
     }
@@ -170,5 +183,24 @@ Deno.serve(async (req: Request) => {
     await supabase.from('push_subscriptions').delete().in('endpoint', mortas)
   }
 
-  return Response.json({ enviados, falhados, caixas_apagadas: mortas.length })
+  /*
+    Com tudo a falhar por 403, o problema não é de um aviso: é da chave. Vai
+    no corpo da resposta e com estado 500, senão o relógio dava isto por bom —
+    um `{"enviados":0}` com HTTP 200 é indistinguível de "não havia nada a
+    enviar".
+  */
+  const resumo = {
+    enviados,
+    falhados,
+    caixas_apagadas: mortas.length,
+    ...(chaveTrocada > 0 && {
+      erro:
+        `${chaveTrocada} subscrições foram criadas com outra chave VAPID. ` +
+        'Trocar a chave invalida as subscrições que já existiam: quem quiser ' +
+        'voltar a receber tem de desligar e ligar os avisos no telemóvel, com a ' +
+        'app já reconstruída com a VITE_VAPID_PUBLIC_KEY nova.',
+    }),
+  }
+
+  return Response.json(resumo, { status: chaveTrocada > 0 && enviados === 0 ? 500 : 200 })
 })

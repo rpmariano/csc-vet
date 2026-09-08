@@ -118,3 +118,24 @@ atravessa a meia-noite testa-se ao contrário.
 O Safari só dá notificações push a uma PWA **instalada no ecrã principal**
 (iOS 16.4+). Num Safari normal o ecrã de avisos diz isso em vez de oferecer um
 botão que não funciona.
+
+## Se trocares a chave VAPID
+
+**Uma subscrição fica presa à chave com que nasceu.** Trocar o par VAPID
+invalida todas as que já existiam, e o serviço de push responde 403 com
+«the VAPID credentials in the authorization header do not correspond to the
+credentials used to create the subscriptions».
+
+A função conta esses casos e devolve-os no corpo da resposta, com estado 500,
+para o relógio não os dar por bons. Não apaga as subscrições: um 403 é quase
+sempre a chave do servidor que mudou, e apagá-las obrigaria o plantel inteiro a
+voltar a ligar os avisos por causa de um segredo mal colado.
+
+A seguir a trocar a chave, por esta ordem:
+
+1. Atualizar `VAPID_PUBLIC_KEY` e `VAPID_PRIVATE_KEY` nos segredos do Supabase.
+2. Atualizar `VITE_VAPID_PUBLIC_KEY` nos segredos do GitHub.
+3. Correr o **Deploy to GitHub Pages** — a app só apanha a chave nova quando é
+   reconstruída.
+4. Em cada telemóvel: fechar e reabrir a app, e no ecrã dos avisos **desligar e
+   voltar a ligar**. É isso que cria a subscrição com a chave nova.

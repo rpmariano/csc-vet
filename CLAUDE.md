@@ -558,3 +558,19 @@ teria de ser rodada de imediato.
 - Ao redesenhar um ecrã, cruzar com `Mapa de Navegação.dc.html` do handoff para
   nenhum botão ficar sem destino, e manter o vocabulário do código (posições GR–PL,
   estados Apto/Lesionado/Inativo, tipos de evento, participação na ficha de jogo).
+
+# Model & Effort Selector
+
+DESIGN/ARCHITECTURE → Opus 5 + xhigh
+IMPLEMENTATION → Sonnet 5 + high
+DEBUGGING → Opus 5 + high
+REFACTOR → Opus 5 + xhigh
+TESTING → Sonnet 5 + high
+QUICK EDITS → Haiku 4.4 + low
+DOCS → Sonnet 5 + medium
+INFRASTRUCTURE → Opus 5 + high
+CODE REVIEW → Opus 5 + high
+MIGRATION → Fable 5.1 + high
+INTEGRATION → Opus 5 + xhigh
+
+Analyze the task and recommend /model and /effort.
