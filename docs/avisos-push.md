@@ -16,14 +16,26 @@ O que falta para os avisos saírem, e o que já está feito.
 
 ## Falta (e só a direção o pode fazer)
 
-**1. Gerar o par de chaves VAPID.** São a identidade de quem envia. Com o Node
-instalado:
+**1. Gerar o par de chaves VAPID.** São a identidade de quem envia:
 
 ```bash
-npx web-push generate-vapid-keys
+node scripts/gerar-chaves-vapid.mjs
 ```
 
-Guarda as duas. A pública é pública mesmo — vai no bundle da app.
+Não descarrega nada — é só uma chave P-256, e o Node sabe fazê-las sozinho.
+
+O `npx web-push generate-vapid-keys` faz o mesmo, mas no PowerShell desta
+máquina é recusado: a política de execução não deixa correr o `npx.ps1`
+(«running scripts is disabled on this system»). Quem preferir esse caminho
+chama o `.cmd`, que passa ao lado do wrapper de PowerShell:
+
+```bash
+npx.cmd web-push generate-vapid-keys
+```
+
+Guarda as duas chaves. A pública é pública mesmo — vai no bundle da app, como
+a chave anónima do Supabase. **A privada não sai do terminal para lado nenhum
+a não ser os segredos do Supabase**: nem para o repositório, nem para um chat.
 
 **2. Pôr os segredos no Supabase** (Project Settings → Edge Functions →
 Secrets), para a função `enviar-avisos`:
