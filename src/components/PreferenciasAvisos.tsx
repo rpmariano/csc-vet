@@ -30,8 +30,14 @@ interface Preferencias {
   quotas_em_atraso: boolean
   eventos_sem_convocatoria: boolean
   fichas_por_preencher: boolean
-  silencio_inicio: string | null
-  silencio_fim: string | null
+  /*
+    Sem silêncio nenhum é uma janela de comprimento zero — as duas horas
+    iguais —, e não `null`: as colunas são `NOT NULL` na base, e desligar o
+    interruptor mandava `null` e rebentava a gravar. O `avisos_pendentes()` já
+    trata `inicio = fim` como "esta pessoa nunca está em silêncio".
+  */
+  silencio_inicio: string
+  silencio_fim: string
 }
 
 const OMISSOES: Preferencias = {
@@ -173,7 +179,7 @@ export const PreferenciasAvisos: React.FC<{
     }
   }
 
-  const silencioLigado = Boolean(prefs.silencio_inicio && prefs.silencio_fim)
+  const silencioLigado = prefs.silencio_inicio !== prefs.silencio_fim
 
   return (
     <BottomSheet
@@ -292,8 +298,8 @@ export const PreferenciasAvisos: React.FC<{
               aoMudar={v =>
                 setPrefs(p => ({
                   ...p,
-                  silencio_inicio: v ? (p.silencio_inicio ?? '23:00') : null,
-                  silencio_fim: v ? (p.silencio_fim ?? '08:00') : null,
+                  silencio_inicio: v ? (p.silencio_inicio === p.silencio_fim ? '23:00' : p.silencio_inicio) : '00:00',
+                  silencio_fim: v ? (p.silencio_fim === p.silencio_inicio ? '08:00' : p.silencio_fim) : '00:00',
                 }))
               }
               titulo="Silêncio à noite"
@@ -308,7 +314,7 @@ export const PreferenciasAvisos: React.FC<{
                   </span>
                   <input
                     type="time"
-                    value={(prefs.silencio_inicio ?? '23:00').slice(0, 5)}
+                    value={prefs.silencio_inicio.slice(0, 5)}
                     onChange={e => setPrefs(p => ({ ...p, silencio_inicio: e.target.value }))}
                     className="w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
                   />
@@ -319,7 +325,7 @@ export const PreferenciasAvisos: React.FC<{
                   </span>
                   <input
                     type="time"
-                    value={(prefs.silencio_fim ?? '08:00').slice(0, 5)}
+                    value={prefs.silencio_fim.slice(0, 5)}
                     onChange={e => setPrefs(p => ({ ...p, silencio_fim: e.target.value }))}
                     className="w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
                   />
