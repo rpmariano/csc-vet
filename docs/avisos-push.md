@@ -33,9 +33,22 @@ chama o `.cmd`, que passa ao lado do wrapper de PowerShell:
 npx.cmd web-push generate-vapid-keys
 ```
 
-Guarda as duas chaves. A pública é pública mesmo — vai no bundle da app, como
-a chave anónima do Supabase. **A privada não sai do terminal para lado nenhum
-a não ser os segredos do Supabase**: nem para o repositório, nem para um chat.
+O script escreve as duas num ficheiro, `chaves-vapid.local.txt`, e é **de lá
+que se copiam**: a pública tem 87 caracteres e quebra em duas linhas em
+qualquer terminal, o que leva a copiá-la a meio — e o servidor de push
+responde então «Vapid public key should be 65 bytes long when decoded».
+
+Comprimentos, para conferir o que colaste:
+
+| Chave | Caracteres |
+|---|---|
+| `VAPID_PUBLIC_KEY` | 87 |
+| `VAPID_PRIVATE_KEY` | 43 |
+
+A pública é pública mesmo — vai no bundle da app, como a chave anónima do
+Supabase. **A privada vai só para os segredos do Supabase**: nem para o
+repositório, nem para um chat. O ficheiro está no `.gitignore`; apaga-o depois
+de guardares as chaves.
 
 **2. Pôr os segredos no Supabase** (Project Settings → Edge Functions →
 Secrets), para a função `enviar-avisos`:

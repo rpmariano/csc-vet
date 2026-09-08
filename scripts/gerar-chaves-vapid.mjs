@@ -7,15 +7,21 @@
  * é só uma chave P-256, e o Node sabe fazê-las sozinho. Serve também quando o
  * PowerShell recusa correr o `npx.ps1` por causa da política de execução.
  *
- * **A chave privada não sai daqui.** Aparece no teu terminal, vai para os
- * segredos do Supabase, e mais nada: não a ponhas no repositório, num chat,
- * nem num ficheiro versionado. A pública é pública por desenho — vai no
- * bundle da app, como a chave anónima do Supabase.
+ * **Escreve as chaves num ficheiro**, e não só no ecrã. A pública tem 87
+ * caracteres e quebra em duas linhas em qualquer terminal: à primeira vez,
+ * foi copiada a meio e o Supabase respondeu «Vapid public key should be 65
+ * bytes long when decoded». De um ficheiro copia-se inteira.
+ *
+ * **A chave privada não sai daqui.** Vai para os segredos do Supabase, e mais
+ * nada: não a ponhas no repositório, num chat, nem numa captura de ecrã. O
+ * ficheiro que isto escreve está no `.gitignore`.
  *
  * O que fazer com elas está em `docs/avisos-push.md`.
  */
 
 import { generateKeyPairSync } from 'node:crypto'
+import { writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 const { publicKey, privateKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' })
 
@@ -38,21 +44,37 @@ const publica = Buffer.concat([
 /* A privada é o escalar `d`, que o JWK já dá em base64url. */
 const privada = jwkPrivada.d
 
-if (publica.length !== 87 || privada.length !== 43) {
+/* A mesma validação que o servidor de push faz, antes de as dar como boas. */
+if (deBase64Url(publica).length !== 65 || deBase64Url(privada).length !== 32) {
   console.error('Comprimento inesperado — não uses estas chaves.')
   process.exit(1)
 }
 
+const ficheiro = resolve(process.cwd(), 'chaves-vapid.local.txt')
+writeFileSync(
+  ficheiro,
+  [
+    '# Chaves VAPID dos avisos push — geradas por scripts/gerar-chaves-vapid.mjs',
+    '# A privada é um segredo. Apaga este ficheiro depois de as guardares.',
+    '',
+    `VAPID_PUBLIC_KEY=${publica}`,
+    `VAPID_PRIVATE_KEY=${privada}`,
+    '',
+  ].join('\n'),
+  'utf8',
+)
+
 console.log('')
-console.log('  A chave privada abaixo é um segredo. Copia-a daqui direto para os')
-console.log('  segredos do Supabase — não a partilhes num chat, num email, nem')
-console.log('  numa captura de ecrã. Se isso acontecer, corre este script outra')
-console.log('  vez e usa o par novo.')
+console.log('  Escrevi as duas chaves em:')
+console.log('  ' + ficheiro)
 console.log('')
-console.log('VAPID_PUBLIC_KEY  (pública — vai no bundle da app)')
-console.log(publica)
+console.log('  Copia-as DE LÁ, e não do ecrã: a pública tem 87 caracteres e')
+console.log('  quebra em duas linhas aqui, o que leva a copiá-la a meio.')
 console.log('')
-console.log('VAPID_PRIVATE_KEY (privada — só nos segredos do Supabase)')
-console.log(privada)
+console.log('  A privada é um segredo — vai para os segredos do Supabase e mais')
+console.log('  lado nenhum. Apaga o ficheiro depois de as guardares.')
 console.log('')
-console.log('Passos seguintes: docs/avisos-push.md')
+console.log(`  VAPID_PUBLIC_KEY   ${publica.length} caracteres`)
+console.log(`  VAPID_PRIVATE_KEY  ${privada.length} caracteres`)
+console.log('')
+console.log('  Passos seguintes: docs/avisos-push.md')
