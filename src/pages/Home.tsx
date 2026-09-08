@@ -200,10 +200,12 @@ const Home: React.FC = () => {
 
         const ondeE = (e: EventoBruto) => e.location?.trim() || e.field?.name || ''
 
+        const jogosEmCima = marcados
+          .filter(e => e.type === 'match')
+          .slice(0, 5)
+
         setJogos(
-          marcados
-            .filter(e => e.type === 'match')
-            .slice(0, 5)
+          jogosEmCima
             .map(e => {
               const fechada = convocatoriaFechada(e, (total.get(e.id) ?? 0) > 0)
               return {
@@ -223,11 +225,21 @@ const Home: React.FC = () => {
             }),
         )
 
-        /* Por responder: o que ainda espera resposta minha, e **nunca treinos**
-           — um treino não pede resposta nenhuma nesta app, ao contrário do que
-           o cartão 4a desenha. */
+        /*
+          Por responder: o que ainda espera resposta minha e **não está já no
+          cartão de cima**. Um jogo que se pode responder no carrossel não
+          precisa de aparecer outra vez três linhas abaixo, com os mesmos dois
+          botões — era a mesma pergunta feita duas vezes no mesmo ecrã. Na
+          prática sobram os convívios, e os jogos que ficarem de fora do
+          carrossel por serem mais do que cinco.
+
+          E **nunca treinos**, ao contrário do que o cartão 4a desenha: um
+          treino não pede resposta nenhuma nesta app.
+        */
+        const idsEmCima = new Set(jogosEmCima.map(e => e.id))
         setPendentes(
           marcados
+            .filter(e => !idsEmCima.has(e.id))
             .filter(e => e.type !== 'practice' && minha.get(e.id) === 'called')
             .filter(e => !convocatoriaFechada(e, true))
             .slice(0, 6)

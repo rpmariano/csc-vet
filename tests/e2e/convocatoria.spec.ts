@@ -274,3 +274,39 @@ test('a edição na Agenda tem o rascunho', async ({ page }) => {
   await expect(caixa).toBeVisible()
   await expect(caixa).not.toBeChecked()
 })
+
+/**
+ * A Home não pergunta a mesma coisa duas vezes.
+ *
+ * O cartão de cima folheia os jogos marcados, cada um com Sim/Não. Um jogo
+ * que já se pode responder ali não volta a aparecer em "Por responder" três
+ * linhas abaixo, com os mesmos dois botões — sobram os convívios, e os jogos
+ * que ficarem de fora do carrossel.
+ */
+test('um jogo do cartão de cima não se repete em "Por responder"', async ({ page }) => {
+  const meu = (id: string) => ({
+    id: 'k-' + id, event_id: id, player_id: UTILIZADOR_TESTE.id,
+    status: 'called', responded_at: null, player: FIXTURES_BASE.profiles[0],
+  })
+
+  await montarSupabaseFalso(page, {
+    events: [
+      { ...base, id: 'g1', title: 'Jogo', type: 'match', date_time: DAQUI_A_DIAS(4) },
+      { ...base, id: 'g2', title: 'Jogo', type: 'match', date_time: DAQUI_A_DIAS(18) },
+      { ...base, id: 'cv', title: 'Jantar Reentré', type: 'gathering', date_time: DAQUI_A_DIAS(4) },
+    ],
+    callups: [meu('g1'), meu('g2'), meu('cv')],
+  })
+  await page.goto('/csc-vet/')
+  await page.waitForLoadState('networkidle')
+  await page.waitForTimeout(600)
+
+  // Os dois jogos estão em cima: duas páginas no carrossel dos jogos.
+  await expect(page.getByRole('group', { name: 'Próximos jogos' })).toBeVisible()
+
+  // E "Por responder" fica só com o convívio.
+  const porResponder = page.getByRole('group', { name: 'Compromissos por responder' })
+  await expect(porResponder).toBeVisible()
+  await expect(porResponder.getByText('Jantar Reentré')).toBeVisible()
+  await expect(porResponder.getByText(/^Jogo com/)).toHaveCount(0)
+})
