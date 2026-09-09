@@ -152,15 +152,25 @@ export async function montarSupabaseFalso(page: Page, fixtures: Fixtures = {}) {
       let linhas = tabelas[tabelaDoPedido(url)] ?? []
 
       /*
-        Filtrar por `id=eq.<x>` quando o pedido o traz. Sem isto, uma leitura
-        de uma ficha só devolvia a tabela inteira e o cliente ficava com a
-        primeira linha, fosse ela quem fosse — o `maybeSingle()` do
-        AuthContext trazia o primeiro do plantel em vez de quem tem sessão.
+        Filtrar por `<coluna>=eq.<valor>` quando o pedido o traz. Sem isto,
+        uma leitura de uma ficha só devolvia a tabela inteira e o cliente
+        ficava com a primeira linha, fosse ela quem fosse — o `maybeSingle()`
+        do AuthContext trazia o primeiro do plantel em vez de quem tem sessão.
       */
-      const filtroId = /[?&]id=eq\.([^&]+)/.exec(url)
-      if (filtroId) {
-        const alvo = decodeURIComponent(filtroId[1])
-        linhas = linhas.filter(l => String((l as { id?: unknown }).id) === alvo)
+      /*
+        Qualquer `<coluna>=eq.<valor>`, e não só o `id`. Era só o `id`, e uma
+        contagem por `tournament_id` devolvia a tabela inteira: as duas provas
+        de um adversário apareciam com os mesmos jogos, e o teste não tinha
+        como ver a diferença. O mock imita os filtros que decidem *quais*
+        linhas voltam — este é um deles.
+      */
+      for (const [, coluna, valor] of decodeURIComponent(url).matchAll(/[?&]([a-z_]+)=eq\.([^&]*)/g)) {
+        if (coluna === 'select' || coluna === 'order') continue
+        linhas = linhas.filter(l => {
+          const atual = (l as Record<string, unknown>)[coluna]
+          if (valor === 'null') return atual === null || atual === undefined
+          return String(atual) === valor
+        })
       }
 
       /*

@@ -205,6 +205,18 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   diálogo e continuava do lado de fora dele. `dialogos.spec.ts` cobre agora as
   persianas abertas por navegação direta, e repete cada uma quatro vezes: era
   uma corrida, e uma passagem única dava verde com o bug lá.
+- **Um cartão não repete o título do ecrã em que está.** A ficha do adversário
+  tinha o nome no título da persiana e outra vez, truncado, no primeiro cartão
+  — com o nome do campo por baixo, que num clube como o "Grupo Desportivo dos
+  Pescadores da Costa da Caparica" é quase a mesma frase: lia-se o nome três
+  vezes seguidas. Um cartão sob um título carrega o que o título **não** diz.
+  Ali passou a ser o emblema, a sigla e o histórico contra nós; o campo tem a
+  sua secção mais abaixo.
+  **E um emblema em falta desenha um escudo, nunca as iniciais** — a mesma
+  regra que já valia no cartão da Agenda: com a sigla ao lado, as iniciais no
+  lugar do emblema eram lê-la duas vezes.
+  Só a ficha do adversário e a do campo dão `title` à `<VistaDetalhe>`, e é
+  onde isto pode acontecer (verificado a 2026-09-09).
 - **Um cabeçalho de grupo escreve-se como etiqueta; a linha, como conteúdo.**
   Numa lista agrupada — "Os meus pagamentos" — o cabeçalho leva maiúsculas
   pequenas e espaçadas (`9.5px`, `tracking-[0.16em]`, `text-white/70`) sobre
@@ -389,6 +401,12 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   fazia o cabeçalho mudar de altura de ecrã para ecrã. **A fotografia não leva
   lápis**: é sempre a mesma porta, e um lápis num ecrã e não nos outros fazia
   parecer que abriam sítios diferentes.
+- **A prova escolhida na Classificação vai no endereço** (`?torneio=`), como o
+  separador vai no `?ver=`. Sem isso não havia como ligar a uma classificação
+  em concreto, e a ficha do adversário — onde um adversário pode estar em mais
+  do que uma prova — só podia mandar quem clicasse para a primeira da lista. A
+  prova que vem no endereço ganha à escolha automática enquanto existir, senão
+  um link para uma prova já terminada caía na primeira em curso.
 - **Uma equipa de torneio mostra-se pela sigla e pelo emblema** — nunca pelo
   nome por extenso, que numa tabela de dez colunas sai truncado a meio. O
   `equipaDoTorneio()` da `StandingsPage` é o único sítio que decide isso, e a

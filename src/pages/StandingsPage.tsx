@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
@@ -58,9 +59,16 @@ export const StandingsPage = () => {
   const { profile } = useAuth()
   const { clubSettings } = useClub()
   const canManage = profile?.role === 'admin' || profile?.role === 'coach'
+  const [params, setParams] = useSearchParams()
 
   const [tournaments, setTournaments] = useState<any[]>([])
-  const [selectedTourId, setSelectedTourId] = useState<string>('')
+  /*
+    A prova escolhida vai no endereço (`?torneio=`), como o separador vai no
+    `?ver=`: sem isso não havia como ligar a uma classificação em concreto, e a
+    ficha do adversário só podia mandar quem clicasse para a primeira prova da
+    lista.
+  */
+  const [selectedTourId, setSelectedTourId] = useState<string>(params.get('torneio') ?? '')
   // Agendados e ativos ficam juntos em "Em Curso"; terminados passam para o Histórico.
   const [tourViewFilter, setTourViewFilter] = useState<'current' | 'history'>('current')
 
@@ -115,16 +123,31 @@ export const StandingsPage = () => {
   }, [])
 
   useEffect(() => {
-    if (selectedTourId) {
-      fetchStandingsData()
-    }
+    if (!selectedTourId) return
+    fetchStandingsData()
+    /* A prova escolhida acompanha o endereço — `replace` porque andar entre
+       provas não deve encher o histórico. */
+    if (params.get('torneio') === selectedTourId) return
+    const seguintes = new URLSearchParams(params)
+    seguintes.set('torneio', selectedTourId)
+    setParams(seguintes, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTourId])
 
-  // Ao trocar de filtro, se o torneio selecionado não pertence à lista visível, escolhe o primeiro dela.
+  /*
+    Ao trocar de filtro, se a prova escolhida não pertence à lista visível,
+    escolhe a primeira dela. A prova que veio no endereço tem precedência
+    enquanto existir: quem chega de um link à ficha do adversário tem de cair
+    na prova certa, mesmo que ela esteja no Histórico e o filtro abra em curso.
+  */
   useEffect(() => {
-    if (visibleTournaments.length > 0 && !visibleTournaments.some(t => t.id === selectedTourId)) {
-      setSelectedTourId(visibleTournaments[0].id)
+    if (visibleTournaments.some(t => t.id === selectedTourId)) return
+    const doEndereco = params.get('torneio')
+    if (doEndereco && tournaments.some(t => t.id === doEndereco)) {
+      setSelectedTourId(doEndereco)
+      return
     }
+    if (visibleTournaments.length > 0) setSelectedTourId(visibleTournaments[0].id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tourViewFilter, tournaments])
 

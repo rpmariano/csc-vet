@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, Pencil, Trash2, Phone, User } from 'lucide-react'
+import { MapPin, Pencil, Trash2, Phone, User, Shield } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { VistaDetalhe } from '../VistaDetalhe'
+import { formatOpponentSigla } from '../../pages/CalendarPage'
 import { EtiquetaSeccao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 
@@ -42,6 +43,9 @@ interface Confronto {
 }
 
 interface ProvaDoAdversario {
+  /** Jornadas já lançadas na prova, e quantas têm resultado. */
+  jornadas: number
+  comResultado: number
   id: string
   nome: string
   epoca: string | null
@@ -122,11 +126,39 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
       const linhas = (inscricoes.data ?? []) as unknown as {
         tournament: { id: string; name: string; season: string | null; status: string } | null
       }[]
+      const provasDoAdversario = linhas
+        .map(l => l.tournament)
+        .filter((t): t is NonNullable<typeof t> => Boolean(t))
+
+      /*
+        Um adversário pode estar em mais do que uma prova, e cada uma está no
+        seu ponto: umas com jornadas lançadas, outras ainda por começar. A
+        linha dizia sempre "sem jornadas lançadas", fosse qual fosse o caso —
+        um texto fixo a fazer-se passar por informação.
+      */
+      const jornadas = await Promise.all(
+        provasDoAdversario.map(t =>
+          supabase
+            .from('tournament_matches')
+            .select('home_score', { count: 'exact' })
+            .eq('tournament_id', t.id),
+        ),
+      )
+
+      if (cancelado) return
+
       setProvas(
-        linhas
-          .map(l => l.tournament)
-          .filter((t): t is NonNullable<typeof t> => Boolean(t))
-          .map(t => ({ id: t.id, nome: t.name, epoca: t.season, estado: t.status })),
+        provasDoAdversario.map((t, i) => {
+          const linhasDaProva = (jornadas[i].data ?? []) as { home_score: number | null }[]
+          return {
+            id: t.id,
+            nome: t.name,
+            epoca: t.season,
+            estado: t.status,
+            jornadas: jornadas[i].count ?? linhasDaProva.length,
+            comResultado: linhasDaProva.filter(j => j.home_score !== null).length,
+          }
+        }),
       )
     }
 
@@ -154,49 +186,62 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
     >
       {adversario && (
         <div className="space-y-3">
-          {/* Identidade */}
-          <div className="cartao-simples flex items-center gap-3.5 px-4 py-3.5">
-            {adversario.logo_url ? (
-              <img
-                src={adversario.logo_url}
-                alt=""
-                className="w-13 h-13 object-contain bg-white rounded-xl border border-white/12 p-1.5 shrink-0"
-              />
-            ) : (
-              <span
-                className="w-13 h-13 bg-white/10 border border-white/15 rounded-xl flex items-center justify-center
-                  font-display font-black text-white/70 text-sm shrink-0"
-              >
-                {adversario.initials || adversario.name.substring(0, 3).toUpperCase()}
-              </span>
-            )}
-            <span className="flex-1 min-w-0">
-              <span className="block font-display font-extrabold text-[15px] text-white truncate">
-                {adversario.name}
-              </span>
-              <span className="block text-[11px] text-white/62 mt-0.5 truncate">
-                {campoPrincipal ? campoPrincipal.name : 'Sem campo principal'}
-              </span>
-            </span>
-          </div>
+          {/*
+            O cartão de identidade **não repete o nome**: esse é o título da
+            persiana, logo por cima. Repetia-o truncado e punha-lhe por baixo o
+            nome do campo — que num clube como o "Grupo Desportivo dos
+            Pescadores da Costa da Caparica" é quase a mesma frase, e lia-se o
+            nome três vezes seguidas. O campo tem a sua secção mais abaixo.
 
-          {/* Jogos · V · E · D */}
-          <div className="grid grid-cols-4 gap-2">
-            {([
-              ['Jogos', comResultado.length],
-              ['V', contagem.vitoria],
-              ['E', contagem.empate],
-              ['D', contagem.derrota],
-            ] as const).map(([etiqueta, valor]) => (
-              <div key={etiqueta} className="cartao-simples p-3 text-center">
-                <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/62">
-                  {etiqueta}
-                </p>
-                <p className="font-display font-black text-[20px] text-white mt-1 tabular-nums leading-none">
-                  {confrontos === null ? '–' : valor}
-                </p>
-              </div>
-            ))}
+            O que fica é o que o título não diz: o emblema e a sigla — a que
+            aparece nos placares e nas tabelas — e o histórico contra nós.
+          */}
+          <div className="cartao-vidro px-4 py-4">
+            <div className="flex items-center gap-3.5">
+              {adversario.logo_url ? (
+                <img
+                  src={adversario.logo_url}
+                  alt=""
+                  className="w-14 h-14 object-contain bg-white rounded-2xl border border-white/12 p-1.5 shrink-0"
+                />
+              ) : (
+                /* Sem emblema desenha-se um escudo, nunca as iniciais: a sigla
+                   está aqui mesmo ao lado, e repeti-la era lê-la duas vezes. */
+                <span
+                  className="w-14 h-14 bg-white/10 border border-white/15 rounded-2xl flex items-center justify-center
+                    text-white/35 shrink-0"
+                  aria-hidden="true"
+                >
+                  <Shield size={24} />
+                </span>
+              )}
+              <span className="flex-1 min-w-0">
+                <span className="block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62">
+                  Sigla nos placares
+                </span>
+                <span className="block font-display font-black text-[22px] text-white leading-none mt-1 truncate">
+                  {adversario.initials || formatOpponentSigla(adversario)}
+                </span>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-white/10">
+              {([
+                ['Jogos', comResultado.length],
+                ['V', contagem.vitoria],
+                ['E', contagem.empate],
+                ['D', contagem.derrota],
+              ] as const).map(([etiqueta, valor]) => (
+                <div key={etiqueta} className="text-center">
+                  <p className="font-display font-extrabold text-[8px] tracking-[0.12em] uppercase text-white/62">
+                    {etiqueta}
+                  </p>
+                  <p className="font-display font-black text-[20px] text-white mt-1 tabular-nums leading-none">
+                    {confrontos === null ? '–' : valor}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Contactos, quando os há. */}
@@ -263,10 +308,13 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
             </div>
           </section>
 
-          {/* Torneios e posições — hoje sempre em estado vazio. */}
+          {/* As provas em que o adversário está inscrito — podem ser várias, e
+              cada uma no seu ponto. */}
           {provas.length > 0 && (
             <section>
-              <EtiquetaSeccao className="mb-2">Torneios e posições</EtiquetaSeccao>
+              <EtiquetaSeccao className="mb-2">
+                {provas.length === 1 ? 'Prova em que participa' : 'Provas em que participa'}
+              </EtiquetaSeccao>
               <div className="cartao-simples overflow-hidden">
                 {provas.map(prova => (
                   <div
@@ -282,23 +330,31 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
                     <span className="flex-1 min-w-0">
                       <span className="block font-display font-bold text-xs text-white truncate">{prova.nome}</span>
                       <span className="block text-[9.5px] text-white/62 mt-0.5 truncate">
-                        {[prova.epoca, prova.estado, 'sem jornadas lançadas'].filter(Boolean).join(' · ')}
+                        {[
+                          prova.epoca,
+                          prova.estado,
+                          prova.jornadas === 0
+                            ? 'sem jornadas lançadas'
+                            : `${prova.comResultado} de ${prova.jornadas} ${prova.jornadas === 1 ? 'jogo' : 'jogos'} com resultado`,
+                        ].filter(Boolean).join(' · ')}
                       </span>
                     </span>
                     <Link
-                      to="/clube?ver=torneios"
+                      to={`/competicao?ver=classificacoes&torneio=${prova.id}`}
                       onClick={() => { triggerHaptic('light'); aoFechar() }}
                       className="font-display font-extrabold text-[10px] text-csc-gold shrink-0 min-h-11 flex items-center px-2
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold rounded-lg"
                     >
-                      Lançar
+                      Ver prova
                     </Link>
                   </div>
                 ))}
-                <p className="px-4 py-3 border-t border-white/7 text-[10px] leading-normal text-white/62">
-                  A posição e os pontos aparecem aqui assim que houver jornadas lançadas na prova.
-                  Os jogos contra nós contam sempre, mesmo sem classificação.
-                </p>
+                {provas.some(p => p.jornadas === 0) && (
+                  <p className="px-4 py-3 border-t border-white/7 text-[10px] leading-normal text-white/62">
+                    Numa prova sem jornadas lançadas não há classificação para mostrar. Os jogos
+                    contra nós contam na mesma, e estão aqui em baixo.
+                  </p>
+                )}
               </div>
             </section>
           )}
