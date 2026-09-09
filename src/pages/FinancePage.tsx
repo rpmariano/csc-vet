@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  Landmark, TrendingUp, Plus, Settings, Wallet,
+  Landmark, Plus, Settings, Wallet,
   ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check, AlertTriangle
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
-import type { UserRole } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -19,32 +18,24 @@ import {
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
 import { CabecalhoEcra, Pastilha, EtiquetaSeccao } from '../components/ui'
+import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
+/*
+  As pastilhas de estado, as barras de cor e o euro em português vivem em
+  `components/financeiro/estilos` desde que a Visão Geral passou a ficheiro
+  próprio — continuam a estar num sítio só, que é o que interessa: as Quotas e
+  os Encargos já disseram a mesma coisa de maneiras diferentes.
+*/
+import {
+  ETIQUETA_SECCAO, CHIP_ATRASO, CHIP_AVISO, CHIP_PAGO, CHIP_NEUTRO,
+  BARRA_ATRASO, BARRA_AVISO, BARRA_PAGO, BARRA_NEUTRA, fmtEuro,
+} from '../components/financeiro/estilos'
+import type {
+  PlayerRow, QuotaStatusRow, MovementRow, ScheduledPayment, EncargoPorReceber,
+} from '../components/financeiro/tipos'
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
 const ETIQUETA =
   'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
-
-const ETIQUETA_SECCAO =
-  'font-display font-extrabold text-[9.5px] tracking-[0.14em] uppercase text-csc-gold'
-
-/*
-  Pastilhas de estado, as mesmas três cores em que a app fala de dinheiro:
-  vermelho em atraso, âmbar a vencer, verde pago. Ficam aqui porque as Quotas e
-  os Encargos dizem o mesmo e diziam-no de maneiras diferentes.
-*/
-const CHIP =
-  'shrink-0 font-display font-black text-[8.5px] tracking-[0.1em] uppercase ' +
-  'px-2 py-1 rounded-full border whitespace-nowrap'
-const CHIP_ATRASO = `${CHIP} bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto`
-const CHIP_AVISO = `${CHIP} bg-amber-500/15 border-amber-400/35 text-amber-300`
-const CHIP_PAGO = `${CHIP} bg-csc-light/15 border-csc-light/30 text-csc-verde-texto`
-const CHIP_NEUTRO = `${CHIP} bg-white/6 border-white/12 text-white/62`
-
-/** A barra de cor à esquerda de uma linha — diz o estado sem se ler nada. */
-const BARRA_ATRASO = 'bg-csc-red'
-const BARRA_AVISO = 'bg-amber-400'
-const BARRA_PAGO = 'bg-csc-light/60'
-const BARRA_NEUTRA = 'bg-white/15'
 
 /** Botão redondo de ação numa linha — 44px, como todos os alvos de toque. */
 const BOTAO_LINHA =
@@ -58,48 +49,6 @@ const CAMPO =
 // ---------------------------------------------------------------------------
 // Tipos
 // ---------------------------------------------------------------------------
-
-interface PlayerRow {
-  id: string
-  name: string
-  shirt_name?: string | null
-  jersey_number?: number | null
-  status?: string | null
-  quota_start_date?: string | null
-  quota_end_date?: string | null
-  role: UserRole
-  roles?: UserRole[] | null
-}
-
-// Linhas de public.v_quota_status — a matriz jogador × mês da época corrente.
-// É aqui que existe a quota POR PAGAR: na tabela `dues` só há linha para as pagas.
-interface QuotaStatusRow {
-  player_id: string
-  month_year: string
-  expected_amount: number
-  due_id: string | null
-  paid_amount: number | null
-  due_date: string
-  status: 'paid' | 'late' | 'pending'
-  owed_amount: number
-}
-
-// Linhas de public.v_financial_movements — o facto único do módulo: quotas,
-// pagamentos de encargos e despesas/receitas avulsas, já com época, categoria
-// e jogador resolvidos.
-interface MovementRow {
-  movement_id: string
-  source: 'quota' | 'encargo' | 'avulso'
-  entry_date: string
-  season: string | null
-  type: 'income' | 'expense'
-  amount: number
-  signed_amount: number
-  description: string
-  category_key: string
-  category_label: string
-  document_url: string | null
-}
 
 interface ExpenseCategory {
   id: string
@@ -133,26 +82,6 @@ interface ChargePlayer {
   id: string
   charge_id: string
   player_id: string
-}
-
-// Uma linha de "Pagamentos Programados" — despesa já certa mas ainda por
-// pagar, venha de uma tranche de inscrição em torneio ou do valor a pagar a
-// terceiros de um encargo-intermediário. Guarda dados simples (não uma ação
-// já feita) para o useMemo que a constrói não depender de handlePayInstallment/
-// handlePayChargePayable — funções recriadas a cada render, seriam sempre
-// "dependências desatualizadas" do memo. A ação certa resolve-se com
-// handlePayScheduled, no local do clique.
-interface ScheduledPayment {
-  key: string
-  title: string
-  categoryLabel: string | null
-  amount: number
-  due_date: string | null
-  source: 'tournament' | 'charge'
-  tournamentId?: string
-  tournamentName?: string
-  installmentIndex?: number
-  chargeId?: string
 }
 
 interface ChargePayment {
@@ -207,17 +136,9 @@ const TITULO_SEPARADOR: Record<TabId, string> = {
 // Cores por categoria, tanto para receitas como despesas — a 6ª categoria em
 // diante recolhe-se em "Outras", para o gráfico não crescer sem limite.
 const RECEITA_CORES = ['bg-csc-light', 'bg-sky-400', 'bg-csc-gold', 'bg-emerald-400', 'bg-indigo-400']
-const RECEITA_COR_OUTRAS = 'bg-gray-400'
 const DESPESA_CORES = ['bg-red-500', 'bg-purple-500', 'bg-amber-500', 'bg-blue-500', 'bg-emerald-500']
-const DESPESA_COR_OUTRAS = 'bg-gray-400'
-
-/*
-  Euros em português: vírgula decimal, espaço fino antes do símbolo e ponto
-  nos milhares. Era `n.toFixed(2) + '€'`, que dava "1019.00€" — a notação
-  inglesa, num ecrã onde tudo o resto está em português.
-*/
-const EUROS = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
-const fmtEuro = (n: number) => EUROS.format(n)
+/** A cor do balde "Outras", igual dos dois lados do gráfico. */
+const COR_OUTRAS = 'bg-gray-400'
 
 // Agrupa os movimentos pela categoria já resolvida na vista (v_financial_movements
 // dá a categoria específica de cada um — Quotas, Seguro Desportivo, Material
@@ -1024,11 +945,11 @@ const FinancePage: React.FC = () => {
 
   // Total ainda por pagar em pagamentos já programados — conta como despesa
   // conhecida na previsão financeira mesmo antes de ser paga (ver "Saldo
-  // Previsto" em Visão Geral), e a parte em atraso serve de alerta.
+  // Previsto" em Visão Geral).
   const pendingScheduledPaymentsTotal = pendingScheduledPayments.reduce((s, i) => s + i.amount, 0)
-  const overdueScheduledPayments = pendingScheduledPayments.filter(i => i.due_date && new Date(i.due_date) < new Date())
 
-  // Agrupados por categoria para a listagem em Despesas/Receitas.
+  // Agrupados por categoria para a listagem em Despesas/Receitas e para a
+  // lista da Visão Geral, onde a categoria é o cabeçalho de cada grupo.
   const scheduledPaymentsByCategory = useMemo(() => {
     const groups = new Map<string, ScheduledPayment[]>()
     for (const p of pendingScheduledPayments) {
@@ -1111,10 +1032,8 @@ const FinancePage: React.FC = () => {
     () => agruparPorCategoria('income', movements, Array.from(objetivoPorCategoria.keys())),
     [movements, objetivoPorCategoria]
   )
-  const maxReceita = Math.max(1, ...receitaPorCategoria.map(([, v]) => v))
 
   const despesaPorCategoria = useMemo(() => agruparPorCategoria('expense', movements), [movements])
-  const maxDespesa = Math.max(1, ...despesaPorCategoria.map(([, v]) => v))
 
   // Categorias com uma obrigação de pagamento a terceiros (encargo-
   // intermediário ou inscrição de torneio) — paga ou não, para a categoria não
@@ -1168,19 +1087,30 @@ const FinancePage: React.FC = () => {
     return total
   }, [tournaments, chargesWithStats])
 
-  const projectedSeasonTotal = projectedQuotasTotal + totalEncargosTarget
   const receivedTowardsProjection = totalQuotasReceived + totalChargesReceived
-  const projectionPct = projectedSeasonTotal > 0 ? Math.min(100, Math.round((receivedTowardsProjection / projectedSeasonTotal) * 100)) : 0
 
-  // Saldo previsto no fim da época: plano de receita menos plano de despesa,
-  // ambos fixos — mais as despesas reais que não fazem parte de um
-  // Pagamento Programado (ex.: compra avulsa de material). totalExpenses já
-  // inclui o que entretanto se pagou de Pagamentos Programados, por isso
-  // subtrai-se aqui essa parte para não descontar o mesmo valor duas vezes
-  // (uma pelo total fixo, outra pela despesa real já lançada).
-  const scheduledPaymentsAlreadyPaid = totalScheduledPaymentsTarget - pendingScheduledPaymentsTotal
-  const otherActualExpenses = totalExpenses - scheduledPaymentsAlreadyPaid
-  const projectedNetBalance = projectedSeasonTotal - totalScheduledPaymentsTarget - otherActualExpenses
+  // O que falta receber de cada encargo, com o prazo em que se espera — o
+  // mínimo de que a linha do saldo precisa dos encargos para saber em que mês
+  // é que esse dinheiro entra. Um encargo sem prazo cai no fim da época.
+  const encargosPorReceber: EncargoPorReceber[] = useMemo(
+    () => chargesWithStats
+      .map(c => ({
+        id: c.id,
+        dueDate: c.due_date || null,
+        amount: Math.max(0, c.totalExpected - c.totalPaid),
+      }))
+      .filter(e => e.amount > 0),
+    [chargesWithStats],
+  )
+
+  /*
+    O Saldo Previsto no Fim da Época deixou de ser calculado aqui: é o último
+    ponto da linha do saldo, dentro da Visão Geral, para não haver duas contas
+    do mesmo número a poderem discordar. A conta que aqui estava tinha ainda um
+    buraco — descontava as despesas avulsas já lançadas mas não somava as
+    receitas avulsas já recebidas, e um patrocínio entrava em caixa sem mexer
+    no previsto.
+  */
 
   if (loading) {
     return (
@@ -1218,245 +1148,32 @@ const FinancePage: React.FC = () => {
 
       {/* ================= VISÃO GERAL ================= */}
       {activeTab === 'overview' && (
-        <div className="space-y-4">
-          {/*
-            Os quatro números da época (ecrã 8a). Eram três cartões em linha,
-            cada um com o rótulo, o valor e um ícone dentro de um círculo de
-            44px — e numa coluna de 480px o círculo saltava para fora do
-            cartão e o rótulo partia em duas linhas. Sem o ícone, e a dois por
-            fila, cabem os quatro que o handoff pede.
-          */}
-          <div className="grid grid-cols-2 gap-2.5">
-            {([
-              ['Saldo disponível', fmtEuro(netBalance), netBalance >= 0 ? 'text-white' : 'text-csc-vermelho-texto'],
-              ['Total recebido', `+${fmtEuro(totalReceived)}`, 'text-csc-verde-texto'],
-              ['Total pago', `−${fmtEuro(totalExpenses)}`, 'text-csc-vermelho-texto'],
-              ['Previsto no fim', fmtEuro(projectedNetBalance), projectedNetBalance >= 0 ? 'text-csc-gold' : 'text-csc-vermelho-texto'],
-            ] as const).map(([etiqueta, valor, cor]) => (
-              <div key={etiqueta} className="cartao-simples p-3.5">
-                <p className="font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/62 leading-tight">
-                  {etiqueta}
-                </p>
-                <p className={`font-display font-black text-[19px] mt-1.5 tabular-nums leading-none ${cor}`}>
-                  {valor}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Alerta de Pagamentos Programados — despesas já certas mas ainda por
-              pagar (inscrições em torneio + encargos-intermediário). Fica logo no
-              topo, antes da Previsão, para o admin ver ao abrir a página; a ação de
-              pagar continua só em Despesas/Receitas. */}
-          {pendingScheduledPayments.length > 0 && (
-            <div className={`cartao-simples text-white p-4 space-y-2.5 ${overdueScheduledPayments.length > 0 ? 'border-csc-red/40' : 'border-csc-gold/30'}`}>
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <h3 className={`${ETIQUETA_SECCAO} flex items-center gap-2`}>
-                  <Receipt size={16} className={overdueScheduledPayments.length > 0 ? 'text-red-400' : 'text-amber-400'} />
-                  <span>Pagamentos Programados</span>
-                </h3>
-                <button type="button" onClick={() => setActiveTab('expenses')} className="text-[11px] font-black text-csc-gold hover:brightness-110 cursor-pointer">
-                  Ver e registar pagamento
-                </button>
-              </div>
-              <p className="text-xs text-white/70">
-                <span className="font-black text-white">{pendingScheduledPayments.length}</span> por pagar · <span className="font-black text-white">{fmtEuro(pendingScheduledPaymentsTotal)}</span>
-                {overdueScheduledPayments.length > 0 && (
-                  <span className="ml-2 text-red-300 font-black">{overdueScheduledPayments.length} em atraso</span>
-                )}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {pendingScheduledPayments.map(p => {
-                  const isOverdue = p.due_date ? new Date(p.due_date) < new Date() : false
-                  return (
-                    <span key={p.key} className={`text-[11px] font-bold px-2 py-1 rounded-full border ${isOverdue ? 'bg-red-500/15 text-red-200 border-red-400/30' : 'bg-amber-500/15 text-amber-200 border-amber-400/30'}`}>
-                      {p.categoryLabel && <span className="opacity-70">{p.categoryLabel} · </span>}
-                      {p.title} · {fmtEuro(p.amount)}{p.due_date ? ` · ${new Date(p.due_date).toLocaleDateString('pt-PT')}` : ''}
-                    </span>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Previsão da Época + Situação de Quotas — lado a lado no desktop, para não
-              alongar o ecrã num scroll só vertical de cartões largos com pouco conteúdo cada. */}
-          <div className="space-y-3">
-            <div className="cartao-simples text-white p-4 space-y-3">
-              <h3 className={`${ETIQUETA_SECCAO} flex items-center gap-2`}>
-                <TrendingUp size={16} className="text-csc-gold" />
-                <span>Previsão da Época {seasonLabel}</span>
-              </h3>
-              <p className="text-xs text-white/60">
-                Fotografia do plano da época — quotas, encargos e Pagamentos Programados pelo valor total, sem descontar o que entretanto já foi recebido ou pago.
-              </p>
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Já Recebido (Quotas + Encargos)</p>
-                  <p className="text-xl font-black text-emerald-400">{fmtEuro(receivedTowardsProjection)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Previsto até ao Fim da Época</p>
-                  <p className="text-xl font-black text-csc-gold">{fmtEuro(projectedSeasonTotal)}</p>
-                </div>
-              </div>
-              <div className="h-3 rounded-full bg-white/10 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-emerald-500 to-csc-gold rounded-full transition-all" style={{ width: `${projectionPct}%` }} />
-              </div>
-              <p className="text-[11px] text-white/60">{projectionPct}% do valor previsto já foi recebido — faltam {fmtEuro(Math.max(0, projectedSeasonTotal - receivedTowardsProjection))}.</p>
-              <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/10 text-xs">
-                <div>
-                  <span className="text-white/60">Quotas previstas: </span>
-                  <span className="font-bold text-white">{fmtEuro(projectedQuotasTotal)}</span>
-                </div>
-                <div>
-                  <span className="text-white/60">Encargos previstos: </span>
-                  <span className="font-bold text-white">{fmtEuro(totalEncargosTarget)}</span>
-                </div>
-                <div>
-                  <span className="text-white/60">Pagamentos previstos: </span>
-                  <span className="font-bold text-red-300">{fmtEuro(totalScheduledPaymentsTarget)}</span>
-                </div>
-              </div>
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-white/70">Saldo Previsto no Fim da Época</span>
-                <span className={`text-lg font-black ${projectedNetBalance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtEuro(projectedNetBalance)}</span>
-              </div>
-            </div>
-
-            {/* Situação de Quotas — coluna estreita ao lado; estatísticas em linhas
-                empilhadas (não grelha 3-colunas) porque a coluna aqui é mais estreita. */}
-            <div className="cartao-simples text-white p-4 space-y-2.5">
-              <h3 className={ETIQUETA_SECCAO}>Situação de Quotas dos Atletas</h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between rounded-xl bg-emerald-500/10 border border-emerald-400/30 pl-3 pr-3.5 py-2 border-l-4 border-l-emerald-400">
-                  <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-wider">Meses Pagos</span>
-                  <span className="text-lg font-black text-emerald-300">{quotaOverview.reduce((s, q) => s + q.paidCount, 0)}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl bg-amber-500/10 border border-amber-400/30 pl-3 pr-3.5 py-2 border-l-4 border-l-amber-400">
-                  <span className="text-[10px] font-bold text-amber-200 uppercase tracking-wider">Meses Pendentes</span>
-                  <span className="text-lg font-black text-amber-300">{quotaOverview.reduce((s, q) => s + q.pendingCount, 0)}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl bg-red-500/10 border border-red-400/30 pl-3 pr-3.5 py-2 border-l-4 border-l-red-400">
-                  <span className="text-[10px] font-bold text-red-200 uppercase tracking-wider">Em Incumprimento</span>
-                  <span className="text-lg font-black text-red-300">{quotaOverview.reduce((s, q) => s + q.lateCount, 0)}</span>
-                </div>
-              </div>
-              {quotaOverview.filter(q => q.lateCount > 0).length > 0 && (
-                <div className="pt-2 border-t border-white/10">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-1.5">Atletas em Incumprimento</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {quotaOverview.filter(q => q.lateCount > 0).map(q => (
-                      <span key={q.player.id} className="text-[11px] font-bold px-2 py-1 rounded-full bg-red-500/15 text-red-200 border border-red-400/30">
-                        {q.player.shirt_name || q.player.name} ({q.lateCount})
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Receita e despesa por categoria — lado a lado no desktop; a receita ocupa a
-              largura toda quando ainda não há despesas com categoria para mostrar ao lado. */}
-          <div className="space-y-3">
-            <div className={`${despesaPorCategoria.length === 0 ? 'lg:col-span-2' : ''} cartao-simples text-white p-4 space-y-3`}>
-              <h3 className={ETIQUETA_SECCAO}>Valor Recebido por Categoria</h3>
-              <div className="space-y-3">
-                {receitaPorCategoria.map(([label, valor], idx) => {
-                  const objetivo = objetivoPorCategoria.get(label)
-                  const temObjetivo = objetivo !== undefined && objetivo > 0
-                  const excedeu = temObjetivo && valor > objetivo!
-                  const pct = temObjetivo ? Math.round((valor / objetivo!) * 100) : Math.round((valor / maxReceita) * 100)
-                  const corBase = label === 'Outras' ? RECEITA_COR_OUTRAS : (RECEITA_CORES[idx] || RECEITA_COR_OUTRAS)
-                  const cor = temObjetivo && pct >= 100 ? 'bg-emerald-500' : corBase
-                  return (
-                    <div key={label}>
-                      <div className="flex items-center justify-between text-xs mb-1 gap-2">
-                        <span className="font-bold text-white/80">{label}</span>
-                        <span className="font-black text-white text-right">
-                          {temObjetivo ? `${fmtEuro(valor)} / ${fmtEuro(objetivo!)}` : fmtEuro(valor)}
-                          {excedeu && (
-                            <span className="ml-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 align-middle">
-                              +{fmtEuro(valor - objetivo!)}
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
-                        <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-                <span className="text-xs font-bold text-white/70">Total Recebido</span>
-                <span className="text-lg font-black text-white">{fmtEuro(totalReceived)}</span>
-              </div>
-            </div>
-
-            {/* Gráfico: Despesa por Categoria */}
-            {despesaPorCategoria.length > 0 && (
-              <div className="cartao-simples text-white p-4 space-y-3">
-                <h3 className={ETIQUETA_SECCAO}>Despesa por Categoria</h3>
-                <div className="space-y-3">
-                  {despesaPorCategoria.map(([label, valor], idx) => {
-                    const pct = Math.round((valor / maxDespesa) * 100)
-                    const cor = label === 'Outras' ? DESPESA_COR_OUTRAS : (DESPESA_CORES[idx] || DESPESA_COR_OUTRAS)
-                    return (
-                      <div key={label}>
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="font-bold text-white/80">{label}</span>
-                          <span className="font-black text-white">{fmtEuro(valor)}</span>
-                        </div>
-                        <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
-                          <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.max(2, pct)}%` }} />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-                  <span className="text-xs font-bold text-white/70">Total de Despesas</span>
-                  <span className="text-lg font-black text-white">{fmtEuro(totalExpenses)}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Gráfico: Valor a Pagar por Categoria — espelha o "Valor Recebido por
-              Categoria" acima, mas para o que o clube tem de pagar a terceiros
-              (encargos-intermediário + inscrições em torneio): pago vs por pagar,
-              por categoria, para o saldo de cada uma se ver a tender a zero. */}
-          {pagarPorCategoria.length > 0 && (
-            <div className="cartao-simples text-white p-4 space-y-3">
-              <h3 className={ETIQUETA_SECCAO}>Valor a Pagar por Categoria</h3>
-              <div className="space-y-3">
-                {pagarPorCategoria.map(r => {
-                  const total = r.pago + r.porPagar
-                  const pagoPct = total > 0 ? Math.round((r.pago / total) * 100) : 0
-                  return (
-                    <div key={r.label}>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-bold text-white/80">{r.label}</span>
-                        <span className="font-black text-white">{fmtEuro(r.pago)} / {fmtEuro(total)}</span>
-                      </div>
-                      <div className="h-2.5 rounded-full bg-white/10 overflow-hidden flex">
-                        <div className="h-full bg-emerald-500" style={{ width: `${pagoPct}%` }} />
-                        <div className="h-full bg-amber-400" style={{ width: `${100 - pagoPct}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1.5 text-white/70"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Pago</span>
-                <span className="flex items-center gap-1.5 text-white/70"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Por pagar</span>
-              </div>
-            </div>
-          )}
-        </div>
+        <VisaoGeralFinanceira
+          seasonLabel={seasonLabel}
+          settings={settings}
+          movements={movements}
+          quotaRows={quotaRows}
+          netBalance={netBalance}
+          totalReceived={totalReceived}
+          totalExpenses={totalExpenses}
+          totalIncomeOther={totalIncomeOther}
+          projectedQuotasTotal={projectedQuotasTotal}
+          totalEncargosTarget={totalEncargosTarget}
+          totalScheduledPaymentsTarget={totalScheduledPaymentsTarget}
+          receivedTowardsProjection={receivedTowardsProjection}
+          encargosPorReceber={encargosPorReceber}
+          pendingScheduledPayments={pendingScheduledPayments}
+          pendingScheduledPaymentsTotal={pendingScheduledPaymentsTotal}
+          scheduledPaymentsByCategory={scheduledPaymentsByCategory}
+          receitaPorCategoria={receitaPorCategoria}
+          objetivoPorCategoria={objetivoPorCategoria}
+          despesaPorCategoria={despesaPorCategoria}
+          pagarPorCategoria={pagarPorCategoria}
+          receitaCores={RECEITA_CORES}
+          despesaCores={DESPESA_CORES}
+          corOutras={COR_OUTRAS}
+          irParaDespesas={() => setActiveTab('expenses')}
+        />
       )}
 
       {/* ================= QUOTAS ================= */}

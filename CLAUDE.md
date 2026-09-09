@@ -244,16 +244,33 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   mesma; o aviso do que falhou vai num `toast.warning`, não num erro que
   desfaça o resto.
 - **O dinheiro fala em três cores, e as pastilhas estão num sítio só.**
-  `CHIP_ATRASO` / `CHIP_AVISO` / `CHIP_PAGO` / `CHIP_NEUTRO` e as barras
-  `BARRA_*` no topo de `FinancePage.tsx` — vermelho em atraso, âmbar a vencer,
-  verde pago, e uma barra de 3px à esquerda da linha a dizer o mesmo sem se ler
-  nada, como em `OsMeusPagamentos`. As Quotas e os Encargos diziam a mesma coisa
-  de maneiras diferentes.
+  `CHIP_ATRASO` / `CHIP_AVISO` / `CHIP_PAGO` / `CHIP_NEUTRO`, as barras
+  `BARRA_*` e o `fmtEuro` vivem em `src/components/financeiro/estilos.ts` —
+  vermelho em atraso, âmbar a vencer, verde pago, e uma barra de 3px à esquerda
+  da linha a dizer o mesmo sem se ler nada, como em `OsMeusPagamentos`. As
+  Quotas e os Encargos diziam a mesma coisa de maneiras diferentes. Estavam no
+  topo de `FinancePage.tsx` e saíram para um módulo quando a Visão Geral passou
+  a ficheiro próprio: um bloco que importasse constantes da página que o
+  importa fecha um ciclo.
   **Os dois ecrãs eram, até 2026-09-09, `bg-white` opacos com `text-white`
   dentro** — o nome do jogador e o encargo inteiro invisíveis, brancos sobre
   branco. É a armadilha do `escurecer-tema.py` já descrita acima; foi a única
   ocorrência que restava em `src/` (o resto dos `bg-white` opacos são campos de
   formulário com tinta escura, fundos de emblema e botões de interruptor).
+- **O Saldo Previsto no Fim da Época é o último ponto da linha do saldo, e mais
+  nada.** A Visão Geral (`src/components/financeiro/VisaoGeralFinanceira.tsx`,
+  saída do `FinancePage.tsx` a 2026-09-09) desenha o saldo mês a mês: até hoje
+  o acumulado real dos movimentos, daí para a frente as quotas por pagar, o que
+  falta de cada encargo e os Pagamentos Programados, cada um no seu prazo. O
+  previsto era uma segunda conta à parte, e tinha um buraco — descontava as
+  despesas avulsas já lançadas mas não somava as receitas avulsas já recebidas,
+  por isso um patrocínio entrava em caixa sem mexer no previsto.
+  **A ordem dos cartões é a das perguntas:** saldo, plano, o que está marcado
+  para sair, como corre a época, como vai a cobrança — e só depois as
+  repartições por categoria, que são consulta e não alerta. Saíram o "Total
+  recebido" e o "Total pago" (são as duas parcelas do saldo, e estão inteiros
+  mais abaixo) e a "Situação de Quotas dos Atletas", cuja lista de nomes é a do
+  separador Quotas, que é onde se resolve.
 - **O que se deve ao clube vive no `useEstadoPagamentos`, e mais em lado
   nenhum.** Quotas *e* encargos, com prazos: devolve a cor (vermelho com algo
   vencido, laranja a menos de `DIAS_DE_AVISO` — 8 — dias, nada em dia), a
