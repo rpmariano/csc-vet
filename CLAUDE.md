@@ -224,9 +224,25 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   origem_id)` em `notification_deliveries`. As duas funções são só do
   `service_role`. O relógio é o `.github/workflows/avisos.yml` e não o
   `pg_cron`, que não está instalado neste projeto.
-  **Falta a chave VAPID**, que só a direção pode criar — ver
-  `docs/avisos-push.md`. Sem ela o ecrã 12b diz que o envio não está
-  configurado, em vez de mostrar um botão que não faz nada.
+  A chave VAPID está criada e a entrega verificada em produção (2026-09-09). A
+  pública entra no bundle por `VITE_VAPID_PUBLIC_KEY`; a privada e o
+  `AVISOS_TOKEN` vivem só nos segredos do Supabase e do repositório. **Trocar a
+  chave invalida todas as subscrições existentes** — passam a responder 403, que
+  a função conta e reporta sem as apagar. Ver `docs/avisos-push.md`.
+- **Os avisos nascem todos desligados, e é o "Guardar" que liga o telemóvel.**
+  `avisos_pendentes()` faz `COALESCE(np.<flag>, false)`: quem nunca abriu o ecrã
+  12b não tem linha em `notification_preferences` e não recebe nada — verificado,
+  7 subscrições sem preferências dão zero avisos. No cliente, `OMISSOES` em
+  `src/components/PreferenciasAvisos.tsx` é tudo `false` e não há botão de
+  "Ligar" à parte: guardar com pelo menos um aviso escolhido pede a permissão e
+  subscreve; guardar com o último desligado apaga a subscrição deste aparelho.
+  Eram dois gestos para uma intenção, e quem fizesse só o primeiro ficava com
+  tudo pedido e nada a chegar.
+  **A escolha grava-se sempre, mesmo que a subscrição falhe** — as preferências
+  são da pessoa e valem em todos os aparelhos, a subscrição é de um só. Quem
+  escolher os avisos num Safari sem a app instalada tem de os ver guardados na
+  mesma; o aviso do que falhou vai num `toast.warning`, não num erro que
+  desfaça o resto.
 - **O que se deve ao clube vive no `useEstadoPagamentos`, e mais em lado
   nenhum.** Quotas *e* encargos, com prazos: devolve a cor (vermelho com algo
   vencido, laranja a menos de `DIAS_DE_AVISO` — 8 — dias, nada em dia), a

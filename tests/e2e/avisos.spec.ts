@@ -73,3 +73,62 @@ test('voltar a ligar repõe as 23h–08h', async ({ page }) => {
   await expect(page.getByLabel('Das')).toHaveValue('23:00')
   await expect(page.getByLabel('Às')).toHaveValue('08:00')
 })
+
+/**
+ * Nada está ligado à partida, e é o "Guardar" que liga o telemóvel.
+ *
+ * Havia um botão "Ligar" à parte, e eram dois gestos para uma intenção:
+ * escolher os avisos e depois autorizar a app. Quem fizesse só o primeiro
+ * ficava com tudo pedido e nada a chegar.
+ *
+ * A escolha grava-se sempre, mesmo que a subscrição falhe: as preferências são
+ * da pessoa e valem em todos os aparelhos, a subscrição é deste. Nos testes o
+ * browser não tem chave VAPID, por isso a subscrição nunca dá — e é a
+ * gravação que tem de acontecer na mesma.
+ */
+test.describe('Avisos desligados à partida', () => {
+  async function abreSemPreferencias(page: import('@playwright/test').Page) {
+    await montarSupabaseFalso(page, { notification_preferences: [] })
+    await abrePreferencias(page)
+  }
+
+  test('quem nunca escolheu abre com tudo desligado', async ({ page }) => {
+    await abreSemPreferencias(page)
+
+    for (const nome of [/Convocatórias/, /Comunicados/, /Quotas/]) {
+      await expect(page.getByRole('switch', { name: nome })).toHaveAttribute('aria-checked', 'false')
+    }
+    await expect(page.getByText('Este telemóvel não recebe avisos')).toBeVisible()
+  })
+
+  test('já não há botão de Ligar à parte', async ({ page }) => {
+    await abreSemPreferencias(page)
+    await expect(page.getByRole('button', { name: 'Ligar', exact: true })).toHaveCount(0)
+  })
+
+  /*
+    Sem `VITE_VAPID_PUBLIC_KEY` — que é o caso nos testes, e era o caso em
+    produção antes de a direção criar as chaves — o cartão diz que o envio não
+    está configurado, em vez de prometer avisos que nunca sairiam.
+  */
+  test('sem chave VAPID, o cartão diz porque é que não recebe', async ({ page }) => {
+    await abreSemPreferencias(page)
+    await expect(page.getByText(/o envio ainda não está configurado no servidor/i)).toBeVisible()
+  })
+
+  test('a escolha grava-se mesmo quando o telemóvel não pode receber', async ({ page }) => {
+    const gravados: string[] = []
+    page.on('request', r => {
+      if (r.url().includes('notification_preferences') && r.method() !== 'GET') {
+        gravados.push(r.postData() ?? '')
+      }
+    })
+
+    await abreSemPreferencias(page)
+    await page.getByRole('switch', { name: /Convocatórias/ }).click()
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click()
+
+    await expect.poll(() => gravados.length).toBeGreaterThan(0)
+    expect(gravados.join(' ')).toContain('"convocatorias":true')
+  })
+})

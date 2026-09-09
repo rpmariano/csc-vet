@@ -40,15 +40,30 @@ interface Preferencias {
   silencio_fim: string
 }
 
+/*
+  Tudo desligado à partida. Um aviso que ninguém pediu é uma interrupção, e a
+  primeira coisa que se aprende a fazer com ele é ignorá-lo.
+
+  O silêncio da noite não é um aviso, é uma regra sobre eles — fica posto de
+  origem, para quem ligar o primeiro aviso não o receber às três da manhã.
+*/
 const OMISSOES: Preferencias = {
-  convocatorias: true,
-  comunicados: true,
-  quotas_em_atraso: true,
-  eventos_sem_convocatoria: true,
-  fichas_por_preencher: true,
+  convocatorias: false,
+  comunicados: false,
+  quotas_em_atraso: false,
+  eventos_sem_convocatoria: false,
+  fichas_por_preencher: false,
   silencio_inicio: '23:00',
   silencio_fim: '08:00',
 }
+
+/** As chaves que são mesmo avisos — o silêncio não conta. */
+const AVISOS = [
+  'convocatorias', 'comunicados', 'quotas_em_atraso',
+  'eventos_sem_convocatoria', 'fichas_por_preencher',
+] as const
+
+const algumLigado = (p: Preferencias) => AVISOS.some(chave => p[chave])
 
 const DO_ATLETA: readonly { chave: keyof Preferencias; titulo: string; nota: string }[] = [
   { chave: 'convocatorias', titulo: 'Convocatórias', nota: 'Quando és chamado, e na véspera se não respondeste' },
@@ -105,34 +120,12 @@ export const PreferenciasAvisos: React.FC<{
   const [aCarregar, setACarregar] = useState(true)
   const [aGuardar, setAGuardar] = useState(false)
   const [push, setPush] = useState<EstadoPush | null>(null)
-  const [aLigar, setALigar] = useState(false)
 
   useEffect(() => {
     if (!aberto) return
     estadoDoPush().then(setPush)
   }, [aberto])
 
-  const alternarPush = async () => {
-    if (!perfilId) return
-    triggerHaptic('medium')
-    setALigar(true)
-    try {
-      if (push === 'ligado') {
-        await desligarAvisos()
-        setPush('desligado')
-        toast.info('Este telemóvel deixa de receber avisos.')
-      } else {
-        const resultado = await ligarAvisos(perfilId)
-        setPush(resultado)
-        if (resultado === 'ligado') toast.success('Este telemóvel passa a receber avisos.')
-        else if (resultado === 'recusado') toast.error('O browser bloqueou as notificações. Dá-as nas definições do site.')
-      }
-    } catch (err) {
-      toast.error('Não foi possível mudar: ' + (err instanceof Error ? err.message : 'erro inesperado'))
-    } finally {
-      setALigar(false)
-    }
-  }
 
   useEffect(() => {
     if (!aberto || !perfilId) return
@@ -162,15 +155,61 @@ export const PreferenciasAvisos: React.FC<{
     return () => { cancelado = true }
   }, [aberto, perfilId])
 
+  /*
+    Guardar faz as duas coisas: escreve a escolha e põe este telemóvel a
+    receber (ou deixa de o pôr).
+
+    Não há botão de "Ligar" à parte. Eram dois gestos para uma intenção —
+    escolher os avisos e depois autorizar a app — e quem fizesse só o primeiro
+    ficava com tudo pedido e nada a chegar. A permissão é pedida aqui, que é
+    quando ela passa a fazer falta.
+
+    **A escolha grava-se sempre, mesmo que a subscrição falhe.** As
+    preferências são da pessoa e valem em todos os aparelhos; a subscrição é
+    deste. Quem escolher os avisos num Safari sem a app instalada tem de os
+    ver guardados na mesma — passam a valer no telemóvel onde a instalar.
+
+    Ao desligar o último aviso, a subscrição deste telemóvel é apagada: uma
+    caixa de correio que não recebe nada é só uma linha a mais na base e um
+    endereço a mais para o servidor tentar.
+  */
   const guardar = async () => {
     if (!perfilId) return
     setAGuardar(true)
     try {
+      const querReceber = algumLigado(prefs)
+      let estadoFinal = push
+      let recado: string | null = null
+
+      if (querReceber && push !== 'ligado') {
+        estadoFinal = await ligarAvisos(perfilId)
+        if (estadoFinal !== 'ligado') {
+          recado =
+            estadoFinal === 'recusado'
+              ? 'Guardado — mas este telemóvel tem as notificações bloqueadas. Dá-as nas definições do site.'
+              : estadoFinal === 'sem-suporte'
+                ? 'Guardado — mas este browser não recebe avisos. No iPhone, instala a app no ecrã principal.'
+                : 'Guardado — mas o envio ainda não está configurado no servidor.'
+        }
+      } else if (!querReceber && push === 'ligado') {
+        await desligarAvisos()
+        estadoFinal = 'desligado'
+      }
+
       const { error } = await supabase
         .from('notification_preferences')
         .upsert({ profile_id: perfilId, ...prefs, updated_at: new Date().toISOString() })
       if (error) throw error
-      toast.success('Preferências guardadas.')
+
+      setPush(estadoFinal)
+      if (recado) toast.warning(recado)
+      else {
+        toast.success(
+          querReceber
+            ? 'Este telemóvel passa a receber os avisos que escolheste.'
+            : 'Guardado. Este telemóvel não recebe avisos nenhuns.',
+        )
+      }
       aoFechar()
     } catch (err) {
       toast.error('Não foi possível guardar: ' + (err instanceof Error ? err.message : 'erro inesperado'))
@@ -204,56 +243,59 @@ export const PreferenciasAvisos: React.FC<{
       ) : (
         <div className="space-y-4">
           {/*
-            Este telemóvel recebe ou não — antes de tudo o resto. Sem
-            subscrição, as preferências em baixo não têm a quem chegar, e a
-            pessoa merece saber isso antes de as escolher.
+            O que este telemóvel faz — uma frase, sem botão.
+
+            O botão de "Ligar" que aqui estava era um segundo gesto para a
+            mesma intenção: quem escolhia os avisos e não carregava nele ficava
+            com tudo pedido e nada a chegar. Quem liga agora é o próprio
+            "Guardar", ao ver que há pelo menos um aviso escolhido.
+
+            Quando o telemóvel não pode receber — Safari sem a app instalada,
+            permissão recusada, envio por configurar — é aqui que se diz
+            porquê, antes de a pessoa escolher avisos que não lhe chegariam.
           */}
-          <div className={`cartao-simples p-3.5 flex items-center gap-3 ${
-            push === 'ligado' ? 'bg-csc-light/10 border-csc-light/28' : ''
-          }`}>
-            <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-              push === 'ligado'
-                ? 'bg-csc-light/20 text-csc-verde-texto'
-                : 'bg-white/8 text-white/60'
-            }`}>
-              {push === 'ligado' ? <BellRing size={17} /> : <BellOff size={17} />}
-            </span>
+          {(() => {
+            const impedido = push === 'sem-suporte' || push === 'por-configurar' || push === 'recusado'
+            const escolheu = algumLigado(prefs)
+            return (
+              <div className={`cartao-simples p-3.5 flex items-center gap-3 ${
+                impedido
+                  ? 'bg-csc-red/10 border-csc-red/28'
+                  : push === 'ligado' ? 'bg-csc-light/10 border-csc-light/28' : ''
+              }`}>
+                <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  impedido
+                    ? 'bg-csc-red/18 text-csc-vermelho-texto'
+                    : push === 'ligado'
+                      ? 'bg-csc-light/20 text-csc-verde-texto'
+                      : 'bg-white/8 text-white/60'
+                }`}>
+                  {push === 'ligado' ? <BellRing size={17} /> : <BellOff size={17} />}
+                </span>
 
-            <span className="min-w-0 flex-1">
-              <span className="block font-display font-extrabold text-[12.5px] text-white">
-                {push === 'ligado' ? 'Este telemóvel recebe avisos' : 'Este telemóvel não recebe avisos'}
-              </span>
-              <span className="block text-[10.5px] leading-relaxed text-white/62 mt-0.5">
-                {push === 'sem-suporte'
-                  ? 'Este browser não os suporta. No iPhone, instala a app no ecrã principal e volta aqui.'
-                  : push === 'por-configurar'
-                    ? 'O envio ainda não está configurado no servidor. Fala com a direção.'
-                    : push === 'recusado'
-                      ? 'Bloqueaste as notificações para este site. Só nas definições do browser as podes voltar a dar.'
-                      : push === 'ligado'
-                        ? 'Chegam com a app fechada. Vale só para este telemóvel.'
-                        : 'Liga para receberes com a app fechada. Vale só para este telemóvel.'}
-              </span>
-            </span>
-
-            {(push === 'ligado' || push === 'desligado') && (
-              <button
-                type="button"
-                onClick={alternarPush}
-                disabled={aLigar}
-                aria-pressed={push === 'ligado'}
-                className={`shrink-0 min-h-11 px-3.5 rounded-[18px] border font-display font-bold text-[11.5px] cursor-pointer
-                  transition-transform duration-150 active:scale-97 disabled:opacity-50
-                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                    push === 'ligado'
-                      ? 'bg-white/8 border-white/18 text-white/80'
-                      : 'bg-csc-gold border-csc-gold text-csc-tinta'
-                  }`}
-              >
-                {aLigar ? '…' : push === 'ligado' ? 'Desligar' : 'Ligar'}
-              </button>
-            )}
-          </div>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display font-extrabold text-[12.5px] text-white">
+                    {push === 'ligado'
+                      ? 'Este telemóvel recebe avisos'
+                      : 'Este telemóvel não recebe avisos'}
+                  </span>
+                  <span className="block text-[10.5px] leading-relaxed text-white/62 mt-0.5">
+                    {push === 'sem-suporte'
+                      ? 'Este browser não os suporta. No iPhone, instala a app no ecrã principal e volta aqui.'
+                      : push === 'por-configurar'
+                        ? 'O envio ainda não está configurado no servidor. Fala com a direção.'
+                        : push === 'recusado'
+                          ? 'Bloqueaste as notificações para este site. Só nas definições do browser as podes voltar a dar.'
+                          : push === 'ligado'
+                            ? 'Chegam com a app fechada. Vale só para este telemóvel.'
+                            : escolheu
+                              ? 'Ao guardar, o telemóvel pede autorização e passa a receber os avisos escolhidos.'
+                              : 'Liga em baixo o que queres saber. Está tudo desligado à partida.'}
+                  </span>
+                </span>
+              </div>
+            )
+          })()}
 
           <div>
             <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-2">

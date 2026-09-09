@@ -96,6 +96,21 @@ construída de novo. Actions → **Deploy to GitHub Pages** → Run workflow.
 **6. Correr uma vez à mão** — Actions → "Enviar avisos" → Run workflow — e ver
 a resposta: `{"enviados":N,"falhados":0,"caixas_apagadas":0}`.
 
+## Ninguém recebe nada sem o pedir
+
+**Os cinco avisos nascem desligados**, dos dois lados: `avisos_pendentes()` faz
+`COALESCE(np.<flag>, false)`, portanto quem nunca abriu o ecrã de avisos não tem
+linha em `notification_preferences` e não entra na fila; e o ecrã abre com todos
+os interruptores em baixo.
+
+Não há botão de "Ligar" à parte. **É o "Guardar" que liga**: com pelo menos um
+aviso escolhido, pede a permissão ao browser e subscreve este telemóvel; com o
+último desligado, apaga a subscrição dele. Um só gesto, porque dois davam para
+escolher os avisos e ficar à espera deles para sempre.
+
+A escolha grava-se sempre, mesmo quando a subscrição falha — as preferências
+são da pessoa e valem em todos os aparelhos, a subscrição é de um só.
+
 ## O que cada aviso é
 
 | Tipo | Quando | Leva a |
