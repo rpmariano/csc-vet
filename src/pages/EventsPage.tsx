@@ -23,7 +23,8 @@ import {
   Send,
   AlertTriangle,
   ClipboardList,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ChevronRight
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -2001,11 +2002,30 @@ const EventsPage: React.FC = () => {
                   const mapsQuery = fieldObj ? (fieldObj.address ? `${fieldObj.name}, ${fieldObj.address}` : fieldObj.name) : (event.location || '')
 
                   return (
-                    <div 
-                      key={event.id} 
-                      className={`p-4 rounded-2xl border-2 transition-all shadow-2xs space-y-3 ${
-                        event.is_active === false 
-                          ? 'bg-amber-500/10 border-amber-400/40 hover:border-amber-400/60' 
+                    /*
+                      O cartão inteiro abre o detalhe. Não pode ser um
+                      `<button>` porque tem o link do Maps lá dentro, por isso
+                      leva `role="button"`, foco por teclado e um `aria-label`
+                      que diz o que abre — a regra dos cartões clicáveis.
+                      Editar e eliminar deixaram de estar aqui: vivem no
+                      detalhe, que é onde se percebe o que se está a mexer.
+                    */
+                    <div
+                      key={event.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Ver os detalhes de ${getEventHeading(event)}`}
+                      onClick={() => { abrirDossier(event); setRsvpTabFilter('all') }}
+                      onKeyDown={e => {
+                        if (e.key !== 'Enter' && e.key !== ' ') return
+                        e.preventDefault()
+                        abrirDossier(event)
+                        setRsvpTabFilter('all')
+                      }}
+                      className={`p-4 rounded-2xl border-2 transition-all shadow-2xs space-y-3 cursor-pointer
+                        active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                        event.is_active === false
+                          ? 'bg-amber-500/10 border-amber-400/40 hover:border-amber-400/60'
                           : 'bg-white/5 hover:bg-amber-500/10 border-white/10 hover:border-amber-400/40'
                       }`}
                     >
@@ -2023,26 +2043,7 @@ const EventsPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {isCoachOrAdmin && (
-                          <div className="flex gap-1 shrink-0">
-                            {!hasMatchReport(event) && (
-                              <button
-                                onClick={() => openEditModal(event)}
-                                className="text-white/65 hover:text-blue-300 p-1.5 rounded-xl hover:bg-blue-500/10 transition-colors cursor-pointer"
-                                title="Editar evento"
-                              >
-                                <Edit size={16} />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDeleteEvent(event.id)}
-                              className="text-white/65 hover:text-red-300 p-1.5 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer"
-                              title="Eliminar evento"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        )}
+                        <ChevronRight size={18} className="shrink-0 text-white/35 mt-0.5" aria-hidden="true" />
                       </div>
 
                       {/* Event Meta Details */}
@@ -2070,6 +2071,7 @@ const EventsPage: React.FC = () => {
                               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
                               className="min-h-11 px-3 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10px] flex items-center gap-1 cursor-pointer"
                               title="Abrir no Google Maps"
                             >
@@ -2105,7 +2107,7 @@ const EventsPage: React.FC = () => {
                           {isCoachOrAdmin && event.is_active === false && (
                             <button
                               type="button"
-                              onClick={() => handleActivateEvent(event)}
+                              onClick={e => { e.stopPropagation(); handleActivateEvent(event) }}
                               className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                               title="Ativar evento e enviar convocatória aos membros"
                             >
@@ -2113,16 +2115,10 @@ const EventsPage: React.FC = () => {
                               <span>Ativar e Convocar</span>
                             </button>
                           )}
-                          <button
-                            onClick={() => {
-                              abrirDossier(event)
-                              setRsvpTabFilter('all')
-                            }}
-                            className="w-full sm:w-auto px-4 py-2 bg-csc-gold hover:brightness-95 text-csc-tinta rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
-                          >
-                            <Users size={14} className="text-csc-tinta" />
-                            <span>Ver Detalhes & RSVP ({callups.length})</span>
-                          </button>
+                          <span className="flex items-center gap-1.5 font-display font-bold text-[11px] text-white/62">
+                            <Users size={13} className="text-white/45" aria-hidden="true" />
+                            <span>{callups.length} {callups.length === 1 ? 'convocado' : 'convocados'}</span>
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -2221,8 +2217,9 @@ const EventsPage: React.FC = () => {
                         fecharDossier()
                         openEditModal(ev)
                       }}
-                      className="p-2 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                      className="w-11 h-11 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs"
                       title="Modificar evento"
+                      aria-label="Modificar evento"
                     >
                       <Edit size={14} />
                     </button>
@@ -2233,8 +2230,9 @@ const EventsPage: React.FC = () => {
                         fecharDossier()
                         handleDeleteEvent(evId)
                       }}
-                      className="p-2 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
+                      className="w-11 h-11 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs"
                       title="Apagar evento"
+                      aria-label="Apagar evento"
                     >
                       <Trash2 size={14} />
                     </button>

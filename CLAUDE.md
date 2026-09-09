@@ -369,6 +369,16 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   **os campos não tinham porta nenhuma** — só se lá chegava pela fila de
   separadores lá dentro. O endereço `/admin` redireciona, com tradução do
   separador antigo, porque anda em links partilhados.
+- **Um ecrã abre sempre no topo.** O `<SubirAoTopo>` (na moldura do router)
+  põe a janela a zero a cada mudança de caminho e de `?ver=`. Numa app de
+  página única o browser não repõe o scroll: quem estava no fim da Agenda e
+  tocava no Plantel caía a meio da lista, sem cabeçalho. Está em
+  `useLayoutEffect` e não em `useEffect` — o navegador pinta entre o render e o
+  efeito, e via-se o ecrã novo a meio antes de saltar.
+  **As persianas de detalhe ficam de fora**: `?event=`, `?atleta=`, `?jogo=`,
+  `?campo=`, `?adversario=` e `?convocatoria=` abrem por cima da lista, e
+  fechá-las tem de devolver a pessoa ao sítio de onde abriu.
+  `tests/e2e/topo-da-pagina.spec.ts` cobre as duas metades.
 - **O canto do cabeçalho é o mesmo em todos os ecrãs**: estado clínico
   (`<PastilhaEstado>`), sino dos comunicados e fotografia, por esta ordem,
   dentro do `<CabecalhoEcra>` — a Home tem o seu próprio cabeçalho (o clube e a

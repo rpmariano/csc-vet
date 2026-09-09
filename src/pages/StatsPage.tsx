@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { Award, Footprints, Flame, Users } from 'lucide-react'
+import { Award, Footprints, Flame, Users, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { Pastilha } from '../components/ui'
+import { Pastilha, Botao } from '../components/ui'
+import { BottomSheet } from '../components/BottomSheet'
 import { triggerHaptic } from '../utils/haptics'
 
 /** Campo, etiqueta e sobrancelha de mosaico — o desenho do resto da app. */
@@ -11,6 +12,9 @@ const CAMPO =
 
 const ETIQUETA =
   'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
+
+/** O ponto de partida das estatísticas — ver a nota no `filterType`. */
+const FILTRO_POR_OMISSAO = 'global_official' as const
 
 const ETIQUETA_MOSAICO =
   'font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/62 leading-tight'
@@ -120,8 +124,15 @@ const StatsPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [rawStats, setRawStats] = useState<RawStat[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
-  const [filterType, setFilterType] = useState<StatsFilterType>('global_official')
+  /*
+    As estatísticas abrem nas competições oficiais, e não em "Todos": um
+    amigável não conta para o pichichi da época. Isto é o ponto de partida e
+    não um filtro posto por alguém — o funil mede-se a partir daqui e não
+    acende só por a app ter aberto, e o "Limpar" volta a este estado.
+  */
+  const [filterType, setFilterType] = useState<StatsFilterType>(FILTRO_POR_OMISSAO)
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>('')
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -249,6 +260,9 @@ const StatsPage: React.FC = () => {
     return matchIds.size
   }, [filteredRawStats])
 
+  /* O funil só acende quando alguém mexeu no que estava. */
+  const temFiltros = filterType !== FILTRO_POR_OMISSAO
+
   const activeFilterLabel = useMemo(() => {
     if (filterType === 'global_official') return 'Competições oficiais'
     if (filterType === 'friendly') return 'Jogos amigáveis'
@@ -272,50 +286,111 @@ const StatsPage: React.FC = () => {
     <div className="space-y-4 pb-12">
 
       {/*
-        Filtros das estatísticas (ecrã 1d): quatro pastilhas, e o torneio a
-        aparecer só quando se filtra por ele. Não há persiana aqui — ao
-        contrário das fichas, não há ano nem mês, e um `select` a mais não
-        justifica escondê-lo.
+        Filtros das estatísticas (ecrã 1d), atrás do funil.
+
+        Eram quatro pastilhas à vista, logo por baixo dos separadores da
+        Competição — duas filas de pastilhas iguais, uma a navegar e outra a
+        filtrar, e não se percebia qual fazia o quê. **Pastilha à vista é
+        navegação; filtro é o que está atrás do funil**, no cabeçalho do bloco,
+        como nos Eventos e nas Fichas de Jogo.
+
+        O que o funil esconde escreve-se ao lado dele, e ele acende: um filtro
+        que não se vê é um filtro que se esquece, e depois os números parecem
+        errados sem razão.
       */}
-      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
-        {([
-          ['all', 'Todos'],
-          ['global_official', 'Oficiais'],
-          ['tournament', 'Por torneio'],
-          ['friendly', 'Amigáveis'],
-        ] as const).map(([valor, etiqueta]) => (
-          <Pastilha
-            key={valor}
-            ativa={filterType === valor}
-            onClick={() => { triggerHaptic('selection'); setFilterType(valor) }}
-            className="flex-none"
-          >
-            {etiqueta}
-          </Pastilha>
-        ))}
+      <div className="flex items-center gap-2.5">
+        <div className="min-w-0 flex-1">
+          <p className={ETIQUETA_MOSAICO}>A contar</p>
+          <p className="font-display font-black text-[13px] text-white truncate mt-0.5">
+            {activeFilterLabel}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
+          aria-label={temFiltros ? 'Filtros (ativos)' : 'Filtros'}
+          className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
+            transition-transform duration-150 active:scale-97
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+              temFiltros
+                ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                : 'bg-white/10 border-white/15 text-white/75'
+            }`}
+        >
+          <SlidersHorizontal size={16} />
+        </button>
       </div>
 
-      {filterType === 'tournament' && (
-        <div>
-          <label className={ETIQUETA} htmlFor="stats-torneio">Torneio</label>
-          <select
-            id="stats-torneio"
-            value={selectedTournamentId}
-            onChange={e => setSelectedTournamentId(e.target.value)}
-            className={CAMPO}
-          >
-            {tournaments.length === 0 ? (
-              <option value="">Sem torneios registados</option>
-            ) : (
-              tournaments.map(t => (
-                <option key={t.id} value={t.id}>
-                  {t.name}{t.season ? ` (${t.season})` : ''}
-                </option>
-              ))
-            )}
-          </select>
+      <BottomSheet
+        isOpen={filtrosAbertos}
+        onClose={() => setFiltrosAbertos(false)}
+        title="Filtrar estatísticas"
+        description="Que jogos entram nas contas"
+        tone="dark"
+        icon={
+          <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
+            <SlidersHorizontal size={17} />
+          </div>
+        }
+        footer={
+          <>
+            <Botao
+              aparencia="vidro"
+              onClick={() => { setFilterType(FILTRO_POR_OMISSAO); triggerHaptic('light') }}
+              disabled={!temFiltros}
+            >
+              Limpar
+            </Botao>
+            <Botao onClick={() => setFiltrosAbertos(false)}>Ver as contas</Botao>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <span className={ETIQUETA}>Tipo de jogo</span>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ['all', 'Todos'],
+                ['global_official', 'Oficiais'],
+                ['tournament', 'Por torneio'],
+                ['friendly', 'Amigáveis'],
+              ] as const).map(([valor, etiqueta]) => (
+                <Pastilha
+                  key={valor}
+                  ativa={filterType === valor}
+                  onClick={() => { triggerHaptic('selection'); setFilterType(valor) }}
+                  className="flex-none"
+                >
+                  {etiqueta}
+                </Pastilha>
+              ))}
+            </div>
+          </div>
+
+          {/* Só faz sentido escolher a prova quando se está a filtrar por ela. */}
+          {filterType === 'tournament' && (
+            <div>
+              <label className={ETIQUETA} htmlFor="stats-torneio">Torneio</label>
+              <select
+                id="stats-torneio"
+                value={selectedTournamentId}
+                onChange={e => setSelectedTournamentId(e.target.value)}
+                className={CAMPO}
+              >
+                {tournaments.length === 0 ? (
+                  <option value="">Sem torneios registados</option>
+                ) : (
+                  tournaments.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}{t.season ? ` (${t.season})` : ''}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          )}
         </div>
-      )}
+      </BottomSheet>
 
       {/* Os quatro números da época, dois a dois. */}
       <div className="grid grid-cols-2 gap-2.5">

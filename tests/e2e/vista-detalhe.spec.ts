@@ -115,7 +115,9 @@ test.describe('Dossier de convocatória', () => {
 
   test('abre com endereço próprio e fecha ao retroceder', async ({ page }) => {
     await abrePagina(page, 'events', { events: [porRealizar] })
-    await page.getByRole('button', { name: /Ver Detalhes & RSVP/ }).click()
+    // O cartão inteiro é que abre o dossier; o botão "Ver Detalhes & RSVP"
+    // saiu, porque duplicava o que o cartão passou a fazer.
+    await page.getByRole('button', { name: /^Ver os detalhes de / }).first().click()
 
     await verificaDetalhe(page, /^Convocatória: /, 'Confirmados', /\?convocatoria=e2$/)
 

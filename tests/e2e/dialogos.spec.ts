@@ -124,9 +124,46 @@ test.describe('Comunicados', () => {
 })
 
 test.describe('Eventos', () => {
+  const treinoDaLista = {
+    id: 'e9', title: 'Treino de teste', type: 'practice',
+    date_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+    location: 'Campo de Teste', description: null, field_id: null, opponent_id: null,
+    tournament_id: null, home_away: 'home', is_friendly: false, max_players: null,
+    meeting_time: null, home_score: null, away_score: null, is_active: true,
+  }
+
   test('criar evento', async ({ page }) => {
     await abrePagina(page, 'events')
     await verificaDialogo(page, () => page.getByRole('button', { name: 'Novo Evento' }).first().click())
+  })
+
+  /*
+    O cartão inteiro abre o detalhe, e é lá dentro que se edita ou elimina —
+    o lápis e o caixote saíram da lista, onde se carregava neles sem sequer
+    ver de que evento se tratava.
+  */
+  test('o cartão da lista abre o detalhe, e é lá que se edita', async ({ page }) => {
+    await abrePagina(page, 'events', { events: [treinoDaLista] })
+
+    const cartao = page.getByRole('button', { name: /^Ver os detalhes de / }).first()
+    await expect(cartao).toBeVisible()
+    // Na lista não há atalhos destrutivos.
+    await expect(page.getByRole('button', { name: 'Eliminar evento' })).toHaveCount(0)
+
+    /* Sem o `verificaDialogo`: ele fecha com Escape no fim, e o fecho tira o
+       `?convocatoria=` do endereço antes de se poder verificar. */
+    const antes = await dialogos(page).count()
+    await cartao.click()
+    await expect(dialogos(page)).toHaveCount(antes + 1)
+    await verificaContrato(dialogos(page).last())
+    await expect(page).toHaveURL(/convocatoria=e9/)
+
+    // Editar e eliminar vivem no detalhe.
+    await expect(dialogos(page).last().getByRole('button', { name: 'Modificar evento' })).toBeVisible()
+    await expect(dialogos(page).last().getByRole('button', { name: 'Apagar evento' })).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(dialogos(page)).toHaveCount(antes)
   })
 })
 

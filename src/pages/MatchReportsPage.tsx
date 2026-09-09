@@ -249,8 +249,8 @@ export const MatchReportsPage: React.FC = () => {
 
   /**
    * O que a persiana esconde, para o funil poder acender e a linha de resumo
-   * dizê-lo. As pastilhas de tipo entram no resumo — ao contrário da Agenda,
-   * aqui o "Limpar" tem de as repor também, senão fica meia limpeza.
+   * dizê-lo. O tipo de jogo entra no resumo e no "Limpar": desde que passou
+   * para dentro da persiana, é mais um filtro escondido como os outros.
    */
   const temFiltros =
     searchTerm.trim() !== '' ||
@@ -316,24 +316,6 @@ export const MatchReportsPage: React.FC = () => {
         </button>
       </div>
 
-      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
-        {([
-          ['all', 'Todos'],
-          ['official', 'Oficiais'],
-          ['tournament', 'Por torneio'],
-          ['friendly', 'Amigáveis'],
-        ] as const).map(([valor, etiqueta]) => (
-          <Pastilha
-            key={valor}
-            ativa={filterType === valor}
-            onClick={() => { triggerHaptic('selection'); setFilterType(valor) }}
-            className="flex-none"
-          >
-            {etiqueta}
-          </Pastilha>
-        ))}
-      </div>
-
       {temFiltros && (
         <button
           type="button"
@@ -353,7 +335,7 @@ export const MatchReportsPage: React.FC = () => {
         isOpen={filtrosAbertos}
         onClose={() => setFiltrosAbertos(false)}
         title="Filtrar fichas"
-        description="Sobre o tipo de jogo escolhido em cima"
+        description="Tipo de jogo, ano, mês e prova"
         tone="dark"
         icon={
           <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
@@ -372,6 +354,33 @@ export const MatchReportsPage: React.FC = () => {
         }
       >
         <div className="space-y-4">
+          {/*
+            O tipo de jogo era uma fila de pastilhas por baixo dos separadores
+            da Competição — duas filas iguais à vista, uma a navegar e outra a
+            filtrar, e não se percebia qual fazia o quê. Filtro é o que está
+            atrás do funil; pastilha à vista é navegação.
+          */}
+          <div>
+            <span className={ETIQUETA}>Tipo de jogo</span>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ['all', 'Todos'],
+                ['official', 'Oficiais'],
+                ['tournament', 'Por torneio'],
+                ['friendly', 'Amigáveis'],
+              ] as const).map(([valor, etiqueta]) => (
+                <Pastilha
+                  key={valor}
+                  ativa={filterType === valor}
+                  onClick={() => { triggerHaptic('selection'); setFilterType(valor) }}
+                  className="flex-none"
+                >
+                  {etiqueta}
+                </Pastilha>
+              ))}
+            </div>
+          </div>
+
           <div>
             <label className={ETIQUETA} htmlFor="ficha-ano">Ano</label>
             <select

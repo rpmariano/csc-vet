@@ -146,7 +146,7 @@ const SOBREPOSTOS: [string, string, (p: Page) => Promise<void>][] = [
   }],
   ['Confirmar eliminar', '/csc-vet/calendar?event=e2', async p => { await p.getByRole('button', { name: /Eliminar evento/ }).click({ timeout: 4000 }) }],
   ['Ficha de atleta', '/csc-vet/team-management', async p => { await p.getByRole('button', { name: /^Ver a ficha de / }).first().click({ timeout: 4000 }) }],
-  ['Dossier de convocatória', '/csc-vet/events', async p => { await p.getByRole('button', { name: /Ver Detalhes & RSVP/ }).first().click({ timeout: 4000 }) }],
+  ['Dossier de convocatória', '/csc-vet/events', async p => { await p.getByRole('button', { name: /^Ver os detalhes de / }).first().click({ timeout: 4000 }) }],
 ]
 
 test('sobrepostos iguais em janela estreita e larga', async ({ page }) => {
