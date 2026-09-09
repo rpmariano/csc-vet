@@ -340,6 +340,21 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   `'ainda-nao-abriu'` e o texto di-lo, para ninguém pensar que perdeu o prazo.
   **E um treino nunca sobe ao cartão de cima da Home** — esse é dos jogos.
   (Regra revista a 2026-09-08: até aí os treinos não se respondiam de todo.)
+- **Não há duas portas para o mesmo sítio.** A app tem cinco superfícies de
+  navegação — a barra de baixo, o canto do cabeçalho, a folha do [+], o ecrã
+  Clube e as ligações dentro das páginas — e um destino escolhe uma. O Plantel
+  e o Perfil saíram da lista do Clube porque já são um lugar da barra e a
+  fotografia do cabeçalho; ficam lá a Competição, que na barra de quem gere não
+  cabe, e os Comunicados, cujo sino só serve para ler.
+- **A gestão vive dentro do ecrã Clube, e não numa página à parte.** É o que o
+  handoff manda — "a página Admin desapareceu: tudo o que era gestão vive no
+  ecrã Clube, num bloco marcado com 🔒". As quatro áreas são secções do próprio
+  Clube, abertas pelo `?ver=` (`dados`, `campos`, `adversarios`, `torneios`),
+  cada uma um componente em `src/components/clube/`. Enquanto o backoffice
+  existiu como página com separadores, três linhas do Clube caíam todas nela e
+  **os campos não tinham porta nenhuma** — só se lá chegava pela fila de
+  separadores lá dentro. O endereço `/admin` redireciona, com tradução do
+  separador antigo, porque anda em links partilhados.
 - **O canto do cabeçalho é o mesmo em todos os ecrãs**: estado clínico
   (`<PastilhaEstado>`), sino dos comunicados e fotografia, por esta ordem,
   dentro do `<CabecalhoEcra>` — a Home tem o seu próprio cabeçalho (o clube e a
@@ -539,13 +554,14 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    `React.lazy` nas rotas que abrem detalhe, ~7%. Mover o `<Suspense>` do `App` para
    dentro do `Layout` piora.
    **Por isso `CalendarPage`, `EventsPage`, `TeamManagementPage`, `CompeticaoPage`
-   e `AdminDashboard` são importadas diretamente em `src/App.tsx`** — são as cinco que
+   e `ClubePage` são importadas diretamente em `src/App.tsx`** — são as cinco que
    abrem um detalhe com endereço próprio (`?event=`, `?atleta=`, `?convocatoria=`,
    `?jogo=`, `?adversario=`, `?campo=`). O resto continua em `React.lazy`. A poupança
    perdida é pequena: o service worker da PWA já pré-carrega todos os pedaços à primeira
    visita, por isso a divisão só valia nos primeiros segundos da primeiríssima
-   abertura. Arranque: ~87 kB → ~156 kB → ~161 kB comprimidos (o último salto é o
-   `AdminDashboard`, que entrou em 2026-09-07 com as fichas 9h e 9i).
+   abertura. Arranque: ~87 kB → ~156 kB → ~161 kB comprimidos (o último salto foi o
+   backoffice, que entrou em 2026-09-07 com as fichas 9h e 9i e passou a viver no
+   Clube em 2026-09-09).
    **Uma página nova que abra um detalhe pelo endereço não pode ser `lazy`.**
    Sobram ~7% de falhas, que continuam a passar à segunda pelo `retries: 1`.
 

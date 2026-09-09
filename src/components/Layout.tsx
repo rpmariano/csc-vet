@@ -39,9 +39,10 @@ const ITENS_GESTAO: readonly ItemNavegacao[] = [
     to: '/clube',
     etiqueta: 'Clube',
     Icone: Shield,
-    // O Backoffice ainda é uma página à parte (desmembra-se na fase 6); até
-    // lá pertence ao Clube para efeitos de navegação.
-    tambemEm: ['/admin', '/finance'],
+    // O Financeiro é o único destino de gestão que ainda vive fora do Clube;
+    // para a barra, pertence-lhe. O backoffice deixou de existir como página:
+    // as suas áreas são secções deste mesmo ecrã.
+    tambemEm: ['/finance'],
   },
 ]
 

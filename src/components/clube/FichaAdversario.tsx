@@ -286,7 +286,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
                       </span>
                     </span>
                     <Link
-                      to="/admin?ver=tournaments"
+                      to="/clube?ver=torneios"
                       onClick={() => { triggerHaptic('light'); aoFechar() }}
                       className="font-display font-extrabold text-[10px] text-csc-gold shrink-0 min-h-11 flex items-center px-2
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold rounded-lg"

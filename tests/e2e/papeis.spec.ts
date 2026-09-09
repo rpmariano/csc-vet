@@ -47,7 +47,11 @@ function fixtures(papel: 'player' | 'coach' | 'admin') {
 /** Rotas de todos, e as que cada papel tem a mais. */
 const DE_TODOS: string[] = ['', 'calendar', 'competicao?ver=classificacoes', 'competicao?ver=fichas',
   'competicao?ver=estatisticas', 'settings']
-const DE_GESTAO: string[] = ['announcements', 'events', 'admin', 'team-management']
+const DE_GESTAO: string[] = [
+  'announcements', 'events', 'team-management',
+  // O Clube é o índice da gestão, e as quatro secções que ele abre.
+  'clube', 'clube?ver=dados', 'clube?ver=campos', 'clube?ver=adversarios', 'clube?ver=torneios',
+]
 const SO_DIRECAO: string[] = ['finance']
 
 interface Perfil {

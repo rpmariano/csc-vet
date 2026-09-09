@@ -60,23 +60,26 @@ async function abrePagina(page: Page, caminho: string, fixtures = {}) {
   await expect(page).toHaveURL(url => url.pathname + url.search === `/csc-vet/${caminho}`)
 }
 
-test.describe('Painel de administração', () => {
+/*
+  As quatro áreas de gestão deixaram de ser separadores de um "painel de
+  administração" e passaram a secções do ecrã Clube, cada uma no seu `?ver=`.
+*/
+test.describe('Gestão do Clube', () => {
   test('criar campo, adversário e torneio', async ({ page }) => {
-    await abrePagina(page, 'admin')
+    await abrePagina(page, 'clube?ver=campos')
+    await verificaDialogo(page, () => page.getByRole('button', { name: 'Criar campo' }).click())
 
-    await verificaDialogo(page, () => page.getByRole('button', { name: 'Novo Campo' }).first().click())
-
-    await page.getByRole('button', { name: /^Adversários/ }).click()
+    await abrePagina(page, 'clube?ver=adversarios')
     await verificaDialogo(page, () => page.getByRole('button', { name: 'Criar adversário' }).click())
 
-    await page.getByRole('button', { name: /^Torneios/ }).click()
+    await abrePagina(page, 'clube?ver=torneios')
     await verificaDialogo(page, () => page.getByRole('button', { name: 'Criar torneio' }).click())
   })
 
   test('Escape num formulário sujo pede confirmação, e só fecha essa', async ({ page }) => {
-    await abrePagina(page, 'admin')
+    await abrePagina(page, 'clube?ver=campos')
 
-    await page.getByRole('button', { name: 'Novo Campo' }).first().click()
+    await page.getByRole('button', { name: 'Criar campo' }).click()
     const painelCampo = dialogos(page).first()
     await expect(painelCampo).toBeVisible()
 
@@ -230,8 +233,8 @@ test.describe('Persianas abertas pelo endereço', () => {
   }
 
   const casos: [string, string][] = [
-    ['ficha do adversário', 'admin?ver=opponents&adversario=o1'],
-    ['ficha do campo', 'admin?ver=fields&campo=f1'],
+    ['ficha do adversário', 'clube?ver=adversarios&adversario=o1'],
+    ['ficha do campo', 'clube?ver=campos&campo=f1'],
     ['detalhe do evento', 'calendar?event=e1'],
     ['ficha de atleta', `team-management?atleta=${UTILIZADOR_TESTE.id}`],
     ['dossier de convocatória', 'events?convocatoria=e1'],
@@ -260,7 +263,7 @@ test.describe('Altura da persiana', () => {
   const campo = { id: 'f1', name: 'Campo de Teste', address: 'R. do Teste' }
 
   test('mesmo com pouco conteúdo, ocupa metade do ecrã', async ({ page }) => {
-    await abrePagina(page, 'admin?ver=fields&campo=f1', { fields: [campo] })
+    await abrePagina(page, 'clube?ver=campos&campo=f1', { fields: [campo] })
 
     const painel = page.getByRole('dialog').last()
     await expect(painel).toBeVisible()

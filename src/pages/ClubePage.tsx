@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Landmark,
   Megaphone,
@@ -10,8 +10,8 @@ import {
   Lock,
   Users,
   ClipboardList,
-  UserCircle,
   ChevronRight,
+  ChevronLeft,
   ExternalLink,
   type LucideIcon,
 } from 'lucide-react'
@@ -21,6 +21,25 @@ import { CabecalhoEcra, EtiquetaSeccao, CartaoSimples } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import { CLUBE_NOME } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
+import { useSaidaGuardada } from '../context/SaidaGuardadaContext'
+import { DadosDoClube } from '../components/clube/DadosDoClube'
+import { GestaoCampos } from '../components/clube/GestaoCampos'
+import { GestaoAdversarios } from '../components/clube/GestaoAdversarios'
+import { GestaoTorneios } from '../components/clube/GestaoTorneios'
+
+/*
+  As secções de gestão, cada uma um ecrã por direito. O `?ver=` no endereço é
+  o que lhes dá link próprio e faz o retroceder do browser voltar ao índice —
+  a mesma convenção da Competição e do Financeiro.
+*/
+const SECCOES = {
+  dados: { titulo: 'Dados do clube', sobrancelha: 'Clube', Componente: DadosDoClube },
+  campos: { titulo: 'Campos', sobrancelha: 'Clube', Componente: GestaoCampos },
+  adversarios: { titulo: 'Adversários', sobrancelha: 'Clube', Componente: GestaoAdversarios },
+  torneios: { titulo: 'Torneios', sobrancelha: 'Clube', Componente: GestaoTorneios },
+} as const
+
+type ChaveDeSeccao = keyof typeof SECCOES
 
 /**
  * Clube — o quarto lugar da barra de quem gere.
@@ -31,9 +50,11 @@ import { supabase } from '../lib/supabaseClient'
  * parte, marcado com 🔒, para se perceber de relance o que é consulta e o
  * que mexe na vida do clube.
  *
- * Nesta fase o ecrã é o índice: as entradas levam às páginas que já existem.
- * A fase 6 desmembra o `AdminDashboard` e traz os torneios, os adversários e
- * os campos para aqui dentro, em vez de os deixar numa página só.
+ * O ecrã é as duas coisas: o índice, e as quatro secções de gestão que o
+ * `?ver=` abre por cima dele — dados do clube, campos, adversários e
+ * torneios. O backoffice era uma página com separadores, e o Clube limitava-se
+ * a ligar-lhe: três das suas linhas caíam todas lá, e os campos não tinham
+ * porta nenhuma.
  *
  * A entrada da Competição não está no mapa de navegação do handoff, que aqui
  * só lista "Fichas de jogo" — mas o README promete que o treinador tem tudo o
@@ -51,13 +72,13 @@ interface Entrada {
   soDirecao?: boolean
 }
 
+/*
+  O que a barra de baixo e o canto do cabeçalho já dão não se repete aqui: o
+  Plantel é um lugar da barra e o Perfil abre na fotografia. Sobra o que só
+  tem esta porta — a Competição, que na barra de quem gere não cabe, e os
+  Comunicados, cujo sino do cabeçalho só serve para ler.
+*/
 const EQUIPA: readonly Entrada[] = [
-  {
-    para: '/team-management',
-    titulo: 'Plantel',
-    descricao: 'Fichas, posições e estado dos atletas',
-    Icone: Users,
-  },
   {
     para: '/competicao',
     titulo: 'Competição',
@@ -70,14 +91,15 @@ const EQUIPA: readonly Entrada[] = [
     descricao: 'Publicar e editar os avisos à equipa',
     Icone: Megaphone,
   },
-  {
-    para: '/settings',
-    titulo: 'O meu perfil',
-    descricao: 'A minha ficha, estado físico e conta',
-    Icone: UserCircle,
-  },
 ]
 
+/*
+  A gestão vive dentro deste ecrã, e não numa página à parte: é o que o
+  handoff manda — "a página Admin desapareceu: tudo o que era gestão vive no
+  ecrã Clube, num bloco marcado com 🔒". Enquanto o backoffice existiu como
+  página, três destas linhas caíam todas nela, em separadores diferentes, e os
+  campos não tinham porta nenhuma.
+*/
 const GESTAO: readonly Entrada[] = [
   {
     para: '/events',
@@ -86,21 +108,27 @@ const GESTAO: readonly Entrada[] = [
     Icone: CalendarPlus,
   },
   {
-    para: '/admin?ver=tournaments',
+    para: '/clube?ver=torneios',
     titulo: 'Torneios e jornadas',
     descricao: 'Competições, grupos, equipas e jogos',
     Icone: Trophy,
   },
   {
-    para: '/admin?ver=opponents',
-    titulo: 'Adversários e campos',
-    descricao: 'Clubes que defrontamos e onde se joga',
+    para: '/clube?ver=adversarios',
+    titulo: 'Adversários',
+    descricao: 'Os clubes que defrontamos, com contactos',
+    Icone: Users,
+  },
+  {
+    para: '/clube?ver=campos',
+    titulo: 'Campos',
+    descricao: 'Onde se joga e onde se treina',
     Icone: MapPin,
   },
   {
-    para: '/admin?ver=club',
+    para: '/clube?ver=dados',
     titulo: 'Dados do clube',
-    descricao: 'Nome, emblema, campo de casa',
+    descricao: 'Nome, sigla, emblema e campo de casa',
     Icone: Shield,
   },
   {
@@ -135,7 +163,18 @@ const LinhaEntrada: React.FC<{ entrada: Entrada; contagem?: string }> = ({ entra
 const ClubePage: React.FC = () => {
   const { profile } = useAuth()
   const { clubSettings } = useClub()
+  const [params, setParams] = useSearchParams()
+  const { pedirSaida } = useSaidaGuardada()
   const eDirecao = profile?.role === 'admin'
+
+  const chave = params.get('ver') as ChaveDeSeccao | null
+  const seccao = chave && chave in SECCOES ? SECCOES[chave] : null
+
+  /* Voltar ao índice limpa a secção e o que ela tenha aberto por endereço. */
+  const voltarAoIndice = () => {
+    triggerHaptic('light')
+    pedirSaida(() => setParams(new URLSearchParams()))
+  }
 
   const gestaoVisivel = GESTAO.filter(e => !e.soDirecao || eDirecao)
 
@@ -189,6 +228,25 @@ const ClubePage: React.FC = () => {
     'Torneios e jornadas': numeros
       ? numeros.torneios === 0 ? 'nenhuma prova a decorrer' : `${numeros.torneios} a decorrer`
       : undefined,
+  }
+
+  if (seccao) {
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={voltarAoIndice}
+          className="min-h-11 -ml-1 pr-3 flex items-center gap-1 text-csc-gold font-display font-extrabold text-[11px] cursor-pointer
+            transition-transform duration-150 active:scale-97
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+        >
+          <ChevronLeft size={16} />
+          <span>Clube</span>
+        </button>
+        <CabecalhoEcra titulo={seccao.titulo} className="mb-4" />
+        <seccao.Componente />
+      </div>
+    )
   }
 
   return (

@@ -11,7 +11,7 @@ import Layout from './components/Layout'
 // Páginas carregadas a pedido.
 //
 // O bundle era um único ficheiro de ~1 MB: quem abria a Home descarregava também
-// a Agenda, os Eventos, o Plantel e o Backoffice. Numa app usada no telemóvel à
+// a Agenda, os Eventos, o Plantel e o Clube. Numa app usada no telemóvel à
 // beira do relvado, com rede fraca, isso pesa. Com React.lazy cada rota vem no
 // seu próprio pedaço, e o Login — a primeira coisa que qualquer pessoa vê — fica
 // no arranque, para não haver um spinner a preceder o ecrã de entrada.
@@ -30,14 +30,13 @@ import Login from './pages/Login'
 import CalendarPage from './pages/CalendarPage'
 import EventsPage from './pages/EventsPage'
 import TeamManagementPage from './pages/TeamManagementPage'
+import ClubePage from './pages/ClubePage'
 import CompeticaoPage from './pages/CompeticaoPage'
-import AdminDashboard from './pages/AdminDashboard'
 
 const Home = React.lazy(() => import('./pages/Home'))
 const AnnouncementsPage = React.lazy(() => import('./pages/AnnouncementsPage'))
 const FinancePage = React.lazy(() => import('./pages/FinancePage'))
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'))
-const ClubePage = React.lazy(() => import('./pages/ClubePage'))
 const NovaPalavraPasse = React.lazy(() => import('./pages/NovaPalavraPasse'))
 
 /**
@@ -51,6 +50,30 @@ const ParaCompeticao: React.FC<{ ver: string }> = ({ ver }) => {
   const params = new URLSearchParams(search)
   params.set('ver', ver)
   return <Navigate to={`/competicao?${params.toString()}`} replace />
+}
+
+/**
+ * O backoffice era uma página com quatro separadores; hoje as suas áreas são
+ * secções do ecrã Clube. O endereço antigo continua a abrir — anda em links
+ * partilhados e no histórico de quem usa a app — e traz consigo o separador em
+ * que estava, mais o `?adversario=`/`?campo=` de uma ficha aberta.
+ */
+const SEPARADORES_DO_BACKOFFICE: Record<string, string> = {
+  club: 'dados',
+  fields: 'campos',
+  opponents: 'adversarios',
+  tournaments: 'torneios',
+}
+
+const ParaClube: React.FC = () => {
+  const { search } = useLocation()
+  const params = new URLSearchParams(search)
+  const antigo = params.get('ver')
+  const seccao = antigo ? SEPARADORES_DO_BACKOFFICE[antigo] : null
+  if (seccao) params.set('ver', seccao)
+  else params.delete('ver')
+  const query = params.toString()
+  return <Navigate to={query ? `/clube?${query}` : '/clube'} replace />
 }
 
 /** Mostrado enquanto o pedaço de código da rota é descarregado. */
@@ -101,13 +124,15 @@ const App: React.FC = () => {
                       onde o handoff os põe. Deixá-lo aberto a todos dava uma
                       página sem nenhum link para o jogador. */}
                   <Route path="/announcements" element={<AnnouncementsPage />} />
-                  {/* O Clube é a porta de entrada da gestão, e o `/admin` é a
-                      página de dados que ele abre: cada entrada do Clube leva
-                      ao seu separador pelo `?ver=` (club, fields, opponents,
-                      tournaments). O nome da rota ficou — mudá-lo partia os
-                      links que já andam por aí. */}
+                  {/* O Clube é a gestão inteira: o índice, e as quatro secções
+                      que o `?ver=` abre — dados, campos, adversarios,
+                      torneios. */}
                   <Route path="/clube" element={<ClubePage />} />
-                  <Route path="/admin" element={<AdminDashboard />} />
+                  {/* O backoffice deixou de ser página: as suas quatro áreas
+                      são secções do Clube (`?ver=`), como o handoff manda. O
+                      endereço antigo redireciona porque anda em links já
+                      partilhados e no histórico de quem usa a app. */}
+                  <Route path="/admin" element={<ParaClube />} />
                   <Route path="/team-management" element={<TeamManagementPage />} />
                 </Route>
 

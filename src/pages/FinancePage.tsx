@@ -629,7 +629,7 @@ const FinancePage: React.FC = () => {
       if (!tournament || !rf) return
 
       // rf.category_id: categoria própria deste torneio, criada ao guardar o torneio
-      // (ver ensureRegistrationFeeCategory em AdminDashboard.tsx). O fallback pelo
+      // (ver garantirCategoriaDeInscricao em components/clube/GestaoTorneios). O fallback pelo
       // nome cobre só torneios guardados antes desta categoria por torneio existir.
       const categoryId = rf.category_id || categories.find(c => c.name === 'Inscrições em Torneios')?.id || null
       const { data: txData, error: txError } = await supabase.from('transactions').insert([{

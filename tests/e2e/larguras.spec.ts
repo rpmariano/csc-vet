@@ -72,16 +72,16 @@ const ECRAS = [
   ['Competição · estatísticas', '/csc-vet/competicao?ver=estatisticas'],
   ['Plantel', '/csc-vet/team-management'],
   ['Clube', '/csc-vet/clube'],
-  ['Backoffice · clube', '/csc-vet/admin?ver=club'],
-  ['Backoffice · campos', '/csc-vet/admin?ver=fields'],
-  ['Backoffice · adversários', '/csc-vet/admin?ver=opponents'],
-  ['Backoffice · torneios', '/csc-vet/admin?ver=tournaments'],
+  ['Clube · dados', '/csc-vet/clube?ver=dados'],
+  ['Clube · campos', '/csc-vet/clube?ver=campos'],
+  ['Clube · adversários', '/csc-vet/clube?ver=adversarios'],
+  ['Clube · torneios', '/csc-vet/clube?ver=torneios'],
   ['Financeiro', '/csc-vet/finance'],
   ['Comunicados', '/csc-vet/announcements'],
   ['Definições', '/csc-vet/settings'],
   ['Detalhe do evento', '/csc-vet/calendar?event=e2'],
-  ['Ficha do adversário', '/csc-vet/admin?ver=opponents&adversario=o1'],
-  ['Ficha do campo', '/csc-vet/admin?ver=fields&campo=f1'],
+  ['Ficha do adversário', '/csc-vet/clube?ver=adversarios&adversario=o1'],
+  ['Ficha do campo', '/csc-vet/clube?ver=campos&campo=f1'],
 ] as const
 
 /** O que se compara: texto visível, largura da coluna, e se a página faz scroll lateral. */

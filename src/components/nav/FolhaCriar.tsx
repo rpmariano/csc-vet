@@ -59,7 +59,7 @@ const OPCOES: readonly OpcaoCriar[] = [
   {
     etiqueta: 'Jornada',
     descricao: 'Nova jornada de um torneio',
-    destino: '/admin?criar=jornada',
+    destino: '/clube?ver=torneios&criar=jornada',
     Icone: Trophy,
     cor: 'text-csc-verde-texto',
   },
