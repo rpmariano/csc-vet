@@ -41,6 +41,30 @@ async function abreFicha(page: import('@playwright/test').Page, perfil = PERFIL)
   await expect(page.getByRole('dialog')).toBeVisible()
 }
 
+/*
+  O cartão de identidade é centrado, e tem de o ser em relação ao cartão
+  inteiro. Tinha um `pr-12` a dar lugar ao botão de fechar, que flutua por
+  cima do canto — e uma margem só de um lado, num cartão centrado, empurra
+  tudo para a esquerda do centro real. Não se vê num diff, e a olho parece
+  só "estranho".
+*/
+test('a fotografia e o nome ficam no centro do cartão', async ({ page }) => {
+  await abreFicha(page)
+
+  const medida = await page.evaluate(() => {
+    const cartao = document.querySelector('[role="dialog"] .cartao-vidro') as HTMLElement | null
+    const titulo = cartao?.querySelector('h2') as HTMLElement | null
+    if (!cartao || !titulo) return null
+    const c = cartao.getBoundingClientRect()
+    const t = titulo.getBoundingClientRect()
+    return Math.abs((c.left + c.width / 2) - (t.left + t.width / 2))
+  })
+
+  expect(medida, 'o cartão de identidade tem de existir').not.toBeNull()
+  // Um pixel de folga chega para o arredondamento do layout.
+  expect(medida!).toBeLessThanOrEqual(1)
+})
+
 test('os contactos estão na ficha, e não só na edição', async ({ page }) => {
   await abreFicha(page)
   const ficha = page.getByRole('dialog')

@@ -2211,7 +2211,16 @@ const TeamManagementPage: React.FC = () => {
               coluna de 480px isso empilhava-se em qualquer ordem menos a
               certa.
             */}
-            <div className="cartao-vidro p-4 flex flex-col items-center text-center gap-2.5 pr-12">
+            {/*
+              Sem `pr-12`. O botão de fechar flutua por cima do canto, e a
+              margem à direita servia para lhe dar lugar — mas num cartão
+              centrado ela estreita a caixa só de um lado, e o `items-center`
+              passa a centrar em relação ao que sobra: a fotografia, o nome e
+              o estado ficavam meia dúzia de píxeis à esquerda do centro real.
+              A fotografia é de 88px e fica bem longe do botão; o nome vem
+              abaixo dele.
+            */}
+            <div className="cartao-vidro p-4 flex flex-col items-center text-center gap-2.5">
               {selectedProfile.photo_url ? (
                 <img
                   src={selectedProfile.photo_url}
