@@ -18,7 +18,7 @@ import {
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
-import { CabecalhoEcra, Pastilha } from '../components/ui'
+import { CabecalhoEcra, Pastilha, EtiquetaSeccao } from '../components/ui'
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
 const ETIQUETA =
@@ -26,6 +26,30 @@ const ETIQUETA =
 
 const ETIQUETA_SECCAO =
   'font-display font-extrabold text-[9.5px] tracking-[0.14em] uppercase text-csc-gold'
+
+/*
+  Pastilhas de estado, as mesmas três cores em que a app fala de dinheiro:
+  vermelho em atraso, âmbar a vencer, verde pago. Ficam aqui porque as Quotas e
+  os Encargos dizem o mesmo e diziam-no de maneiras diferentes.
+*/
+const CHIP =
+  'shrink-0 font-display font-black text-[8.5px] tracking-[0.1em] uppercase ' +
+  'px-2 py-1 rounded-full border whitespace-nowrap'
+const CHIP_ATRASO = `${CHIP} bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto`
+const CHIP_AVISO = `${CHIP} bg-amber-500/15 border-amber-400/35 text-amber-300`
+const CHIP_PAGO = `${CHIP} bg-csc-light/15 border-csc-light/30 text-csc-verde-texto`
+const CHIP_NEUTRO = `${CHIP} bg-white/6 border-white/12 text-white/62`
+
+/** A barra de cor à esquerda de uma linha — diz o estado sem se ler nada. */
+const BARRA_ATRASO = 'bg-csc-red'
+const BARRA_AVISO = 'bg-amber-400'
+const BARRA_PAGO = 'bg-csc-light/60'
+const BARRA_NEUTRA = 'bg-white/15'
+
+/** Botão redondo de ação numa linha — 44px, como todos os alvos de toque. */
+const BOTAO_LINHA =
+  'w-11 h-11 flex items-center justify-center rounded-xl shrink-0 cursor-pointer transition-colors ' +
+  'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold'
 
 const CAMPO =
   'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
@@ -1437,230 +1461,324 @@ const FinancePage: React.FC = () => {
 
       {/* ================= QUOTAS ================= */}
       {activeTab === 'quotas' && (
-        <div className="rounded-2xl shadow-sm border border-white/12 overflow-hidden">
-          <div className="bg-csc-dark px-4 py-3 border-b-2 border-csc-gold flex items-center justify-between gap-3 flex-wrap">
-            <h3 className={ETIQUETA_SECCAO}>Controlo de Quotas — Época {seasonLabel}</h3>
-            <span className="text-[11px] text-white/70">{fmtEuro(settings.quota_amount)}/mês · incumprimento a partir do dia {settings.quota_due_day}</span>
+        <div className="space-y-3">
+          {/*
+            A regra em cima, a lista em baixo — e nada de molduras dentro de
+            molduras. Isto era um cartão `bg-csc-dark` com sublinhado dourado a
+            embrulhar uma caixa cinzenta a embrulhar fichas **`bg-white`
+            opacas**: sobre elas o `text-white` das linhas ficava branco em
+            branco, e o nome do jogador não se via de todo. Ver a nota do
+            `CLAUDE.md` sobre o que o `escurecer-tema.py` deixa para trás.
+          */}
+          <div className="cartao-simples p-3.5">
+            <EtiquetaSeccao>Controlo de quotas · Época {seasonLabel}</EtiquetaSeccao>
+            <p className="text-[11px] leading-relaxed text-white/62 mt-1.5">
+              {fmtEuro(settings.quota_amount)} por mês · em atraso a partir do dia {settings.quota_due_day}.
+            </p>
           </div>
-          {/* Fundo cinzento para as fichas de cada jogador se destacarem como cartões
-              elevados (sombra + faixa de cor do estado), em vez de linhas lisas sobre branco. */}
-          <div className="bg-white/10 p-3 space-y-2">
-            {quotaOverview.map(q => {
-              const expanded = expandedPlayerId === q.player.id
-              const accent = q.lateCount > 0 ? 'border-l-red-400' : q.pendingCount > 0 ? 'border-l-amber-400' : 'border-l-emerald-400'
-              return (
-                <div
-                  key={q.player.id}
-                  className={`bg-white rounded-xl border border-white/12 border-l-4 ${accent} transition-shadow ${expanded ? 'shadow-md ring-1 ring-csc-dark/10' : 'shadow-sm hover:shadow-md'}`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setExpandedPlayerId(expanded ? null : q.player.id)}
-                    className="w-full flex items-center justify-between gap-3 cursor-pointer px-3.5 py-3"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-8 h-8 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 text-csc-gold font-display font-extrabold text-[11px] flex items-center justify-center shrink-0">
-                        {q.player.jersey_number || '—'}
-                      </span>
-                      <span className="font-bold text-sm text-white truncate">{q.player.shirt_name || q.player.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {q.lateCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-red/15 text-csc-vermelho-texto">{q.lateCount} em atraso</span>}
-                      {q.pendingCount > 0 && <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold">{q.pendingCount} pendentes</span>}
-                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-light/15 text-csc-verde-texto">{q.paidCount} pagos</span>
-                      <ChevronDown size={16} className={`text-white/62 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-                    </div>
-                  </button>
 
-                  {expanded && (
-                    <div className="px-3.5 pb-3.5 pt-0.5 space-y-2 border-t border-white/10 mt-0.5">
-                      <p className="text-[10px] text-white/62 pt-2.5">Clique num mês para marcar como pago; clique outra vez para corrigir. Pode selecionar vários meses seguidos.</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {q.months.map(m => {
-                          const isPaid = m.statusCalc === 'paid'
-                          const isSaving = savingMonth === m.monthYear
-                          return (
-                            <button
-                              key={m.monthYear}
-                              type="button"
-                              disabled={isSaving}
-                              onClick={() => handleToggleQuotaMonth(q.player.id, m)}
-                              title={isPaid ? 'Clique para remover o pagamento' : 'Clique para marcar como pago'}
-                              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
-                                isPaid
-                                  ? 'bg-csc-light/10 border-csc-light/35 text-csc-verde-texto hover:bg-csc-red/10 hover:border-csc-red/35 hover:text-csc-vermelho-texto'
-                                  : m.statusCalc === 'late'
-                                    ? 'bg-csc-red/10 border-csc-red/35 text-csc-vermelho-texto hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
-                                    : 'bg-white/6 border-white/12 text-white/60 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
-                              }`}
-                            >
-                              {nomeMes(m.month).slice(0, 3)}/{String(m.year).slice(2)}
-                              {isPaid && <Check size={11} className="inline ml-1 -mt-0.5" />}
-                              {!isPaid && m.statusCalc === 'late' && <AlertTriangle size={11} className="inline ml-1 -mt-0.5" />}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
+          {quotaOverview.map(q => {
+            const expanded = expandedPlayerId === q.player.id
+            const barra = q.lateCount > 0
+              ? BARRA_ATRASO
+              : q.pendingCount > 0 ? BARRA_AVISO : BARRA_PAGO
+            return (
+              <div key={q.player.id} className="cartao-simples overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setExpandedPlayerId(expanded ? null : q.player.id)}
+                  aria-expanded={expanded}
+                  className={`w-full min-h-14 flex items-center gap-2.5 pl-2.5 pr-3.5 py-2.5 text-left cursor-pointer transition-colors
+                    hover:bg-white/[0.04] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
+                      expanded ? 'bg-white/[0.06] border-b border-white/12' : ''
+                    }`}
+                >
+                  <span aria-hidden="true" className={`w-[3px] self-stretch rounded-full shrink-0 ${barra}`} />
+                  <span className="w-8 h-8 rounded-full bg-csc-dark border border-csc-gold/35 text-csc-gold font-display font-extrabold text-[11px] flex items-center justify-center shrink-0 tabular-nums">
+                    {q.player.jersey_number || '—'}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-display font-extrabold text-[13px] text-white truncate">
+                      {q.player.shirt_name || q.player.name}
+                    </span>
+                    <span className="block text-[10.5px] text-white/50 mt-0.5">
+                      {q.paidCount} de {q.months.length} {q.months.length === 1 ? 'mês pago' : 'meses pagos'}
+                    </span>
+                  </span>
+
+                  {q.lateCount > 0 ? (
+                    <span className={CHIP_ATRASO}>{q.lateCount} em atraso</span>
+                  ) : q.pendingCount > 0 ? (
+                    <span className={CHIP_AVISO}>{q.pendingCount} por pagar</span>
+                  ) : (
+                    <span className={CHIP_PAGO}>em dia</span>
                   )}
-                </div>
-              )
-            })}
-            {quotaOverview.length === 0 && (
-              <p className="text-xs text-white/62 py-6 text-center">Sem jogadores elegíveis para quota nesta época.</p>
-            )}
-          </div>
+
+                  <ChevronDown size={16} className={`shrink-0 text-white/50 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+                </button>
+
+                {expanded && (
+                  <div className="px-3.5 py-3">
+                    <p className="text-[10.5px] leading-relaxed text-white/55 mb-2.5">
+                      Toca num mês para o marcar como pago; toca outra vez para corrigir.
+                    </p>
+                    {/*
+                      Grelha de três, e não uma fila que quebra onde calha: os
+                      doze meses da época ficam em quatro linhas certas, e cada
+                      pastilha tem os 44px de alvo de toque que a app exige —
+                      tinham 30px.
+                    */}
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {q.months.map(m => {
+                        const isPaid = m.statusCalc === 'paid'
+                        const isSaving = savingMonth === m.monthYear
+                        return (
+                          <button
+                            key={m.monthYear}
+                            type="button"
+                            disabled={isSaving}
+                            onClick={() => handleToggleQuotaMonth(q.player.id, m)}
+                            aria-label={`${nomeMes(m.month)} de ${m.year} — ${isPaid ? 'pago, tocar para corrigir' : 'por pagar, tocar para marcar como pago'}`}
+                            className={`min-h-11 px-2 rounded-[14px] font-display font-extrabold text-[11px] border cursor-pointer
+                              flex items-center justify-center gap-1 tabular-nums transition-colors
+                              disabled:opacity-50 disabled:cursor-wait
+                              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                                isPaid
+                                  ? 'bg-csc-light/15 border-csc-light/30 text-csc-verde-texto hover:bg-csc-red/12 hover:border-csc-red/35 hover:text-csc-vermelho-texto'
+                                  : m.statusCalc === 'late'
+                                    ? 'bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
+                                    : 'bg-white/6 border-white/12 text-white/70 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
+                              }`}
+                          >
+                            {nomeMes(m.month).slice(0, 3)}/{String(m.year).slice(2)}
+                            {isPaid && <Check size={11} />}
+                            {!isPaid && m.statusCalc === 'late' && <AlertTriangle size={11} />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {quotaOverview.length === 0 && (
+            <p className="cartao-simples p-6 text-center text-[11.5px] text-white/62">
+              Sem jogadores elegíveis para quota nesta época.
+            </p>
+          )}
         </div>
       )}
 
       {/* ================= ENCARGOS ================= */}
       {activeTab === 'charges' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h3 className={`${ETIQUETA_SECCAO} flex items-center gap-2`}>
-                <ShieldCheck size={16} className="text-csc-tinta" />
-                Encargos
-              </h3>
-              <p className="text-xs text-white/62 mt-0.5">Cobranças a jogadores escolhidos — Seguro, equipamento, inscrição/viagem de torneio, etc.</p>
+        <div className="space-y-3">
+          <div className="cartao-simples p-3.5 flex items-start gap-3">
+            <span className="w-9 h-9 rounded-xl bg-csc-gold/15 text-csc-gold flex items-center justify-center shrink-0">
+              <ShieldCheck size={17} />
+            </span>
+            <div className="min-w-0 flex-1">
+              {/* O ícone era `text-csc-tinta` — tinta escura sobre fundo escuro. */}
+              <EtiquetaSeccao>Encargos</EtiquetaSeccao>
+              <p className="text-[11px] leading-relaxed text-white/62 mt-1.5">
+                Cobranças a jogadores escolhidos — seguro, equipamento, inscrição ou viagem de torneio.
+              </p>
             </div>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={openNewChargeModal}
-                disabled={incomeCategories.length === 0}
-                title={incomeCategories.length === 0 ? 'Cria primeiro uma categoria que possa ser usada para receitas (aba Despesas/Receitas)' : undefined}
-                className="flex items-center gap-1.5 min-h-11 px-4 bg-csc-gold text-csc-tinta rounded-[22px] font-display font-extrabold text-[11.5px] cursor-pointer transition-transform duration-150 active:scale-97 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-              >
-                <Plus size={14} />
-                Novo Encargo
-              </button>
-            )}
           </div>
 
           {isAdmin && incomeCategories.length === 0 && (
-            <p className="text-[11px] text-csc-gold bg-csc-gold/10 border border-csc-gold/25 rounded-lg px-2.5 py-1.5">
-              Ainda não há nenhuma categoria marcada para receitas. Cria ou edita uma em Despesas/Receitas → Categorias, assinalando "Também pode ser usada para receitas".
+            <p className="cartao-simples bg-csc-gold/10 border-csc-gold/25 p-3.5 text-[11px] leading-relaxed text-csc-gold">
+              Ainda não há nenhuma categoria marcada para receitas. Cria ou edita uma em
+              Despesas/Receitas → Categorias, assinalando &quot;Também pode ser usada para receitas&quot;.
             </p>
           )}
 
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={openNewChargeModal}
+              disabled={incomeCategories.length === 0}
+              title={incomeCategories.length === 0 ? 'Cria primeiro uma categoria que possa ser usada para receitas (aba Despesas/Receitas)' : undefined}
+              className="w-full min-h-12 flex items-center justify-center gap-1.5 px-4 bg-csc-gold text-csc-tinta rounded-[22px]
+                font-display font-extrabold text-[12px] cursor-pointer transition-transform duration-150 active:scale-97
+                disabled:opacity-40 disabled:cursor-not-allowed
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+            >
+              <Plus size={15} />
+              Novo encargo
+            </button>
+          )}
+
           {chargesWithStats.length === 0 ? (
-            <div className="bg-white/4 rounded-2xl border border-dashed border-white/15 p-8 text-center text-sm text-white/62">
+            <p className="cartao-simples p-6 text-center text-[11.5px] text-white/62">
               Ainda não há encargos criados.
-            </div>
+            </p>
           ) : (
-            <div className="space-y-3">
-              {chargesWithStats.map(c => {
-                const expanded = expandedChargeId === c.id
-                const pct = c.totalExpected > 0 ? Math.min(100, Math.round((c.totalPaid / c.totalExpected) * 100)) : 0
-                return (
-                  <div key={c.id} className={`bg-white rounded-2xl shadow-sm border border-white/10 border-l-4 ${pct >= 100 ? 'border-l-emerald-400' : pct > 0 ? 'border-l-csc-gold' : 'border-l-gray-300'} overflow-hidden`}>
+            chargesWithStats.map(c => {
+              const expanded = expandedChargeId === c.id
+              const pct = c.totalExpected > 0 ? Math.min(100, Math.round((c.totalPaid / c.totalExpected) * 100)) : 0
+              const barra = pct >= 100 ? BARRA_PAGO : pct > 0 ? BARRA_AVISO : BARRA_NEUTRA
+              return (
+                <div key={c.id} className="cartao-simples overflow-hidden">
+                  {/*
+                    O botão de abrir e os de editar/apagar são irmãos, e não uns
+                    dentro do outro: um `<button>` aninhado noutro não é HTML
+                    válido, e os de dentro eram `<span role="button">` de 26px,
+                    metade do alvo de toque mínimo.
+                  */}
+                  <div className={`flex items-stretch ${expanded ? 'bg-white/[0.06] border-b border-white/12' : ''}`}>
                     <button
                       type="button"
                       onClick={() => setExpandedChargeId(expanded ? null : c.id)}
-                      className="w-full px-5 py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/6 transition-colors"
+                      aria-expanded={expanded}
+                      className="flex-1 min-w-0 min-h-14 flex items-center gap-2.5 pl-2.5 pr-2 py-3 text-left cursor-pointer transition-colors
+                        hover:bg-white/[0.04] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <ChevronDown size={16} className={`text-white/62 transition-transform shrink-0 ${expanded ? 'rotate-180' : ''}`} />
-                        <div className="min-w-0 text-left">
-                          <p className="font-black text-sm text-white truncate">{c.title}</p>
-                          <p className="text-[10px] text-white/62 flex items-center gap-1.5 flex-wrap">
-                            {c.categoryName && <span className="px-1.5 py-0.5 rounded bg-white/10">{c.categoryName}</span>}
-                            <span>{fmtEuro(c.amount)}/jogador · {c.participantIds.length} {c.participantIds.length === 1 ? 'participante' : 'participantes'}</span>
-                            {c.pendingCount > 0 && <span className="text-csc-gold font-bold">· {c.pendingCount} por pagar</span>}
-                            {c.due_date && <span>· prazo {new Date(c.due_date).toLocaleDateString('pt-PT')}</span>}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="text-right">
-                          <p className="text-xs font-black text-white">
+                      <span aria-hidden="true" className={`w-[3px] self-stretch rounded-full shrink-0 ${barra}`} />
+                      <span className="min-w-0 flex-1">
+                        {/*
+                          O título leva a linha toda. Partilhava-a com a
+                          pastilha de estado e, com o lápis e o caixote ao lado,
+                          sobravam-lhe ~200px: "Seguro Desportivo 26/27" saía
+                          "Seguro Despo…". A pastilha era de resto uma terceira
+                          maneira de dizer o mesmo que a barra de cor à esquerda
+                          e a barra de progresso — a contagem volta para a linha
+                          de detalhe, a dourado.
+                        */}
+                        <span className="block font-display font-extrabold text-[13px] text-white truncate">
+                          {c.title}
+                        </span>
+
+                        {/* Quebra em vez de cortar: com o chevron e os dois botões ao
+                            lado, "· 3 participantes · prazo … · 2 por pagar" era o que
+                            ficava sempre de fora. */}
+                        <span className="block text-[10.5px] leading-snug text-white/50 mt-0.5">
+                          {c.categoryName && <>{c.categoryName} · </>}
+                          {fmtEuro(c.amount)}/jogador · {c.participantIds.length}{' '}
+                          {c.participantIds.length === 1 ? 'participante' : 'participantes'}
+                          {c.due_date && <> · prazo {new Date(c.due_date).toLocaleDateString('pt-PT')}</>}
+                          {c.pendingCount > 0 && (
+                            <span className="text-csc-gold font-bold"> · {c.pendingCount} por pagar</span>
+                          )}
+                        </span>
+
+                        <span className="flex items-center gap-2 mt-2">
+                          <span className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
+                            <span
+                              className={`block h-full rounded-full ${pct >= 100 ? 'bg-csc-light' : 'bg-csc-gold'}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </span>
+                          <span className="font-display font-black text-[10.5px] text-white/80 tabular-nums shrink-0">
                             {fmtEuro(c.totalPaid)} / {fmtEuro(c.totalExpected)}
-                            {c.surplusAmount > 0 && (
-                              <span className="ml-1 text-[10px] font-black text-csc-light">+{fmtEuro(c.surplusAmount)}</span>
-                            )}
-                          </p>
-                          <div className="w-16 sm:w-24 h-1.5 rounded-full bg-white/10 overflow-hidden mt-1">
-                            <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-csc-gold'}`} style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                        {isAdmin && (
-                          <>
-                            <span
-                              role="button"
-                              onClick={(e) => { e.stopPropagation(); openEditChargeModal(c) }}
-                              className="p-1.5 text-blue-500 hover:bg-csc-blue/12 rounded-lg cursor-pointer"
-                              title="Editar encargo"
-                            >
-                              <Pencil size={14} />
+                          </span>
+                          {c.surplusAmount > 0 && (
+                            <span className="font-display font-black text-[10px] text-csc-verde-texto tabular-nums shrink-0">
+                              +{fmtEuro(c.surplusAmount)}
                             </span>
-                            <span
-                              role="button"
-                              onClick={(e) => { e.stopPropagation(); setChargeToDelete(c.id) }}
-                              className="p-1.5 text-red-400 hover:bg-csc-red/10 rounded-lg cursor-pointer"
-                              title="Apagar encargo"
-                            >
-                              <Trash2 size={14} />
-                            </span>
-                          </>
-                        )}
-                      </div>
+                          )}
+                        </span>
+                      </span>
+
+                      <ChevronDown size={16} className={`shrink-0 text-white/50 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
                     </button>
 
-                    {expanded && (
-                      <div className="border-t border-white/12 bg-white/10 p-2 space-y-1.5">
-                        {c.participantIds.map(playerId => {
-                          const p = players.find(pl => pl.id === playerId)
-                          const payments = c.payments.filter(pay => pay.player_id === playerId)
-                          const paidTotal = payments.reduce((s, pay) => s + pay.amount, 0)
-                          const remaining = Math.max(0, c.amount - paidTotal)
-                          const isPastDeadline = c.due_date ? new Date() > new Date(c.due_date) : false
-                          const isPayingHere = payFormKey === `${c.id}:${playerId}`
-                          const accent = remaining <= 0 ? 'border-l-emerald-400' : paidTotal > 0 ? 'border-l-amber-400' : isPastDeadline ? 'border-l-red-400' : 'border-l-gray-300'
-                          return (
-                            <div key={playerId} className={`bg-white shadow-sm rounded-lg border border-white/12 border-l-4 ${accent} px-3 py-2.5 space-y-2`}>
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm font-bold text-white truncate">{p?.shirt_name || p?.name || 'Jogador'}</span>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {remaining <= 0 ? (
-                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-light/15 text-csc-verde-texto">
-                                      Pago ({fmtEuro(paidTotal)}{paidTotal > c.amount ? ` · +${fmtEuro(paidTotal - c.amount)}` : ''})
-                                    </span>
-                                  ) : paidTotal > 0 ? (
-                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold">Falta {fmtEuro(remaining)}</span>
-                                  ) : (
-                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isPastDeadline ? 'bg-csc-red/15 text-csc-vermelho-texto' : 'bg-white/10 text-white/62'}`}>
-                                      {isPastDeadline ? `Em atraso — deve ${fmtEuro(remaining)}` : `Por pagar (${fmtEuro(remaining)})`}
-                                    </span>
-                                  )}
-                                  {isAdmin && (
-                                    <button type="button" onClick={() => isPayingHere ? setPayFormKey(null) : openPayForm(c.id, playerId)} className="text-[10px] font-black px-2 py-0.5 rounded-full bg-csc-blue/12 text-csc-azul-texto hover:bg-csc-blue/20 cursor-pointer">
-                                      {isPayingHere ? 'Cancelar' : '+ Pagamento'}
-                                    </button>
-                                  )}
-                                </div>
+                    {isAdmin && (
+                      <div className="flex items-center gap-0.5 pr-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => openEditChargeModal(c)}
+                          aria-label={`Editar o encargo ${c.title}`}
+                          title="Editar encargo"
+                          className={`${BOTAO_LINHA} text-csc-azul-texto hover:bg-csc-blue/20`}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setChargeToDelete(c.id)}
+                          aria-label={`Apagar o encargo ${c.title}`}
+                          title="Apagar encargo"
+                          className={`${BOTAO_LINHA} text-csc-vermelho-texto hover:bg-csc-red/15`}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {expanded && (
+                    <div>
+                      {c.participantIds.map(playerId => {
+                        const p = players.find(pl => pl.id === playerId)
+                        const payments = c.payments.filter(pay => pay.player_id === playerId)
+                        const paidTotal = payments.reduce((s, pay) => s + pay.amount, 0)
+                        const remaining = Math.max(0, c.amount - paidTotal)
+                        const isPastDeadline = c.due_date ? new Date() > new Date(c.due_date) : false
+                        const isPayingHere = payFormKey === `${c.id}:${playerId}`
+                        const barraJogador = remaining <= 0
+                          ? BARRA_PAGO
+                          : paidTotal > 0 ? BARRA_AVISO : isPastDeadline ? BARRA_ATRASO : BARRA_NEUTRA
+                        return (
+                          <div
+                            key={playerId}
+                            className="flex gap-2.5 pl-2.5 pr-3 py-2.5 border-t border-white/7 first:border-t-0"
+                          >
+                            <span aria-hidden="true" className={`w-[3px] self-stretch rounded-full shrink-0 ${barraJogador}`} />
+
+                            <div className="min-w-0 flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-display font-extrabold text-[12.5px] text-white truncate flex-1 min-w-0">
+                                  {p?.shirt_name || p?.name || 'Jogador'}
+                                </span>
+                                {remaining <= 0 ? (
+                                  <span className={CHIP_PAGO}>
+                                    pago{paidTotal > c.amount ? ` +${fmtEuro(paidTotal - c.amount)}` : ''}
+                                  </span>
+                                ) : paidTotal > 0 ? (
+                                  <span className={CHIP_AVISO}>falta {fmtEuro(remaining)}</span>
+                                ) : isPastDeadline ? (
+                                  <span className={CHIP_ATRASO}>deve {fmtEuro(remaining)}</span>
+                                ) : (
+                                  <span className={CHIP_NEUTRO}>por pagar {fmtEuro(remaining)}</span>
+                                )}
+                                {isAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={() => isPayingHere ? setPayFormKey(null) : openPayForm(c.id, playerId)}
+                                    aria-label={isPayingHere ? 'Cancelar o registo de pagamento' : `Registar pagamento de ${p?.shirt_name || p?.name || 'jogador'}`}
+                                    className={`${BOTAO_LINHA} ${
+                                      isPayingHere
+                                        ? 'bg-white/10 text-white/70 hover:bg-white/15'
+                                        : 'bg-csc-blue/15 text-csc-azul-texto hover:bg-csc-blue/25'
+                                    }`}
+                                  >
+                                    {isPayingHere ? <X size={15} /> : <Plus size={15} />}
+                                  </button>
+                                )}
                               </div>
 
                               {payments.length > 0 && (
-                                <div className="space-y-1 pl-1">
+                                <div className="space-y-1">
                                   {payments.map(pay => (
-                                    <div key={pay.id} className="flex items-center gap-2 text-[11px] text-white/62">
+                                    <div key={pay.id} className="flex items-center gap-2 text-[10.5px] text-white/55">
                                       {editingPaymentId === pay.id ? (
                                         <>
-                                          <input type="number" step="0.01" value={editPaymentAmount} onChange={e => setEditPaymentAmount(e.target.value)} className={`${CAMPO} w-16 px-2`} />
-                                          <input type="date" value={editPaymentDate} onChange={e => setEditPaymentDate(e.target.value)} className={`${CAMPO} w-auto px-2`} />
-                                          <button type="button" onClick={handleSaveEditedPayment} className="p-1 text-csc-light hover:bg-csc-light/10 rounded cursor-pointer"><Check size={12} /></button>
-                                          <button type="button" onClick={() => setEditingPaymentId(null)} className="p-1 text-white/62 hover:bg-white/10 rounded cursor-pointer"><X size={12} /></button>
+                                          <input type="number" step="0.01" aria-label="Valor" value={editPaymentAmount} onChange={e => setEditPaymentAmount(e.target.value)} className={`${CAMPO} w-20 px-2`} />
+                                          <input type="date" aria-label="Data" value={editPaymentDate} onChange={e => setEditPaymentDate(e.target.value)} className={`${CAMPO} w-auto px-2`} />
+                                          <button type="button" onClick={handleSaveEditedPayment} aria-label="Guardar a correção" className={`${BOTAO_LINHA} text-csc-verde-texto hover:bg-csc-light/15`}><Check size={15} /></button>
+                                          <button type="button" onClick={() => setEditingPaymentId(null)} aria-label="Cancelar a correção" className={`${BOTAO_LINHA} text-white/60 hover:bg-white/10`}><X size={15} /></button>
                                         </>
                                       ) : (
                                         <>
-                                          <span className="font-bold text-white/80">{fmtEuro(pay.amount)}</span>
-                                          <span>{new Date(pay.paid_at).toLocaleDateString('pt-PT')}</span>
+                                          <span className="font-display font-black text-white/85 tabular-nums">{fmtEuro(pay.amount)}</span>
+                                          <span className="tabular-nums">{new Date(pay.paid_at).toLocaleDateString('pt-PT')}</span>
                                           {pay.notes && <span className="italic truncate">({pay.notes})</span>}
                                           {isAdmin && (
-                                            <span className="ml-auto flex items-center gap-1">
-                                              <button type="button" onClick={() => startEditPayment(pay)} className="p-1 text-blue-500 hover:bg-csc-blue/12 rounded cursor-pointer" title="Corrigir valor"><Pencil size={11} /></button>
-                                              <button type="button" onClick={() => setPaymentToDelete(pay.id)} className="p-1 text-red-400 hover:bg-csc-red/10 rounded cursor-pointer" title="Apagar"><Trash2 size={11} /></button>
+                                            <span className="ml-auto flex items-center shrink-0">
+                                              <button type="button" onClick={() => startEditPayment(pay)} aria-label="Corrigir este pagamento" title="Corrigir valor" className={`${BOTAO_LINHA} text-csc-azul-texto hover:bg-csc-blue/20`}><Pencil size={13} /></button>
+                                              <button type="button" onClick={() => setPaymentToDelete(pay.id)} aria-label="Apagar este pagamento" title="Apagar" className={`${BOTAO_LINHA} text-csc-vermelho-texto hover:bg-csc-red/15`}><Trash2 size={13} /></button>
                                             </span>
                                           )}
                                         </>
@@ -1675,24 +1793,30 @@ const FinancePage: React.FC = () => {
                                 // input flex-1 não encolhia (min-width:auto por omissão) e o
                                 // botão Guardar saía do cartão, escondido pelo overflow-hidden
                                 // do cartão do encargo — a linha passa a quebrar antes disso.
-                                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                                  <input type="number" step="0.01" placeholder="Valor (€)" value={payFormAmount} onChange={e => setPayFormAmount(e.target.value)} className={`${CAMPO} w-20 px-2 shrink-0`} />
-                                  <input type="date" value={payFormDate} onChange={e => setPayFormDate(e.target.value)} className={`${CAMPO} w-auto px-2 shrink-0`} />
-                                  <input type="text" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className={`${CAMPO} flex-1 min-w-[100px]`} />
-                                  <button type="button" onClick={() => handleAddChargePayment(c.id, playerId)} className="px-3 py-1.5 bg-csc-gold text-csc-tinta rounded-lg text-xs font-black hover:brightness-95 cursor-pointer shrink-0">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <input type="number" step="0.01" aria-label="Valor do pagamento" placeholder="Valor (€)" value={payFormAmount} onChange={e => setPayFormAmount(e.target.value)} className={`${CAMPO} w-24 px-2 shrink-0`} />
+                                  <input type="date" aria-label="Data do pagamento" value={payFormDate} onChange={e => setPayFormDate(e.target.value)} className={`${CAMPO} w-auto px-2 shrink-0`} />
+                                  <input type="text" aria-label="Notas" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className={`${CAMPO} flex-1 min-w-[100px]`} />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddChargePayment(c.id, playerId)}
+                                    className="min-h-11 px-4 bg-csc-gold text-csc-tinta rounded-[14px] font-display font-extrabold text-[11.5px] cursor-pointer shrink-0
+                                      transition-transform duration-150 active:scale-97
+                                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                                  >
                                     Guardar
                                   </button>
                                 </div>
                               )}
                             </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })
           )}
         </div>
       )}

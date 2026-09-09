@@ -243,6 +243,17 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   escolher os avisos num Safari sem a app instalada tem de os ver guardados na
   mesma; o aviso do que falhou vai num `toast.warning`, não num erro que
   desfaça o resto.
+- **O dinheiro fala em três cores, e as pastilhas estão num sítio só.**
+  `CHIP_ATRASO` / `CHIP_AVISO` / `CHIP_PAGO` / `CHIP_NEUTRO` e as barras
+  `BARRA_*` no topo de `FinancePage.tsx` — vermelho em atraso, âmbar a vencer,
+  verde pago, e uma barra de 3px à esquerda da linha a dizer o mesmo sem se ler
+  nada, como em `OsMeusPagamentos`. As Quotas e os Encargos diziam a mesma coisa
+  de maneiras diferentes.
+  **Os dois ecrãs eram, até 2026-09-09, `bg-white` opacos com `text-white`
+  dentro** — o nome do jogador e o encargo inteiro invisíveis, brancos sobre
+  branco. É a armadilha do `escurecer-tema.py` já descrita acima; foi a única
+  ocorrência que restava em `src/` (o resto dos `bg-white` opacos são campos de
+  formulário com tinta escura, fundos de emblema e botões de interruptor).
 - **O que se deve ao clube vive no `useEstadoPagamentos`, e mais em lado
   nenhum.** Quotas *e* encargos, com prazos: devolve a cor (vermelho com algo
   vencido, laranja a menos de `DIAS_DE_AVISO` — 8 — dias, nada em dia), a
