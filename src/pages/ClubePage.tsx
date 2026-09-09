@@ -9,7 +9,7 @@ import {
   Shield,
   Lock,
   Users,
-  ClipboardList,
+  Swords,
   ChevronRight,
   ChevronLeft,
   ExternalLink,
@@ -73,17 +73,17 @@ interface Entrada {
 }
 
 /*
-  O que a barra de baixo e o canto do cabeçalho já dão não se repete aqui: o
-  Plantel é um lugar da barra e o Perfil abre na fotografia. Sobra o que só
-  tem esta porta — a Competição, que na barra de quem gere não cabe, e os
+  O que a barra de baixo e o canto do cabeçalho já dão não se repete aqui: a
+  Competição é um lugar da barra e o Perfil abre na fotografia. Sobra o que só
+  tem esta porta — o Plantel, que saiu da barra para lhe dar o lugar, e os
   Comunicados, cujo sino do cabeçalho só serve para ler.
 */
 const EQUIPA: readonly Entrada[] = [
   {
-    para: '/competicao',
-    titulo: 'Competição',
-    descricao: 'Classificações, fichas de jogo e estatísticas',
-    Icone: ClipboardList,
+    para: '/team-management',
+    titulo: 'Plantel',
+    descricao: 'Fichas, posições e estado dos atletas',
+    Icone: Users,
   },
   {
     para: '/announcements',
@@ -117,7 +117,7 @@ const GESTAO: readonly Entrada[] = [
     para: '/clube?ver=adversarios',
     titulo: 'Adversários',
     descricao: 'Os clubes que defrontamos, com contactos',
-    Icone: Users,
+    Icone: Swords,
   },
   {
     para: '/clube?ver=campos',

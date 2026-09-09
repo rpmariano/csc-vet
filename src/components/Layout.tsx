@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { Home, Calendar, Users, Trophy, Shield } from 'lucide-react'
+import { Home, Calendar, Trophy, Shield } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { FaixaTopo } from './ui'
 import { BarraNavegacao, type ItemNavegacao } from './nav/BarraNavegacao'
@@ -30,19 +30,28 @@ const ITENS_JOGADOR: readonly ItemNavegacao[] = [
   { to: '/competicao', etiqueta: 'Competição', Icone: Trophy },
 ]
 
-/** Barra de quatro lugares com [+] ao meio: treinador e direção. */
+/**
+ * Barra de quatro lugares com [+] ao meio: treinador e direção.
+ *
+ * A Competição ocupa aqui o lugar que era do Plantel. Quem gere chegava às
+ * classificações e às estatísticas um nível mais fundo do que o jogador, que
+ * as tem na barra — e não há razão para isso: são os mesmos ecrãs, e quem
+ * treina consulta-os tanto ou mais. O Plantel passou para a lista do Clube,
+ * que é onde vive o resto da gestão.
+ */
 const ITENS_GESTAO: readonly ItemNavegacao[] = [
   { to: '/', etiqueta: 'Hoje', Icone: Home },
   { to: '/calendar', etiqueta: 'Agenda', Icone: Calendar },
-  { to: '/team-management', etiqueta: 'Plantel', Icone: Users },
+  { to: '/competicao', etiqueta: 'Competição', Icone: Trophy },
   {
     to: '/clube',
     etiqueta: 'Clube',
     Icone: Shield,
-    // O Financeiro é o único destino de gestão que ainda vive fora do Clube;
-    // para a barra, pertence-lhe. O backoffice deixou de existir como página:
-    // as suas áreas são secções deste mesmo ecrã.
-    tambemEm: ['/finance'],
+    // Os destinos de gestão que ainda têm rota própria — o Plantel e o
+    // Financeiro — abrem-se a partir do Clube, e para a barra pertencem-lhe.
+    // O backoffice deixou de existir como página: as suas áreas são secções
+    // deste mesmo ecrã.
+    tambemEm: ['/team-management', '/finance'],
   },
 ]
 

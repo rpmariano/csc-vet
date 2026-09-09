@@ -342,10 +342,16 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   (Regra revista a 2026-09-08: até aí os treinos não se respondiam de todo.)
 - **Não há duas portas para o mesmo sítio.** A app tem cinco superfícies de
   navegação — a barra de baixo, o canto do cabeçalho, a folha do [+], o ecrã
-  Clube e as ligações dentro das páginas — e um destino escolhe uma. O Plantel
-  e o Perfil saíram da lista do Clube porque já são um lugar da barra e a
-  fotografia do cabeçalho; ficam lá a Competição, que na barra de quem gere não
-  cabe, e os Comunicados, cujo sino só serve para ler.
+  Clube e as ligações dentro das páginas — e um destino escolhe uma. O Perfil
+  saiu da lista do Clube porque já é a fotografia do cabeçalho; ficam lá o
+  Plantel e os Comunicados, cujo sino só serve para ler.
+- **A barra de quem gere é `Hoje · Agenda · [+] · Competição · Clube`.** O
+  handoff dava o quarto lugar ao Plantel, e com isso o treinador chegava às
+  classificações e às estatísticas um nível mais fundo do que o jogador, que as
+  tem na barra. São os mesmos ecrãs, e quem treina consulta-os tanto ou mais; o
+  Plantel passou para a lista do Clube, que é onde vive o resto da gestão. A
+  barra acende o Clube também em `/team-management` e `/finance`, os dois
+  destinos de gestão que ainda têm rota própria.
 - **A gestão vive dentro do ecrã Clube, e não numa página à parte.** É o que o
   handoff manda — "a página Admin desapareceu: tudo o que era gestão vive no
   ecrã Clube, num bloco marcado com 🔒". As quatro áreas são secções do próprio

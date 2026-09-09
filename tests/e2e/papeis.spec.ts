@@ -64,8 +64,8 @@ interface Perfil {
 
 const PERFIS: Perfil[] = [
   { papel: 'player', barra: ['Hoje', 'Agenda', 'Competição'], abre: DE_TODOS, fecha: [...DE_GESTAO, ...SO_DIRECAO] },
-  { papel: 'coach', barra: ['Hoje', 'Agenda', 'Plantel', 'Clube'], abre: [...DE_TODOS, ...DE_GESTAO], fecha: SO_DIRECAO },
-  { papel: 'admin', barra: ['Hoje', 'Agenda', 'Plantel', 'Clube'], abre: [...DE_TODOS, ...DE_GESTAO, ...SO_DIRECAO], fecha: [] },
+  { papel: 'coach', barra: ['Hoje', 'Agenda', 'Competição', 'Clube'], abre: [...DE_TODOS, ...DE_GESTAO], fecha: SO_DIRECAO },
+  { papel: 'admin', barra: ['Hoje', 'Agenda', 'Competição', 'Clube'], abre: [...DE_TODOS, ...DE_GESTAO, ...SO_DIRECAO], fecha: [] },
 ]
 
 for (const { papel, barra, abre, fecha } of PERFIS) {
