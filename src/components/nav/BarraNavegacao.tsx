@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Plus, type LucideIcon } from 'lucide-react'
 import { useRealceDeslizante } from '../../hooks/useRealceDeslizante'
 import { triggerHaptic } from '../../utils/haptics'
@@ -52,12 +52,11 @@ function estaAtivo(item: ItemNavegacao, caminho: string): boolean {
 
 export const BarraNavegacao: React.FC<BarraNavegacaoProps> = ({ itens, caminho, aoCriar }) => {
   const indiceAtivo = itens.findIndex(item => estaAtivo(item, caminho))
-  const navegar = useNavigate()
   /*
-    Sair de um ecrã com um formulário por gravar — o Perfil, um comunicado por
-    publicar, as definições financeiras — passa quase sempre por aqui. A página
-    regista-se no guarda e este pergunta antes de a barra levar o utilizador
-    embora; sem isto o trabalho ia à vida por um toque.
+    Sair de um ecrã com um formulário por gravar já não precisa de guarda aqui:
+    o `useBlocker` do `SaidaGuardadaProvider` apanha qualquer mudança de
+    caminho, venha de um `<Link>` ou do retroceder do browser. O que fica é o
+    [+], que abre uma folha e não navega — esse continua a perguntar.
   */
   const { pedirSaida } = useSaidaGuardada()
   const { refFila, refItem, estiloRealce } = useRealceDeslizante(indiceAtivo, {
@@ -74,10 +73,7 @@ export const BarraNavegacao: React.FC<BarraNavegacaoProps> = ({ itens, caminho, 
         key={item.to}
         to={item.to}
         ref={refItem(i)}
-        onClick={e => {
-          triggerHaptic('selection')
-          if (!pedirSaida(() => navegar(item.to))) e.preventDefault()
-        }}
+        onClick={() => triggerHaptic('selection')}
         aria-current={ativo ? 'page' : undefined}
         className="relative z-1 flex flex-1 flex-col items-center justify-center gap-1.5 min-h-11 rounded-[22px]
           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"

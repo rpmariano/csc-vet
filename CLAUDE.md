@@ -179,13 +179,21 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   gravar" abria o aviso outra vez.
 - **Um formulário que ocupa a página não se fecha — sai-se dele a navegar.** O
   Perfil, o comunicado por publicar e os dois formulários do Financeiro
-  registam-se no `useGuardaDeSaida` (`src/context/SaidaGuardadaContext`), e a
-  barra de baixo, o [+] e o avatar do cabeçalho perguntam por `pedirSaida()`
-  antes de levar o utilizador embora. O `beforeunload` cobre fechar o separador.
-  **O que isto não apanha é o retroceder do browser**: bloqueá-lo obriga a
-  empurrar entradas no histórico à mão, e o histórico desta app já é delicado
-  (ver Riscos, ponto 6). Cobri-lo é passar as rotas a um data router e usar o
-  `useBlocker`.
+  registam-se no `useGuardaDeSaida` (`src/context/SaidaGuardadaContext`), e o
+  `useBlocker` do React Router apanha qualquer mudança de caminho, venha de um
+  `<Link>`, da barra de baixo ou do **retroceder do browser**. Foi para o ter
+  que as rotas passaram a um data router (`createBrowserRouter`, em `App.tsx`):
+  o `useBlocker` não existe fora de um. O `beforeunload` cobre fechar o
+  separador ou recarregar.
+  **O bloqueio só olha ao caminho, não à query.** Trocar de `?ver=` ou abrir uma
+  persiana de detalhe não é sair do formulário, e bloquear a cada parâmetro
+  perguntaria a quem só abriu uma ficha ao lado. As transições dentro da própria
+  página — os separadores do Financeiro, o voltar das secções do Clube — passam
+  pelo `pedirSaida()`, que é a porta manual do mesmo guarda.
+  `tests/e2e/alteracoes-por-gravar.spec.ts` cobre isto. **Cuidado ao escrevê-lo:
+  dois `page.goto()` seguidos são dois documentos, e retroceder entre eles é
+  navegação do browser — o router não a bloqueia, e o teste falha a dizer que a
+  funcionalidade não existe. A ida tem de ser dentro da app.**
 - **Um diálogo tem de levar o foco lá para dentro ao abrir**, e o
   `useModalA11y` trata disso — mas insistindo por `requestAnimationFrame` até o
   painel existir, e não uma vez só. A versão anterior tentava com
@@ -548,28 +556,23 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`.
    O redesenho parte-os por secções à medida que cada área é tocada — não como
    refactor à parte.
-6. **P2 — O retroceder do browser nem sempre fecha a persiana.** Muito melhorado em
-   2026-09-06; não fechado. O endereço muda, mas a atualização de localização do
-   React Router não chega a ser confirmada: o `popstate` não vê mudança nenhuma, o
-   efeito que fecha o detalhe nunca corre e a persiana fica aberta por cima da
-   lista. Reproduzido com `history.back()` do próprio browser (não é artefacto do
-   Playwright) e no código anterior ao redesenho.
-   **A causa é o `React.lazy` nas rotas.** Medido em `tests/e2e/vista-detalhe.spec.ts`,
-   com `--retries=0 --repeat-each=3`: com um `<Suspense>` extra dentro da Competição
-   falhava sempre; com `React.lazy` e só o `<Suspense>` do `App`, ~50%; sem
-   `React.lazy` nas rotas que abrem detalhe, ~7%. Mover o `<Suspense>` do `App` para
-   dentro do `Layout` piora.
-   **Por isso `CalendarPage`, `EventsPage`, `TeamManagementPage`, `CompeticaoPage`
-   e `ClubePage` são importadas diretamente em `src/App.tsx`** — são as cinco que
-   abrem um detalhe com endereço próprio (`?event=`, `?atleta=`, `?convocatoria=`,
-   `?jogo=`, `?adversario=`, `?campo=`). O resto continua em `React.lazy`. A poupança
-   perdida é pequena: o service worker da PWA já pré-carrega todos os pedaços à primeira
-   visita, por isso a divisão só valia nos primeiros segundos da primeiríssima
-   abertura. Arranque: ~87 kB → ~156 kB → ~161 kB comprimidos (o último salto foi o
-   backoffice, que entrou em 2026-09-07 com as fichas 9h e 9i e passou a viver no
-   Clube em 2026-09-09).
-   **Uma página nova que abra um detalhe pelo endereço não pode ser `lazy`.**
-   Sobram ~7% de falhas, que continuam a passar à segunda pelo `retries: 1`.
+6. **~~P2 — O retroceder do browser nem sempre fecha a persiana.~~ Corrigido em
+   2026-09-09.** A causa não era o `React.lazy`, como se tinha concluído: era as
+   persianas guardarem a sua própria abertura em **estado**, sincronizado do
+   endereço por um efeito com o objeto dos parâmetros nas dependências. Quando a
+   identidade desse objeto não mudava, o efeito não corria — o endereço perdia o
+   `?event=` e a persiana ficava aberta por cima da lista.
+   **A abertura de uma persiana deriva-se do endereço durante o render**, nunca
+   se copia para estado:
+   `const aberta = Boolean(searchParams.get('event'))`. O conteúdo (o evento, a
+   ficha) esse fica retido, para a persiana poder deslizar para fora antes de
+   desaparecer. Foi assim que as fichas do adversário e do campo nasceram, e são
+   as únicas que nunca falharam.
+   Medido depois da correção: `vista-detalhe` e `dialogos`, nos dois perfis, com
+   `--retries=0 --repeat-each=3` — 126 execuções, zero falhas. Antes eram ~7%.
+   **Com a causa resolvida, o `React.lazy` voltou às cinco páginas** que tinham
+   sido tiradas dele, e o arranque desceu de ~157 kB para ~64 kB comprimidos.
+   O `tests/e2e/vista-detalhe.spec.ts` é o que impede isto de voltar.
 
 **A identidade de uma pessoa é o endereço de email, e mais nada.** Uma conta liga-se
 à ficha que a direção criou quando — e só quando — o email do registo é igual ao
@@ -631,9 +634,11 @@ teria de ser rodada de imediato.
 
 ## Regras de trabalho
 
-- O redesenho de 2026 vive na branch de integração **`redesign`**; a `main` fica em
-  produção intacta até estar tudo pronto. Uma branch e um PR por fase, contra a
-  `redesign`. Nunca fazer push direto para `main`.
+- **A `main` é produção**, e um push para lá faz o deploy pelo GitHub Actions.
+  Uma branch e um PR por trabalho, contra a `main`. A branch de integração
+  `redesign` foi apagada a 2026-09-09: tinha ficado 44 commits atrás e o
+  trabalho recente ia todo direto para a `main`, por isso a regra antiga — PR
+  contra a `redesign` — só produzia PRs com dezenas de commits já em produção.
 - Antes de cada commit: `npm run lint`, `npm run build` e `npm run test:e2e` têm de
   passar.
 - Qualquer alteração de UI tem de ser verificada em janela **estreita e larga**: em

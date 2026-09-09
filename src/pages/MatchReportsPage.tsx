@@ -91,7 +91,12 @@ export const MatchReportsPage: React.FC = () => {
   // Modal de Ficha de Jogo
   const [selectedEventForReport, setSelectedEventForReport] = useState<MatchEvent | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  /*
+    A ficha **não tem estado de aberta/fechada**: quem manda é o endereço.
+    Ver a nota no efeito abaixo — o estado sincronizado era a causa da falha
+    do retroceder do browser.
+  */
+  const isReportModalOpen = Boolean(searchParams.get('jogo'))
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
@@ -212,7 +217,6 @@ export const MatchReportsPage: React.FC = () => {
   // link próprio e o retroceder do browser fecha-a.
   const handleOpenReport = (ev: MatchEvent) => {
     setSelectedEventForReport(ev)
-    setIsReportModalOpen(true)
     // Acrescentar, não substituir: esta página vive dentro dos separadores da
     // Competição, e o separador escolhido também vai no endereço (`?ver=`).
     // Um `setSearchParams({ jogo })` apagava-o, a Competição saltava para o
@@ -223,7 +227,6 @@ export const MatchReportsPage: React.FC = () => {
   }
 
   const fecharFicha = () => {
-    setIsReportModalOpen(false)
     if (searchParams.get('jogo')) {
       const restantes = new URLSearchParams(searchParams)
       restantes.delete('jogo')
@@ -231,17 +234,17 @@ export const MatchReportsPage: React.FC = () => {
     }
   }
 
+  /*
+    A ficha aberta pelo endereço. Só enche o jogo — quem manda em estar aberta
+    é o próprio endereço, e não um estado sincronizado por este efeito: era daí
+    que vinha a falha do retroceder do browser, com o `?jogo=` a sair do
+    endereço e a persiana a ficar aberta por cima da lista.
+  */
   useEffect(() => {
     const idJogo = searchParams.get('jogo')
-    if (!idJogo) {
-      setIsReportModalOpen(false)
-      return
-    }
+    if (!idJogo) return
     const alvo = matches.find(m => m.id === idJogo)
-    if (alvo) {
-      setSelectedEventForReport(alvo)
-      setIsReportModalOpen(true)
-    }
+    if (alvo) setSelectedEventForReport(alvo)
   }, [searchParams, matches])
 
   /**

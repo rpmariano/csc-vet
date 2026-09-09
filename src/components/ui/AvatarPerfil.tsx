@@ -1,6 +1,5 @@
 import React from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useSaidaGuardada } from '../../context/SaidaGuardadaContext'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 /**
@@ -27,12 +26,6 @@ export const AvatarPerfil: React.FC<AvatarPerfilProps> = ({
   className = '',
 }) => {
   const { profile } = useAuth()
-  /* O avatar está em todos os cabeçalhos, e é uma das saídas de um ecrã com
-     formulário — pergunta antes de deixar para trás o que não foi gravado.
-     Acima do `return null`: um hook corre em todos os renders ou em nenhum. */
-  const navegar = useNavigate()
-  const { pedirSaida } = useSaidaGuardada()
-
   if (!profile) return null
 
   /*
@@ -47,7 +40,6 @@ export const AvatarPerfil: React.FC<AvatarPerfilProps> = ({
     <Link
       to="/settings"
       aria-label="Ver o meu perfil"
-      onClick={e => { if (!pedirSaida(() => navegar('/settings'))) e.preventDefault() }}
       className={`relative flex-none rounded-full border-2 border-csc-gold/60 flex items-center justify-center overflow-visible
         font-display font-extrabold text-csc-gold transition-transform duration-150 active:scale-97
         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${className}`}

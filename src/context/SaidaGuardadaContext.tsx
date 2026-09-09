@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useBlocker } from 'react-router-dom'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 
 /**
@@ -14,13 +15,16 @@ import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
  * cabeçalho — pergunta primeiro por `pedirSaida()`. Se houver alterações por
  * gravar, a navegação fica pendente e aparece o mesmo aviso de sempre.
  *
- * **O que isto não apanha é o retroceder do browser.** Bloquear o `popstate`
- * obriga a empurrar entradas no histórico à mão, e o histórico desta app já é
- * delicado — é dele que dependem as persianas de detalhe (`?event=`,
- * `?atleta=`), com uma corrida conhecida por fechar. Cobrir o botão de
- * retroceder é mudar as rotas para um data router e usar o `useBlocker` do
- * React Router; até lá, o que se faz é não perder o trabalho por um toque na
- * barra de navegação, que é como se sai destes ecrãs quase sempre.
+ * **O retroceder do browser também é apanhado**, pelo `useBlocker` do React
+ * Router — foi para o ter que as rotas passaram a um data router
+ * (`createBrowserRouter`, em `App.tsx`). A alternativa era empurrar entradas
+ * no histórico à mão, e o histórico desta app já é delicado: é dele que
+ * dependem as persianas de detalhe (`?event=`, `?atleta=`).
+ *
+ * **O bloqueio só olha ao caminho**, não à query. Mudar de `?ver=` ou abrir
+ * uma persiana de detalhe não é sair do formulário — e um bloqueio a cada
+ * parâmetro perguntaria a quem só abriu uma ficha ao lado. As transições
+ * dentro da própria página continuam a passar pelo `pedirSaida()`.
  */
 
 export interface RegistoDeSaida {
@@ -60,10 +64,14 @@ export const SaidaGuardadaProvider: React.FC<{ children: React.ReactNode }> = ({
   /* A navegação à espera de resposta, e o texto que o aviso vai mostrar — o
      texto vem para aqui porque durante o render não se lê uma ref. */
   const [pendente, setPendente] = useState<{ seguir: () => void; descricao?: string } | null>(null)
+  const [descricaoAtual, setDescricaoAtual] = useState<string | undefined>(undefined)
   const [aGravar, setAGravar] = useState(false)
 
   const registar = useCallback((novo: RegistoDeSaida | null) => {
     registo.current = novo
+    // O React descarta a atualização quando o valor é o mesmo, e isto é uma
+    // frase por página: na prática muda duas vezes, ao entrar e ao sair.
+    setDescricaoAtual(novo?.descricao)
   }, [])
 
   const pedirSaida = useCallback((prosseguir: () => void) => {
@@ -74,6 +82,33 @@ export const SaidaGuardadaProvider: React.FC<{ children: React.ReactNode }> = ({
     setPendente({ seguir: prosseguir, descricao: registo.current.descricao })
     return false
   }, [])
+
+  /*
+    O retroceder do browser, e qualquer outra navegação que mude de ecrã. Só o
+    caminho conta: trocar de `?ver=` ou abrir uma persiana de detalhe não é
+    sair do formulário.
+  */
+  const bloqueio = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      Boolean(registo.current?.sujo) && currentLocation.pathname !== nextLocation.pathname,
+  )
+  const bloqueado = bloqueio.state === 'blocked'
+
+  /* Deixar de estar sujo enquanto o aviso está de pé — porque se gravou por
+     outro caminho — liberta a navegação em vez de a deixar pendurada. */
+  useEffect(() => {
+    if (bloqueado && !registo.current?.sujo) bloqueio.proceed()
+  }, [bloqueado, bloqueio])
+
+  const seguirEmFrente = () => {
+    registo.current = null
+    if (bloqueado) bloqueio.proceed()
+    else {
+      const seguir = pendente?.seguir
+      setPendente(null)
+      seguir?.()
+    }
+  }
 
   /*
     Fechar o separador ou recarregar não passa pelo router — só o browser é que
@@ -91,29 +126,26 @@ export const SaidaGuardadaProvider: React.FC<{ children: React.ReactNode }> = ({
     <Contexto.Provider value={{ registar, pedirSaida }}>
       {children}
       <UnsavedChangesModal
-        isOpen={pendente !== null}
-        description={pendente?.descricao}
+        isOpen={bloqueado || pendente !== null}
+        description={bloqueado ? descricaoAtual : pendente?.descricao}
         isSaving={aGravar}
         onSaveAndExit={async () => {
-          const seguir = pendente?.seguir
           setAGravar(true)
           try {
             await registo.current?.gravar()
-            registo.current = null
-            setPendente(null)
-            seguir?.()
+            seguirEmFrente()
           } finally {
             setAGravar(false)
           }
         }}
         onExitWithoutSaving={() => {
-          const seguir = pendente?.seguir
           registo.current?.descartar?.()
-          registo.current = null
-          setPendente(null)
-          seguir?.()
+          seguirEmFrente()
         }}
-        onCancel={() => setPendente(null)}
+        onCancel={() => {
+          if (bloqueado) bloqueio.reset()
+          else setPendente(null)
+        }}
       />
     </Contexto.Provider>
   )

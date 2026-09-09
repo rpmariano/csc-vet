@@ -415,7 +415,18 @@ const CalendarPage: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   // Separado de `selectedEvent`: o evento fica retido (para a persiana poder deslizar
   // suavemente para fora ao fechar) mesmo depois de a persiana deixar de estar aberta.
-  const [isEventSheetOpen, setIsEventSheetOpen] = useState(false)
+  /*
+    A persiana do detalhe **não tem estado de aberta/fechada**: quem manda é o
+    endereço. Tinha, sincronizado do `?event=` por um efeito, e era daí que
+    vinha a falha do retroceder do browser — o efeito dependia do objeto dos
+    parâmetros, e quando a identidade dele não mudava não corria: o endereço
+    perdia o `?event=` e a persiana ficava aberta por cima da lista.
+
+    Derivado durante o render não há nada a sincronizar, e o retroceder fecha
+    sempre. O `selectedEvent` continua a ser retido, para a persiana poder
+    deslizar para fora antes de o conteúdo desaparecer.
+  */
+  const isEventSheetOpen = Boolean(searchParams.get('event'))
   const [loading, setLoading] = useState(true)
 
   // Calendar View States
@@ -478,28 +489,17 @@ const CalendarPage: React.FC = () => {
     if (selectedEvent) setIsModalCallupsExpanded(false)
   }, [selectedEvent])
 
-  // Retroceder no browser (ou qualquer coisa que tire o ?event= do endereço)
-  // fecha o detalhe — sem isto o botão de voltar mudava o endereço e deixava a
-  // persiana aberta.
-  useEffect(() => {
-    if (!searchParams.get('event')) {
-      setIsEventSheetOpen(false)
-    }
-  }, [searchParams])
-
   // Ver um evento é navegar: o endereço passa a ter ?event=<id>, portanto o
   // detalhe tem link próprio e o botão de retroceder do browser fecha-o. No
   // desktop deixa de ser uma persiana e passa a ser a página (ver VistaDetalhe).
   const abrirEvento = (ev: Event) => {
     setSelectedEvent(ev)
-    setIsEventSheetOpen(true)
     setSearchParams({ event: ev.id })
   }
 
   const handleCloseEventModal = () => {
-    // Só fecha visualmente — `selectedEvent` fica retido para a persiana poder
-    // deslizar para fora antes de o conteúdo desaparecer (ver isEventSheetOpen).
-    setIsEventSheetOpen(false)
+    // `selectedEvent` fica retido para a persiana poder deslizar para fora
+    // antes de o conteúdo desaparecer; o que a fecha é o endereço, abaixo.
     setPlayerSearchTerm('')
     setModalCallupStatusFilter('all')
     if (searchParams.get('event')) {
@@ -985,7 +985,6 @@ const CalendarPage: React.FC = () => {
       const target = events.find(e => e.id === eventIdParam)
       if (target) {
         setSelectedEvent(target)
-        setIsEventSheetOpen(true)
         const d = new Date(target.date_time)
         setSelectedDate(d)
         setCurrentDate(d)
@@ -1010,7 +1009,6 @@ const CalendarPage: React.FC = () => {
 
         if (data) {
           setSelectedEvent(data as Event)
-          setIsEventSheetOpen(true)
           const d = new Date(data.date_time)
           setSelectedDate(d)
           setCurrentDate(d)
@@ -1171,7 +1169,7 @@ const CalendarPage: React.FC = () => {
         try {
           const { error } = await supabase.from('events').delete().eq('id', eventId)
           if (error) throw error
-          setIsEventSheetOpen(false)
+          handleCloseEventModal()
           setIsEditModalOpen(false)
           fetchEventsAndData()
           toast.success('Evento eliminado com sucesso!')
@@ -2415,9 +2413,9 @@ const CalendarPage: React.FC = () => {
       </BottomSheet>
 
       {/* Modal Detalhes Evento & Convocatória (persiana partilhada).
-          A condição usa só `selectedEvent` (nunca voltar a null ao fechar) — a persiana
-          controla a própria visibilidade por `isEventSheetOpen`, para poder deslizar
-          para fora suavemente em vez de desaparecer no instante em que se fecha. */}
+          A condição usa só `selectedEvent` (nunca voltar a null ao fechar) — a
+          persiana abre e fecha pelo endereço, e o conteúdo fica retido para ela
+          poder deslizar para fora em vez de desaparecer de repente. */}
       {/* A ficha de jogo abre a partir do detalhe do evento — uma persiana
           por cima da outra, um nível abaixo na navegação. */}
       <div>

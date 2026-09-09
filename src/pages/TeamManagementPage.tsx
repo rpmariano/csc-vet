@@ -119,7 +119,15 @@ const TeamManagementPage: React.FC = () => {
   // Modals
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  /*
+    A ficha **não tem estado de aberta/fechada**: quem manda é o endereço.
+    Tinha, sincronizado do `?atleta=` por um efeito, e era daí que vinha a
+    falha do retroceder do browser — o efeito dependia do objeto dos
+    parâmetros, e quando a identidade dele não mudava não corria: o endereço
+    perdia o `?atleta=` e a ficha ficava aberta por cima da lista.
+    O `selectedProfile` continua retido, para a persiana deslizar para fora.
+  */
+  const isDetailModalOpen = Boolean(searchParams.get('atleta'))
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null)
   /* Os meses dispensados vivem noutra tabela; a ficha lê-os ao abrir, como o
      formulário de edição. `null` enquanto não chegam, para não dizer "Nenhum"
@@ -443,25 +451,19 @@ const TeamManagementPage: React.FC = () => {
   // desktop deixa de ser uma persiana e passa a ser a página (ver VistaDetalhe).
   const openDetailModal = (p: Profile) => {
     setSelectedProfile(p)
-    setIsDetailModalOpen(true)
     setSearchParams({ atleta: p.id })
   }
 
+  /* A ficha aberta pelo endereço, quando a lista já cá está — só encher o
+     `selectedProfile`; quem manda em estar aberta é o endereço. */
   useEffect(() => {
     const idAtleta = searchParams.get('atleta')
-    if (!idAtleta) {
-      setIsDetailModalOpen(false)
-      return
-    }
+    if (!idAtleta) return
     const alvo = profiles.find(p => p.id === idAtleta)
-    if (alvo) {
-      setSelectedProfile(alvo)
-      setIsDetailModalOpen(true)
-    }
+    if (alvo) setSelectedProfile(alvo)
   }, [searchParams, profiles])
 
   const fecharFicha = () => {
-    setIsDetailModalOpen(false)
     if (searchParams.get('atleta')) {
       const restantes = new URLSearchParams(searchParams)
       restantes.delete('atleta')
@@ -2174,7 +2176,7 @@ const TeamManagementPage: React.FC = () => {
 
       {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER PC & MOBILE).
           A condição usa só `selectedProfile` (nunca é limpo ao fechar) — a persiana
-          controla a própria visibilidade por `isDetailModalOpen`, para poder deslizar
+          abre e fecha pelo endereço; o conteúdo fica retido para poder deslizar
           para fora suavemente em vez de desaparecer no instante em que se fecha. */}
       {selectedProfile && (
         <VistaDetalhe

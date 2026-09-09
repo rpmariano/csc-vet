@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Outlet, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ClubProvider } from './context/ClubContext'
 import { ToastProvider } from './context/ToastContext'
@@ -17,22 +17,19 @@ import Layout from './components/Layout'
 // no arranque, para não haver um spinner a preceder o ecrã de entrada.
 import Login from './pages/Login'
 
-// Estas cinco não são carregadas a pedido, ao contrário das outras: são as
-// que abrem um detalhe com endereço próprio (`?event=`, `?atleta=`,
-// `?convocatoria=`, `?jogo=`, `?adversario=`, `?campo=`), e com `React.lazy` a atualização de localização
-// do React Router deixa de ser confirmada — o endereço muda ao retroceder mas
-// a persiana fica aberta, em cerca de metade das vezes. Medido: sem `lazy`, as
-// falhas caem para quase nenhuma. Ver o risco P2 no CLAUDE.md.
-//
-// A poupança que se perde é pequena: o service worker da PWA já pré-carrega
-// todos os pedaços à primeira visita, por isso a divisão só valia nos
-// primeiros segundos da primeiríssima abertura.
-import CalendarPage from './pages/CalendarPage'
-import EventsPage from './pages/EventsPage'
-import TeamManagementPage from './pages/TeamManagementPage'
-import ClubePage from './pages/ClubePage'
-import CompeticaoPage from './pages/CompeticaoPage'
-
+// As cinco páginas que abrem um detalhe pelo endereço estiveram fora daqui,
+// carregadas de uma vez, porque com `React.lazy` o retroceder do browser
+// deixava a persiana aberta. A causa era outra — as persianas guardavam a sua
+// própria abertura em estado, sincronizado do endereço por um efeito — e
+// desde que passaram a derivá-la do endereço o `lazy` voltou sem trazer o bug:
+// 126 execuções de `vista-detalhe` e `dialogos` sem uma falha, com
+// `--retries=0 --repeat-each=3`. O arranque desceu de 157 kB para 64 kB
+// comprimidos.
+const CalendarPage = React.lazy(() => import('./pages/CalendarPage'))
+const EventsPage = React.lazy(() => import('./pages/EventsPage'))
+const TeamManagementPage = React.lazy(() => import('./pages/TeamManagementPage'))
+const ClubePage = React.lazy(() => import('./pages/ClubePage'))
+const CompeticaoPage = React.lazy(() => import('./pages/CompeticaoPage'))
 const Home = React.lazy(() => import('./pages/Home'))
 const AnnouncementsPage = React.lazy(() => import('./pages/AnnouncementsPage'))
 const FinancePage = React.lazy(() => import('./pages/FinancePage'))
@@ -84,77 +81,113 @@ const EcraACarregar: React.FC = () => (
   </div>
 )
 
+/**
+ * A moldura de dentro do router.
+ *
+ * O `SaidaGuardadaProvider` tem de estar aqui, e não à volta do
+ * `<RouterProvider>`: é ele que chama o `useBlocker`, e esse hook só existe
+ * dentro do contexto de um data router. Por isso é uma rota-moldura sem
+ * caminho, que embrulha todas as outras.
+ */
+const MolduraDoRouter: React.FC = () => (
+  <SaidaGuardadaProvider>
+    <React.Suspense fallback={<EcraACarregar />}>
+      <Outlet />
+    </React.Suspense>
+  </SaidaGuardadaProvider>
+)
+
+/*
+  As rotas são um data router (`createBrowserRouter`) e não o `<BrowserRouter>`
+  com `<Routes>`. A troca não foi por gosto: o `useBlocker` — a única forma
+  suportada de perguntar antes de o retroceder do browser deitar fora um
+  formulário por gravar — só existe num data router.
+
+  O router fica fora do componente de propósito: criá-lo dentro do `App`
+  fá-lo-ia de novo a cada render, e com ele todo o estado de navegação.
+*/
+const router = createBrowserRouter(
+  [
+    {
+      element: <MolduraDoRouter />,
+      children: [
+        // Públicas
+        { path: '/login', element: <Login /> },
+        /* O link de recuperação vem do email e traz uma sessão de recuperação,
+           não uma sessão normal — por isso fica fora do ProtectedRoute e fora
+           do Layout. */
+        { path: '/nova-palavra-passe', element: <NovaPalavraPasse /> },
+
+        // Com sessão
+        {
+          element: <ProtectedRoute />,
+          children: [
+            {
+              element: <Layout />,
+              children: [
+                { path: '/', element: <Home /> },
+                { path: '/calendar', element: <CalendarPage /> },
+                /* A Competição junta classificações, fichas de jogo e
+                   estatísticas em separadores. As três páginas mantêm endereço
+                   próprio: são ligadas de outros sítios e são o alvo de links
+                   partilhados. */
+                { path: '/competicao', element: <CompeticaoPage /> },
+                { path: '/match-reports', element: <ParaCompeticao ver="fichas" /> },
+                { path: '/stats', element: <ParaCompeticao ver="estatisticas" /> },
+                { path: '/standings', element: <ParaCompeticao ver="classificacoes" /> },
+                { path: '/settings', element: <SettingsPage /> },
+
+                // Treinador e direção
+                {
+                  element: <ProtectedRoute allowedRoles={['coach', 'admin']} />,
+                  children: [
+                    { path: '/events', element: <EventsPage /> },
+                    /* Comunicados é o ecrã de *gestão*: publicar, editar,
+                       apagar. Quem só lê tem-nos na persiana do sino, que é
+                       onde o handoff os põe. */
+                    { path: '/announcements', element: <AnnouncementsPage /> },
+                    /* O Clube é a gestão inteira: o índice, e as quatro secções
+                       que o `?ver=` abre — dados, campos, adversarios,
+                       torneios. */
+                    { path: '/clube', element: <ClubePage /> },
+                    /* O backoffice deixou de ser página; o endereço antigo
+                       redireciona porque anda em links já partilhados. */
+                    { path: '/admin', element: <ParaClube /> },
+                    { path: '/team-management', element: <TeamManagementPage /> },
+                  ],
+                },
+
+                // Só direção
+                {
+                  element: <ProtectedRoute allowedRoles={['admin']} />,
+                  children: [
+                    { path: '/finance', element: <FinancePage /> },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+
+        { path: '*', element: <Navigate to="/" replace /> },
+      ],
+    },
+  ],
+  { basename: import.meta.env.BASE_URL },
+)
+
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <ClubProvider>
         <ToastProvider>
-        <AnnouncementsProvider>
-          <Router basename={import.meta.env.BASE_URL}>
-          <SaidaGuardadaProvider>
-          <React.Suspense fallback={<EcraACarregar />}>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
-            {/* O link de recuperação vem do email e traz uma sessão de
-                recuperação, não uma sessão normal — por isso fica fora do
-                ProtectedRoute e fora do Layout. */}
-            <Route path="/nova-palavra-passe" element={<NovaPalavraPasse />} />
-
-            {/* Protected Routes (Everyone logged in) */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<Layout />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/calendar" element={<CalendarPage />} />
-                {/* Competição junta classificações, fichas de jogo e
-                    estatísticas em separadores — é o terceiro lugar da barra
-                    do jogador. As três páginas mantêm endereço próprio: são
-                    ligadas de outros sítios e são o alvo de links partilhados. */}
-                <Route path="/competicao" element={<CompeticaoPage />} />
-                <Route path="/match-reports" element={<ParaCompeticao ver="fichas" />} />
-                <Route path="/stats" element={<ParaCompeticao ver="estatisticas" />} />
-                <Route path="/standings" element={<ParaCompeticao ver="classificacoes" />} />
-                <Route path="/settings" element={<SettingsPage />} />
-
-                {/* Coach and Admin Only */}
-                <Route element={<ProtectedRoute allowedRoles={['coach', 'admin']} />}>
-                  <Route path="/events" element={<EventsPage />} />
-                  {/* Comunicados é o ecrã de *gestão*: publicar, editar, apagar.
-                      Quem só lê tem-nos na persiana do sino, na Home — que é
-                      onde o handoff os põe. Deixá-lo aberto a todos dava uma
-                      página sem nenhum link para o jogador. */}
-                  <Route path="/announcements" element={<AnnouncementsPage />} />
-                  {/* O Clube é a gestão inteira: o índice, e as quatro secções
-                      que o `?ver=` abre — dados, campos, adversarios,
-                      torneios. */}
-                  <Route path="/clube" element={<ClubePage />} />
-                  {/* O backoffice deixou de ser página: as suas quatro áreas
-                      são secções do Clube (`?ver=`), como o handoff manda. O
-                      endereço antigo redireciona porque anda em links já
-                      partilhados e no histórico de quem usa a app. */}
-                  <Route path="/admin" element={<ParaClube />} />
-                  <Route path="/team-management" element={<TeamManagementPage />} />
-                </Route>
-
-                {/* Admin Only */}
-                <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                  <Route path="/finance" element={<FinancePage />} />
-                </Route>
-              </Route>
-            </Route>
-
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          </React.Suspense>
-          </SaidaGuardadaProvider>
-        </Router>
-        </AnnouncementsProvider>
+          <AnnouncementsProvider>
+            <RouterProvider router={router} />
+          </AnnouncementsProvider>
         </ToastProvider>
       </ClubProvider>
     </AuthProvider>
   )
 }
-
 
 export default App

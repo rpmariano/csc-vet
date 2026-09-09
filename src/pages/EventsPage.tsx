@@ -1318,7 +1318,6 @@ const EventsPage: React.FC = () => {
   }
 
   const fecharDossier = () => {
-    setActiveCallupModalEvent(null)
     if (searchParams.get('convocatoria')) {
       const restantes = new URLSearchParams(searchParams)
       restantes.delete('convocatoria')
@@ -1326,15 +1325,20 @@ const EventsPage: React.FC = () => {
     }
   }
 
+  /*
+    O dossier aberto pelo endereço. Só enche o evento — quem manda em estar
+    aberto é o próprio endereço, e não um estado sincronizado por este efeito:
+    era daí que vinha a falha do retroceder do browser, com o `?convocatoria=`
+    a sair do endereço e a persiana a ficar aberta por cima da lista.
+  */
   useEffect(() => {
     const idEvento = searchParams.get('convocatoria')
-    if (!idEvento) {
-      setActiveCallupModalEvent(null)
-      return
-    }
+    if (!idEvento) return
     const alvo = events.find(e => e.id === idEvento)
     if (alvo) setActiveCallupModalEvent(alvo)
   }, [searchParams, events])
+
+  const dossierAberto = Boolean(searchParams.get('convocatoria'))
 
   return (
     <div className="space-y-6 pb-12">
@@ -2139,7 +2143,7 @@ const EventsPage: React.FC = () => {
       <div>
       {activeCallupModalEvent && (
         <VistaDetalhe
-          isOpen={!!activeCallupModalEvent}
+          isOpen={dossierAberto}
           onClose={fecharDossier}
           tone="dark"
           size="2xl"
