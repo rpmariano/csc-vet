@@ -42,7 +42,7 @@ import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, CampoEntrada, Botao, EtiquetaSeccao } from '../components/ui'
+import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
@@ -2035,34 +2035,26 @@ const CalendarPage: React.FC = () => {
       />
 
       {/*
-        Pastilhas de tipo (as do handoff, sem emoji) e, no fim da linha, o
-        funil dos filtros escondidos.
+        **Procura à vista, tudo o resto atrás do funil** — a mesma forma em
+        todos os ecrãs de lista da app.
 
-        O funil estava no cabeçalho, encostado ao avatar, longe do que faz.
-        Aqui fica ao pé das outras pastilhas de filtro, que é o que é: mais um
-        filtro, só que os dele estão atrás de uma persiana. Fica `flex-none`
-        fora da caixa de scroll, senão fugia para fora do ecrã assim que
-        alguém arrastasse as pastilhas.
+        As pastilhas do tipo de evento estavam aqui fora, e as Fichas de Jogo
+        e as Estatísticas escondiam o filtro equivalente: o mesmo filtro
+        tratado de duas maneiras conforme o ecrã. Uma pastilha à vista é
+        navegação; o que filtra fica atrás do funil.
       */}
       <div className="flex items-center gap-2">
-        <div className="sem-barra-rolagem flex-1 min-w-0 flex gap-2 overflow-x-auto pb-0.5">
-          {([
-            ['all', 'Todos'],
-            ['match', 'Jogos'],
-            ['practice', 'Treinos'],
-            ['gathering', 'Convívios'],
-          ] as const).map(([valor, etiqueta]) => (
-            <Pastilha
-              key={valor}
-              ativa={typeFilter === valor}
-              onClick={() => { triggerHaptic('selection'); setTypeFilter(valor) }}
-              className="flex-none"
-            >
-              {etiqueta}
-            </Pastilha>
-          ))}
+        <div className="relative flex-1 min-w-0">
+          <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Título, adversário ou local"
+            aria-label="Procurar na agenda"
+            className={`${CAMPO_FORM} pl-9.5`}
+          />
         </div>
-
         <button
           type="button"
           onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
@@ -2353,15 +2345,15 @@ const CalendarPage: React.FC = () => {
       </div>
 
       {/*
-        Pesquisa e filtro de estado. Fora do ecrã porque o handoff quer a
+        O tipo de evento e o estado. Fora do ecrã porque o handoff quer a
         Agenda limpa, mas a um toque porque a app tem eventos que chegam para
         os tornar necessários.
       */}
       <BottomSheet
         isOpen={filtrosAbertos}
         onClose={() => setFiltrosAbertos(false)}
-        title="Procurar na agenda"
-        description="Sobre os eventos do tipo escolhido em cima"
+        title="Filtrar a agenda"
+        description="Tipo de evento e estado"
         tone="dark"
         icon={
           <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
@@ -2384,13 +2376,27 @@ const CalendarPage: React.FC = () => {
         }
       >
         <div className="space-y-4">
-          <CampoEntrada
-            etiqueta="Procurar"
-            type="search"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Título, adversário ou local"
-          />
+          <div>
+            <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+              Tipo de evento
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {([
+                ['all', 'Todos'],
+                ['match', 'Jogos'],
+                ['practice', 'Treinos'],
+                ['gathering', 'Convívios'],
+              ] as const).map(([valor, etiqueta]) => (
+                <Pastilha
+                  key={valor}
+                  ativa={typeFilter === valor}
+                  onClick={() => { triggerHaptic('selection'); setTypeFilter(valor) }}
+                >
+                  {etiqueta}
+                </Pastilha>
+              ))}
+            </div>
+          </div>
 
           <div>
             <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">

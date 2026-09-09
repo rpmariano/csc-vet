@@ -84,9 +84,10 @@ test.describe('Detalhe do evento', () => {
     await page.goBack()
     await expect(page).toHaveURL(/calendar$/)
     await expect(page.locator('[role="dialog"]')).toHaveCount(0, { timeout: 10_000 })
-    // A agenda mostra o calendário e a lista ao mesmo tempo; o alternador de
-    // vista desapareceu com o redesenho (ecrã 1a).
-    await expect(page.getByRole('button', { name: 'Todos' })).toBeVisible()
+    /* A agenda voltou mesmo, e não ficou um ecrã em branco por trás do
+       detalhe fechado. A prova era a pastilha "Todos", que entretanto passou
+       para dentro do funil; é a procura que está sempre à vista. */
+    await expect(page.getByPlaceholder('Título, adversário ou local')).toBeVisible()
   })
 
   test('o endereço abre o evento diretamente', async ({ page }) => {

@@ -48,7 +48,7 @@ import { useModalA11y } from '../hooks/useModalA11y'
 import { VistaDetalhe } from '../components/VistaDetalhe'
 import { useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../components/BottomSheet'
-import { Pastilha, Botao, CampoEntrada } from '../components/ui'
+import { Pastilha, Botao } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
@@ -1815,32 +1815,44 @@ const EventsPage: React.FC = () => {
         return (
           <div className="w-full space-y-4">
             {/*
-              Filtros da lista (ecrã 4a). Estavam aqui três filas de botões
-              empilhadas — publicação, tempo e tipo — e o handoff tem uma. Fica
-              à vista a do tipo de evento, que é a que se usa a cada minuto; a
-              pesquisa e as outras duas passam para a persiana atrás do funil,
-              o mesmo gesto da Agenda.
+              Filtros da lista (ecrã 4a). **Procura à vista, tudo o resto atrás
+              do funil** — a mesma forma em todos os ecrãs de lista da app.
+
+              A fila de pastilhas do tipo de evento estava aqui fora, e as
+              Fichas de Jogo e as Estatísticas escondiam o filtro equivalente:
+              o mesmo filtro tratado de duas maneiras conforme o ecrã. Uma
+              pastilha à vista é navegação; o que filtra fica atrás do funil.
 
               O que a persiana esconde acende o funil e escreve-se por baixo:
               um filtro que não se vê é um filtro que se esquece, e depois a
               lista parece vazia sem razão.
             */}
-            <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
-                {([
-                  ['all', 'Todos'],
-                  ['match', 'Jogos'],
-                  ['practice', 'Treinos'],
-                  ['gathering', 'Convívios'],
-                ] as const).map(([valor, etiqueta]) => (
-                  <Pastilha
-                    key={valor}
-                    ativa={eventListTypeFilter === valor}
-                    onClick={() => { triggerHaptic('selection'); setEventListTypeFilter(valor) }}
-                    className="flex-none"
-                  >
-                    {etiqueta}
-                  </Pastilha>
-                ))}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 min-w-0">
+                <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
+                <input
+                  type="search"
+                  value={eventListSearch}
+                  onChange={e => setEventListSearch(e.target.value)}
+                  placeholder="Título, adversário ou local"
+                  aria-label="Procurar nos eventos"
+                  className={`${CAMPO_FORM} pl-9.5`}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => { triggerHaptic('light'); setFiltrosListaAbertos(true) }}
+                aria-label={temFiltrosLista ? 'Filtros (ativos)' : 'Filtros'}
+                className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
+                  transition-transform duration-150 active:scale-97
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                    temFiltrosLista
+                      ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                      : 'bg-white/10 border-white/15 text-white/75'
+                  }`}
+              >
+                <SlidersHorizontal size={16} />
+              </button>
             </div>
 
             {temFiltrosLista && (
@@ -1867,8 +1879,8 @@ const EventsPage: React.FC = () => {
             <BottomSheet
               isOpen={filtrosListaAbertos}
               onClose={() => setFiltrosListaAbertos(false)}
-              title="Procurar nos eventos"
-              description="Sobre os eventos do tipo escolhido em cima"
+              title="Filtrar eventos"
+              description="Tipo, quando e publicação"
               tone="dark"
               icon={
                 <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
@@ -1897,13 +1909,27 @@ const EventsPage: React.FC = () => {
               }
             >
               <div className="space-y-4">
-                <CampoEntrada
-                  etiqueta="Procurar"
-                  type="search"
-                  value={eventListSearch}
-                  onChange={e => setEventListSearch(e.target.value)}
-                  placeholder="Título, adversário ou local"
-                />
+                <div>
+                  <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+                    Tipo de evento
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      ['all', 'Todos'],
+                      ['match', 'Jogos'],
+                      ['practice', 'Treinos'],
+                      ['gathering', 'Convívios'],
+                    ] as const).map(([valor, etiqueta]) => (
+                      <Pastilha
+                        key={valor}
+                        ativa={eventListTypeFilter === valor}
+                        onClick={() => { triggerHaptic('selection'); setEventListTypeFilter(valor) }}
+                      >
+                        {etiqueta}
+                      </Pastilha>
+                    ))}
+                  </div>
+                </div>
 
                 <div>
                   <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
@@ -1963,20 +1989,6 @@ const EventsPage: React.FC = () => {
                     A mostrar {filteredScheduledEvents.length} de {events.length} registados
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => { triggerHaptic('light'); setFiltrosListaAbertos(true) }}
-                  aria-label={temFiltrosLista ? 'Pesquisa e filtros (ativos)' : 'Pesquisa e filtros'}
-                  className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
-                    transition-transform duration-150 active:scale-97
-                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                      temFiltrosLista
-                        ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                        : 'bg-white/10 border-white/15 text-white/75'
-                    }`}
-                >
-                  <SlidersHorizontal size={16} />
-                </button>
               </div>
 
               {loading ? (

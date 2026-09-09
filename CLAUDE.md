@@ -482,6 +482,21 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   lista, há duas saídas para ele que têm de continuar a existir: o "Ver
   realizados" ao lado do título e o vazio "Nada por realizar" — sem eles o
   histórico fica sem porta, com o filtro escondido atrás do funil.
+- **Procura à vista, tudo o resto atrás do funil.** É a forma de todos os
+  ecrãs de lista: uma caixa de procura e, ao lado, o botão do funil que abre a
+  persiana com os filtros. **Uma pastilha à vista é navegação; o que filtra
+  fica escondido.** Havia três formas ao mesmo tempo — a Agenda e os Eventos
+  com as pastilhas de tipo à vista, as Fichas e o Plantel com a procura, as
+  Estatísticas sem nada —, e o mesmo filtro, o tipo de evento ou de jogo,
+  estava à vista num ecrã e escondido no outro. Na Competição era pior: uma
+  fila de pastilhas de filtro por baixo da fila de separadores, iguais a olho.
+  **O funil só acende quando alguém mexeu no que estava**, e o que ele esconde
+  escreve-se por baixo: um filtro que não se vê é um filtro que se esquece, e
+  depois a lista parece vazia sem razão. O ponto de partida de cada ecrã não
+  conta como filtro — a Agenda abre em "Por realizar" e as Estatísticas em
+  "Oficiais", e o funil fica apagado.
+  As Estatísticas não têm procura porque não há lá texto para procurar; ficam
+  só com o funil.
 - **A cor de um tipo de evento vive em `CORES_TIPO`**, num sítio só. O ponto do
   calendário e a pastilha do cartão diziam a mesma coisa em tons diferentes —
   o convívio era `csc-azul-texto` no ponto e `blue-300` no rótulo.
