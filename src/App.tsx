@@ -7,6 +7,7 @@ import { AnnouncementsProvider } from './context/AnnouncementsContext'
 import { SaidaGuardadaProvider } from './context/SaidaGuardadaContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
+import { SubirAoTopo } from './components/SubirAoTopo'
 
 // Páginas carregadas a pedido.
 //
@@ -91,6 +92,7 @@ const EcraACarregar: React.FC = () => (
  */
 const MolduraDoRouter: React.FC = () => (
   <SaidaGuardadaProvider>
+    <SubirAoTopo />
     <React.Suspense fallback={<EcraACarregar />}>
       <Outlet />
     </React.Suspense>
