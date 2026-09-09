@@ -160,6 +160,32 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   origem), mas o grep custa um segundo. **E o script traduz comentários**, que
   não sabe distinguir de classes: um comentário que cite `bg-red-50` fica a
   dizer `bg-csc-red/10` e passa a mentir.
+- **Nada que se escreva se perde por um Escape.** Todo o formulário passa pelo
+  `useAlteracoesPorGravar` (`src/hooks`), que compara os valores com a
+  fotografia tirada à abertura e, se houver diferenças, mostra o
+  `<UnsavedChangesModal>` em vez de fechar. **Sujo é "diferente de como abriu",
+  não "tem alguma coisa escrita"** — as quatro cópias anteriores testavam se
+  algum campo tinha texto, e ao *editar* uma ficha já preenchida isso é sempre
+  verdade: abrir a ficha de um atleta e fechá-la logo dava o aviso de
+  alterações que nunca se fizeram. Um formulário que carregue os dados da rede
+  depois de abrir passa `pronto`, senão o próprio carregamento conta como
+  alteração; um que fique aberto depois de gravar chama `marcarComoGravado()`.
+  A exceção é a `sempre`, hoje só na edição de evento: sair de lá é sempre
+  deliberado porque gravar pode reenviar os pedidos de resposta ao plantel
+  todo, e o `dialogos.spec.ts` cobre essa decisão.
+  **O diálogo rápido guarda-se a si próprio** — o `QuickFieldModal` e o
+  `QuickOpponentModal` trazem o guarda lá dentro, por isso quem os usa passa um
+  `onClose` que fecha e limpa, e não um segundo guarda: com os dois, "sair sem
+  gravar" abria o aviso outra vez.
+- **Um formulário que ocupa a página não se fecha — sai-se dele a navegar.** O
+  Perfil, o comunicado por publicar e os dois formulários do Financeiro
+  registam-se no `useGuardaDeSaida` (`src/context/SaidaGuardadaContext`), e a
+  barra de baixo, o [+] e o avatar do cabeçalho perguntam por `pedirSaida()`
+  antes de levar o utilizador embora. O `beforeunload` cobre fechar o separador.
+  **O que isto não apanha é o retroceder do browser**: bloqueá-lo obriga a
+  empurrar entradas no histórico à mão, e o histórico desta app já é delicado
+  (ver Riscos, ponto 6). Cobri-lo é passar as rotas a um data router e usar o
+  `useBlocker`.
 - **Um diálogo tem de levar o foco lá para dentro ao abrir**, e o
   `useModalA11y` trata disso — mas insistindo por `requestAnimationFrame` até o
   painel existir, e não uma vez só. A versão anterior tentava com

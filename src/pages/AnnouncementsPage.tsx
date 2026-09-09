@@ -15,7 +15,13 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
+import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
+import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { CabecalhoEcra } from '../components/ui'
+
+/** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
+const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 interface Announcement {
   id: string
@@ -298,7 +304,38 @@ const AnnouncementsPage: React.FC = () => {
   const inactiveCount = announcements.filter(a => a.is_active === false).length
 
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
-  const painelEdicaoRef = useModalA11y({ isOpen: !!editingAnn, onClose: () => setEditingAnn(null) })
+  /*
+    Um comunicado em edição não se perde por um Escape ou um clique ao lado. A
+    fotografia é tirada depois de `handleStartEdit` encher os campos, por isso
+    abrir e fechar sem tocar em nada não pergunta nada.
+  */
+  const guardaEdicao = useAlteracoesPorGravar({
+    aberto: !!editingAnn,
+    valores: [editTitle, editContent, editIsActive],
+    aoGravar: () => handleSaveEdit(EVENTO_FALSO),
+    aoSair: () => setEditingAnn(null),
+    descricao: 'As alterações a este comunicado ainda não foram gravadas. Se saíres agora, perdem-se.',
+  })
+  const painelEdicaoRef = useModalA11y({ isOpen: !!editingAnn, onClose: guardaEdicao.tentarFechar })
+
+  /*
+    O formulário de publicar ocupa a página e não se fecha — sai-se dele a
+    navegar. Um comunicado escrito e ainda não publicado ia à vida num toque na
+    barra de baixo.
+  */
+  const guardaNovo = useAlteracoesPorGravar({
+    aberto: true,
+    valores: [title, content, isActiveOnCreate],
+    aoGravar: () => handlePublish(EVENTO_FALSO),
+    aoSair: () => {},
+    descricao: 'O comunicado que escreveste ainda não foi publicado. Se saíres agora, perde-se.',
+  })
+
+  useGuardaDeSaida({
+    sujo: guardaNovo.sujo,
+    gravar: () => handlePublish(EVENTO_FALSO),
+    descricao: 'O comunicado que escreveste ainda não foi publicado. Se saíres agora, perde-se.',
+  })
   const painelApagarRef = useModalA11y({ isOpen: !!deletingAnn, onClose: () => setDeletingAnn(null) })
 
   return (
@@ -593,7 +630,7 @@ const AnnouncementsPage: React.FC = () => {
           className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
           onMouseDown={(e) => {
             // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-            if (e.target === e.currentTarget) setEditingAnn(null)
+            if (e.target === e.currentTarget) guardaEdicao.tentarFechar()
           }}
         >
           <div
@@ -606,7 +643,7 @@ const AnnouncementsPage: React.FC = () => {
           >
             <button
               type="button"
-              onClick={() => setEditingAnn(null)}
+              onClick={guardaEdicao.tentarFechar}
               aria-label="Fechar"
               className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 cursor-pointer active:scale-97"
             >
@@ -676,7 +713,7 @@ const AnnouncementsPage: React.FC = () => {
               <div className="flex gap-2.5 pt-2 border-t border-white/10">
                 <button
                   type="button"
-                  onClick={() => setEditingAnn(null)}
+                  onClick={guardaEdicao.tentarFechar}
                   className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
                 >
                   Cancelar
@@ -693,6 +730,8 @@ const AnnouncementsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <UnsavedChangesModal {...guardaEdicao.props} />
 
       {/* MODAL: CONFIRMAÇÃO DE ELIMINAÇÃO */}
       {deletingAnn && (

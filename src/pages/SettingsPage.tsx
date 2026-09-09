@@ -30,6 +30,11 @@ import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { OsMeusPagamentos } from '../components/OsMeusPagamentos'
 import { PreferenciasAvisos } from '../components/PreferenciasAvisos'
+import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
+import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
+
+/** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
+const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** Campo branco de 44px do handoff (ecrã 5b). */
 const CAMPO =
@@ -101,6 +106,42 @@ const SettingsPage: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  /*
+    O Perfil é um formulário que ocupa a página: não se fecha, sai-se dele a
+    navegar. A barra de baixo e o avatar do cabeçalho perguntam antes de levar
+    o utilizador embora — quem escrevia o IBAN e tocava em "Hoje" perdia-o sem
+    uma palavra.
+
+    O `perfilCarregado` diz ao guarda quando o formulário já representa a
+    ficha: a fotografia não pode ser tirada quando `profile` chega, porque os
+    campos só são preenchidos no efeito a seguir, e esse preenchimento contaria
+    como alteração — o Perfil abria já a avisar.
+  */
+  const [perfilCarregado, setPerfilCarregado] = useState(false)
+
+  const guardaPerfil = useAlteracoesPorGravar({
+    aberto: true,
+    pronto: perfilCarregado,
+    valores: [
+      formName, formShirtName, formBirthDate, formNationality, formNif, formIdNumber,
+      formIdCardExpiry, formAddress, formPostalCode, formCity, formEmail, formPhone,
+      formPositions, formJerseyNumber, formKitSize, formPreferredFoot, formIban,
+      formMemberNumber, formEmergencyName, formEmergencyPhone, formEmergencyRelation,
+      formMedicalNotes, formGdprConsent, photoUrl, idDocUrl, insuranceDocUrl, medicalExamDocUrl,
+    ],
+    aoGravar: () => handleSave(EVENTO_FALSO),
+    // Não há para onde "sair": a navegação é que segue. O formulário fica como
+    // está, e a página vai desmontar de qualquer forma.
+    aoSair: () => {},
+    descricao: 'As alterações ao teu perfil ainda não foram gravadas. Se saíres agora, perdem-se.',
+  })
+
+  useGuardaDeSaida({
+    sujo: guardaPerfil.sujo,
+    gravar: () => handleSave(EVENTO_FALSO),
+    descricao: 'As alterações ao teu perfil ainda não foram gravadas. Se saíres agora, perdem-se.',
+  })
+
   useEffect(() => {
     if (profile) {
       setFormName(profile.name || '')
@@ -136,6 +177,14 @@ const SettingsPage: React.FC = () => {
       setInsuranceDocUrl(profile.insurance_doc_url || null)
       setMedicalExamDocUrl(profile.medical_exam_doc_url || null)
       setFormGdprConsent(Boolean(profile.gdpr_consent))
+      /*
+        Só a partir daqui é que o formulário representa a ficha. O guarda de
+        alterações espera por este sinal: sem ele tirava a fotografia no render
+        em que `profile` chega — com os campos ainda vazios — e o preenchimento
+        que se segue contava como alteração do utilizador. O Perfil abria já a
+        avisar que tinha coisas por gravar.
+      */
+      setPerfilCarregado(true)
     }
   }, [profile])
 
@@ -234,6 +283,9 @@ const SettingsPage: React.FC = () => {
       if (error) throw error
 
       await refreshProfile()
+      /* O Perfil não fecha ao gravar: sem uma fotografia nova ficava sujo para
+         sempre, e a barra de baixo passava a perguntar em todos os toques. */
+      guardaPerfil.marcarComoGravado()
       setSaveSuccess(true)
       toast.success('Alterações guardadas com sucesso!')
       window.scrollTo({ top: 0, behavior: 'smooth' })

@@ -6,6 +6,8 @@ import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from './BottomSheet'
 import { Botao } from './ui'
 import { estadoDoPush, ligarAvisos, desligarAvisos, type EstadoPush } from '../lib/push'
+import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
+import { UnsavedChangesModal } from './UnsavedChangesModal'
 
 /**
  * Preferências de avisos (ecrã 12b) — o que cada um escolhe receber.
@@ -220,15 +222,30 @@ export const PreferenciasAvisos: React.FC<{
 
   const silencioLigado = prefs.silencio_inicio !== prefs.silencio_fim
 
+  /*
+    As escolhas de avisos não se perdem num Escape ou num arrasto da persiana.
+    A fotografia espera pelo `aCarregar`: as preferências vêm da base depois de
+    a persiana abrir, e sem isso o próprio carregamento contava como escolha.
+  */
+  const guarda = useAlteracoesPorGravar({
+    aberto,
+    pronto: !aCarregar,
+    valores: prefs,
+    aoGravar: guardar,
+    aoSair: aoFechar,
+    descricao: 'As tuas escolhas de avisos ainda não foram guardadas. Se saíres agora, perdem-se.',
+  })
+
   return (
+    <>
     <BottomSheet
       isOpen={aberto}
-      onClose={aoFechar}
+      onClose={guarda.tentarFechar}
       title="O que quero saber"
       description="Avisos que a app te vai enviar"
       footer={
         <>
-          <Botao aparencia="vidro" onClick={aoFechar}>Cancelar</Botao>
+          <Botao aparencia="vidro" onClick={guarda.tentarFechar}>Cancelar</Botao>
           <Botao onClick={guardar} disabled={aGuardar || aCarregar}>
             {aGuardar ? 'A guardar…' : 'Guardar'}
           </Botao>
@@ -378,6 +395,9 @@ export const PreferenciasAvisos: React.FC<{
         </div>
       )}
     </BottomSheet>
+
+    <UnsavedChangesModal {...guarda.props} />
+    </>
   )
 }
 

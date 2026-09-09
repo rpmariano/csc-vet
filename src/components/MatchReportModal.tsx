@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { X, Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../pages/CalendarPage'
@@ -6,6 +6,8 @@ import { toast } from '../context/ToastContext'
 import { VistaDetalhe } from './VistaDetalhe'
 import { Modal } from './Modal'
 import { CLUBE_SIGLA } from '../lib/clube'
+import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
+import { UnsavedChangesModal } from './UnsavedChangesModal'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -124,9 +126,9 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
         // Se coach/admin, sem resultado ainda, e o jogo já se realizou, entra logo em modo de edição.
         // Jogos futuros nunca entram em modo de edição — ainda não há nada para reportar.
-        const hasScoreAlready = event?.home_score !== null && event?.home_score !== undefined
+        const temResultadoAlready = event?.home_score !== null && event?.home_score !== undefined
         const alreadyPlayed = !event?.date_time || new Date(event.date_time).getTime() <= Date.now()
-        if (isCoachOrAdmin && !hasScoreAlready && alreadyPlayed) {
+        if (isCoachOrAdmin && !temResultadoAlready && alreadyPlayed) {
           setIsEditModalOpen(true)
         } else {
           setIsEditModalOpen(false)
@@ -344,6 +346,60 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     }
   }
 
+  /*
+    Um jogo ainda não realizado (e sem resultado registado) não tem ficha para
+    mostrar ou editar. Calculado aqui em cima, antes do `return null`, porque o
+    guarda de alterações precisa de o saber e um hook não corre depois de uma
+    saída antecipada.
+  */
+  const temResultado = event?.home_score !== null && event?.home_score !== undefined
+  const jogoPorRealizar = !temResultado && !!event?.date_time && new Date(event.date_time).getTime() > Date.now()
+
+  /*
+    A fotografia da ficha ao entrar em edição. Serve duas coisas: o guarda de
+    alterações compara com ela, e o "Cancelar" repõe-na — antes fechava o
+    diálogo e deixava os valores alterados no estado, por isso cancelar uma
+    edição não cancelava nada, e a alteração ia à vida na gravação seguinte.
+  */
+  const fichaAoEditar = useRef<{
+    homeScore: number | null
+    awayScore: number | null
+    tacticalFormation: string
+    occurrences: string
+    playerStats: PlayerMatchStat[]
+  } | null>(null)
+
+  useEffect(() => {
+    if (isEditModalOpen && !loading) {
+      if (!fichaAoEditar.current) {
+        fichaAoEditar.current = { homeScore, awayScore, tacticalFormation, occurrences, playerStats }
+      }
+    } else if (!isEditModalOpen) {
+      fichaAoEditar.current = null
+    }
+  }, [isEditModalOpen, loading, homeScore, awayScore, tacticalFormation, occurrences, playerStats])
+
+  const guardaFicha = useAlteracoesPorGravar({
+    aberto: isEditModalOpen && !jogoPorRealizar,
+    // A ficha vem da rede depois de o diálogo abrir; sem isto o próprio
+    // carregamento contava como alteração do utilizador.
+    pronto: !loading,
+    valores: [homeScore, awayScore, tacticalFormation, occurrences, playerStats],
+    aoGravar: handleSaveReport,
+    aoSair: () => {
+      const antes = fichaAoEditar.current
+      if (antes) {
+        setHomeScore(antes.homeScore)
+        setAwayScore(antes.awayScore)
+        setTacticalFormation(antes.tacticalFormation)
+        setOccurrences(antes.occurrences)
+        setPlayerStats(antes.playerStats)
+      }
+      setIsEditModalOpen(false)
+    },
+    descricao: 'O resultado, os marcadores e as ocorrências ainda não foram gravados. Se saíres agora, perdem-se.',
+  })
+
   if (!isOpen) return null
 
   const isAway = event?.home_away === 'away'
@@ -361,9 +417,6 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const totalYellows = playerStats.reduce((sum, p) => sum + p.yellow_cards, 0)
   const totalReds = playerStats.reduce((sum, p) => sum + p.red_cards, 0)
 
-  // Um jogo ainda não realizado (e sem resultado já registado) não tem ficha para mostrar ou editar.
-  const hasScore = event?.home_score !== null && event?.home_score !== undefined
-  const isFutureMatch = !hasScore && !!event?.date_time && new Date(event.date_time).getTime() > Date.now()
 
   return (
     <>
@@ -415,7 +468,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             {event?.date_time && new Date(event.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
           </p>
 
-          {isCoachOrAdmin && !isFutureMatch && !loading && (
+          {isCoachOrAdmin && !jogoPorRealizar && !loading && (
             <button
               type="button"
               onClick={() => setIsEditModalOpen(true)}
@@ -442,7 +495,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-csc-gold mb-2"></div>
             <p className="text-xs font-bold text-white/70">A carregar dados do jogo...</p>
           </div>
-        ) : isFutureMatch ? (
+        ) : jogoPorRealizar ? (
           <div className="p-6 sm:p-8 bg-white/5 border border-white/10 rounded-3xl text-center space-y-2">
             <div className="w-12 h-12 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center mx-auto">
               <Clock size={22} />
@@ -729,8 +782,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         pede um contentor mais deliberado, sem o gesto de arrastar que a fecharia
         por engano com alterações por guardar. */}
     <Modal
-      isOpen={isEditModalOpen && !loading && !isFutureMatch}
-      onClose={() => setIsEditModalOpen(false)}
+      isOpen={isEditModalOpen && !loading && !jogoPorRealizar}
+      onClose={guardaFicha.tentarFechar}
       size="3xl"
       stacked
       title="Editar ficha de jogo"
@@ -741,7 +794,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         <>
           <button
             type="button"
-            onClick={() => setIsEditModalOpen(false)}
+            onClick={guardaFicha.tentarFechar}
             className="px-4 py-2.5 text-xs font-bold text-white hover:text-white bg-white/10 hover:bg-white/20 rounded-xl cursor-pointer transition-all"
           >
             Cancelar
@@ -977,6 +1030,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         )}
       </div>
     </Modal>
+
+    <UnsavedChangesModal {...guardaFicha.props} />
     </>
   )
 }

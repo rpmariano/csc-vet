@@ -32,6 +32,7 @@ import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../c
 import { VistaDetalhe } from '../components/VistaDetalhe'
 import { useSearchParams } from 'react-router-dom'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
+import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -47,6 +48,9 @@ import {
   DEFAULT_FINANCIAL_SETTINGS,
   type FinancialSettings,
 } from '../lib/finance'
+
+/** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
+const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** As abreviaturas dos meses, para as pastilhas de quota dispensada. */
 const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -160,7 +164,6 @@ const TeamManagementPage: React.FC = () => {
   const [insuranceDocUrl, setInsuranceDocUrl] = useState<string | null>(null)
   const [medicalExamDocUrl, setMedicalExamDocUrl] = useState<string | null>(null)
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
-  const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false)
 
   // Generic Confirmation Modal State
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
@@ -177,27 +180,28 @@ const TeamManagementPage: React.FC = () => {
     onConfirm: () => {}
   })
 
-  const isFormDirty = () => {
-    return Boolean(
-      formName.trim() ||
-      formShirtName.trim() ||
-      formEmail.trim() ||
-      formPhone.trim() ||
-      formNif.trim() ||
-      formAddress.trim() ||
-      formEmergencyName.trim() ||
-      formMedicalNotes.trim()
-    )
-  }
-
-  const handleAttemptCloseFormModal = () => {
-    if (isFormDirty()) {
-      setIsUnsavedModalOpen(true)
-    } else {
-      setIsFormModalOpen(false)
-      resetForm()
-    }
-  }
+  /*
+    O guarda da ficha. Testava-se antes se algum campo tinha texto — e ao
+    *editar* uma ficha já preenchida isso é sempre verdade: abrir a ficha de um
+    atleta e fechá-la logo dava o aviso de alterações que nunca se fizeram.
+    Agora compara-se com a fotografia tirada à abertura, e só há aviso se
+    alguma coisa mudou mesmo.
+  */
+  const guardaFicha = useAlteracoesPorGravar({
+    aberto: isFormModalOpen,
+    valores: [
+      formId, formName, formShirtName, formEmail, formPhone, formRoles, formStatus,
+      formJerseyNumber, formKitSize, formPreferredFoot, formBirthDate, formNationality,
+      formPositions, formAddress, formPostalCode, formCity, formNif, formIdNumber,
+      formIdCardExpiry, formIban, formGdprConsent, formMemberNumber, formEmergencyName,
+      formEmergencyPhone, formEmergencyRelation, formMedicalNotes, formQuotaStart,
+      formQuotaEnd, formMesesDispensados,
+    ],
+    aoGravar: () => handleSaveMember(EVENTO_FALSO),
+    aoSair: () => { setIsFormModalOpen(false); resetForm() },
+    descricao: 'As alterações a esta ficha ainda não foram gravadas. Se saíres agora, perdem-se.',
+  })
+  const handleAttemptCloseFormModal = guardaFicha.tentarFechar
 
   const isCoachOrAdmin = currentUserProfile && ['coach', 'admin'].includes(currentUserProfile.role)
   const isAdmin = currentUserProfile?.role === 'admin'
@@ -3054,20 +3058,7 @@ const TeamManagementPage: React.FC = () => {
       })()}
 
       {/* MODAL: CONFIRMAÇÃO DE SAÍDA COM ALTERAÇÕES NÃO GUARDADAS */}
-      <UnsavedChangesModal
-        isOpen={isUnsavedModalOpen}
-        onSaveAndExit={async () => {
-          setIsUnsavedModalOpen(false)
-          const fakeEvent = { preventDefault: () => {} } as React.FormEvent
-          await handleSaveMember(fakeEvent)
-        }}
-        onExitWithoutSaving={() => {
-          setIsUnsavedModalOpen(false)
-          setIsFormModalOpen(false)
-          resetForm()
-        }}
-        onCancel={() => setIsUnsavedModalOpen(false)}
-      />
+      <UnsavedChangesModal {...guardaFicha.props} />
 
       {/* Modal Genérico de Confirmação (Estilo Unificado e Elegante) */}
       <ConfirmModal

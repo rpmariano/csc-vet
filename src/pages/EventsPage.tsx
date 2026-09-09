@@ -30,6 +30,7 @@ import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
+import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { QuickFieldModal } from '../components/QuickFieldModal'
 import { QuickOpponentModal } from '../components/QuickOpponentModal'
 import { ResendCallupsModal } from '../components/ResendCallupsModal'
@@ -48,6 +49,9 @@ import { useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../components/BottomSheet'
 import { Pastilha, Botao, CampoEntrada } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
+
+/** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
+const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** Campo branco dos formulários de evento (ecrã 2e), o mesmo da Agenda. */
 const CAMPO_FORM =
@@ -322,7 +326,6 @@ const EventsPage: React.FC = () => {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false)
   const isCreatingEventRef = useRef(false)
   const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
-  const [unsavedModalTarget, setUnsavedModalTarget] = useState<'edit' | 'quickField' | 'quickOpp' | null>(null)
   // Ativação e Publicação de Convocatórias
   const [isActiveOnCreate, setIsActiveOnCreate] = useState(true)
   const [editIsActive, setEditIsActive] = useState(true)
@@ -339,31 +342,59 @@ const EventsPage: React.FC = () => {
   const [preEscolhidos, setPreEscolhidos] = useState<string[]>([])
   const [viewModeTab, setViewModeTab] = useState<'create' | 'list'>('list')
 
-  const handleAttemptCloseEditModal = () => {
-    setUnsavedModalTarget('edit')
+  /*
+    O guarda do formulário de edição. Perguntava sempre — fechar um evento que
+    só se tinha aberto para ver dava o aviso na mesma. A caixa de procura de
+    jogadores fica de fora: escrever nela não altera o evento.
+  */
+  const guardaEdicao = useAlteracoesPorGravar({
+    aberto: !!editingEvent,
+    valores: [
+      editTitle, editType, editEventDate, editEventTime, editMeetingTime, editFieldId,
+      editLocationText, editDescription, editIsFriendly, editTournamentId, editOpponentId,
+      editHomeAway, editIsActive,
+    ],
+    // Sair da edição de um evento é sempre deliberado: gravá-la pode reenviar
+    // os pedidos de resposta ao plantel todo — ver `sempre` no hook.
+    sempre: true,
+    // Guardar um evento já convocado pergunta antes se reenvia os pedidos.
+    aoGravar: () => setIsResendPromptOpen(true),
+    aoSair: () => setEditingEvent(null),
+    descricao: 'As alterações a este evento ainda não foram gravadas. Se saíres agora, perdem-se.',
+  })
+  const handleAttemptCloseEditModal = guardaEdicao.tentarFechar
+
+  /*
+    O guarda do formulário de criação. Não tinha nenhum: fechar a folha de
+    criar um evento com data, campo e adversário já escolhidos voltava à lista
+    sem uma palavra.
+  */
+  const guardaCriacao = useAlteracoesPorGravar({
+    aberto: viewModeTab === 'create',
+    valores: [
+      title, type, eventDate, eventTime, meetingTime, fieldId, locationText, description,
+      maxPlayers, isFriendly, tournamentId, opponentId, homeAway,
+      isRecurring, recurrenceWeekdays, recurrenceEndDate, isActiveOnCreate,
+    ],
+    aoGravar: () => handleCreateEvent(EVENTO_FALSO),
+    aoSair: () => setViewModeTab('list'),
+    descricao: 'O evento que estás a criar ainda não foi gravado. Se saíres agora, perde-se.',
+  })
+
+  /* Os diálogos rápidos guardam-se a si próprios — ver QuickFieldModal. */
+  const fecharQuickFieldModal = () => {
+    setIsQuickFieldModalOpen(false)
+    setQuickFieldName('')
+    setQuickFieldAddress('')
   }
 
-  const handleAttemptCloseQuickFieldModal = () => {
-    if (quickFieldName.trim() || quickFieldAddress.trim()) {
-      setUnsavedModalTarget('quickField')
-    } else {
-      setIsQuickFieldModalOpen(false)
-      setQuickFieldName('')
-      setQuickFieldAddress('')
-    }
-  }
-
-  const handleAttemptCloseQuickOppModal = () => {
-    if (quickOppName.trim() || quickOppInitials.trim() || quickOppContactName.trim()) {
-      setUnsavedModalTarget('quickOpp')
-    } else {
-      setIsQuickOpponentModalOpen(false)
-      setQuickOppName('')
-      setQuickOppInitials('')
-      setQuickOppHomeFieldId('')
-      setQuickOppContactName('')
-      setQuickOppContactPhone('')
-    }
+  const fecharQuickOppModal = () => {
+    setIsQuickOpponentModalOpen(false)
+    setQuickOppName('')
+    setQuickOppInitials('')
+    setQuickOppHomeFieldId('')
+    setQuickOppContactName('')
+    setQuickOppContactPhone('')
   }
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
@@ -1275,7 +1306,7 @@ const EventsPage: React.FC = () => {
   const currentLocationStr = getActiveLocationString()
 
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
-  const painelCriarEventoRef = useModalA11y({ isOpen: viewModeTab === 'create', onClose: () => setViewModeTab('list') })
+  const painelCriarEventoRef = useModalA11y({ isOpen: viewModeTab === 'create', onClose: guardaCriacao.tentarFechar })
   const painelEditarEventoRef = useModalA11y({ isOpen: !!editingEvent, onClose: handleAttemptCloseEditModal })
 
   // Ver a convocatória de um evento é navegar: o endereço passa a ter
@@ -1352,7 +1383,7 @@ const EventsPage: React.FC = () => {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setViewModeTab('list')}
+                  onClick={guardaCriacao.tentarFechar}
                   aria-label="Voltar à lista"
                   className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90"
                 >
@@ -2794,7 +2825,7 @@ const EventsPage: React.FC = () => {
         onNameChange={setQuickFieldName}
         onAddressChange={setQuickFieldAddress}
         onSubmit={handleSaveQuickField}
-        onClose={handleAttemptCloseQuickFieldModal}
+        onClose={fecharQuickFieldModal}
         isSaving={isSavingQuickField}
       />
 
@@ -2812,7 +2843,7 @@ const EventsPage: React.FC = () => {
         onContactNameChange={setQuickOppContactName}
         onContactPhoneChange={setQuickOppContactPhone}
         onSubmit={handleSaveQuickOpponent}
-        onClose={handleAttemptCloseQuickOppModal}
+        onClose={fecharQuickOppModal}
         isSaving={isSavingQuickOpp}
       />
 
@@ -2825,41 +2856,8 @@ const EventsPage: React.FC = () => {
         isSaving={isSavingEdit}
       />
 
-      <UnsavedChangesModal
-        isOpen={unsavedModalTarget !== null}
-        onSaveAndExit={async () => {
-          if (unsavedModalTarget === 'edit') {
-            setUnsavedModalTarget(null)
-            setIsResendPromptOpen(true)
-          } else if (unsavedModalTarget === 'quickField') {
-            setUnsavedModalTarget(null)
-            const fakeEvent = { preventDefault: () => {} } as React.FormEvent
-            await handleSaveQuickField(fakeEvent)
-          } else if (unsavedModalTarget === 'quickOpp') {
-            setUnsavedModalTarget(null)
-            const fakeEvent = { preventDefault: () => {} } as React.FormEvent
-            await handleSaveQuickOpponent(fakeEvent)
-          }
-        }}
-        onExitWithoutSaving={() => {
-          if (unsavedModalTarget === 'edit') {
-            setEditingEvent(null)
-          } else if (unsavedModalTarget === 'quickField') {
-            setIsQuickFieldModalOpen(false)
-            setQuickFieldName('')
-            setQuickFieldAddress('')
-          } else if (unsavedModalTarget === 'quickOpp') {
-            setIsQuickOpponentModalOpen(false)
-            setQuickOppName('')
-            setQuickOppInitials('')
-            setQuickOppHomeFieldId('')
-            setQuickOppContactName('')
-            setQuickOppContactPhone('')
-          }
-          setUnsavedModalTarget(null)
-        }}
-        onCancel={() => setUnsavedModalTarget(null)}
-      />
+      <UnsavedChangesModal {...guardaEdicao.props} />
+      <UnsavedChangesModal {...guardaCriacao.props} />
 
       {/* Modal de Ficha de Jogo (Esquema Tático, Marcadores, Cartões e Ocorrências) */}
       {activeCallupModalEvent && activeCallupModalEvent.type === 'match' && (

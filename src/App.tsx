@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ClubProvider } from './context/ClubContext'
 import { ToastProvider } from './context/ToastContext'
 import { AnnouncementsProvider } from './context/AnnouncementsContext'
+import { SaidaGuardadaProvider } from './context/SaidaGuardadaContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
@@ -67,6 +68,7 @@ const App: React.FC = () => {
         <ToastProvider>
         <AnnouncementsProvider>
           <Router basename={import.meta.env.BASE_URL}>
+          <SaidaGuardadaProvider>
           <React.Suspense fallback={<EcraACarregar />}>
           <Routes>
             {/* Public Routes */}
@@ -120,6 +122,7 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </React.Suspense>
+          </SaidaGuardadaProvider>
         </Router>
         </AnnouncementsProvider>
         </ToastProvider>

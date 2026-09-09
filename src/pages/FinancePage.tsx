@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Landmark, Plus, Settings, Wallet,
   ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check, AlertTriangle
@@ -19,6 +19,9 @@ import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
 import { CabecalhoEcra, Pastilha, EtiquetaSeccao } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
+import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
+import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
+import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 /*
   As pastilhas de estado, as barras de cor e o euro em português vivem em
   `components/financeiro/estilos` desde que a Visão Geral passou a ficheiro
@@ -32,6 +35,9 @@ import {
 import type {
   PlayerRow, QuotaStatusRow, MovementRow, ScheduledPayment, EncargoPorReceber,
 } from '../components/financeiro/tipos'
+
+/** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
+const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
 const ETIQUETA =
@@ -172,7 +178,7 @@ const FinancePage: React.FC = () => {
   /* O separador vai no endereço; ver a nota no cabeçalho. */
   const verAtual = (params.get('ver') ?? '') as TabId
   const activeTab: TabId = TABS.some(t => t.id === verAtual) ? verAtual : 'overview'
-  const setActiveTab = (seguinte: TabId) => {
+  const trocarSeparador = (seguinte: TabId) => {
     const seguintes = new URLSearchParams(params)
     seguintes.set('ver', seguinte)
     setParams(seguintes, { replace: true })
@@ -418,6 +424,24 @@ const FinancePage: React.FC = () => {
     setIsNewChargeModalOpen(false)
     setEditingChargeId(null)
   }
+
+  /*
+    Um encargo meio preenchido — com a lista de participantes já escolhida a
+    dedo — não se perde num Escape. O conjunto de participantes vai ordenado
+    para a comparação: um `Set` não se serializa, e sem isto duas listas
+    diferentes de jogadores davam a mesma fotografia.
+  */
+  const guardaEncargo = useAlteracoesPorGravar({
+    aberto: isNewChargeModalOpen,
+    valores: [
+      newChargeCategoryId, newChargeTitle, newChargeAmount, newChargeDueDate,
+      newChargeIsIntermediary, newChargePayableAmount, newChargePayableDueDate,
+      [...newChargePlayerIds].sort(),
+    ],
+    aoGravar: () => handleSaveCharge(),
+    aoSair: fecharModalEncargo,
+    descricao: 'Este encargo ainda não foi gravado. Se saíres agora, perde-se o que preencheste.',
+  })
 
   const openEditChargeModal = (c: (typeof chargesWithStats)[number]) => {
     setEditingChargeId(c.id)
@@ -768,6 +792,15 @@ const FinancePage: React.FC = () => {
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryAllowIncome, setNewCategoryAllowIncome] = useState(false)
 
+  /* O que "descartar" quer dizer neste formulário — e o que se faz depois de
+     gravar, para o guarda não continuar a achar que há coisas por gravar. */
+  const limparFormularioMovimento = () => {
+    setTxDesc('')
+    setTxAmount('')
+    setTxCategoryId('')
+    setTxFile(null)
+  }
+
   const handleTxTypeChange = (type: 'income' | 'expense') => {
     setTxType(type)
     setTxCategoryId(prev => (type === 'income' && !categories.find(c => c.id === prev)?.allow_income) ? '' : prev)
@@ -844,10 +877,7 @@ const FinancePage: React.FC = () => {
       if (error) throw error
 
       toast.success('Movimento registado com sucesso!')
-      setTxDesc('')
-      setTxAmount('')
-      setTxCategoryId('')
-      setTxFile(null)
+      limparFormularioMovimento()
       fetchAll()
     } catch (err: any) {
       toast.error('Erro ao registar movimento: ' + (err.message || 'Erro'))
@@ -967,6 +997,83 @@ const FinancePage: React.FC = () => {
   useEffect(() => { setSettingsForm(settings) }, [settings])
   const [savingSettings, setSavingSettings] = useState(false)
 
+  /*
+    As Definições financeiras são um formulário sem botão de fechar: sai-se
+    delas trocando de separador ou saindo da página. Mexer no valor da quota ou
+    nos meses excluídos e tocar noutro separador apagava tudo em silêncio — e
+    são números que mudam a previsão da época inteira.
+
+    O separador de destino vai numa ref e não em estado: é lido só dentro dos
+    callbacks do aviso, e em estado chegaria tarde ao `aoSair` desta passagem.
+  */
+  const separadorPendente = useRef<TabId | null>(null)
+  const irParaSeparadorPendente = () => {
+    const alvo = separadorPendente.current
+    separadorPendente.current = null
+    if (alvo) trocarSeparador(alvo)
+  }
+
+  /*
+    Trocar de separador é sair do formulário que lá estava. Pergunta-se pelo
+    guarda do separador de onde se sai — os outros não têm nada por gravar.
+  */
+  const pedirTrocaDeSeparador = (seguinte: TabId) => {
+    if (seguinte === activeTab) return
+    separadorPendente.current = seguinte
+    if (activeTab === 'settings') guardaDefinicoes.tentarFechar()
+    else if (activeTab === 'expenses') guardaMovimento.tentarFechar()
+    else trocarSeparador(seguinte)
+  }
+
+  const guardaDefinicoes = useAlteracoesPorGravar({
+    aberto: activeTab === 'settings',
+    valores: settingsForm,
+    aoGravar: async () => {
+      await handleSaveSettings()
+      irParaSeparadorPendente()
+    },
+    aoSair: () => {
+      setSettingsForm(settings)
+      irParaSeparadorPendente()
+    },
+    descricao: 'As definições financeiras ainda não foram gravadas. Se saíres agora, perdem-se.',
+  })
+
+  /*
+    O lançamento de uma despesa ou receita é um formulário no meio do
+    separador, sem botão de fechar: trocar de separador ou sair da página
+    apagava a descrição, o valor e o comprovativo já escolhido.
+
+    O ficheiro entra na comparação pelo nome: um `File` não se serializa, e sem
+    isto trocar de comprovativo não contava como alteração.
+  */
+  const guardaMovimento = useAlteracoesPorGravar({
+    aberto: activeTab === 'expenses',
+    valores: [txType, txDesc, txAmount, txDate, txCategoryId, txFile?.name ?? null],
+    aoGravar: async () => {
+      await handleAddTransaction(EVENTO_FALSO)
+      irParaSeparadorPendente()
+    },
+    aoSair: () => {
+      limparFormularioMovimento()
+      irParaSeparadorPendente()
+    },
+    descricao: 'A despesa ou receita que estás a lançar ainda não foi gravada. Se saíres agora, perde-se.',
+  })
+
+  useGuardaDeSaida({
+    sujo: guardaDefinicoes.sujo || guardaMovimento.sujo,
+    gravar: async () => {
+      if (guardaDefinicoes.sujo) await handleSaveSettings()
+      if (guardaMovimento.sujo) await handleAddTransaction(EVENTO_FALSO)
+    },
+    descartar: () => {
+      setSettingsForm(settings)
+      limparFormularioMovimento()
+    },
+    descricao: 'Há alterações no Financeiro por gravar. Se saíres agora, perdem-se.',
+  })
+
   const handleSaveSettings = async () => {
     setSavingSettings(true)
     try {
@@ -981,6 +1088,9 @@ const FinancePage: React.FC = () => {
         insurance_deadline_day: settingsForm.insurance_deadline_day,
       }).eq('id', 1)
       if (error) throw error
+      /* O separador não fecha ao gravar: sem uma fotografia nova ficava sujo
+         para sempre, e cada toque noutro separador voltava a perguntar. */
+      guardaDefinicoes.marcarComoGravado()
       toast.success('Definições financeiras atualizadas!')
       fetchAll()
     } catch (err: any) {
@@ -1138,7 +1248,7 @@ const FinancePage: React.FC = () => {
           <Pastilha
             key={tab.id}
             ativa={activeTab === tab.id}
-            onClick={() => { triggerHaptic('selection'); setActiveTab(tab.id) }}
+            onClick={() => { triggerHaptic('selection'); pedirTrocaDeSeparador(tab.id) }}
             className="flex-none"
           >
             {tab.label}
@@ -1172,7 +1282,7 @@ const FinancePage: React.FC = () => {
           receitaCores={RECEITA_CORES}
           despesaCores={DESPESA_CORES}
           corOutras={COR_OUTRAS}
-          irParaDespesas={() => setActiveTab('expenses')}
+          irParaDespesas={() => trocarSeparador('expenses')}
         />
       )}
 
@@ -1541,7 +1651,7 @@ const FinancePage: React.FC = () => {
       {/* MODAL: Novo Encargo / Editar Encargo — moldura partilhada (Escape, prisão de foco, rodapé fixo) */}
       <Modal
         isOpen={isNewChargeModalOpen}
-        onClose={fecharModalEncargo}
+        onClose={guardaEncargo.tentarFechar}
         size="lg"
         headerStyle="brand"
         icon={<ShieldCheck size={18} className="text-csc-gold" />}
@@ -1551,7 +1661,7 @@ const FinancePage: React.FC = () => {
           <>
             <button
               type="button"
-              onClick={fecharModalEncargo}
+              onClick={guardaEncargo.tentarFechar}
               className="px-4 py-2 text-sm font-bold text-white/60 bg-white/10 rounded-xl hover:bg-white/15 transition-colors cursor-pointer"
             >
               Cancelar
@@ -2001,6 +2111,8 @@ const FinancePage: React.FC = () => {
         </div>
       </div>
       )}
+
+      <UnsavedChangesModal {...guardaEncargo.props} />
     </div>
   )
 }

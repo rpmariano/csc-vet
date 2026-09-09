@@ -9,6 +9,8 @@ import { Modal } from '../components/Modal'
 import { useClub } from '../context/ClubContext'
 import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
 import { Pastilha } from '../components/ui'
+import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
+import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 
 /** Campo e etiqueta dos formulários, o mesmo desenho da Agenda e dos Eventos. */
 const CAMPO =
@@ -75,12 +77,34 @@ export const StandingsPage = () => {
   const [jornadaMatchday, setJornadaMatchday] = useState('1')
   const [jornadaDate, setJornadaDate] = useState('')
   const [jornadaFixtures, setJornadaFixtures] = useState<{ home: string; away: string }[]>([{ home: '', away: '' }])
+
+  /* Uma jornada com jogos já marcados não se perde num Escape. */
+  const guardaJornada = useAlteracoesPorGravar({
+    aberto: !!jornadaModalGroupId,
+    valores: [jornadaMatchday, jornadaDate, jornadaFixtures],
+    aoGravar: () => handleCreateJornada(),
+    aoSair: () => setJornadaModalGroupId(null),
+    descricao: 'A jornada que estás a criar ainda não foi gravada. Se saíres agora, perde-se.',
+  })
   const [savingJornada, setSavingJornada] = useState(false)
 
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editHomeScore, setEditHomeScore] = useState('')
   const [editAwayScore, setEditAwayScore] = useState('')
   const [editDate, setEditDate] = useState('')
+
+  /*
+    O resultado escrito à mão numa linha da tabela — dois números e a data —
+    também é trabalho por gravar: fechar a edição com o X deitava-o fora sem
+    perguntar.
+  */
+  const guardaResultado = useAlteracoesPorGravar({
+    aberto: !!editingMatchId,
+    valores: [editHomeScore, editAwayScore, editDate],
+    aoGravar: () => (editingMatchId ? handleSaveMatch(editingMatchId) : undefined),
+    aoSair: () => setEditingMatchId(null),
+    descricao: 'O resultado que escreveste ainda não foi gravado. Se saíres agora, perde-se.',
+  })
 
   const [matchToDelete, setMatchToDelete] = useState<string | null>(null)
 
@@ -663,7 +687,7 @@ export const StandingsPage = () => {
                                               </button>
                                               <button
                                                 type="button"
-                                                onClick={() => setEditingMatchId(null)}
+                                                onClick={guardaResultado.tentarFechar}
                                                 className="w-11 h-11 rounded-xl bg-white/8 text-white/60 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                                                 title="Cancelar"
                                                 aria-label="Cancelar"
@@ -715,7 +739,7 @@ export const StandingsPage = () => {
       {/* MODAL: Nova Jornada — moldura partilhada (Escape, prisão de foco, rodapé fixo) */}
       <Modal
         isOpen={!!jornadaModalGroupId}
-        onClose={() => setJornadaModalGroupId(null)}
+        onClose={guardaJornada.tentarFechar}
         size="lg"
         headerStyle="brand"
         icon={<CalendarDays size={18} className="text-csc-gold" />}
@@ -726,7 +750,7 @@ export const StandingsPage = () => {
           <>
             <button
               type="button"
-              onClick={() => setJornadaModalGroupId(null)}
+              onClick={guardaJornada.tentarFechar}
               className="px-4 py-2 text-sm font-bold text-white/60 bg-white/10 rounded-xl hover:bg-white/15 transition-colors cursor-pointer"
             >
               Cancelar
@@ -831,6 +855,9 @@ export const StandingsPage = () => {
         onConfirm={handleDeleteMatch}
         onCancel={() => setMatchToDelete(null)}
       />
+
+      <UnsavedChangesModal {...guardaJornada.props} />
+      <UnsavedChangesModal {...guardaResultado.props} />
     </div>
   )
 }

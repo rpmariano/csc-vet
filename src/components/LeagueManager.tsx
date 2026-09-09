@@ -7,6 +7,8 @@ import { Modal } from './Modal'
 import { CLUBE_SIGLA } from '../lib/clube'
 import { useClub } from '../context/ClubContext'
 import { equipaDoTorneio } from '../pages/StandingsPage'
+import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
+import { UnsavedChangesModal } from './UnsavedChangesModal'
 
 interface LeagueManagerProps {
   tournamentId: string
@@ -30,6 +32,15 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   const [isNewGroupModalOpen, setIsNewGroupModalOpen] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupPhase, setNewGroupPhase] = useState('1')
+
+  /* Um grupo meio preenchido não se perde num Escape ou num clique ao lado. */
+  const guardaGrupo = useAlteracoesPorGravar({
+    aberto: isNewGroupModalOpen,
+    valores: [newGroupName, newGroupPhase],
+    aoGravar: () => handleAddGroup(),
+    aoSair: () => setIsNewGroupModalOpen(false),
+    descricao: 'O grupo que estás a criar ainda não foi gravado. Se saíres agora, perde-se.',
+  })
 
   // Modal genérico de confirmação — substitui os confirm() nativos do browser
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
@@ -272,7 +283,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       {/* MODAL: Criar Novo Grupo — mesma moldura partilhada da Nova Jornada */}
       <Modal
         isOpen={isNewGroupModalOpen}
-        onClose={() => setIsNewGroupModalOpen(false)}
+        onClose={guardaGrupo.tentarFechar}
         size="md"
         stacked
         headerStyle="brand"
@@ -282,7 +293,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
           <>
             <button
               type="button"
-              onClick={() => setIsNewGroupModalOpen(false)}
+              onClick={guardaGrupo.tentarFechar}
               className="px-4 py-2 text-sm font-bold text-white/60 bg-white/10 rounded-xl hover:bg-white/15 transition-colors cursor-pointer"
             >
               Cancelar
@@ -333,6 +344,8 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
         onConfirm={confirmModalConfig.onConfirm}
         onCancel={closeConfirmModal}
       />
+
+      <UnsavedChangesModal {...guardaGrupo.props} />
     </div>
   )
 }

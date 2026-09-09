@@ -1,8 +1,9 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Plus, type LucideIcon } from 'lucide-react'
 import { useRealceDeslizante } from '../../hooks/useRealceDeslizante'
 import { triggerHaptic } from '../../utils/haptics'
+import { useSaidaGuardada } from '../../context/SaidaGuardadaContext'
 
 /**
  * A barra de navegação inferior — a única navegação da app.
@@ -51,6 +52,14 @@ function estaAtivo(item: ItemNavegacao, caminho: string): boolean {
 
 export const BarraNavegacao: React.FC<BarraNavegacaoProps> = ({ itens, caminho, aoCriar }) => {
   const indiceAtivo = itens.findIndex(item => estaAtivo(item, caminho))
+  const navegar = useNavigate()
+  /*
+    Sair de um ecrã com um formulário por gravar — o Perfil, um comunicado por
+    publicar, as definições financeiras — passa quase sempre por aqui. A página
+    regista-se no guarda e este pergunta antes de a barra levar o utilizador
+    embora; sem isto o trabalho ia à vida por um toque.
+  */
+  const { pedirSaida } = useSaidaGuardada()
   const { refFila, refItem, estiloRealce } = useRealceDeslizante(indiceAtivo, {
     larguraFixa: LARGURA_REALCE,
   })
@@ -65,7 +74,10 @@ export const BarraNavegacao: React.FC<BarraNavegacaoProps> = ({ itens, caminho, 
         key={item.to}
         to={item.to}
         ref={refItem(i)}
-        onClick={() => triggerHaptic('selection')}
+        onClick={e => {
+          triggerHaptic('selection')
+          if (!pedirSaida(() => navegar(item.to))) e.preventDefault()
+        }}
         aria-current={ativo ? 'page' : undefined}
         className="relative z-1 flex flex-1 flex-col items-center justify-center gap-1.5 min-h-11 rounded-[22px]
           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -125,7 +137,8 @@ export const BarraNavegacao: React.FC<BarraNavegacaoProps> = ({ itens, caminho, 
                 type="button"
                 onClick={() => {
                   triggerHaptic('medium')
-                  aoCriar?.()
+                  // O [+] leva a criar um evento noutra rota: também pergunta.
+                  pedirSaida(() => aoCriar?.())
                 }}
                 aria-label="Criar"
                 className="relative z-1 flex-none w-12 h-12 mx-1 rounded-full bg-csc-gold text-csc-tinta

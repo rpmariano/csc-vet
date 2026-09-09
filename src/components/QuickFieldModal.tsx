@@ -1,6 +1,11 @@
 import React from 'react'
 import { X, Plus } from 'lucide-react'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
+import { UnsavedChangesModal } from './UnsavedChangesModal'
+
+/** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
+const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** Campo branco do handoff, o mesmo dos formulários de evento. */
 const CAMPO_DIALOGO =
@@ -38,16 +43,25 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
   onClose,
   isSaving = false,
 }) => {
-  const painelRef = useModalA11y({ isOpen, onClose })
+  /* Um campo meio preenchido não se perde por um Escape ou um clique ao lado. */
+  const guarda = useAlteracoesPorGravar({
+    aberto: isOpen,
+    valores: [name, address],
+    aoGravar: () => onSubmit(EVENTO_FALSO),
+    aoSair: onClose,
+    descricao: 'O campo que estás a criar ainda não foi gravado. Se saíres agora, perde-se.',
+  })
+  const painelRef = useModalA11y({ isOpen, onClose: guarda.tentarFechar })
 
   if (!isOpen) return null
 
   return (
+    <>
     <div
       className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-modal-top animate-fade-in"
       onMouseDown={e => {
         // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget) guarda.tentarFechar()
       }}
     >
       <div
@@ -60,7 +74,7 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={guarda.tentarFechar}
           aria-label="Fechar"
           className="absolute top-4 right-4 text-white/62 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
         >
@@ -108,7 +122,7 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/12">
             <button
               type="button"
-              onClick={onClose}
+              onClick={guarda.tentarFechar}
               className="px-4 py-2 border border-white/15 hover:bg-white/10 text-white/80 rounded-xl text-xs font-bold transition-colors cursor-pointer"
             >
               Cancelar
@@ -125,6 +139,8 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
         </form>
       </div>
     </div>
+    <UnsavedChangesModal {...guarda.props} />
+    </>
   )
 }
 
