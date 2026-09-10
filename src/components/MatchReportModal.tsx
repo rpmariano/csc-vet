@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { X, Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock } from 'lucide-react'
+import { X, Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock, AlertTriangle } from 'lucide-react'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJogo'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
@@ -9,6 +9,7 @@ import { Modal } from './Modal'
 import { CLUBE_SIGLA } from '../lib/clube'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
+import { ConfirmModal } from './ConfirmModal'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -100,6 +101,9 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   // Scores
+  /* Aberto quando o resultado tem golos que nenhum atleta marcou: pergunta-se
+     antes de gravar, porque pode ser um autogolo do adversário. */
+  const [golosSemMarcador, setGolosSemMarcador] = useState(false)
   const [homeScore, setHomeScore] = useState<number | null>(event?.home_score ?? null)
   const [awayScore, setAwayScore] = useState<number | null>(event?.away_score ?? null)
 
@@ -244,8 +248,48 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     })))
   }
 
-  const handleSaveReport = async () => {
+  /*
+    Os golos dos atletas contra o resultado.
+
+    **Somar mais golos do que o resultado é impossível**, e a ficha deixava
+    gravar: um jogo 2-1 com quatro golos repartidos pelos jogadores ficava na
+    base a alimentar as estatísticas e a classificação. Faltar é outra coisa —
+    um autogolo do adversário conta para nós e não tem marcador —, por isso
+    esse caso pergunta em vez de recusar.
+
+    `home_score` é o da casa do jogo, não o nosso: fora, os nossos golos são os
+    da visita. É assim que a app inteira lê o placar.
+  */
+  const nossosGolos = event?.home_away === 'away' ? awayScore : homeScore
+  const golosDosAtletas = playerStats.reduce((soma, p) => soma + p.goals, 0)
+  const golosAMais = nossosGolos !== null && nossosGolos !== undefined
+    ? golosDosAtletas - nossosGolos
+    : 0
+  const semResultado = (nossosGolos === null || nossosGolos === undefined) && golosDosAtletas > 0
+
+  const handleSaveReport = async (confirmado = false) => {
     if (!isCoachOrAdmin) return
+
+    if (semResultado) {
+      toast.warning(
+        `Os atletas somam ${golosDosAtletas} ${golosDosAtletas === 1 ? 'golo' : 'golos'},` +
+        ' mas o resultado está por preencher.',
+      )
+      return
+    }
+    if (golosAMais > 0) {
+      toast.error(
+        `Os atletas somam ${golosDosAtletas} golos e o resultado dá ${nossosGolos} ao ${CLUBE_SIGLA}.` +
+        ' Corrige um dos dois antes de gravar.',
+      )
+      return
+    }
+    if (golosAMais < 0 && !confirmado) {
+      setGolosSemMarcador(true)
+      return
+    }
+    setGolosSemMarcador(false)
+
     setSaving(true)
     setSaveSuccess(false)
     try {
@@ -400,7 +444,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     // carregamento contava como alteração do utilizador.
     pronto: !loading,
     valores: [homeScore, awayScore, tacticalFormation, occurrences, playerStats],
-    aoGravar: handleSaveReport,
+    aoGravar: () => handleSaveReport(),
     aoSair: () => {
       const antes = fichaAoEditar.current
       if (antes) {
@@ -816,7 +860,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={handleSaveReport}
+            onClick={() => handleSaveReport()}
             disabled={saving}
             className="px-5 py-2.5 text-xs font-black text-csc-dark bg-csc-gold hover:brightness-95 rounded-xl cursor-pointer shadow-md flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
           >
@@ -852,6 +896,27 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             />
           </div>
         </div>
+
+        {/*
+          A conta à vista enquanto se escreve, e não só ao gravar: quem soma
+          quatro golos num jogo de dois vê-o na linha de baixo antes de chegar
+          ao botão.
+        */}
+        {(golosAMais !== 0 || semResultado) && (
+          <p
+            role="status"
+            className={`flex items-center gap-1.5 text-[11px] leading-snug font-bold ${
+              golosAMais > 0 || semResultado ? 'text-csc-vermelho-texto' : 'text-amber-300'
+            }`}
+          >
+            <AlertTriangle size={13} className="shrink-0" aria-hidden="true" />
+            {semResultado
+              ? `Os atletas somam ${golosDosAtletas} ${golosDosAtletas === 1 ? 'golo' : 'golos'} e o resultado está por preencher.`
+              : golosAMais > 0
+                ? `Os atletas somam ${golosDosAtletas} golos, mais ${golosAMais} do que os ${nossosGolos} do resultado.`
+                : `${-golosAMais} ${-golosAMais === 1 ? 'golo do resultado está' : 'golos do resultado estão'} sem marcador. Um autogolo do adversário conta para nós e não tem marcador.`}
+          </p>
+        )}
 
         {/* Esquema Tático */}
         <div>
@@ -1047,6 +1112,19 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     </Modal>
 
     <UnsavedChangesModal {...guardaFicha.props} />
+    <ConfirmModal
+      isOpen={golosSemMarcador}
+      title="Golos sem marcador"
+      description={
+        `O resultado dá ${nossosGolos} ao ${CLUBE_SIGLA} e os atletas somam ${golosDosAtletas}.` +
+        ' Um autogolo do adversário conta para nós e não tem marcador — se não foi isso,' +
+        ' falta atribuir o golo a alguém.'
+      }
+      confirmText="Gravar assim"
+      variant="warning"
+      onConfirm={() => { setGolosSemMarcador(false); handleSaveReport(true) }}
+      onCancel={() => setGolosSemMarcador(false)}
+    />
     </>
   )
 }

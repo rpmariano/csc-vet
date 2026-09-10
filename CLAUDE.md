@@ -632,6 +632,14 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   um formulário. Durante uns meses as páginas ignoraram o parâmetro e caíam na
   lista — quem escolhia "Jogo" ficava na gestão de eventos sem nada a dizer que
   faltava um toque. `tests/e2e/folha-criar.spec.ts` cobre os três tipos.
+- **Os golos dos atletas têm de bater certo com o resultado.** Somar mais do
+  que o resultado é impossível e a ficha recusa gravar; somar menos pergunta
+  antes, porque um autogolo do adversário conta para nós e não tem marcador. A
+  conta aparece à vista enquanto se escreve, e não só ao carregar em Guardar.
+  Sem isto gravou-se um 2-1 com quatro golos repartidos pelos jogadores, e
+  esses números alimentam as estatísticas e — desde que o jogo se espelha na
+  jornada — também a classificação. **Os nossos golos são os da visita quando
+  jogamos fora**: `home_score` é o da casa do jogo, não o nosso.
 - **Guardar um evento leva à convocatória**, e é lá que as linhas de `callups`
   são escritas — em mais lado nenhum do fluxo de criação
   (`ConvocatoriaAoCriar`, ecrãs 4f/4g). Era um bloco no meio do formulário, e
