@@ -25,7 +25,8 @@ import { useEstadoPagamentos } from '../hooks/useEstadoPagamentos'
 
 /** Euros em português — a mesma notação do Financeiro. */
 const EUROS_PERFIL = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
-import SoccerPitchSelector, { parsePositions } from '../components/SoccerPitchSelector'
+import SoccerPitchSelector from '../components/SoccerPitchSelector'
+import { parsePositions } from '../lib/posicoes'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { OsMeusPagamentos } from '../components/OsMeusPagamentos'

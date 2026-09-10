@@ -28,7 +28,8 @@ import {
 import { supabase } from '../lib/supabaseClient'
 import { useAuth, extractRolesFromProfile, cleanNotesFromRolesTag } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
-import SoccerPitchSelector, { parsePositions, normalizePositionName } from '../components/SoccerPitchSelector'
+import SoccerPitchSelector from '../components/SoccerPitchSelector'
+import { parsePositions, normalizePositionName, siglasDasPosicoes } from '../lib/posicoes'
 import { VistaDetalhe } from '../components/VistaDetalhe'
 import { useSearchParams } from 'react-router-dom'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
@@ -1328,14 +1329,12 @@ const TeamManagementPage: React.FC = () => {
                           numero={person.jersey_number}
                           nome={nomeCurto}
                           foto={person.photo_url}
-                          detalhe={
-                            <>
-                              {nomeCurto === person.name ? '' : `${person.name} · `}
-                              {positions.length > 0
-                                ? positions.map(pos => normalizePositionName(pos)).join(' · ')
-                                : roles.includes('coach') ? 'Treinador' : roles.includes('admin') ? 'Direção' : ''}
-                            </>
-                          }
+                          /* Só as posições, e em sigla como no campo: o nome
+                             por extenso estava aqui a competir com a alcunha
+                             logo por cima, e "Ponta de Lança (Esq)" enchia a
+                             linha. Quem não joga não tem posições — e o grupo
+                             já diz que é da equipa técnica ou da direção. */
+                          detalhe={siglasDasPosicoes(positions).join(' · ')}
                           direita={
                             /* J · G · A — os inativos não jogaram esta época. */
                             inativo ? (
@@ -1456,9 +1455,7 @@ const TeamManagementPage: React.FC = () => {
                               {person.shirt_name || person.nickname || person.name}
                             </span>
                             <span className="block text-[9.5px] text-white/62 truncate mt-0.5">
-                              {positions.length > 0
-                                ? positions.map(pos => normalizePositionName(pos)).join(' · ')
-                                : roles.includes('coach') ? 'Treinador' : roles.includes('admin') ? 'Direção' : ''}
+                              {siglasDasPosicoes(positions).join(' · ')}
                             </span>
                           </span>
 
