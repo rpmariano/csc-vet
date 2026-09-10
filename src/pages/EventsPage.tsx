@@ -44,6 +44,7 @@ import { ConvocatoriaAoCriar } from '../components/callups/ConvocatoriaAoCriar'
 import type { EventoCriado } from '../components/callups/ConvocatoriaAoCriar'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla, hasMatchReport } from './CalendarPage'
+import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { VistaDetalhe } from '../components/VistaDetalhe'
 import { useSearchParams } from 'react-router-dom'
@@ -172,6 +173,8 @@ interface Event {
   is_friendly?: boolean
   is_active?: boolean
   tournament_id?: string | null
+  /** Jornada da prova em que este jogo conta — ver `jornadaDoJogo.ts`. */
+  matchday?: number | null
   opponent_id?: string | null
   home_away?: 'home' | 'away' | 'neutral' | null
   max_players?: number | null
@@ -277,6 +280,9 @@ const EventsPage: React.FC = () => {
   // Match specifics
   const [isFriendly, setIsFriendly] = useState(false)
   const [tournamentId, setTournamentId] = useState('')
+  /* A jornada em que o jogo conta. Obrigatória com torneio escolhido: é ela
+     que põe o jogo na tabela e deixa a ficha lançar lá o resultado. */
+  const [matchday, setMatchday] = useState('')
   const [opponentId, setOpponentId] = useState('')
   const [homeAway, setHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
 
@@ -313,6 +319,7 @@ const EventsPage: React.FC = () => {
   const [editDescription, setEditDescription] = useState('')
   const [editIsFriendly, setEditIsFriendly] = useState(false)
   const [editTournamentId, setEditTournamentId] = useState('')
+  const [editMatchday, setEditMatchday] = useState('')
   const [editOpponentId, setEditOpponentId] = useState('')
   const [editHomeAway, setEditHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
   const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
@@ -352,7 +359,7 @@ const EventsPage: React.FC = () => {
     aberto: !!editingEvent,
     valores: [
       editTitle, editType, editEventDate, editEventTime, editMeetingTime, editFieldId,
-      editLocationText, editDescription, editIsFriendly, editTournamentId, editOpponentId,
+      editLocationText, editDescription, editIsFriendly, editTournamentId, editMatchday, editOpponentId,
       editHomeAway, editIsActive,
     ],
     // Sair da edição de um evento é sempre deliberado: gravá-la pode reenviar
@@ -374,7 +381,7 @@ const EventsPage: React.FC = () => {
     aberto: viewModeTab === 'create',
     valores: [
       title, type, eventDate, eventTime, meetingTime, fieldId, locationText, description,
-      maxPlayers, isFriendly, tournamentId, opponentId, homeAway,
+      maxPlayers, isFriendly, tournamentId, matchday, opponentId, homeAway,
       isRecurring, recurrenceWeekdays, recurrenceEndDate, isActiveOnCreate,
     ],
     aoGravar: () => handleCreateEvent(EVENTO_FALSO),
@@ -541,19 +548,44 @@ const EventsPage: React.FC = () => {
     setEditIsFriendly(ev.is_friendly ?? false)
     setEditIsActive(ev.is_active !== false)
     setEditTournamentId(ev.tournament_id || '')
+    setEditMatchday(ev.matchday ? String(ev.matchday) : '')
     setEditOpponentId(ev.opponent_id || '')
     setEditHomeAway(ev.home_away || 'home')
     setEditPlayerSearchTerm('')
   }
 
+  /*
+    Espelha o jogo na jornada da prova. O aviso é um `warning` e não um erro:
+    o evento ficou criado — o que falhou foi pô-lo na tabela, e isso resolve-se
+    inscrevendo as equipas no grupo.
+  */
+  const espelharNaJornada = async (evento: EventoParaJornada) => {
+    const r = await sincronizarJogoNaJornada(evento)
+    if (r.estado === 'sem-equipas') toast.warning(AVISO_SEM_EQUIPAS)
+    if (r.estado === 'erro') toast.warning('O jogo ficou gravado, mas não entrou na tabela da prova: ' + r.mensagem)
+  }
+
+  /* Um jogo de torneio tem de dizer em que jornada conta — é o que o põe na
+     tabela da prova. Vale para criar e para editar. */
+  const faltaAJornada = (tipo: string, amigavel: boolean, prova: string, jornada: string) =>
+    tipo === 'match' && !amigavel && Boolean(prova) && !Number(jornada)
+
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingEvent) return
+    if (faltaAJornada(editType, editIsFriendly, editTournamentId, editMatchday)) {
+      toast.warning('Escolhe a jornada em que este jogo conta para a prova.')
+      return
+    }
     setIsResendPromptOpen(true)
   }
 
   const handleConfirmSaveEdit = async (resendCallups: boolean) => {
     if (!editingEvent) return
+    if (faltaAJornada(editType, editIsFriendly, editTournamentId, editMatchday)) {
+      toast.warning('Escolhe a jornada em que este jogo conta para a prova.')
+      return
+    }
     setIsSavingEdit(true)
     try {
       const editOppObj = opponents.find(o => o.id === editOpponentId)
@@ -582,6 +614,7 @@ const EventsPage: React.FC = () => {
         is_friendly: editType === 'match' ? editIsFriendly : false,
         is_active: editIsActive,
         tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
+        matchday: (editType === 'match' && !editIsFriendly && editTournamentId) ? Number(editMatchday) : null,
         opponent_id: editType === 'match' ? (editOpponentId || null) : null,
         home_away: editType === 'match' ? editHomeAway : null,
       }
@@ -607,6 +640,11 @@ const EventsPage: React.FC = () => {
       } catch (err: any) {
         if (!err.message?.includes('is_active')) throw err
       }
+
+      /* A jornada acompanha a edição: mudar de prova, de jornada, de
+         adversário ou de casa/fora reescreve a linha da tabela — e tirar a
+         prova ao jogo tira-o de lá. */
+      await espelharNaJornada({ ...editingEvent, ...payload, id: editingEvent.id } as EventoParaJornada)
 
       // Se o utilizador escolheu reenviar confirmações:
       if (resendCallups) {
@@ -945,6 +983,15 @@ const EventsPage: React.FC = () => {
       return
     }
 
+    /* Um jogo de torneio sem jornada não vai parar à tabela — e é a jornada
+       que faz a ficha de jogo lançar lá o resultado sozinha. */
+    if (faltaAJornada(type, isFriendly, tournamentId, matchday)) {
+      isCreatingEventRef.current = false
+      setIsCreatingEvent(false)
+      toast.warning('Escolhe a jornada em que este jogo conta para a prova.')
+      return
+    }
+
     const fullIsoDateTime = new Date(`${eventDate}T${eventTime}:00`).toISOString()
 
     try {
@@ -977,6 +1024,7 @@ const EventsPage: React.FC = () => {
           is_friendly: type === 'match' ? isFriendly : false,
           is_active: isActiveOnCreate,
           tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
+          matchday: (type === 'match' && !isFriendly && tournamentId) ? Number(matchday) : null,
           opponent_id: type === 'match' ? (opponentId || null) : null,
           home_away: type === 'match' ? homeAway : null,
           created_by: profile?.id
@@ -1012,6 +1060,10 @@ const EventsPage: React.FC = () => {
         }
 
         if (createdBatchResult) createdEventsList = createdBatchResult as Event[]
+
+        for (const criado of createdEventsList) {
+          await espelharNaJornada(criado as EventoParaJornada)
+        }
 
         const playerIdsToCall = type === 'practice'
           ? allPlayers.filter(p => isPlayerEligible(p, 'practice')).map(p => p.id)
@@ -1052,6 +1104,7 @@ const EventsPage: React.FC = () => {
           is_friendly: type === 'match' ? isFriendly : false,
           is_active: isActiveOnCreate,
           tournament_id: (type === 'match' && !isFriendly) ? (tournamentId || null) : null,
+          matchday: (type === 'match' && !isFriendly && tournamentId) ? Number(matchday) : null,
           opponent_id: type === 'match' ? (opponentId || null) : null,
           home_away: type === 'match' ? homeAway : null,
           created_by: profile?.id
@@ -1090,6 +1143,8 @@ const EventsPage: React.FC = () => {
 
         const createdEvent = createdEventResult as Event
 
+        if (createdEvent) await espelharNaJornada(createdEvent as EventoParaJornada)
+
         /*
           Guardar leva à convocatória (ecrãs 4f e 4g). A inserção das linhas
           de `callups` acontece lá e não aqui: antes era um bloco no meio do
@@ -1122,6 +1177,7 @@ const EventsPage: React.FC = () => {
       setTitle('')
       setDescription('')
       setTournamentId('')
+      setMatchday('')
       setOpponentId('')
       setIsFriendly(false)
       setIsActiveOnCreate(true)
@@ -1459,7 +1515,7 @@ const EventsPage: React.FC = () => {
                     checked={isFriendly}
                     onChange={(e) => {
                       setIsFriendly(e.target.checked)
-                      if (e.target.checked) setTournamentId('')
+                      if (e.target.checked) { setTournamentId(''); setMatchday('') }
                     }}
                     className="h-4 w-4 text-csc-tinta focus:ring-csc-dark border-white/15 rounded cursor-pointer"
                   />
@@ -1469,18 +1525,39 @@ const EventsPage: React.FC = () => {
                 </div>
 
                 {!isFriendly && (
-                  <div>
-                    <label className={ETIQUETA_FORM}>Torneio / Competição</label>
-                    <select
-                      value={tournamentId}
-                      onChange={(e) => setTournamentId(e.target.value)}
-                      className={CAMPO_FORM}
-                    >
-                      <option value="">-- Selecionar Torneio --</option>
-                      {tournaments.map(t => (
-                        <option key={t.id} value={t.id}>{t.name} ({t.season})</option>
-                      ))}
-                    </select>
+                  /* A jornada aparece ao lado assim que há prova escolhida: é
+                     ela que põe o jogo na tabela da prova, e sem ela a ficha
+                     de jogo não tem onde lançar o resultado. */
+                  <div className="flex gap-2.5">
+                    <div className="flex-1 min-w-0">
+                      <label className={ETIQUETA_FORM} htmlFor="prova-nova">Torneio / Competição</label>
+                      <select
+                        id="prova-nova"
+                        value={tournamentId}
+                        onChange={(e) => setTournamentId(e.target.value)}
+                        className={CAMPO_FORM}
+                      >
+                        <option value="">-- Selecionar Torneio --</option>
+                        {tournaments.map(t => (
+                          <option key={t.id} value={t.id}>{t.name} ({t.season})</option>
+                        ))}
+                      </select>
+                    </div>
+                    {tournamentId && (
+                      <div className="w-[96px] flex-none">
+                        <label className={ETIQUETA_FORM} htmlFor="jornada-nova">Jornada *</label>
+                        <input
+                          id="jornada-nova"
+                          type="number"
+                          min="1"
+                          inputMode="numeric"
+                          value={matchday}
+                          onChange={e => setMatchday(e.target.value)}
+                          placeholder="1"
+                          className={CAMPO_FORM}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2462,19 +2539,36 @@ const EventsPage: React.FC = () => {
                       checked={editIsFriendly} 
                       onChange={e => {
                         setEditIsFriendly(e.target.checked)
-                        if (e.target.checked) setEditTournamentId('')
+                        if (e.target.checked) { setEditTournamentId(''); setEditMatchday('') }
                       }} 
                       className="w-4 h-4 rounded cursor-pointer" 
                     />
                   </div>
 
                   {!editIsFriendly && (
-                    <div>
-                      <label className={ETIQUETA_FORM}>Torneio/Competição</label>
-                      <select value={editTournamentId} onChange={e => setEditTournamentId(e.target.value)} className={CAMPO_FORM}>
-                        <option value="">-- Selecionar --</option>
-                        {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
+                    <div className="flex gap-2.5">
+                      <div className="flex-1 min-w-0">
+                        <label className={ETIQUETA_FORM} htmlFor="prova-edicao">Torneio/Competição</label>
+                        <select id="prova-edicao" value={editTournamentId} onChange={e => setEditTournamentId(e.target.value)} className={CAMPO_FORM}>
+                          <option value="">-- Selecionar --</option>
+                          {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                      </div>
+                      {editTournamentId && (
+                        <div className="w-[96px] flex-none">
+                          <label className={ETIQUETA_FORM} htmlFor="jornada-edicao">Jornada *</label>
+                          <input
+                            id="jornada-edicao"
+                            type="number"
+                            min="1"
+                            inputMode="numeric"
+                            value={editMatchday}
+                            onChange={e => setEditMatchday(e.target.value)}
+                            placeholder="1"
+                            className={CAMPO_FORM}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
 

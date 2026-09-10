@@ -25,6 +25,7 @@ import { PorResponder, type PendenteDaHome } from '../components/home/PorRespond
 import { UltimoJogo, type UltimoJogoDaHome } from '../components/home/UltimoJogo'
 import { ProvasEmCurso, type ProvaDaHome } from '../components/home/ProvasEmCurso'
 import { comOmissoes, getSeasonLabel } from '../lib/finance'
+import { calcularClassificacao, janelaDoClube } from '../lib/classificacao'
 
 /**
  * Hoje — o primeiro ecrã, e o único que responde a "o que é que me diz
@@ -93,6 +94,33 @@ interface EventoBruto {
   tournament: { id?: string; name: string } | null
   field: { name: string; address: string | null } | null
   opponent: { name: string; initials: string | null; logo_url: string | null } | null
+}
+
+interface GrupoBruto {
+  id: string
+  tournament_id: string
+  name: string
+  phase: number | null
+}
+
+interface EquipaBruta {
+  id: string
+  tournament_id: string
+  group_id: string | null
+  opponent_id: string | null
+  points_carryover: number | null
+  opponent: { id: string; name?: string; initials: string | null; logo_url: string | null } | null
+}
+
+interface JogoSerieBruto {
+  tournament_id: string
+  group_id: string
+  matchday: number
+  status: string | null
+  home_team_id: string
+  away_team_id: string
+  home_score: number | null
+  away_score: number | null
 }
 
 const Home: React.FC = () => {
@@ -165,7 +193,9 @@ const Home: React.FC = () => {
             .not('home_score', 'is', null)
             .order('date_time', { ascending: false })
             .limit(1),
-          supabase.from('tournaments').select('id, name, season, status').neq('status', 'terminado'),
+          /* Só as provas a decorrer: uma prova agendada não tem tabela para
+             mostrar, e o cartão levava a um ecrã vazio. */
+          supabase.from('tournaments').select('id, name, season, status').eq('status', 'ativo'),
           supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date, status'),
         ])
 
@@ -292,25 +322,78 @@ const Home: React.FC = () => {
           setUltimo(null)
         }
 
-        // Provas a decorrer, com quantas jornadas já foram lançadas.
+        /*
+          Provas a decorrer, com o pedaço da classificação onde estamos. A
+          conta é a da `StandingsPage` — a mesma função, para as duas tabelas
+          não poderem discordar.
+        */
         const provasBrutas = (torneios ?? []) as { id: string; name: string; season: string | null }[]
-        const { data: jornadas } = provasBrutas.length
-          ? await supabase
-              .from('tournament_matches')
-              .select('tournament_id')
-              .in('tournament_id', provasBrutas.map(t => t.id))
-          : { data: [] as { tournament_id: string }[] }
+        const idsProvas = provasBrutas.map(t => t.id)
+        const [
+          { data: gruposT },
+          { data: equipasT },
+          { data: jogosT },
+        ] = idsProvas.length
+          ? await Promise.all([
+              supabase.from('tournament_groups').select('id, tournament_id, name, phase').in('tournament_id', idsProvas),
+              supabase
+                .from('tournament_teams')
+                .select('id, tournament_id, group_id, opponent_id, points_carryover, opponent:opponents(id, name, initials, logo_url)')
+                .in('tournament_id', idsProvas),
+              supabase
+                .from('tournament_matches')
+                .select('tournament_id, group_id, matchday, status, home_team_id, away_team_id, home_score, away_score')
+                .in('tournament_id', idsProvas),
+            ])
+          : [{ data: [] }, { data: [] }, { data: [] }]
         if (cancelado) return
-        const porProva = new Map<string, number>()
-        for (const j of (jornadas ?? []) as { tournament_id: string }[]) {
-          porProva.set(j.tournament_id, (porProva.get(j.tournament_id) ?? 0) + 1)
-        }
-        setProvas(provasBrutas.map(t => ({
-          id: t.id,
-          nome: t.name,
-          epoca: t.season,
-          jornadas: porProva.get(t.id) ?? 0,
-        })))
+
+        const grupos = (gruposT ?? []) as GrupoBruto[]
+        const equipas = (equipasT ?? []) as unknown as EquipaBruta[]
+        const jogosSerie = (jogosT ?? []) as JogoSerieBruto[]
+
+        setProvas(provasBrutas.map(t => {
+          const gruposDaProva = grupos
+            .filter(gr => gr.tournament_id === t.id)
+            .sort((a, b) => (b.phase ?? 1) - (a.phase ?? 1))
+          const equipasDaProva = equipas.filter(e => e.tournament_id === t.id)
+          /* O grupo que interessa é aquele em que estamos, na fase mais
+             adiantada; sem nós na prova, o primeiro que tenha equipas. */
+          const grupo =
+            gruposDaProva.find(gr => equipasDaProva.some(e => e.group_id === gr.id && e.opponent_id === null))
+            ?? gruposDaProva.find(gr => equipasDaProva.some(e => e.group_id === gr.id))
+            ?? null
+
+          const linhas = grupo
+            ? janelaDoClube(
+                calcularClassificacao(
+                  equipasDaProva,
+                  jogosSerie.filter(m => m.tournament_id === t.id),
+                  grupo.id,
+                ),
+              )
+            : []
+
+          const jornadasDaProva = new Set(
+            jogosSerie.filter(m => m.tournament_id === t.id).map(m => m.matchday),
+          )
+
+          return {
+            id: t.id,
+            nome: t.name,
+            epoca: t.season,
+            jornadas: jornadasDaProva.size,
+            grupo: grupo?.name ?? null,
+            linhas: linhas.map(({ linha, posicao }) => ({
+              id: linha.team.id,
+              posicao,
+              equipa: linha.team,
+              j: linha.j,
+              dg: linha.dg,
+              p: linha.p,
+            })),
+          }
+        }))
 
         // Aniversários deste mês, e não só de hoje: é o que o 4a mostra.
         const hoje = new Date()

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { X, Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock } from 'lucide-react'
+import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJogo'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../pages/CalendarPage'
 import { toast } from '../context/ToastContext'
@@ -262,6 +263,20 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           description: updatedDescription
         })
         .eq('id', eventId)
+
+      /*
+        E o resultado entra na tabela da prova sozinho: a linha da jornada é o
+        espelho deste jogo, pela jornada que se escolheu ao criá-lo. Era este
+        o passo que faltava — quem lançava a ficha tinha de ir à Classificação
+        escrever o mesmo resultado outra vez à mão.
+      */
+      const espelho = await sincronizarJogoNaJornada({
+        ...event,
+        id: eventId,
+        home_score: homeScore,
+        away_score: awayScore,
+      })
+      if (espelho.estado === 'sem-equipas') toast.warning(AVISO_SEM_EQUIPAS)
 
       const participatingPlayers = playerStats.filter(p => p.lineup_status !== 'none' || p.goals > 0 || p.yellow_cards > 0 || p.red_cards > 0)
       

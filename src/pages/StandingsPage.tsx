@@ -4,12 +4,12 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
-import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, ChevronsUpDown } from 'lucide-react'
+import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, ChevronsUpDown, FileText } from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
 import { useClub } from '../context/ClubContext'
-import { formatClubSigla, formatOpponentSigla } from './CalendarPage'
 import { Pastilha } from '../components/ui'
+import { calcularClassificacao, equipaDoTorneio, jogoTerminado } from '../lib/classificacao'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 
@@ -21,39 +21,20 @@ const CAMPO =
 const ETIQUETA =
   'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
-/*
-  Uma equipa de torneio mostra-se pela sigla e pelo emblema, e nao pelo nome
-  por extenso: numa tabela de classificacao com dez colunas, "Clube Atletismo
-  do Montijo" nao cabe e sai truncado a meio, enquanto "CA MONTIJO" cabe.
-  Sao as mesmas funcoes que a Agenda usa nos placares, para o mesmo adversario
-  nao ter duas siglas conforme o ecra.
-
-  A linha do proprio clube e a que tinha o emblema em falta: o `logo` era
-  `isCSC ? null : ...`, portanto o clube ficava sempre com o escudo generico,
-  mesmo tendo emblema em `club_settings`.
-*/
-export const equipaDoTorneio = (
-  team: any,
-  clube: { initials?: string | null; logo_url?: string | null } | null | undefined,
-): { sigla: string; logo: string | null; eOClube: boolean } => {
-  if (!team?.opponent_id) {
-    return {
-      sigla: formatClubSigla(clube?.initials),
-      logo: clube?.logo_url ?? null,
-      eOClube: true,
-    }
-  }
-  return {
-    /* A sigla como a direção a escreveu — "CA Montijo" —, e não a que o
-       `formatOpponentSigla` reconstrói para os placares, que recusa espaços e
-       corta a seis letras: desse lado "Clube Atletismo do Montijo" dá "CADM",
-       que ninguém escreveu. Numa tabela há largura para a sigla a sério; a
-       reconstrução fica de reserva, para um adversário sem sigla nenhuma. */
-    sigla: team.opponent?.initials?.trim() || formatOpponentSigla(team.opponent),
-    logo: team.opponent?.logo_url ?? null,
-    eOClube: false,
-  }
-}
+/**
+ * Emblema pequeno de uma equipa de torneio, o mesmo da tabela. Sem emblema
+ * desenha um escudo e nunca as iniciais: a sigla está ao lado, e repeti-la era
+ * lê-la duas vezes.
+ */
+const EmblemaTorneio = ({ logo, eOClube }: { logo: string | null; eOClube: boolean }) => (
+  <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+    {logo ? (
+      <img src={logo} alt="" className="w-full h-full object-contain bg-white" />
+    ) : (
+      <Shield size={11} className={eOClube ? 'text-csc-gold' : 'text-white/30'} />
+    )}
+  </span>
+)
 
 export const StandingsPage = () => {
   const { profile } = useAuth()
@@ -75,7 +56,6 @@ export const StandingsPage = () => {
   const [groups, setGroups] = useState<any[]>([])
   const [teams, setTeams] = useState<any[]>([])
   const [matches, setMatches] = useState<any[]>([])
-  const [cscMatches, setCscMatches] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [activePhase, setActivePhase] = useState<number>(1)
 
@@ -95,6 +75,13 @@ export const StandingsPage = () => {
     descricao: 'A jornada que estás a criar ainda não foi gravada. Se saíres agora, perde-se.',
   })
   const [savingJornada, setSavingJornada] = useState(false)
+
+  /*
+    Que jornada está aberta em cada grupo. Vazio quer dizer "a que está em
+    foco", calculada mais abaixo — só se guarda aqui a escolha de quem tocou
+    numa pastilha.
+  */
+  const [jornadaAberta, setJornadaAberta] = useState<Record<string, number>>({})
 
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editHomeScore, setEditHomeScore] = useState('')
@@ -167,14 +154,14 @@ export const StandingsPage = () => {
 
   const fetchStandingsData = async () => {
     setLoading(true)
-    const [groupsRes, teamsRes, matchesRes, cscMatchesRes] = await Promise.all([
+    const [groupsRes, teamsRes, matchesRes] = await Promise.all([
       supabase.from('tournament_groups').select('*').eq('tournament_id', selectedTourId).order('name'),
       supabase.from('tournament_teams').select('*, opponent:opponents(*)').eq('tournament_id', selectedTourId),
       // Todas as jornadas (agendadas e realizadas) — a classificação só conta as realizadas,
       // mas a lista de jornadas mostra também os jogos ainda por realizar.
+      /* Os nossos jogos estão aqui também: o evento espelha-se na jornada
+         que se lhe escolheu, e a ficha de jogo lança-lhe o resultado. */
       supabase.from('tournament_matches').select('*').eq('tournament_id', selectedTourId).order('matchday'),
-      // Fetch CSC matches that are finished
-      supabase.from('events').select('*, opponent:opponents(*)').eq('tournament_id', selectedTourId).eq('type', 'match').eq('status', 'finished')
     ])
 
     if (groupsRes.data) {
@@ -184,129 +171,14 @@ export const StandingsPage = () => {
     }
     if (teamsRes.data) setTeams(teamsRes.data)
     if (matchesRes.data) setMatches(matchesRes.data)
-    if (cscMatchesRes.data) setCscMatches(cscMatchesRes.data)
 
     setLoading(false)
   }
 
-  // --- ENGINE ---
-  const getStandingsForGroup = (groupId: string) => {
-    const groupTeams = teams.filter(t => t.group_id === groupId)
-
-    // Initialize stats
-    const stats: Record<string, any> = {}
-    groupTeams.forEach(t => {
-      stats[t.id] = {
-        team: t,
-        p: t.points_carryover || 0, // points
-        j: 0, // matches played
-        v: 0, // wins
-        e: 0, // draws
-        d: 0, // losses
-        gm: 0, // goals for
-        gs: 0, // goals against
-        dg: 0, // goal diff
-        headToHead: {} // store match results against other teams for tie-breaking
-      }
-    })
-
-    const processMatch = (homeId: string, awayId: string, hScore: number, aScore: number) => {
-      if (!stats[homeId] || !stats[awayId]) return
-
-      stats[homeId].j++
-      stats[awayId].j++
-
-      stats[homeId].gm += hScore
-      stats[homeId].gs += aScore
-      stats[awayId].gm += aScore
-      stats[awayId].gs += hScore
-
-      if (!stats[homeId].headToHead[awayId]) stats[homeId].headToHead[awayId] = { p: 0, gm: 0, gs: 0 }
-      if (!stats[awayId].headToHead[homeId]) stats[awayId].headToHead[homeId] = { p: 0, gm: 0, gs: 0 }
-
-      stats[homeId].headToHead[awayId].gm += hScore
-      stats[homeId].headToHead[awayId].gs += aScore
-      stats[awayId].headToHead[homeId].gm += aScore
-      stats[awayId].headToHead[homeId].gs += hScore
-
-      if (hScore > aScore) {
-        stats[homeId].p += 3
-        stats[homeId].v++
-        stats[awayId].d++
-        stats[homeId].headToHead[awayId].p += 3
-      } else if (hScore < aScore) {
-        stats[awayId].p += 3
-        stats[awayId].v++
-        stats[homeId].d++
-        stats[awayId].headToHead[homeId].p += 3
-      } else {
-        stats[homeId].p += 1
-        stats[awayId].p += 1
-        stats[homeId].e++
-        stats[awayId].e++
-        stats[homeId].headToHead[awayId].p += 1
-        stats[awayId].headToHead[homeId].p += 1
-      }
-    }
-
-    // Process External Matches (só as jornadas com resultado lançado)
-    matches.filter(m => m.group_id === groupId && m.status === 'finished' && m.home_score !== null && m.away_score !== null).forEach(m => {
-      processMatch(m.home_team_id, m.away_team_id, m.home_score, m.away_score)
-    })
-
-    // Process CSC Matches
-    // We need to find CSC's team ID in this group.
-    const cscTeam = groupTeams.find(t => t.opponent_id === null)
-    if (cscTeam) {
-      cscMatches.forEach(m => {
-        // Find opponent team ID in this group
-        const oppTeam = groupTeams.find(t => t.opponent_id === m.opponent_id)
-        if (oppTeam && m.home_score !== null && m.away_score !== null) {
-          if (m.home_away === 'casa') {
-            processMatch(cscTeam.id, oppTeam.id, m.home_score, m.away_score)
-          } else {
-            processMatch(oppTeam.id, cscTeam.id, m.away_score, m.home_score)
-          }
-        }
-      })
-    }
-
-    // Calculate overall DG
-    Object.values(stats).forEach(s => {
-      s.dg = s.gm - s.gs
-    })
-
-    // Convert to array and Sort
-    const standingsList = Object.values(stats)
-
-    standingsList.sort((a, b) => {
-      // 1. Points
-      if (a.p !== b.p) return b.p - a.p
-
-      // Tied! Use Head to Head if they played against each other
-      const h2hA = a.headToHead[b.team.id]
-      const h2hB = b.headToHead[a.team.id]
-      if (h2hA && h2hB) {
-        // 2. Head to head points
-        if (h2hA.p !== h2hB.p) return h2hB.p - h2hA.p
-        // 3. Head to head DG
-        const dgA = h2hA.gm - h2hA.gs
-        const dgB = h2hB.gm - h2hB.gs
-        if (dgA !== dgB) return dgB - dgA
-        // 4. Head to head GS
-        if (h2hA.gm !== h2hB.gm) return h2hB.gm - h2hA.gm
-      }
-
-      // 5. Overall DG
-      if (a.dg !== b.dg) return b.dg - a.dg
-      // 6. Overall GS
-      if (a.gm !== b.gm) return b.gm - a.gm
-
-      return 0
-    })
-
-    return standingsList
-  }
+  /* A tabela e os desempates vivem em `src/lib/classificacao.ts` — a Home
+     mostra a mesma classificação e não pode fazer a conta por sua conta. */
+  const getStandingsForGroup = (groupId: string) =>
+    calcularClassificacao(teams, matches, groupId)
 
   // --- JORNADAS (agendar + registar resultados) ---
   const openJornadaModal = (groupId: string) => {
@@ -350,6 +222,8 @@ export const StandingsPage = () => {
     }
     triggerHaptic('success')
     toast.success(`Jornada ${matchday} criada com ${validFixtures.length} ${validFixtures.length === 1 ? 'jogo' : 'jogos'}.`)
+    /* Quem acabou de criar a jornada quer vê-la, não a que estava aberta. */
+    setJornadaAberta(prev => ({ ...prev, [jornadaModalGroupId]: matchday }))
     setJornadaModalGroupId(null)
     fetchStandingsData()
   }
@@ -383,6 +257,10 @@ export const StandingsPage = () => {
     if (!matchToDelete) return
     const { error } = await supabase.from('tournament_matches').delete().eq('id', matchToDelete)
     setMatchToDelete(null)
+    /* Apagar-se agora de dentro da edição: sem isto ficava a edição aberta
+       num jogo que já não existe, e o guarda de alterações por gravar
+       continuava a achar que havia um resultado por gravar. */
+    setEditingMatchId(null)
     if (error) {
       toast.error('Não foi possível apagar o jogo: ' + error.message)
       return
@@ -495,6 +373,17 @@ export const StandingsPage = () => {
               const standings = getStandingsForGroup(g.id)
               const groupMatches = matches.filter(m => m.group_id === g.id)
               const matchdays = Array.from(new Set(groupMatches.map(m => m.matchday))).sort((a, b) => a - b)
+              /*
+                A jornada em foco é a primeira com jogos por realizar — é onde
+                se vai lançar resultado — e, com tudo lançado, a última. A
+                escolha de quem tocou numa pastilha ganha-lhe, enquanto essa
+                jornada existir: apagado o último jogo dela, volta-se ao foco.
+              */
+              const emFoco = matchdays.find(md => groupMatches.some(m => m.matchday === md && !jogoTerminado(m)))
+                ?? matchdays[matchdays.length - 1]
+              const escolhida = jornadaAberta[g.id]
+              const jornadaAtiva = escolhida !== undefined && matchdays.includes(escolhida) ? escolhida : emFoco
+              const jogosDaJornada = groupMatches.filter(m => m.matchday === jornadaAtiva)
               return (
                 /*
                   Um grupo é um cartão (ecrã 1c): faixa verde com o nome e a
@@ -590,14 +479,24 @@ export const StandingsPage = () => {
                     é a tabela que elas explicam, e no handoff vêm logo por
                     baixo dela.
 
+                    **Vê-se uma jornada de cada vez**, escolhida nas pastilhas.
+                    Abertas todas, uma prova de dez jornadas a seis jogos punha
+                    mais de sessenta linhas entre a tabela do Grupo A e a do
+                    Grupo B — chegar ao segundo grupo era um scroll sem fim. A
+                    pastilha aqui é navegação e não filtro, por isso fica à
+                    vista, como as das provas lá em cima.
+
+                    Abre na jornada em foco: a primeira com jogos por realizar,
+                    ou a última quando está tudo lançado.
+
                     Os jogos do clube entram na tabela pela ficha de jogo; o
                     que aqui se lança são os resultados das outras equipas da
                     série — daí o aviso ao pé do botão de nova jornada.
                   */}
-                  <div className="border-t border-white/10 px-3.5 py-3.5 space-y-3 bg-black/20">
+                  <div className="border-t border-white/10 px-3.5 py-3.5 space-y-3 bg-csc-dark/30">
                     <div className="flex items-center justify-between gap-2">
                       <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 flex items-center gap-1.5">
-                        <CalendarDays size={12} className="text-white/35" />
+                        <CalendarDays size={12} className="text-csc-gold/70" />
                         Jornadas
                       </h4>
                       {canManage && (() => {
@@ -629,127 +528,213 @@ export const StandingsPage = () => {
                     {matchdays.length === 0 ? (
                       <p className="text-[11px] text-white/62 italic py-1">Ainda não há jornadas criadas para este grupo.</p>
                     ) : (
-                      <div className="space-y-2.5">
-                        {matchdays.map(md => (
-                          <div key={md} className="rounded-2xl border border-white/10 overflow-hidden bg-white/4">
-                            <div className="px-3 py-1.5 bg-white/6 font-display font-extrabold text-[9px] tracking-[0.12em] uppercase text-white/62">
-                              Jornada {md}
-                            </div>
-                            <div>
-                              {groupMatches.filter(m => m.matchday === md).map(m => {
-                                const homeTeam = teams.find(t => t.id === m.home_team_id)
-                                const awayTeam = teams.find(t => t.id === m.away_team_id)
-                                const isEditing = editingMatchId === m.id
-                                const isFinished = m.status === 'finished' && m.home_score !== null && m.away_score !== null
-                                return (
-                                  <div key={m.id} className="px-3 py-2 border-t border-white/7 first:border-t-0 space-y-1.5">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      {m.match_date && (
-                                        <span className="text-[9.5px] font-bold text-white/62 shrink-0 w-9 tabular-nums">
-                                          {new Date(m.match_date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}
-                                        </span>
-                                      )}
-                                      <span className="flex-1 text-right font-display font-bold text-[11.5px] text-white/85 truncate">{equipaDoTorneio(homeTeam, clubSettings).sigla}</span>
-                                      {isEditing ? (
-                                        <span className="flex items-center gap-1 shrink-0">
-                                          <input
-                                            type="number"
-                                            min="0"
-                                            value={editHomeScore}
-                                            onChange={e => setEditHomeScore(e.target.value)}
-                                            aria-label={`Golos de ${equipaDoTorneio(homeTeam, clubSettings).sigla}`}
-                                            className="w-10 h-9 px-1 rounded-lg text-center font-display font-black text-[12px] bg-white text-csc-tinta outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
-                                            placeholder="-"
-                                          />
-                                          <span className="text-white/30 font-black">-</span>
-                                          <input
-                                            type="number"
-                                            min="0"
-                                            value={editAwayScore}
-                                            onChange={e => setEditAwayScore(e.target.value)}
-                                            aria-label={`Golos de ${equipaDoTorneio(awayTeam, clubSettings).sigla}`}
-                                            className="w-10 h-9 px-1 rounded-lg text-center font-display font-black text-[12px] bg-white text-csc-tinta outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
-                                            placeholder="-"
-                                          />
-                                        </span>
-                                      ) : (
-                                        <span className={`shrink-0 px-2 py-0.5 rounded-lg font-display font-black text-[11.5px] tabular-nums ${
-                                          isFinished ? 'bg-white text-csc-tinta' : 'bg-white/10 text-white/62'
-                                        }`}>
-                                          {isFinished ? `${m.home_score} - ${m.away_score}` : 'vs'}
-                                        </span>
-                                      )}
-                                      <span className="flex-1 text-left font-display font-bold text-[11.5px] text-white/85 truncate">{equipaDoTorneio(awayTeam, clubSettings).sigla}</span>
-                                    </div>
-
-                                    <div className="flex items-center gap-1.5">
-                                      {!isFinished && !isEditing && (
-                                        <span className="font-display font-black text-[8.5px] tracking-[0.1em] uppercase text-csc-gold bg-csc-gold/15 border border-csc-gold/30 px-2 py-0.5 rounded-full">
-                                          Por realizar
-                                        </span>
-                                      )}
-                                      {canManage && (
-                                        <span className="flex items-center gap-1 ml-auto shrink-0">
-                                          {isEditing ? (
-                                            <>
-                                              <input
-                                                type="date"
-                                                value={editDate}
-                                                onChange={e => setEditDate(e.target.value)}
-                                                aria-label="Data do jogo"
-                                                className="h-9 px-2 rounded-lg text-[11px] bg-white text-csc-tinta outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
-                                              />
-                                              <button
-                                                type="button"
-                                                onClick={() => handleSaveMatch(m.id)}
-                                                className="w-11 h-11 rounded-xl bg-csc-light text-white flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                                                title="Guardar resultado"
-                                                aria-label="Guardar resultado"
-                                              >
-                                                <Check size={15} />
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={guardaResultado.tentarFechar}
-                                                className="w-11 h-11 rounded-xl bg-white/8 text-white/60 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                                                title="Cancelar"
-                                                aria-label="Cancelar"
-                                              >
-                                                <X size={15} />
-                                              </button>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <button
-                                                type="button"
-                                                onClick={() => startEditMatch(m)}
-                                                className="w-11 h-11 rounded-xl bg-white/6 text-white/60 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                                                title={isFinished ? 'Editar resultado' : 'Registar resultado'}
-                                                aria-label={`${isFinished ? 'Editar' : 'Registar'} resultado de ${equipaDoTorneio(homeTeam, clubSettings).sigla} com ${equipaDoTorneio(awayTeam, clubSettings).sigla}`}
-                                              >
-                                                <Pencil size={14} />
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => setMatchToDelete(m.id)}
-                                                className="w-11 h-11 rounded-xl bg-white/6 text-white/60 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                                                title="Apagar jogo"
-                                                aria-label={`Apagar o jogo de ${equipaDoTorneio(homeTeam, clubSettings).sigla} com ${equipaDoTorneio(awayTeam, clubSettings).sigla}`}
-                                              >
-                                                <Trash2 size={14} />
-                                              </button>
-                                            </>
-                                          )}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
+                      <>
+                        {matchdays.length > 1 && (
+                          <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
+                            {matchdays.map(md => {
+                              const porRealizar = groupMatches.filter(m => m.matchday === md && !jogoTerminado(m)).length
+                              return (
+                                <Pastilha
+                                  key={md}
+                                  ativa={md === jornadaAtiva}
+                                  onClick={() => { triggerHaptic('selection'); setJornadaAberta(prev => ({ ...prev, [g.id]: md })) }}
+                                  className="flex-none gap-1.5 px-3.5"
+                                  aria-label={
+                                    porRealizar > 0
+                                      ? `Jornada ${md}, ${porRealizar} ${porRealizar === 1 ? 'jogo por realizar' : 'jogos por realizar'}`
+                                      : `Jornada ${md}, tudo lançado`
+                                  }
+                                >
+                                  J{md}
+                                  {/* O ponto dourado diz que ainda falta lançar
+                                      resultado — é o que se anda à procura. */}
+                                  {porRealizar > 0 && (
+                                    <span className={`w-1.5 h-1.5 rounded-full ${md === jornadaAtiva ? 'bg-csc-tinta/45' : 'bg-csc-gold'}`} />
+                                  )}
+                                </Pastilha>
+                              )
+                            })}
                           </div>
-                        ))}
-                      </div>
+                        )}
+
+                        <div className="space-y-1.5">
+                          {jogosDaJornada.map(m => {
+                            const casa = equipaDoTorneio(teams.find(t => t.id === m.home_team_id), clubSettings)
+                            const fora = equipaDoTorneio(teams.find(t => t.id === m.away_team_id), clubSettings)
+                            const terminado = jogoTerminado(m)
+                            const nosso = casa.eOClube || fora.eOClube
+                            /* O nosso jogo é o espelho do evento: o resultado
+                               vem da ficha de jogo e escreve-se lá, senão os
+                               dois sítios ficavam a dizer coisas diferentes. */
+                            const daFicha = Boolean(m.event_id)
+                            const data = m.match_date
+                              ? new Date(m.match_date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })
+                              : '—'
+
+                            /* Num jogo lançado, quem ganhou lê-se a branco e
+                               quem perdeu esbate — a linha diz o resultado
+                               antes de se olhar para o placar. O clube é sempre
+                               dourado, como na tabela. */
+                            const cor = (eq: { eOClube: boolean }, golos: number, contra: number) =>
+                              eq.eOClube
+                                ? 'text-csc-gold'
+                                : !terminado
+                                  ? 'text-white/85'
+                                  : golos > contra
+                                    ? 'text-white'
+                                    : golos < contra
+                                      ? 'text-white/45'
+                                      : 'text-white/75'
+
+                            /*
+                              A edição abre na própria linha: dois números, a
+                              data e os botões. O lápis e o caixote deixaram de
+                              estar em cada jogo — eram dois quadrados cinzentos
+                              por linha, seis por jornada, e o que se lê numa
+                              lista de jornadas é o resultado.
+                            */
+                            if (editingMatchId === m.id && !daFicha) {
+                              return (
+                                <div key={m.id} className="rounded-[14px] border border-csc-gold/35 bg-csc-gold/10 p-2.5 space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                                      <span className="truncate font-display font-bold text-[11.5px] text-white">{casa.sigla}</span>
+                                      <EmblemaTorneio logo={casa.logo} eOClube={casa.eOClube} />
+                                    </span>
+                                    <span className="flex items-center gap-1 shrink-0">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={editHomeScore}
+                                        onChange={e => setEditHomeScore(e.target.value)}
+                                        aria-label={`Golos de ${casa.sigla}`}
+                                        className="w-11 h-11 px-1 rounded-xl text-center font-display font-black text-[13px] bg-white text-csc-tinta outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+                                        placeholder="-"
+                                        autoFocus
+                                      />
+                                      <span className="text-white/40 font-black">-</span>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={editAwayScore}
+                                        onChange={e => setEditAwayScore(e.target.value)}
+                                        aria-label={`Golos de ${fora.sigla}`}
+                                        className="w-11 h-11 px-1 rounded-xl text-center font-display font-black text-[13px] bg-white text-csc-tinta outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+                                        placeholder="-"
+                                      />
+                                    </span>
+                                    <span className="flex-1 flex items-center gap-1.5 min-w-0">
+                                      <EmblemaTorneio logo={fora.logo} eOClube={fora.eOClube} />
+                                      <span className="truncate font-display font-bold text-[11.5px] text-white">{fora.sigla}</span>
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5">
+                                    <input
+                                      type="date"
+                                      value={editDate}
+                                      onChange={e => setEditDate(e.target.value)}
+                                      aria-label="Data do jogo"
+                                      className="h-11 min-w-0 flex-1 px-2.5 rounded-xl text-[11.5px] font-bold bg-white text-csc-tinta outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveMatch(m.id)}
+                                      className="w-11 h-11 rounded-xl bg-csc-light text-white flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                                      title="Guardar resultado"
+                                      aria-label="Guardar resultado"
+                                    >
+                                      <Check size={15} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={guardaResultado.tentarFechar}
+                                      className="w-11 h-11 rounded-xl bg-white/10 border border-white/20 text-white/70 flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                                      title="Cancelar"
+                                      aria-label="Cancelar edição do resultado"
+                                    >
+                                      <X size={15} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setMatchToDelete(m.id)}
+                                      className="w-11 h-11 rounded-xl bg-csc-red/15 border border-csc-red/35 text-csc-vermelho-texto flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                                      title="Apagar jogo"
+                                      aria-label={`Apagar o jogo de ${casa.sigla} com ${fora.sigla}`}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            }
+
+                            /* A barra à esquerda marca os nossos jogos, como as
+                               linhas de "Os meus pagamentos" marcam o estado. */
+                            const linha =
+                              'w-full min-h-11 flex items-center gap-2 px-2.5 py-1.5 rounded-[14px] border-l-[3px] ' +
+                              (nosso ? 'border-l-csc-gold bg-csc-gold/10' : 'border-l-white/15 bg-white/5')
+
+                            const conteudo = (
+                              <>
+                                <span className={`w-9 shrink-0 font-display font-bold text-[9.5px] tabular-nums ${terminado ? 'text-white/45' : 'text-csc-gold/85'}`}>
+                                  {data}
+                                </span>
+                                <span className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                                  <span className={`truncate font-display font-bold text-[11.5px] ${cor(casa, m.home_score, m.away_score)}`}>
+                                    {casa.sigla}
+                                  </span>
+                                  <EmblemaTorneio logo={casa.logo} eOClube={casa.eOClube} />
+                                </span>
+                                {terminado ? (
+                                  <span className="shrink-0 px-2 py-1 rounded-lg bg-white text-csc-tinta font-display font-black text-[12px] tabular-nums">
+                                    {m.home_score} - {m.away_score}
+                                  </span>
+                                ) : (
+                                  /* Por realizar não leva pastilha nenhuma: o
+                                     "VS" dourado, como no cartão de jogo da
+                                     Home, já diz que não há resultado. */
+                                  <span className="shrink-0 w-11 text-center font-display font-black text-[11px] tracking-[0.08em] text-csc-gold/80">
+                                    VS
+                                  </span>
+                                )}
+                                <span className="flex-1 flex items-center gap-1.5 min-w-0">
+                                  <EmblemaTorneio logo={fora.logo} eOClube={fora.eOClube} />
+                                  <span className={`truncate font-display font-bold text-[11.5px] ${cor(fora, m.away_score, m.home_score)}`}>
+                                    {fora.sigla}
+                                  </span>
+                                </span>
+                              </>
+                            )
+
+                            return canManage && !daFicha ? (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => { triggerHaptic('light'); startEditMatch(m) }}
+                                aria-label={`${terminado ? 'Editar' : 'Registar'} resultado de ${casa.sigla} com ${fora.sigla}`}
+                                className={`${linha} text-left cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
+                              >
+                                {conteudo}
+                                <Pencil size={13} className="shrink-0 text-white/35" />
+                              </button>
+                            ) : (
+                              <div key={m.id} className={linha}>
+                                {conteudo}
+                                {daFicha && (
+                                  <span
+                                    className="shrink-0 text-white/35"
+                                    title="O resultado deste jogo vem da ficha de jogo"
+                                    aria-label="Resultado lançado na ficha de jogo"
+                                  >
+                                    <FileText size={13} />
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>

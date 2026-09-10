@@ -105,6 +105,15 @@ A função `public.financial_season(date)` espelha `getSeasonLabel()` de `src/li
 qualquer mudança à regra da época tem de ser feita **nos dois sítios**.
 Ver `docs/financeiro-campos-reporting.md`.
 
+`events.matchday` e `tournament_matches.event_id`
+(`supabase_jornada_do_jogo_migration.sql`, aplicada a 2026-09-09) ligam o jogo
+do clube à jornada da prova: a coluna diz em que jornada o jogo conta, a outra
+diz de que evento veio a linha da tabela. O `event_id` é único (índice parcial)
+e cai com o evento (`ON DELETE CASCADE`) — a linha é o espelho do jogo, e um
+resultado órfão numa jornada mentiria na classificação. A obrigatoriedade da
+jornada é da app e não da base: as fichas anteriores à migração têm
+`matchday` a NULL e continuam a valer como evento.
+
 `callups.responded_at` (`supabase_callups_responded_at_migration.sql`) guarda quando
 o atleta confirmou ou recusou — `created_at` é de quando foi *convocado*, e não servia.
 É preenchida pelo gatilho `callups_marcar_resposta` e nunca pelo cliente: a política de
@@ -409,14 +418,53 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   um link para uma prova já terminada caía na primeira em curso.
 - **Uma equipa de torneio mostra-se pela sigla e pelo emblema** — nunca pelo
   nome por extenso, que numa tabela de dez colunas sai truncado a meio. O
-  `equipaDoTorneio()` da `StandingsPage` é o único sítio que decide isso, e a
-  gestão do torneio usa-o também. **A sigla de um adversário é a que a direção
+  `equipaDoTorneio()` de `src/lib/classificacao.ts` é o único sítio que decide
+  isso, e a gestão do torneio usa-o também. **A sigla de um adversário é a que a direção
   escreveu na ficha** (`opponents.initials`), e só na falta dela é que se
   recorre ao `formatOpponentSigla()`: esse é para os placares apertados, recusa
   espaços e corta a seis letras — de "Clube Atletismo do Montijo" faz "CADM",
   que ninguém escreveu. O emblema do próprio clube vem de `club_settings`, e
   não de um ficheiro estático nem de um `null` fixo, que era o que punha o
   escudo genérico na linha do clube.
+- **Um jogo de prova diz em que jornada conta, e é obrigatório.** Escolhido o
+  torneio no evento, aparece ao lado o número da jornada; sem ele não se
+  grava. É essa jornada que espelha o jogo em `tournament_matches`
+  (`sincronizarJogoNaJornada`, em `src/lib/jornadaDoJogo.ts`): ao criar nasce
+  "por realizar", e **a ficha de jogo lança o resultado nos dois sítios ao
+  mesmo tempo**. A linha espelhada traz `event_id` — por isso não há como
+  duplicar, e na Classificação essa linha não se edita à mão (o resultado vive
+  na ficha). Uma linha que a direção já tenha escrito à mão para o mesmo
+  encontro é **adotada** em vez de duplicada.
+  Antes disto, o nosso jogo simplesmente não entrava na tabela: a
+  `StandingsPage` procurava-o em `events` com `status = 'finished'` e
+  `home_away = 'casa'`, e **nenhum desses valores existe no esquema**
+  (`event_status` é 'agendado'/'concluído'/'adiado'/'cancelado';
+  `match_location_type` é 'home'/'away'/'neutral'). A condição nunca deu
+  verdade uma única vez, e quem quisesse o jogo na classificação escrevia-o
+  outra vez à mão. Esse caminho morto saiu da conta.
+  **Casa e visita são as do evento**, não as nossas: num jogo fora,
+  `home_score` é o do adversário — é assim que a app inteira lê o placar.
+- **A conta da classificação vive em `src/lib/classificacao.ts`**, e mais em
+  lado nenhum. Esteve dentro da `StandingsPage`, e por isso o cartão da Home
+  só sabia dizer quantas jornadas havia: copiar para lá as cem linhas dos
+  desempates dava duas tabelas que podiam discordar. Junto com ela mudaram-se
+  o `equipaDoTorneio()` e, para uma página não ser dependência de um cartão da
+  Home, as siglas (`src/lib/siglas.ts` — a `CalendarPage` continua a
+  exportá-las para quem já as importava de lá).
+  **A janela da Home é `janelaDoClube()`:** cinco linhas em torno da nossa,
+  com a posição real, porque num resumo não cabem doze equipas e a que se
+  procura é sempre a do clube. **E só entram provas com `status = 'ativo'`** —
+  uma prova agendada leva a um ecrã vazio.
+- **As jornadas de um grupo veem-se uma de cada vez**, escolhida em pastilhas
+  (a pastilha é navegação, e por isso fica à vista). Abertas todas, uma prova
+  de dez jornadas a seis jogos punha mais de sessenta linhas entre a tabela de
+  um grupo e a do seguinte. Abre na jornada em foco: a primeira com jogos por
+  realizar, ou a última quando está tudo lançado; um ponto dourado na pastilha
+  marca as que ainda têm resultado por lançar.
+  **O resultado escreve-se na própria linha** — tocar no jogo abre ali os dois
+  números, a data e o apagar. O lápis e o caixote em cada linha eram dois
+  quadrados cinzentos por jogo, e o que se lê numa lista de jornadas é o
+  resultado.
 - **Os controlos do mês vivem dentro do cartão do calendário**, com o "Hoje"
   entre as duas setas — não no cabeçalho do ecrã, longe do que mudam e
   encostados ao funil dos filtros. **E o mês passa com o dedo:** um arrasto
