@@ -205,7 +205,12 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   funcionalidade não existe. A ida tem de ser dentro da app.**
 - **Um diálogo tem de levar o foco lá para dentro ao abrir**, e o
   `useModalA11y` trata disso — mas insistindo por `requestAnimationFrame` até o
-  painel existir, e não uma vez só. A versão anterior tentava com
+  painel existir, e não uma vez só. **A paciência conta-se em frames (120), e
+  não em milissegundos.** Era meio segundo de relógio, e numa máquina carregada
+  o painel monta depois disso: o hook desistia calado, que é o defeito que
+  aquele bloco existe para corrigir. Em frames o limite estica com a máquina —
+  quando os frames demoram, há mais tempo real para o painel aparecer. Foi
+  encontrado a 2026-09-10, pelas falhas do `dialogos.spec.ts` sob carga. A versão anterior tentava com
   `setTimeout(…, 0)` e desistia em silêncio se a ref ainda fosse nula: chegava
   para os diálogos que abrem de um clique, e falhava nas persianas abertas
   **pelo endereço**, porque o `BottomSheet` monta o painel num segundo passo
@@ -797,7 +802,19 @@ teria de ser rodada de imediato.
   trabalho recente ia todo direto para a `main`, por isso a regra antiga — PR
   contra a `redesign` — só produzia PRs com dezenas de commits já em produção.
 - Antes de cada commit: `npm run lint`, `npm run build` e `npm run test:e2e` têm de
-  passar.
+  passar. **Ler o código de saída do Playwright, e não a última linha:** um
+  `npm run test:e2e | tail -6` devolve o estado do `tail` e esconde as falhas.
+- **A bateria corre com três workers e 60s por teste** (`playwright.config.ts`).
+  Com os workers por omissão — metade dos dez núcleos — cada um é um Chromium,
+  todos partilham um só Vite, e as falhas apareciam sempre nas asserções com
+  prazo: o foco a entrar numa persiana, uma desmontagem de contexto a estourar
+  os 30s. Medido a 2026-09-10: cinco falhados e oito instáveis antes, zero e
+  zero depois, e a bateria passou de 12,6 a 6,7 minutos.
+- **Não esperar por `networkidle` quando há uma asserção a seguir.** É uma
+  promessa sobre a rede inteira, e basta um pedido pendurado — uma fotografia,
+  um tipo de letra — para nunca chegar; era o que estourava os prazos em
+  `ficha-atleta.spec.ts`. Esperar pelo elemento que o teste vai usar diz a
+  mesma coisa e não depende da rede.
 - Qualquer alteração de UI tem de ser verificada em janela **estreita e larga**: em
   ambas tem de aparecer a mesma coisa, centrada. Diferenças entre as duas são bug.
   **`tests/e2e/larguras.spec.ts` verifica-o sozinho**, de duas maneiras. A
@@ -809,6 +826,14 @@ teria de ser rodada de imediato.
   de palavras. **Não guarda imagens de referência**: compara duas capturas do
   mesmo instante, portanto não há nada para versionar nem para atualizar quando o
   desenho mudar de propósito. Um ecrã novo acrescenta-se à lista `ECRAS`.
+  **O limite é 0,10% e é o chão do ruído medido**, não um número escolhido a
+  olho: numa passagem verde, dez ecrãs dão 0,0000%, o Plantel 0,0012%, as
+  Definições 0,0057%, o detalhe do evento 0,0385% e a ficha do adversário
+  0,0530%. Com o limite a 0,05% essa última passava num dia e falhava no outro
+  sem nada ter mudado. Uma diferença a sério dá ordens de grandeza acima —
+  0,22% no caso que apanhou o separador dos torneios a empurrar a página —, e
+  uma coluna de tamanho diferente falha logo nas dimensões, sem chegar a
+  comparar pixels.
 - Ao redesenhar um ecrã, cruzar com `Mapa de Navegação.dc.html` do handoff para
   nenhum botão ficar sem destino, e manter o vocabulário do código (posições GR–PL,
   estados Apto/Lesionado/Inativo, tipos de evento, participação na ficha de jogo).

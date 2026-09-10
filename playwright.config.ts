@@ -22,7 +22,22 @@ export default defineConfig({
   // lento faz falhar uma asserção que noutra corrida passa. Falhar duas vezes
   // continua a ser falha a sério.
   retries: 1,
-  workers: process.env.CI ? 1 : undefined,
+  /*
+    Metade dos núcleos, que é o que o Playwright faz por omissão, era de mais
+    nesta máquina: cada worker é um Chromium, todos partilham um só Vite, e as
+    falhas apareciam sempre nas asserções com prazo — o foco a entrar numa
+    persiana, uma desmontagem de contexto a estourar os 30s. Em isolamento os
+    mesmos ficheiros passavam em 1,3 minutos. Três workers deixam núcleos para
+    o Vite e para o browser fazerem o seu trabalho.
+  */
+  workers: process.env.CI ? 1 : 3,
+  /*
+    60s por teste, contra os 30s por omissão. Um teste que abre meia dúzia de
+    persianas, cada uma com a sua consulta, não é um teste unitário — e o que
+    falhava era a desmontagem do contexto a apanhar o fim do prazo, não uma
+    asserção.
+  */
+  timeout: 60_000,
   reporter: process.env.CI ? 'line' : 'list',
   use: {
     baseURL: `http://localhost:${PORTA}/csc-vet/`,

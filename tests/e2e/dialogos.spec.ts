@@ -36,8 +36,15 @@ async function verificaContrato(painel: Locator) {
   await expect(painel).toBeVisible()
   await expect(painel).toHaveAttribute('aria-modal', 'true')
   expect(await nomeAcessivel(painel), 'o diálogo tem de ter nome acessível').not.toBe('')
-  // O foco entra no diálogo: sem isto o teclado continuava na página por baixo.
-  await expect.poll(() => focoDentro(painel), { timeout: 2000 }).toBe(true)
+  /*
+    O foco entra no diálogo: sem isto o teclado continuava na página por baixo.
+
+    Cinco segundos e não dois: o `useModalA11y` insiste durante 120 frames, e
+    numa máquina carregada 120 frames são bem mais do que dois segundos. O
+    limite é generoso de propósito — a espera acaba assim que o foco entra, e
+    só o caminho da falha é que paga por ele.
+  */
+  await expect.poll(() => focoDentro(painel), { timeout: 5000 }).toBe(true)
 }
 
 /** Diálogo simples: abre, cumpre o contrato e fecha com Escape. */
