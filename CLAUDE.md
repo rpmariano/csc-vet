@@ -233,6 +233,17 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   e uma barra de cor à esquerda com o seu estado. Tinham os dois o mesmo peso,
   e a categoria "Seguro Desportivo" aparecia colada ao encargo "Seguro
   Desportivo 26/27" sem nada a dizer que um era o título do outro.
+  **E o grupo é uma caixa só, com as linhas por dentro** — banda em cima, um
+  fio entre linhas, nada de caixas irmãs: com o cabeçalho numa caixa e cada
+  linha na sua, do mesmo cinzento, voltava a ler-se tudo ao mesmo nível. Foi
+  isso que os Pagamentos Programados tinham, e é por isso que a lista é hoje um
+  bloco só (`src/components/financeiro/PagamentosProgramados.tsx`), usado pela
+  Visão Geral e pelas Despesas/Receitas — ali a linha leva às Despesas, aqui
+  abre o registo do pagamento.
+  **A linha não repete o que o cabeçalho já diz:** dentro de "Inscrição — Liga
+  Masters +35", a linha "Liga Masters +35 — Tranche 1" fica "Tranche 1" — o
+  corte é por travessão e um título de uma parte só fica intacto, senão o
+  seguro passava a chamar-se "26/27".
 - **Uma persiana sobe sempre até meio do ecrã** (`min-h-[55dvh]` no
   `BottomSheet`). Sem isso o painel agarrava-se ao conteúdo, e uma persiana
   curta abria uma tira colada ao fundo do telemóvel — o título à altura dos
@@ -473,6 +484,31 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   natural nesta página é rolar para baixo, e um calendário que mudasse de mês a
   meio de um scroll era pior do que não ter gesto nenhum. As setas ficam: um
   gesto não chega ao teclado nem a quem usa leitor de ecrã.
+- **Nas Quotas há dois estados: ou se deve, ou se está em dia.** Devedor é
+  quem tem um mês cujo prazo já passou (`status = 'late'` em
+  `v_quota_status`); todo o resto está em dia, **incluindo quem tem meses por
+  pagar** — a quota de março paga-se em março, e devê-la em setembro não é
+  dever nada. Havia uma terceira pastilha, âmbar, com "9 por pagar", que punha
+  em aviso quem não devia um cêntimo ao lado do vermelho de quem devia mesmo.
+  **A lista abre pelos devedores e ordena cada grupo por nome** — a vista vem
+  por número de camisola, e procurar alguém assim é ler os vinte. Cada grupo é
+  uma `<section>` com nome, e não uma pilha de cartões: banda em cima com o
+  estado, a contagem e (nos devedores) o total por receber, e os atletas como
+  linhas separadas por um fio lá dentro. Vinte e dois cartões com moldura,
+  fundo e um vão de 12px entre cada dois eram uma parede onde não se
+  distinguia nada.
+  **A linha diz uma coisa só:** a barra de estado, o nome e, à direita, o que
+  interessa ao grupo — quanto se deve, para quem deve; os meses pagos, para
+  quem está em dia. Tinha barra, pastilha, contagem por extenso e o número da
+  camisola num círculo com aro dourado, quatro maneiras de dizer o mesmo.
+  **A grelha dos meses lá dentro continua com três cores**, e é outra
+  pergunta: ali interessa separar o mês que já venceu do que ainda não chegou.
+- **Marcar um mês de quota não devolve a lista ao topo.** O `fetchAll()` do
+  Financeiro põe `loading` e a página passa a ser só o rodopio: o documento
+  encolhe, o browser perde a posição, e quem estivesse no décimo atleta
+  voltava ao princípio a cada mês que marcasse. As escritas de quota
+  recarregam com `fetchAll(true)`, sem rodopio — a gravação já se vê na
+  pastilha, que fica desativada enquanto grava.
 - **Meses dispensados de quota (ecrã 3c): a fila segue a época, não o
   calendário.** Começa em `season_start_month` e dá a volta aos doze meses. Os
   que o clube inteiro não paga (`financial_settings.quota_excluded_months`) e os

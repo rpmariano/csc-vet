@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
-import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, ChevronsUpDown, FileText } from 'lucide-react'
+import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, ChevronsUpDown, ChevronRight, ScrollText } from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
 import { useClub } from '../context/ClubContext'
@@ -567,6 +567,11 @@ export const StandingsPage = () => {
                                vem da ficha de jogo e escreve-se lá, senão os
                                dois sítios ficavam a dizer coisas diferentes. */
                             const daFicha = Boolean(m.event_id)
+                            /* Com resultado lançado há ficha para abrir; sem
+                               ele o jogo é nosso mas ainda não tem ficha
+                               nenhuma, e a linha diz isso em vez de convidar a
+                               abrir uma página vazia. */
+                            const temFicha = daFicha && terminado
                             const data = m.match_date
                               ? new Date(m.match_date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })
                               : '—'
@@ -672,12 +677,15 @@ export const StandingsPage = () => {
                             /* A barra à esquerda marca os nossos jogos, como as
                                linhas de "Os meus pagamentos" marcam o estado. */
                             const linha =
-                              'w-full min-h-11 flex items-center gap-2 px-2.5 py-1.5 rounded-[14px] border-l-[3px] ' +
+                              /* `gap-1.5` e `px-2`: as siglas são o que se lê,
+                                 e com o ícone da ficha à direita um "CA
+                                 Montijo" saía truncado a meio. */
+                              'w-full min-h-11 flex items-center gap-1.5 px-2 py-1.5 rounded-[14px] border-l-[3px] ' +
                               (nosso ? 'border-l-csc-gold bg-csc-gold/10' : 'border-l-white/15 bg-white/5')
 
                             const conteudo = (
                               <>
-                                <span className={`w-9 shrink-0 font-display font-bold text-[9.5px] tabular-nums ${terminado ? 'text-white/45' : 'text-csc-gold/85'}`}>
+                                <span className={`w-8 shrink-0 font-display font-bold text-[9.5px] tabular-nums ${terminado ? 'text-white/45' : 'text-csc-gold/85'}`}>
                                   {data}
                                 </span>
                                 <span className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
@@ -694,7 +702,7 @@ export const StandingsPage = () => {
                                   /* Por realizar não leva pastilha nenhuma: o
                                      "VS" dourado, como no cartão de jogo da
                                      Home, já diz que não há resultado. */
-                                  <span className="shrink-0 w-11 text-center font-display font-black text-[11px] tracking-[0.08em] text-csc-gold/80">
+                                  <span className="shrink-0 w-10 text-center font-display font-black text-[11px] tracking-[0.08em] text-csc-gold/80">
                                     VS
                                   </span>
                                 )}
@@ -706,6 +714,27 @@ export const StandingsPage = () => {
                                 </span>
                               </>
                             )
+
+                            /* Um jogo nosso já lançado abre a ficha: é lá que
+                               está o resultado, os marcadores e os cartões, e
+                               daqui só se via o placar. */
+                            if (temFicha) {
+                              return (
+                                <Link
+                                  key={m.id}
+                                  to={`/competicao?ver=fichas&jogo=${m.event_id}`}
+                                  onClick={() => triggerHaptic('light')}
+                                  aria-label={`Abrir a ficha de jogo de ${casa.sigla} com ${fora.sigla}`}
+                                  className={`${linha} cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
+                                >
+                                  {conteudo}
+                                  <span className="shrink-0 flex items-center gap-0.5 text-csc-gold" aria-hidden="true">
+                                    <ScrollText size={13} />
+                                    <ChevronRight size={12} className="opacity-70" />
+                                  </span>
+                                </Link>
+                              )
+                            }
 
                             return canManage && !daFicha ? (
                               <button
@@ -722,12 +751,15 @@ export const StandingsPage = () => {
                               <div key={m.id} className={linha}>
                                 {conteudo}
                                 {daFicha && (
+                                  /* Nosso, marcado, e ainda sem ficha: o ícone
+                                     apagado ao lado do dourado dos que já a
+                                     têm diz de relance quais faltam lançar. */
                                   <span
-                                    className="shrink-0 text-white/35"
-                                    title="O resultado deste jogo vem da ficha de jogo"
-                                    aria-label="Resultado lançado na ficha de jogo"
+                                    className="shrink-0 text-white/20"
+                                    title="Jogo nosso, ainda sem ficha de jogo"
+                                    aria-label="Ainda sem ficha de jogo"
                                   >
-                                    <FileText size={13} />
+                                    <ScrollText size={13} />
                                   </span>
                                 )}
                               </div>
