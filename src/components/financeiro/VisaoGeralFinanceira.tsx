@@ -285,6 +285,51 @@ const Legenda: React.FC<{ cor: string; children: React.ReactNode }> = ({ cor, ch
   </span>
 )
 
+/**
+ * Um bloco da Visão Geral: **banda com o título em cima, conteúdo por baixo**.
+ *
+ * É a forma que o Financeiro inteiro passou a ter — os grupos das Quotas, as
+ * categorias dos Pagamentos Programados, os meses das Despesas. Aqui os
+ * títulos flutuavam dentro do cartão, à mistura com o conteúdo, e o número que
+ * resume o bloco andava ora ao lado do título ora numa linha de rodapé, atrás
+ * de um traço. Na banda, o título à esquerda e o resumo à direita.
+ */
+const Bloco: React.FC<{
+  titulo: string
+  icone?: React.ReactNode
+  /** O número ou a pastilha que resume o bloco, à direita da banda. */
+  resumo?: React.ReactNode
+  /** Espaçamento do corpo; as listas passam `p-0` e tratam do seu. */
+  corpo?: string
+  children: React.ReactNode
+}> = ({ titulo, icone, resumo, corpo = 'p-3.5 space-y-3', children }) => (
+  <section aria-label={titulo} className="cartao-simples text-white overflow-hidden">
+    <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.055] border-b border-white/12">
+      {icone}
+      <h3 className={ETIQUETA_SECCAO}>{titulo}</h3>
+      {resumo && <span className="ml-auto shrink-0">{resumo}</span>}
+    </div>
+    <div className={corpo}>{children}</div>
+  </section>
+)
+
+/** Uma linha de repartição por categoria: rótulo, valor e a barra por baixo. */
+const LinhaCategoria: React.FC<{
+  rotulo: string
+  valor: React.ReactNode
+  children: React.ReactNode
+}> = ({ rotulo, valor, children }) => (
+  <div className="px-3 py-2.5 border-t border-white/8 first:border-t-0">
+    <div className="flex items-baseline justify-between gap-2 mb-1.5">
+      <span className="font-display font-bold text-[12px] text-white/85 truncate">{rotulo}</span>
+      <span className="font-display font-black text-[12px] tabular-nums text-white text-right shrink-0">
+        {valor}
+      </span>
+    </div>
+    {children}
+  </div>
+)
+
 // ---------------------------------------------------------------------------
 // Barra de composição — entradas e saídas à mesma escala
 // ---------------------------------------------------------------------------
@@ -312,7 +357,6 @@ export interface VisaoGeralFinanceiraProps {
   quotaRows: QuotaStatusRow[]
   /** Saldo em caixa hoje — recebido menos pago, de todos os movimentos. */
   netBalance: number
-  totalReceived: number
   totalExpenses: number
   /** Receita avulsa já recebida (patrocínio, rifa) — nem quota nem encargo. */
   totalIncomeOther: number
@@ -337,7 +381,7 @@ export interface VisaoGeralFinanceiraProps {
 
 export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
   seasonLabel, settings, movements, quotaRows,
-  netBalance, totalReceived, totalExpenses, totalIncomeOther,
+  netBalance, totalExpenses, totalIncomeOther,
   projectedQuotasTotal, totalEncargosTarget, totalScheduledPaymentsTarget,
   receivedTowardsProjection, encargosPorReceber,
   pendingScheduledPayments, pendingScheduledPaymentsTotal, scheduledPaymentsByCategory,
@@ -458,12 +502,11 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
         plano, e os pagamentos são um dos seus pedaços. Vê-los primeiro era
         ler o detalhe antes do total.
       */}
-      <div className="cartao-simples text-white p-4 space-y-3.5">
-        <h3 className={`${ETIQUETA_SECCAO} flex items-center gap-2`}>
-          <TrendingUp size={16} className="text-csc-gold" />
-          <span>Previsão da época {seasonLabel}</span>
-        </h3>
-
+      <Bloco
+        titulo={`Previsão da época ${seasonLabel}`}
+        icone={<TrendingUp size={15} className="text-csc-gold shrink-0" />}
+        corpo="p-3.5 space-y-3.5"
+      >
         <div>
           <div className="flex items-baseline justify-between gap-2 mb-1.5">
             <span className={ETIQUETA_GRUPO}>Entra</span>
@@ -527,7 +570,7 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
             {projectionPct}% das quotas e encargos da época já foi recebido — faltam {fmtEuro(Math.max(0, projectedSeasonTotal - receivedTowardsProjection))}.
           </p>
         </div>
-      </div>
+      </Bloco>
 
       {/*
         Pagamentos Programados — desceu para debaixo da Previsão, e deixou de
@@ -539,17 +582,13 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
         continua só em Despesas/Receitas; cada linha leva lá.
       */}
       {pendingScheduledPayments.length > 0 && (
-        <div className="cartao-simples text-white p-4 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className={`${ETIQUETA_SECCAO} flex items-center gap-2`}>
-              <Receipt size={16} className={pagamentosEmAtraso > 0 ? 'text-csc-vermelho-texto' : 'text-csc-gold'} />
-              <span>Pagamentos programados</span>
-            </h3>
-            {pagamentosEmAtraso > 0
-              ? <span className={CHIP_ATRASO}>{pagamentosEmAtraso} em atraso</span>
-              : <span className={CHIP_NEUTRO}>{pendingScheduledPayments.length} por pagar</span>}
-          </div>
-
+        <Bloco
+          titulo="Pagamentos programados"
+          icone={<Receipt size={15} className={`shrink-0 ${pagamentosEmAtraso > 0 ? 'text-csc-vermelho-texto' : 'text-csc-gold'}`} />}
+          resumo={pagamentosEmAtraso > 0
+            ? <span className={CHIP_ATRASO}>{pagamentosEmAtraso} em atraso</span>
+            : <span className={CHIP_NEUTRO}>{pendingScheduledPayments.length} por pagar</span>}
+        >
           <p className="text-xs text-white/60">
             <span className="font-black text-white tabular-nums">{fmtEuro(pendingScheduledPaymentsTotal)}</span>
             {' '}por pagar a terceiros até ao fim da época.
@@ -559,7 +598,7 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
             grupos={scheduledPaymentsByCategory}
             aoTocar={() => { triggerHaptic('selection'); irParaDespesas() }}
           />
-        </div>
+        </Bloco>
       )}
 
       {/*
@@ -568,25 +607,22 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
         o plano pelos prazos que já existem, e o ponto do fim é exatamente o
         Saldo Previsto do cartão de cima.
       */}
-      <div className="cartao-simples text-white p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className={`${ETIQUETA_SECCAO} flex items-center gap-2`}>
-            <Activity size={16} className="text-csc-gold" />
-            <span>Saldo ao longo da época</span>
-          </h3>
-          {saldoPrevisto < 0 && (
-            <span className={`${CHIP_ATRASO} flex items-center gap-1`}>
-              <AlertTriangle size={10} aria-hidden="true" />
-              Fecha negativo
-            </span>
-          )}
-        </div>
+      <Bloco
+        titulo="Saldo ao longo da época"
+        icone={<Activity size={15} className="text-csc-gold shrink-0" />}
+        resumo={saldoPrevisto < 0 && (
+          <span className={`${CHIP_ATRASO} flex items-center gap-1`}>
+            <AlertTriangle size={10} aria-hidden="true" />
+            Fecha negativo
+          </span>
+        )}
+      >
         <GraficoSaldo pontos={serieSaldo} idxHoje={idxHoje} />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 border-t border-white/10">
           <Legenda cor="bg-csc-verde-texto">Realizado · {fmtEuroCurto(netBalance)}</Legenda>
           <Legenda cor="bg-csc-gold">Previsto · {fmtEuroCurto(saldoPrevisto)}</Legenda>
         </div>
-      </div>
+      </Bloco>
 
       {/*
         Cobrança de quotas, mês a mês — no lugar da "Situação de Quotas dos
@@ -595,17 +631,16 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
         aqui interessa em que meses a cobrança falhou, não quem falhou.
       */}
       {cobrancaPorMes.length > 0 && (
-        <div className="cartao-simples text-white p-4 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className={`${ETIQUETA_SECCAO} flex items-center gap-2`}>
-              <ListChecks size={16} className="text-csc-gold" />
-              <span>Cobrança de quotas</span>
-            </h3>
-            <span className="font-display font-black text-[13px] tabular-nums text-white">
+        <Bloco
+          titulo="Cobrança de quotas"
+          icone={<ListChecks size={15} className="text-csc-gold shrink-0" />}
+          resumo={
+            <span className="font-display font-black text-[11px] tabular-nums text-white">
               {fmtEuroCurto(cobranca.pago)}
               <span className="text-white/45"> / {fmtEuroCurto(cobranca.esperado)}</span>
             </span>
-          </div>
+          }
+        >
           <GraficoCobranca meses={cobrancaPorMes} />
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 border-t border-white/10">
             <Legenda cor="bg-csc-light">{cobranca.fechados} de {cobrancaPorMes.length} meses fechados</Legenda>
@@ -617,14 +652,25 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
               </Legenda>
             )}
           </div>
-        </div>
+        </Bloco>
       )}
 
       {/* Valor recebido por categoria — quanto entrou de cada coisa, contra o
           que se espera receber dela em toda a época. */}
-      <div className="cartao-simples text-white p-4 space-y-3">
-        <h3 className={ETIQUETA_SECCAO}>Valor recebido por categoria</h3>
-        <div className="space-y-3">
+      <Bloco
+        titulo="Valor recebido por categoria"
+        corpo="p-0"
+        /* A soma das linhas que estão por baixo, e não o `totalReceived`:
+           são duas contas diferentes da mesma coisa, e uma banda que não bata
+           certo com a sua própria lista mente. O "Outras" recolhe o que fica
+           fora do top 5, por isso a soma é o total. */
+        resumo={
+          <span className="font-display font-black text-[11px] tabular-nums text-white">
+            {fmtEuro(receitaPorCategoria.reduce((soma, [, valor]) => soma + valor, 0))}
+          </span>
+        }
+      >
+        <div>
           {receitaPorCategoria.map(([label, valor], idx) => {
             const objetivo = objetivoPorCategoria.get(label)
             const temObjetivo = objetivo !== undefined && objetivo > 0
@@ -635,87 +681,94 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
             const corBase = label === 'Outras' ? corOutras : (receitaCores[idx] || corOutras)
             const cor = temObjetivo && pct >= 100 ? 'bg-csc-light' : corBase
             return (
-              <div key={label}>
-                <div className="flex items-center justify-between text-xs mb-1 gap-2">
-                  <span className="font-bold text-white/80">{label}</span>
-                  <span className="font-black text-white text-right tabular-nums">
+              <LinhaCategoria
+                key={label}
+                rotulo={label}
+                valor={
+                  <>
                     {temObjetivo ? `${fmtEuro(valor)} / ${fmtEuro(objetivo)}` : fmtEuro(valor)}
                     {excedeu && (
                       <span className="ml-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-csc-light/20 text-csc-verde-texto align-middle">
                         +{fmtEuro(valor - objetivo)}
                       </span>
                     )}
-                  </span>
-                </div>
-                <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+                  </>
+                }
+              >
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                   <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
                 </div>
-              </div>
+              </LinhaCategoria>
             )
           })}
         </div>
-        <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-          <span className="text-xs font-bold text-white/70">Total recebido</span>
-          <span className="font-display font-black text-lg tabular-nums text-white">{fmtEuro(totalReceived)}</span>
-        </div>
-      </div>
+      </Bloco>
 
       {/* Despesa por categoria. */}
       {despesaPorCategoria.length > 0 && (
-        <div className="cartao-simples text-white p-4 space-y-3">
-          <h3 className={ETIQUETA_SECCAO}>Despesa por categoria</h3>
-          <div className="space-y-3">
+        <Bloco
+          titulo="Despesa por categoria"
+          corpo="p-0"
+          resumo={
+            <span className="font-display font-black text-[11px] tabular-nums text-white">
+              {fmtEuro(despesaPorCategoria.reduce((soma, [, valor]) => soma + valor, 0))}
+            </span>
+          }
+        >
+          <div>
             {despesaPorCategoria.map(([label, valor], idx) => {
               const pct = Math.round((valor / maxDespesa) * 100)
               const cor = label === 'Outras' ? corOutras : (despesaCores[idx] || corOutras)
               return (
-                <div key={label}>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-bold text-white/80">{label}</span>
-                    <span className="font-black text-white tabular-nums">{fmtEuro(valor)}</span>
-                  </div>
-                  <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+                <LinhaCategoria key={label} rotulo={label} valor={fmtEuro(valor)}>
+                  <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                     <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.max(2, pct)}%` }} />
                   </div>
-                </div>
+                </LinhaCategoria>
               )
             })}
           </div>
-          <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-            <span className="text-xs font-bold text-white/70">Total de despesas</span>
-            <span className="font-display font-black text-lg tabular-nums text-white">{fmtEuro(totalExpenses)}</span>
-          </div>
-        </div>
+        </Bloco>
       )}
 
       {/* Valor a pagar por categoria — o espelho do recebido, para o lado do
           que o clube tem de entregar a terceiros. */}
       {pagarPorCategoria.length > 0 && (
-        <div className="cartao-simples text-white p-4 space-y-3">
-          <h3 className={ETIQUETA_SECCAO}>Valor a pagar por categoria</h3>
-          <div className="space-y-3">
+        <Bloco
+          titulo="Valor a pagar por categoria"
+          corpo="p-0"
+          resumo={
+            <span className="font-display font-black text-[11px] tabular-nums text-white">
+              {fmtEuro(pagarPorCategoria.reduce((soma, r) => soma + r.pago, 0))}
+              <span className="text-white/45">
+                {' / '}{fmtEuro(pagarPorCategoria.reduce((soma, r) => soma + r.pago + r.porPagar, 0))}
+              </span>
+            </span>
+          }
+        >
+          <div>
             {pagarPorCategoria.map(r => {
               const total = r.pago + r.porPagar
               const pagoPct = total > 0 ? Math.round((r.pago / total) * 100) : 0
               return (
-                <div key={r.label}>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-bold text-white/80">{r.label}</span>
-                    <span className="font-black text-white tabular-nums">{fmtEuro(r.pago)} / {fmtEuro(total)}</span>
-                  </div>
-                  <div className="h-2.5 rounded-full bg-white/10 overflow-hidden flex">
+                <LinhaCategoria
+                  key={r.label}
+                  rotulo={r.label}
+                  valor={<>{fmtEuro(r.pago)}<span className="text-white/45"> / {fmtEuro(total)}</span></>}
+                >
+                  <div className="h-2 rounded-full bg-white/10 overflow-hidden flex">
                     <div className="h-full bg-csc-light" style={{ width: `${pagoPct}%` }} />
                     <div className="h-full bg-amber-400" style={{ width: `${100 - pagoPct}%` }} />
                   </div>
-                </div>
+                </LinhaCategoria>
               )
             })}
           </div>
-          <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-4 px-3 py-2 border-t border-white/10">
             <Legenda cor="bg-csc-light">Pago</Legenda>
             <Legenda cor="bg-amber-400">Por pagar</Legenda>
           </div>
-        </div>
+        </Bloco>
       )}
     </div>
   )

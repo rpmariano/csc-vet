@@ -1323,7 +1323,6 @@ const FinancePage: React.FC = () => {
           movements={movements}
           quotaRows={quotaRows}
           netBalance={netBalance}
-          totalReceived={totalReceived}
           totalExpenses={totalExpenses}
           totalIncomeOther={totalIncomeOther}
           projectedQuotasTotal={projectedQuotasTotal}

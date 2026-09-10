@@ -44,7 +44,10 @@ test('a linha não repete o cabeçalho do grupo', async ({ page }) => {
   await montarSupabaseFalso(page, FIXTURES)
   await page.goto('/csc-vet/finance')
   await page.waitForLoadState('networkidle')
-  const cartao = page.locator('div').filter({ hasText: /^Pagamentos programados/ }).first()
+  /* Pelo nome da região e não por um filtro de texto num `div`: o bloco é
+     hoje uma `<section>` com nome, e é esse o seletor que não se parte quando
+     o cartão muda de aspeto. */
+  const cartao = page.getByRole('region', { name: 'Pagamentos programados' })
   await expect(cartao).toBeVisible({ timeout: 15000 })
 
   // A banda leva a categoria; a linha, só o que a distingue das outras.
@@ -339,4 +342,33 @@ test('apagar um lançamento pergunta primeiro', async ({ page }) => {
   await page.getByRole('button', { name: /Cancelar/ }).click()
   await expect(aviso).toHaveCount(0)
   await expect(setembro).toContainText('Bolas novas')
+})
+
+/**
+ * Visão Geral — cada bloco é uma banda com o título e o resumo, e o conteúdo
+ * por baixo. Os títulos flutuavam dentro do cartão e o número que resume o
+ * bloco andava ora ao lado do título ora num rodapé atrás de um traço.
+ */
+test('na Visão Geral, a banda resume a lista que tem por baixo', async ({ page }) => {
+  await montarSupabaseFalso(page, {
+    ...FIXTURES_MOVIMENTOS,
+    v_financial_movements: [
+      { id: 'm1', entry_date: '2026-09-08', type: 'expense', amount: 120, category_label: 'Material', season: '2026/2027', source: 'transaction' },
+      { id: 'm2', entry_date: '2026-09-05', type: 'income', amount: 500, category_label: 'Patrocínios', season: '2026/2027', source: 'transaction' },
+      { id: 'm3', entry_date: '2026-08-28', type: 'expense', amount: 60, category_label: 'Material', season: '2026/2027', source: 'transaction' },
+    ],
+  })
+  await page.goto('/csc-vet/finance?ver=overview')
+  await page.waitForLoadState('networkidle')
+
+  const despesa = page.getByRole('region', { name: 'Despesa por categoria' })
+  await expect(despesa).toBeVisible({ timeout: 15000 })
+
+  /* A banda soma as linhas que tem por baixo — 120 mais 60 de Material. Era o
+     `totalExpenses`, uma segunda conta da mesma coisa. */
+  await expect(despesa).toContainText('180,00')
+
+  const recebido = page.getByRole('region', { name: 'Valor recebido por categoria' })
+  await expect(recebido).toContainText('Patrocínios')
+  await expect(recebido).toContainText('500,00')
 })
