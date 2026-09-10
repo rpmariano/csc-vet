@@ -620,6 +620,21 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   calendário e a pastilha do cartão diziam a mesma coisa em tons diferentes —
   o convívio era `csc-azul-texto` no ponto e `blue-300` no rótulo.
 - Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
+- **As três listas do plantel inteiro leem-se da mesma maneira.** Plantel,
+  Quotas e Encargos mostram as mesmas pessoas, e mostravam-nas de três
+  maneiras: no Plantel uma bola verde com o número, nas Quotas um número
+  apagado ao lado da barra, nos Encargos nada. A `<LinhaAtleta>`
+  (`src/components/ui`) é a linha das três — **a bola verde com o número é de
+  todas, a fotografia e a posição são só do Plantel**, que é o ecrã onde a
+  pergunta é quem é a pessoa; nos outros dois é quanto deve.
+- **O Plantel agrupa por perfil, e quem tem vários conta pelo primeiro desta
+  ordem: jogador, treinador, direção.** Metade da direção deste clube também
+  joga, e quem joga aparece entre os jogadores. Os inativos ficam num grupo à
+  parte no fim, como já estavam. **A ordem por omissão passou a ser o nome**: o
+  handoff pedia o número de camisola, mas com a lista agrupada a numeração já
+  não corre seguida, e procurar um nome numa lista por número é lê-la toda. O
+  número continua a ser uma das ordens, na persiana dos filtros.
+  `tests/e2e/listas-do-plantel.spec.ts` cobre as duas coisas.
 - **O plantel lê-se de `v_players_public`, não de `profiles`.** Tudo o que mostre
   colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a
   vista, que só tem colunas de equipa. `profiles` fica para a própria ficha e para o

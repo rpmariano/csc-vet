@@ -17,7 +17,7 @@ import {
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
-import { CabecalhoEcra, Pastilha } from '../components/ui'
+import { CabecalhoEcra, Pastilha, LinhaAtleta } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
 import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -1413,21 +1413,25 @@ const FinancePage: React.FC = () => {
                         aria-hidden="true"
                         className={`w-[3px] self-stretch rounded-full shrink-0 ${devedor ? BARRA_ATRASO : BARRA_PAGO}`}
                       />
-                      <span className="w-5 shrink-0 text-right font-display font-extrabold text-[10.5px] tabular-nums text-white/40">
-                        {q.player.jersey_number || '—'}
-                      </span>
-                      <span className="min-w-0 flex-1 font-display font-extrabold text-[13px] text-white truncate">
-                        {q.player.shirt_name || q.player.name}
-                      </span>
-                      {devedor ? (
-                        <span className="shrink-0 font-display font-black text-[12.5px] tabular-nums text-csc-vermelho-texto">
-                          {fmtEuro(q.lateAmount)}
-                        </span>
-                      ) : (
-                        <span className="shrink-0 font-bold text-[11px] tabular-nums text-white/45">
-                          {q.paidCount}/{q.months.length}
-                        </span>
-                      )}
+                      {/* A bola verde com o número é a mesma do Plantel e dos
+                          Encargos: são as três listas do plantel inteiro, e
+                          quem passa de uma para a outra não tem de reaprender
+                          a linha. A fotografia e a posição ficam no Plantel. */}
+                      <LinhaAtleta
+                        numero={q.player.jersey_number}
+                        nome={q.player.shirt_name || q.player.name || 'Atleta'}
+                        direita={
+                          devedor ? (
+                            <span className="shrink-0 font-display font-black text-[12.5px] tabular-nums text-csc-vermelho-texto">
+                              {fmtEuro(q.lateAmount)}
+                            </span>
+                          ) : (
+                            <span className="shrink-0 font-bold text-[11px] tabular-nums text-white/45">
+                              {q.paidCount}/{q.months.length}
+                            </span>
+                          )
+                        }
+                      />
                       <ChevronDown size={15} className={`shrink-0 text-white/35 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
                     </button>
 
@@ -1695,22 +1699,25 @@ const FinancePage: React.FC = () => {
 
                                   <div className="min-w-0 flex-1 space-y-2">
                                     <div className="flex items-center gap-2 min-h-9">
-                                      <span className="font-display font-extrabold text-[12.5px] text-white truncate flex-1 min-w-0">
-                                        {nome}
-                                      </span>
-                                      {/* O valor, e não uma pastilha: a cor da barra
-                                          e o grupo já dizem o estado. */}
-                                      {remaining <= 0 ? (
-                                        <span className="shrink-0 font-bold text-[11px] text-csc-verde-texto/85 tabular-nums">
-                                          pago{paidTotal > c.amount ? ` +${fmtEuro(paidTotal - c.amount)}` : ''}
-                                        </span>
-                                      ) : (
-                                        <span className={`shrink-0 font-display font-black text-[12px] tabular-nums ${
-                                          emDivida ? 'text-csc-vermelho-texto' : 'text-white/45'
-                                        }`}>
-                                          {fmtEuro(remaining)}
-                                        </span>
-                                      )}
+                                      <LinhaAtleta
+                                        numero={players.find(pl => pl.id === playerId)?.jersey_number}
+                                        nome={nome}
+                                        /* O valor, e não uma pastilha: a cor da barra
+                                           e o grupo já dizem o estado. */
+                                        direita={
+                                          remaining <= 0 ? (
+                                            <span className="shrink-0 font-bold text-[11px] text-csc-verde-texto/85 tabular-nums">
+                                              pago{paidTotal > c.amount ? ` +${fmtEuro(paidTotal - c.amount)}` : ''}
+                                            </span>
+                                          ) : (
+                                            <span className={`shrink-0 font-display font-black text-[12px] tabular-nums ${
+                                              emDivida ? 'text-csc-vermelho-texto' : 'text-white/45'
+                                            }`}>
+                                              {fmtEuro(remaining)}
+                                            </span>
+                                          )
+                                        }
+                                      />
                                       {isAdmin && (
                                         <button
                                           type="button"
