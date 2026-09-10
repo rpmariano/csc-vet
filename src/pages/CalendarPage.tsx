@@ -44,6 +44,8 @@ import { useModalA11y } from '../hooks/useModalA11y'
 import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
+import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
+import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -266,29 +268,10 @@ const DATA_CURTA = new Intl.DateTimeFormat('pt-PT', {
 export const formatDataCurta = (iso: string): string =>
   DATA_CURTA.format(new Date(iso)).replace(/\./g, '').toUpperCase()
 
-export const formatClubSigla = (initials?: string | null): string => {
-  if (!initials) return 'CSC'
-  const trimmed = initials.trim()
-  if (trimmed === 'GDS CASCAIS' || trimmed === 'GDSCASCAIS' || trimmed.length > 5 || trimmed.includes(' ')) {
-    return 'CSC'
-  }
-  return trimmed.toUpperCase()
-}
-
-export const formatOpponentSigla = (opp?: { name?: string; initials?: string | null } | null): string => {
-  if (!opp) return 'ADV'
-  if (opp.initials && opp.initials.trim().length <= 6 && !opp.initials.trim().includes(' ')) {
-    return opp.initials.trim().toUpperCase()
-  }
-  if (opp.name) {
-    const words = opp.name.trim().split(/\s+/).filter(w => w.length > 1)
-    if (words.length > 1) {
-      return words.map(w => w[0].toUpperCase()).join('').substring(0, 5)
-    }
-    return opp.name.substring(0, 4).toUpperCase()
-  }
-  return 'ADV'
-}
+/* As siglas mudaram-se para `src/lib/siglas.ts` — a Home também precisa
+   delas, e uma página não é sítio para as guardar. Continuam a sair daqui
+   para quem já as importava. */
+export { formatClubSigla, formatOpponentSigla }
 
 const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
   // A base de dados é a única fonte do plantel. Até agosto de 2026 esta função
@@ -354,6 +337,8 @@ interface Event {
   is_friendly?: boolean | null
   is_active?: boolean
   tournament_id?: string | null
+  /** Jornada da prova em que este jogo conta — ver `jornadaDoJogo.ts`. */
+  matchday?: number | null
   tournament?: {
     id: string
     name: string
@@ -561,6 +546,8 @@ const CalendarPage: React.FC = () => {
   const [editDescription, setEditDescription] = useState('')
   const [editMaxPlayers, setEditMaxPlayers] = useState<number | ''>('')
   const [editTournamentId, setEditTournamentId] = useState('')
+  /* A jornada em que o jogo conta na prova — obrigatória com prova escolhida. */
+  const [editMatchday, setEditMatchday] = useState('')
   const [editOpponentId, setEditOpponentId] = useState('')
   const [editHomeAway, setEditHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
   const [editIsFriendly, setEditIsFriendly] = useState(false)
@@ -602,7 +589,7 @@ const CalendarPage: React.FC = () => {
     aberto: isEditModalOpen,
     valores: [
       editTitle, editType, editDateTime, editMeetingTime, editFieldId, editLocation,
-      editDescription, editMaxPlayers, editTournamentId, editOpponentId, editHomeAway,
+      editDescription, editMaxPlayers, editTournamentId, editMatchday, editOpponentId, editHomeAway,
       editIsFriendly, editIsActive,
     ],
     // Sair da edição de um evento é sempre deliberado: gravá-la pode reenviar
@@ -1057,6 +1044,7 @@ const CalendarPage: React.FC = () => {
     setEditDescription(ev.description || '')
     setEditMaxPlayers(ev.max_players ?? '')
     setEditTournamentId(ev.tournament_id || (ev.tournament?.id || ''))
+    setEditMatchday(ev.matchday ? String(ev.matchday) : '')
     setEditOpponentId(ev.opponent_id || '')
     setEditHomeAway(ev.home_away || 'home')
     setEditIsFriendly(Boolean(ev.is_friendly))
@@ -1068,6 +1056,13 @@ const CalendarPage: React.FC = () => {
   const handleSaveEditedEvent = (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedEvent) return
+
+    /* Um jogo de prova diz sempre em que jornada conta: é o que o põe na
+       tabela e o que deixa a ficha de jogo lançar lá o resultado. */
+    if (editType === 'match' && !editIsFriendly && editTournamentId && !Number(editMatchday)) {
+      toast.warning('Escolhe a jornada em que este jogo conta para a prova.')
+      return
+    }
 
     /*
       A pergunta "reenviar o pedido de resposta a todos os convocados?" só faz
@@ -1112,6 +1107,7 @@ const CalendarPage: React.FC = () => {
         description: editDescription,
         max_players: editMaxPlayers !== '' ? Number(editMaxPlayers) : null,
         tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
+        matchday: (editType === 'match' && !editIsFriendly && editTournamentId) ? Number(editMatchday) : null,
         opponent_id: editType === 'match' ? (editOpponentId || null) : null,
         home_away: editType === 'match' ? editHomeAway : null,
         is_friendly: editType === 'match' ? editIsFriendly : false,
@@ -1124,6 +1120,12 @@ const CalendarPage: React.FC = () => {
         .eq('id', selectedEvent.id)
 
       if (error) throw error
+
+      /* E a linha da jornada acompanha: mudar de prova, de jornada, de
+         adversário ou de casa/fora reescreve-a; tirar a prova ao jogo
+         tira-o da tabela. */
+      const espelho = await sincronizarJogoNaJornada({ ...selectedEvent, ...payload, id: selectedEvent.id } as EventoParaJornada)
+      if (espelho.estado === 'sem-equipas') toast.warning(AVISO_SEM_EQUIPAS)
 
       // Se o utilizador escolheu reenviar o pedido de confirmação:
       if (resendCallups) {
@@ -3185,7 +3187,7 @@ const CalendarPage: React.FC = () => {
                         checked={editIsFriendly}
                         onChange={(e) => {
                           setEditIsFriendly(e.target.checked)
-                          if (e.target.checked) setEditTournamentId('')
+                          if (e.target.checked) { setEditTournamentId(''); setEditMatchday('') }
                         }}
                         className="h-4 w-4 accent-csc-gold rounded cursor-pointer"
                       />
@@ -3194,20 +3196,38 @@ const CalendarPage: React.FC = () => {
                       </label>
                     </div>
                     {!editIsFriendly && (
-                      <div className="animate-fade-in">
-                        <label className={ETIQUETA_FORM}>Torneio / Competição</label>
-                        <select
-                          value={editTournamentId}
-                          onChange={(e) => setEditTournamentId(e.target.value)}
-                          className={CAMPO_FORM}
-                        >
-                          <option value="">-- Selecionar Torneio --</option>
-                          {tournaments.map(t => (
-                            <option key={t.id} value={t.id}>
-                              {t.name} {t.season ? `(${t.season})` : ''}
-                            </option>
-                          ))}
-                        </select>
+                      <div className="animate-fade-in flex gap-2.5">
+                        <div className="flex-1 min-w-0">
+                          <label className={ETIQUETA_FORM} htmlFor="agenda-prova">Torneio / Competição</label>
+                          <select
+                            id="agenda-prova"
+                            value={editTournamentId}
+                            onChange={(e) => setEditTournamentId(e.target.value)}
+                            className={CAMPO_FORM}
+                          >
+                            <option value="">-- Selecionar Torneio --</option>
+                            {tournaments.map(t => (
+                              <option key={t.id} value={t.id}>
+                                {t.name} {t.season ? `(${t.season})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {editTournamentId && (
+                          <div className="w-[96px] flex-none">
+                            <label className={ETIQUETA_FORM} htmlFor="agenda-jornada">Jornada *</label>
+                            <input
+                              id="agenda-jornada"
+                              type="number"
+                              min="1"
+                              inputMode="numeric"
+                              value={editMatchday}
+                              onChange={e => setEditMatchday(e.target.value)}
+                              placeholder="1"
+                              className={CAMPO_FORM}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
 

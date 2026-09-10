@@ -6,7 +6,7 @@ import { ConfirmModal } from './ConfirmModal'
 import { Modal } from './Modal'
 import { CLUBE_SIGLA } from '../lib/clube'
 import { useClub } from '../context/ClubContext'
-import { equipaDoTorneio } from '../pages/StandingsPage'
+import { equipaDoTorneio } from '../lib/classificacao'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
 
