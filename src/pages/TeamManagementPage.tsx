@@ -38,7 +38,7 @@ import { toast } from '../context/ToastContext'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { CLUBE_NOME } from '../lib/clube'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, Botao } from '../components/ui'
+import { CabecalhoEcra, Pastilha, Botao, LinhaAtleta } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import {
   getSeasonLabel,
@@ -111,7 +111,7 @@ const TeamManagementPage: React.FC = () => {
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   /* O handoff ordena o plantel por número; a ordenação por nome era a única
      que existia e continua à mão de quem a preferir. */
-  const [ordem, setOrdem] = useState<'numero' | 'jga' | 'nome'>('numero')
+  const [ordem, setOrdem] = useState<'numero' | 'jga' | 'nome'>('nome')
   const [viewMode, setViewMode] = useState<'list' | 'cards'>(() => {
     return (localStorage.getItem('csc_team_view_mode') as 'list' | 'cards') || 'list'
   })
@@ -927,9 +927,11 @@ const TeamManagementPage: React.FC = () => {
   })
 
   /*
-    A ordem por que a lista sai. O handoff (3a) põe o plantel por número de
-    camisola; quem não tem número vai para o fim, senão os sem número ficavam
-    todos à cabeça.
+    A ordem por que a lista sai. **Por omissão é o nome**, que é como se procura
+    alguém: o handoff (3a) pedia o número de camisola, mas com a lista agrupada
+    por perfil a numeração já não corre seguida, e procurar um nome numa lista
+    ordenada por número é lê-la toda. O número continua a ser uma das ordens
+    possíveis, na persiana dos filtros; quem não o tem vai para o fim.
   */
   const jga = (id: string) => estatisticas[id] ?? { j: 0, g: 0, a: 0 }
   filteredProfiles.sort((a, b) => {
@@ -957,18 +959,45 @@ const TeamManagementPage: React.FC = () => {
   const perfisAtivos = separarInativos ? filteredProfiles.filter(p => p.status !== 'inactive') : filteredProfiles
   const perfisInativos = separarInativos ? filteredProfiles.filter(p => p.status === 'inactive') : []
 
+  /*
+    **O plantel agrupa-se por perfil, e quem tem vários conta pelo primeiro
+    desta ordem: jogador, treinador, direção.** Metade da direção deste clube
+    também joga, e a pergunta que se faz nesta lista é quem entra em campo —
+    quem joga aparece entre os jogadores, mesmo que também dirija. Sem isto era
+    uma lista corrida de vinte e oito pessoas onde o treinador aparecia no meio
+    dos médios.
+
+    Os inativos ficam num grupo à parte no fim, como já estavam: um inativo não
+    entra na conta do plantel, seja qual for o perfil.
+  */
+  const grupoDoPerfil = (p: Profile): 'player' | 'coach' | 'admin' => {
+    const papeis = extractRolesFromProfile(p)
+    if (papeis.includes('player')) return 'player'
+    if (papeis.includes('coach')) return 'coach'
+    return 'admin'
+  }
+
+  const gruposDoPlantel = ([
+    ['player', 'Jogadores'],
+    ['coach', 'Equipa técnica'],
+    ['admin', 'Direção'],
+  ] as const).map(([papel, titulo]) => [
+    titulo,
+    perfisAtivos.filter(pe => grupoDoPerfil(pe) === papel),
+  ] as [string, Profile[]])
+
   /** O que a persiana esconde, para o funil acender e o resumo dizê-lo. */
   const temFiltros =
     searchTerm.trim() !== '' ||
     statusFilter !== 'all' ||
     positionFilter !== 'all' ||
-    ordem !== 'numero'
+    ordem !== 'nome'
 
   const resumoFiltros = [
     searchTerm.trim() ? `"${searchTerm.trim()}"` : null,
     statusFilter !== 'all' ? ROTULOS_ESTADO[statusFilter] : null,
     positionFilter !== 'all' ? positionFilter : null,
-    ordem !== 'numero' ? ROTULOS_ORDEM[ordem] : null,
+    ordem !== 'nome' ? ROTULOS_ORDEM[ordem] : null,
   ]
     .filter(Boolean)
     .join(' · ') || 'Filtrado'
@@ -977,7 +1006,7 @@ const TeamManagementPage: React.FC = () => {
     setSearchTerm('')
     setStatusFilter('all')
     setPositionFilter('all')
-    setOrdem('numero')
+    setOrdem('nome')
   }
 
   // Quick Metrics
@@ -1250,20 +1279,30 @@ const TeamManagementPage: React.FC = () => {
           as põe (3b, "Gestão do atleta"). Fica na linha só a pastilha de
           estado, que o treinador usa a toda a hora para marcar um lesionado.
         */
-        <div className="space-y-4">
+        <div className="space-y-3">
           {([
-            ['', perfisAtivos],
-            ['Inativos', perfisInativos],
-          ] as const).map(([titulo, grupo]) => (
+            ...gruposDoPlantel,
+            ['Inativos', perfisInativos] as [string, Profile[]],
+          ]).map(([titulo, grupo]) => (
             grupo.length === 0 ? null : (
-              <div key={titulo || 'plantel'} className="space-y-2">
-                {titulo && (
-                  <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 pt-1">
+              /* Caixa com banda e linhas por dentro, como nas Quotas e nos
+                 Encargos: eram vinte e oito cartões soltos com moldura e vão
+                 entre cada dois. */
+              <section
+                key={titulo}
+                aria-label={titulo}
+                className="rounded-2xl border border-white/12 overflow-hidden"
+              >
+                <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.07] border-b border-white/12">
+                  <span className={`font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase ${
+                    titulo === 'Inativos' ? 'text-white/45' : 'text-csc-gold'
+                  }`}>
                     {titulo}
-                  </p>
-                )}
+                  </span>
+                  <span className="text-[10px] font-bold text-white/45 tabular-nums">{grupo.length}</span>
+                </div>
 
-                {grupo.map(person => {
+                {grupo.map((person, iLinha) => {
                   const roles = extractRolesFromProfile(person)
                   // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
                   // omissão de parsePositions(null) mostrava sempre "Médio Centro".
@@ -1273,7 +1312,10 @@ const TeamManagementPage: React.FC = () => {
                   const nomeCurto = person.shirt_name || person.nickname || person.name
 
                   return (
-                    <div key={person.id} className="cartao-simples flex items-stretch overflow-hidden">
+                    <div
+                      key={person.id}
+                      className={`flex items-stretch ${iLinha > 0 ? 'border-t border-white/8' : ''}`}
+                    >
                       <button
                         type="button"
                         onClick={() => { triggerHaptic('light'); openDetailModal(person) }}
@@ -1282,44 +1324,31 @@ const TeamManagementPage: React.FC = () => {
                           transition-transform duration-150 active:scale-[0.99]
                           focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold"
                       >
-                        <span className="w-8 h-8 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 text-csc-gold font-display font-extrabold text-[11px] flex items-center justify-center shrink-0 tabular-nums">
-                          {person.jersey_number ?? '–'}
-                        </span>
-
-                        {person.photo_url ? (
-                          <img
-                            src={person.photo_url}
-                            alt=""
-                            className="w-9 h-9 rounded-xl object-cover shrink-0"
-                          />
-                        ) : (
-                          <span className="w-9 h-9 rounded-xl bg-white/10 text-white/60 flex items-center justify-center font-display font-black text-[13px] shrink-0">
-                            {(person.name || '?').charAt(0).toUpperCase()}
-                          </span>
-                        )}
-
-                        <span className="flex-1 min-w-0">
-                          <span className="block font-display font-black text-[13px] text-white truncate">
-                            {nomeCurto}
-                          </span>
-                          <span className="block text-[10px] text-white/62 truncate mt-0.5">
-                            {nomeCurto === person.name ? '' : `${person.name} · `}
-                            {positions.length > 0
-                              ? positions.map(pos => normalizePositionName(pos)).join(' · ')
-                              : roles.includes('coach') ? 'Treinador' : roles.includes('admin') ? 'Direção' : ''}
-                          </span>
-                        </span>
-
-                        {/* J · G · A — os inativos não jogaram esta época. */}
-                        {inativo ? (
-                          <span className="text-[9.5px] text-white/35 italic shrink-0">sem jogos</span>
-                        ) : (
-                          <span className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
-                            <span className="font-display font-bold text-[11px] text-white/62">{e.j}<span className="text-white/30">J</span></span>
-                            <span className="font-display font-black text-[11px] text-csc-gold">{e.g}<span className="opacity-60">G</span></span>
-                            <span className="font-display font-black text-[11px] text-csc-azul-texto">{e.a}<span className="opacity-60">A</span></span>
-                          </span>
-                        )}
+                        <LinhaAtleta
+                          numero={person.jersey_number}
+                          nome={nomeCurto}
+                          foto={person.photo_url}
+                          detalhe={
+                            <>
+                              {nomeCurto === person.name ? '' : `${person.name} · `}
+                              {positions.length > 0
+                                ? positions.map(pos => normalizePositionName(pos)).join(' · ')
+                                : roles.includes('coach') ? 'Treinador' : roles.includes('admin') ? 'Direção' : ''}
+                            </>
+                          }
+                          direita={
+                            /* J · G · A — os inativos não jogaram esta época. */
+                            inativo ? (
+                              <span className="text-[9.5px] text-white/35 italic shrink-0">sem jogos</span>
+                            ) : (
+                              <span className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
+                                <span className="font-display font-bold text-[11px] text-white/62">{e.j}<span className="text-white/30">J</span></span>
+                                <span className="font-display font-black text-[11px] text-csc-gold">{e.g}<span className="opacity-60">G</span></span>
+                                <span className="font-display font-black text-[11px] text-csc-azul-texto">{e.a}<span className="opacity-60">A</span></span>
+                              </span>
+                            )
+                          }
+                        />
                       </button>
 
                       {/* O estado é o único botão que fica na linha: é o que o
@@ -1346,7 +1375,7 @@ const TeamManagementPage: React.FC = () => {
                     </div>
                   )
                 })}
-              </div>
+              </section>
             )
           ))}
         </div>
@@ -1362,9 +1391,9 @@ const TeamManagementPage: React.FC = () => {
         */
         <div className="space-y-4">
           {([
-            ['', perfisAtivos],
-            ['Inativos', perfisInativos],
-          ] as const).map(([titulo, grupo]) => (
+            ...gruposDoPlantel,
+            ['Inativos', perfisInativos] as [string, Profile[]],
+          ]).map(([titulo, grupo]) => (
             grupo.length === 0 ? null : (
               <div key={titulo || 'plantel'} className="space-y-2">
                 {titulo && (
