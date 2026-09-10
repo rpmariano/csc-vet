@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-11T00:00:00Z",
+  "title": "Design System: CSC Veteranos",
+  "extensions": {
+    "colorMeta": {
+      "verde-clube": {
+        "role": "primary",
+        "displayName": "Verde do Clube",
+        "canonical": "#164f16",
+        "tonalRamp": ["oklch(15% 0.06 145)", "oklch(26% 0.09 145)", "oklch(36% 0.10 145)", "oklch(47% 0.11 145)", "oklch(58% 0.11 145)", "oklch(70% 0.10 145)", "oklch(83% 0.07 145)", "oklch(95% 0.03 145)"]
+      },
+      "verde-equipamento": {
+        "role": "secondary",
+        "displayName": "Verde de Equipamento",
+        "canonical": "#009662",
+        "tonalRamp": ["oklch(15% 0.06 163)", "oklch(27% 0.09 163)", "oklch(38% 0.11 163)", "oklch(48% 0.12 163)", "oklch(58% 0.13 163)", "oklch(70% 0.12 163)", "oklch(83% 0.08 163)", "oklch(95% 0.03 163)"]
+      },
+      "dourado-emblema": {
+        "role": "primary",
+        "displayName": "Dourado do Emblema",
+        "canonical": "#e3c04d",
+        "tonalRamp": ["oklch(15% 0.05 88)", "oklch(27% 0.07 88)", "oklch(38% 0.09 88)", "oklch(50% 0.11 88)", "oklch(62% 0.12 88)", "oklch(72% 0.13 88)", "oklch(82% 0.13 88)", "oklch(95% 0.06 88)"]
+      },
+      "azul-institucional": {
+        "role": "secondary",
+        "displayName": "Azul Institucional",
+        "canonical": "#005296",
+        "tonalRamp": ["oklch(15% 0.07 250)", "oklch(26% 0.10 250)", "oklch(36% 0.12 250)", "oklch(44% 0.13 250)", "oklch(56% 0.13 250)", "oklch(68% 0.11 250)", "oklch(82% 0.07 250)", "oklch(95% 0.03 250)"]
+      },
+      "vermelho-cartao": {
+        "role": "tertiary",
+        "displayName": "Vermelho de Cartão",
+        "canonical": "#ef3223",
+        "tonalRamp": ["oklch(15% 0.08 30)", "oklch(27% 0.12 30)", "oklch(38% 0.16 30)", "oklch(49% 0.19 30)", "oklch(60% 0.22 30)", "oklch(72% 0.17 30)", "oklch(84% 0.10 30)", "oklch(95% 0.04 30)"]
+      },
+      "fundo": {
+        "role": "neutral",
+        "displayName": "Fundo de Noite",
+        "canonical": "#262d2b",
+        "tonalRamp": ["oklch(15% 0.006 165)", "oklch(22% 0.007 165)", "oklch(28% 0.008 165)", "oklch(40% 0.008 165)", "oklch(53% 0.008 165)", "oklch(66% 0.007 165)", "oklch(81% 0.005 165)", "oklch(95% 0.003 165)"]
+      },
+      "superficie": {
+        "role": "neutral",
+        "displayName": "Superfície Elevada",
+        "canonical": "#2d3532",
+        "tonalRamp": ["oklch(15% 0.006 165)", "oklch(24% 0.007 165)", "oklch(32% 0.008 165)", "oklch(43% 0.008 165)", "oklch(55% 0.008 165)", "oklch(68% 0.007 165)", "oklch(82% 0.005 165)", "oklch(95% 0.003 165)"]
+      },
+      "tinta": {
+        "role": "neutral",
+        "displayName": "Tinta sobre Dourado",
+        "canonical": "#121415",
+        "tonalRamp": ["oklch(12% 0.003 200)", "oklch(17% 0.003 200)", "oklch(26% 0.004 200)", "oklch(38% 0.004 200)", "oklch(52% 0.004 200)", "oklch(66% 0.003 200)", "oklch(81% 0.002 200)", "oklch(95% 0.002 200)"]
+      },
+      "verde-texto": {
+        "role": "neutral",
+        "displayName": "Verde de Leitura",
+        "canonical": "#4ecf9d",
+        "tonalRamp": ["oklch(15% 0.06 163)", "oklch(28% 0.09 163)", "oklch(40% 0.12 163)", "oklch(52% 0.14 163)", "oklch(65% 0.14 163)", "oklch(78% 0.14 163)", "oklch(88% 0.09 163)", "oklch(96% 0.04 163)"]
+      },
+      "azul-texto": {
+        "role": "neutral",
+        "displayName": "Azul de Leitura",
+        "canonical": "#7fb3e0",
+        "tonalRamp": ["oklch(16% 0.04 245)", "oklch(28% 0.06 245)", "oklch(40% 0.07 245)", "oklch(52% 0.08 245)", "oklch(63% 0.08 245)", "oklch(75% 0.08 245)", "oklch(86% 0.05 245)", "oklch(96% 0.02 245)"]
+      },
+      "vermelho-texto": {
+        "role": "neutral",
+        "displayName": "Vermelho de Leitura",
+        "canonical": "#f08a7f",
+        "tonalRamp": ["oklch(16% 0.05 25)", "oklch(28% 0.08 25)", "oklch(40% 0.10 25)", "oklch(52% 0.12 25)", "oklch(63% 0.13 25)", "oklch(74% 0.12 25)", "oklch(86% 0.07 25)", "oklch(96% 0.03 25)"]
+      },
+      "vermelho-suave": {
+        "role": "neutral",
+        "displayName": "Vermelho Suave",
+        "canonical": "#f0b8b0",
+        "tonalRamp": ["oklch(16% 0.03 25)", "oklch(29% 0.05 25)", "oklch(41% 0.06 25)", "oklch(53% 0.07 25)", "oklch(65% 0.07 25)", "oklch(76% 0.07 25)", "oklch(88% 0.05 25)", "oklch(96% 0.02 25)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Título de Ecrã", "purpose": "O nome da página, em cima de tudo. Sobe a 44px na Home, onde o próximo jogo é o título." },
+      "headline": { "displayName": "Número Grande", "purpose": "Saldos, contagens e resultados, com dígitos tabulares para não dançarem." },
+      "title": { "displayName": "Linha de Conteúdo", "purpose": "O nome numa lista, o título de um cartão, o rótulo de um botão. O tamanho em que a app fala." },
+      "body": { "displayName": "Nota", "purpose": "Explicações e moradas, sempre em branco translúcido e nunca em branco cheio." },
+      "label": { "displayName": "Etiqueta de Secção", "purpose": "Anuncia um bloco ou um grupo. Só funciona em maiúsculas — é o espaçamento que a distingue de uma frase." }
+    },
+    "shadows": [
+      { "name": "cartao-vidro", "value": "0 20px 46px -24px rgba(0,0,0,0.95)", "purpose": "Descola o cartão principal da faixa verde que passa por trás dele." },
+      { "name": "sombra-barra", "value": "0 16px 40px -14px rgba(0,0,0,0.95)", "purpose": "A barra de navegação flutua sobre o conteúdo, e a sombra é o que o diz." },
+      { "name": "sombra-persiana", "value": "0 -20px 60px -12px rgba(0,0,0,0.9)", "purpose": "Projetada para cima, do fundo do ecrã, quando a persiana sobe." },
+      { "name": "sombra-fab", "value": "0 0 0 5px rgba(227,192,77,0.14), 0 12px 28px -8px rgba(227,192,77,0.5)", "purpose": "O único halo colorido do sistema, no botão de criar." },
+      { "name": "realce-navegacao", "value": "0 6px 16px -6px rgba(227,192,77,0.45)", "purpose": "Por baixo do realce dourado que corre atrás do item ativo." },
+      { "name": "realce-separadores", "value": "0 6px 16px -6px rgba(22,79,22,0.6)", "purpose": "O mesmo realce nos separadores de página, em verde do clube." }
+    ],
+    "motion": [
+      { "name": "saida-suave", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "A curva de tudo o que entra em cena: modais, cartões, persianas." },
+      { "name": "toque", "value": "150ms", "purpose": "A resposta de um botão ao dedo, com scale(0.97) no :active." },
+      { "name": "aparecer", "value": "180ms ease-out", "purpose": "Fade de fundos de diálogo e toasts." },
+      { "name": "crescer", "value": "220ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Entrada de modais e cartões." },
+      { "name": "subir", "value": "240ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "A persiana a subir do fundo do ecrã." },
+      { "name": "movimento-reduzido", "value": "@media (prefers-reduced-motion: reduce) → 0.01ms, 1 iteração", "purpose": "Quem pediu menos movimento ao sistema não leva nenhum." }
+    ],
+    "breakpoints": [
+      { "name": "coluna", "value": "480px" },
+      { "name": "sm", "value": "9999px (desligado de propósito)" },
+      { "name": "md", "value": "9999px (desligado de propósito)" },
+      { "name": "lg", "value": "9999px (desligado de propósito)" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão Dourado",
+      "kind": "button",
+      "refersTo": "botao-dourado",
+      "description": "A ação principal de um ecrã, idealmente uma só. Cede ao dedo e confirma com vibração.",
+      "html": "<button class=\"ds-btn-dourado\">Guardar evento</button>",
+      "css": ".ds-btn-dourado { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 24px; border: 1px solid transparent; border-radius: 24px; background: #e3c04d; color: #121415; font-family: Archivo, Helvetica, sans-serif; font-weight: 800; font-size: 12.5px; cursor: pointer; transition: background-color 150ms, transform 150ms; } .ds-btn-dourado:hover { background: #ecd06b; } .ds-btn-dourado:active { transform: scale(0.97); } .ds-btn-dourado:focus-visible { outline: 2px solid #e3c04d; outline-offset: 2px; }"
+    },
+    {
+      "name": "Botão de Vidro",
+      "kind": "button",
+      "refersTo": "botao-vidro",
+      "description": "A ação secundária — cancelar, alternativas. Branco translúcido com fio.",
+      "html": "<button class=\"ds-btn-vidro\">Cancelar</button>",
+      "css": ".ds-btn-vidro { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 24px; border: 1px solid rgba(255,255,255,0.20); border-radius: 24px; background: rgba(255,255,255,0.09); color: #ffffff; font-family: Archivo, Helvetica, sans-serif; font-weight: 800; font-size: 12.5px; cursor: pointer; transition: background-color 150ms, transform 150ms; } .ds-btn-vidro:hover { background: rgba(255,255,255,0.14); } .ds-btn-vidro:active { transform: scale(0.97); } .ds-btn-vidro:focus-visible { outline: 2px solid #e3c04d; outline-offset: 2px; }"
+    },
+    {
+      "name": "Pastilha",
+      "kind": "chip",
+      "refersTo": "pastilha",
+      "description": "Filtro ou escolha entre poucas opções. 44px de altura como tudo o resto; a ativa muda de fundo no sítio.",
+      "html": "<div class=\"ds-chip-fila\"><button class=\"ds-chip ds-chip-ativa\" aria-pressed=\"true\">Por realizar</button><button class=\"ds-chip\" aria-pressed=\"false\">Jogos</button><button class=\"ds-chip\" aria-pressed=\"false\">Treinos</button></div>",
+      "css": ".ds-chip-fila { display: flex; gap: 8px; } .ds-chip { height: 44px; padding: 0 16px; border: 1px solid rgba(255,255,255,0.12); border-radius: 22px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.70); font-family: Archivo, Helvetica, sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background-color 200ms, color 200ms, transform 150ms; } .ds-chip:hover { background: rgba(255,255,255,0.09); color: #ffffff; } .ds-chip:active { transform: scale(0.97); } .ds-chip:focus-visible { outline: 2px solid #e3c04d; outline-offset: 2px; } .ds-chip-ativa { background: #e3c04d; border-color: transparent; color: #121415; } .ds-chip-ativa:hover { background: #ecd06b; color: #121415; }"
+    },
+    {
+      "name": "Cartão de Vidro",
+      "kind": "card",
+      "refersTo": "cartao-vidro",
+      "description": "O cartão principal de um ecrã. Translúcido de propósito: deixa passar a faixa verde do topo, que é de onde vem a profundidade.",
+      "html": "<div class=\"ds-cartao-vidro\"><p class=\"ds-etiqueta\">Próximo jogo</p><p class=\"ds-cartao-titulo\">GDS Cascais &middot; Sesimbra</p><p class=\"ds-cartao-nota\">Sábado, 18:00 &middot; Campo da Torre</p></div>",
+      "css": ".ds-cartao-vidro { padding: 16px; background: rgba(255,255,255,0.11); border: 1px solid rgba(255,255,255,0.14); border-radius: 26px; -webkit-backdrop-filter: blur(26px) saturate(160%); backdrop-filter: blur(26px) saturate(160%); box-shadow: 0 20px 46px -24px rgba(0,0,0,0.95); } .ds-etiqueta { margin: 0 0 8px; font-family: Archivo, Helvetica, sans-serif; font-weight: 800; font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.62); } .ds-cartao-titulo { margin: 0; font-family: Archivo, Helvetica, sans-serif; font-weight: 900; font-size: 20px; letter-spacing: -0.03em; color: #ffffff; } .ds-cartao-nota { margin: 6px 0 0; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,0.62); }"
+    },
+    {
+      "name": "Cartão Simples",
+      "kind": "card",
+      "refersTo": "cartao-simples",
+      "description": "Listas e blocos secundários. Sem desfoque: há dezenas por ecrã e o backdrop-filter repetido custa caro a pintar num telemóvel antigo.",
+      "html": "<div class=\"ds-cartao-simples\"><span class=\"ds-numero\">9</span><span class=\"ds-linha-nome\">Ricardo Mariano</span><span class=\"ds-chip-estado\">Disse que sim</span></div>",
+      "css": ".ds-cartao-simples { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 22px; } .ds-numero { flex: none; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9999px; background: rgba(255,255,255,0.10); font-family: Archivo, Helvetica, sans-serif; font-weight: 900; font-size: 12px; font-variant-numeric: tabular-nums; color: #ffffff; } .ds-linha-nome { flex: 1; font-family: Archivo, Helvetica, sans-serif; font-weight: 800; font-size: 13px; color: #ffffff; } .ds-chip-estado { flex: none; padding: 4px 8px; border: 1px solid rgba(0,150,98,0.30); border-radius: 9999px; background: rgba(0,150,98,0.15); font-family: Archivo, Helvetica, sans-serif; font-weight: 900; font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase; color: #4ecf9d; }"
+    },
+    {
+      "name": "Campo de Entrada",
+      "kind": "input",
+      "refersTo": "campo-entrada",
+      "description": "A única superfície branca opaca do sistema, e é deliberada: são os campos de entrada antes de haver sessão, e o contraste máximo ajuda quem escreve ao sol.",
+      "html": "<div class=\"ds-campo\"><label class=\"ds-campo-etiqueta\" for=\"ds-email\">Email</label><input class=\"ds-campo-caixa\" id=\"ds-email\" type=\"email\" placeholder=\"nome@exemplo.pt\" /><p class=\"ds-campo-nota\">É o email com que a direção criou a tua ficha.</p></div>",
+      "css": ".ds-campo { display: block; max-width: 320px; } .ds-campo-etiqueta { display: block; margin-bottom: 6px; font-family: Archivo, Helvetica, sans-serif; font-weight: 700; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.60); } .ds-campo-caixa { width: 100%; height: 50px; padding: 0 14px; border: none; border-radius: 15px; background: #ffffff; color: #121415; font-family: Helvetica, Arial, sans-serif; font-size: 12.5px; outline: none; box-sizing: border-box; } .ds-campo-caixa::placeholder { color: rgba(0,0,0,0.40); } .ds-campo-caixa:focus-visible { box-shadow: 0 0 0 2px #e3c04d; } .ds-campo-nota { margin: 6px 0 0; font-family: Helvetica, Arial, sans-serif; font-size: 10.5px; line-height: 1.4; color: rgba(255,255,255,0.62); }"
+    },
+    {
+      "name": "Barra de Navegação",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Flutua sobre o conteúdo, ancorada à coluna e não ao ecrã. O realce dourado corre por trás do item ativo, e o botão de criar é o centro.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Navegação principal\"><button class=\"ds-nav-item ds-nav-ativo\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z\"/></svg><span>Hoje</span></button><button class=\"ds-nav-item\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"3\"/><path d=\"M8 2v4M16 2v4M3 10h18\"/></svg><span>Agenda</span></button><button class=\"ds-nav-fab\" aria-label=\"Criar\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button><button class=\"ds-nav-item\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 3h12v4a6 6 0 0 1-12 0z\"/><path d=\"M9 21h6M12 13v8\"/></svg><span>Competição</span></button><button class=\"ds-nav-item\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 21h18M5 21V8l7-5 7 5v13M10 21v-5h4v5\"/></svg><span>Clube</span></button></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 4px; padding: 10px 6px; border: 1px solid rgba(255,255,255,0.14); border-radius: 26px; background: rgba(53,61,58,0.9); -webkit-backdrop-filter: blur(28px) saturate(160%); backdrop-filter: blur(28px) saturate(160%); box-shadow: 0 16px 40px -14px rgba(0,0,0,0.95); } .ds-nav-item { flex: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 0 4px; border: none; border-radius: 22px; background: transparent; color: rgba(255,255,255,0.82); font-family: Archivo, Helvetica, sans-serif; font-weight: 700; font-size: 9px; cursor: pointer; transition: color 400ms; } .ds-nav-item:hover { color: #ffffff; } .ds-nav-item:focus-visible { outline: 2px solid #e3c04d; outline-offset: 2px; } .ds-nav-ativo { background: #e3c04d; color: #121415; box-shadow: 0 6px 16px -6px rgba(227,192,77,0.45); } .ds-nav-ativo:hover { color: #121415; } .ds-nav-fab { flex: none; width: 48px; height: 48px; margin: 0 4px; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 9999px; background: #e3c04d; color: #121415; cursor: pointer; box-shadow: 0 0 0 5px rgba(227,192,77,0.14), 0 12px 28px -8px rgba(227,192,77,0.5); transition: transform 150ms; } .ds-nav-fab:active { transform: scale(0.97); } .ds-nav-fab:focus-visible { outline: 2px solid #e3c04d; outline-offset: 2px; }"
+    },
+    {
+      "name": "Fila de Separadores",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Os separadores de uma página. Mesmo mecanismo da barra de baixo com a cor trocada: o realce corre por trás do ativo, em verde do clube.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"Secções do financeiro\"><button class=\"ds-tab ds-tab-ativo\" role=\"tab\" aria-selected=\"true\">Visão Geral</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">Quotas</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">Encargos</button></div>",
+      "css": ".ds-tabs { display: flex; gap: 8px; } .ds-tab { height: 44px; padding: 0 16px; border: 1px solid rgba(255,255,255,0.12); border-radius: 22px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.70); font-family: Archivo, Helvetica, sans-serif; font-weight: 700; font-size: 12px; white-space: nowrap; cursor: pointer; transition: background-color 200ms, color 200ms, border-color 200ms; } .ds-tab:hover { color: #ffffff; } .ds-tab:focus-visible { outline: 2px solid #e3c04d; outline-offset: 2px; } .ds-tab-ativo { background: #164f16; border-color: transparent; color: #ffffff; box-shadow: 0 6px 16px -6px rgba(22,79,22,0.6); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Placard Iluminado",
+    "overview": "A app lê-se como o marcador de um campo à noite. O fundo é escuro e ligeiramente esverdeado, os números são grandes e tabulares, e o dourado do emblema é a única luz acesa — aparece onde há uma ação a tomar e em mais lado nenhum. A faixa geométrica verde que atravessa o topo de cada ecrã é a bancada por trás do marcador: os cartões de vidro deixam-na passar, e é daí que vem a profundidade de um ecrã que, de outra forma, seria preto e liso.\n\nÉ oficial sem ser corporativa. As cores são as do manual de normas do clube, o tipo de letra é pesado e o vocabulário é o da direção — mas há pessoas do outro lado, e nota-se: o botão cede ao dedo, o telemóvel vibra quando se confirma, os aniversários do mês enchem uma agenda que de outra forma estaria vazia. A densidade é alta de propósito. Assume um adulto que quer ver o jogo, a hora, o campo e a sua resposta sem rolar, não uma app que o leva pela mão.\n\nQuatro coisas que este sistema recusa, e que foram confirmadas: não é uma app de apostas, não é um dashboard SaaS, não é uma rede social desportiva e não é a app de um clube profissional.",
+    "keyCharacteristics": [
+      "Uma só coluna de 480px, em qualquer largura de ecrã, sem exceção.",
+      "Fundo escuro esverdeado com vidro translúcido por cima da faixa do clube.",
+      "Dourado raro e sempre acionável; verde, âmbar e vermelho reservados a estado.",
+      "Archivo pesado (500–900), tamanhos pequenos, maiúsculas espaçadas nas etiquetas.",
+      "Cantos largos (22–30px) e 44px de altura em tudo o que se toca."
+    ],
+    "rules": [
+      { "name": "A Regra das Duas Famílias", "body": "Uma cor de superfície nunca se escreve. Verde do Clube, Verde de Equipamento, Azul Institucional e Vermelho de Cartão são para fundos, faixas e barras; para uma frase usa-se a mesma cor na versão de leitura.", "section": "colors" },
+      { "name": "A Regra da Luz Única", "body": "O dourado é acionável. Se um elemento dourado não responde ao toque, ou está errado ou é a sobrancelha de um título — e nesse caso é o único ornamento dourado do ecrã.", "section": "colors" },
+      { "name": "A Regra da Opacidade que Multiplica", "body": "Um alfa de texto nunca leva opacity por cima: os dois multiplicam-se, e foi assim que o rótulo da barra de navegação chegou a 3,65:1 de contraste.", "section": "colors" },
+      { "name": "A Regra das Três Cores do Dinheiro", "body": "Vermelho em atraso, âmbar a vencer, verde pago — e uma barra de 3px à esquerda da linha a dizer o mesmo sem se ler nada. Vivem num sítio só.", "section": "colors" },
+      { "name": "A Regra da Etiqueta e do Conteúdo", "body": "Numa lista agrupada, o cabeçalho é etiqueta — maiúsculas pequenas e espaçadas sobre uma banda mais clara — e a linha é conteúdo, a 13px e peso 800, com um recuo e uma barra de cor à esquerda.", "section": "typography" },
+      { "name": "A Regra do Título que não se Repete", "body": "Um cartão nunca repete o título do ecrã em que está. Sob um título, o cartão carrega o que o título não diz.", "section": "typography" },
+      { "name": "A Regra da Linha que não Ecoa o Cabeçalho", "body": "Dentro de um grupo chamado \"Inscrição — Liga Masters +35\", a linha \"Liga Masters +35 — Tranche 1\" fica \"Tranche 1\". O corte é por travessão, e um título de uma parte só fica intacto.", "section": "typography" },
+      { "name": "A Regra dos 44px", "body": "Tudo o que se toca tem no mínimo 44px de altura. Sem exceções: pastilhas, separadores, botões de linha, ícones clicáveis.", "section": "layout" },
+      { "name": "A Regra da Largura Única", "body": "Uma janela estreita e uma janela larga têm de mostrar exatamente a mesma coisa, centrada. Qualquer diferença entre as duas é um defeito.", "section": "layout" },
+      { "name": "A Regra do Esbatimento", "body": "Uma faixa nunca acaba a direito e uma barra translúcida nunca fica sobre conteúdo cru. Sem o gradiente por trás, o que passa pelo vidro entra-lhe pela cara e a barra deixa de se ler.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do usar os primitivos: CartaoVidro para o cartão principal de um ecrã, CartaoSimples para listas e blocos, e Botao, Pastilha, TituloEcra, EtiquetaSeccao e FilaSeparadores para o resto.",
+      "Do dar 44px de altura a tudo o que se toca, incluindo pastilhas e separadores.",
+      "Do escrever o texto colorido na família de leitura, e guardar as cores cheias para superfícies.",
+      "Do desenhar o estado vazio como o caso normal — nesta app é a norma.",
+      "Do desenhar um escudo quando falta o emblema de um clube, nunca as iniciais.",
+      "Do acabar a coluna acima da barra de navegação com margin-bottom.",
+      "Do dar role=\"dialog\", nome acessível e foco lá para dentro a qualquer painel que abra por cima, e fechá-lo com Escape."
+    ],
+    "donts": [
+      "Don't usar emoji na interface — cada telemóvel desenha-os à sua maneira e os leitores de ecrã leem-nos por extenso.",
+      "Don't pôr dois botões dourados no mesmo ecrã.",
+      "Don't dar tom a um modal. O painel é sempre Superfície Elevada.",
+      "Don't fazer de um div com onClick um cartão clicável.",
+      "Don't escrever classes sm:, md: ou lg: — não geram nada nesta app.",
+      "Don't somar um alfa de texto a uma opacity.",
+      "Don't repetir o título do ecrã dentro do primeiro cartão desse ecrã.",
+      "Don't cortar uma descrição que possa quebrar.",
+      "Don't esconder linhas para dizer que estão desatualizadas."
+    ]
+  }
+}

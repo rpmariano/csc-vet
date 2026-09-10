@@ -1,10 +1,25 @@
 # Ecrãs por desenhar — CSC Veteranos
 
-Estado em 2026-09-07. O redesenho de 2026 cobriu **49 dos 58 ecrãs** do handoff
-(`Redesign UI app futebol veteranos/design_handoff_app_veteranos/Ecrãs Jogador.dc.html`).
-Faltam nove, e **seis deles vão ser desenhados** — três foram postos de lado
-por decisão do cliente (ver o fim do documento). Este documento é o que
-precisas de saber para os desenhar sem inventar dados que a app não tem.
+**Estado em 2026-09-11: os seis estão feitos.** O redesenho de 2026 cobre os
+**55 ecrãs** do handoff
+(`Redesign UI app futebol veteranos/design_handoff_app_veteranos/Ecrãs Jogador.dc.html`)
+que o cliente decidiu fazer; os outros três foram postos de lado por decisão
+dele (ver o fim do documento).
+
+Este documento nasceu a 2026-09-07 como o que era preciso saber para os
+desenhar sem inventar dados que a app não tem. Fica como **registo**: o que
+cada ecrã precisava, o que ficou decidido, e onde vive hoje. As restrições da
+secção seguinte e a regra da presença continuam a valer para qualquer ecrã
+novo.
+
+| Ecrã | Onde vive |
+|---|---|
+| **4a** Toque num convocado | `src/components/callups/FichaConvocado.tsx` |
+| **4e** Evento em falta na Agenda | `src/pages/CalendarPage.tsx` — `renderCartaoPorConvocar` e o contador do cartão |
+| **9h** Ficha de adversário | `src/components/clube/FichaAdversario.tsx` |
+| **9i** Ficha de campo | `src/components/clube/FichaCampo.tsx` |
+| **11a** Conta por ligar | `src/components/FichaPorLigar.tsx` |
+| **11b** Agenda sem nada marcado | `src/pages/CalendarPage.tsx` — o vazio sem filtros, com `AniversariosDoMes` |
 
 ---
 
@@ -86,16 +101,18 @@ que a mostra em detalhe está a resolver o problema errado.
   se sabe é quem disse que ia. Já mudei o mosaico da Home de "Presenças" para
   **"Disse que sim"**, e o número passou a ler `callups`.
 
-**No 4a**, o handoff desenha "P P F P P — últimos 5 jogos". A tradução é as
-últimas cinco convocatórias respondidas, com dois estados em vez de três (sim /
-não), e as por responder simplesmente não entram. Cabe ao desenho decidir a
-forma — pontos, letras, barras — mas o vocabulário tem de ser o da resposta e
-não o da presença, e o caso normal hoje é **nenhuma resposta**.
+**No 4a**, o handoff desenha "P P F P P — últimos 5 jogos". A tradução são as
+últimas convocatórias respondidas, com dois estados em vez de três (sim / não),
+e as por responder simplesmente não entram. O bloco ficou a contar — "1 de 34
+convocatórias" — e não em percentagem: a percentagem de uma resposta é 100% e
+não significa nada. O vocabulário é o da resposta e não o da presença, e o caso
+normal continua a ser **nenhuma resposta**.
 
 ## Os seis ecrãs
 
 ### 4a · Toque num convocado
-**Prioridade: alta.** É de uso diário para quem gere.
+**Feito** — `src/components/callups/FichaConvocado.tsx`. Era de prioridade
+alta, por ser de uso diário para quem gere.
 
 **O handoff mostra:** uma persiana sobre a convocatória, com a tira de
 convocados no topo (números, com o escolhido em destaque). Dentro: número,
@@ -105,10 +122,10 @@ presença · ontem, 21:14"), **PRESENÇAS** (P P F P P, últimos 5 jogos),
 **Ligar** e **WhatsApp**, e as ações: ✓ Confirmado, ✕ Recusou, Remover da
 convocatória, Abrir ficha completa →.
 
-**O que existe hoje:** `src/components/callups/CallupRow.tsx` — a linha do
+**O que existia antes:** `src/components/callups/CallupRow.tsx` — a linha do
 convocado, com o número numa bolha, o nome, as posições e quatro botões de
 ação de 44px (confirmar, recusar, repor sem resposta, remover). **A linha não
-abre nada**: não há ficha rápida.
+abria nada**: não havia ficha rápida.
 
 **Dados disponíveis:**
 - Resposta: `callups.status`, `callups.responded_at`, `callups.notes`.
@@ -134,17 +151,24 @@ abre nada**: não há ficha rápida.
 - Presenças: ver a secção acima — são as respostas à convocatória, e é assim
   que se lhes deve chamar.
 
-**Decisões em aberto:**
-1. Vale a pena a tira de convocados no topo para saltar entre atletas, ou
-   fecha-se e abre-se o seguinte? A tira é bonita mas obriga a carregar a
-   convocatória inteira.
-2. Com 9 respostas em toda a base, o bloco de histórico vale a pena, ou o ecrã
-   deve ser sobretudo o contacto e as ações? Aqui o estado vazio é o normal.
+**Decidido:**
+1. **A tira ficou.** A convocatória já está carregada por quem abre a ficha —
+   é filha da persiana da convocatória —, por isso saltar entre atletas não
+   custa um pedido novo.
+2. **O histórico ficou, contado e não em percentagem.** Diz "1 de 34
+   convocatórias" e escreve em letra pequena que as por responder não são
+   falta de ninguém: a percentagem de uma resposta é 100% e não significa
+   nada. O contacto e as quatro ações são o corpo do ecrã, agora em botões
+   com nome e não só em ícones.
+3. **Não vai no endereço.** É filha de uma persiana que já lá está
+   (`?event=`, `?convocatoria=`); um `?convocado=` sozinho não abriria nada e
+   empilhar dois detalhes com endereço agravava a falha do retroceder.
 
 ---
 
 ### 4e · Agenda, com o evento em falta
-**Prioridade: alta.** Fecha o par com o alerta que já existe.
+**Feito** — `src/pages/CalendarPage.tsx`, em `renderCartaoPorConvocar` e no
+contador do cartão de evento. Fechou o par com o alerta que já existia.
 
 **O handoff mostra:** na Agenda, o evento sem convocatória sobe para o topo num
 cartão destacado: data grande, "CSC vs Sesimbra", "18:00 · Liga Setúbal",
@@ -154,28 +178,32 @@ eventos normais, cada um com "16 convocados · 11 sim" ou "18 convocados · 7 se
 resp.". O handoff é explícito: *"na Agenda o evento em falta fica marcado, sem
 alarme — o aviso a 6 dias é o alerta flutuante do 4c"*.
 
-**O que existe hoje:** `src/pages/CalendarPage.tsx` — os cartões de evento
-(`renderEventCard`, ~linha 2000) mostram tipo, confronto, concentração/início,
-local. **Não mostram quantos foram convocados nem quantos responderam**, e não
-há marca nenhuma para "sem convocatória". Confirmado: zero ocorrências.
+**O que existia antes:** `src/pages/CalendarPage.tsx` — os cartões de evento
+(`renderEventCard`) mostravam tipo, confronto, concentração/início e local.
+**Não diziam quantos foram convocados nem quantos responderam**, e não havia
+marca nenhuma para "sem convocatória". Confirmado à data: zero ocorrências.
 
-O alerta flutuante (4c/4d) **já está feito** —
+O alerta flutuante (4c/4d) **já estava feito** —
 `src/components/AlertaSemConvocatoria.tsx`, na Home de quem gere.
 
 **Dados disponíveis:** tudo. `callups` por `event_id`, com `status`. Basta uma
 consulta agregada.
 
-**Decisões em aberto:**
-1. O contador "16 convocados · 11 sim" aparece a toda a gente ou só a quem
-   gere? Um jogador saber que 7 ainda não responderam é informação útil ou
-   ruído?
-2. O cartão em falta sobe ao topo, ou fica na ordem cronológica com a marca?
-   O handoff mostra-o em cima, fora da lista.
+**Decidido:**
+1. **O contador é só de quem gere.** Para o jogador é ruído — o que lhe diz
+   respeito é a hora, o local e a sua própria resposta, que estão mais abaixo
+   no mesmo cartão. E mostra os "sim" enquanto houver algum; só quando não há
+   nenhum é que passa a dizer quantos faltam responder, senão, com 0,7% de
+   respostas, um "0 sim" em cada cartão seria a única coisa que a Agenda
+   dizia.
+2. **O cartão em falta sobe ao topo**, fora da lista, como no handoff — e só
+   aparece a quem gere, que é quem pode convocar.
 
 ---
 
 ### 9h · Adversário — ver e editar
-**Prioridade: média.**
+**Feito** — `src/components/clube/FichaAdversario.tsx`, aberta por
+`?adversario=`.
 
 **O handoff mostra:** cabeçalho com a sigla numa bolha, nome, campo principal.
 Três números: **JOGOS 3 · V 1 · E 1 · D 1**. Cartão **CAMPO PRINCIPAL** com
@@ -186,8 +214,10 @@ com resultado, data, prova e casa/fora. No fim, **Editar adversário** e
 **Eliminar adversário**, com a nota "não se pode eliminar um adversário com
 jogos registados — nesse caso só se edita".
 
-**O que existe hoje:** nada. Um adversário edita-se num diálogo
-(`src/pages/AdminDashboard.tsx`, separador `?ver=opponents`) e não tem ficha.
+**O que existia antes:** nada. Um adversário editava-se num diálogo
+(`AdminDashboard`, separador `?ver=opponents`) e não tinha ficha. A gestão
+mudou de sítio entretanto: hoje é `src/components/clube/GestaoAdversarios.tsx`,
+secção `?ver=adversarios` do ecrã Clube.
 
 **Dados disponíveis:**
 - Identidade: `opponents` (`name, initials, logo_url, contact_name,
@@ -199,16 +229,25 @@ jogos registados — nesse caso só se edita".
   tem com que ser calculada hoje. O "1º · 17 pontos" fica em branco até alguém
   lançar jornadas.
 
-**Decisões em aberto:**
-1. Com `tournament_matches` vazia, o bloco "Torneios e posições" desenha-se na
-   mesma (vazio, com uma frase) ou fica de fora até haver dados?
-2. "Mudar campo principal" abre o quê — um `select` na própria ficha, ou a
-   folha de escolher campo?
+**Decidido:**
+1. **O bloco das provas desenha-se na mesma, vazio e a tracejado.** Escondê-lo
+   deixava a pessoa sem perceber se o adversário não está em prova nenhuma ou
+   se é a app que não sabe. Fica a prova, com o lugar da posição a tracejado e
+   o caminho para lançar as jornadas.
+2. **"Mudar" abre o diálogo de edição**, que já tem o seletor de campo. O
+   handoff mandava-o para a lista de campos, que é de leitura e não mudava
+   nada.
+
+**E um cartão não repete o título do ecrã.** A primeira versão tinha o nome do
+adversário no título da persiana e outra vez, truncado, no primeiro cartão —
+com o campo por baixo, que num clube como o "Grupo Desportivo dos Pescadores da
+Costa da Caparica" é quase a mesma frase. O cartão ficou com o emblema, a sigla
+e o histórico contra nós; o campo tem a sua secção mais abaixo.
 
 ---
 
 ### 9i · Campo — ver e editar
-**Prioridade: média.**
+**Feito** — `src/components/clube/FichaCampo.tsx`, aberta por `?campo=`.
 
 **O handoff mostra:** etiqueta "★ CAMPO DO CLUBE" quando é o de casa, nome,
 localidade, um mapa (com o estado "mapa por carregar"), **Ver no mapa** e
@@ -216,8 +255,8 @@ localidade, um mapa (com o estado "mapa por carregar"), **Ver no mapa** e
 hora e prova. No fim, **Editar campo** e **Eliminar campo**, com a nota "o
 campo do clube não se elimina sem escolher outro em Clube".
 
-**O que existe hoje:** nada. Edita-se num diálogo
-(`AdminDashboard`, `?ver=fields`).
+**O que existia antes:** nada. Editava-se num diálogo (`AdminDashboard`,
+`?ver=fields`), hoje `src/components/clube/GestaoCampos.tsx` em `?ver=campos`.
 
 **Dados disponíveis:**
 - `fields` (`id, name, address`). ⚠️ Só **2 campos** em produção, e o `address`
@@ -229,9 +268,15 @@ campo do clube não se elimina sem escolher outro em Clube".
   mapa. O quadrado de mapa do handoff seria um trabalho novo (e uma chave a
   pagar). O desenho deve assumir que não há mapa, ou marcar isso como decisão.
 
-**Decisões em aberto:**
-1. Mapa embebido ou só o botão que abre o Maps? (implica custo e chave)
-2. "Copiar morada" faz sentido quando 1 dos 2 campos não tem morada?
+**Decidido:**
+1. **Não há mapa dentro da app, e a ficha di-lo.** Embeber um mapa a sério
+   obriga a um componente novo e a uma chave que se paga por utilização, para
+   mostrar um retângulo de dois campos que toda a gente do clube já conhece. O
+   "Ver no Maps" abre o Google Maps por URL, como a Agenda sempre fez, e uma
+   linha em letra pequena explica-o para ninguém pensar que o mapa não
+   carregou.
+2. **Sem morada, os dois botões ficam desativados**, com uma frase a dizer
+   porquê. Um "Copiar morada" que copia vazio é pior do que um botão apagado.
 
 
 ---
@@ -240,7 +285,9 @@ campo do clube não se elimina sem escolher outro em Clube".
 ---
 
 ### 11a · Conta criada, ficha por ligar
-**Prioridade: alta — e o texto do handoff está errado para este clube.**
+**Feito** — `src/components/FichaPorLigar.tsx`, com o `useFichaPorLigar()` a
+decidir na Home. Era de prioridade alta, e **o texto do handoff estava errado
+para este clube** — ver abaixo.
 
 **Como funciona aqui.** As fichas são criadas pela direção **antes** de as
 pessoas se registarem, e **a identidade é o endereço de email**: o `AuthContext`
@@ -286,7 +333,7 @@ provavelmente porque te registaste com outro email; fala com a direção, que
 liga em dois toques. E o que se pode fazer entretanto — ver a agenda, as
 classificações e os comunicados — que é verdade e continua a valer.
 
-**O que existe hoje:** nada. Nem faixa, nem ecrã, nem mensagem.
+**O que existia antes:** nada. Nem faixa, nem ecrã, nem mensagem.
 
 **Dados disponíveis:** a condição é a mesma que a RPC `admin_contas_por_ligar()`
 usa do lado da direção (`supabase_contas_por_ligar_migration.sql`). ⚠️ **Não é a
@@ -297,20 +344,26 @@ só colunas que o próprio não pode escrever (`role`, `roles`, `jersey_number`,
 `position`) e exige que o clube nunca tenha contado com a pessoa — sem
 convocatórias, sem estatísticas, sem quotas.
 
-**Decisões em aberto:**
-1. **Ecrã inteiro ou faixa?** Um ecrã que substitui a Home é claro mas
-   bloqueante; uma faixa no topo da Home deixa a pessoa usar o que pode usar.
-   O handoff desenha um ecrã. A app já tem faixas para coisas do género (o
-   aviso de quotas em atraso, o alerta de convocatórias) — há linguagem
-   estabelecida para as duas hipóteses.
-2. Deve haver uma ação que o próprio possa fazer, ou só "fala com a direção"?
-   Uma hipótese: um botão que mostre o email com que se registou, para ele o
-   passar a quem liga as contas.
+**Decidido:**
+1. **Substitui o corpo da Home, e o cabeçalho fica.** Como no handoff. O que
+   desaparece com ele é o que não faz sentido a quem não tem ficha — o sinal
+   de pagamentos e a pastilha de estado clínico. O sino dos comunicados e a
+   fotografia ficam.
+2. **Nenhuma ação para o próprio, além de ler e copiar o email do registo.**
+   O "Preencher o meu perfil" do handoff era o conselho errado: preencher
+   dados numa ficha órfã cria uma segunda ficha da mesma pessoa, que é
+   precisamente o que o ecrã 3d existe para desfazer. O email está lá em texto
+   que se lê e se copia, para se passar a quem liga as contas.
+3. **A verificação é em dois tempos**, e isto é da implementação. O teste das
+   colunas é de graça; só para quem passa é que se vai confirmar à rede que
+   não há convocatórias. Aqui um falso positivo não é uma linha a mais numa
+   lista de admin — é a app inteira que desaparece.
 
 ---
 
 ### 11b · Agenda sem nada marcado
-**Prioridade: média.** Barato e nota-se.
+**Feito** — `src/pages/CalendarPage.tsx`, no vazio sem filtros, com
+`<AniversariosDoMes>`.
 
 **O handoff mostra:** o calendário do mês vazio, "Nada marcado ainda" com "o
 próximo jogo ou treino aparece aqui assim que a equipa técnica o criar", e —
@@ -318,31 +371,38 @@ este é o ponto — um cartão **🎂 Aniversários deste mês** ("Tiago a 6, Pa
 22"), com a nota: *"mesmo sem eventos, a agenda mostra os aniversários do
 plantel — não fica uma página em branco"*.
 
-**O que existe hoje:** `src/pages/CalendarPage.tsx:1823` — um vazio genérico:
-"Nenhum evento encontrado. / Limpa os filtros, ou marca alguma coisa no [+]".
-Não há aniversários na Agenda (zero ocorrências).
+**O que existia antes:** um vazio genérico em `CalendarPage`: "Nenhum evento
+encontrado. / Limpa os filtros, ou marca alguma coisa no [+]". Não havia
+aniversários na Agenda (zero ocorrências).
 
 **Dados disponíveis:** `v_players_public.birth_date` — 25 das 27 fichas
 preenchidas. A **Home já mostra aniversários** (`src/pages/Home.tsx`), com o
 código feito; é reaproveitável.
 
-**Decisão em aberto:** os aniversários aparecem só quando a agenda está vazia,
-ou sempre? Se sempre, competem com os eventos; se só no vazio, o ecrã muda de
-conteúdo conforme o mês, o que pode confundir.
+**Decidido: só no vazio, e só sem filtros postos.** Sempre à vista, competiriam
+com os eventos. E há três vazios diferentes, não um: com filtro posto, o que
+falta é tirá-lo; fora de época, com jogos já realizados, o vazio manda ver os
+realizados — dizer "Nada marcado ainda" aí era mentira, e deixava o histórico
+sem porta. Os aniversários ficam no terceiro, o de quem não tem mesmo nada
+marcado.
 
 
 ---
 
-## Resumo para priorizar
+## Resumo — o que era o plano, e o que ficou
 
-| Ecrã | Prioridade | Porquê | Bloqueio |
+Os seis estão feitos. A prioridade e o bloqueio ficam registados porque
+explicam as decisões: onde havia bloqueio, foi ele que decidiu a forma do
+ecrã.
+
+| Ecrã | Prioridade | Bloqueio | Como ficou |
 |---|---|---|---|
-| **4e** Evento em falta na Agenda | Alta | Fecha o par com o alerta que já existe | — |
-| **4a** Toque num convocado | Alta | Uso diário de quem convoca | 9 respostas em toda a base |
-| **11a** Ficha por ligar | Média | Nenhuma conta neste estado hoje, mas recorre | Texto do handoff não serve |
-| **11b** Agenda vazia | Média | Barato, e a agenda passa semanas vazia | — |
-| **9h** Ficha de adversário | Média | Ecrã novo, com história de confrontos | Jornadas vazias |
-| **9i** Ficha de campo | Média | Ecrã novo | Não há mapa embebido |
+| **4e** Evento em falta na Agenda | Alta | — | Cartão no topo, e o contador só para quem gere |
+| **4a** Toque num convocado | Alta | 9 respostas em toda a base | Histórico contado, nunca em percentagem |
+| **11a** Ficha por ligar | Média | Texto do handoff não serve | Substitui o corpo da Home, sem ação para o próprio |
+| **11b** Agenda vazia | Média | — | Aniversários só no vazio sem filtros |
+| **9h** Ficha de adversário | Média | Jornadas vazias | Bloco das provas desenhado a tracejado |
+| **9i** Ficha de campo | Média | Não há mapa embebido | Botão que abre o Maps, e a ficha di-lo |
 
 ## Postos de lado — não desenhar
 
@@ -360,8 +420,8 @@ para não parecerem esquecimento:
 
 ## O que **não** falta
 
-Para não haver dúvidas: 1a–1d, 2a–2f, 3a–3d, 4b, 4c, 4d, 4f, 4g, 5a, 5b, 6a,
-7a, 7b, 8a–8i, 9a–9g, 10a–10d, 12b e 12c **estão feitos**. O 12a não é um ecrã
+Para não haver dúvidas: 1a–1d, 2a–2f, 3a–3d, 4a–4g, 5a, 5b, 6a, 7a, 7b,
+8a–8i, 9a–9i, 10a–10d, 11a, 11b, 12b e 12c **estão feitos**. O 12a não é um ecrã
 da app — é a ilustração de uma notificação no ecrã bloqueado do telemóvel, e
 depende de um sistema de envio que não existe.
 
