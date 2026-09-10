@@ -1384,6 +1384,30 @@ const EventsPage: React.FC = () => {
   }
 
   /*
+    O [+] da barra manda para cá com `?criar=match|practice|gathering`.
+
+    Sem isto o pedido caía na lista: quem escolhia "Jogo" na folha do [+] era
+    posto na gestão de eventos, com o formulário a um toque de distância e sem
+    nada a dizer que tinha de o abrir. O tipo já vem escolhido, que é a única
+    coisa que a folha sabe e a lista não.
+
+    O parâmetro sai do endereço a seguir, com `replace`, como o `?criar=jornada`
+    dos torneios: recarregar a página não volta a atirar ninguém para dentro de
+    um formulário.
+  */
+  useEffect(() => {
+    const pedido = searchParams.get('criar')
+    if (!pedido) return
+    if (pedido === 'match' || pedido === 'practice' || pedido === 'gathering') {
+      setType(pedido)
+      setViewModeTab('create')
+    }
+    const restantes = new URLSearchParams(searchParams)
+    restantes.delete('criar')
+    setSearchParams(restantes, { replace: true })
+  }, [searchParams, setSearchParams])
+
+  /*
     O dossier aberto pelo endereço. Só enche o evento — quem manda em estar
     aberto é o próprio endereço, e não um estado sincronizado por este efeito:
     era daí que vinha a falha do retroceder do browser, com o `?convocatoria=`

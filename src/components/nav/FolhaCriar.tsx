@@ -12,10 +12,11 @@ import { triggerHaptic } from '../../utils/haptics'
  * qualquer ecrã.
  *
  * Cada opção leva à página que já sabe criar essa entidade, com a intenção no
- * endereço (`?criar=…`). As páginas ainda não leem esse parâmetro — passam a
- * lê-lo quando forem redesenhadas (Agenda na fase 3, Clube na fase 6); até lá
- * abrem na lista, que é onde o botão de criar está hoje. O endereço já é o
- * definitivo, para não haver que voltar aqui.
+ * endereço (`?criar=…`), **e a página abre o formulário**: os Eventos no tipo
+ * escolhido aqui, os Torneios no gestor da prova a decorrer. Durante uns meses
+ * as páginas ignoraram o parâmetro e abriam na lista — quem pedia para criar um
+ * jogo era posto na gestão de eventos sem nada a dizer-lhe que faltava um toque.
+ * O comunicado não precisa: a página de Comunicados é o próprio formulário.
  */
 
 interface OpcaoCriar {
