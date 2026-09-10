@@ -17,7 +17,7 @@ import {
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
-import { CabecalhoEcra, Pastilha, EtiquetaSeccao } from '../components/ui'
+import { CabecalhoEcra, Pastilha } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
 import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -30,7 +30,7 @@ import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
   os Encargos já disseram a mesma coisa de maneiras diferentes.
 */
 import {
-  ETIQUETA_SECCAO, CHIP_ATRASO, CHIP_AVISO, CHIP_PAGO, CHIP_NEUTRO,
+  ETIQUETA_SECCAO,
   BARRA_ATRASO, BARRA_AVISO, BARRA_PAGO, BARRA_NEUTRA, fmtEuro,
 } from '../components/financeiro/estilos'
 import type {
@@ -1471,18 +1471,11 @@ const FinancePage: React.FC = () => {
       {/* ================= ENCARGOS ================= */}
       {activeTab === 'charges' && (
         <div className="space-y-3">
-          <div className="cartao-simples p-3.5 flex items-start gap-3">
-            <span className="w-9 h-9 rounded-xl bg-csc-gold/15 text-csc-gold flex items-center justify-center shrink-0">
-              <ShieldCheck size={17} />
-            </span>
-            <div className="min-w-0 flex-1">
-              {/* O ícone era `text-csc-tinta` — tinta escura sobre fundo escuro. */}
-              <EtiquetaSeccao>Encargos</EtiquetaSeccao>
-              <p className="text-[11px] leading-relaxed text-white/62 mt-1.5">
-                Cobranças a jogadores escolhidos — seguro, equipamento, inscrição ou viagem de torneio.
-              </p>
-            </div>
-          </div>
+          {/* Uma linha, e não um cartão com ícone: "Encargos" já está no título
+              do ecrã e no separador aceso. Fica a frase que diz o que isto é. */}
+          <p className="px-1 text-[10.5px] leading-relaxed text-white/50">
+            Cobranças a jogadores escolhidos — seguro, equipamento, inscrição ou viagem de torneio.
+          </p>
 
           {isAdmin && incomeCategories.length === 0 && (
             <p className="cartao-simples bg-csc-gold/10 border-csc-gold/25 p-3.5 text-[11px] leading-relaxed text-csc-gold">
@@ -1555,9 +1548,8 @@ const FinancePage: React.FC = () => {
                           {fmtEuro(c.amount)}/jogador · {c.participantIds.length}{' '}
                           {c.participantIds.length === 1 ? 'participante' : 'participantes'}
                           {c.due_date && <> · prazo {new Date(c.due_date).toLocaleDateString('pt-PT')}</>}
-                          {c.pendingCount > 0 && (
-                            <span className="text-csc-gold font-bold"> · {c.pendingCount} por pagar</span>
-                          )}
+                          {/* O "N por pagar" saiu: a banda dos Devedores, aqui
+                              por baixo, já diz quantos são e quanto falta. */}
                         </span>
 
                         <span className="flex items-center gap-2 mt-2">
@@ -1605,112 +1597,173 @@ const FinancePage: React.FC = () => {
                     )}
                   </div>
 
-                  {expanded && (
-                    <div>
-                      {c.participantIds.map(playerId => {
+                  {expanded && (() => {
+                    /*
+                      Os participantes de um encargo seguem a organização das
+                      Quotas: **ou se deve, ou se está em dia**. Deve-se quando
+                      o prazo já passou e ainda falta pagar; antes do prazo,
+                      quem não pagou não deve nada — tem é de pagar.
+
+                      Eram quatro pastilhas ("pago", "falta X", "deve X",
+                      "por pagar X") numa lista por ordem de inscrição, e o
+                      mesmo encargo tinha vinte e duas delas de três cores. Os
+                      grupos dizem o estado uma vez, e a linha fica com o nome
+                      e o número.
+                    */
+                    const isPastDeadline = c.due_date ? new Date() > new Date(c.due_date) : false
+                    const participantes = c.participantIds
+                      .map(playerId => {
                         const p = players.find(pl => pl.id === playerId)
                         const payments = c.payments.filter(pay => pay.player_id === playerId)
                         const paidTotal = payments.reduce((s, pay) => s + pay.amount, 0)
-                        const remaining = Math.max(0, c.amount - paidTotal)
-                        const isPastDeadline = c.due_date ? new Date() > new Date(c.due_date) : false
-                        const isPayingHere = payFormKey === `${c.id}:${playerId}`
-                        const barraJogador = remaining <= 0
-                          ? BARRA_PAGO
-                          : paidTotal > 0 ? BARRA_AVISO : isPastDeadline ? BARRA_ATRASO : BARRA_NEUTRA
-                        return (
-                          <div
-                            key={playerId}
-                            className="flex gap-2.5 pl-2.5 pr-3 py-2.5 border-t border-white/7 first:border-t-0"
-                          >
-                            <span aria-hidden="true" className={`w-[3px] self-stretch rounded-full shrink-0 ${barraJogador}`} />
+                        return {
+                          playerId,
+                          nome: p?.shirt_name || p?.name || 'Jogador',
+                          payments,
+                          paidTotal,
+                          remaining: Math.max(0, c.amount - paidTotal),
+                        }
+                      })
+                      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' }))
 
-                            <div className="min-w-0 flex-1 space-y-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-display font-extrabold text-[12.5px] text-white truncate flex-1 min-w-0">
-                                  {p?.shirt_name || p?.name || 'Jogador'}
+                    const deve = (x: typeof participantes[number]) => x.remaining > 0 && isPastDeadline
+
+                    const grupos = [
+                      {
+                        chave: 'devedores',
+                        titulo: 'Devedores',
+                        cor: 'text-csc-vermelho-texto',
+                        lista: participantes.filter(deve),
+                      },
+                      {
+                        chave: 'em-dia',
+                        titulo: 'Em dia',
+                        cor: 'text-csc-verde-texto',
+                        lista: participantes.filter(x => !deve(x)),
+                      },
+                    ]
+
+                    return (
+                      <div>
+                        {grupos.map(grupo => grupo.lista.length === 0 ? null : (
+                          <section key={grupo.chave} aria-label={`${grupo.titulo} — ${c.title}`}>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.05] border-t border-white/10">
+                              <span className={`font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase ${grupo.cor}`}>
+                                {grupo.titulo}
+                              </span>
+                              <span className="text-[10px] font-bold text-white/45 tabular-nums">{grupo.lista.length}</span>
+                              {grupo.chave === 'devedores' && (
+                                <span className="ml-auto font-display font-black text-[10.5px] tabular-nums text-csc-vermelho-texto">
+                                  {fmtEuro(grupo.lista.reduce((soma, x) => soma + x.remaining, 0))}
                                 </span>
-                                {remaining <= 0 ? (
-                                  <span className={CHIP_PAGO}>
-                                    pago{paidTotal > c.amount ? ` +${fmtEuro(paidTotal - c.amount)}` : ''}
-                                  </span>
-                                ) : paidTotal > 0 ? (
-                                  <span className={CHIP_AVISO}>falta {fmtEuro(remaining)}</span>
-                                ) : isPastDeadline ? (
-                                  <span className={CHIP_ATRASO}>deve {fmtEuro(remaining)}</span>
-                                ) : (
-                                  <span className={CHIP_NEUTRO}>por pagar {fmtEuro(remaining)}</span>
-                                )}
-                                {isAdmin && (
-                                  <button
-                                    type="button"
-                                    onClick={() => isPayingHere ? setPayFormKey(null) : openPayForm(c.id, playerId)}
-                                    aria-label={isPayingHere ? 'Cancelar o registo de pagamento' : `Registar pagamento de ${p?.shirt_name || p?.name || 'jogador'}`}
-                                    className={`${BOTAO_LINHA} ${
-                                      isPayingHere
-                                        ? 'bg-white/10 text-white/70 hover:bg-white/15'
-                                        : 'bg-csc-blue/15 text-csc-azul-texto hover:bg-csc-blue/25'
-                                    }`}
-                                  >
-                                    {isPayingHere ? <X size={15} /> : <Plus size={15} />}
-                                  </button>
-                                )}
-                              </div>
-
-                              {payments.length > 0 && (
-                                <div className="space-y-1">
-                                  {payments.map(pay => (
-                                    <div key={pay.id} className="flex items-center gap-2 text-[10.5px] text-white/55">
-                                      {editingPaymentId === pay.id ? (
-                                        <>
-                                          <input type="number" step="0.01" aria-label="Valor" value={editPaymentAmount} onChange={e => setEditPaymentAmount(e.target.value)} className={`${CAMPO} w-20 px-2`} />
-                                          <input type="date" aria-label="Data" value={editPaymentDate} onChange={e => setEditPaymentDate(e.target.value)} className={`${CAMPO} w-auto px-2`} />
-                                          <button type="button" onClick={handleSaveEditedPayment} aria-label="Guardar a correção" className={`${BOTAO_LINHA} text-csc-verde-texto hover:bg-csc-light/15`}><Check size={15} /></button>
-                                          <button type="button" onClick={() => setEditingPaymentId(null)} aria-label="Cancelar a correção" className={`${BOTAO_LINHA} text-white/60 hover:bg-white/10`}><X size={15} /></button>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <span className="font-display font-black text-white/85 tabular-nums">{fmtEuro(pay.amount)}</span>
-                                          <span className="tabular-nums">{new Date(pay.paid_at).toLocaleDateString('pt-PT')}</span>
-                                          {pay.notes && <span className="italic truncate">({pay.notes})</span>}
-                                          {isAdmin && (
-                                            <span className="ml-auto flex items-center shrink-0">
-                                              <button type="button" onClick={() => startEditPayment(pay)} aria-label="Corrigir este pagamento" title="Corrigir valor" className={`${BOTAO_LINHA} text-csc-azul-texto hover:bg-csc-blue/20`}><Pencil size={13} /></button>
-                                              <button type="button" onClick={() => setPaymentToDelete(pay.id)} aria-label="Apagar este pagamento" title="Apagar" className={`${BOTAO_LINHA} text-csc-vermelho-texto hover:bg-csc-red/15`}><Trash2 size={13} /></button>
-                                            </span>
-                                          )}
-                                        </>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {isPayingHere && (
-                                // flex-wrap + min-w-0 nas Notas: sem isto, num ecrã estreito o
-                                // input flex-1 não encolhia (min-width:auto por omissão) e o
-                                // botão Guardar saía do cartão, escondido pelo overflow-hidden
-                                // do cartão do encargo — a linha passa a quebrar antes disso.
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <input type="number" step="0.01" aria-label="Valor do pagamento" placeholder="Valor (€)" value={payFormAmount} onChange={e => setPayFormAmount(e.target.value)} className={`${CAMPO} w-24 px-2 shrink-0`} />
-                                  <input type="date" aria-label="Data do pagamento" value={payFormDate} onChange={e => setPayFormDate(e.target.value)} className={`${CAMPO} w-auto px-2 shrink-0`} />
-                                  <input type="text" aria-label="Notas" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className={`${CAMPO} flex-1 min-w-[100px]`} />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAddChargePayment(c.id, playerId)}
-                                    className="min-h-11 px-4 bg-csc-gold text-csc-tinta rounded-[14px] font-display font-extrabold text-[11.5px] cursor-pointer shrink-0
-                                      transition-transform duration-150 active:scale-97
-                                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                                  >
-                                    Guardar
-                                  </button>
-                                </div>
                               )}
                             </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+
+                            {grupo.lista.map(({ playerId, nome, payments, paidTotal, remaining }, i) => {
+                              const isPayingHere = payFormKey === `${c.id}:${playerId}`
+                              const emDivida = remaining > 0 && isPastDeadline
+                              const barraJogador = remaining <= 0
+                                ? BARRA_PAGO
+                                : emDivida ? BARRA_ATRASO : BARRA_NEUTRA
+                              return (
+                                <div
+                                  key={playerId}
+                                  className={`flex gap-2.5 pl-2.5 pr-3 py-2 ${i > 0 ? 'border-t border-white/8' : ''}`}
+                                >
+                                  <span aria-hidden="true" className={`w-[3px] self-stretch rounded-full shrink-0 ${barraJogador}`} />
+
+                                  <div className="min-w-0 flex-1 space-y-2">
+                                    <div className="flex items-center gap-2 min-h-9">
+                                      <span className="font-display font-extrabold text-[12.5px] text-white truncate flex-1 min-w-0">
+                                        {nome}
+                                      </span>
+                                      {/* O valor, e não uma pastilha: a cor da barra
+                                          e o grupo já dizem o estado. */}
+                                      {remaining <= 0 ? (
+                                        <span className="shrink-0 font-bold text-[11px] text-csc-verde-texto/85 tabular-nums">
+                                          pago{paidTotal > c.amount ? ` +${fmtEuro(paidTotal - c.amount)}` : ''}
+                                        </span>
+                                      ) : (
+                                        <span className={`shrink-0 font-display font-black text-[12px] tabular-nums ${
+                                          emDivida ? 'text-csc-vermelho-texto' : 'text-white/45'
+                                        }`}>
+                                          {fmtEuro(remaining)}
+                                        </span>
+                                      )}
+                                      {isAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={() => isPayingHere ? setPayFormKey(null) : openPayForm(c.id, playerId)}
+                                          aria-label={isPayingHere ? 'Cancelar o registo de pagamento' : `Registar pagamento de ${nome}`}
+                                          className={`${BOTAO_LINHA} ${
+                                            isPayingHere
+                                              ? 'bg-white/10 text-white/70 hover:bg-white/15'
+                                              : 'bg-csc-blue/15 text-csc-azul-texto hover:bg-csc-blue/25'
+                                          }`}
+                                        >
+                                          {isPayingHere ? <X size={15} /> : <Plus size={15} />}
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    {payments.length > 0 && (
+                                      <div className="space-y-1 pb-1">
+                                        {payments.map(pay => (
+                                          <div key={pay.id} className="flex items-center gap-2 text-[10.5px] text-white/55">
+                                            {editingPaymentId === pay.id ? (
+                                              <>
+                                                <input type="number" step="0.01" aria-label="Valor" value={editPaymentAmount} onChange={e => setEditPaymentAmount(e.target.value)} className={`${CAMPO} w-20 px-2`} />
+                                                <input type="date" aria-label="Data" value={editPaymentDate} onChange={e => setEditPaymentDate(e.target.value)} className={`${CAMPO} w-auto px-2`} />
+                                                <button type="button" onClick={handleSaveEditedPayment} aria-label="Guardar a correção" className={`${BOTAO_LINHA} text-csc-verde-texto hover:bg-csc-light/15`}><Check size={15} /></button>
+                                                <button type="button" onClick={() => setEditingPaymentId(null)} aria-label="Cancelar a correção" className={`${BOTAO_LINHA} text-white/60 hover:bg-white/10`}><X size={15} /></button>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <span className="font-display font-black text-white/85 tabular-nums">{fmtEuro(pay.amount)}</span>
+                                                <span className="tabular-nums">{new Date(pay.paid_at).toLocaleDateString('pt-PT')}</span>
+                                                {pay.notes && <span className="italic truncate">({pay.notes})</span>}
+                                                {isAdmin && (
+                                                  <span className="ml-auto flex items-center shrink-0">
+                                                    <button type="button" onClick={() => startEditPayment(pay)} aria-label="Corrigir este pagamento" title="Corrigir valor" className={`${BOTAO_LINHA} text-csc-azul-texto hover:bg-csc-blue/20`}><Pencil size={13} /></button>
+                                                    <button type="button" onClick={() => setPaymentToDelete(pay.id)} aria-label="Apagar este pagamento" title="Apagar" className={`${BOTAO_LINHA} text-csc-vermelho-texto hover:bg-csc-red/15`}><Trash2 size={13} /></button>
+                                                  </span>
+                                                )}
+                                              </>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {isPayingHere && (
+                                      // flex-wrap + min-w-0 nas Notas: sem isto, num ecrã estreito o
+                                      // input flex-1 não encolhia (min-width:auto por omissão) e o
+                                      // botão Guardar saía do cartão, escondido pelo overflow-hidden
+                                      // do cartão do encargo — a linha passa a quebrar antes disso.
+                                      <div className="flex flex-wrap items-center gap-1.5 pb-1">
+                                        <input type="number" step="0.01" aria-label="Valor do pagamento" placeholder="Valor (€)" value={payFormAmount} onChange={e => setPayFormAmount(e.target.value)} className={`${CAMPO} w-24 px-2 shrink-0`} />
+                                        <input type="date" aria-label="Data do pagamento" value={payFormDate} onChange={e => setPayFormDate(e.target.value)} className={`${CAMPO} w-auto px-2 shrink-0`} />
+                                        <input type="text" aria-label="Notas" placeholder="Notas (opcional)" value={payFormNotes} onChange={e => setPayFormNotes(e.target.value)} className={`${CAMPO} flex-1 min-w-[100px]`} />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAddChargePayment(c.id, playerId)}
+                                          className="min-h-11 px-4 bg-csc-gold text-csc-tinta rounded-[14px] font-display font-extrabold text-[11.5px] cursor-pointer shrink-0
+                                            transition-transform duration-150 active:scale-97
+                                            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                                        >
+                                          Guardar
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </section>
+                        ))}
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })

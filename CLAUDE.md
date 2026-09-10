@@ -503,6 +503,12 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   camisola num círculo com aro dourado, quatro maneiras de dizer o mesmo.
   **A grelha dos meses lá dentro continua com três cores**, e é outra
   pergunta: ali interessa separar o mês que já venceu do que ainda não chegou.
+  **Os participantes de um encargo seguem a mesma regra**, dentro do encargo
+  aberto: deve-se quando o prazo já passou e ainda falta pagar, e antes do
+  prazo ninguém deve nada. Eram quatro pastilhas — "pago", "falta X", "deve
+  X", "por pagar X" — de três cores, numa lista por ordem de inscrição. A
+  linha fica com o nome e o valor em falta, e o "N por pagar" saiu do resumo
+  do encargo: a banda dos devedores diz quantos são e quanto falta.
 - **Marcar um mês de quota não devolve a lista ao topo.** O `fetchAll()` do
   Financeiro põe `loading` e a página passa a ser só o rodopio: o documento
   encolhe, o browser perde a posição, e quem estivesse no décimo atleta

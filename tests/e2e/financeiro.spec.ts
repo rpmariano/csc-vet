@@ -187,3 +187,84 @@ test('marcar um mês não devolve a lista ao topo', async ({ page }, testInfo) =
 
   expect(await page.evaluate(() => window.scrollY)).toBe(antes)
 })
+
+/**
+ * Encargos — a mesma organização das Quotas, dentro de cada encargo.
+ *
+ * A lista de participantes vinha por ordem de inscrição e com quatro
+ * pastilhas ("pago", "falta X", "deve X", "por pagar X") de três cores. Passa
+ * a dois grupos: deve-se quando o prazo já passou e falta pagar; antes do
+ * prazo, quem não pagou ainda não deve nada.
+ */
+
+const ENCARGO_VENCIDO = 'ch1'
+const ENCARGO_POR_VENCER = 'ch2'
+
+const FIXTURES_ENCARGOS = {
+  ...FIXTURES_BASE,
+  financial_settings: [{
+    id: 1, season_start_month: 8, quota_amount: 10, quota_due_day: 8,
+    quota_excluded_months: [], initial_balance: 0,
+  }],
+  expense_categories: [{ id: 'cat1', name: 'Seguro Desportivo', allow_income: true }],
+  v_players_public: ATLETAS.slice(0, 4).map(a => ({
+    ...a, status: 'active', role: 'player', roles: ['player'],
+    quota_start_date: '2026-08-01', quota_end_date: null,
+  })),
+  charges: [
+    {
+      id: ENCARGO_VENCIDO, title: 'Seguro desportivo 26/27', amount: 25, category_id: 'cat1',
+      is_intermediary: true, payable_amount: 700, payable_paid: false,
+      payable_due_date: '2026-10-15', due_date: '2026-09-01', season: '2026/2027',
+    },
+    {
+      id: ENCARGO_POR_VENCER, title: 'Equipamento 26/27', amount: 40, category_id: 'cat1',
+      is_intermediary: false, due_date: '2027-06-30', season: '2026/2027',
+    },
+  ],
+  charge_players: [
+    ...ATLETAS.slice(0, 4).map(a => ({ id: `cp1-${a.id}`, charge_id: ENCARGO_VENCIDO, player_id: a.id })),
+    ...ATLETAS.slice(0, 4).map(a => ({ id: `cp2-${a.id}`, charge_id: ENCARGO_POR_VENCER, player_id: a.id })),
+  ],
+  charge_payments: [
+    // Alves pagou tudo, Carlos pagou metade — os dois antes do prazo.
+    { id: 'pay1', charge_id: ENCARGO_VENCIDO, player_id: 'p3', amount: 25, paid_at: '2026-08-20', notes: null },
+    { id: 'pay2', charge_id: ENCARGO_VENCIDO, player_id: 'p4', amount: 10, paid_at: '2026-08-21', notes: null },
+  ],
+}
+
+const abreEncargo = async (page: import('@playwright/test').Page, titulo: string) => {
+  await montarSupabaseFalso(page, FIXTURES_ENCARGOS)
+  await page.goto('/csc-vet/finance?ver=charges')
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByText(titulo)).toBeVisible({ timeout: 15000 })
+  await page.locator('button[aria-expanded]').filter({ hasText: titulo }).click()
+}
+
+test('num encargo vencido, devedores primeiro e por ordem alfabética', async ({ page }) => {
+  await abreEncargo(page, 'Seguro desportivo 26/27')
+
+  const devedores = page.getByRole('region', { name: /^Devedores — Seguro/ })
+  const emDia = page.getByRole('region', { name: /^Em dia — Seguro/ })
+
+  const yDevedores = (await devedores.boundingBox())!.y
+  expect(yDevedores).toBeLessThan((await emDia.boundingBox())!.y)
+
+  const texto = await devedores.innerText()
+  expect(texto.indexOf('Bruno')).toBeLessThan(texto.indexOf('Vieira'))
+
+  // Quem pagou metade e já passou o prazo deve o resto, e não o total.
+  await expect(devedores).toContainText('15,00')
+  // Quem pagou tudo está em dia, sem valor nenhum a vermelho.
+  await expect(emDia).toContainText('Alves')
+  await expect(emDia).toContainText('pago')
+})
+
+test('antes do prazo, ninguém deve nada', async ({ page }) => {
+  await abreEncargo(page, 'Equipamento 26/27')
+
+  await expect(page.getByRole('region', { name: /^Devedores — Equipamento/ })).toHaveCount(0)
+  const emDia = page.getByRole('region', { name: /^Em dia — Equipamento/ })
+  await expect(emDia).toContainText('Bruno')
+  await expect(emDia).toContainText('40,00')
+})
