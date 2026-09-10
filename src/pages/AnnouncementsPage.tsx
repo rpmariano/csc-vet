@@ -141,7 +141,7 @@ const AnnouncementsPage: React.FC = () => {
         if (error) {
           // Se falhar porque a coluna is_active ainda não existe na base de dados
           if (error.message?.includes('is_active')) {
-            const { is_active, ...withoutActive } = newAnn
+            const { is_active: _is_active, ...withoutActive } = newAnn
             const { data: fallbackData, error: fallbackErr } = await supabase
               .from('announcements')
               .insert([withoutActive])
@@ -155,7 +155,7 @@ const AnnouncementsPage: React.FC = () => {
         } else {
           createdItem = data as Announcement
         }
-      } catch (dbErr) {
+      } catch {
         // Fallback local se estiver offline ou em simulação
         createdItem = {
           id: `local-${Date.now()}`,
@@ -233,7 +233,7 @@ const AnnouncementsPage: React.FC = () => {
         .eq('id', editingAnn.id)
 
       if (error && error.message?.includes('is_active')) {
-        const { is_active, ...withoutActive } = updatePayload
+        const { is_active: _is_active, ...withoutActive } = updatePayload
         await supabase.from('announcements').update(withoutActive).eq('id', editingAnn.id)
       } else if (error) {
         throw error
@@ -270,7 +270,7 @@ const AnnouncementsPage: React.FC = () => {
       setAnnouncements(prev => prev.filter(ann => ann.id !== deletingAnn.id))
       setDeletingAnn(null)
       showToast('Comunicado eliminado do histórico.')
-    } catch (err: any) {
+    } catch {
       setAnnouncements(prev => prev.filter(ann => ann.id !== deletingAnn.id))
       setDeletingAnn(null)
       showToast('Comunicado removido.')

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { MapPin, Pencil, Trash2, Phone, User, Shield } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { VistaDetalhe } from '../VistaDetalhe'
-import { formatOpponentSigla } from '../../pages/CalendarPage'
+import { formatOpponentSigla } from '../../lib/siglas'
 import { EtiquetaSeccao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 

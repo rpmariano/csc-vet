@@ -25,6 +25,9 @@ import { montarSupabaseFalso, FIXTURES_BASE, UTILIZADOR_TESTE } from './supabase
 
 // Corre uma vez: o teste é que põe as larguras, portanto repeti-lo no projeto
 // do telemóvel não acrescentava nada e demorava o dobro.
+// O Playwright exige que o primeiro argumento seja destruturação de objeto,
+// mesmo vazia — dar-lhe um nome rebenta a bateria inteira no arranque.
+// eslint-disable-next-line no-empty-pattern
 test.beforeEach(({}, testInfo) => {
   testInfo.skip(testInfo.project.name !== 'desktop', 'Corre só uma vez.')
   // Dezoito ecrãs a duas larguras, com os workers a partilhar um só Vite: o
