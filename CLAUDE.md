@@ -503,6 +503,18 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   camisola num círculo com aro dourado, quatro maneiras de dizer o mesmo.
   **A grelha dos meses lá dentro continua com três cores**, e é outra
   pergunta: ali interessa separar o mês que já venceu do que ainda não chegou.
+- **Na Visão Geral, cada bloco é uma banda com o título e o resumo.** O
+  `<Bloco>` de `VisaoGeralFinanceira.tsx` — `<section>` com nome, banda em
+  cima, conteúdo por baixo — é a mesma forma dos grupos das Quotas, das
+  categorias dos Pagamentos Programados e dos meses das Despesas. Os títulos
+  flutuavam dentro do cartão, à mistura com o conteúdo, e o número que resume
+  o bloco andava ora ao lado do título ora numa linha de rodapé atrás de um
+  traço.
+  **O resumo de uma banda soma as linhas que tem por baixo.** Nas repartições
+  por categoria era o `totalReceived`/`totalExpenses`, uma segunda conta da
+  mesma coisa vinda de outro caminho: uma banda que não bata certo com a sua
+  própria lista mente. O "Outras" recolhe o que fica fora do top 5, por isso a
+  soma das linhas *é* o total.
 - **As despesas e receitas leem-se por mês.** Um bloco por mês, do mais
   recente para o mais antigo, com o saldo do mês na banda e, dentro, o dia, a
   descrição, a categoria e o valor. Era uma fila de caixas cinzentas iguais,
