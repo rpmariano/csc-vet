@@ -491,11 +491,16 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   dever nada. Havia uma terceira pastilha, âmbar, com "9 por pagar", que punha
   em aviso quem não devia um cêntimo ao lado do vermelho de quem devia mesmo.
   **A lista abre pelos devedores e ordena cada grupo por nome** — a vista vem
-  por número de camisola, e procurar alguém assim é ler os vinte. O cabeçalho
-  de cada grupo é uma etiqueta solta e não uma banda: as linhas aqui são
-  cartões com número, nome e chevron, e uma banda ao lado deles lia-se como
-  mais um cartão (ao contrário dos Pagamentos Programados, onde as linhas são
-  linhas).
+  por número de camisola, e procurar alguém assim é ler os vinte. Cada grupo é
+  uma `<section>` com nome, e não uma pilha de cartões: banda em cima com o
+  estado, a contagem e (nos devedores) o total por receber, e os atletas como
+  linhas separadas por um fio lá dentro. Vinte e dois cartões com moldura,
+  fundo e um vão de 12px entre cada dois eram uma parede onde não se
+  distinguia nada.
+  **A linha diz uma coisa só:** a barra de estado, o nome e, à direita, o que
+  interessa ao grupo — quanto se deve, para quem deve; os meses pagos, para
+  quem está em dia. Tinha barra, pastilha, contagem por extenso e o número da
+  camisola num círculo com aro dourado, quatro maneiras de dizer o mesmo.
   **A grelha dos meses lá dentro continua com três cores**, e é outra
   pergunta: ali interessa separar o mês que já venceu do que ainda não chegou.
 - **Marcar um mês de quota não devolve a lista ao topo.** O `fetchAll()` do

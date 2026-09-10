@@ -274,6 +274,8 @@ const FinancePage: React.FC = () => {
     lateCount: number
     pendingCount: number
     totalOwed: number
+    /** Só o que já venceu — é isto que se cobra, e não os meses que faltam. */
+    lateAmount: number
     totalPaid: number
   }
 
@@ -309,6 +311,9 @@ const FinancePage: React.FC = () => {
         pendingCount: linhas.filter(r => r.status === 'pending').length,
         totalPaid: linhas.reduce((sum, r) => sum + (r.paid_amount || 0), 0),
         totalOwed: linhas.reduce((sum, r) => sum + Number(r.owed_amount || 0), 0),
+        lateAmount: linhas
+          .filter(r => r.status === 'late')
+          .reduce((sum, r) => sum + Number(r.owed_amount || 0), 0),
       }
     })
   }, [players, quotaRows])
@@ -1322,120 +1327,137 @@ const FinancePage: React.FC = () => {
       {activeTab === 'quotas' && (
         <div className="space-y-3">
           {/*
-            A regra em cima, a lista em baixo — e nada de molduras dentro de
-            molduras. Isto era um cartão `bg-csc-dark` com sublinhado dourado a
-            embrulhar uma caixa cinzenta a embrulhar fichas **`bg-white`
-            opacas**: sobre elas o `text-white` das linhas ficava branco em
-            branco, e o nome do jogador não se via de todo. Ver a nota do
-            `CLAUDE.md` sobre o que o `escurecer-tema.py` deixa para trás.
+            A regra numa linha, e não num cartão: "Controlo de quotas · Época
+            2026/2027" repetia o título do ecrã e a sobrancelha do cabeçalho,
+            que já dizem as duas coisas. O que sobra é o que não está em lado
+            nenhum — quanto custa e a partir de que dia se conta o atraso.
           */}
-          <div className="cartao-simples p-3.5">
-            <EtiquetaSeccao>Controlo de quotas · Época {seasonLabel}</EtiquetaSeccao>
-            <p className="text-[11px] leading-relaxed text-white/62 mt-1.5">
-              {fmtEuro(settings.quota_amount)} por mês · em atraso a partir do dia {settings.quota_due_day}.
-            </p>
-          </div>
+          <p className="px-1 text-[10.5px] leading-relaxed text-white/50">
+            {fmtEuro(settings.quota_amount)} por mês · em atraso a partir do dia {settings.quota_due_day}.
+          </p>
 
           {/*
-            Dois grupos, devedores em cima. O cabeçalho é uma etiqueta solta e
-            não uma banda — as linhas aqui são cartões com número, nome e
-            chevron, e uma banda do mesmo cinzento ao lado deles voltaria a
-            ler-se como mais um cartão.
+            **Um grupo é uma caixa, e os atletas são linhas lá dentro.** Cada
+            atleta era um cartão seu — moldura, fundo e um vão de 12px entre
+            cada dois: com vinte e dois atletas, o ecrã era uma parede de
+            cartões iguais onde não se distinguia nada. Passam a linhas
+            separadas por um fio, numa caixa por grupo, como em "Os meus
+            pagamentos" e nos Pagamentos Programados.
+
+            E a linha diz uma coisa só. Tinha a barra de estado, a pastilha
+            ("1 em atraso"), a contagem ("0 de 11 meses pagos") e o número da
+            camisola num círculo com aro dourado — quatro maneiras de dizer o
+            mesmo, vinte e duas vezes. Fica a barra, o nome, e à direita o que
+            interessa a cada grupo: quanto se deve, para quem deve; os meses
+            pagos, para quem está em dia.
           */}
           {([
-            { titulo: 'Devedores', cor: 'text-csc-vermelho-texto', lista: quotasAgrupadas.devedores },
-            { titulo: 'Em dia', cor: 'text-csc-verde-texto', lista: quotasAgrupadas.emDia },
+            { chave: 'devedores', titulo: 'Devedores', cor: 'text-csc-vermelho-texto', lista: quotasAgrupadas.devedores },
+            { chave: 'em-dia', titulo: 'Em dia', cor: 'text-csc-verde-texto', lista: quotasAgrupadas.emDia },
           ] as const).map(grupo => grupo.lista.length === 0 ? null : (
-          <div key={grupo.titulo} className="space-y-3">
-          <div className="flex items-baseline gap-2 pt-1">
-            <span className={`font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase ${grupo.cor}`}>
-              {grupo.titulo}
-            </span>
-            <span className="text-[10px] font-bold text-white/45 tabular-nums">{grupo.lista.length}</span>
-          </div>
-          {grupo.lista.map(q => {
-            const expanded = expandedPlayerId === q.player.id
-            /* Vermelho a dever, verde em dia. O âmbar saiu com a pastilha:
-               meses por pagar de meses que ainda não chegaram não são aviso
-               nenhum. */
-            const barra = q.lateCount > 0 ? BARRA_ATRASO : BARRA_PAGO
-            return (
-              <div key={q.player.id} className="cartao-simples overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setExpandedPlayerId(expanded ? null : q.player.id)}
-                  aria-expanded={expanded}
-                  className={`w-full min-h-14 flex items-center gap-2.5 pl-2.5 pr-3.5 py-2.5 text-left cursor-pointer transition-colors
-                    hover:bg-white/[0.04] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
-                      expanded ? 'bg-white/[0.06] border-b border-white/12' : ''
-                    }`}
-                >
-                  <span aria-hidden="true" className={`w-[3px] self-stretch rounded-full shrink-0 ${barra}`} />
-                  <span className="w-8 h-8 rounded-full bg-csc-dark border border-csc-gold/35 text-csc-gold font-display font-extrabold text-[11px] flex items-center justify-center shrink-0 tabular-nums">
-                    {q.player.jersey_number || '—'}
+            /* `section` com nome: dá a quem usa leitor de ecrã uma marca por
+               onde saltar, e aos testes um seletor que não depende do aspeto. */
+            <section
+              key={grupo.chave}
+              aria-label={grupo.titulo}
+              className="rounded-2xl border border-white/12 overflow-hidden"
+            >
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.07] border-b border-white/12">
+                <span className={`font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase ${grupo.cor}`}>
+                  {grupo.titulo}
+                </span>
+                <span className="text-[10px] font-bold text-white/45 tabular-nums">{grupo.lista.length}</span>
+                {grupo.chave === 'devedores' && (
+                  <span className="ml-auto font-display font-black text-[10.5px] tabular-nums text-csc-vermelho-texto">
+                    {fmtEuro(grupo.lista.reduce((soma, q) => soma + q.lateAmount, 0))}
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display font-extrabold text-[13px] text-white truncate">
-                      {q.player.shirt_name || q.player.name}
-                    </span>
-                    <span className="block text-[10.5px] text-white/50 mt-0.5">
-                      {q.paidCount} de {q.months.length} {q.months.length === 1 ? 'mês pago' : 'meses pagos'}
-                    </span>
-                  </span>
-
-                  {q.lateCount > 0
-                    ? <span className={CHIP_ATRASO}>{q.lateCount} em atraso</span>
-                    : <span className={CHIP_PAGO}>em dia</span>}
-
-                  <ChevronDown size={16} className={`shrink-0 text-white/50 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
-                </button>
-
-                {expanded && (
-                  <div className="px-3.5 py-3">
-                    <p className="text-[10.5px] leading-relaxed text-white/55 mb-2.5">
-                      Toca num mês para o marcar como pago; toca outra vez para corrigir.
-                    </p>
-                    {/*
-                      Grelha de três, e não uma fila que quebra onde calha: os
-                      doze meses da época ficam em quatro linhas certas, e cada
-                      pastilha tem os 44px de alvo de toque que a app exige —
-                      tinham 30px.
-                    */}
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {q.months.map(m => {
-                        const isPaid = m.statusCalc === 'paid'
-                        const isSaving = savingMonth === m.monthYear
-                        return (
-                          <button
-                            key={m.monthYear}
-                            type="button"
-                            disabled={isSaving}
-                            onClick={() => handleToggleQuotaMonth(q.player.id, m)}
-                            aria-label={`${nomeMes(m.month)} de ${m.year} — ${isPaid ? 'pago, tocar para corrigir' : 'por pagar, tocar para marcar como pago'}`}
-                            className={`min-h-11 px-2 rounded-[14px] font-display font-extrabold text-[11px] border cursor-pointer
-                              flex items-center justify-center gap-1 tabular-nums transition-colors
-                              disabled:opacity-50 disabled:cursor-wait
-                              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                                isPaid
-                                  ? 'bg-csc-light/15 border-csc-light/30 text-csc-verde-texto hover:bg-csc-red/12 hover:border-csc-red/35 hover:text-csc-vermelho-texto'
-                                  : m.statusCalc === 'late'
-                                    ? 'bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
-                                    : 'bg-white/6 border-white/12 text-white/70 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
-                              }`}
-                          >
-                            {nomeMes(m.month).slice(0, 3)}/{String(m.year).slice(2)}
-                            {isPaid && <Check size={11} />}
-                            {!isPaid && m.statusCalc === 'late' && <AlertTriangle size={11} />}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
                 )}
               </div>
-            )
-          })}
-          </div>
+
+              {grupo.lista.map((q, i) => {
+                const expanded = expandedPlayerId === q.player.id
+                const devedor = q.lateCount > 0
+                return (
+                  <div key={q.player.id} className={i > 0 ? 'border-t border-white/8' : ''}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedPlayerId(expanded ? null : q.player.id)}
+                      aria-expanded={expanded}
+                      className={`w-full min-h-12 flex items-center gap-2.5 pl-2.5 pr-3 py-2 text-left cursor-pointer transition-colors
+                        hover:bg-white/[0.04] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
+                          expanded ? 'bg-white/[0.06]' : ''
+                        }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`w-[3px] self-stretch rounded-full shrink-0 ${devedor ? BARRA_ATRASO : BARRA_PAGO}`}
+                      />
+                      <span className="w-5 shrink-0 text-right font-display font-extrabold text-[10.5px] tabular-nums text-white/40">
+                        {q.player.jersey_number || '—'}
+                      </span>
+                      <span className="min-w-0 flex-1 font-display font-extrabold text-[13px] text-white truncate">
+                        {q.player.shirt_name || q.player.name}
+                      </span>
+                      {devedor ? (
+                        <span className="shrink-0 font-display font-black text-[12.5px] tabular-nums text-csc-vermelho-texto">
+                          {fmtEuro(q.lateAmount)}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 font-bold text-[11px] tabular-nums text-white/45">
+                          {q.paidCount}/{q.months.length}
+                        </span>
+                      )}
+                      <ChevronDown size={15} className={`shrink-0 text-white/35 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {expanded && (
+                      <div className="px-3 pb-3 pt-1 bg-white/[0.03]">
+                        <p className="text-[10.5px] leading-relaxed text-white/55 mb-2.5">
+                          {devedor
+                            ? `${q.lateCount} ${q.lateCount === 1 ? 'mês vencido' : 'meses vencidos'} por pagar. Toca num mês para o marcar como pago.`
+                            : 'Toca num mês para o marcar como pago; toca outra vez para corrigir.'}
+                        </p>
+                        {/*
+                          Grelha de três, e não uma fila que quebra onde calha: os
+                          doze meses da época ficam em quatro linhas certas, e cada
+                          pastilha tem os 44px de alvo de toque que a app exige —
+                          tinham 30px.
+                        */}
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {q.months.map(m => {
+                            const isPaid = m.statusCalc === 'paid'
+                            const isSaving = savingMonth === m.monthYear
+                            return (
+                              <button
+                                key={m.monthYear}
+                                type="button"
+                                disabled={isSaving}
+                                onClick={() => handleToggleQuotaMonth(q.player.id, m)}
+                                aria-label={`${nomeMes(m.month)} de ${m.year} — ${isPaid ? 'pago, tocar para corrigir' : 'por pagar, tocar para marcar como pago'}`}
+                                className={`min-h-11 px-2 rounded-[14px] font-display font-extrabold text-[11px] border cursor-pointer
+                                  flex items-center justify-center gap-1 tabular-nums transition-colors
+                                  disabled:opacity-50 disabled:cursor-wait
+                                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                                    isPaid
+                                      ? 'bg-csc-light/15 border-csc-light/30 text-csc-verde-texto hover:bg-csc-red/12 hover:border-csc-red/35 hover:text-csc-vermelho-texto'
+                                      : m.statusCalc === 'late'
+                                        ? 'bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
+                                        : 'bg-white/6 border-white/12 text-white/70 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
+                                  }`}
+                              >
+                                {nomeMes(m.month).slice(0, 3)}/{String(m.year).slice(2)}
+                                {isPaid && <Check size={11} />}
+                                {!isPaid && m.statusCalc === 'late' && <AlertTriangle size={11} />}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </section>
           ))}
 
           {quotaOverview.length === 0 && (
