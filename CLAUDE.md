@@ -624,6 +624,22 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a
   vista, que só tem colunas de equipa. `profiles` fica para a própria ficha e para o
   Plantel (treinador/admin), onde os dados pessoais são o assunto.
+- **A folha do [+] abre o formulário, e não a lista.** Cada opção leva à
+  página que sabe criar a entidade, com a intenção no endereço (`?criar=…`), e
+  a página tem de a ler: os Eventos abrem o formulário no tipo escolhido, os
+  Torneios abrem o gestor da prova a decorrer. O parâmetro sai do endereço a
+  seguir (`replace`), senão recarregar volta a atirar a pessoa para dentro de
+  um formulário. Durante uns meses as páginas ignoraram o parâmetro e caíam na
+  lista — quem escolhia "Jogo" ficava na gestão de eventos sem nada a dizer que
+  faltava um toque. `tests/e2e/folha-criar.spec.ts` cobre os três tipos.
+- **Os golos dos atletas têm de bater certo com o resultado.** Somar mais do
+  que o resultado é impossível e a ficha recusa gravar; somar menos pergunta
+  antes, porque um autogolo do adversário conta para nós e não tem marcador. A
+  conta aparece à vista enquanto se escreve, e não só ao carregar em Guardar.
+  Sem isto gravou-se um 2-1 com quatro golos repartidos pelos jogadores, e
+  esses números alimentam as estatísticas e — desde que o jogo se espelha na
+  jornada — também a classificação. **Os nossos golos são os da visita quando
+  jogamos fora**: `home_score` é o da casa do jogo, não o nosso.
 - **Guardar um evento leva à convocatória**, e é lá que as linhas de `callups`
   são escritas — em mais lado nenhum do fluxo de criação
   (`ConvocatoriaAoCriar`, ecrãs 4f/4g). Era um bloco no meio do formulário, e
