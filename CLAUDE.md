@@ -627,6 +627,13 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   (`src/components/ui`) é a linha das três — **a bola verde com o número é de
   todas, a fotografia e a posição são só do Plantel**, que é o ecrã onde a
   pergunta é quem é a pessoa; nos outros dois é quanto deve.
+- **Na linha do Plantel, a letra pequena são as posições, em sigla.** "PL",
+  "DCE · MC", "GR" — as mesmas siglas do campo (`siglaDaPosicao`, em
+  `src/lib/posicoes.ts`), e os dois pontas de lança dão "PL" os dois, como lá.
+  Tinha o nome por extenso à frente da posição, a competir com a alcunha logo
+  por cima, e "Ponta de Lança (Esq)" enchia a linha. Quem não joga não tem
+  posições e fica sem letra pequena — o grupo já diz que é da equipa técnica ou
+  da direção.
 - **O Plantel agrupa por perfil, e quem tem vários conta pelo primeiro desta
   ordem: jogador, treinador, direção.** Metade da direção deste clube também
   joga, e quem joga aparece entre os jogadores. Os inativos ficam num grupo à

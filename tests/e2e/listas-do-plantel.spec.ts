@@ -81,14 +81,18 @@ test('a bola com o número está nas três listas; a foto e a posição só no P
   await page.goto('/csc-vet/team-management')
   const noPlantel = page.getByRole('button', { name: /Ver a ficha de Vieira Silva/ })
   await expect(noPlantel).toContainText('11')
-  await expect(noPlantel).toContainText('Ponta de Lança')
+  /* A posição em sigla, como no campo, e sozinha: o nome por extenso competia
+     com a alcunha logo por cima, e "Ponta de Lança (Esq)" enchia a linha. */
+  await expect(noPlantel).toContainText('PL')
+  await expect(noPlantel).not.toContainText('Ponta de Lança')
+  await expect(noPlantel).not.toContainText('Vieira Silva ·')
 
   await page.goto('/csc-vet/finance?ver=quotas')
   await expect(page.getByText(/em atraso a partir do dia/)).toBeVisible({ timeout: 15000 })
   const naQuota = page.locator('button[aria-expanded]').filter({ hasText: 'Vieira' })
   await expect(naQuota).toContainText('11')
   // Sem posição: aqui a pergunta é quanto deve, não quem é.
-  await expect(naQuota).not.toContainText('Ponta de Lança')
+  await expect(naQuota).not.toContainText('PL')
 
   await page.goto('/csc-vet/finance?ver=charges')
   await expect(page.getByText('Seguro desportivo 26/27')).toBeVisible({ timeout: 15000 })
