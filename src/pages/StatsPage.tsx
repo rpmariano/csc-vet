@@ -19,6 +19,45 @@ const FILTRO_POR_OMISSAO = 'global_official' as const
 const ETIQUETA_MOSAICO =
   'font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/62 leading-tight'
 
+/**
+ * O cabeçalho de cada coluna ordena a tabela. Era um `onClick` no `<th>` —
+ * o rato chegava lá, o teclado não. Passa a `<button>` dentro do `<th>`, com
+ * `aria-sort` a dizer por onde está ordenada.
+ *
+ * Vive no módulo e não dentro da página: declarado lá dentro, era um
+ * componente novo a cada render, e o React desmontava e remontava as seis
+ * células do cabeçalho sempre que se mexia num filtro.
+ */
+const Coluna: React.FC<{
+  col: SortKey
+  children: React.ReactNode
+  largura?: string
+  sortKey: SortKey
+  sortDir: 'asc' | 'desc'
+  aoOrdenar: (col: SortKey) => void
+}> = ({ col, children, largura, sortKey, sortDir, aoOrdenar }) => (
+  <th
+    scope="col"
+    aria-sort={sortKey === col ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    className={`p-0 ${largura ?? ''}`}
+  >
+    <button
+      type="button"
+      onClick={() => aoOrdenar(col)}
+      className={`w-full min-h-11 px-2 flex items-center justify-center gap-1 cursor-pointer
+        font-display font-black text-[9px] tracking-[0.1em] uppercase
+        focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
+          sortKey === col ? 'text-csc-gold' : 'text-white/62'
+        }`}
+    >
+      {children}
+      <span aria-hidden="true" className={sortKey === col ? 'text-csc-gold' : 'text-white/25'}>
+        {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+      </span>
+    </button>
+  </th>
+)
+
 interface LinhaPodio {
   id: string
   nome: string
@@ -521,34 +560,6 @@ function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats:
     })
   }, [aggregatedStats, sortKey, sortDir])
 
-  /**
-   * O cabeçalho de cada coluna ordena a tabela. Era um `onClick` no `<th>` —
-   * o rato chegava lá, o teclado não. Passa a `<button>` dentro do `<th>`,
-   * com `aria-sort` a dizer por onde está ordenada.
-   */
-  const Coluna = ({ col, children, largura }: { col: SortKey; children: React.ReactNode; largura?: string }) => (
-    <th
-      scope="col"
-      aria-sort={sortKey === col ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={`p-0 ${largura ?? ''}`}
-    >
-      <button
-        type="button"
-        onClick={() => handleSort(col)}
-        className={`w-full min-h-11 px-2 flex items-center justify-center gap-1 cursor-pointer
-          font-display font-black text-[9px] tracking-[0.1em] uppercase
-          focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
-            sortKey === col ? 'text-csc-gold' : 'text-white/62'
-          }`}
-      >
-        {children}
-        <span aria-hidden="true" className={sortKey === col ? 'text-csc-gold' : 'text-white/25'}>
-          {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
-        </span>
-      </button>
-    </th>
-  )
-
   return (
     <div className="cartao-simples overflow-hidden">
       <div className="px-4 py-3 bg-csc-dark border-b-2 border-csc-gold flex items-center gap-2.5">
@@ -567,12 +578,12 @@ function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats:
         <table className="w-full text-left">
           <thead className="bg-white/5">
             <tr>
-              <Coluna col="name" largura="text-left">Jogador</Coluna>
-              <Coluna col="games_played">J</Coluna>
-              <Coluna col="goals">G</Coluna>
-              <Coluna col="assists">A</Coluna>
-              <Coluna col="mvp_count">MVP</Coluna>
-              <Coluna col="red_cards">Disc.</Coluna>
+              <Coluna col="name" largura="text-left" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>Jogador</Coluna>
+              <Coluna col="games_played" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>J</Coluna>
+              <Coluna col="goals" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>G</Coluna>
+              <Coluna col="assists" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>A</Coluna>
+              <Coluna col="mvp_count" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>MVP</Coluna>
+              <Coluna col="red_cards" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>Disc.</Coluna>
             </tr>
           </thead>
           <tbody>

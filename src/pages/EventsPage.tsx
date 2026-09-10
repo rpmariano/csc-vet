@@ -43,7 +43,8 @@ import { FichaConvocado } from '../components/callups/FichaConvocado'
 import { ConvocatoriaAoCriar } from '../components/callups/ConvocatoriaAoCriar'
 import type { EventoCriado } from '../components/callups/ConvocatoriaAoCriar'
 import { toast } from '../context/ToastContext'
-import { formatClubSigla, formatOpponentSigla, hasMatchReport } from './CalendarPage'
+import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
+import { hasMatchReport } from '../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 import { useModalA11y } from '../hooks/useModalA11y'
 import { VistaDetalhe } from '../components/VistaDetalhe'
@@ -627,7 +628,7 @@ const EventsPage: React.FC = () => {
 
         if (error) {
           if (error.message?.includes('is_active')) {
-            const { is_active, ...withoutActive } = payload
+            const { is_active: _is_active, ...withoutActive } = payload
             const { error: fbErr } = await supabase
               .from('events')
               .update(withoutActive)
@@ -1038,7 +1039,7 @@ const EventsPage: React.FC = () => {
             .select()
           if (error) {
             if (error.message?.includes('is_active')) {
-              const withoutActive = eventsToInsert.map(({ is_active, ...rest }) => rest)
+              const withoutActive = eventsToInsert.map(({ is_active: _is_active, ...rest }) => rest)
               const { data: fbData, error: fbErr } = await supabase.from('events').insert(withoutActive).select()
               if (fbErr) throw fbErr
               createdBatchResult = (fbData || []).map((e: any) => ({ ...e, is_active: isActiveOnCreate }))
@@ -1050,7 +1051,7 @@ const EventsPage: React.FC = () => {
           }
         } catch (dbErr: any) {
           if (dbErr.message?.includes('is_active')) {
-            const withoutActive = eventsToInsert.map(({ is_active, ...rest }) => rest)
+            const withoutActive = eventsToInsert.map(({ is_active: _is_active, ...rest }) => rest)
             const { data: fbData, error: fbErr } = await supabase.from('events').insert(withoutActive).select()
             if (fbErr) throw fbErr
             createdBatchResult = (fbData || []).map((e: any) => ({ ...e, is_active: isActiveOnCreate }))
@@ -1120,7 +1121,7 @@ const EventsPage: React.FC = () => {
 
           if (error) {
             if (error.message?.includes('is_active')) {
-              const { is_active, ...withoutActive } = newEvent
+              const { is_active: _is_active, ...withoutActive } = newEvent
               const { data: fbData, error: fbErr } = await supabase.from('events').insert([withoutActive]).select().single()
               if (fbErr) throw fbErr
               createdEventResult = { ...fbData, is_active: isActiveOnCreate }
@@ -1132,7 +1133,7 @@ const EventsPage: React.FC = () => {
           }
         } catch (dbErr: any) {
           if (dbErr.message?.includes('is_active')) {
-            const { is_active, ...withoutActive } = newEvent
+            const { is_active: _is_active, ...withoutActive } = newEvent
             const { data: fbData, error: fbErr } = await supabase.from('events').insert([withoutActive]).select().single()
             if (fbErr) throw fbErr
             createdEventResult = { ...fbData, is_active: isActiveOnCreate }

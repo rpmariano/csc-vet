@@ -4,11 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
-import {
-  formatClubSigla,
-  convocatoriaFechada,
-  textoConvocatoriaFechada,
-} from './CalendarPage'
+import { formatClubSigla } from '../lib/siglas'
+import { convocatoriaFechada, textoConvocatoriaFechada } from '../lib/eventos'
 import { triggerHaptic } from '../utils/haptics'
 import { AvatarPerfil, CartaoVidro, CartaoSimples, EtiquetaSeccao, PastilhaEstado } from '../components/ui'
 import { AnnouncementsInboxButton } from '../components/AnnouncementsInbox'

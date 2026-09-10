@@ -10,7 +10,7 @@ import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../UnsavedChangesModal'
 import { ConfirmModal } from '../ConfirmModal'
 import { FichaAdversario } from './FichaAdversario'
-import { formatClubSigla } from '../../pages/CalendarPage'
+import { formatClubSigla } from '../../lib/siglas'
 import { CAMPO, ETIQUETA, urlDoGoogleMaps, type Adversario, type Campo } from './comum'
 
 /*

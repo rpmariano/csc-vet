@@ -34,7 +34,10 @@ export const CarrosselCartoes: React.FC<CarrosselCartoesProps> = ({
 }) => {
   const refTrilho = useRef<HTMLDivElement>(null)
   const [ativa, setAtiva] = useState(0)
-  const realce = useRealceDeslizante(ativa, { larguraFixa: 22 })
+  /* Destruturado, como nos outros dois sítios que usam o realce: com o
+     objeto inteiro, cada `refFila` parece ao linter uma leitura de ref
+     durante o render. */
+  const { refFila, refItem, estiloRealce } = useRealceDeslizante(ativa, { larguraFixa: 22 })
 
   /* Qual a página ao centro. Lê-se do scroll e não de um índice guardado,
      porque o arrasto pode parar a meio e o que manda é onde ficou. */
@@ -81,18 +84,18 @@ export const CarrosselCartoes: React.FC<CarrosselCartoesProps> = ({
       </div>
 
       {paginas.length > 1 && (
-        <div ref={realce.refFila} className="relative flex items-center justify-center gap-1 mt-1">
+        <div ref={refFila} className="relative flex items-center justify-center gap-1 mt-1">
           {/* O realce, por trás dos traços. */}
           <span
             aria-hidden="true"
             className="absolute h-[3px] rounded-full bg-csc-gold pointer-events-none"
-            style={realce.estiloRealce}
+            style={estiloRealce}
           />
           {paginas.map((_, i) => (
             <button
               key={i}
               type="button"
-              ref={realce.refItem(i)}
+              ref={refItem(i)}
               onClick={() => irPara(i)}
               aria-label={`Página ${i + 1} de ${paginas.length}`}
               aria-current={i === ativa ? 'true' : undefined}

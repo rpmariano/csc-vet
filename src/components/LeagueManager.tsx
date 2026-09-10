@@ -55,10 +55,9 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   })
   const closeConfirmModal = () => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
 
-  useEffect(() => {
-    fetchData()
-  }, [tournamentId])
-
+  /* O efeito fica **depois** da função que chama: em cima referia uma `const`
+     ainda por inicializar, o que só funciona porque o corpo do componente
+     corre inteiro antes de o efeito disparar. */
   const fetchData = async () => {
     setLoading(true)
     const [tourRes, groupsRes, teamsRes, oppsRes] = await Promise.all([
@@ -80,6 +79,10 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    fetchData()
+  }, [tournamentId])
 
   const handleAddGroup = async () => {
     if (!newGroupName.trim()) return

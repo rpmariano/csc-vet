@@ -128,36 +128,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   })
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // 1. Get current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id, session.user.email, session.user.phone, session.user)
-      } else {
-        setLoading(false)
-      }
-    })
-
-    // 2. Listen to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        const currentUser = session?.user ?? null
-        setUser(currentUser)
-        
-        if (currentUser) {
-          await fetchProfile(currentUser.id, currentUser.email, currentUser.phone, currentUser)
-        } else {
-          setActualProfile(null)
-          setLoading(false)
-        }
-      }
-    )
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
 
   const fetchProfile = async (
     userId: string, 
@@ -241,6 +211,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false)
     }
   }
+
+  /* O efeito fica **depois** do `fetchProfile`: em cima referia uma `const`
+     ainda por inicializar, o que só funciona porque o corpo do componente
+     corre inteiro antes de o efeito disparar. Nenhum hook mudou de ordem —
+     entre um sítio e o outro só há declarações de funções. */
+  useEffect(() => {
+    // 1. Get current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        fetchProfile(session.user.id, session.user.email, session.user.phone, session.user)
+      } else {
+        setLoading(false)
+      }
+    })
+
+    // 2. Listen to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        const currentUser = session?.user ?? null
+        setUser(currentUser)
+        
+        if (currentUser) {
+          await fetchProfile(currentUser.id, currentUser.email, currentUser.phone, currentUser)
+        } else {
+          setActualProfile(null)
+          setLoading(false)
+        }
+      }
+    )
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
 
   const assignedRoles = extractRolesFromProfile(actualProfile)
 
