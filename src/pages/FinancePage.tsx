@@ -19,6 +19,7 @@ import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
 import { CabecalhoEcra, Pastilha, EtiquetaSeccao } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
+import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
@@ -1857,33 +1858,13 @@ const FinancePage: React.FC = () => {
           {pendingScheduledPayments.length > 0 && (
             <div className="cartao-simples text-white border-csc-gold/30 p-4">
               <h3 className={`${ETIQUETA_SECCAO} mb-3`}>Pagamentos Programados</h3>
-              <div className="space-y-4">
-                {scheduledPaymentsByCategory.map(([label, items]) => (
-                  <div key={label}>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-white/62 mb-1.5">{label}</p>
-                    <div className="space-y-2">
-                      {items.map(p => (
-                        <div key={p.key} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-400/20">
-                          <div className="min-w-0">
-                            <p className="font-bold text-white text-sm truncate">{p.title}</p>
-                            {p.due_date && <p className="text-[10px] text-white/60">Prazo: {new Date(p.due_date).toLocaleDateString('pt-PT')}</p>}
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-black text-sm text-amber-300">{fmtEuro(p.amount)}</span>
-                            <button
-                              type="button"
-                              onClick={() => handlePayScheduled(p)}
-                              className="px-3 py-1.5 bg-csc-gold text-csc-tinta rounded-lg text-[11px] font-black hover:brightness-95 transition-all cursor-pointer"
-                            >
-                              Registar Pagamento
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {/* A mesma lista da Visão Geral, e não uma segunda maneira de a
+                  desenhar: aqui a linha abre o registo do pagamento. */}
+              <PagamentosProgramados
+                grupos={scheduledPaymentsByCategory}
+                aoTocar={handlePayScheduled}
+                accao="pagar"
+              />
             </div>
           )}
 

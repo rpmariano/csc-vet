@@ -49,6 +49,28 @@ const FIXTURES = {
       id: 'j2a', tournament_id: 't1', group_id: 'g1', matchday: 2, match_date: '2026-09-19',
       home_team_id: 'e3', away_team_id: 'e2', status: 'scheduled', home_score: null, away_score: null,
     },
+    /* Um jogo nosso espelhado de um evento, já com ficha lançada… */
+    {
+      id: 'j2b', tournament_id: 't1', group_id: 'g1', matchday: 2, match_date: '2026-09-20',
+      home_team_id: 'e1', away_team_id: 'e2', status: 'finished', home_score: 3, away_score: 1,
+      event_id: 'ev1',
+    },
+    /* …e outro nosso, marcado e ainda sem ficha. */
+    {
+      id: 'j2c', tournament_id: 't1', group_id: 'g1', matchday: 2, match_date: '2026-09-21',
+      home_team_id: 'e1', away_team_id: 'e3', status: 'scheduled', home_score: null, away_score: null,
+      event_id: 'ev2',
+    },
+  ],
+  events: [
+    {
+      id: 'ev1', tournament_id: 't1', type: 'match', matchday: 2, is_active: true,
+      date_time: '2026-09-20T10:00:00Z', meeting_time: null, home_away: 'home',
+      home_score: 3, away_score: 1, opponent_id: 'o1', is_friendly: false, location: 'Cascais',
+      title: 'Jogo vs Clube Atletismo do Montijo', description: null, field_id: null,
+      opponent: { id: 'o1', name: 'Clube Atletismo do Montijo', initials: 'CA Montijo', logo_url: EMBLEMA },
+      tournament: { id: 't1', name: 'Liga Masters +35', season: '2026/2027', rules: null }, field: null,
+    },
   ],
 }
 
@@ -161,4 +183,23 @@ test('um jogo de prova não se grava sem jornada', async ({ page }) => {
   // Com a jornada preenchida, o formulário deixa de reclamar.
   await page.getByLabel('Jornada *').fill('3')
   await expect(page.getByLabel('Jornada *')).toHaveValue('3')
+})
+
+/**
+ * Um jogo nosso já lançado abre a ficha; um por lançar diz que lhe falta.
+ *
+ * A lista de jornadas mostrava só o placar, e a ficha — marcadores, cartões,
+ * onze — ficava a dois ecrãs de distância, sem nada a dizer sequer quais dos
+ * nossos jogos já a tinham.
+ */
+test('a linha do nosso jogo abre a ficha, e distingue quem ainda não a tem', async ({ page }) => {
+  await abreClassificacao(page)
+
+  const comFicha = page.getByRole('link', { name: /Abrir a ficha de jogo de CSC com CA Montijo/ })
+  await expect(comFicha).toBeVisible()
+  await expect(page.getByTitle('Jogo nosso, ainda sem ficha de jogo')).toBeVisible()
+
+  await comFicha.click()
+  await expect(page).toHaveURL(/ver=fichas&jogo=ev1/)
+  await expect(page.locator('[role="dialog"]')).toBeVisible()
 })

@@ -1,17 +1,17 @@
 import React, { useMemo } from 'react'
-import { TrendingUp, Receipt, ChevronRight, AlertTriangle, ListChecks, Activity } from 'lucide-react'
+import { TrendingUp, Receipt, AlertTriangle, ListChecks, Activity } from 'lucide-react'
 import { getSeasonMonths } from '../../lib/finance'
 import type { FinancialSettings, SeasonMonth } from '../../lib/finance'
 import { CartaoVidro } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 import {
   ETIQUETA_SECCAO, ETIQUETA_GRUPO, CHIP_ATRASO, CHIP_NEUTRO,
-  BARRA_ATRASO, BARRA_AVISO, BARRA_NEUTRA,
-  fmtEuro, fmtEuroCurto, fmtData, MESES_CURTOS,
+  fmtEuro, fmtEuroCurto, MESES_CURTOS,
 } from './estilos'
 import type {
   MovementRow, QuotaStatusRow, ScheduledPayment, EncargoPorReceber,
 } from './tipos'
+import { PagamentosProgramados } from './PagamentosProgramados'
 
 /*
   Visão Geral do Financeiro (ecrã 8a).
@@ -38,9 +38,6 @@ interface PontoSaldo {
   valor: number
   previsto: boolean
 }
-
-/** Dias a partir dos quais um prazo por vencer já se assinala a âmbar. */
-const DIAS_DE_AVISO = 30
 
 /** 'AAAA-MM' de uma data — a chave por que os movimentos são agrupados. */
 const mesDe = (iso: string) => iso.slice(0, 7)
@@ -536,9 +533,9 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
         Pagamentos Programados — desceu para debaixo da Previsão, e deixou de
         ser uma nuvem de pastilhas douradas onde a categoria, o título, o valor
         e a data corriam todos no mesmo peso e partiam a meio da palavra.
-        Passou a lista agrupada: a categoria é cabeçalho de grupo, cada
-        compromisso é uma linha com barra de estado, valor à direita e prazo
-        por baixo — o desenho de "Os meus pagamentos". A ação de pagar
+        Passou a lista agrupada do `<PagamentosProgramados>`, que é a mesma
+        que Despesas/Receitas mostra — a categoria é a banda de cima de uma
+        caixa e os compromissos são as linhas lá dentro. A ação de pagar
         continua só em Despesas/Receitas; cada linha leva lá.
       */}
       {pendingScheduledPayments.length > 0 && (
@@ -558,48 +555,10 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
             {' '}por pagar a terceiros até ao fim da época.
           </p>
 
-          <div className="space-y-2.5">
-            {scheduledPaymentsByCategory.map(([categoria, linhas]) => (
-              <div key={categoria} className="space-y-1">
-                <div className="rounded-lg bg-white/6 px-2.5 py-1.5">
-                  <span className={ETIQUETA_GRUPO}>{categoria}</span>
-                </div>
-                {linhas.map(p => {
-                  const prazo = p.due_date ? new Date(p.due_date) : null
-                  const emAtraso = prazo ? prazo < hoje : false
-                  const aVencer = prazo !== null && !emAtraso
-                    && (prazo.getTime() - hoje.getTime()) / 86400000 <= DIAS_DE_AVISO
-                  const barra = emAtraso ? BARRA_ATRASO : aVencer ? BARRA_AVISO : BARRA_NEUTRA
-                  const corPrazo = emAtraso ? 'text-csc-vermelho-texto' : aVencer ? 'text-amber-300' : 'text-white/50'
-                  return (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onClick={() => { triggerHaptic('selection'); irParaDespesas() }}
-                      aria-label={`${p.title}, ${fmtEuro(p.amount)}. Ver e registar pagamento.`}
-                      className="w-full min-h-11 flex items-stretch gap-2.5 rounded-xl bg-white/4 hover:bg-white/8 transition-colors cursor-pointer text-left overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold"
-                    >
-                      <span className={`w-[3px] shrink-0 ${barra}`} aria-hidden="true" />
-                      <span className="flex-1 min-w-0 py-2">
-                        <span className="block font-display font-extrabold text-[13px] text-white truncate">
-                          {p.title}
-                        </span>
-                        <span className={`block text-[10px] font-bold mt-0.5 ${corPrazo}`}>
-                          {p.due_date
-                            ? `${emAtraso ? 'Em atraso desde' : 'Vence'} ${fmtData(p.due_date)}`
-                            : 'Sem prazo definido'}
-                        </span>
-                      </span>
-                      <span className="shrink-0 self-center font-display font-black text-[13px] tabular-nums text-white">
-                        {fmtEuro(p.amount)}
-                      </span>
-                      <ChevronRight size={16} className="shrink-0 self-center mr-2 text-white/35" aria-hidden="true" />
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
+          <PagamentosProgramados
+            grupos={scheduledPaymentsByCategory}
+            aoTocar={() => { triggerHaptic('selection'); irParaDespesas() }}
+          />
         </div>
       )}
 

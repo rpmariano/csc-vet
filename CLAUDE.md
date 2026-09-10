@@ -233,6 +233,17 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   e uma barra de cor à esquerda com o seu estado. Tinham os dois o mesmo peso,
   e a categoria "Seguro Desportivo" aparecia colada ao encargo "Seguro
   Desportivo 26/27" sem nada a dizer que um era o título do outro.
+  **E o grupo é uma caixa só, com as linhas por dentro** — banda em cima, um
+  fio entre linhas, nada de caixas irmãs: com o cabeçalho numa caixa e cada
+  linha na sua, do mesmo cinzento, voltava a ler-se tudo ao mesmo nível. Foi
+  isso que os Pagamentos Programados tinham, e é por isso que a lista é hoje um
+  bloco só (`src/components/financeiro/PagamentosProgramados.tsx`), usado pela
+  Visão Geral e pelas Despesas/Receitas — ali a linha leva às Despesas, aqui
+  abre o registo do pagamento.
+  **A linha não repete o que o cabeçalho já diz:** dentro de "Inscrição — Liga
+  Masters +35", a linha "Liga Masters +35 — Tranche 1" fica "Tranche 1" — o
+  corte é por travessão e um título de uma parte só fica intacto, senão o
+  seguro passava a chamar-se "26/27".
 - **Uma persiana sobe sempre até meio do ecrã** (`min-h-[55dvh]` no
   `BottomSheet`). Sem isso o painel agarrava-se ao conteúdo, e uma persiana
   curta abria uma tira colada ao fundo do telemóvel — o título à altura dos
