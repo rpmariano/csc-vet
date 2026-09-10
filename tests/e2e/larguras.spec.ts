@@ -260,8 +260,22 @@ async function assentar(page: Page, tentativas = 25) {
 
 /** Diferença acima da qual um pixel conta, por canal (0–255). */
 const DELTA = 32
-/** Percentagem de pixels diferentes a partir da qual se considera bug. */
-const LIMITE_PCT = 0.05
+/**
+ * Percentagem de pixels diferentes a partir da qual se considera bug.
+ *
+ * **0,10% é o chão do ruído medido, não um número escolhido a olho.** Numa
+ * passagem verde de todos os ecrãs: dez a 0,0000%, o Plantel a 0,0012%, as
+ * Definições a 0,0057%, o detalhe do evento a 0,0385% e a ficha do adversário
+ * a 0,0530%. Com o limite a 0,05% a ficha do adversário passava num dia e
+ * falhava no outro sem nada ter mudado — e o que ela mede não é a largura, é o
+ * antialiasing de umas centenas de pixels numa faixa só.
+ *
+ * Uma diferença a sério — um cartão que muda de forma, um espaçamento, texto a
+ * mais ou a menos — dá ordens de grandeza acima disto: o que apanhou o
+ * separador dos torneios a empurrar a página dava 0,22%, e uma coluna de
+ * tamanho diferente nem chega a comparar-se (falha logo nas dimensões).
+ */
+const LIMITE_PCT = 0.1
 
 
 /**
@@ -280,6 +294,18 @@ async function fotografar(page: Page, caminho: string, janela: number): Promise<
   await page.waitForTimeout(250)
   await page.waitForLoadState('networkidle')
   await assentar(page)
+  /*
+    E as imagens descodificadas, não só descarregadas. O `networkidle` diz que
+    o pedido acabou; o pixel só existe depois de o browser descodificar o
+    ficheiro, e um emblema que entrasse entre as duas fotografias aparecia
+    como diferença de largura — a ficha do adversário deu 0,0530% num dia,
+    0,0748% noutro e 0,0000% noutro, sempre numa faixa só.
+  */
+  await page.evaluate(() => Promise.all(
+    Array.from(document.images)
+      .filter(img => img.src)
+      .map(img => img.decode().catch(() => undefined)),
+  ))
   await page.waitForTimeout(200)
   return page.locator('#root').screenshot({ animations: 'disabled', scale: 'css' })
 }

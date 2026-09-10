@@ -166,13 +166,21 @@ export function useModalA11y({
       teclado ou com leitor de ecrã do lado de fora — o Tab continua a
       percorrer a página por baixo.
 
-      Tenta a cada frame durante meio segundo, o que cobre a montagem em dois
-      passos sem prender nada se o painel nunca aparecer.
+      **A paciência conta-se em frames, e não em milissegundos.** Era meio
+      segundo de relógio: numa máquina carregada — um telemóvel antigo, um
+      portátil a compilar — o painel monta depois disso, e o `setTimeout`
+      desistia calado, que é o defeito que este bloco existe para corrigir.
+      Contado em frames, o limite estica com a máquina: quando os frames
+      demoram, há mais tempo real para o painel aparecer.
+
+      Cento e vinte frames são uns dois segundos numa máquina folgada, e mais
+      numa cansada. Se o painel nunca aparecer — um consumidor que não pendure
+      a ref — a contagem acaba e não fica nada a correr.
     */
     let cancelado = false
     let frame = 0
     if (autoFocus) {
-      const limite = performance.now() + 500
+      let restantes = 120
       const tentar = () => {
         if (cancelado) return
         const painel = painelRef.current
@@ -182,7 +190,7 @@ export function useModalA11y({
           ;(primeiro ?? painel).focus()
           return
         }
-        if (performance.now() < limite) frame = requestAnimationFrame(tentar)
+        if (restantes-- > 0) frame = requestAnimationFrame(tentar)
       }
       frame = requestAnimationFrame(tentar)
     }

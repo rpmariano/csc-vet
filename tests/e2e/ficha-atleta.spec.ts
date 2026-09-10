@@ -37,7 +37,6 @@ async function abreFicha(page: import('@playwright/test').Page, perfil = PERFIL)
     quota_exemptions: [{ profile_id: perfil.id, month_year: '0000-12', reason: null }],
   })
   await page.goto(`/csc-vet/team-management?atleta=${perfil.id}`)
-  await page.waitForLoadState('networkidle')
   await expect(page.getByRole('dialog')).toBeVisible()
 }
 
@@ -120,10 +119,16 @@ test('a relação aparece na ficha, por baixo do nome', async ({ page }) => {
   await expect(ficha.getByText('Cônjuge', { exact: true })).toBeVisible()
 })
 
+/*
+  Abrir o Perfil não espera por `networkidle` — espera pelo campo que se vai
+  usar, que é o que interessa. O `networkidle` estourava o prazo do teste de
+  vez em quando: é uma promessa sobre a rede inteira, e basta um pedido que
+  fique pendurado (uma fotografia, um tipo de letra) para nunca chegar.
+  Playwright desaconselha-o por isto mesmo.
+*/
 test('no Perfil, a relação escolhe-se numa lista fechada', async ({ page }) => {
   await abreFicha(page)
   await page.goto('/csc-vet/settings')
-  await page.waitForLoadState('networkidle')
 
   const relacao = page.getByLabel('Relação', { exact: true })
   await expect(relacao).toBeVisible()
@@ -141,7 +146,6 @@ test('no Perfil, a relação escolhe-se numa lista fechada', async ({ page }) =>
 test('a janela de atividade aparece no Perfil, só de leitura', async ({ page }) => {
   await abreFicha(page)
   await page.goto('/csc-vet/settings')
-  await page.waitForLoadState('networkidle')
 
   await expect(page.getByText('01/09/2026')).toBeVisible()
   await expect(page.getByText('Sem fim marcado')).toBeVisible()
@@ -167,7 +171,6 @@ test('o meio-campo diz "Médio Centro", e não "Médio Defensivo"', async ({ pag
 test('o atleta muda o tamanho e o pé no seu Perfil', async ({ page }) => {
   await abreFicha(page)
   await page.goto('/csc-vet/settings')
-  await page.waitForLoadState('networkidle')
 
   const tamanho = page.getByLabel('Tamanho de Equipamento', { exact: true })
   await expect(tamanho).toBeEnabled()
@@ -183,7 +186,6 @@ test('o atleta muda o tamanho e o pé no seu Perfil', async ({ page }) => {
 test('a camisola e as posições continuam travadas no Perfil', async ({ page }) => {
   await abreFicha(page)
   await page.goto('/csc-vet/settings')
-  await page.waitForLoadState('networkidle')
 
   // O número é texto, não campo: quem o atribui é a equipa técnica.
   await expect(page.getByText('#99', { exact: true })).toBeVisible()
