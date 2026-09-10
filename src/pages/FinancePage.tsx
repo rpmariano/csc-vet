@@ -13,7 +13,7 @@ import { Modal } from '../components/Modal'
 // das vistas v_quota_status e v_financial_movements. De finance.ts só sobra o
 // que é regra de negócio pura — a época e o prazo do seguro.
 import {
-  DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes,
+  DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes, formatMonthYear,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
@@ -417,6 +417,21 @@ const FinancePage: React.FC = () => {
     const category = categories.find(cat => cat.id === c.category_id)
     return { ...c, participantIds, payments, totalExpected, totalPaid, surplusAmount, pendingCount, categoryName: category?.name || null }
   }), [charges, chargePlayers, chargePayments, categories])
+
+  /*
+    Os lançamentos manuais por mês, do mais recente para o mais antigo — é
+    assim que se lê um livro de caixa, e é a pergunta que se faz neste ecrã:
+    o que saiu e o que entrou em setembro.
+  */
+  const movimentosPorMes = useMemo(() => {
+    const porMes = new Map<string, Transaction[]>()
+    for (const t of [...transactions].sort((a, b) => b.date.localeCompare(a.date))) {
+      const mes = t.date.slice(0, 7)
+      if (!porMes.has(mes)) porMes.set(mes, [])
+      porMes.get(mes)!.push(t)
+    }
+    return Array.from(porMes.entries()).sort((a, b) => b[0].localeCompare(a[0]))
+  }, [transactions])
 
   const [expandedChargeId, setExpandedChargeId] = useState<string | null>(null)
   const [isNewChargeModalOpen, setIsNewChargeModalOpen] = useState(false)
@@ -1990,39 +2005,112 @@ const FinancePage: React.FC = () => {
             </div>
           )}
 
-          <div className="cartao-simples text-white p-4">
-            <h3 className={`${ETIQUETA_SECCAO} mb-3`}>Últimas Despesas e Receitas</h3>
-            <div className="space-y-2">
-              {transactions.map(t => {
-                const cat = categories.find(c => c.id === t.category_id)
-                return (
-                  <div key={t.id} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-white/5">
-                    <div className="min-w-0">
-                      <p className="font-bold text-white text-sm truncate">{t.description}</p>
-                      <p className="text-[10px] text-white/60 flex items-center gap-1.5 flex-wrap">
-                        <span>{new Date(t.date).toLocaleDateString('pt-PT')}</span>
-                        {cat ? <span className="px-1.5 py-0.5 rounded bg-white/10">{cat.name}</span> : t.type === 'income' && <span className="px-1.5 py-0.5 rounded bg-white/10">Receita</span>}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <p className={`font-black text-sm ${t.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>{t.type === 'income' ? '+' : '-'}{fmtEuro(t.amount)}</p>
-                      {t.document_url && (
-                        <button type="button" onClick={() => handleOpenDocument(t.document_url!)} title="Ver documento" className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 cursor-pointer transition-colors">
-                          <Paperclip size={13} />
-                        </button>
-                      )}
-                      <button type="button" onClick={() => handleDeleteTransaction(t.id)} title="Eliminar" className="p-1.5 rounded-lg text-white/62 hover:text-red-400 hover:bg-red-500/10 cursor-pointer transition-colors">
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+          {/*
+            Últimas despesas e receitas, **agrupadas por mês**.
+
+            Era uma fila de caixas cinzentas iguais, uma por lançamento, com a
+            data escrita por extenso em cada uma e o valor em `emerald-400` e
+            `red-400` — cores que não são as do clube. Um livro de caixa lê-se
+            por mês, e é o mês que responde à pergunta que se faz aqui: o que
+            saiu e o que entrou em setembro. A banda leva o saldo do mês; a
+            linha, o dia, o que foi e quanto.
+
+            Os botões de anexo e de apagar tinham 26px — metade do alvo de
+            toque mínimo da app.
+          */}
+          <p className="px-1 font-display font-extrabold text-[9.5px] tracking-[0.14em] uppercase text-csc-gold">
+            Últimas despesas e receitas
+          </p>
+
+          {transactions.length === 0 ? (
+            <p className="cartao-simples p-6 text-center text-[11.5px] text-white/62">
+              Sem despesas ou receitas registadas.
+            </p>
+          ) : (
+            movimentosPorMes.map(([mes, linhas]) => {
+              const saldo = linhas.reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0)
+              return (
+                <section
+                  key={mes}
+                  aria-label={formatMonthYear(mes)}
+                  className="rounded-2xl border border-white/12 overflow-hidden"
+                >
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.07] border-b border-white/12">
+                    <span className="font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase text-white/70">
+                      {formatMonthYear(mes)}
+                    </span>
+                    <span className="text-[10px] font-bold text-white/45 tabular-nums">{linhas.length}</span>
+                    <span className={`ml-auto font-display font-black text-[10.5px] tabular-nums ${
+                      saldo >= 0 ? 'text-csc-verde-texto' : 'text-csc-vermelho-texto'
+                    }`}>
+                      {saldo >= 0 ? '+' : '−'}{fmtEuro(Math.abs(saldo))}
+                    </span>
                   </div>
-                )
-              })}
-              {transactions.length === 0 && (
-                <p className="text-xs text-white/60 py-6 text-center">Sem despesas ou receitas registadas.</p>
-              )}
-            </div>
-          </div>
+
+                  {linhas.map((t, i) => {
+                    const cat = categories.find(c => c.id === t.category_id)
+                    const entrada = t.type === 'income'
+                    return (
+                      <div
+                        key={t.id}
+                        className={`flex items-center gap-2.5 pl-2.5 pr-1.5 py-1.5 min-h-12 ${
+                          i > 0 ? 'border-t border-white/8' : ''
+                        }`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`w-[3px] self-stretch rounded-full shrink-0 ${entrada ? BARRA_PAGO : BARRA_ATRASO}`}
+                        />
+                        {/* O dia, e não a data por extenso: o mês está na banda. */}
+                        <span className="w-6 shrink-0 text-right font-display font-extrabold text-[10.5px] tabular-nums text-white/40">
+                          {t.date.slice(8, 10)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          {/* Quebra em vez de cortar: com o valor e os botões
+                              ao lado, "Lavandaria dos equipamentos" saía
+                              "Lavandaria dos equipam…" — e é a descrição o que
+                              se lê primeiro numa linha de caixa. */}
+                          <span className="block font-display font-extrabold text-[12.5px] text-white line-clamp-2">
+                            {t.description}
+                          </span>
+                          {(cat || entrada) && (
+                            <span className="block text-[10px] text-white/45 truncate">
+                              {cat ? cat.name : 'Receita'}
+                            </span>
+                          )}
+                        </span>
+                        <span className={`shrink-0 font-display font-black text-[12.5px] tabular-nums ${
+                          entrada ? 'text-csc-verde-texto' : 'text-csc-vermelho-texto'
+                        }`}>
+                          {entrada ? '+' : '−'}{fmtEuro(t.amount)}
+                        </span>
+                        {t.document_url && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDocument(t.document_url!)}
+                            title="Ver documento"
+                            aria-label={`Ver o documento de ${t.description}`}
+                            className={`${BOTAO_LINHA} text-white/70 hover:bg-white/10`}
+                          >
+                            <Paperclip size={14} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTransaction(t.id)}
+                          title="Eliminar"
+                          aria-label={`Eliminar ${t.description}`}
+                          className={`${BOTAO_LINHA} text-white/50 hover:text-csc-vermelho-texto hover:bg-csc-red/15`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </section>
+              )
+            })
+          )}
         </div>
       )}
 
