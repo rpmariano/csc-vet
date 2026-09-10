@@ -458,6 +458,10 @@ const FinancePage: React.FC = () => {
   const [editPaymentAmount, setEditPaymentAmount] = useState('')
   const [editPaymentDate, setEditPaymentDate] = useState('')
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null)
+  /* Apagar um lançamento passa pelo mesmo aviso que apagar um encargo ou um
+     pagamento: era o único caixote da página que despejava logo, e uma
+     despesa apagada por engano só se recupera escrevendo-a outra vez. */
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null)
 
   const openNewChargeModal = () => {
     setEditingChargeId(null)
@@ -956,9 +960,12 @@ const FinancePage: React.FC = () => {
     }
   }
 
-  const handleDeleteTransaction = async (id: string) => {
+  const handleDeleteTransaction = async () => {
+    if (!transactionToDelete) return
+    const alvo = transactionToDelete
+    setTransactionToDelete(null)
     try {
-      const { error } = await supabase.from('transactions').delete().eq('id', id)
+      const { error } = await supabase.from('transactions').delete().eq('id', alvo)
       if (error) throw error
       toast.success('Movimento eliminado.')
       fetchAll()
@@ -1930,6 +1937,13 @@ const FinancePage: React.FC = () => {
         onConfirm={handleDeletePayment}
         onCancel={() => setPaymentToDelete(null)}
       />
+      <ConfirmModal
+        isOpen={!!transactionToDelete}
+        title="Eliminar Movimento"
+        description="Esta despesa ou receita é apagada e deixa de contar para o saldo do clube."
+        onConfirm={handleDeleteTransaction}
+        onCancel={() => setTransactionToDelete(null)}
+      />
 
       {/* ================= DESPESAS ================= */}
       {activeTab === 'expenses' && (
@@ -2097,7 +2111,7 @@ const FinancePage: React.FC = () => {
                         )}
                         <button
                           type="button"
-                          onClick={() => handleDeleteTransaction(t.id)}
+                          onClick={() => setTransactionToDelete(t.id)}
                           title="Eliminar"
                           aria-label={`Eliminar ${t.description}`}
                           className={`${BOTAO_LINHA} text-white/50 hover:text-csc-vermelho-texto hover:bg-csc-red/15`}

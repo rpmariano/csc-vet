@@ -319,3 +319,24 @@ test('os lançamentos agrupam-se por mês, com o saldo do mês na banda', async 
   await expect(setembro).toContainText('Material')
   await expect(agosto).toContainText('Arbitragem')
 })
+
+test('apagar um lançamento pergunta primeiro', async ({ page }) => {
+  await montarSupabaseFalso(page, FIXTURES_MOVIMENTOS)
+  await page.goto('/csc-vet/finance?ver=expenses')
+  await page.waitForLoadState('networkidle')
+
+  const setembro = page.getByRole('region', { name: 'Setembro 2026' })
+  await expect(setembro).toBeVisible({ timeout: 15000 })
+  await setembro.getByRole('button', { name: 'Eliminar Bolas novas' }).click()
+
+  /* O mesmo aviso que apagar um encargo ou um pagamento: era o único caixote
+     da página que despejava logo. */
+  const aviso = page.locator('[role="dialog"]')
+  await expect(aviso).toBeVisible()
+  await expect(aviso).toContainText('Eliminar Movimento')
+
+  // Desistir deixa a linha onde estava.
+  await page.getByRole('button', { name: /Cancelar/ }).click()
+  await expect(aviso).toHaveCount(0)
+  await expect(setembro).toContainText('Bolas novas')
+})

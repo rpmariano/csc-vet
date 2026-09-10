@@ -511,6 +511,10 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   em vez de cortar** — com o valor e os botões ao lado, "Lavandaria dos
   equipamentos" saía "Lavandaria dos equipam…", e é a descrição o que se lê
   primeiro numa linha de caixa.
+  **E apagar um lançamento pergunta primeiro**, pelo `<ConfirmModal>` que já
+  guardava os encargos e os pagamentos: era o único caixote da página que
+  despejava logo, e uma despesa apagada por engano só se recupera
+  escrevendo-a outra vez.
   **Os participantes de um encargo seguem a mesma regra**, dentro do encargo
   aberto: deve-se quando o prazo já passou e ainda falta pagar, e antes do
   prazo ninguém deve nada. Eram quatro pastilhas — "pago", "falta X", "deve
