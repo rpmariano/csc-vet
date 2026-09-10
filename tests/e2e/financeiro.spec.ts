@@ -66,3 +66,104 @@ test('em Despesas, a mesma lista abre o registo do pagamento', async ({ page }) 
     page.getByRole('button', { name: /Registar o pagamento de Tranche 1/ }),
   ).toBeVisible({ timeout: 15000 })
 })
+
+/**
+ * Quotas — duas prateleiras, e não três.
+ *
+ * A lista tinha "em atraso", "por pagar" e "em dia": quem não devia nada mas
+ * ainda tinha meses futuros por pagar aparecia de pastilha âmbar, ao lado de
+ * quem devia mesmo. Ou se deve — porque o prazo passou —, ou se está em dia.
+ * Devedores primeiro, e por ordem alfabética dentro de cada grupo: a vista vem
+ * ordenada por número de camisola, e procurar um nome assim é ler a lista toda.
+ */
+
+const ATLETAS = [
+  { id: 'p1', name: 'Vieira Silva', shirt_name: 'Vieira', jersey_number: 11 },
+  { id: 'p2', name: 'Bruno Costa', shirt_name: 'Bruno', jersey_number: 2 },
+  { id: 'p3', name: 'Alves Pinto', shirt_name: 'Alves', jersey_number: 7 },
+  { id: 'p4', name: 'Carlos Nogueira', shirt_name: 'Carlos', jersey_number: 9 },
+]
+
+const mes = (
+  player_id: string,
+  month_year: string,
+  status: 'paid' | 'late' | 'pending',
+) => ({
+  player_id,
+  month_year,
+  expected_amount: 10,
+  due_id: status === 'paid' ? `d-${player_id}-${month_year}` : null,
+  paid_amount: status === 'paid' ? 10 : 0,
+  due_date: `${month_year}-08`,
+  status,
+  owed_amount: status === 'paid' ? 0 : 10,
+})
+
+const FIXTURES_QUOTAS = {
+  ...FIXTURES_BASE,
+  financial_settings: [{
+    id: 1, season_start_month: 8, quota_amount: 10, quota_due_day: 8,
+    quota_excluded_months: [], initial_balance: 0,
+  }],
+  v_players_public: ATLETAS.map(a => ({
+    ...a, status: 'active', role: 'player', roles: ['player'],
+    quota_start_date: '2026-08-01', quota_end_date: null,
+  })),
+  v_quota_status: [
+    // Devem: têm um mês cujo prazo já passou.
+    mes('p1', '2026-09', 'late'), mes('p1', '2026-10', 'pending'),
+    mes('p2', '2026-09', 'late'), mes('p2', '2026-10', 'pending'),
+    // Em dia: um com meses futuros por pagar, outro com tudo pago.
+    mes('p3', '2026-09', 'paid'), mes('p3', '2026-10', 'pending'), mes('p3', '2026-11', 'pending'),
+    mes('p4', '2026-09', 'paid'), mes('p4', '2026-10', 'paid'),
+  ],
+}
+
+const abreQuotas = async (page: import('@playwright/test').Page) => {
+  await montarSupabaseFalso(page, FIXTURES_QUOTAS)
+  await page.goto('/csc-vet/finance?ver=quotas')
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByText(/Controlo de quotas/)).toBeVisible({ timeout: 15000 })
+}
+
+test('devedores primeiro, e por ordem alfabética dentro do grupo', async ({ page }) => {
+  await abreQuotas(page)
+
+  const grupos = page.getByText(/^(Devedores|Em dia)$/)
+  await expect(grupos).toHaveText(['Devedores', 'Em dia'])
+
+  /* Os nomes saem por ordem alfabética, e não por número de camisola. Lidos
+     do texto da linha e não de uma classe: um seletor preso ao aspeto já se
+     partiu duas vezes neste repositório. */
+  const esperada = ['Bruno', 'Vieira', 'Alves', 'Carlos']
+  const linhas = await page.locator('button[aria-expanded]').allInnerTexts()
+  expect(linhas.map(t => esperada.find(n => t.includes(n)))).toEqual(esperada)
+})
+
+test('meses futuros por pagar não fazem de ninguém devedor', async ({ page }) => {
+  await abreQuotas(page)
+
+  const alves = page.locator('button[aria-expanded]').filter({ hasText: 'Alves' })
+  await expect(alves.getByText('em dia')).toBeVisible()
+  // A pastilha âmbar de "por pagar" deixou de existir na lista.
+  await expect(page.getByText(/por pagar/)).toHaveCount(0)
+})
+
+test('marcar um mês não devolve a lista ao topo', async ({ page }, testInfo) => {
+  /* Numa janela de computador a lista cabe inteira e não há scroll nenhum
+     para preservar — o teste não teria o que medir. */
+  testInfo.skip(testInfo.project.name !== 'telemovel', 'Só o telemóvel chega a rolar.')
+  await abreQuotas(page)
+
+  await page.locator('button[aria-expanded]').filter({ hasText: 'Carlos' }).click()
+  await page.mouse.wheel(0, 600)
+  await page.waitForTimeout(200)
+  const antes = await page.evaluate(() => window.scrollY)
+  expect(antes).toBeGreaterThan(0)
+
+  await page.getByRole('button', { name: /outubro de 2026/i }).first().click()
+  await expect(page.getByText(/Quota registada|Pagamento de quota removido/)).toBeVisible()
+  await page.waitForTimeout(600)
+
+  expect(await page.evaluate(() => window.scrollY)).toBe(antes)
+})

@@ -196,8 +196,17 @@ const FinancePage: React.FC = () => {
   const [categories, setCategories] = useState<ExpenseCategory[]>([])
   const [tournaments, setTournaments] = useState<TournamentRow[]>([])
 
-  const fetchAll = async () => {
-    setLoading(true)
+  /*
+    `silencioso` recarrega sem mostrar o rodopio da página inteira.
+
+    Marcar um mês de quota chamava o `fetchAll()` normal: a página passava a
+    ser só o rodopio, o documento encolhia para meia dúzia de pixels e o
+    browser perdia a posição — quem estivesse no décimo atleta da lista
+    voltava ao topo a cada mês que marcasse. A gravação já se vê na própria
+    pastilha, que fica desativada enquanto grava.
+  */
+  const fetchAll = async (silencioso = false) => {
+    if (!silencioso) setLoading(true)
     try {
       const [
         { data: settingsData },
@@ -304,6 +313,28 @@ const FinancePage: React.FC = () => {
     })
   }, [players, quotaRows])
 
+  /*
+    Duas prateleiras, e não três: **ou se deve, ou se está em dia.** Ter meses
+    por pagar não é dever nada enquanto o prazo não chegar — a quota de março
+    paga-se em março. A lista tinha uma pastilha âmbar de "9 por pagar" que
+    punha em aviso quem não devia um cêntimo, ao lado do vermelho de quem
+    devia mesmo, e as duas coisas liam-se igual.
+
+    Devedores primeiro, que é a lista que se abre para resolver, e dentro de
+    cada grupo por ordem alfabética — a ordem da vista é por número de
+    camisola, e procurar um nome numa lista ordenada por número é ler os vinte.
+  */
+  const quotasAgrupadas = useMemo(() => {
+    const nomeDe = (q: PlayerQuotaOverview) =>
+      (q.player.shirt_name || q.player.name || '').trim()
+    const porNome = (a: PlayerQuotaOverview, b: PlayerQuotaOverview) =>
+      nomeDe(a).localeCompare(nomeDe(b), 'pt', { sensitivity: 'base' })
+    return {
+      devedores: quotaOverview.filter(q => q.lateCount > 0).sort(porNome),
+      emDia: quotaOverview.filter(q => q.lateCount === 0).sort(porNome),
+    }
+  }, [quotaOverview])
+
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null)
   const [savingMonth, setSavingMonth] = useState<string | null>(null)
 
@@ -324,7 +355,7 @@ const FinancePage: React.FC = () => {
       const { error } = await supabase.from('dues').upsert(rows, { onConflict: 'player_id,month_year' })
       if (error) throw error
       toast.success(`${monthYears.length === 1 ? 'Quota registada' : `${monthYears.length} quotas registadas`} com sucesso!`)
-      fetchAll()
+      fetchAll(true)
     } catch (err: any) {
       toast.error('Erro ao registar quota: ' + (err.message || 'Erro'))
     }
@@ -336,7 +367,7 @@ const FinancePage: React.FC = () => {
       const { error } = await supabase.from('dues').delete().eq('id', dueId)
       if (error) throw error
       toast.success('Pagamento de quota removido.')
-      fetchAll()
+      fetchAll(true)
     } catch (err: any) {
       toast.error('Erro ao remover pagamento: ' + (err.message || 'Erro'))
     }
@@ -1305,11 +1336,29 @@ const FinancePage: React.FC = () => {
             </p>
           </div>
 
-          {quotaOverview.map(q => {
+          {/*
+            Dois grupos, devedores em cima. O cabeçalho é uma etiqueta solta e
+            não uma banda — as linhas aqui são cartões com número, nome e
+            chevron, e uma banda do mesmo cinzento ao lado deles voltaria a
+            ler-se como mais um cartão.
+          */}
+          {([
+            { titulo: 'Devedores', cor: 'text-csc-vermelho-texto', lista: quotasAgrupadas.devedores },
+            { titulo: 'Em dia', cor: 'text-csc-verde-texto', lista: quotasAgrupadas.emDia },
+          ] as const).map(grupo => grupo.lista.length === 0 ? null : (
+          <div key={grupo.titulo} className="space-y-3">
+          <div className="flex items-baseline gap-2 pt-1">
+            <span className={`font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase ${grupo.cor}`}>
+              {grupo.titulo}
+            </span>
+            <span className="text-[10px] font-bold text-white/45 tabular-nums">{grupo.lista.length}</span>
+          </div>
+          {grupo.lista.map(q => {
             const expanded = expandedPlayerId === q.player.id
-            const barra = q.lateCount > 0
-              ? BARRA_ATRASO
-              : q.pendingCount > 0 ? BARRA_AVISO : BARRA_PAGO
+            /* Vermelho a dever, verde em dia. O âmbar saiu com a pastilha:
+               meses por pagar de meses que ainda não chegaram não são aviso
+               nenhum. */
+            const barra = q.lateCount > 0 ? BARRA_ATRASO : BARRA_PAGO
             return (
               <div key={q.player.id} className="cartao-simples overflow-hidden">
                 <button
@@ -1334,13 +1383,9 @@ const FinancePage: React.FC = () => {
                     </span>
                   </span>
 
-                  {q.lateCount > 0 ? (
-                    <span className={CHIP_ATRASO}>{q.lateCount} em atraso</span>
-                  ) : q.pendingCount > 0 ? (
-                    <span className={CHIP_AVISO}>{q.pendingCount} por pagar</span>
-                  ) : (
-                    <span className={CHIP_PAGO}>em dia</span>
-                  )}
+                  {q.lateCount > 0
+                    ? <span className={CHIP_ATRASO}>{q.lateCount} em atraso</span>
+                    : <span className={CHIP_PAGO}>em dia</span>}
 
                   <ChevronDown size={16} className={`shrink-0 text-white/50 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
                 </button>
@@ -1390,6 +1435,8 @@ const FinancePage: React.FC = () => {
               </div>
             )
           })}
+          </div>
+          ))}
 
           {quotaOverview.length === 0 && (
             <p className="cartao-simples p-6 text-center text-[11.5px] text-white/62">

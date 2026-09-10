@@ -484,6 +484,26 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   natural nesta página é rolar para baixo, e um calendário que mudasse de mês a
   meio de um scroll era pior do que não ter gesto nenhum. As setas ficam: um
   gesto não chega ao teclado nem a quem usa leitor de ecrã.
+- **Nas Quotas há dois estados: ou se deve, ou se está em dia.** Devedor é
+  quem tem um mês cujo prazo já passou (`status = 'late'` em
+  `v_quota_status`); todo o resto está em dia, **incluindo quem tem meses por
+  pagar** — a quota de março paga-se em março, e devê-la em setembro não é
+  dever nada. Havia uma terceira pastilha, âmbar, com "9 por pagar", que punha
+  em aviso quem não devia um cêntimo ao lado do vermelho de quem devia mesmo.
+  **A lista abre pelos devedores e ordena cada grupo por nome** — a vista vem
+  por número de camisola, e procurar alguém assim é ler os vinte. O cabeçalho
+  de cada grupo é uma etiqueta solta e não uma banda: as linhas aqui são
+  cartões com número, nome e chevron, e uma banda ao lado deles lia-se como
+  mais um cartão (ao contrário dos Pagamentos Programados, onde as linhas são
+  linhas).
+  **A grelha dos meses lá dentro continua com três cores**, e é outra
+  pergunta: ali interessa separar o mês que já venceu do que ainda não chegou.
+- **Marcar um mês de quota não devolve a lista ao topo.** O `fetchAll()` do
+  Financeiro põe `loading` e a página passa a ser só o rodopio: o documento
+  encolhe, o browser perde a posição, e quem estivesse no décimo atleta
+  voltava ao princípio a cada mês que marcasse. As escritas de quota
+  recarregam com `fetchAll(true)`, sem rodopio — a gravação já se vê na
+  pastilha, que fica desativada enquanto grava.
 - **Meses dispensados de quota (ecrã 3c): a fila segue a época, não o
   calendário.** Começa em `season_start_month` e dá a volta aos doze meses. Os
   que o clube inteiro não paga (`financial_settings.quota_excluded_months`) e os
