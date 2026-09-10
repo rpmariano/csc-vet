@@ -268,3 +268,75 @@ test('antes do prazo, ninguém deve nada', async ({ page }) => {
   await expect(emDia).toContainText('Bruno')
   await expect(emDia).toContainText('40,00')
 })
+
+/**
+ * Despesas e receitas — um livro de caixa lê-se por mês.
+ *
+ * Era uma fila de caixas cinzentas iguais, uma por lançamento, com a data por
+ * extenso em cada uma e os valores em verde e vermelho que não são os do
+ * clube. Passa a um bloco por mês, do mais recente para o mais antigo, com o
+ * saldo do mês na banda.
+ */
+
+const FIXTURES_MOVIMENTOS = {
+  ...FIXTURES_BASE,
+  financial_settings: [{
+    id: 1, season_start_month: 8, quota_amount: 10, quota_due_day: 8,
+    quota_excluded_months: [], initial_balance: 0,
+  }],
+  expense_categories: [
+    { id: 'cm1', name: 'Material', allow_income: false },
+    { id: 'cm2', name: 'Patrocínios', allow_income: true },
+  ],
+  transactions: [
+    { id: 'tx1', description: 'Bolas novas', amount: 120, type: 'expense', date: '2026-09-08', category_id: 'cm1', document_url: null },
+    { id: 'tx2', description: 'Patrocínio Talho do Bairro', amount: 500, type: 'income', date: '2026-09-05', category_id: 'cm2', document_url: null },
+    { id: 'tx3', description: 'Lavandaria dos equipamentos', amount: 45.5, type: 'expense', date: '2026-09-02', category_id: null, document_url: null },
+    { id: 'tx4', description: 'Arbitragem', amount: 60, type: 'expense', date: '2026-08-28', category_id: 'cm1', document_url: null },
+  ],
+}
+
+test('os lançamentos agrupam-se por mês, com o saldo do mês na banda', async ({ page }) => {
+  await montarSupabaseFalso(page, FIXTURES_MOVIMENTOS)
+  await page.goto('/csc-vet/finance?ver=expenses')
+  await page.waitForLoadState('networkidle')
+
+  const setembro = page.getByRole('region', { name: 'Setembro 2026' })
+  const agosto = page.getByRole('region', { name: 'Agosto 2026' })
+  await expect(setembro).toBeVisible({ timeout: 15000 })
+
+  // O mês mais recente vem primeiro.
+  expect((await setembro.boundingBox())!.y).toBeLessThan((await agosto.boundingBox())!.y)
+
+  // 500 recebidos menos 120 e 45,50 gastos.
+  await expect(setembro).toContainText('334,50')
+
+  // E dentro do mês, do dia mais recente para o mais antigo.
+  const texto = await setembro.innerText()
+  expect(texto.indexOf('Bolas novas')).toBeLessThan(texto.indexOf('Lavandaria'))
+
+  // O lançamento sem categoria não inventa nenhuma.
+  await expect(setembro).toContainText('Material')
+  await expect(agosto).toContainText('Arbitragem')
+})
+
+test('apagar um lançamento pergunta primeiro', async ({ page }) => {
+  await montarSupabaseFalso(page, FIXTURES_MOVIMENTOS)
+  await page.goto('/csc-vet/finance?ver=expenses')
+  await page.waitForLoadState('networkidle')
+
+  const setembro = page.getByRole('region', { name: 'Setembro 2026' })
+  await expect(setembro).toBeVisible({ timeout: 15000 })
+  await setembro.getByRole('button', { name: 'Eliminar Bolas novas' }).click()
+
+  /* O mesmo aviso que apagar um encargo ou um pagamento: era o único caixote
+     da página que despejava logo. */
+  const aviso = page.locator('[role="dialog"]')
+  await expect(aviso).toBeVisible()
+  await expect(aviso).toContainText('Eliminar Movimento')
+
+  // Desistir deixa a linha onde estava.
+  await page.getByRole('button', { name: /Cancelar/ }).click()
+  await expect(aviso).toHaveCount(0)
+  await expect(setembro).toContainText('Bolas novas')
+})
