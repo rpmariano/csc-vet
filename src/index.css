@@ -280,6 +280,26 @@ body {
 }
 
 /*
+ * Um alvo de toque de 44px à volta de um controlo desenhado mais pequeno.
+ *
+ * A regra dos 44px é sobre o que se toca, não sobre o que se vê. No canto do
+ * cabeçalho há três círculos de 36 a 38px que não podem crescer sem desmanchar
+ * a fila — e que, medidos, ficavam todos abaixo do mínimo. Isto estica a caixa
+ * clicável para 44px sem mexer num pixel do desenho: o pseudo-elemento é filho
+ * do botão, por isso o toque nele é toque no botão.
+ */
+.alvo-toque { position: relative; }
+.alvo-toque::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+/*
  * Filas que rolam na horizontal (separadores, listas de pastilhas). A barra
  * de rolagem some-se, mas o gesto e o `scrollLeft` mantêm-se — o realce
  * deslizante centra o item ativo por aí.

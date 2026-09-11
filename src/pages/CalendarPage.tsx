@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  CalendarDays as CalendarDaysIcon,
   Edit,
   Save,
   CalendarRange,
@@ -45,7 +44,7 @@ import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
-import { getPlayerDisplayName, getGoogleMapsUrl, hasMatchReport, convocatoriaFechada, textoConvocatoriaFechada, formatDataCurta } from '../lib/eventos'
+import { getPlayerDisplayName, getGoogleMapsUrl, hasMatchReport, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento } from '../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
@@ -97,19 +96,19 @@ const CORES_TIPO = {
     ponto: 'bg-csc-vermelho-texto',
     halo: 'shadow-csc-vermelho-texto/70',
     texto: 'text-csc-vermelho-texto',
-    pastilha: 'bg-csc-red/20 border-csc-red/50',
+    pastilha: 'bg-csc-red/12 border-csc-red/50',
   },
   practice: {
     ponto: 'bg-csc-verde-texto',
     halo: 'shadow-csc-verde-texto/70',
     texto: 'text-csc-verde-texto',
-    pastilha: 'bg-csc-light/22 border-csc-verde-texto/45',
+    pastilha: 'bg-csc-light/14 border-csc-verde-texto/45',
   },
   gathering: {
     ponto: 'bg-csc-azul-texto',
     halo: 'shadow-csc-azul-texto/70',
     texto: 'text-csc-azul-texto',
-    pastilha: 'bg-csc-blue/28 border-csc-azul-texto/45',
+    pastilha: 'bg-csc-blue/16 border-csc-azul-texto/45',
   },
 } as const
 
@@ -648,26 +647,15 @@ const CalendarPage: React.FC = () => {
    */
   const getEventLocationParts = (
     ev: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null | undefined,
-  ): { nome: string; morada: string } => {
-    if (!ev) return { nome: '', morada: '' }
-    const solto = ev.location?.trim()
-    if (solto) return { nome: solto, morada: '' }
-    const campo = ev.field ?? (ev.field_id ? fields.find(item => item.id === ev.field_id) ?? null : null)
-    if (campo?.name) return { nome: campo.name, morada: campo.address?.trim() || '' }
-    return { nome: '', morada: '' }
-  }
+  ): { nome: string; morada: string } => localDoEvento(ev, fields)
 
+  /* A consulta que vai para o Google Maps. Segue a mesma precedência do resto
+     — o campo ganha ao local escrito à mão —, senão o cartão dizia um sítio e
+     o mapa abria noutro. */
   const getEventLocation = (ev: { location?: string | null; field_id?: string | null; field?: { name: string; address?: string | null } | null } | null | undefined) => {
-    if (!ev) return ''
-    if (ev.location && ev.location.trim()) return ev.location.trim()
-    if (ev.field?.name) {
-      return ev.field.address ? `${ev.field.name} (${ev.field.address})` : ev.field.name
-    }
-    if (ev.field_id) {
-      const f = fields.find(item => item.id === ev.field_id)
-      if (f) return f.address ? `${f.name} (${f.address})` : f.name
-    }
-    return ''
+    const { nome, morada } = localDoEvento(ev, fields)
+    if (!nome) return ''
+    return morada ? `${nome} (${morada})` : nome
   }
 
   const fetchEventsAndData = async () => {
@@ -1819,8 +1807,19 @@ const CalendarPage: React.FC = () => {
                             ? 'Ficas de fora.'
                             : 'Contamos contigo?'}
                       </span>
-                      <span className="text-[11px] text-white/60 flex-none">
-                        {confirmedCount} {confirmedCount === 1 ? 'confirmado' : 'confirmados'}
+                      {/*
+                        Ao lado da pergunta, o atleta lia a contagem de
+                        confirmados — e numa base com 0,7% de respostas isso é
+                        "0 confirmados" colado a "Contamos contigo?": a prova
+                        de que ninguém responde, no momento em que se pede que
+                        responda. A contagem é de quem gere, como já era nas
+                        pastilhas do cabeçalho deste cartão; a ele dá-se o que
+                        lhe falta e a app sempre soube, que é o prazo.
+                      */}
+                      <span className="text-[11px] text-white/70 flex-none">
+                        {isCoachOrAdmin
+                          ? `${confirmedCount} ${confirmedCount === 1 ? 'confirmado' : 'confirmados'}`
+                          : textoPrazoResposta(event)}
                       </span>
                     </div>
                     <div className="flex gap-2.5 mt-3">
@@ -1832,7 +1831,7 @@ const CalendarPage: React.FC = () => {
                           flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
                           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                             myCallup.status === 'confirmed'
-                              ? 'bg-csc-light border-csc-light text-white'
+                              ? 'bg-csc-light border-csc-light text-csc-tinta'
                               : 'bg-white/9 border-white/20 text-white'
                           }`}
                       >
@@ -2011,7 +2010,7 @@ const CalendarPage: React.FC = () => {
                   type="button"
                   onClick={handlePrevMonth}
                   aria-label="Mês anterior"
-                  className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
+                  className="w-11 h-11 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
                     transition-transform duration-150 active:scale-97
                     focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                 >
@@ -2030,7 +2029,7 @@ const CalendarPage: React.FC = () => {
                   type="button"
                   onClick={handleNextMonth}
                   aria-label="Mês seguinte"
-                  className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
+                  className="w-11 h-11 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
                     transition-transform duration-150 active:scale-97
                     focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                 >
@@ -2112,20 +2111,24 @@ const CalendarPage: React.FC = () => {
               duas mensagens de vazio seguidas leem-se como uma avaria. O
               painel do dia só faz sentido quando há eventos noutros dias.
             */}
-            {selectedDate && !(eventosDoCalendario.length === 0 && !temFiltros) && (
-              selectedDayEvents.length === 0 ? (
-                <div className="cartao-simples border-dashed text-center px-5 py-8">
-                  <CalendarDaysIcon size={26} className="mx-auto text-white/25 mb-2.5" />
-                  <p className="font-display font-extrabold text-sm text-white">Sem eventos neste dia.</p>
-                  <p className="text-[11px] text-white/62 mt-1.5">
-                    Escolhe outro dia no calendário, ou vê tudo o que vem a seguir mais abaixo.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {selectedDayEvents.map(event => renderEventCard(event))}
-                </div>
-              )
+            {/*
+              **Um dia sem eventos não desenha nada.**
+
+              Este painel dizia "Sem eventos neste dia" e ocupava 160px logo
+              abaixo do calendário — e, como a Agenda abre no dia de hoje e o
+              clube tem 52 eventos por época, essa era a primeira frase do ecrã
+              em quase todos os dias do ano. Medido: com ele, nenhum pixel de
+              nenhum evento ficava acima da dobra num telemóvel de 727px.
+
+              É também uma resposta a uma pergunta que ninguém fez: o dia não
+              foi escolhido, foi o de hoje. Quem toca num dia à espera de
+              eventos vê a lista aparecer; quem não toca não precisa de ser
+              informado de um vazio. A lista completa vem logo por baixo.
+            */}
+            {selectedDate && selectedDayEvents.length > 0 && (
+              <div className="space-y-3">
+                {selectedDayEvents.map(event => renderEventCard(event))}
+              </div>
             )}
           </div>
         </div>
@@ -2347,15 +2350,17 @@ const CalendarPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={prevEvent}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-white/10 hover:bg-white/20 text-white"
+                      className="w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-150 cursor-pointer active:scale-97 shrink-0 bg-white/10 text-white
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                      aria-label="Convocatória anterior"
                       title="Convocatória anterior (ou desliza para a direita)"
                     >
                       <ChevronLeft size={16} />
                     </button>
 
                     <div className="flex items-center gap-2 select-none min-w-0">
-                      <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
-                        <span>Convocatória pendente</span>
+                      <span className="text-xs font-black text-csc-gold flex items-center gap-1.5">
+                        <span>Por responder</span>
                         <span className="px-2 py-0.5 rounded-full text-[10.5px] font-black bg-white/20 text-white tracking-wider">
                           {activeIndex + 1}/{myPendingEvents.length}
                         </span>
@@ -2365,8 +2370,10 @@ const CalendarPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={nextEvent}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-90 shrink-0 bg-white/10 hover:bg-white/20 text-white"
-                      title="Próxima Convocatória"
+                      className="w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-150 cursor-pointer active:scale-97 shrink-0 bg-white/10 text-white
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                      aria-label="Convocatória seguinte"
+                      title="Convocatória seguinte (ou desliza para a esquerda)"
                     >
                       <ChevronRight size={16} />
                     </button>
@@ -2492,11 +2499,7 @@ const CalendarPage: React.FC = () => {
                   </div>
 
                   {(() => {
-                    const campo = selectedEvent.field
-                      ?? fields.find(f => f.id === selectedEvent.field_id)
-                      ?? null
-                    const nome = campo?.name || selectedEvent.location?.trim() || ''
-                    const morada = campo?.address || ''
+                    const { nome, morada } = localDoEvento(selectedEvent, fields)
                     const paraMaps = getEventLocation(selectedEvent)
 
                     if (!nome && !paraMaps) return null
@@ -2579,7 +2582,7 @@ const CalendarPage: React.FC = () => {
                                 transition-transform duration-150 active:scale-97
                                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                                 myCallup.status === 'confirmed'
-                                  ? 'bg-csc-light border-csc-light text-white'
+                                  ? 'bg-csc-light border-csc-light text-csc-tinta'
                                   : 'bg-white/9 border-white/20 text-white'
                               }`}
                             >
@@ -2695,17 +2698,37 @@ const CalendarPage: React.FC = () => {
                           </h3>
                         </div>
 
-                        {/* Resumo quando colapsado ou expandido — as cores de estado mantêm-se
-                            (verde/âmbar/vermelho): é informação, não decoração. */}
+                        {/*
+                          Resumo quando colapsado ou expandido.
+
+                          **A contagem por responder é de quem gere.** Ao
+                          atleta, "0 confirmados · 22 pendentes" por cima do
+                          seu próprio botão é a prova de que ninguém responde,
+                          no sítio onde lhe pedimos que responda. A ele vale a
+                          mesma regra já decidida para o cabeçalho do cartão na
+                          lista: mostram-se os "sim" enquanto houver algum, e
+                          quando não há nenhum não se diz nada — senão a app
+                          passa o tempo a anunciar zeros.
+
+                          As cores de estado mantêm-se: é informação, não
+                          decoração.
+                        */}
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-[10.5px] font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-md">
-                            {confirmedList.length} {confirmedList.length === 1 ? 'confirmado' : 'confirmados'}
-                          </span>
-                          <span className="text-[10.5px] font-bold text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-md">
-                            {pendingList.length} {pendingList.length === 1 ? 'pendente' : 'pendentes'}
-                          </span>
-                          {declinedList.length > 0 && (
-                            <span className="text-[10.5px] font-bold text-red-300 bg-red-500/15 px-2 py-0.5 rounded-md">
+                          {(isCoachOrAdmin || confirmedList.length > 0) && (
+                            <span className="text-[10.5px] font-bold text-csc-verde-texto bg-csc-light/15 px-2 py-0.5 rounded-md">
+                              {confirmedList.length} {confirmedList.length === 1 ? 'confirmado' : 'confirmados'}
+                            </span>
+                          )}
+                          {/* Neutro, e não âmbar: o âmbar desta app é do
+                              dinheiro a vencer, e quem ainda não respondeu não
+                              está em falta com ninguém. */}
+                          {isCoachOrAdmin && (
+                            <span className="text-[10.5px] font-bold text-white/70 bg-white/8 px-2 py-0.5 rounded-md">
+                              {pendingList.length} sem resposta
+                            </span>
+                          )}
+                          {isCoachOrAdmin && declinedList.length > 0 && (
+                            <span className="text-[10.5px] font-bold text-csc-vermelho-texto bg-csc-red/15 px-2 py-0.5 rounded-md">
                               {declinedList.length} {declinedList.length === 1 ? 'recusado' : 'recusados'}
                             </span>
                           )}
@@ -2737,7 +2760,14 @@ const CalendarPage: React.FC = () => {
                     {/* Conteúdo Expandido da Convocatória */}
                     {isModalCallupsExpanded && (
                       <div className="space-y-4 pt-3 border-t border-white/10 animate-fade-in">
-                        {/* Resumo de Quórum como Botões de Filtro Acionáveis */}
+                        {/*
+                          Resumo de quórum e procura: ferramentas de quem monta
+                          a convocatória, e por isso só de quem gere. Ao atleta
+                          davam o mesmo "SEM RESPOSTA 20" que se tirou das
+                          pastilhas acima, e mais uma caixa para procurar
+                          colegas numa lista que ele lê de uma vez.
+                        */}
+                        {isCoachOrAdmin && (
                         <div className="space-y-2">
                           <QuorumFilterCards
                             totalCount={callups.length}
@@ -2772,6 +2802,7 @@ const CalendarPage: React.FC = () => {
                             )}
                           </div>
                         </div>
+                        )}
 
                         {/*
                           A convocatória envelhece: quem foi chamado apto pode

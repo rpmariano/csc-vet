@@ -50,7 +50,7 @@ export const AnnouncementsInboxButton: React.FC<AnnouncementsInboxButtonProps> =
         type="button"
         onClick={handleOpen}
         aria-label={unreadCount > 0 ? `Comunicados — ${unreadCount} por ler` : 'Comunicados'}
-        className={`relative ${tamanhoBotao} rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${corBotao} ${className}`}
+        className={`alvo-toque ${tamanhoBotao} rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${corBotao} ${className}`}
       >
         <Bell size={size === 'sm' ? 14 : 16} />
         {unreadCount > 0 && (

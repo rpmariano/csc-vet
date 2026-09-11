@@ -40,7 +40,7 @@ export const AvatarPerfil: React.FC<AvatarPerfilProps> = ({
     <Link
       to="/settings"
       aria-label="Ver o meu perfil"
-      className={`relative flex-none rounded-full border-2 border-csc-gold/60 flex items-center justify-center overflow-visible
+      className={`alvo-toque flex-none rounded-full border-2 border-csc-gold/60 flex items-center justify-center overflow-visible
         font-display font-extrabold text-csc-gold transition-transform duration-150 active:scale-97
         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${className}`}
       style={{

@@ -614,6 +614,40 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   não apareciam e por isso não havia como os tirar; e a recusa de um deles
   sumia das contagens — uma resposta a menos numa base que tem nove.
   **Esconder linhas nunca é a forma de dizer que estão desatualizadas.**
+- **A contagem de quem respondeu é de quem gere, e o atleta recebe o prazo.**
+  Ao lado de "Contamos contigo?" estava "0 confirmados", e na persiana
+  "Convocatória (22) · 0 confirmados · 22 pendentes" — numa base com 1191
+  convocatórias por responder, é o que o atleta lia quase sempre: a prova de
+  que ninguém responde, no momento em que lhe pedimos que responda. A regra já
+  valia nas pastilhas do cabeçalho do cartão e faltava nestes dois sítios.
+  No lugar da contagem, o `textoPrazoResposta()` (`src/lib/eventos.ts`) diz o
+  que faltava e a app sempre soube: **"Responde até terça, 17h00"**, calculado
+  do mesmo valor que fecha a convocatória. Dentro da persiana, o atleta vê os
+  "sim" enquanto houver algum e nada quando não há; o quórum e a procura de
+  convocados são ferramentas de quem monta a convocatória e ficaram só para
+  quem gere. Veio da crítica de 2026-09-11; `convocatoria.spec.ts` cobre-a.
+- **Onde é o evento decide-se no `localDoEvento()`, e o campo ganha.** O cartão
+  da Agenda dava precedência ao `location` escrito à mão e devolvia a morada
+  vazia; a persiana do mesmo evento fazia o contrário, e a consulta do Maps
+  seguia a do cartão. Com os dois preenchidos, o cartão dizia um sítio e a
+  persiana dizia outro — a única informação deste ecrã que, errada, leva
+  alguém a conduzir para o lado errado. O `location` é hoje a exceção, para
+  eventos sem campo na base.
+- **Um dia sem eventos não desenha painel nenhum.** O painel do dia dizia "Sem
+  eventos neste dia" e ocupava 160px por baixo do calendário — e, como a
+  Agenda abre no dia de hoje e o clube tem 52 eventos por época, era a
+  primeira frase do ecrã em quase todos os dias do ano. Medido antes: nenhum
+  pixel de nenhum evento ficava acima da dobra num telemóvel de 727px. É
+  também resposta a uma pergunta que ninguém fez — o dia não foi escolhido,
+  foi o de hoje.
+- **A regra dos 44px é sobre o que se toca, não sobre o que se vê.** Os três
+  círculos do canto do cabeçalho têm 36 a 38px de desenho e não podem crescer
+  sem desmanchar a fila; a classe `.alvo-toque` (`src/index.css`) estica-lhes a
+  caixa clicável para 44px com um pseudo-elemento, sem mexer num pixel. Foram
+  medidos dez alvos abaixo do mínimo na Agenda a 2026-09-11, incluindo as setas
+  do mês (36px), as do carrossel de convocatórias (28px) e o fechar das
+  persianas (36px). **Medir, e não confiar na classe:** um `w-9 h-9` não avisa
+  ninguém.
 - **A Agenda abre no que está por realizar** (`ESTADO_POR_OMISSAO`), não em
   "Todos": a lista é ordenada por data e a época tem meses feitos, por isso
   abrir em tudo era abrir num jogo de janeiro. Isto é o ponto de partida e não

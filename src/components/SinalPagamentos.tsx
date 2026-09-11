@@ -57,7 +57,9 @@ export const SinalPagamentos: React.FC = () => {
   const classes = vermelho
     ? 'bg-csc-red/20 border-csc-red/45 text-csc-vermelho-texto'
     : 'bg-amber-500/20 border-amber-400/50 text-amber-300'
-  const corDoCracha = vermelho ? 'bg-csc-red text-white' : 'bg-amber-400 text-csc-tinta'
+  /* Tinta e não branco: branco sobre o vermelho do clube dá 4,08:1,
+     abaixo do mínimo. O crachá âmbar ao lado já era tinta. */
+  const corDoCracha = vermelho ? 'bg-csc-red text-csc-tinta' : 'bg-amber-400 text-csc-tinta'
 
   const lista = [...estado.emAtraso, ...estado.aVencer]
 
@@ -70,11 +72,14 @@ export const SinalPagamentos: React.FC = () => {
           `${estado.contador} ${estado.contador === 1 ? 'pagamento' : 'pagamentos'} ` +
           `${vermelho ? 'em atraso' : 'a vencer'} — ${fmt(estado.totalEmAviso)}`
         }
-        className={`relative flex-none w-9 h-9 rounded-full border flex items-center justify-center cursor-pointer
+        className={`alvo-toque flex-none w-9 h-9 rounded-full border flex items-center justify-center cursor-pointer
           transition-transform duration-150 active:scale-97
           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${classes}`}
       >
-        <span className="font-display font-black text-[15px] leading-none animate-pulse">€</span>
+        {/* Sem `animate-pulse`: a opacidade a 0,5 punha o glifo em 2,52:1,
+            abaixo do mínimo de 3:1 para texto grande, metade de cada ciclo.
+            O crachá vermelho ao lado já chama a atenção, e não pisca. */}
+        <span className="font-display font-black text-[15px] leading-none">€</span>
         <span
           className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full font-display text-[10px]
             font-extrabold flex items-center justify-center border-2 border-[#101314] ${corDoCracha}`}

@@ -272,7 +272,8 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
           type="button"
           onClick={onClose}
           aria-label="Fechar"
-          className="flex items-center justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing shrink-0"
+          className="flex items-center justify-center min-h-11 -mb-5 cursor-grab active:cursor-grabbing shrink-0
+            focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold"
         >
           <span className={`w-12 h-1.5 rounded-full transition-colors ${corAlca}`} />
         </button>
@@ -295,7 +296,7 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className={`shrink-0 -mt-1 -mr-1 p-2 rounded-xl transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-light ${corBotaoFechar}`}
+                className={`shrink-0 -mt-2.5 -mr-2.5 w-11 h-11 flex items-center justify-center rounded-xl transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-light ${corBotaoFechar}`}
               >
                 <X size={20} />
               </button>

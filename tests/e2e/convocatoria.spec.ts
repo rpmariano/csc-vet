@@ -569,3 +569,61 @@ test.describe('O treino na Home', () => {
     await expect(page.getByText('Treino de terça')).toHaveCount(0)
   })
 })
+
+/**
+ * A contagem de quem respondeu é de quem gere.
+ *
+ * Ao atleta, "0 confirmados" colado a "Contamos contigo?" é a prova de que
+ * ninguém responde, no exato momento em que lhe pedimos que responda — numa
+ * base com 1191 convocatórias por responder para 9 respostas, é o que ele leria
+ * quase sempre. A regra já valia nas pastilhas do cabeçalho do cartão da lista;
+ * faltava aqui, e foi a crítica de 2026-09-11 que a apanhou.
+ *
+ * No lugar da contagem, o atleta recebe o que lhe falta e a app sempre soube:
+ * o prazo para responder.
+ */
+test.describe('A contagem de respostas é de quem gere', () => {
+  const jogo = {
+    ...base, id: 'cg', title: null, type: 'match',
+    date_time: DAQUI_A_DIAS(4), opponent_id: null,
+  }
+  const outroAtleta = { id: 'p-2', name: 'Outro Atleta', role: 'player', roles: ['player'], status: 'active' }
+  const convocatorias = [
+    convocatoriaMinha('cg'),
+    { id: 'c-2', event_id: 'cg', player_id: 'p-2', status: 'called', responded_at: null, player: outroAtleta },
+  ]
+
+  const comoJogador = {
+    profiles: [{ ...EU, role: 'player', roles: ['player'] }, outroAtleta],
+    v_players_public: [{ ...EU, role: 'player', roles: ['player'] }, outroAtleta],
+  }
+
+  test('o atleta não lê zeros — lê o prazo', async ({ page }) => {
+    await montarSupabaseFalso(page, { events: [jogo], callups: convocatorias, ...comoJogador })
+    await page.goto('/csc-vet/calendar')
+    await expect(page.getByText(/Contamos contigo\?/).first()).toBeVisible()
+
+    await expect(page.getByText(/confirmados/)).toHaveCount(0)
+    await expect(page.getByText(/sem resposta/i)).toHaveCount(0)
+    await expect(page.getByText(/Responde até/).first()).toBeVisible()
+  })
+
+  test('quem gere continua a ver a contagem', async ({ page }) => {
+    await montarSupabaseFalso(page, { events: [jogo], callups: convocatorias })
+    await page.goto('/csc-vet/calendar')
+    await expect(page.getByText(/Contamos contigo\?/).first()).toBeVisible()
+
+    await expect(page.getByText(/0 confirmados/).first()).toBeVisible()
+  })
+
+  test('na persiana, o atleta não leva a contagem por responder', async ({ page }) => {
+    await montarSupabaseFalso(page, { events: [jogo], callups: convocatorias, ...comoJogador })
+    await page.goto('/csc-vet/calendar?event=cg')
+    await expect(page.getByRole('dialog')).toBeVisible()
+
+    const persiana = page.getByRole('dialog')
+    await expect(persiana.getByText(/Convocatória \(2/)).toBeVisible()
+    await expect(persiana.getByText(/sem resposta/i)).toHaveCount(0)
+    await expect(persiana.getByText(/0 confirmados/)).toHaveCount(0)
+  })
+})
