@@ -82,7 +82,7 @@ export const SinalPagamentos: React.FC = () => {
         <span className="font-display font-black text-[15px] leading-none">€</span>
         <span
           className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full font-display text-[10px]
-            font-extrabold flex items-center justify-center border-2 border-[#101314] ${corDoCracha}`}
+            font-extrabold flex items-center justify-center border-2 border-black/25 ${corDoCracha}`}
         >
           {estado.contador > 9 ? '9+' : estado.contador}
         </span>

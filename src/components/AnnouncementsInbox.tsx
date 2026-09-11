@@ -54,7 +54,7 @@ export const AnnouncementsInboxButton: React.FC<AnnouncementsInboxButtonProps> =
       >
         <Bell size={size === 'sm' ? 14 : 16} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1.5 rounded-full bg-csc-gold text-csc-tinta font-display text-[10px] font-extrabold flex items-center justify-center border-2 border-[#101314]">
+          <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1.5 rounded-full bg-csc-gold text-csc-tinta font-display text-[10px] font-extrabold flex items-center justify-center border-2 border-black/25">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
