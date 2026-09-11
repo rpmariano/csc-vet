@@ -615,6 +615,19 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   não apareciam e por isso não havia como os tirar; e a recusa de um deles
   sumia das contagens — uma resposta a menos numa base que tem nove.
   **Esconder linhas nunca é a forma de dizer que estão desatualizadas.**
+- **Quem escolhe quem joga é quem treina.** O cartão da Agenda e a persiana do
+  evento tinham uma segunda regra, mais larga do que a do
+  `getMyCallupForEvent`: sem convocatória minha, inventavam-me uma sempre que
+  eu fosse **jogador**, fosse qual fosse o evento. Num treino isso é a regra do
+  clube, que convoca automaticamente todos os aptos; num **jogo** dava a
+  qualquer jogador a pergunta "Contamos contigo?" sem a equipa técnica o ter
+  chamado, e responder inscrevia-o na convocatória. Hoje a regra é uma só, a do
+  `getMyCallupForEvent`: convocatória automática só em treino e convívio, e só
+  a quem está apto.
+  **E o painel não desaparece, diz porquê** — "Não estás nesta convocatória",
+  ou a razão de a convocatória inteira estar fechada. Calado, quem abre um jogo
+  não distingue "não fui chamado" de "a app não está a funcionar", e a
+  diferença entre as duas é um telefonema ao treinador.
 - **A minha convocatória é a que tem o meu `id`, e mais nada.** A app
   procurava-a também pelo **nome** e pelo **email** do atleta, em seis sítios
   entre a Agenda e os Eventos. É a mesma falha que a identidade por email já

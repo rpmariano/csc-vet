@@ -667,12 +667,20 @@ test.describe('Homónimos não respondem um pelo outro', () => {
     inscrever-se: é outra decisão desta app, e não é o que aqui se testa.)
   */
   test('a resposta do outro não é a minha', async ({ page }) => {
+    /* Os dois convocados, com o mesmo nome. Ele disse que sim; eu não
+       respondi — e é a minha linha que o cartão tem de ler. */
     await montarSupabaseFalso(page, {
       events: [jogo],
-      callups: [{
-        id: 'c-outro', event_id: 'hm', player_id: outroJoao.id,
-        status: 'confirmed', responded_at: new Date().toISOString(), player: outroJoao,
-      }],
+      callups: [
+        {
+          id: 'c-outro', event_id: 'hm', player_id: outroJoao.id,
+          status: 'confirmed', responded_at: new Date().toISOString(), player: outroJoao,
+        },
+        {
+          id: 'c-eu', event_id: 'hm', player_id: UTILIZADOR_TESTE.id,
+          status: 'called', responded_at: null, player: eu,
+        },
+      ],
       profiles: [eu, outroJoao],
       v_players_public: [eu, outroJoao],
     })
@@ -680,6 +688,61 @@ test.describe('Homónimos não respondem um pelo outro', () => {
     await expect(page.getByText('POR REALIZAR')).toBeVisible()
 
     await expect(page.getByText(/Contamos contigo\?/).first()).toBeVisible()
-    await expect(page.getByText(/Contamos contigo\.|Disseste que sim/)).toHaveCount(0)
+    await expect(page.getByText(/Contamos contigo\.|Ficas de fora/)).toHaveCount(0)
+  })
+})
+
+/**
+ * Quem escolhe quem joga é quem treina.
+ *
+ * O cartão e a persiana tinham uma segunda regra, mais larga do que a do
+ * `getMyCallupForEvent`: sem convocatória minha, inventavam-me uma sempre que
+ * eu fosse jogador — fosse qual fosse o evento. Num treino isso é a regra do
+ * clube, que convoca automaticamente todos os aptos. Num **jogo** dava a
+ * qualquer jogador a pergunta "Contamos contigo?" sem ninguém o ter chamado, e
+ * responder inscrevia-o na convocatória.
+ */
+test.describe('Um jogo só pergunta a quem foi convocado', () => {
+  const outro = {
+    id: 'p-outro', name: 'Outro Atleta', role: 'player', roles: ['player'],
+    status: 'active', jersey_number: 7,
+  }
+  const euJogador = { ...EU, role: 'player', roles: ['player'] }
+
+  const comOutroConvocado = (eventId: string) => ({
+    profiles: [euJogador, outro],
+    v_players_public: [euJogador, outro],
+    callups: [{
+      id: 'c-outro', event_id: eventId, player_id: outro.id,
+      status: 'called', responded_at: null, player: outro,
+    }],
+  })
+
+  test('não fui convocado para o jogo, não me perguntam nada', async ({ page }) => {
+    const jogo = { ...base, id: 'jg', title: null, type: 'match', date_time: DAQUI_A_DIAS(3), opponent_id: null }
+    await montarSupabaseFalso(page, { events: [jogo], ...comOutroConvocado('jg') })
+    await page.goto('/csc-vet/calendar')
+    await expect(page.getByText('POR REALIZAR')).toBeVisible()
+
+    await expect(page.getByText(/Contamos contigo\?/)).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Sim, vou' })).toHaveCount(0)
+  })
+
+  test('nem na persiana do jogo', async ({ page }) => {
+    const jogo = { ...base, id: 'jg', title: null, type: 'match', date_time: DAQUI_A_DIAS(3), opponent_id: null }
+    await montarSupabaseFalso(page, { events: [jogo], ...comOutroConvocado('jg') })
+    await page.goto('/csc-vet/calendar?event=jg')
+    await expect(page.getByRole('dialog')).toBeVisible()
+
+    await expect(page.getByRole('dialog').getByText(/Contamos contigo\?/)).toHaveCount(0)
+    /* E não fica calada: quem abre o jogo tem de perceber porquê. */
+    await expect(page.getByRole('dialog').getByText(/Não estás nesta convocatória/)).toBeVisible()
+  })
+
+  test('mas o treino continua a perguntar a todos os aptos', async ({ page }) => {
+    const treino = { ...base, id: 'tr', title: 'Treino', type: 'practice', date_time: DAQUI_A_DIAS(2) }
+    await montarSupabaseFalso(page, { events: [treino], ...comOutroConvocado('tr') })
+    await page.goto('/csc-vet/calendar')
+    await expect(page.getByText(/Contamos contigo\?/).first()).toBeVisible()
   })
 })

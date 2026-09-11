@@ -1507,17 +1507,17 @@ const CalendarPage: React.FC = () => {
 
   const renderEventCard = (event: Event) => {
     const callups = eventCallups[event.id] || []
-    /* Só pelo id. O email vinha de `profiles.email`, que o próprio escreve. */
-    let myCallup = profile ? callups.find(c => c.player_id === profile.id || c.player?.id === profile.id) : null
-    if (!myCallup && profile && (event.type === 'practice' || event.type === 'gathering' || isPlayerEligible(profile, event.type) || profile.role === 'player')) {
-      myCallup = {
-        id: `temp-${event.id}-${profile.id}`,
-        event_id: event.id,
-        player_id: profile.id,
-        status: 'called',
-        player: profile
-      }
-    }
+    /*
+      A minha convocatória, pela regra única do `getMyCallupForEvent`.
+
+      Havia aqui uma segunda regra, mais larga: se eu não estivesse na
+      convocatória, inventava-se-me uma sempre que eu fosse **jogador**, fosse
+      qual fosse o evento. Num treino isso é a regra do clube — convocam-se
+      todos os aptos —, mas num **jogo** dava a qualquer jogador a pergunta
+      "Contamos contigo?" sem a equipa técnica o ter chamado, e responder
+      inscrevia-o na convocatória. Quem escolhe quem joga é quem treina.
+    */
+    const myCallup = getMyCallupForEvent(event.id)
     const confirmedCount = callups.filter(c => c.status === 'confirmed').length
     const semRespostaCount = callups.filter(c => c.status === 'called').length
 
@@ -2523,25 +2523,38 @@ const CalendarPage: React.FC = () => {
 
                 {/* Painel do Atleta Atual (RSVP Pessoal) */}
                 {(() => {
-                  let myCallup = getMyCallupForEvent(selectedEvent.id)
-
-                  // Se o atleta for elegível para este evento mas ainda não houver registo pré-carregado no mapa de convocatórias:
-                  if (!myCallup && profile && (selectedEvent.type === 'practice' || selectedEvent.type === 'gathering' || isPlayerEligible(profile, selectedEvent.type) || profile.role === 'player')) {
-                    myCallup = {
-                      id: `temp-${selectedEvent.id}-${profile.id}`,
-                      event_id: selectedEvent.id,
-                      player_id: profile.id,
-                      status: 'called',
-                      player: profile
-                    }
-                  }
-
-                  if (!myCallup) return null
+                  /* A mesma regra do cartão, e do resto da app: quem não foi
+                     convocado para um jogo não tem nada a responder. O ramo
+                     que aqui estava inventava uma convocatória a qualquer
+                     jogador, e responder inscrevia-o. */
+                  const myCallup = getMyCallupForEvent(selectedEvent.id)
 
                   const fechada = convocatoriaFechada(
                     selectedEvent,
                     (eventCallups[selectedEvent.id] || []).length > 0,
                   )
+
+                  /*
+                    Sem convocatória minha, o painel não desaparece — diz
+                    porquê. Calado, quem abre um jogo não distingue "não fui
+                    chamado" de "a app não está a funcionar", e é uma pergunta
+                    que se faz a quem convoca em vez de se ler no ecrã.
+
+                    Se a convocatória inteira está fechada ou por fazer, essa é
+                    a razão e é a que se dá — é também a que explica a ausência
+                    a quem gere, que não é convocado para nada.
+                  */
+                  if (!myCallup) {
+                    return (
+                      <div className="p-4 bg-white/[0.07] rounded-2xl border border-white/10">
+                        <p className="text-xs text-white/70 font-medium">
+                          {fechada
+                            ? `${textoConvocatoriaFechada(fechada, selectedEvent)}.`
+                            : 'Não estás nesta convocatória.'}
+                        </p>
+                      </div>
+                    )
+                  }
 
                   return (
                     <div className={!fechada ? 'rounded-2xl overflow-hidden shadow-lg shadow-black/20' : 'p-4 bg-white/[0.07] rounded-2xl space-y-3 border border-white/10 border-t-white/20 shadow-md shadow-black/20'}>
