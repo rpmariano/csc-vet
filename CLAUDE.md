@@ -761,6 +761,19 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   para inserções curtas (criar um campo, confirmar) — não para consultar uma
   entidade. Assim estão o detalhe do evento, a ficha de atleta, o dossier de
   convocatória e a ficha de jogo.
+- **Um deploy com a app aberta não pode acabar num ecrã em inglês.** Cada
+  página é um `React.lazy` com hash no nome; o push para a `main` troca os
+  hashes e a janela que ficou aberta pede ficheiros que já não existem
+  ("Failed to fetch dynamically imported module"). O service worker piorava:
+  com `autoUpdate` e `cleanupOutdatedCaches`, o SW novo apagava a cache antiga
+  com a página antiga ainda a correr. `src/lib/atualizacaoDaApp.ts` recarrega
+  em três momentos — `vite:preloadError`, o `errorElement` das rotas
+  (`EcraDeErro`, em `App.tsx`) e o `controllerchange` do SW — **mas uma vez
+  só** (15 s em `sessionStorage`): um ficheiro que não existe mesmo dava um
+  ecrã a piscar para sempre, e à segunda falha mostra-se o ecrã com o botão.
+  **E nunca por cima de um formulário por gravar**: o `SaidaGuardadaProvider`
+  avisa o módulo, e a recarga espera que se grave ou descarte.
+  `tests/e2e/versao-da-app.spec.ts` cobre as duas metades.
 - Comentários e strings de UI em português.
 - Assets públicos são referenciados com o prefixo literal `/csc-vet/` (não com
   `import.meta.env.BASE_URL`).

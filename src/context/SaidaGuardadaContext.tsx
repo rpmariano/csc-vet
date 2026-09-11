@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useBlocker } from 'react-router-dom'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
+import { informarTrabalhoPorGravar } from '../lib/atualizacaoDaApp'
 
 /**
  * O guarda de saída dos formulários que ocupam o ecrã inteiro.
@@ -69,6 +70,10 @@ export const SaidaGuardadaProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const registar = useCallback((novo: RegistoDeSaida | null) => {
     registo.current = novo
+    // Uma versão nova da app espera por isto antes de recarregar a página
+    // (`src/lib/atualizacaoDaApp.ts`): recarregar por cima de um formulário
+    // deitava fora o que estava escrito.
+    informarTrabalhoPorGravar(Boolean(novo?.sujo))
     // O React descarta a atualização quando o valor é o mesmo, e isto é uma
     // frase por página: na prática muda duas vezes, ao entrar e ao sair.
     setDescricaoAtual(novo?.descricao)

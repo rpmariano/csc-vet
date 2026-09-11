@@ -1,5 +1,5 @@
 import React from 'react'
-import { createBrowserRouter, RouterProvider, Outlet, Navigate, useLocation } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Outlet, Navigate, useLocation, useRouteError } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ClubProvider } from './context/ClubContext'
 import { ToastProvider } from './context/ToastContext'
@@ -8,6 +8,8 @@ import { SaidaGuardadaProvider } from './context/SaidaGuardadaContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import { SubirAoTopo } from './components/SubirAoTopo'
+import { Botao } from './components/ui'
+import { ePedacoEmFalta, recarregarUmaVez } from './lib/atualizacaoDaApp'
 
 // Páginas carregadas a pedido.
 //
@@ -83,6 +85,49 @@ const EcraACarregar: React.FC = () => (
 )
 
 /**
+ * O que se vê quando uma rota rebenta.
+ *
+ * Sem isto o React Router mostrava a sua página — "Unexpected Application
+ * Error!", em inglês, com um aceno ao programador. O caso de longe mais comum
+ * é um pedaço de código que já não existe no servidor, porque houve um deploy
+ * com a app aberta (ver `src/lib/atualizacaoDaApp.ts`): recarrega-se uma vez,
+ * em silêncio, e só se o recarregar não resolver é que se mostra este ecrã,
+ * com o botão à mão.
+ */
+const EcraDeErro: React.FC = () => {
+  const erro = useRouteError()
+  const versaoVelha = ePedacoEmFalta(erro)
+  /* Só se decide uma vez por montagem: `recarregarUmaVez()` grava a hora e
+     um segundo render (StrictMode) não pode voltar a decidir com ela. */
+  const [aRecarregar] = React.useState(() => versaoVelha && recarregarUmaVez())
+
+  if (aRecarregar) return <EcraACarregar />
+
+  const mensagem = erro instanceof Error ? erro.message : String(erro ?? '')
+  return (
+    <main
+      className="min-h-[100dvh] flex flex-col items-center justify-center gap-5 px-6 text-center text-white"
+      role="alert"
+    >
+      <p className="font-display font-black text-lg">
+        {versaoVelha ? 'A app tem uma versão nova' : 'Algo correu mal'}
+      </p>
+      <p className="text-sm text-white/70 max-w-xs">
+        {versaoVelha
+          ? 'Esta janela ficou com uma versão antiga. Recarrega para continuar.'
+          : 'Ocorreu um erro inesperado. Recarregar a app costuma resolver.'}
+      </p>
+      <Botao onClick={() => window.location.reload()}>Recarregar</Botao>
+      {!versaoVelha && mensagem && (
+        <pre className="mt-4 max-w-full overflow-x-auto text-left text-[10px] text-white/40 whitespace-pre-wrap break-words">
+          {mensagem}
+        </pre>
+      )}
+    </main>
+  )
+}
+
+/**
  * A moldura de dentro do router.
  *
  * O `SaidaGuardadaProvider` tem de estar aqui, e não à volta do
@@ -112,6 +157,9 @@ const router = createBrowserRouter(
   [
     {
       element: <MolduraDoRouter />,
+      /* Um erro em qualquer rota — o mais comum, um pedaço de código de uma
+         versão antiga — sobe até aqui. */
+      errorElement: <EcraDeErro />,
       children: [
         // Públicas
         { path: '/login', element: <Login /> },
