@@ -1090,7 +1090,12 @@ const CalendarPage: React.FC = () => {
         }
         return { ...prev, [eventId]: curList }
       })
-      toast.success(status === 'confirmed' ? 'Presença confirmada!' : 'Presença recusada.')
+      /*
+        "Presença confirmada" era o vocabulário errado, e é o que esta app não
+        diz: ninguém marca presença nenhuma, o que se sabe é quem disse que ia.
+        É o mesmo texto da Home, que já o dizia bem.
+      */
+      toast.success(status === 'confirmed' ? 'Contamos contigo.' : 'Resposta registada.')
     } catch (err: any) {
       console.error('Erro ao atualizar resposta:', err)
       toast.error('Erro ao atualizar resposta: ' + (err.message || 'Erro'))

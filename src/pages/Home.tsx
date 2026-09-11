@@ -16,6 +16,11 @@ import {
   PersianaSemConvocatoria,
 } from '../components/AlertaSemConvocatoria'
 import { FichaPorLigar, useFichaPorLigar } from '../components/FichaPorLigar'
+import {
+  useConviteAvisos,
+  FaixaConvidarAvisos,
+  PersianaConvidarAvisos,
+} from '../components/ConvidarAvisos'
 import { CarrosselCartoes } from '../components/home/CarrosselCartoes'
 import { CartaoProximoJogo, type JogoDaHome } from '../components/home/CartaoProximoJogo'
 import { PorResponder, type PendenteDaHome } from '../components/home/PorResponder'
@@ -139,6 +144,24 @@ const Home: React.FC = () => {
   */
   const estadoDaFicha = useFichaPorLigar(profile, assignedRoles)
   const semFicha = estadoDaFicha === 'por-ligar'
+
+  /*
+    O convite para ligar os avisos. Não é decoração: sem ele a app só avisa
+    quem se lembrou de a abrir, e é por isso que há 1191 convocatórias sem
+    resposta. Aparece em faixa a quem nunca escolheu, e outra vez logo a seguir
+    a uma resposta — que é quando a pergunta se explica sozinha.
+  */
+  const convite = useConviteAvisos(profile?.id, assignedRoles.includes('player'))
+  const [conviteAberto, setConviteAberto] = useState(false)
+  /* Retido, e não derivado do `aberto`: a persiana leva 240ms a sair, e um
+     motivo que se apagasse ao fechar trocava a frase à vista de quem está a
+     ver a persiana deslizar para baixo. */
+  const [conviteMotivo, setConviteMotivo] = useState<'faixa' | 'acabou-de-responder'>('faixa')
+
+  const abrirConvite = (motivo: 'faixa' | 'acabou-de-responder') => {
+    setConviteMotivo(motivo)
+    setConviteAberto(true)
+  }
 
   /* O alerta de convocatórias em falta é de quem gere; ver 4c/4d. */
   const eGestao = profile?.role === 'coach' || profile?.role === 'admin'
@@ -435,6 +458,23 @@ const Home: React.FC = () => {
       return
     }
     toast.success(status === 'confirmed' ? 'Contamos contigo.' : 'Resposta registada.')
+
+    /*
+      O momento em que a pergunta dos avisos se explica sozinha: a pessoa
+      acabou de vir cá responder, e a alternativa é não ter de vir.
+
+      **Mas só quando não fica nada por responder.** Quem tem dois
+      compromissos à espera está a meio de uma tarefa, e uma persiana a subir
+      entre o primeiro e o segundo tapa o botão do segundo — é literalmente
+      pôr-se à frente de quem está a fazer o que queríamos que fizesse. Fica
+      para o fim da fila; e quem nunca lá chegar tem a faixa, que não tapa
+      nada.
+    */
+    const faltaResponder =
+      pendentes.some(p => p.id !== eventId) ||
+      jogos.some(j => j.id !== eventId && j.minhaResposta === 'called' && j.fechada === null)
+
+    if (convite.oferecer && !faltaResponder) abrirConvite('acabou-de-responder')
   }
 
   if (!profile) return null
@@ -539,6 +579,14 @@ const Home: React.FC = () => {
 
           <PorResponder pendentes={pendentes} aoResponder={responder} />
 
+          {/*
+            O convite vem logo a seguir ao que está por responder, e não acima
+            do jogo: ali competia com o título do ecrã por uma coisa que é uma
+            oferta e não um alerta, e aqui lê-se como o que é — "ou podíamos
+            simplesmente avisar-te".
+          */}
+          {convite.oferecer && <FaixaConvidarAvisos aoAbrir={() => abrirConvite('faixa')} />}
+
           {ultimo && <UltimoJogo jogo={ultimo} siglaClube={sigla} />}
 
           <ProvasEmCurso provas={provas} />
@@ -560,6 +608,15 @@ const Home: React.FC = () => {
               </span>
             </CartaoSimples>
           )}
+
+          <PersianaConvidarAvisos
+            aberto={conviteAberto}
+            perfilId={profile.id}
+            push={convite.push}
+            motivo={conviteMotivo}
+            aoLigado={() => { setConviteAberto(false); convite.arrumar() }}
+            aoAdiar={() => { setConviteAberto(false); convite.adiar() }}
+          />
         </>
       )}
     </div>

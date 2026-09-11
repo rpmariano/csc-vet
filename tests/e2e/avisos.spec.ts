@@ -23,7 +23,10 @@ const PREFS = {
 async function abrePreferencias(page: import('@playwright/test').Page) {
   await page.goto('/csc-vet/settings')
   await page.waitForLoadState('networkidle')
-  await page.getByRole('button', { name: /O que quero saber/ }).click()
+  /* Pelo título do cartão e não pelo subtítulo: o subtítulo é uma frase que
+     se reescreve quando se percebe que dizia pouco, e um teste que se agarra a
+     ela parte-se a cada afinação de texto. */
+  await page.getByRole('button', { name: /^Avisos/ }).click()
   await expect(page.getByRole('switch', { name: /Silêncio à noite/ })).toBeVisible()
 }
 

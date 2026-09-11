@@ -314,6 +314,32 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   escolher os avisos num Safari sem a app instalada tem de os ver guardados na
   mesma; o aviso do que falhou vai num `toast.warning`, não num erro que
   desfaça o resto.
+- **E por isso alguém tem de perguntar.** Nascerem desligados é a decisão certa
+  e tem um preço: o ecrã 12b está a quatro toques — fotografia do cabeçalho,
+  Definições, um cartão, uma persiana — e ninguém lá vai por iniciativa
+  própria. Enquanto assim foi, a app só avisava quem se lembrava de a abrir, e
+  é a explicação mais provável para 1191 convocatórias sem resposta.
+  O `ConvidarAvisos` (`src/components/ConvidarAvisos.tsx`) faz a pergunta em
+  dois sítios, sem bloquear a app: **uma faixa na Home** a quem nunca escolheu
+  — é quem nunca responde que precisa de a ver, e essa gente nunca chega ao
+  outro momento — e **a seguir a uma resposta na Home**, que é quando a
+  pergunta se explica sozinha ("da próxima não tens de vir ver").
+  **Mas só quando não fica nada por responder**, e só na Home. Quem tem dois
+  compromissos à espera está a meio de uma tarefa, e a persiana a subir entre o
+  primeiro e o segundo tapa o botão do segundo — o `convocatoria.spec.ts`
+  apanhou-o. Na Agenda não há convite nenhum: ali responde-se de dentro da
+  persiana do evento, e empilhar-lhe outra por cima é o que esta app evita em
+  todo o lado.
+  **O "sim" liga três avisos, e o painel escreve os três antes de haver botão**
+  — convocatórias, comunicados e quotas, por decisão da direção. Ligar mais do
+  que a pergunta promete era ganhar a resposta com letra pequena. Os avisos de
+  quem gere não entram: são sobre o trabalho da equipa técnica e continuam nas
+  Definições.
+  **"Agora não" adia, e ao fim de três vezes cala-se de vez** (`localStorage`,
+  21 dias de descanso). Um convite que volta para sempre é um anúncio. E o
+  convite **só se mostra a quem tem o papel de jogador**: promete "quando fores
+  convocado", e a quem nunca é convocado isso é falso.
+  `tests/e2e/convite-avisos.spec.ts` cobre as três decisões.
 - **O dinheiro fala em três cores, e as pastilhas estão num sítio só.**
   `CHIP_ATRASO` / `CHIP_AVISO` / `CHIP_PAGO` / `CHIP_NEUTRO`, as barras
   `BARRA_*` e o `fmtEuro` vivem em `src/components/financeiro/estilos.ts` —

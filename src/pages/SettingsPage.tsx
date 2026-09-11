@@ -454,7 +454,9 @@ const SettingsPage: React.FC = () => {
             <span className="block font-display font-extrabold text-[12.5px] text-white">
               Avisos
             </span>
-            <span className="block text-[10px] text-white/62 mt-0.5">O que quero saber</span>
+            {/* Dizia "O que quero saber", que não diz o que a app faz com
+                isto. O nome dos três avisos é o que faz alguém entrar aqui. */}
+            <span className="block text-[10px] text-white/62 mt-0.5">Convocatórias e mais</span>
           </span>
         </button>
       </div>
