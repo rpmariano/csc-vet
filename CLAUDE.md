@@ -615,6 +615,20 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   não apareciam e por isso não havia como os tirar; e a recusa de um deles
   sumia das contagens — uma resposta a menos numa base que tem nove.
   **Esconder linhas nunca é a forma de dizer que estão desatualizadas.**
+- **A minha convocatória é a que tem o meu `id`, e mais nada.** A app
+  procurava-a também pelo **nome** e pelo **email** do atleta, em seis sítios
+  entre a Agenda e os Eventos. É a mesma falha que a identidade por email já
+  tinha fechado do lado da associação de conta, ainda viva do outro lado: o
+  nome repete-se entre sócios e o `profiles.email` é escrevível pelo próprio,
+  por isso nenhum dos dois identifica ninguém. `player_id` referencia
+  `profiles.id`, que é o `auth.uid()`, e chega.
+  Não era um buraco de segurança — a RLS recusa a escrita numa linha que não é
+  da pessoa —, era pior de outra maneira: a app dava a resposta de um homónimo
+  como sendo minha, e responder não fazia nada. **E num sítio era destrutivo:**
+  o `handleToggleCallup` encontrava a linha por nome e **apagava-a**, por isso
+  tirar um homónimo da convocatória apagava a do outro, com a resposta dele
+  dentro. `convocatoria.spec.ts` cobre-o com dois Joões Silva — verificado que
+  o teste falha com o defeito reposto.
 - **A contagem de quem respondeu é de quem gere, e o atleta recebe o prazo.**
   Ao lado de "Contamos contigo?" estava "0 confirmados", e na persiana
   "Convocatória (22) · 0 confirmados · 22 pendentes" — numa base com 1191

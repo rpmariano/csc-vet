@@ -2714,14 +2714,10 @@ const EventsPage: React.FC = () => {
                 const calledPlayerIds = currentCallups.map(c => c.player_id)
 
                 const isMemberCalled = (player: Profile) => {
-                  return calledPlayerIds.includes(player.id) || currentCallups.some(c => 
-                    c.player_id === player.id || 
-                    (c.player && (
-                      c.player.id === player.id ||
-                      (c.player.name && player.name && c.player.name.toLowerCase().trim() === player.name.toLowerCase().trim()) ||
-                      (c.player.email && player.email && c.player.email.toLowerCase().trim() === player.email.toLowerCase().trim())
-                    ))
-                  )
+                  /* Só pelo id: o nome repete-se entre sócios e o email da ficha é
+                     escrevível pelo próprio — nenhum dos dois identifica ninguém. */
+                  return calledPlayerIds.includes(player.id) ||
+                    currentCallups.some(c => c.player_id === player.id || c.player?.id === player.id)
                 }
 
                 const calledMembersCount = eligibleMembers.filter(p => isMemberCalled(p)).length
@@ -2859,13 +2855,8 @@ const EventsPage: React.FC = () => {
                     {/* Lista de membros um a um */}
                     <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto p-1.5 bg-white/5 border border-white/12 rounded-2xl">
                       {filteredMembers.map(p => {
-                        const callup = currentCallups.find(c => 
-                          c.player_id === p.id ||
-                          (c.player && (
-                            c.player.id === p.id ||
-                            (c.player.name && p.name && c.player.name.toLowerCase().trim() === p.name.toLowerCase().trim()) ||
-                            (c.player.email && p.email && c.player.email.toLowerCase().trim() === p.email.toLowerCase().trim())
-                          ))
+                        const callup = currentCallups.find(
+                          c => c.player_id === p.id || c.player?.id === p.id,
                         )
                         const isCalled = isMemberCalled(p)
 

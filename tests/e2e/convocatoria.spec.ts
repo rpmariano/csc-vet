@@ -627,3 +627,59 @@ test.describe('A contagem de respostas é de quem gere', () => {
     await expect(persiana.getByText(/0 confirmados/)).toHaveCount(0)
   })
 })
+
+/**
+ * A minha convocatória é a que tem o meu `id`, e mais nada.
+ *
+ * A app procurava-a também pelo nome e pelo email do atleta. Dois sócios com o
+ * mesmo nome — e um clube de bairro tem-nos — viam a convocatória um do outro
+ * como sendo sua; o `profiles.email` é escrevível pelo próprio, por isso
+ * também não prova identidade nenhuma. A RLS impedia a escrita na linha
+ * errada, portanto não era um buraco de segurança: era a app a mostrar a
+ * pergunta de outra pessoa e a não fazer nada quando se respondia.
+ *
+ * É a mesma lição que tirou o telefone e o nome da associação de conta a
+ * ficha, aplicada ao outro sítio onde ainda vivia.
+ */
+test.describe('Homónimos não respondem um pelo outro', () => {
+  const MESMO_NOME = 'João Silva'
+
+  /* O convocado é o outro João, e não eu. */
+  const outroJoao = {
+    id: 'p-homonimo',
+    name: MESMO_NOME,
+    email: UTILIZADOR_TESTE.email,
+    role: 'player', roles: ['player'], status: 'active', jersey_number: 7,
+  }
+  const eu = { ...EU, name: MESMO_NOME, role: 'player', roles: ['player'] }
+
+  const jogo = {
+    ...base, id: 'hm', title: null, type: 'match',
+    date_time: DAQUI_A_DIAS(3), opponent_id: null,
+  }
+
+  /*
+    O outro João já respondeu que sim. Eu não respondi nada — e é isso que o
+    cartão me tem de dizer. Com a procura por nome, a app dava a resposta dele
+    como minha: "Disseste que sim" a quem nunca tocou no botão.
+
+    (Um atleta apto que não foi convocado recebe a pergunta à mesma e pode
+    inscrever-se: é outra decisão desta app, e não é o que aqui se testa.)
+  */
+  test('a resposta do outro não é a minha', async ({ page }) => {
+    await montarSupabaseFalso(page, {
+      events: [jogo],
+      callups: [{
+        id: 'c-outro', event_id: 'hm', player_id: outroJoao.id,
+        status: 'confirmed', responded_at: new Date().toISOString(), player: outroJoao,
+      }],
+      profiles: [eu, outroJoao],
+      v_players_public: [eu, outroJoao],
+    })
+    await page.goto('/csc-vet/calendar')
+    await expect(page.getByText('POR REALIZAR')).toBeVisible()
+
+    await expect(page.getByText(/Contamos contigo\?/).first()).toBeVisible()
+    await expect(page.getByText(/Contamos contigo\.|Disseste que sim/)).toHaveCount(0)
+  })
+})

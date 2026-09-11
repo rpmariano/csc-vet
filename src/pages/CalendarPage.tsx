@@ -735,18 +735,17 @@ const CalendarPage: React.FC = () => {
 
       if (uniqueCallups.length >= 0) {
         const playerMap = new Map<string, Profile>(mergedPlayers.map(p => [p.id, p]))
-        const emailMap = new Map<string, Profile>(mergedPlayers.filter(p => p.email).map(p => [p.email!.toLowerCase().trim(), p]))
-        const nameMap = new Map<string, Profile>(mergedPlayers.map(p => [p.name.toLowerCase().trim(), p]))
 
         const eventsList = (evRes.data as Event[]) || []
         const practiceEventIds = new Set(eventsList.filter(e => e.type === 'practice').map(e => e.id))
 
         const map: Record<string, CallupWithPlayer[]> = {}
         uniqueCallups.forEach((c: any) => {
-          const fullP = playerMap.get(c.player_id) ||
-            (c.player?.email ? emailMap.get(c.player.email.toLowerCase().trim()) : null) ||
-            (c.player?.name ? nameMap.get(c.player.name.toLowerCase().trim()) : null) ||
-            c.player
+          /* A convocatória traz `player_id`, que é a chave estrangeira para a
+             ficha. Havia aqui um recurso ao email e ao nome quando o id não
+             estivesse no plantel carregado — e com homónimos colava a ficha
+             errada, incluindo o estado clínico que a linha seguinte lê. */
+          const fullP = playerMap.get(c.player_id) || c.player
 
           // Para treinos: atletas lesionados ou inativos não entram na convocatória
           if (practiceEventIds.has(c.event_id)) {
@@ -1214,6 +1213,45 @@ const CalendarPage: React.FC = () => {
     desenha não é um calendário. O filtro de tempo é da lista, que é onde a
     pergunta "o que vem a seguir?" se faz.
   */
+  /**
+   * A minha convocatória para um evento.
+   *
+   * **A identidade é o `id`, e mais nada.** Isto aceitava também uma
+   * convocatória cujo atleta tivesse o meu nome ou o meu email — dois sócios
+   * com o mesmo nome respondiam um pela convocatória do outro, e o
+   * `profiles.email` é escrevível pelo próprio, por isso não prova identidade
+   * nenhuma (é a mesma lição que tirou o telefone e o nome da associação de
+   * conta a ficha). Não era um buraco de segurança, porque a RLS recusa a
+   * escrita numa linha que não é da pessoa — era pior de outra maneira: a app
+   * mostrava a convocatória de outro como sendo minha, e responder não fazia
+   * nada.
+   *
+   * O `player_id` referencia `profiles.id`, que é o `auth.uid()`. Chega.
+   *
+   * O que fica é o **auto-convocado**: num treino ou convívio, quem está apto
+   * conta como chamado mesmo sem linha em `callups` — é a convocatória
+   * automática dos aptos, e não uma forma de descobrir quem eu sou.
+   */
+  const getMyCallupForEvent = (eventId: string): CallupWithPlayer | null => {
+    if (!profile) return null
+    const callups = eventCallups[eventId] || []
+
+    const minha = callups.find(c => c.player_id === profile.id || c.player?.id === profile.id)
+    if (minha) return minha
+
+    const ev = events.find(item => item.id === eventId)
+    if (ev && (ev.type === 'practice' || ev.type === 'gathering') && isPlayerEligible(profile, ev.type)) {
+      return {
+        id: `auto-${eventId}-${profile.id}`,
+        event_id: eventId,
+        player_id: profile.id,
+        status: 'called',
+        player: profile
+      }
+    }
+    return null
+  }
+
   const eventosDoCalendario = events.filter(e => {
     /*
       0. Rascunhos: só para quem gere.
@@ -1243,36 +1281,6 @@ const CalendarPage: React.FC = () => {
       if (!titleMatch && !locMatch && !descMatch && !tourMatch && !oppMatch) {
         return false
       }
-    }
-
-    // Helper para obter a convocatória do utilizador atual para qualquer evento
-    const getMyCallupForEvent = (eventId: string): CallupWithPlayer | null => {
-      if (!profile) return null
-      const callups = eventCallups[eventId] || []
-      const pId = profile.id
-      const pEmail = profile.email ? profile.email.toLowerCase().trim() : ''
-      const pName = profile.name ? profile.name.toLowerCase().trim() : ''
-
-      const found = callups.find(c => 
-        c.player_id === pId ||
-        c.player?.id === pId ||
-        (pEmail && c.player?.email && c.player.email.toLowerCase().trim() === pEmail) ||
-        (pName && c.player?.name && c.player.name.toLowerCase().trim() === pName)
-      )
-      if (found) return found
-
-      // Fallback para treinos/convívios se elegível
-      const ev = events.find(item => item.id === eventId)
-      if (ev && (ev.type === 'practice' || ev.type === 'gathering') && isPlayerEligible(profile, ev.type)) {
-        return {
-          id: `auto-${eventId}-${profile.id}`,
-          event_id: eventId,
-          player_id: profile.id,
-          status: 'called',
-          player: profile
-        }
-      }
-      return null
     }
 
     // 3. Status Filter — a parte da resposta à convocatória; o tempo é abaixo.
@@ -1306,35 +1314,6 @@ const CalendarPage: React.FC = () => {
   const haRealizados = eventosDoCalendario.some(
     e => new Date(e.date_time).getTime() < Date.now(),
   )
-
-  // Helper centralizado fora do filter para obter a convocatória do utilizador atual
-  const getMyCallupForEvent = (eventId: string): CallupWithPlayer | null => {
-    if (!profile) return null
-    const callups = eventCallups[eventId] || []
-    const pId = profile.id
-    const pEmail = profile.email ? profile.email.toLowerCase().trim() : ''
-    const pName = profile.name ? profile.name.toLowerCase().trim() : ''
-
-    const found = callups.find(c => 
-      c.player_id === pId ||
-      c.player?.id === pId ||
-      (pEmail && c.player?.email && c.player.email.toLowerCase().trim() === pEmail) ||
-      (pName && c.player?.name && c.player.name.toLowerCase().trim() === pName)
-    )
-    if (found) return found
-
-    const ev = events.find(item => item.id === eventId)
-    if (ev && (ev.type === 'practice' || ev.type === 'gathering') && isPlayerEligible(profile, ev.type)) {
-      return {
-        id: `auto-${eventId}-${profile.id}`,
-        event_id: eventId,
-        player_id: profile.id,
-        status: 'called',
-        player: profile
-      }
-    }
-    return null
-  }
 
   // Lista de todos os eventos com convocatória pendente de resposta para o atleta atual
   const isCallupPendingForUser = (ev: Event) => {
@@ -1528,7 +1507,8 @@ const CalendarPage: React.FC = () => {
 
   const renderEventCard = (event: Event) => {
     const callups = eventCallups[event.id] || []
-    let myCallup = profile ? callups.find(c => c.player_id === profile.id || c.player?.id === profile.id || (c.player?.email && profile.email && c.player.email.toLowerCase().trim() === profile.email.toLowerCase().trim())) : null
+    /* Só pelo id. O email vinha de `profiles.email`, que o próprio escreve. */
+    let myCallup = profile ? callups.find(c => c.player_id === profile.id || c.player?.id === profile.id) : null
     if (!myCallup && profile && (event.type === 'practice' || event.type === 'gathering' || isPlayerEligible(profile, event.type) || profile.role === 'player')) {
       myCallup = {
         id: `temp-${event.id}-${profile.id}`,
@@ -3285,14 +3265,10 @@ const CalendarPage: React.FC = () => {
                   const calledPlayerIds = currentCallups.map(c => c.player_id)
 
                   const isMemberCalled = (player: Profile) => {
-                    return calledPlayerIds.includes(player.id) || currentCallups.some(c => 
-                      c.player_id === player.id || 
-                      (c.player && (
-                        c.player.id === player.id ||
-                        (c.player.name && player.name && c.player.name.toLowerCase().trim() === player.name.toLowerCase().trim()) ||
-                        (c.player.email && player.email && c.player.email.toLowerCase().trim() === player.email.toLowerCase().trim())
-                      ))
-                    )
+                    /* Só pelo id: o nome repete-se entre sócios e o email da ficha é
+                     escrevível pelo próprio — nenhum dos dois identifica ninguém. */
+                    return calledPlayerIds.includes(player.id) ||
+                      currentCallups.some(c => c.player_id === player.id || c.player?.id === player.id)
                   }
 
                   const calledMembersCount = eligibleMembers.filter(p => isMemberCalled(p)).length
@@ -3467,13 +3443,11 @@ const CalendarPage: React.FC = () => {
                   }
 
                   const handleToggleCallup = async (player: Profile) => {
-                    const existing = currentCallups.find(c => 
-                      c.player_id === player.id || 
-                      (c.player && (
-                        c.player.id === player.id ||
-                        (c.player.name && player.name && c.player.name.toLowerCase().trim() === player.name.toLowerCase().trim()) ||
-                        (c.player.email && player.email && c.player.email.toLowerCase().trim() === player.email.toLowerCase().trim())
-                      ))
+                    /* Só pelo id, e aqui não é detalhe: esta linha é apagada a
+                       seguir. Por nome, tirar um homónimo da convocatória
+                       apagava a do outro, e a resposta dele com ela. */
+                    const existing = currentCallups.find(
+                      c => c.player_id === player.id || c.player?.id === player.id,
                     )
                     if (existing) {
                       const { error } = await supabase.from('callups').delete().eq('id', existing.id)
