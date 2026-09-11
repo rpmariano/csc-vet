@@ -262,11 +262,17 @@ body {
 }
 
 /*
- * Marca de água "CASCAIS" na faixa do topo. `-webkit-text-*` para o caso de
- * se querer o contorno; por omissão é o preenchimento translúcido do handoff.
+ * Marca de água "CASCAIS" na faixa do topo.
+ *
+ * O tamanho é a única coisa que muda de sítio para sítio — 78px na faixa de
+ * 250px dos ecrãs, 96px na moldura de entrada, onde a faixa ocupa o ecrã todo
+ * — e por isso entra por uma propriedade, e não por um `fontSize` escrito à
+ * mão que sai da escala tipográfica sem se dar por isso. A tinta é uma só: a
+ * moldura de entrada tinha a sua, a `.05`, sem nada que a explicasse, e duas
+ * opacidades para a mesma marca são duas decisões onde devia haver uma.
  */
 .marca-agua {
-  font: 900 78px/0.8 var(--font-display);
+  font: 900 var(--marca-agua-tamanho, 78px)/0.8 var(--font-display);
   color: rgba(255, 255, 255, 0.065);
   letter-spacing: -0.02em;
   user-select: none;

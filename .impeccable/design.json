@@ -34,6 +34,65 @@
         "canonical": "#ef3223",
         "tonalRamp": ["oklch(15% 0.08 30)", "oklch(27% 0.12 30)", "oklch(38% 0.16 30)", "oklch(49% 0.19 30)", "oklch(60% 0.22 30)", "oklch(72% 0.17 30)", "oklch(84% 0.10 30)", "oklch(95% 0.04 30)"]
       },
+      "ambar-aviso": {
+        "role": "tertiary",
+        "displayName": "Âmbar de Aviso",
+        "canonical": "#f59e0b",
+        "tonalRamp": ["oklch(15% 0.05 70)", "oklch(28% 0.08 70)", "oklch(40% 0.11 70)", "oklch(52% 0.14 70)", "oklch(64% 0.16 70)", "oklch(75% 0.15 70)", "oklch(86% 0.10 70)", "oklch(96% 0.04 70)"]
+      },
+      "ambar-texto": {
+        "role": "tertiary",
+        "displayName": "Âmbar de Leitura",
+        "canonical": "#fcd34d",
+        "tonalRamp": ["oklch(15% 0.04 85)", "oklch(28% 0.07 85)", "oklch(41% 0.09 85)", "oklch(54% 0.11 85)", "oklch(67% 0.13 85)", "oklch(78% 0.14 85)", "oklch(88% 0.11 85)", "oklch(96% 0.05 85)"]
+      },
+      "faixa-verde-vivo": {
+        "role": "primary",
+        "displayName": "Verde Vivo da Faixa",
+        "canonical": "#22691f",
+        "tonalRamp": ["oklch(15% 0.06 142)", "oklch(27% 0.10 142)", "oklch(40% 0.12 142)", "oklch(52% 0.13 142)", "oklch(63% 0.13 142)", "oklch(74% 0.11 142)", "oklch(85% 0.07 142)", "oklch(95% 0.03 142)"]
+      },
+      "faixa-verde-fundo": {
+        "role": "primary",
+        "displayName": "Verde de Fundo da Faixa",
+        "canonical": "#17452a",
+        "tonalRamp": ["oklch(15% 0.04 155)", "oklch(25% 0.06 155)", "oklch(34% 0.07 155)", "oklch(46% 0.08 155)", "oklch(58% 0.08 155)", "oklch(70% 0.07 155)", "oklch(83% 0.05 155)", "oklch(95% 0.02 155)"]
+      },
+      "branco": {
+        "role": "neutral",
+        "displayName": "Branco",
+        "canonical": "#ffffff"
+      },
+      "vidro-cartao": {
+        "role": "neutral",
+        "displayName": "Vidro do Cartão",
+        "canonical": "rgba(255,255,255,0.11)"
+      },
+      "vidro-bloco": {
+        "role": "neutral",
+        "displayName": "Vidro do Bloco",
+        "canonical": "rgba(255,255,255,0.07)"
+      },
+      "vidro-barra": {
+        "role": "neutral",
+        "displayName": "Vidro da Barra",
+        "canonical": "rgba(53,61,58,0.9)"
+      },
+      "fio-forte": {
+        "role": "neutral",
+        "displayName": "Fio do Cartão",
+        "canonical": "rgba(255,255,255,0.14)"
+      },
+      "fio": {
+        "role": "neutral",
+        "displayName": "Fio do Bloco",
+        "canonical": "rgba(255,255,255,0.12)"
+      },
+      "marca-agua": {
+        "role": "neutral",
+        "displayName": "Marca de Água",
+        "canonical": "rgba(255,255,255,0.065)"
+      },
       "fundo": {
         "role": "neutral",
         "displayName": "Fundo de Noite",
@@ -78,11 +137,23 @@
       }
     },
     "typographyMeta": {
-      "display": { "displayName": "Título de Ecrã", "purpose": "O nome da página, em cima de tudo. Sobe a 44px na Home, onde o próximo jogo é o título." },
+      "heroi": { "displayName": "Herói", "purpose": "O confronto do próximo jogo na Home, que é o título dessa página. Existe uma vez em toda a app." },
+      "display": { "displayName": "Título de Ecrã", "purpose": "O nome da página, em cima de tudo." },
       "headline": { "displayName": "Número Grande", "purpose": "Saldos, contagens e resultados, com dígitos tabulares para não dançarem." },
-      "title": { "displayName": "Linha de Conteúdo", "purpose": "O nome numa lista, o título de um cartão, o rótulo de um botão. O tamanho em que a app fala." },
-      "body": { "displayName": "Nota", "purpose": "Explicações e moradas, sempre em branco translúcido e nunca em branco cheio." },
-      "label": { "displayName": "Etiqueta de Secção", "purpose": "Anuncia um bloco ou um grupo. Só funciona em maiúsculas — é o espaçamento que a distingue de uma frase." }
+      "numero": { "displayName": "Número", "purpose": "O resultado num placar de cartão e a contagem num mosaico." },
+      "subtitulo": { "displayName": "Subtítulo", "purpose": "Cabeçalho de um bloco dentro de um cartão. Pouco usado, de propósito." },
+      "enfase": { "displayName": "Ênfase", "purpose": "O degrau entre o título de cartão e o subtítulo." },
+      "title": { "displayName": "Título de Cartão", "purpose": "O título de um cartão e o nome de uma secção." },
+      "linha": { "displayName": "Linha", "purpose": "O nome numa lista. É aqui que a app fala a maior parte do tempo." },
+      "linha-forte": { "displayName": "Linha Forte", "purpose": "O rótulo de um botão e a linha que carrega o valor." },
+      "body": { "displayName": "Corpo", "purpose": "Frases inteiras — explicações, moradas." },
+      "apoio": { "displayName": "Apoio", "purpose": "A frase secundária, meio pixel abaixo do corpo." },
+      "nota": { "displayName": "Nota", "purpose": "A segunda linha de uma linha de lista, sempre em branco translúcido." },
+      "nota-fraca": { "displayName": "Nota Fraca", "purpose": "A nota que acompanha um valor, ainda mais discreta." },
+      "micro": { "displayName": "Micro", "purpose": "O degrau mais pequeno em Helvetica: datas em coluna, contagens ao lado de um ícone." },
+      "label": { "displayName": "Etiqueta de Secção", "purpose": "Anuncia um bloco ou um grupo. Só funciona em maiúsculas — é o espaçamento que a distingue de uma frase." },
+      "label-campo": { "displayName": "Etiqueta de Campo", "purpose": "Nomeia um campo de formulário, por cima da caixa." },
+      "pastilha-estado": { "displayName": "Pastilha de Estado", "purpose": "O degrau mais pequeno do sistema, e só para pastilhas de duas ou três palavras." }
     },
     "shadows": [
       { "name": "cartao-vidro", "value": "0 20px 46px -24px rgba(0,0,0,0.95)", "purpose": "Descola o cartão principal da faixa verde que passa por trás dele." },

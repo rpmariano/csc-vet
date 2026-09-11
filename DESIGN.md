@@ -7,14 +7,31 @@ colors:
   dourado-emblema: "#e3c04d"
   azul-institucional: "#005296"
   vermelho-cartao: "#ef3223"
+  ambar-aviso: "#f59e0b"
+  ambar-texto: "#fcd34d"
+  faixa-verde-vivo: "#22691f"
+  faixa-verde-fundo: "#17452a"
   fundo: "#262d2b"
   superficie: "#2d3532"
   tinta: "#121415"
+  branco: "#ffffff"
   verde-texto: "#4ecf9d"
   azul-texto: "#7fb3e0"
   vermelho-texto: "#f08a7f"
   vermelho-suave: "#f0b8b0"
+  vidro-cartao: "rgba(255,255,255,0.11)"
+  vidro-bloco: "rgba(255,255,255,0.07)"
+  vidro-barra: "rgba(53,61,58,0.9)"
+  fio-forte: "rgba(255,255,255,0.14)"
+  fio: "rgba(255,255,255,0.12)"
+  marca-agua: "rgba(255,255,255,0.065)"
 typography:
+  heroi:
+    fontFamily: "Archivo, Helvetica, sans-serif"
+    fontSize: "44px"
+    fontWeight: 900
+    lineHeight: 0.95
+    letterSpacing: "-0.04em"
   display:
     fontFamily: "Archivo, Helvetica, sans-serif"
     fontSize: "36px"
@@ -27,29 +44,88 @@ typography:
     fontWeight: 900
     lineHeight: 1
     letterSpacing: "-0.03em"
+  numero:
+    fontFamily: "Archivo, Helvetica, sans-serif"
+    fontSize: "22px"
+    fontWeight: 900
+    lineHeight: 1
+    letterSpacing: "-0.03em"
+  subtitulo:
+    fontFamily: "Archivo, Helvetica, sans-serif"
+    fontSize: "18px"
+    fontWeight: 800
+    lineHeight: 1.15
+  enfase:
+    fontFamily: "Archivo, Helvetica, sans-serif"
+    fontSize: "16px"
+    fontWeight: 800
+    lineHeight: 1.2
   title:
     fontFamily: "Archivo, Helvetica, sans-serif"
     fontSize: "14px"
     fontWeight: 800
     lineHeight: 1.2
     letterSpacing: "normal"
+  linha:
+    fontFamily: "Archivo, Helvetica, sans-serif"
+    fontSize: "13px"
+    fontWeight: 800
+    lineHeight: 1.25
+  linha-forte:
+    fontFamily: "Archivo, Helvetica, sans-serif"
+    fontSize: "12.5px"
+    fontWeight: 800
+    lineHeight: 1.3
   body:
     fontFamily: "Helvetica, Arial, sans-serif"
     fontSize: "12px"
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "normal"
+  apoio:
+    fontFamily: "Helvetica, Arial, sans-serif"
+    fontSize: "11.5px"
+    fontWeight: 400
+    lineHeight: 1.45
+  nota:
+    fontFamily: "Helvetica, Arial, sans-serif"
+    fontSize: "11px"
+    fontWeight: 400
+    lineHeight: 1.45
+  nota-fraca:
+    fontFamily: "Helvetica, Arial, sans-serif"
+    fontSize: "10.5px"
+    fontWeight: 400
+    lineHeight: 1.4
+  micro:
+    fontFamily: "Helvetica, Arial, sans-serif"
+    fontSize: "10px"
+    fontWeight: 400
+    lineHeight: 1.4
   label:
     fontFamily: "Archivo, Helvetica, sans-serif"
     fontSize: "9.5px"
     fontWeight: 800
     lineHeight: 1.2
     letterSpacing: "0.18em"
+  label-campo:
+    fontFamily: "Archivo, Helvetica, sans-serif"
+    fontSize: "9px"
+    fontWeight: 700
+    lineHeight: 1.2
+    letterSpacing: "0.1em"
+  pastilha-estado:
+    fontFamily: "Archivo, Helvetica, sans-serif"
+    fontSize: "8.5px"
+    fontWeight: 900
+    lineHeight: 1.2
+    letterSpacing: "0.1em"
 rounded:
   campo: "15px"
   bloco: "22px"
   cartao: "26px"
   persiana: "30px"
+  faixa: "44px"
   circulo: "9999px"
 spacing:
   linha: "12px"
@@ -179,6 +255,22 @@ para superfícies, e as mesmas clareadas, para texto sobre o fundo escuro.
 
 - **Vermelho de Cartão** (`{colors.vermelho-cartao}`): eliminar, recusar, em
   atraso. Nunca decorativo.
+- **Âmbar de Aviso** (`{colors.ambar-aviso}`, texto em `{colors.ambar-texto}`):
+  **a única cor deste sistema que não é do clube**, e existe porque o dinheiro
+  precisa de um estado entre o pago e o em atraso. Uma quota que vence daqui a
+  três dias não é verde nem vermelha. Fora do dinheiro e do ponto que marca uma
+  jornada por lançar, não se usa.
+
+### Cores da faixa
+
+Não são tokens de interface — são a matéria de que a faixa do topo é feita, e
+por isso vivem só ali e na moldura do ecrã de entrada.
+
+- **Verde Vivo da Faixa** (`{colors.faixa-verde-vivo}`): o início do gradiente,
+  no canto superior esquerdo.
+- **Verde de Fundo da Faixa** (`{colors.faixa-verde-fundo}`): onde o gradiente
+  aterra antes de se esbater para o fundo da página, e a cor do bloco inclinado
+  da direita.
 
 ### Neutral
 
@@ -191,9 +283,14 @@ para superfícies, e as mesmas clareadas, para texto sobre o fundo escuro.
 - **Verde, Azul e Vermelho de Leitura** (`{colors.verde-texto}`,
   `{colors.azul-texto}`, `{colors.vermelho-texto}`): as três cores do clube
   clareadas até lerem sobre o fundo. **É esta família que se escreve.**
-- **Branco em translucidez**: a escala de leitura real da app. `text-white` para
-  o que decide, `/82` para rótulos sobre vidro, `/70` para o inativo, `/62` para
-  a nota secundária. Abaixo de `/62` não se desce.
+- **Branco em translucidez**: a escala de leitura real da app.
+  `{colors.branco}` para o que decide, `/82` para rótulos sobre vidro, `/70`
+  para o inativo, `/62` para a nota secundária. Abaixo de `/62` não se desce.
+- **Os brancos de superfície** são quatro, e não se improvisam:
+  `{colors.vidro-cartao}` no cartão principal, `{colors.vidro-bloco}` no cartão
+  simples, `{colors.fio-forte}` e `{colors.fio}` nos fios que os contornam.
+  `{colors.vidro-barra}` é o vidro esverdeado da barra de navegação, e
+  `{colors.marca-agua}` é a palavra CASCAIS na faixa.
 
 ### Named Rules
 
@@ -231,18 +328,46 @@ lida e não para ser vista, sai do tipo de display.
 
 ### Hierarchy
 
-- **Display** (900, 36px, entrelinha 1, `-0.035em`): o título do ecrã, e o
-  confronto do próximo jogo na Home, que sobe a 44px por ser o título dessa
-  página.
-- **Headline** (900, 28px, entrelinha 1, `-0.03em`, `tabular-nums`): saldos,
-  contagens, resultados. Os dígitos são tabulares para não dançarem quando o
-  valor muda.
-- **Title** (800, 13–14px): o nome numa linha de lista, o título de um cartão, o
-  rótulo de um botão. É o tamanho em que a app fala a maior parte do tempo.
-- **Body** (400, 11–12px, entrelinha 1.5): notas, explicações, moradas. Sempre em
-  branco translúcido, nunca em branco cheio.
-- **Label** (800, 9–9.5px, `0.18em`, maiúsculas): a etiqueta que anuncia uma
-  secção ou um grupo. O espaçamento entre letras só assenta em maiúsculas.
+**O ramo é denso no fundo e esparso no topo**, e isso é a consequência de uma
+coluna de 480px que carrega muita informação: entre os 8,5px e os 13px há sete
+degraus com meio pixel de diferença entre vizinhos, porque é aí que a app passa
+a maior parte do tempo e meio pixel decide se uma linha cabe. Acima dos 16px há
+quatro degraus e todos vivem dentro de um primitivo.
+
+- **Herói** (900, 44px, `-0.04em`): o confronto do próximo jogo na Home, que é o
+  título dessa página. Existe uma vez em toda a app.
+- **Display** (900, 36px, entrelinha 1, `-0.035em`): o título do ecrã.
+- **Headline** (900, 28px, `-0.03em`, `tabular-nums`): saldos, contagens,
+  resultados. Os dígitos são tabulares para não dançarem quando o valor muda.
+- **Número** (900, 22px): o resultado num placar de cartão e a contagem num
+  mosaico.
+- **Subtítulo** (800, 18px) e **Ênfase** (800, 16px): o cabeçalho de um bloco
+  dentro de um cartão. São os dois degraus menos usados, e é de propósito.
+- **Título** (800, 14px): o título de um cartão e o nome de uma secção.
+- **Linha** (800, 13px) e **Linha forte** (800, 12,5px): o nome numa lista, o
+  rótulo de um botão. É aqui que a app fala a maior parte do tempo.
+- **Corpo** (400, 12px, entrelinha 1.5) e **Apoio** (400, 11,5px): frases
+  inteiras — explicações, moradas.
+- **Nota** (400, 11px), **Nota fraca** (400, 10,5px) e **Micro** (400, 10px): a
+  segunda linha de uma linha de lista, sempre em branco translúcido.
+- **Etiqueta** (800, 9,5px, `0.18em`, maiúsculas) e **Etiqueta de campo** (700,
+  9px, `0.1em`): a linha pequena que anuncia uma secção ou nomeia um campo. O
+  espaçamento entre letras só assenta em maiúsculas.
+- **Pastilha de estado** (900, 8,5px, `0.1em`): o degrau mais pequeno do
+  sistema, e só para pastilhas de duas ou três palavras.
+
+**A marca de água não é texto e não conta para o ramo.** É tipo desenhado:
+Archivo 900 a 78px na faixa dos ecrãs, e a 96px na moldura do ecrã de entrada,
+onde a faixa ocupa o ecrã todo em vez dos 250px do topo. O tamanho entra pela
+propriedade `--marca-agua-tamanho`, e é a única coisa que varia: a tinta é uma
+só, `{colors.marca-agua}`.
+
+**Degraus fora do ramo, a caminho de sair.** Existem no código e não são
+intencionais: 8px, 13,5px, 15px, 17px, 19px, 20px, 24px, 26px e 30px, em cerca
+de sessenta sítios. Cada um deles nasceu de um ajuste local que ninguém
+reconciliou, e o mais frequente — 15px, em quinze sítios — está a fazer o
+trabalho do degrau de 16px. Um ecrã tocado de novo devolve-os ao ramo; não se
+acrescentam degraus novos sem os escrever aqui.
 
 ### Named Rules
 
@@ -322,8 +447,8 @@ ele, o que passa por trás do vidro entra-lhe pela cara e a barra deixa de se le
 
 Cantos largos e consistentes: 15px nos campos de formulário, 22px nos blocos e
 pastilhas, 26px no cartão principal e na barra de navegação, 30px no topo de uma
-persiana, e círculo completo nas bolhas de número, nos avatares e no botão de
-criar. Nada nesta app tem cantos vivos.
+persiana, 44px nos blocos inclinados da faixa, e círculo completo nas bolhas de
+número, nos avatares e no botão de criar. Nada nesta app tem cantos vivos.
 
 As bordas são fios de branco translúcido — `/14` no cartão de vidro, `/12` no
 simples — e não linhas desenhadas. A faixa do topo é a única geometria com

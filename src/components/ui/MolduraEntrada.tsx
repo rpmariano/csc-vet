@@ -50,7 +50,7 @@ export const MolduraEntrada: React.FC<MolduraEntradaProps> = ({ children }) => (
       />
       <div
         className="marca-agua absolute whitespace-nowrap"
-        style={{ bottom: '40px', left: '-20px', fontSize: '96px', color: 'rgba(255,255,255,.05)' }}
+        style={{ bottom: '40px', left: '-20px', '--marca-agua-tamanho': '96px' } as React.CSSProperties}
       >
         CASCAIS
       </div>
