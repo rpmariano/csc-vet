@@ -49,7 +49,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     
     Estavam nas paletas do Tailwind do tema claro: um vermelho-50 a 80% de
     opacidade como fundo da caixa da mensagem, e um vermelho-950 no texto. No
-    tema claro era um tom discreto sobre branco; sobre o fundo `#0e1011` era um
+    tema claro era um tom discreto sobre branco; sobre o fundo escuro era um
     retângulo quase branco com texto quase preto, aceso no meio de um diálogo
     escuro. E este diálogo é o de **todas** as confirmações de apagar da app.
     (Sem nomes de classe neste comentário de propósito: o

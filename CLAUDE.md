@@ -138,7 +138,8 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   `csc-dark #164f16` · `csc-light #009662` · `csc-gold #e3c04d` · `csc-blue #005296` ·
   `csc-red #ef3223`. De texto sobre o fundo escuro, porque as de superfície são
   escuras de mais para uma frase: `csc-verde-texto #4ecf9d` · `csc-azul-texto #7fb3e0` ·
-  `csc-vermelho-texto #f08a7f`. Fundo `csc-fundo #0e1011`; `csc-tinta #121415` é o
+  `csc-vermelho-texto #f08a7f`. Fundo `csc-fundo #262d2b` e, um degrau acima, `csc-superficie #2d3532` para
+  o que flutua — persianas, modais, a barra de baixo. `csc-tinta #121415` é o
   texto sobre dourado. Tipo de letra de display: **Archivo**.
 - Tipografia densa e pesada: `font-black`, tamanhos `text-[9px]`–`text-sm`.
 - **Cartões: usar os primitivos**, não classes à mão — `<CartaoVidro>` para o cartão

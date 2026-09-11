@@ -36,7 +36,7 @@ não gera nada. Desenha para 393px de largura útil e mais nada.
 **Todos os alvos de toque têm no mínimo 44px de altura.** Sem exceções —
 pastilhas, separadores, botões de linha, ícones clicáveis.
 
-**Paleta.** Fundo `#0e1011`. Superfícies: verde escuro `#164f16`, verde
+**Paleta.** Fundo `#262d2b`. Superfícies: verde escuro `#164f16`, verde
 `#009662`, dourado `#e3c04d`, azul `#005296`, vermelho `#ef3223`. Para texto
 sobre o fundo escuro, porque as de superfície são escuras de mais para uma
 frase: verde `#4ecf9d`, azul `#7fb3e0`, vermelho `#f08a7f`. Tinta sobre
