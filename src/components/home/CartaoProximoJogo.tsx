@@ -50,9 +50,19 @@ const DATA_LONGA = new Intl.DateTimeFormat('pt-PT', {
 const hora = (iso: string) =>
   new Date(iso).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
 
-/** "É hoje" · "É amanhã" · "Em 8 dias" */
+/**
+ * "É hoje" · "É amanhã" · "Em 8 dias"
+ *
+ * Em dias de calendário, não em blocos de 24h: um jogo hoje às 18h, visto às
+ * 10h da manhã, está a 8h de distância — menos de um dia inteiro — e um
+ * `Math.ceil` sobre a diferença em milissegundos arredondava isso para "1
+ * dia" e dizia "É amanhã" no próprio dia do jogo. Por isso as duas datas
+ * normalizam-se para a meia-noite local antes de se subtraírem, como já
+ * fazia `textoPrazoResposta()` em `src/lib/eventos.ts`.
+ */
 function quantoFalta(iso: string): string {
-  const dias = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
+  const meiaNoite = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const dias = Math.round((meiaNoite(new Date(iso)) - meiaNoite(new Date())) / 86400000)
   if (dias <= 0) return 'É hoje'
   if (dias === 1) return 'É amanhã'
   return `Em ${dias} dias`
