@@ -1625,9 +1625,13 @@ const FinancePage: React.FC = () => {
                   {expanded && (() => {
                     /*
                       Os participantes de um encargo seguem a organização das
-                      Quotas: **ou se deve, ou se está em dia**. Deve-se quando
-                      o prazo já passou e ainda falta pagar; antes do prazo,
-                      quem não pagou não deve nada — tem é de pagar.
+                      Quotas, e antes do prazo dizem mais do que "em dia" ou
+                      "deve": quem já pagou tudo, quem já pagou parte e quem
+                      ainda não pagou nada são três respostas diferentes à
+                      mesma pergunta ("como vai isto?"), mesmo não devendo
+                      nenhum dos dois últimos um cêntimo enquanto o prazo não
+                      passa. Passado o prazo, os dois deixam de se distinguir
+                      — quem tem remanescente é devedor, pagou parte ou nada.
 
                       Eram quatro pastilhas ("pago", "falta X", "deve X",
                       "por pagar X") numa lista por ordem de inscrição, e o
@@ -1652,6 +1656,9 @@ const FinancePage: React.FC = () => {
                       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' }))
 
                     const deve = (x: typeof participantes[number]) => x.remaining > 0 && isPastDeadline
+                    const pago = (x: typeof participantes[number]) => x.remaining <= 0
+                    const faltaPagar = (x: typeof participantes[number]) => !deve(x) && !pago(x) && x.paidTotal > 0
+                    const porPagar = (x: typeof participantes[number]) => !deve(x) && !pago(x) && x.paidTotal === 0
 
                     const grupos = [
                       {
@@ -1661,10 +1668,22 @@ const FinancePage: React.FC = () => {
                         lista: participantes.filter(deve),
                       },
                       {
-                        chave: 'em-dia',
-                        titulo: 'Em dia',
+                        chave: 'pago',
+                        titulo: 'Pago',
                         cor: 'text-csc-verde-texto',
-                        lista: participantes.filter(x => !deve(x)),
+                        lista: participantes.filter(pago),
+                      },
+                      {
+                        chave: 'falta-pagar',
+                        titulo: 'Falta pagar',
+                        cor: 'text-amber-300',
+                        lista: participantes.filter(faltaPagar),
+                      },
+                      {
+                        chave: 'por-pagar',
+                        titulo: 'Por pagar',
+                        cor: 'text-white/55',
+                        lista: participantes.filter(porPagar),
                       },
                     ]
 
@@ -1689,7 +1708,7 @@ const FinancePage: React.FC = () => {
                               const emDivida = remaining > 0 && isPastDeadline
                               const barraJogador = remaining <= 0
                                 ? BARRA_PAGO
-                                : emDivida ? BARRA_ATRASO : BARRA_NEUTRA
+                                : emDivida ? BARRA_ATRASO : paidTotal > 0 ? BARRA_AVISO : BARRA_NEUTRA
                               return (
                                 <div
                                   key={playerId}

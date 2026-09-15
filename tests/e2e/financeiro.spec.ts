@@ -192,12 +192,17 @@ test('marcar um mês não devolve a lista ao topo', async ({ page }, testInfo) =
 })
 
 /**
- * Encargos — a mesma organização das Quotas, dentro de cada encargo.
+ * Encargos — a mesma organização das Quotas, dentro de cada encargo, e mais
+ * fina antes do prazo.
  *
  * A lista de participantes vinha por ordem de inscrição e com quatro
- * pastilhas ("pago", "falta X", "deve X", "por pagar X") de três cores. Passa
- * a dois grupos: deve-se quando o prazo já passou e falta pagar; antes do
- * prazo, quem não pagou ainda não deve nada.
+ * pastilhas ("pago", "falta X", "deve X", "por pagar X") de três cores.
+ * Deve-se quando o prazo já passou e falta pagar — nisso é igual às Quotas —,
+ * mas antes do prazo "ninguém deve nada" escondia a diferença entre quem já
+ * pagou tudo, quem já pagou parte e quem ainda não pagou nada: três grupos,
+ * "Pago" / "Falta pagar" / "Por pagar", nenhum deles a dever um cêntimo
+ * enquanto o prazo não passa. Depois do prazo os dois últimos deixam de se
+ * distinguir — têm remanescente, logo são "Devedores".
  */
 
 const ENCARGO_VENCIDO = 'ch1'
@@ -233,6 +238,8 @@ const FIXTURES_ENCARGOS = {
     // Alves pagou tudo, Carlos pagou metade — os dois antes do prazo.
     { id: 'pay1', charge_id: ENCARGO_VENCIDO, player_id: 'p3', amount: 25, paid_at: '2026-08-20', notes: null },
     { id: 'pay2', charge_id: ENCARGO_VENCIDO, player_id: 'p4', amount: 10, paid_at: '2026-08-21', notes: null },
+    // Bruno pagou parte do Equipamento, antes do prazo — "Falta pagar", não "Devedores".
+    { id: 'pay3', charge_id: ENCARGO_POR_VENCER, player_id: 'p2', amount: 15, paid_at: '2026-09-10', notes: null },
   ],
 }
 
@@ -248,28 +255,34 @@ test('num encargo vencido, devedores primeiro e por ordem alfabética', async ({
   await abreEncargo(page, 'Seguro desportivo 26/27')
 
   const devedores = page.getByRole('region', { name: /^Devedores — Seguro/ })
-  const emDia = page.getByRole('region', { name: /^Em dia — Seguro/ })
+  const pago = page.getByRole('region', { name: /^Pago — Seguro/ })
 
   const yDevedores = (await devedores.boundingBox())!.y
-  expect(yDevedores).toBeLessThan((await emDia.boundingBox())!.y)
+  expect(yDevedores).toBeLessThan((await pago.boundingBox())!.y)
 
   const texto = await devedores.innerText()
   expect(texto.indexOf('Bruno')).toBeLessThan(texto.indexOf('Vieira'))
 
   // Quem pagou metade e já passou o prazo deve o resto, e não o total.
   await expect(devedores).toContainText('15,00')
-  // Quem pagou tudo está em dia, sem valor nenhum a vermelho.
-  await expect(emDia).toContainText('Alves')
-  await expect(emDia).toContainText('pago')
+  // Quem pagou tudo está pago, sem valor nenhum a vermelho.
+  await expect(pago).toContainText('Alves')
+  await expect(pago).toContainText('pago')
 })
 
-test('antes do prazo, ninguém deve nada', async ({ page }) => {
+test('antes do prazo, quem não pagou nada fica em "Por pagar" e quem pagou parte em "Falta pagar"', async ({ page }) => {
   await abreEncargo(page, 'Equipamento 26/27')
 
+  // Ninguém deve nada: o prazo ainda não passou.
   await expect(page.getByRole('region', { name: /^Devedores — Equipamento/ })).toHaveCount(0)
-  const emDia = page.getByRole('region', { name: /^Em dia — Equipamento/ })
-  await expect(emDia).toContainText('Bruno')
-  await expect(emDia).toContainText('40,00')
+
+  const porPagar = page.getByRole('region', { name: /^Por pagar — Equipamento/ })
+  await expect(porPagar).toContainText('Vieira')
+  await expect(porPagar).toContainText('40,00')
+
+  const faltaPagar = page.getByRole('region', { name: /^Falta pagar — Equipamento/ })
+  await expect(faltaPagar).toContainText('Bruno')
+  await expect(faltaPagar).toContainText('25,00')
 })
 
 /**
