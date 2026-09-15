@@ -240,6 +240,8 @@ const FIXTURES_ENCARGOS = {
     { id: 'pay2', charge_id: ENCARGO_VENCIDO, player_id: 'p4', amount: 10, paid_at: '2026-08-21', notes: null },
     // Bruno pagou parte do Equipamento, antes do prazo — "Falta pagar", não "Devedores".
     { id: 'pay3', charge_id: ENCARGO_POR_VENCER, player_id: 'p2', amount: 15, paid_at: '2026-09-10', notes: null },
+    // Alves já pagou o Equipamento todo — fica no fundo, em "Pago".
+    { id: 'pay4', charge_id: ENCARGO_POR_VENCER, player_id: 'p3', amount: 40, paid_at: '2026-09-05', notes: null },
   ],
 }
 
@@ -270,19 +272,29 @@ test('num encargo vencido, devedores primeiro e por ordem alfabética', async ({
   await expect(pago).toContainText('pago')
 })
 
-test('antes do prazo, quem não pagou nada fica em "Por pagar" e quem pagou parte em "Falta pagar"', async ({ page }) => {
+test('antes do prazo, ninguém deve nada — e quem já pagou fica no fundo', async ({ page }) => {
   await abreEncargo(page, 'Equipamento 26/27')
 
   // Ninguém deve nada: o prazo ainda não passou.
   await expect(page.getByRole('region', { name: /^Devedores — Equipamento/ })).toHaveCount(0)
 
+  const faltaPagar = page.getByRole('region', { name: /^Falta pagar — Equipamento/ })
+  await expect(faltaPagar).toContainText('Bruno')
+  await expect(faltaPagar).toContainText('25,00')
+
   const porPagar = page.getByRole('region', { name: /^Por pagar — Equipamento/ })
   await expect(porPagar).toContainText('Vieira')
   await expect(porPagar).toContainText('40,00')
 
-  const faltaPagar = page.getByRole('region', { name: /^Falta pagar — Equipamento/ })
-  await expect(faltaPagar).toContainText('Bruno')
-  await expect(faltaPagar).toContainText('25,00')
+  // Alves já pagou tudo — está por baixo de quem ainda tem algo por pagar.
+  const pago = page.getByRole('region', { name: /^Pago — Equipamento/ })
+  await expect(pago).toContainText('Alves')
+
+  const yFaltaPagar = (await faltaPagar.boundingBox())!.y
+  const yPorPagar = (await porPagar.boundingBox())!.y
+  const yPago = (await pago.boundingBox())!.y
+  expect(yFaltaPagar).toBeLessThan(yPorPagar)
+  expect(yPorPagar).toBeLessThan(yPago)
 })
 
 /**

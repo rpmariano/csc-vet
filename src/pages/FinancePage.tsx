@@ -1668,12 +1668,6 @@ const FinancePage: React.FC = () => {
                         lista: participantes.filter(deve),
                       },
                       {
-                        chave: 'pago',
-                        titulo: 'Pago',
-                        cor: 'text-csc-verde-texto',
-                        lista: participantes.filter(pago),
-                      },
-                      {
                         chave: 'falta-pagar',
                         titulo: 'Falta pagar',
                         cor: 'text-amber-300',
@@ -1684,6 +1678,12 @@ const FinancePage: React.FC = () => {
                         titulo: 'Por pagar',
                         cor: 'text-white/55',
                         lista: participantes.filter(porPagar),
+                      },
+                      {
+                        chave: 'pago',
+                        titulo: 'Pago',
+                        cor: 'text-csc-verde-texto',
+                        lista: participantes.filter(pago),
                       },
                     ]
 
