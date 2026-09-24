@@ -1546,7 +1546,7 @@ const FinancePage: React.FC = () => {
           {isAdmin && incomeCategories.length === 0 && (
             <p className="cartao-simples bg-csc-gold/10 border-csc-gold/25 p-3.5 text-[11px] leading-relaxed text-csc-gold">
               Ainda não há nenhuma categoria marcada para receitas. Cria ou edita uma em
-              Despesas/Receitas → Categorias, assinalando &quot;Também pode ser usada para receitas&quot;.
+              Definições (separador Categorias), assinalando &quot;Também pode ser usada para receitas&quot;.
             </p>
           )}
 
@@ -2108,7 +2108,7 @@ const FinancePage: React.FC = () => {
                     {(txType === 'income' ? incomeCategories : categories).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   {txType === 'income' && incomeCategories.length === 0 && (
-                    <p className="text-[10px] text-white/62 mt-1">Nenhuma categoria aceita receitas — assinala "Também pode ser usada para receitas" numa categoria, abaixo.</p>
+                    <p className="text-[10px] text-white/62 mt-1">Nenhuma categoria aceita receitas — assinala "Também pode ser usada para receitas" em Definições (separador Categorias).</p>
                   )}
                 </div>
                 <div>
