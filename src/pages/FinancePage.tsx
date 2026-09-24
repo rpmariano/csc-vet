@@ -123,10 +123,10 @@ type TabId = 'overview' | 'quotas' | 'charges' | 'expenses' | 'movements' | 'set
 
 const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { id: 'overview', label: 'Visão Geral', Icon: Landmark },
+  { id: 'movements', label: 'Movimentos', Icon: Wallet },
   { id: 'quotas', label: 'Quotas', Icon: ListChecks },
   { id: 'charges', label: 'Encargos', Icon: ShieldCheck },
   { id: 'expenses', label: 'Despesas/Receitas', Icon: Receipt },
-  { id: 'movements', label: 'Movimentos', Icon: Wallet },
   { id: 'settings', label: 'Definições', Icon: Settings },
 ]
 
@@ -888,6 +888,7 @@ const FinancePage: React.FC = () => {
     setTxAmount('')
     setTxCategoryId('')
     setTxFile(null)
+    guardaMovimento.marcarComoGravado()
   }
 
   const handleTxTypeChange = (type: 'income' | 'expense') => {
@@ -1343,17 +1344,21 @@ const FinancePage: React.FC = () => {
         className="mb-3"
       />
 
-      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
-        {TABS.map(tab => (
-          <Pastilha
-            key={tab.id}
-            ativa={activeTab === tab.id}
-            onClick={() => { triggerHaptic('selection'); pedirTrocaDeSeparador(tab.id) }}
-            className="flex-none"
-          >
-            {tab.label}
-          </Pastilha>
-        ))}
+      <div className="relative">
+        <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
+          {TABS.map(tab => (
+            <Pastilha
+              key={tab.id}
+              ativa={activeTab === tab.id}
+              onClick={() => { triggerHaptic('selection'); pedirTrocaDeSeparador(tab.id) }}
+              className="flex-none"
+            >
+              {tab.label}
+            </Pastilha>
+          ))}
+        </div>
+        {/* Indicador visual de que há mais separadores à direita */}
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-csc-fundo to-transparent pointer-events-none" />
       </div>
 
       {/* ================= VISÃO GERAL ================= */}
