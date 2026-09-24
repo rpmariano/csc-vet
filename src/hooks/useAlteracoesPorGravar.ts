@@ -56,6 +56,11 @@ export interface AlteracoesPorGravar {
   /**
    * Voltar a tirar a fotografia — para os formulários que ficam abertos depois
    * de gravar (o Perfil, as Definições), senão continuavam sujos para sempre.
+   *
+   * A fotografia é a do render **seguinte**, e não a dos valores de quem chama:
+   * quem grava e limpa o formulário na mesma passagem (a despesa lançada) tem
+   * ainda os valores preenchidos na mão, e fotografá-los deixava o formulário
+   * limpo "diferente de como abriu" — sujo depois de cada gravação.
    */
   marcarComoGravado: () => void
   /** Passar tal e qual ao `<UnsavedChangesModal {...guarda.props} />`. */
@@ -97,11 +102,11 @@ export function useAlteracoesPorGravar({
     avisa o React de que há mais o que pintar, e `sujo` chegava atrasado uma
     passagem.
   */
-  const [fotografia, setFotografia] = useState<{ ativo: boolean; inicial: string | null }>({
+  const [fotografia, setFotografia] = useState<{ ativo: boolean; inicial: string | null; refazer?: boolean }>({
     ativo: false,
     inicial: null,
   })
-  if (fotografia.ativo !== ativo) {
+  if (fotografia.ativo !== ativo || fotografia.refazer) {
     setFotografia({ ativo, inicial: ativo ? agora : null })
     if (!aberto && avisoAberto) setAvisoAberto(false)
   }
@@ -115,8 +120,8 @@ export function useAlteracoesPorGravar({
   }, [sujo, aoSair])
 
   const marcarComoGravado = useCallback(() => {
-    setFotografia({ ativo: true, inicial: fotografar(valores) })
-  }, [valores])
+    setFotografia(f => ({ ...f, refazer: true }))
+  }, [])
 
   return {
     sujo,

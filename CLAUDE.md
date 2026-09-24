@@ -179,7 +179,17 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   verdade: abrir a ficha de um atleta e fechá-la logo dava o aviso de
   alterações que nunca se fizeram. Um formulário que carregue os dados da rede
   depois de abrir passa `pronto`, senão o próprio carregamento conta como
-  alteração; um que fique aberto depois de gravar chama `marcarComoGravado()`.
+  alteração; um que fique aberto depois de gravar chama `marcarComoGravado()`,
+  que fotografa **o render seguinte** e não os valores de quem chama — quem
+  grava e limpa na mesma passagem (a despesa lançada) ainda tem na mão os
+  valores preenchidos, e fotografá-los deixava o formulário limpo "diferente de
+  como abriu", sujo depois de cada gravação.
+  **E o aviso tem de estar desenhado:** o `tentarFechar()` só o abre, quem usa o
+  guarda é que põe o `<UnsavedChangesModal {...guarda.props} />` na página. As
+  Despesas/Receitas e as Definições do Financeiro não o desenhavam desde
+  2026-09-09: com o formulário sujo, tocar noutro separador abria um aviso que
+  não se via, e a barra de separadores parecia morta. `financeiro.spec.ts`
+  cobre-o — e o teste falha com o defeito reposto.
   A exceção é a `sempre`, hoje só na edição de evento: sair de lá é sempre
   deliberado porque gravar pode reenviar os pedidos de resposta ao plantel
   todo, e o `dialogos.spec.ts` cobre essa decisão.

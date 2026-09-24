@@ -494,3 +494,68 @@ test('na Visão Geral, a banda resume a lista que tem por baixo', async ({ page 
   await expect(recebido).toContainText('Patrocínios')
   await expect(recebido).toContainText('500,00')
 })
+
+/**
+ * A barra de separadores nunca fica morta.
+ *
+ * Os avisos de "alterações por gravar" da despesa e das Definições não eram
+ * desenhados em lado nenhum: com o formulário sujo, tocar noutro separador
+ * abria um aviso invisível, e o toque parecia não fazer nada. Ficava sujo
+ * depois de gravar, porque a data e o tipo não voltam ao que eram — e, com a
+ * primeira tentativa de correção, ficava sujo depois de qualquer gravação.
+ */
+test('depois de lançar uma despesa, os separadores continuam a funcionar', async ({ page }) => {
+  await montarSupabaseFalso(page, FIXTURES_MOVIMENTOS)
+  await page.goto('/csc-vet/finance?ver=expenses')
+
+  const descricao = page.getByLabel('Descrição')
+  await expect(descricao).toBeVisible({ timeout: 15000 })
+  await descricao.fill('Bolas de treino')
+  await page.getByLabel('Valor (€)').fill('35')
+  // Outro dia que não hoje — é o caso normal, e era o que deixava o formulário sujo.
+  await page.getByLabel('Data').fill('2026-09-20')
+  await page.getByRole('button', { name: 'Registar', exact: true }).click()
+  await expect(page.getByText('Movimento registado com sucesso!')).toBeVisible()
+  await expect(descricao).toHaveValue('')
+
+  await page.getByRole('button', { name: 'Visão Geral', exact: true }).click()
+  await expect(page).toHaveURL(/ver=overview/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('com a despesa por gravar, trocar de separador pergunta — e a pergunta vê-se', async ({ page }) => {
+  await montarSupabaseFalso(page, FIXTURES_MOVIMENTOS)
+  await page.goto('/csc-vet/finance?ver=expenses')
+
+  const descricao = page.getByLabel('Descrição')
+  await expect(descricao).toBeVisible({ timeout: 15000 })
+  await descricao.fill('Água para o jogo')
+  await page.getByRole('button', { name: 'Quotas', exact: true }).click()
+
+  const aviso = page.getByRole('dialog', { name: 'Tens alterações por guardar' })
+  await expect(aviso).toBeVisible()
+  await expect(page).toHaveURL(/ver=expenses/)
+
+  // Continuar a editar deixa tudo como estava.
+  await aviso.getByRole('button', { name: /Continuar a Editar/ }).click()
+  await expect(aviso).toHaveCount(0)
+  await expect(descricao).toHaveValue('Água para o jogo')
+
+  // Sair sem gravar sai mesmo.
+  await page.getByRole('button', { name: 'Quotas', exact: true }).click()
+  await aviso.getByRole('button', { name: 'Sair sem Gravar' }).click()
+  await expect(page).toHaveURL(/ver=quotas/)
+})
+
+test('com as definições por gravar, trocar de separador pergunta', async ({ page }) => {
+  await montarSupabaseFalso(page, FIXTURES_MOVIMENTOS)
+  await page.goto('/csc-vet/finance?ver=settings')
+
+  const quota = page.getByLabel('Valor da Quota (€)')
+  await expect(quota).toBeVisible({ timeout: 15000 })
+  await quota.fill('12')
+  await page.getByRole('button', { name: 'Visão Geral', exact: true }).click()
+
+  await expect(page.getByRole('dialog', { name: 'Tens alterações por guardar' })).toBeVisible()
+  await expect(page).toHaveURL(/ver=settings/)
+})

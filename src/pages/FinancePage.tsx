@@ -937,12 +937,12 @@ const FinancePage: React.FC = () => {
     }
   }
 
-  const handleAddTransaction = async (e: React.FormEvent) => {
+  const handleAddTransaction = async (e: React.FormEvent): Promise<boolean> => {
     e.preventDefault()
     const val = parseFloat(txAmount)
     if (isNaN(val) || val <= 0) {
       toast.warning('Indica um valor válido.')
-      return
+      return false
     }
     setTxSaving(true)
     try {
@@ -969,8 +969,10 @@ const FinancePage: React.FC = () => {
       toast.success('Movimento registado com sucesso!')
       limparFormularioMovimento()
       fetchAll()
+      return true
     } catch (err: any) {
       toast.error('Erro ao registar movimento: ' + (err.message || 'Erro'))
+      return false
     } finally {
       setTxSaving(false)
     }
@@ -1130,8 +1132,7 @@ const FinancePage: React.FC = () => {
     aberto: activeTab === 'settings',
     valores: settingsForm,
     aoGravar: async () => {
-      await handleSaveSettings()
-      irParaSeparadorPendente()
+      if (await handleSaveSettings()) irParaSeparadorPendente()
     },
     aoSair: () => {
       setSettingsForm(settings)
@@ -1152,8 +1153,7 @@ const FinancePage: React.FC = () => {
     aberto: activeTab === 'expenses',
     valores: [txType, txDesc, txAmount, txDate, txCategoryId, txFile?.name ?? null],
     aoGravar: async () => {
-      await handleAddTransaction(EVENTO_FALSO)
-      irParaSeparadorPendente()
+      if (await handleAddTransaction(EVENTO_FALSO)) irParaSeparadorPendente()
     },
     aoSair: () => {
       limparFormularioMovimento()
@@ -1175,7 +1175,7 @@ const FinancePage: React.FC = () => {
     descricao: 'Há alterações no Financeiro por gravar. Se saíres agora, perdem-se.',
   })
 
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async (): Promise<boolean> => {
     setSavingSettings(true)
     try {
       const { error } = await supabase.from('financial_settings').update({
@@ -1194,8 +1194,10 @@ const FinancePage: React.FC = () => {
       guardaDefinicoes.marcarComoGravado()
       toast.success('Definições financeiras atualizadas!')
       fetchAll()
+      return true
     } catch (err: any) {
       toast.error('Erro ao guardar definições: ' + (err.message || 'Erro'))
+      return false
     } finally {
       setSavingSettings(false)
     }
@@ -1550,8 +1552,8 @@ const FinancePage: React.FC = () => {
 
           {isAdmin && incomeCategories.length === 0 && (
             <p className="cartao-simples bg-csc-gold/10 border-csc-gold/25 p-3.5 text-[11px] leading-relaxed text-csc-gold">
-              Ainda não há nenhuma categoria marcada para receitas. Cria ou edita uma em
-              Definições (separador Categorias), assinalando &quot;Também pode ser usada para receitas&quot;.
+              Ainda não há nenhuma categoria marcada para receitas. Cria ou edita uma no
+              separador Definições, em Categorias, assinalando &quot;Também pode ser usada para receitas&quot;.
             </p>
           )}
 
@@ -2083,22 +2085,22 @@ const FinancePage: React.FC = () => {
               </h3>
               <form onSubmit={handleAddTransaction} className="space-y-3">
                 <div>
-                  <label className={ETIQUETA}>Descrição</label>
-                  <input type="text" required value={txDesc} onChange={e => setTxDesc(e.target.value)} className={CAMPO} placeholder="Ex: Bolas novas" />
+                  <label className={ETIQUETA} htmlFor="movimento-descricao">Descrição</label>
+                  <input id="movimento-descricao" type="text" required value={txDesc} onChange={e => setTxDesc(e.target.value)} className={CAMPO} placeholder="Ex: Bolas novas" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className={ETIQUETA}>Valor (€)</label>
-                    <input type="number" step="0.01" required value={txAmount} onChange={e => setTxAmount(e.target.value)} className={CAMPO} placeholder="0.00" />
+                    <label className={ETIQUETA} htmlFor="movimento-valor">Valor (€)</label>
+                    <input id="movimento-valor" type="number" step="0.01" required value={txAmount} onChange={e => setTxAmount(e.target.value)} className={CAMPO} placeholder="0.00" />
                   </div>
                   <div>
-                    <label className={ETIQUETA}>Data</label>
-                    <input type="date" required value={txDate} onChange={e => setTxDate(e.target.value)} className={CAMPO} />
+                    <label className={ETIQUETA} htmlFor="movimento-data">Data</label>
+                    <input id="movimento-data" type="date" required value={txDate} onChange={e => setTxDate(e.target.value)} className={CAMPO} />
                   </div>
                 </div>
                 <div>
-                  <label className={ETIQUETA}>Tipo</label>
-                  <select value={txType} onChange={e => handleTxTypeChange(e.target.value as 'income' | 'expense')} className={CAMPO}>
+                  <label className={ETIQUETA} htmlFor="movimento-tipo">Tipo</label>
+                  <select id="movimento-tipo" value={txType} onChange={e => handleTxTypeChange(e.target.value as 'income' | 'expense')} className={CAMPO}>
                     <option value="expense">Despesa (Saída)</option>
                     <option value="income">Receita (Entrada)</option>
                   </select>
@@ -2107,13 +2109,13 @@ const FinancePage: React.FC = () => {
                   {/* Numa receita só se oferecem as categorias marcadas com
                       "também pode ser usada para receitas" — é o que permite ver
                       o saldo de uma categoria (recebido − gasto) tender para zero. */}
-                  <label className={ETIQUETA}>Categoria</label>
-                  <select value={txCategoryId} onChange={e => setTxCategoryId(e.target.value)} className={CAMPO}>
+                  <label className={ETIQUETA} htmlFor="movimento-categoria">Categoria</label>
+                  <select id="movimento-categoria" value={txCategoryId} onChange={e => setTxCategoryId(e.target.value)} className={CAMPO}>
                     <option value="">-- Sem categoria --</option>
                     {(txType === 'income' ? incomeCategories : categories).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   {txType === 'income' && incomeCategories.length === 0 && (
-                    <p className="text-[10px] text-white/62 mt-1">Nenhuma categoria aceita receitas — assinala "Também pode ser usada para receitas" em Definições (separador Categorias).</p>
+                    <p className="text-[10px] text-white/62 mt-1">Nenhuma categoria aceita receitas — assinala "Também pode ser usada para receitas" numa categoria, no separador Definições.</p>
                   )}
                 </div>
                 <div>
@@ -2354,14 +2356,14 @@ const FinancePage: React.FC = () => {
             <h3 className={`${ETIQUETA_SECCAO} mb-3`}>Época Desportiva</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={ETIQUETA}>Mês de Início</label>
-                <select value={settingsForm.season_start_month} onChange={e => setSettingsForm(s => ({ ...s, season_start_month: Number(e.target.value) }))} className={CAMPO}>
+                <label className={ETIQUETA} htmlFor="definicoes-inicio">Mês de Início</label>
+                <select id="definicoes-inicio" value={settingsForm.season_start_month} onChange={e => setSettingsForm(s => ({ ...s, season_start_month: Number(e.target.value) }))} className={CAMPO}>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{nomeMes(m)}</option>)}
                 </select>
               </div>
               <div>
-                <label className={ETIQUETA}>Mês de Fim</label>
-                <select value={settingsForm.season_end_month} onChange={e => setSettingsForm(s => ({ ...s, season_end_month: Number(e.target.value) }))} className={CAMPO}>
+                <label className={ETIQUETA} htmlFor="definicoes-fim">Mês de Fim</label>
+                <select id="definicoes-fim" value={settingsForm.season_end_month} onChange={e => setSettingsForm(s => ({ ...s, season_end_month: Number(e.target.value) }))} className={CAMPO}>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{nomeMes(m)}</option>)}
                 </select>
               </div>
@@ -2372,12 +2374,12 @@ const FinancePage: React.FC = () => {
             <h3 className={`${ETIQUETA_SECCAO} mb-3`}>Quotas</h3>
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className={ETIQUETA}>Valor da Quota (€)</label>
-                <input type="number" step="0.01" value={settingsForm.quota_amount} onChange={e => setSettingsForm(s => ({ ...s, quota_amount: Number(e.target.value) }))} className={CAMPO} />
+                <label className={ETIQUETA} htmlFor="definicoes-quota">Valor da Quota (€)</label>
+                <input id="definicoes-quota" type="number" step="0.01" value={settingsForm.quota_amount} onChange={e => setSettingsForm(s => ({ ...s, quota_amount: Number(e.target.value) }))} className={CAMPO} />
               </div>
               <div>
-                <label className={ETIQUETA}>Incumprimento a partir do dia</label>
-                <input type="number" min={1} max={28} value={settingsForm.quota_due_day} onChange={e => setSettingsForm(s => ({ ...s, quota_due_day: Number(e.target.value) }))} className={CAMPO} />
+                <label className={ETIQUETA} htmlFor="definicoes-dia">Incumprimento a partir do dia</label>
+                <input id="definicoes-dia" type="number" min={1} max={28} value={settingsForm.quota_due_day} onChange={e => setSettingsForm(s => ({ ...s, quota_due_day: Number(e.target.value) }))} className={CAMPO} />
               </div>
             </div>
             <label className={ETIQUETA}>Meses sem quota</label>
@@ -2445,6 +2447,11 @@ const FinancePage: React.FC = () => {
       )}
 
       <UnsavedChangesModal {...guardaEncargo.props} />
+      {/* Sem estes dois, tocar noutro separador com a despesa ou as definições
+          por gravar abria um aviso que ninguém desenhava: o toque parecia não
+          fazer nada, e a barra de separadores ficava morta. */}
+      <UnsavedChangesModal {...guardaMovimento.props} />
+      <UnsavedChangesModal {...guardaDefinicoes.props} />
     </div>
   )
 }
