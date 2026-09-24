@@ -445,6 +445,15 @@ const FinancePage: React.FC = () => {
   const [newChargeIsIntermediary, setNewChargeIsIntermediary] = useState(false)
   const [newChargePayableAmount, setNewChargePayableAmount] = useState('')
   const [newChargePayableDueDate, setNewChargePayableDueDate] = useState('')
+  /*
+    O valor a pagar ao terceiro **acompanha o total cobrado** — valor por
+    jogador × participantes — enquanto for igual a ele. Era um número à parte,
+    sugerido uma vez ao marcar o intermediário e esquecido daí em diante: a
+    direção acrescentou cinco atletas ao seguro, o total cobrado passou de
+    700 € a 825 €, e o que o clube tinha a pagar à seguradora ficou nos 700 €.
+    Escrever outro valor à mão solta-o, que o terceiro pode cobrar outra coisa.
+  */
+  const [payableSegueTotal, setPayableSegueTotal] = useState(false)
   const [newChargePlayerIds, setNewChargePlayerIds] = useState<Set<string>>(new Set())
   const [savingCharge, setSavingCharge] = useState(false)
   const [chargeToDelete, setChargeToDelete] = useState<string | null>(null)
@@ -462,6 +471,19 @@ const FinancePage: React.FC = () => {
      pagamento: era o único caixote da página que despejava logo, e uma
      despesa apagada por engano só se recupera escrevendo-a outra vez. */
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null)
+  /* Pagar um Pagamento Programado lança uma despesa de centenas de euros, e
+     era um toque na linha sem pergunta nenhuma: a 2026-09-24 um toque no
+     seguro lançou 700 € que ninguém tinha pago. Pergunta primeiro, como o
+     apagar. */
+  const [pagamentoAConfirmar, setPagamentoAConfirmar] = useState<ScheduledPayment | null>(null)
+
+  /** O que os participantes pagam no total, com o que está escrito no formulário. */
+  const totalCobradoNoFormulario =
+    Math.round((parseFloat(newChargeAmount) || 0) * newChargePlayerIds.size * 100) / 100
+  /** O valor a pagar ao terceiro que o formulário mostra e grava. */
+  const valorAPagarNoFormulario = payableSegueTotal
+    ? (totalCobradoNoFormulario > 0 ? String(totalCobradoNoFormulario) : '')
+    : newChargePayableAmount
 
   const openNewChargeModal = () => {
     setEditingChargeId(null)
@@ -472,6 +494,7 @@ const FinancePage: React.FC = () => {
     setNewChargeIsIntermediary(false)
     setNewChargePayableAmount('')
     setNewChargePayableDueDate('')
+    setPayableSegueTotal(false)
     setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))
     setIsNewChargeModalOpen(true)
   }
@@ -491,7 +514,7 @@ const FinancePage: React.FC = () => {
     aberto: isNewChargeModalOpen,
     valores: [
       newChargeCategoryId, newChargeTitle, newChargeAmount, newChargeDueDate,
-      newChargeIsIntermediary, newChargePayableAmount, newChargePayableDueDate,
+      newChargeIsIntermediary, valorAPagarNoFormulario, newChargePayableDueDate,
       [...newChargePlayerIds].sort(),
     ],
     aoGravar: () => handleSaveCharge(),
@@ -508,6 +531,12 @@ const FinancePage: React.FC = () => {
     setNewChargeIsIntermediary(!!c.is_intermediary)
     setNewChargePayableAmount(c.payable_amount != null ? String(c.payable_amount) : '')
     setNewChargePayableDueDate(c.payable_due_date ? c.payable_due_date.slice(0, 10) : '')
+    // Acompanha o total se abrir igual a ele — e nunca depois de pago: o que
+    // já se pagou ao terceiro não muda por entrar mais um atleta.
+    setPayableSegueTotal(
+      !!c.is_intermediary && !c.payable_paid && c.payable_amount != null
+        && Math.abs(Number(c.payable_amount) - c.totalExpected) < 0.005,
+    )
     setNewChargePlayerIds(new Set(c.participantIds))
     setIsNewChargeModalOpen(true)
   }
@@ -516,6 +545,12 @@ const FinancePage: React.FC = () => {
   // encargo ao editar — perderia-se a ligação ao seu histórico de pagamentos.
   const chargeParticipantHasPayments = (charge: (typeof chargesWithStats)[number] | undefined, playerId: string) =>
     !!charge?.payments.some(p => p.player_id === playerId)
+
+  /** Os participantes do encargo em edição que já têm algum pagamento. */
+  const participantesComPagamentos = (): string[] => {
+    const encargo = editingChargeId ? chargesWithStats.find(c => c.id === editingChargeId) : undefined
+    return encargo ? encargo.participantIds.filter(pid => chargeParticipantHasPayments(encargo, pid)) : []
+  }
 
   const toggleNewChargePlayer = (id: string) => setNewChargePlayerIds(prev => {
     const next = new Set(prev)
@@ -542,15 +577,13 @@ const FinancePage: React.FC = () => {
     setNewChargeCategoryId(categoryId)
   }
 
-  // Ao marcar "o clube funciona como intermediário", sugere como valor a
-  // pagar o total já configurado (valor por jogador × participantes) — só um
-  // ponto de partida, o clube pode dever um valor diferente ao terceiro.
+  // Ao marcar "o clube funciona como intermediário" sem valor escrito, o valor
+  // a pagar passa a ser o total cobrado (valor por jogador × participantes) e
+  // acompanha-o — até alguém escrever outro, que o terceiro pode cobrar outra
+  // coisa.
   const handleToggleChargeIntermediary = (checked: boolean) => {
     setNewChargeIsIntermediary(checked)
-    if (checked && !newChargePayableAmount) {
-      const total = (parseFloat(newChargeAmount) || 0) * newChargePlayerIds.size
-      if (total > 0) setNewChargePayableAmount(String(total))
-    }
+    if (checked && !newChargePayableAmount) setPayableSegueTotal(true)
   }
 
   const handleSaveCharge = async () => {
@@ -569,7 +602,7 @@ const FinancePage: React.FC = () => {
     }
     let payableAmt: number | null = null
     if (newChargeIsIntermediary) {
-      payableAmt = parseFloat(newChargePayableAmount)
+      payableAmt = parseFloat(valorAPagarNoFormulario)
       if (isNaN(payableAmt) || payableAmt <= 0) {
         toast.warning('Indica quanto o clube tem de pagar ao terceiro.')
         return
@@ -1030,6 +1063,14 @@ const FinancePage: React.FC = () => {
       const charge = chargesWithStats.find(c => c.id === p.chargeId)
       if (charge) handlePayChargePayable(charge)
     }
+  }
+
+  // O aviso fecha antes de se gravar, como no apagar: um segundo toque no
+  // botão não lança a despesa duas vezes.
+  const confirmarPagamentoProgramado = () => {
+    const alvo = pagamentoAConfirmar
+    setPagamentoAConfirmar(null)
+    if (alvo) handlePayScheduled(alvo)
   }
 
   // Total ainda por pagar em pagamentos já programados — conta como despesa
@@ -1876,6 +1917,10 @@ const FinancePage: React.FC = () => {
           {(() => {
             const editingCharge = editingChargeId ? chargesWithStats.find(c => c.id === editingChargeId) : undefined
             const payableLocked = !!editingCharge?.payable_paid
+            // "33 × 25,00 €" numa peça só: partida a meio, lia-se "(33" numa
+            // linha e "× 25,00 €)" na seguinte.
+            const contaDoTotal =
+              `${newChargePlayerIds.size}\u00a0×\u00a0${fmtEuro(parseFloat(newChargeAmount) || 0)}`
             return (
               <div className="p-3 bg-white/6 border border-white/12 rounded-xl space-y-2.5">
                 <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
@@ -1894,9 +1939,12 @@ const FinancePage: React.FC = () => {
                       <label className={ETIQUETA} htmlFor="encargo-payable-valor">Valor a pagar ao terceiro (€) *</label>
                       <input
                         id="encargo-payable-valor" type="number" step="0.01"
-                        value={newChargePayableAmount}
+                        value={valorAPagarNoFormulario}
                         disabled={payableLocked}
-                        onChange={e => setNewChargePayableAmount(e.target.value)}
+                        onChange={e => {
+                          setNewChargePayableAmount(e.target.value)
+                          setPayableSegueTotal(false)
+                        }}
                         placeholder="0.00"
                         className={`${CAMPO} disabled:opacity-50`}
                       />
@@ -1911,11 +1959,42 @@ const FinancePage: React.FC = () => {
                         className={`${CAMPO} disabled:opacity-50`}
                       />
                     </div>
-                    <p className="col-span-2 text-[10px] text-white/62">
-                      {payableLocked
-                        ? 'Já pago ao terceiro.'
-                        : 'Entra logo em Pagamentos Programados e na Previsão da Época, mesmo antes de ser pago.'}
-                    </p>
+                    {/* O que o valor a pagar é, e o que se faz se estiver errado —
+                        "Já pago ao terceiro" sozinho não dizia como se desfaz um
+                        pagamento lançado por engano. */}
+                    {payableLocked ? (
+                      <p className="col-span-2 text-[10px] leading-relaxed text-white/62">
+                        Já pago ao terceiro. Se foi engano, apaga a despesa desse pagamento em
+                        Despesas/Receitas e o encargo volta aos Pagamentos Programados.
+                      </p>
+                    ) : (
+                      <div className="col-span-2 space-y-1.5 text-[10px] leading-relaxed text-white/62">
+                        {payableSegueTotal ? (
+                          <p>
+                            Igual ao total cobrado aos jogadores ({contaDoTotal}), e acompanha-o se
+                            mudares o valor ou os participantes.
+                          </p>
+                        ) : totalCobradoNoFormulario > 0
+                          && Math.abs((parseFloat(newChargePayableAmount) || 0) - totalCobradoNoFormulario) >= 0.005 && (
+                          <div className="flex items-center gap-2">
+                            <p className="flex-1 min-w-0">
+                              Os jogadores pagam {fmtEuro(totalCobradoNoFormulario)} no total
+                              ({contaDoTotal}).
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setPayableSegueTotal(true)}
+                              className="min-h-11 px-3 shrink-0 rounded-xl bg-white/9 border border-white/20 text-white
+                                font-display font-extrabold text-[11px] tabular-nums cursor-pointer transition-transform duration-150 active:scale-97
+                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                            >
+                              Usar {fmtEuro(totalCobradoNoFormulario)}
+                            </button>
+                          </div>
+                        )}
+                        <p>Entra logo em Pagamentos Programados e na Previsão da Época, mesmo antes de ser pago.</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1926,8 +2005,14 @@ const FinancePage: React.FC = () => {
             <div className="flex items-center justify-between gap-2 mb-1">
               <span className="block text-xs font-bold text-white/60">Jogadores participantes * ({newChargePlayerIds.size})</span>
               <div className="flex items-center gap-2 shrink-0">
-                <button type="button" onClick={() => setNewChargePlayerIds(new Set(activePlayers.map(p => p.id)))} className="text-[11px] font-bold text-csc-tinta hover:text-csc-light cursor-pointer">Todos os ativos</button>
-                <button type="button" onClick={() => setNewChargePlayerIds(new Set())} className="text-[11px] font-bold text-white/62 hover:text-white/60 cursor-pointer">Limpar</button>
+                {/* Quem já pagou fica nos dois casos: não sai do encargo ao
+                    gravar, e desmarcado aqui deixava de contar para o total
+                    cobrado — o valor a pagar ao terceiro acompanhava um número
+                    de participantes que não era o que ficava gravado.
+                    (O "Todos os ativos" estava na tinta do dourado, quase preta
+                    sobre o fundo escuro, e ninguém o via.) */}
+                <button type="button" onClick={() => setNewChargePlayerIds(new Set([...activePlayers.map(p => p.id), ...participantesComPagamentos()]))} className="min-h-11 px-2 text-[11px] font-bold text-csc-verde-texto hover:text-white cursor-pointer">Todos os ativos</button>
+                <button type="button" onClick={() => setNewChargePlayerIds(new Set(participantesComPagamentos()))} className="min-h-11 px-2 text-[11px] font-bold text-white/62 hover:text-white cursor-pointer">Limpar</button>
               </div>
             </div>
             <div className="max-h-48 overflow-y-auto border border-white/12 rounded-xl divide-y divide-white/8">
@@ -1968,6 +2053,18 @@ const FinancePage: React.FC = () => {
         description="Esta despesa ou receita é apagada e deixa de contar para o saldo do clube."
         onConfirm={handleDeleteTransaction}
         onCancel={() => setTransactionToDelete(null)}
+      />
+      <ConfirmModal
+        isOpen={!!pagamentoAConfirmar}
+        title="Registar Pagamento"
+        description={pagamentoAConfirmar
+          ? `${pagamentoAConfirmar.title}: fica lançada uma despesa de ${fmtEuro(pagamentoAConfirmar.amount)} com a data de hoje, e o pagamento sai dos Pagamentos Programados. Se for engano, basta apagar essa despesa para ele voltar à lista.`
+          : undefined}
+        confirmText="Registar pagamento"
+        variant="warning"
+        icon={<Receipt size={24} />}
+        onConfirm={confirmarPagamentoProgramado}
+        onCancel={() => setPagamentoAConfirmar(null)}
       />
 
       {/* ================= DESPESAS ================= */}
@@ -2038,7 +2135,7 @@ const FinancePage: React.FC = () => {
                   desenhar: aqui a linha abre o registo do pagamento. */}
               <PagamentosProgramados
                 grupos={scheduledPaymentsByCategory}
-                aoTocar={handlePayScheduled}
+                aoTocar={setPagamentoAConfirmar}
                 accao="pagar"
               />
             </div>

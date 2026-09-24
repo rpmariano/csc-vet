@@ -571,6 +571,24 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   voltava ao princípio a cada mês que marcasse. As escritas de quota
   recarregam com `fetchAll(true)`, sem rodopio — a gravação já se vê na
   pastilha, que fica desativada enquanto grava.
+- **Pagar um Pagamento Programado pergunta primeiro, e apagar a despesa
+  desfaz o pagamento.** Um toque na linha em Despesas/Receitas lançava logo a
+  despesa e dava o encargo por pago; apagar a despesa só desfazia metade — a
+  chave estrangeira punha o `payable_transaction_id` a NULL e o `payable_paid`
+  ficava `true`. Foi assim que o seguro de 700 € saiu da lista a 2026-09-24,
+  com o valor a pagar trancado no formulário ("Já pago ao terceiro") e a
+  Previsão a contar uma saída que não estava em lado nenhum. Hoje o toque abre
+  um `<ConfirmModal>`, e o gatilho `transactions_desfazer_pagamento`
+  (`supabase_desfazer_pagamento_programado_migration.sql`, aplicada a
+  2026-09-24) repõe o encargo — e a tranche de torneio, que tinha o mesmo
+  defeito — quando a despesa que o pagou é apagada, venha o apagar de onde
+  vier. **O "pago" é consequência de a despesa existir**, e por isso vive na
+  base e não no cliente.
+  **O valor a pagar ao terceiro acompanha o total cobrado enquanto for igual a
+  ele.** Acrescentar atletas ao seguro subia o que se cobra (25 € × 33) e
+  deixava o que se paga à seguradora nos 700 € de quando eram 28. Escrever
+  outro valor solta-o — o terceiro pode cobrar outra coisa —, e o formulário
+  diz então quanto se cobra, com um botão para o usar.
 - **Meses dispensados de quota (ecrã 3c): a fila segue a época, não o
   calendário.** Começa em `season_start_month` e dá a volta aos doze meses. Os
   que o clube inteiro não paga (`financial_settings.quota_excluded_months`) e os

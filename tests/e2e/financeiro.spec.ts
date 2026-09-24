@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { montarSupabaseFalso, FIXTURES_BASE } from './supabase-mock'
+import { montarSupabaseFalso, FIXTURES_BASE, type Fixtures } from './supabase-mock'
 
 /**
  * Pagamentos Programados — o que o clube tem marcado para pagar a terceiros.
@@ -68,6 +68,43 @@ test('em Despesas, a mesma lista abre o registo do pagamento', async ({ page }) 
   await expect(
     page.getByRole('button', { name: /Registar o pagamento de Tranche 1/ }),
   ).toBeVisible({ timeout: 15000 })
+})
+
+/**
+ * Registar um pagamento programado pergunta primeiro.
+ *
+ * Era um toque na linha e a despesa ficava lançada, sem pergunta nenhuma: foi
+ * assim que o seguro de 700 € se deu por pago a 2026-09-24, e apagar a despesa
+ * a seguir deixou-o fora da lista (isso é hoje um gatilho na base, ver
+ * `supabase_desfazer_pagamento_programado_migration.sql`).
+ */
+test('registar um pagamento programado pergunta primeiro', async ({ page }) => {
+  await montarSupabaseFalso(page, FIXTURES)
+  const escritas: string[] = []
+  page.on('request', r => {
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(r.method()) && r.url().includes('/rest/v1/')) {
+      escritas.push(`${r.method()} ${new URL(r.url()).pathname}`)
+    }
+  })
+  await page.goto('/csc-vet/finance?ver=expenses')
+
+  const linha = page.getByRole('button', { name: /Registar o pagamento de Seguro desportivo 26\/27/ })
+  await expect(linha).toBeVisible({ timeout: 15000 })
+  await linha.click()
+
+  const aviso = page.getByRole('dialog', { name: 'Registar Pagamento' })
+  await expect(aviso).toBeVisible()
+  await expect(aviso).toContainText('700,00')
+
+  // Desistir não lança nada.
+  await aviso.getByRole('button', { name: 'Cancelar' }).click()
+  await expect(aviso).toHaveCount(0)
+  expect(escritas).toEqual([])
+
+  // Confirmar lança a despesa e marca o encargo como pago.
+  await linha.click()
+  await aviso.getByRole('button', { name: 'Registar pagamento' }).click()
+  await expect.poll(() => escritas).toEqual(['POST /rest/v1/transactions', 'PATCH /rest/v1/charges'])
 })
 
 /**
@@ -295,6 +332,66 @@ test('antes do prazo, ninguém deve nada — e quem já pagou fica no fundo', as
   const yPago = (await pago.boundingBox())!.y
   expect(yFaltaPagar).toBeLessThan(yPorPagar)
   expect(yPorPagar).toBeLessThan(yPago)
+})
+
+/**
+ * O valor a pagar ao terceiro acompanha o total cobrado aos jogadores.
+ *
+ * Era um número à parte, sugerido uma vez e esquecido: a direção acrescentou
+ * atletas ao seguro, o total cobrado subiu, e o que o clube tinha a pagar à
+ * seguradora ficou no valor antigo. Enquanto for igual ao total, acompanha-o;
+ * quando é outro, o formulário diz quanto se cobra e deixa usá-lo num toque.
+ */
+const abreEdicaoDoSeguro = async (page: import('@playwright/test').Page, fixtures: Fixtures) => {
+  await montarSupabaseFalso(page, fixtures)
+  await page.goto('/csc-vet/finance?ver=charges')
+  const editar = page.getByRole('button', { name: 'Editar o encargo Seguro desportivo 26/27' })
+  await expect(editar).toBeVisible({ timeout: 15000 })
+  await editar.click()
+  const formulario = page.getByRole('dialog', { name: 'Editar Encargo' })
+  await expect(formulario).toBeVisible()
+  return formulario
+}
+
+test('o valor a pagar ao terceiro acompanha os participantes', async ({ page }) => {
+  // 4 participantes × 25 € — o seguro abre igual ao total cobrado.
+  const formulario = await abreEdicaoDoSeguro(page, {
+    ...FIXTURES_ENCARGOS,
+    charges: FIXTURES_ENCARGOS.charges.map(c => (c.id === ENCARGO_VENCIDO ? { ...c, payable_amount: 100 } : c)),
+  })
+  const valor = formulario.getByLabel('Valor a pagar ao terceiro')
+  await expect(valor).toHaveValue('100')
+  await expect(formulario).toContainText('acompanha-o')
+
+  // Abrir e fechar não é mexer: o valor derivado não suja o formulário.
+  await page.keyboard.press('Escape')
+  await expect(formulario).toHaveCount(0)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Editar o encargo Seguro desportivo 26/27' }).click()
+  await formulario.getByRole('checkbox', { name: 'Bruno' }).uncheck()
+  await expect(valor).toHaveValue('75')
+
+  // Um valor escrito à mão solta-o do total.
+  await valor.fill('90')
+  await formulario.getByRole('checkbox', { name: 'Vieira' }).uncheck()
+  await expect(valor).toHaveValue('90')
+  await expect(formulario.getByRole('button', { name: /Usar 50,00/ })).toBeVisible()
+})
+
+test('quando o valor a pagar é outro, o formulário diz quanto se cobra', async ({ page }) => {
+  // 700 € a pagar, 100 € cobrados — o caso do seguro depois de mexerem nos atletas.
+  const formulario = await abreEdicaoDoSeguro(page, FIXTURES_ENCARGOS)
+  const valor = formulario.getByLabel('Valor a pagar ao terceiro')
+  await expect(valor).toHaveValue('700')
+  await expect(formulario).toContainText('Os jogadores pagam 100,00')
+
+  await formulario.getByRole('button', { name: /Usar 100,00/ }).click()
+  await expect(valor).toHaveValue('100')
+
+  // E daí em diante acompanha.
+  await formulario.getByRole('checkbox', { name: 'Bruno' }).uncheck()
+  await expect(valor).toHaveValue('75')
 })
 
 /**
