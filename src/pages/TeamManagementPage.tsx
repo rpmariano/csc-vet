@@ -11,7 +11,6 @@ import {
   HeartPulse, 
   CheckCircle2, 
   XCircle, 
-  X, 
   ExternalLink,
   Save,
   Link2,
@@ -36,7 +35,6 @@ import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
-import { useModalA11y } from '../hooks/useModalA11y'
 import { CLUBE_NOME } from '../lib/clube'
 import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao, LinhaAtleta } from '../components/ui'
@@ -1016,14 +1014,6 @@ const TeamManagementPage: React.FC = () => {
   const inactiveCount = profiles.filter(p => p.status === 'inactive').length
 
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
-  const painelFichaRef = useModalA11y({ isOpen: isFormModalOpen, onClose: handleAttemptCloseFormModal })
-  const painelAssociarRef = useModalA11y({
-    isOpen: !!associatingPlayer,
-    onClose: () => {
-      setAssociatingPlayer(null)
-      setSelectedUserToAssociate(null)
-    },
-  })
 
   return (
     <div className="space-y-6 pb-12">
@@ -1474,52 +1464,18 @@ const TeamManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL 1: CRIAR / EDITAR FICHA DE MEMBRO */}
-      {isFormModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 lg:p-6 z-50 overflow-y-auto"
-          onMouseDown={(e) => {
-            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-            if (e.target === e.currentTarget) handleAttemptCloseFormModal()
-          }}
-        >
-          <div
-            ref={painelFichaRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ficha-membro-titulo"
-            tabIndex={-1}
-            className="bg-csc-superficie text-white rounded-3xl w-full p-4 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/12 outline-none"
-          >
-            <button
-              type="button"
-              onClick={handleAttemptCloseFormModal}
-              aria-label="Fechar"
-              className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center z-10 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
-              <X size={18} />
-            </button>
-
-            {/*
-              Editar atleta (ecrã 3c). O painel era `bg-csc-dark`, o verde do
-              clube, e sobre o fundo preto lia-se como um erro; o título ficava
-              por baixo de um botão de fechar branco e redondo.
-
-              O estado passou para uma secção própria, a "2 · ESTADO" do
-              handoff, em vez de um segmentado espremido ao lado do título.
-            */}
-            <div className="border-b border-white/10 pb-3.5 mb-4 pr-12">
-              <p className="font-display font-extrabold text-[9px] tracking-[0.16em] uppercase text-csc-gold">
-                {isEditing ? 'Editar atleta' : 'Novo membro'}
-              </p>
-              <h2 id="ficha-membro-titulo" className="font-display font-black text-[20px] leading-tight text-white mt-0.5">
-                {isEditing ? (formName || 'Ficha do atleta') : 'Criar ficha'}
-              </h2>
-              {isEditing && formJerseyNumber !== '' && (
-                <p className="text-[11px] text-white/62 mt-0.5">nº {formJerseyNumber}</p>
-              )}
-            </div>
-
+      {/* Criar e editar atleta (ecrã 3c) é um ecrã, não um modal: são 28
+          campos, e numa caixa a 92% da altura liam-se a rolar por dentro de
+          outra página. Aberto a partir da ficha, fica por cima dela e o "‹"
+          volta à ficha; a partir da lista, volta ao Plantel. */}
+      <EcraDetalhe
+        aberto={isFormModalOpen}
+        voltarPara={isEditing && isDetailModalOpen ? 'Ficha do atleta' : 'Plantel'}
+        aoVoltar={handleAttemptCloseFormModal}
+        sobrancelha={isEditing ? 'Editar atleta' : 'Novo membro'}
+        titulo={isEditing ? (formName || 'Ficha do atleta') : 'Criar ficha'}
+        legenda={isEditing && formJerseyNumber !== '' ? `nº ${formJerseyNumber}` : undefined}
+      >
             <form onSubmit={handleSaveMember} className="space-y-4">
 
               {/* Estado — a secção 2 do handoff, aqui em primeiro porque é o
@@ -2176,27 +2132,15 @@ const TeamManagementPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-2 flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleAttemptCloseFormModal}
-                  className="flex-1 py-3 rounded-xl font-bold text-white bg-white/10 hover:bg-white/20 text-sm cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploadingDoc !== null}
-                  className="flex-1 py-3 rounded-xl font-bold text-csc-dark bg-csc-gold hover:brightness-95 transition-colors shadow-md text-sm flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Save size={16} className="text-csc-dark" />
-                  <span>{isEditing ? 'Guardar Alterações' : 'Criar Membro'}</span>
-                </button>
+              {/* Sair sem gravar é o "‹" do topo; aqui fica só gravar. */}
+              <div className="pt-2">
+                <Botao type="submit" largo disabled={uploadingDoc !== null}>
+                  <Save size={16} />
+                  {isEditing ? 'Guardar alterações' : 'Criar membro'}
+                </Botao>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </EcraDetalhe>
       </div>
 
       {/* A ficha do atleta (ecrã 3b) é um ecrã, não uma persiana — ver
@@ -2665,11 +2609,7 @@ const TeamManagementPage: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    const alvo = selectedProfile
-                    fecharFicha()
-                    openEditModal(alvo)
-                  }}
+                  onClick={() => openEditModal(selectedProfile)}
                   className="w-full min-h-12 px-4 rounded-2xl bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px]
                     flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
                     focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -2703,11 +2643,7 @@ const TeamManagementPage: React.FC = () => {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => {
-                        const alvo = selectedProfile
-                        fecharFicha()
-                        openAssociateModal(alvo)
-                      }}
+                      onClick={() => openAssociateModal(selectedProfile)}
                       className="w-full min-h-12 px-4 rounded-2xl bg-white/8 border border-white/15 text-white/80
                         font-display font-extrabold text-[12px] flex items-center justify-center gap-2 cursor-pointer
                         transition-transform duration-150 active:scale-97
@@ -2767,42 +2703,21 @@ const TeamManagementPage: React.FC = () => {
           )
         )
 
+        /* Fundir é escolher uma ficha numa lista e confirmar: uma persiana,
+           por cima da ficha de onde se abriu. Era um modal a 90% da altura. */
+        const fecharFusao = () => {
+          setAssociatingPlayer(null)
+          setSelectedUserToAssociate(null)
+        }
         return (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-            <div
-              ref={painelAssociarRef}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="associar-utilizador-titulo"
-              tabIndex={-1}
-              className="bg-csc-superficie text-white rounded-3xl max-w-xl w-full p-5 relative max-h-[90vh] overflow-y-auto shadow-2xl border border-white/12 outline-none"
-            >
-              <button
-                onClick={() => {
-                  setAssociatingPlayer(null)
-                  setSelectedUserToAssociate(null)
-                }}
-                aria-label="Fechar"
-                className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-              >
-                <X size={18} className="stroke-[2.5]" />
-              </button>
-
-              {/* Cabeçalho */}
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="p-2.5 bg-csc-blue/20 rounded-xl text-csc-azul-texto">
-                  <Link2 size={22} />
-                </div>
-                <div>
-                  <h3 id="associar-utilizador-titulo" className="text-lg font-black text-white">
-                    Fundir Ficha de {associatingPlayer.name}
-                  </h3>
-                  <p className="text-xs text-white/70 font-medium">
-                    Junta esta ficha a outra — os dados em falta na que ficar são preenchidos a partir da outra, e a que sobra é apagada
-                  </p>
-                </div>
-              </div>
-
+          <BottomSheet
+            isOpen
+            onClose={fecharFusao}
+            title={`Fundir a ficha de ${associatingPlayer.name}`}
+            description="Os dados em falta na que ficar vêm da outra, e a que sobra é apagada"
+            tone="dark"
+          >
+            <div>
               {/* Informação do Jogador Atual */}
               <div className="mt-4 p-3.5 bg-white/5 rounded-xl border border-white/10 text-xs flex items-center justify-between">
                 <div>
@@ -3036,22 +2951,8 @@ const TeamManagementPage: React.FC = () => {
                 )
               })()}
 
-              {!selectedUserToAssociate && (
-                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAssociatingPlayer(null)
-                      setSelectedUserToAssociate(null)
-                    }}
-                    className="px-4 py-2 border border-white/15 rounded-lg text-xs font-bold text-white hover:bg-white/10"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              )}
             </div>
-          </div>
+          </BottomSheet>
         )
       })()}
 

@@ -126,10 +126,34 @@ test.describe('Gestão do Clube', () => {
   })
 })
 
+/* Criar e editar atleta deixaram de ser modal a 2026-09-25 (28 campos): são
+   um ecrã, e da ficha o "‹" volta à ficha. Fundir fichas passou a persiana. */
 test.describe('Plantel', () => {
-  test('criar ficha de membro', async ({ page }) => {
+  test('criar ficha de membro abre um ecrã', async ({ page }) => {
     await abrePagina(page, 'team-management')
-    await verificaDialogo(page, () => page.getByRole('button', { name: /Adicionar membro ao plantel/ }).first().click())
+    await page.getByRole('button', { name: /Adicionar membro ao plantel/ }).first().click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Criar ficha' })).toBeFocused()
+    await expect(dialogos(page)).toHaveCount(0)
+    await page.getByRole('button', { name: 'Plantel', exact: true }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Plantel' })).toBeVisible()
+  })
+
+  test('editar a partir da ficha volta à ficha', async ({ page }) => {
+    await abrePagina(page, `team-management?atleta=${UTILIZADOR_TESTE.id}`)
+    await page.getByRole('button', { name: 'Editar atleta' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toBeFocused()
+    await expect(page.getByText('Editar atleta', { exact: true }).filter({ visible: true })).toHaveCount(1)
+    await expect(dialogos(page)).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Ficha do atleta', exact: true }).click()
+    await expect(page.getByText('Gestão do atleta')).toBeVisible()
+  })
+
+  test('fundir fichas abre uma persiana por cima da ficha', async ({ page }) => {
+    await abrePagina(page, `team-management?atleta=${UTILIZADOR_TESTE.id}`)
+    await verificaDialogo(page, () => page.getByRole('button', { name: 'Fundir com outra ficha' }).click())
+    // Fechada a persiana, a ficha continua lá.
+    await expect(page.getByText('Gestão do atleta')).toBeVisible()
   })
 })
 
