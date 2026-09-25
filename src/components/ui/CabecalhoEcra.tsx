@@ -42,6 +42,8 @@ export interface CabecalhoEcraProps {
   legenda?: string
   /** Ações à direita, antes da fotografia. */
   acoes?: React.ReactNode
+  /** `id` do título, para uma região se nomear por ele (`aria-labelledby`). */
+  idTitulo?: string
   className?: string
 }
 
@@ -50,6 +52,7 @@ export const CabecalhoEcra: React.FC<CabecalhoEcraProps> = ({
   sobrancelha,
   legenda,
   acoes,
+  idTitulo,
   className = '',
 }) => (
   <header className={`pt-safe ${className}`}>
@@ -67,7 +70,7 @@ export const CabecalhoEcra: React.FC<CabecalhoEcraProps> = ({
     </div>
     {/* `break-words` é a última rede: nenhum título de hoje precisa dela com a
         largura toda, mas uma palavra que não coubesse nunca passaria da coluna. */}
-    <TituloEcra className="mt-2 break-words">{titulo}</TituloEcra>
+    <TituloEcra id={idTitulo} className="mt-2 break-words">{titulo}</TituloEcra>
     {legenda && <p className="text-[11px] text-white/62 mt-1.5">{legenda}</p>}
   </header>
 )

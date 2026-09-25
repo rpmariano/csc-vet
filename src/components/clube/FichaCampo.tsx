@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { MapPin, Pencil, Trash2, ExternalLink, Copy, Star, Info } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
-import { VistaDetalhe } from '../VistaDetalhe'
+import { EcraDetalhe } from '../EcraDetalhe'
 import { EtiquetaSeccao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 import { toast } from '../../context/ToastContext'
 
 /**
- * Ficha do campo (ecrã 9i).
+ * Ficha do campo (ecrã 9i). É um ecrã e não uma persiana — ver `EcraDetalhe`.
  *
  * **Não há mapa dentro da app, e isto é uma decisão e não uma falha.** O
  * handoff desenhava um quadrado de mapa; embeber um mapa a sério obriga a um
@@ -38,6 +38,8 @@ interface EventoNoCampo {
 }
 
 interface FichaCampoProps {
+  /** Há um `?campo=` no endereço — mesmo que o campo ainda esteja a carregar. */
+  aberto: boolean
   campo: CampoDaFicha | null
   /** É o campo de casa do clube (`club_settings.home_field_id`). */
   eCampoDoClube: boolean
@@ -54,6 +56,7 @@ const TIPO_ETIQUETA: Record<EventoNoCampo['type'], string> = {
 }
 
 export const FichaCampo: React.FC<FichaCampoProps> = ({
+  aberto,
   campo,
   eCampoDoClube,
   siglaClube,
@@ -104,14 +107,15 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
   }
 
   return (
-    <VistaDetalhe
-      isOpen={Boolean(campo)}
-      onClose={aoFechar}
-      title={campo?.name ?? ''}
-      description="Campo"
-      ariaLabel={'Ficha do campo ' + (campo?.name ?? '')}
+    <EcraDetalhe
+      aberto={aberto}
+      voltarPara="Campos"
+      aoVoltar={aoFechar}
+      titulo={campo?.name ?? 'Campo'}
     >
-      {campo && (
+      {!campo ? (
+        <div className="cartao-simples h-40 animate-pulse" role="status" aria-label="A carregar o campo" />
+      ) : (
         <div className="space-y-3">
           {eCampoDoClube && (
             <span
@@ -251,7 +255,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
           )}
         </div>
       )}
-    </VistaDetalhe>
+    </EcraDetalhe>
   )
 }
 

@@ -25,7 +25,7 @@ import { supabase } from '../lib/supabaseClient'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
-import { VistaDetalhe } from '../components/VistaDetalhe'
+import { EcraDetalhe } from '../components/EcraDetalhe'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { QuickFieldModal } from '../components/QuickFieldModal'
@@ -259,18 +259,15 @@ const CalendarPage: React.FC = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  // Separado de `selectedEvent`: o evento fica retido (para a persiana poder deslizar
-  // suavemente para fora ao fechar) mesmo depois de a persiana deixar de estar aberta.
   /*
-    A persiana do detalhe **não tem estado de aberta/fechada**: quem manda é o
+    O detalhe do evento **não tem estado de aberto/fechado**: quem manda é o
     endereço. Tinha, sincronizado do `?event=` por um efeito, e era daí que
     vinha a falha do retroceder do browser — o efeito dependia do objeto dos
     parâmetros, e quando a identidade dele não mudava não corria: o endereço
-    perdia o `?event=` e a persiana ficava aberta por cima da lista.
+    perdia o `?event=` e o detalhe ficava aberto por cima da lista.
 
-    Derivado durante o render não há nada a sincronizar, e o retroceder fecha
-    sempre. O `selectedEvent` continua a ser retido, para a persiana poder
-    deslizar para fora antes de o conteúdo desaparecer.
+    Derivado durante o render não há nada a sincronizar, e o retroceder volta
+    sempre à agenda.
   */
   const isEventSheetOpen = Boolean(searchParams.get('event'))
   const [loading, setLoading] = useState(true)
@@ -281,7 +278,7 @@ const CalendarPage: React.FC = () => {
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
-  /* A ficha rápida do convocado (4a), por cima da persiana do evento. Guarda-se
+  /* A ficha rápida do convocado (4a), numa persiana por cima do evento. Guarda-se
      o id da convocatória e não a linha, para a ficha acompanhar as alterações
      de estado feitas nos seus próprios botões. */
   const [convocadoAberto, setConvocadoAberto] = useState<string | null>(null)
@@ -301,8 +298,8 @@ const CalendarPage: React.FC = () => {
     tempo em que havia duas UIs. Com uma só, isso passou a ser um bug: o mesmo
     evento mostrava a lista de convocados numa janela larga e escondia-a num
     telemóvel, e a regra é que as duas larguras têm de mostrar a mesma coisa.
-    Fica o comportamento do telemóvel, que é o que toda a gente vê: a persiana
-    abre curta, com a hora, o local e a resposta do próprio à vista, e a lista
+    Fica o comportamento do telemóvel, que é o que toda a gente vê: o detalhe
+    abre curto, com a hora, o local e a resposta do próprio à vista, e a lista
     do plantel a um toque.
   */
   const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(false)
@@ -324,10 +321,8 @@ const CalendarPage: React.FC = () => {
     onConfirm: () => {}
   })
   
-  // O arrasto vertical para fechar (e o bloqueio de scroll do fundo) vivem agora
-  // no BottomSheet partilhado; aqui só fica o gesto horizontal específico deste
-  // modal — deslizar entre convocatórias pendentes no carrossel do topo.
-  const modalScrollRef = React.useRef<HTMLDivElement>(null)
+  // O gesto horizontal do detalhe do evento: deslizar entre convocatórias
+  // pendentes no carrossel do topo.
   const carouselDragRef = React.useRef<{ startX: number; startY: number; lastDeltaX: number; lastDeltaY: number } | null>(null)
 
   // Abrir outro evento repõe a convocatória recolhida.
@@ -336,16 +331,14 @@ const CalendarPage: React.FC = () => {
   }, [selectedEvent])
 
   // Ver um evento é navegar: o endereço passa a ter ?event=<id>, portanto o
-  // detalhe tem link próprio e o botão de retroceder do browser fecha-o. No
-  // desktop deixa de ser uma persiana e passa a ser a página (ver VistaDetalhe).
+  // detalhe tem link próprio e o botão de retroceder do browser volta à agenda.
   const abrirEvento = (ev: Event) => {
     setSelectedEvent(ev)
     setSearchParams({ event: ev.id })
   }
 
   const handleCloseEventModal = () => {
-    // `selectedEvent` fica retido para a persiana poder deslizar para fora
-    // antes de o conteúdo desaparecer; o que a fecha é o endereço, abaixo.
+    // `selectedEvent` fica retido; o que fecha o detalhe é o endereço, abaixo.
     setPlayerSearchTerm('')
     setModalCallupStatusFilter('all')
     if (searchParams.get('event')) {
@@ -383,12 +376,12 @@ const CalendarPage: React.FC = () => {
           // Slide para a Esquerda (Avançar para o Próximo Evento Pendente)
           const nextIdx = (activeIdx + 1) % myPendingEvents.length
           setSelectedEvent(myPendingEvents[nextIdx])
-          if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
+          window.scrollTo(0, 0)
         } else if (lastDeltaX > 40) {
           // Slide para a Direita (Retroceder para o Evento Pendente Anterior)
           const prevIdx = (activeIdx - 1 + myPendingEvents.length) % myPendingEvents.length
           setSelectedEvent(myPendingEvents[prevIdx])
-          if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
+          window.scrollTo(0, 0)
         }
       }
     }
@@ -2270,39 +2263,35 @@ const CalendarPage: React.FC = () => {
         </div>
       </BottomSheet>
 
-      {/* Modal Detalhes Evento & Convocatória (persiana partilhada).
-          A condição usa só `selectedEvent` (nunca voltar a null ao fechar) — a
-          persiana abre e fecha pelo endereço, e o conteúdo fica retido para ela
-          poder deslizar para fora em vez de desaparecer de repente. */}
-      {/* A ficha de jogo abre a partir do detalhe do evento — uma persiana
-          por cima da outra, um nível abaixo na navegação. */}
+      {/* O detalhe do evento é um ecrã, não uma persiana — ver `EcraDetalhe`.
+          Continua no endereço (`?event=`). A ficha de jogo abre a partir
+          dele, como o ecrã seguinte. */}
       <div>
       {selectedEvent && (
-        <VistaDetalhe
-          isOpen={isEventSheetOpen}
-          onClose={handleCloseEventModal}
-          ref={modalScrollRef}
-          tone="dark"
-          size="7xl"
-          showCloseButton={false}
-          ariaLabel="Detalhe do evento"
-          voltarTexto="Voltar à agenda"
-          onContentTouchStart={handleCarouselTouchStart}
-          onContentTouchMove={handleCarouselTouchMove}
-          onContentTouchEnd={handleCarouselTouchEnd}
+        <EcraDetalhe
+          aberto={isEventSheetOpen}
+          voltarPara="Agenda"
+          aoVoltar={handleCloseEventModal}
+          titulo={
+            selectedEvent.type === 'match' && selectedEvent.opponent
+              ? selectedEvent.home_away === 'away'
+                ? `${formatOpponentSigla(selectedEvent.opponent)} vs ${formatClubSigla(clubSettings?.initials)}`
+                : `${formatClubSigla(clubSettings?.initials)} vs ${formatOpponentSigla(selectedEvent.opponent)}`
+              : selectedEvent.title
+                || (selectedEvent.type === 'match' ? 'Jogo' : selectedEvent.type === 'practice' ? 'Treino' : 'Convívio')
+          }
+          legenda={new Date(selectedEvent.date_time).toLocaleDateString('pt-PT', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+          })}
         >
-          <div className="space-y-4 select-none">
-            {/* Fechar a persiana. */}
-            <button
-              type="button"
-              onClick={handleCloseEventModal}
-              aria-label="Fechar"
-              className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 z-30 cursor-pointer active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-              title="Fechar"
-            >
-              <X size={18} />
-            </button>
-
+          {/* O gesto horizontal entre convocatórias por responder: era do
+              conteúdo da persiana, passou a ser do ecrã. */}
+          <div
+            className="space-y-4 select-none"
+            onTouchStart={handleCarouselTouchStart}
+            onTouchMove={handleCarouselTouchMove}
+            onTouchEnd={handleCarouselTouchEnd}
+          >
             {/* Topo Premium Unificado da Persiana (Layout Verde Oficial CSC com Carrossel Integrado) */}
             <div className="cartao-vidro text-white p-4 relative overflow-hidden space-y-2.5">
               
@@ -2315,14 +2304,14 @@ const CalendarPage: React.FC = () => {
                   e?.stopPropagation()
                   const nextIdx = (activeIndex + 1) % myPendingEvents.length
                   setSelectedEvent(myPendingEvents[nextIdx])
-                  if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
+                  window.scrollTo(0, 0)
                 }
 
                 const prevEvent = (e?: React.MouseEvent) => {
                   e?.stopPropagation()
                   const prevIdx = (activeIndex - 1 + myPendingEvents.length) % myPendingEvents.length
                   setSelectedEvent(myPendingEvents[prevIdx])
-                  if (modalScrollRef.current) modalScrollRef.current.scrollTop = 0
+                  window.scrollTo(0, 0)
                 }
 
                 return (
@@ -2410,24 +2399,6 @@ const CalendarPage: React.FC = () => {
                 )}
               </div>
 
-              <div>
-                <h2 className="font-display font-black text-[30px] leading-[1.05] text-white tracking-[-0.03em]">
-                  {selectedEvent.type === 'match' && selectedEvent.opponent ? (
-                    selectedEvent.home_away === 'away' ? (
-                      <>{formatOpponentSigla(selectedEvent.opponent)} <span className="text-white/62 text-xl">vs</span> {formatClubSigla(clubSettings?.initials)}</>
-                    ) : (
-                      <>{formatClubSigla(clubSettings?.initials)} <span className="text-white/62 text-xl">vs</span> {formatOpponentSigla(selectedEvent.opponent)}</>
-                    )
-                  ) : (
-                    selectedEvent.title
-                  )}
-                </h2>
-                <p className="text-[11.5px] text-white/60 mt-1.5">
-                  {new Date(selectedEvent.date_time).toLocaleDateString('pt-PT', {
-                    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                  })}
-                </p>
-              </div>
             </div>
 
             {/* Grelha Responsiva Versão Web (2 Colunas Amplas no Desktop) */}
@@ -2440,11 +2411,6 @@ const CalendarPage: React.FC = () => {
                     linha "Condição: Visitado". Passou a ser o título do ecrã
                     (ver acima) e uma etiqueta — dizia-se três vezes a mesma
                     coisa, e uma delas com outras palavras. */}
-
-                {/* Title (apenas exibido para convívios) */}
-                {selectedEvent.type === 'gathering' && (
-                  <h2 className="text-2xl font-black text-white leading-tight">{selectedEvent.title}</h2>
-                )}
 
                 {/*
                   As horas e o local num só cartão, como no 2c: a concentração
@@ -2974,13 +2940,12 @@ const CalendarPage: React.FC = () => {
               </div>
             )}
           </div>
-        </VistaDetalhe>
+        </EcraDetalhe>
       )}
 
       {/*
-        A ficha rápida do convocado (4a), empilhada por cima da persiana do
-        evento — o `useModalA11y` trata da pilha. Fica fora da `VistaDetalhe`
-        para não ser desmontada quando ela anima a saída.
+        A ficha rápida do convocado (4a): uma persiana por cima do ecrã do
+        evento — é um olhar rápido, e fecha-se para voltar à convocatória.
       */}
       {selectedEvent && (() => {
         const tira = (eventCallups[selectedEvent.id] || []) as CallupWithPlayer[]
@@ -3722,6 +3687,7 @@ const CalendarPage: React.FC = () => {
           eventId={selectedEvent.id}
           event={selectedEvent}
           isCoachOrAdmin={!!isCoachOrAdmin}
+          voltarPara="Evento"
           onSaved={() => {
             fetchEventsAndData()
           }}

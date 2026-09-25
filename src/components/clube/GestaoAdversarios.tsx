@@ -25,6 +25,7 @@ export const GestaoAdversarios: React.FC = () => {
   const [params, setParams] = useSearchParams()
 
   const [adversarios, setAdversarios] = useState<Adversario[]>([])
+  const [carregado, setCarregado] = useState(false)
   const [campos, setCampos] = useState<Campo[]>([])
   const [procura, setProcura] = useState('')
 
@@ -53,6 +54,7 @@ export const GestaoAdversarios: React.FC = () => {
     ])
     setAdversarios((resAdv.data as Adversario[]) ?? [])
     setCampos((resCampos.data as Campo[]) ?? [])
+    setCarregado(true)
   }
 
   useEffect(() => { carregar() }, [])
@@ -160,6 +162,9 @@ export const GestaoAdversarios: React.FC = () => {
   }
 
   const adversarioAberto = adversarios.find(a => a.id === params.get('adversario')) ?? null
+  /* Aberta enquanto a lista carrega; um adversário que já não existe volta à
+     lista em vez de ficar a carregar. */
+  const fichaAberta = params.has('adversario') && (!carregado || Boolean(adversarioAberto))
 
   const abrirFicha = (id: string) => {
     triggerHaptic('light')
@@ -505,6 +510,7 @@ export const GestaoAdversarios: React.FC = () => {
 
       {/* Ficha do adversário (ecrã 9h) */}
       <FichaAdversario
+        aberto={fichaAberta}
         adversario={adversarioAberto}
         campoPrincipal={
           adversarioAberto ? (campos.find(c => c.id === adversarioAberto.home_field_id) ?? null) : null

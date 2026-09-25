@@ -147,7 +147,8 @@ test.describe('Eventos', () => {
   /*
     O cartão inteiro abre o detalhe, e é lá dentro que se edita ou elimina —
     o lápis e o caixote saíram da lista, onde se carregava neles sem sequer
-    ver de que evento se tratava.
+    ver de que evento se tratava. O detalhe é um ecrã e não um diálogo (ver
+    `EcraDetalhe`): o que se verifica aqui é só onde vivem as ações.
   */
   test('o cartão da lista abre o detalhe, e é lá que se edita', async ({ page }) => {
     await abrePagina(page, 'events', { events: [treinoDaLista] })
@@ -157,20 +158,13 @@ test.describe('Eventos', () => {
     // Na lista não há atalhos destrutivos.
     await expect(page.getByRole('button', { name: 'Eliminar evento' })).toHaveCount(0)
 
-    /* Sem o `verificaDialogo`: ele fecha com Escape no fim, e o fecho tira o
-       `?convocatoria=` do endereço antes de se poder verificar. */
-    const antes = await dialogos(page).count()
     await cartao.click()
-    await expect(dialogos(page)).toHaveCount(antes + 1)
-    await verificaContrato(dialogos(page).last())
     await expect(page).toHaveURL(/convocatoria=e9/)
+    await expect(dialogos(page)).toHaveCount(0)
 
     // Editar e eliminar vivem no detalhe.
-    await expect(dialogos(page).last().getByRole('button', { name: 'Modificar evento' })).toBeVisible()
-    await expect(dialogos(page).last().getByRole('button', { name: 'Apagar evento' })).toBeVisible()
-
-    await page.keyboard.press('Escape')
-    await expect(dialogos(page)).toHaveCount(antes)
+    await expect(page.getByRole('button', { name: 'Modificar evento' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Apagar evento' })).toBeVisible()
   })
 })
 
@@ -193,7 +187,7 @@ test.describe('Calendário', () => {
     away_score: null,
   }
 
-  /** Cartão do evento (abre a persiana) → botão Modificar. */
+  /** Cartão do evento (abre o ecrã do evento) → botão Editar. */
   async function abreEdicaoDoEvento(page: Page) {
     /* Ao pé do topo do cartão, e não no centro: o centro é a linha do
        campo, que é um link para o Maps e pára o clique de subir. */
@@ -202,8 +196,9 @@ test.describe('Calendário', () => {
     await page.getByRole('button', { name: 'Editar evento' }).click()
   }
 
-  // A contagem de partida conta já com a persiana do detalhe, aberta pelo
-  // caminho acima; o que se verifica é o que se empilha por cima dela.
+  // O detalhe do evento é um ecrã e não conta como diálogo; a contagem de
+  // partida é a do formulário de edição, e o que se verifica é o que se
+  // empilha por cima dele.
   test('editar evento', async ({ page }) => {
     await abrePagina(page, 'calendar', { events: [treino] })
     await abreEdicaoDoEvento(page)
@@ -239,8 +234,16 @@ test.describe('Calendário', () => {
 })
 
 /**
- * Persianas abertas pelo endereço, e não por um clique.
+ * Fichas abertas pelo endereço, e não por um clique.
  *
+ * Eram persianas, e o contrato aqui era o de um diálogo: foco lá dentro. Desde
+ * 2026-09-25 são ecrãs (`EcraDetalhe`), e o contrato passou a ser o de uma
+ * página nova — o foco entra pelo título principal, que um leitor de ecrã
+ * anuncia. A corrida que estes testes apanharam continua possível: o título
+ * só aceita foco depois de a ficha passar ao topo da pilha, num segundo
+ * render.
+ *
+ * A história, do tempo das persianas:
  * O `verificaContrato` já exigia o foco lá dentro, mas todos os casos acima
  * abrem com um clique — e por um clique o foco sempre entrou. Estas abrem por
  * navegação direta, que é o caminho de um link partilhado ou de um retroceder,
@@ -253,7 +256,7 @@ test.describe('Calendário', () => {
  * Repete-se cada uma **quatro vezes** de propósito: era uma corrida, e uma
  * passagem única voltaria a dar verde com o bug lá.
  */
-test.describe('Persianas abertas pelo endereço', () => {
+test.describe('Fichas abertas pelo endereço', () => {
   const campo = { id: 'f1', name: 'Estádio Municipal', address: 'Rua da Bela Vista, 2750-343 Cascais' }
   const adversario = {
     id: 'o1', name: 'Sesimbra Veteranos', initials: 'SES', logo_url: null,
@@ -286,10 +289,13 @@ test.describe('Persianas abertas pelo endereço', () => {
   ]
 
   for (const [nome, caminho] of casos) {
-    test(`o foco entra na ${nome}`, async ({ page }) => {
+    test(`o foco entra no título da ${nome}`, async ({ page }) => {
       for (let i = 0; i < 4; i++) {
         await abrePagina(page, caminho, { fields: [campo], opponents: [adversario], events: [evento, jogo] })
-        await verificaContrato(dialogos(page).last())
+        const titulo = page.getByRole('heading', { level: 1 })
+        await expect(titulo).toHaveCount(1)
+        await expect(titulo).toBeFocused({ timeout: 5000 })
+        await expect(dialogos(page)).toHaveCount(0)
       }
     })
   }
@@ -304,10 +310,11 @@ test.describe('Persianas abertas pelo endereço', () => {
  * bezel. O `max-h` continua a limitar as compridas.
  */
 test.describe('Altura da persiana', () => {
-  const campo = { id: 'f1', name: 'Campo de Teste', address: 'R. do Teste' }
-
+  /* Era a ficha do campo, que deixou de ser persiana; os filtros das
+     Estatísticas são das persianas mais curtas que restam. */
   test('mesmo com pouco conteúdo, ocupa metade do ecrã', async ({ page }) => {
-    await abrePagina(page, 'clube?ver=campos&campo=f1', { fields: [campo] })
+    await abrePagina(page, 'competicao?ver=estatisticas')
+    await page.getByRole('button', { name: /^Filtros/ }).click()
 
     const painel = page.getByRole('dialog').last()
     await expect(painel).toBeVisible()

@@ -30,6 +30,9 @@ const PERFIL = {
   id_document_url: null, insurance_doc_url: null, medical_exam_doc_url: null,
 }
 
+/** A ficha é um ecrã (`EcraDetalhe`): uma região com o nome do atleta. */
+const fichaDe = (page: import('@playwright/test').Page) => page.getByRole('region').first()
+
 async function abreFicha(page: import('@playwright/test').Page, perfil = PERFIL) {
   await montarSupabaseFalso(page, {
     profiles: [perfil],
@@ -37,22 +40,23 @@ async function abreFicha(page: import('@playwright/test').Page, perfil = PERFIL)
     quota_exemptions: [{ profile_id: perfil.id, month_year: '0000-12', reason: null }],
   })
   await page.goto(`/csc-vet/team-management?atleta=${perfil.id}`)
-  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: perfil.shirt_name ?? perfil.name })).toBeVisible()
 }
 
 /*
   O cartão de identidade é centrado, e tem de o ser em relação ao cartão
-  inteiro. Tinha um `pr-12` a dar lugar ao botão de fechar, que flutua por
+  inteiro. Tinha um `pr-12` a dar lugar ao botão de fechar, que flutuava por
   cima do canto — e uma margem só de um lado, num cartão centrado, empurra
   tudo para a esquerda do centro real. Não se vê num diff, e a olho parece
-  só "estranho".
+  só "estranho". O nome saiu do cartão para o título do ecrã; mede-se a
+  fotografia.
 */
-test('a fotografia e o nome ficam no centro do cartão', async ({ page }) => {
+test('a fotografia fica no centro do cartão', async ({ page }) => {
   await abreFicha(page)
 
   const medida = await page.evaluate(() => {
-    const cartao = document.querySelector('[role="dialog"] .cartao-vidro') as HTMLElement | null
-    const titulo = cartao?.querySelector('h2') as HTMLElement | null
+    const cartao = document.querySelector('section[aria-labelledby] .cartao-vidro') as HTMLElement | null
+    const titulo = cartao?.firstElementChild as HTMLElement | null
     if (!cartao || !titulo) return null
     const c = cartao.getBoundingClientRect()
     const t = titulo.getBoundingClientRect()
@@ -66,7 +70,7 @@ test('a fotografia e o nome ficam no centro do cartão', async ({ page }) => {
 
 test('os contactos estão na ficha, e não só na edição', async ({ page }) => {
   await abreFicha(page)
-  const ficha = page.getByRole('dialog')
+  const ficha = fichaDe(page)
 
   await expect(ficha.getByText(UTILIZADOR_TESTE.email)).toBeVisible()
   await expect(ficha.getByText('912345678')).toBeVisible()
@@ -74,7 +78,7 @@ test('os contactos estão na ficha, e não só na edição', async ({ page }) =>
 
 test('o que a equipa técnica atribui: camisola, tamanho e pé', async ({ page }) => {
   await abreFicha(page)
-  const ficha = page.getByRole('dialog')
+  const ficha = fichaDe(page)
 
   await expect(ficha.getByText('#99')).toBeVisible()
   await expect(ficha.getByText('M', { exact: true })).toBeVisible()
@@ -83,7 +87,7 @@ test('o que a equipa técnica atribui: camisola, tamanho e pé', async ({ page }
 
 test('a janela de quota e os meses dispensados', async ({ page }) => {
   await abreFicha(page)
-  const ficha = page.getByRole('dialog')
+  const ficha = fichaDe(page)
 
   await expect(ficha.getByText('01/09/2026')).toBeVisible()
   await expect(ficha.getByText('Sem fim marcado')).toBeVisible()
@@ -92,15 +96,15 @@ test('a janela de quota e os meses dispensados', async ({ page }) => {
 
 test('o RGPD diz o que está na base, e não "consentido" a toda a gente', async ({ page }) => {
   await abreFicha(page)
-  await expect(page.getByRole('dialog').getByText('RGPD por consentir')).toBeVisible()
+  await expect(fichaDe(page).getByText('RGPD por consentir')).toBeVisible()
 
   await abreFicha(page, { ...PERFIL, gdpr_consent: true })
-  await expect(page.getByRole('dialog').getByText('RGPD consentido')).toBeVisible()
+  await expect(fichaDe(page).getByText('RGPD consentido')).toBeVisible()
 })
 
 test('o campo tático da ficha não convida a clicar: é só de leitura', async ({ page }) => {
   await abreFicha(page)
-  await expect(page.getByRole('dialog').getByText('Clica no campo para alternar')).toHaveCount(0)
+  await expect(fichaDe(page).getByText('Clica no campo para alternar')).toHaveCount(0)
 })
 
 /**
@@ -113,7 +117,7 @@ test('o campo tático da ficha não convida a clicar: é só de leitura', async 
 test('a relação aparece na ficha, por baixo do nome', async ({ page }) => {
   await abreFicha(page, { ...PERFIL, emergency_contact_relation: 'Cônjuge' })
 
-  const ficha = page.getByRole('dialog')
+  const ficha = fichaDe(page)
   // O nome e a relação em linhas próprias, e não "Maria (esposa)" num campo só.
   await expect(ficha.getByText('Maria Silva', { exact: true })).toBeVisible()
   await expect(ficha.getByText('Cônjuge', { exact: true })).toBeVisible()
@@ -154,7 +158,7 @@ test('a janela de atividade aparece no Perfil, só de leitura', async ({ page })
 /** O lugar do meio do campo chama-se "Médio Centro" em toda a app. */
 test('o meio-campo diz "Médio Centro", e não "Médio Defensivo"', async ({ page }) => {
   await abreFicha(page)
-  const ficha = page.getByRole('dialog')
+  const ficha = fichaDe(page)
 
   await expect(ficha.getByText(/Médio Defensivo/)).toHaveCount(0)
   await expect(ficha.getByText('Médio Centro').first()).toBeVisible()

@@ -39,8 +39,9 @@ const fixtures = {
   events: [],
 }
 
+/* A ficha é um ecrã (`EcraDetalhe`): uma região com o nome do adversário. */
 const painel = (pagina: import('@playwright/test').Page) =>
-  pagina.locator('[role="dialog"]').last()
+  pagina.getByRole('region', { name: adversario.name })
 
 test('o cartão não repete o nome que já é o título da ficha', async ({ page }) => {
   await montarSupabaseFalso(page, fixtures)

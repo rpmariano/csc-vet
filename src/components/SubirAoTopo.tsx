@@ -12,10 +12,11 @@ import { useLocation } from 'react-router-dom'
  * secções do Clube e os separadores da Competição e do Financeiro se
  * identificam: são conteúdo novo, e começam do princípio.
  *
- * **O que não conta são as persianas de detalhe** — `?event=`, `?atleta=`,
- * `?jogo=`, `?campo=`, `?adversario=`, `?convocatoria=`. Abrem por cima da
- * lista, e fechá-las tem de devolver a pessoa ao sítio de onde abriu; um salto
- * ao topo aqui perdia-lhe o lugar a cada ficha que espreitasse.
+ * **O que não conta são as fichas** — `?event=`, `?atleta=`, `?jogo=`,
+ * `?campo=`, `?adversario=`, `?convocatoria=`, e as persianas como `?conta=`.
+ * As fichas são ecrãs e abrem no topo, mas quem trata disso é a
+ * `<AreaDoEcra>` (`EcraDetalhe.tsx`), que também devolve a lista ao sítio onde
+ * estava quando se volta; as persianas abrem por cima e não mexem no scroll.
  *
  * Em `useLayoutEffect` e não em `useEffect`: o navegador pinta entre o render e
  * o efeito, e com o efeito normal via-se o ecrã novo a meio antes de saltar.

@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, Copy, Search, Share2, SlidersHorizontal } from 'lucide-react'
 import { BottomSheet } from '../BottomSheet'
-import { VistaDetalhe } from '../VistaDetalhe'
 import { Botao, LinhaAtleta, NumeroCamisola, Pastilha } from '../ui'
 import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
@@ -451,8 +450,11 @@ export const ContasPorAtleta: React.FC<ContasPorAtletaProps> = ({ contas, clube 
         </div>
       </BottomSheet>
 
-      {/* ---------------------------------------------- a conta do atleta */}
-      <VistaDetalhe
+      {/* ---------------------------------------------- a conta do atleta
+          Fica persiana, ao contrário das fichas (ver `EcraDetalhe`): é o
+          pormenor de uma linha, e o trabalho é a lista — vê-se o que um
+          atleta deve e volta-se para o seguinte. */}
+      <BottomSheet
         isOpen={Boolean(idConta)}
         onClose={fecharConta}
         title={contaMostrada?.nome ?? 'Contas'}
@@ -518,7 +520,7 @@ export const ContasPorAtleta: React.FC<ContasPorAtletaProps> = ({ contas, clube 
         ) : (
           <p className="text-[11.5px] text-white/62">Este atleta não tem quotas nem encargos nesta época.</p>
         )}
-      </VistaDetalhe>
+      </BottomSheet>
     </div>
   )
 }

@@ -3,12 +3,15 @@ import { X } from 'lucide-react'
 import { useModalA11y } from '../hooks/useModalA11y'
 
 /**
- * Persiana / bottom sheet: a moldura para ecrãs de "ver" (detalhe de evento,
- * de jogador, de comunicado, de ficha de jogo em modo leitura...). No
- * telemóvel desliza do fundo, com arrasto para fechar — sempre a partir da
+ * Persiana / bottom sheet: um olhar rápido por cima do que se está a fazer —
+ * filtros, escolher, confirmar, o que um atleta deve, a ficha rápida de um
+ * convocado. Desliza do fundo, com arrasto para fechar — sempre a partir da
  * alça ou do cabeçalho, e a partir do corpo quando este está no topo do
- * scroll (senão o arrasto tem de poder continuar a fazer scroll); a partir
- * do breakpoint `sm:` degrada para um modal centrado, tal como o `Modal`.
+ * scroll (senão o arrasto tem de poder continuar a fazer scroll).
+ *
+ * **Uma ficha com nome próprio não é persiana** — um jogo, um atleta, um
+ * evento, um adversário, um campo. Essas leem-se de cima a baixo e são ecrãs:
+ * ver `EcraDetalhe`.
  *
  * Ecrãs de "editar" (formulários, confirmações, ações destrutivas) devem
  * continuar a usar `Modal` — pedem um contentor mais deliberado, sem um

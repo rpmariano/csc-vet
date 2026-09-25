@@ -27,6 +27,7 @@ export const GestaoCampos: React.FC = () => {
   const [params, setParams] = useSearchParams()
 
   const [campos, setCampos] = useState<Campo[]>([])
+  const [carregado, setCarregado] = useState(false)
   const [procura, setProcura] = useState('')
 
   const [modalAberto, setModalAberto] = useState(false)
@@ -44,6 +45,7 @@ export const GestaoCampos: React.FC = () => {
   const carregar = async () => {
     const { data } = await supabase.from('fields').select('*').order('name')
     setCampos((data as Campo[]) ?? [])
+    setCarregado(true)
   }
 
   useEffect(() => { carregar() }, [])
@@ -113,6 +115,9 @@ export const GestaoCampos: React.FC = () => {
 
   /* A ficha vai no endereço: dá link próprio e o retroceder do browser fecha. */
   const campoAberto = campos.find(c => c.id === params.get('campo')) ?? null
+  /* Aberta enquanto a lista carrega; um campo que já não existe (um link
+     antigo para um campo apagado) volta à lista em vez de ficar a carregar. */
+  const fichaAberta = params.has('campo') && (!carregado || Boolean(campoAberto))
 
   const abrirFicha = (id: string) => {
     triggerHaptic('light')
@@ -343,6 +348,7 @@ export const GestaoCampos: React.FC = () => {
 
       {/* Ficha do campo (ecrã 9i) */}
       <FichaCampo
+        aberto={fichaAberta}
         campo={campoAberto}
         eCampoDoClube={Boolean(campoAberto && clubSettings?.home_field_id === campoAberto.id)}
         siglaClube={formatClubSigla(clubSettings?.initials)}
