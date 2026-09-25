@@ -44,7 +44,7 @@ src/
 ├── components/
 │   ├── ui/              primitivos do redesenho: cartões, faixa, botões, separadores
 │   ├── nav/             barra inferior, cabeçalho, folha do [+]
-│   └── …                Layout (a moldura), modais partilhados, PWA prompt
+│   └── …                Layout (a moldura), modais partilhados
 ├── hooks/
 │   ├── useModalA11y     Escape, prisão de foco e pilha de diálogos empilhados
 │   └── useRealceDeslizante  o realce que corre por trás do item ativo ("minhoca")

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Botao } from './ui'
 import { supabase } from '../lib/supabaseClient'
 import { Trophy, Trash2, Shield, Plus, Users, X } from 'lucide-react'
 import { toast } from '../context/ToastContext'
@@ -294,21 +295,10 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
         title="Novo Grupo"
         footer={
           <>
-            <button
-              type="button"
-              onClick={guardaGrupo.tentarFechar}
-              className="px-4 py-2 text-sm font-bold text-white/60 bg-white/10 rounded-xl hover:bg-white/15 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleAddGroup}
-              disabled={!newGroupName.trim()}
-              className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer"
-            >
+            <Botao aparencia="vidro" onClick={guardaGrupo.tentarFechar}>Cancelar</Botao>
+            <Botao onClick={handleAddGroup} disabled={!newGroupName.trim()}>
               Criar Grupo
-            </button>
+            </Botao>
           </>
         }
       >

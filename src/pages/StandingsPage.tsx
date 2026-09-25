@@ -8,7 +8,7 @@ import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, Che
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
 import { useClub } from '../context/ClubContext'
-import { Pastilha } from '../components/ui'
+import { Botao, Pastilha } from '../components/ui'
 import { calcularClassificacao, equipaDoTorneio, jogoTerminado } from '../lib/classificacao'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
@@ -788,21 +788,10 @@ export const StandingsPage = () => {
         closeOnOverlayClick={false}
         footer={
           <>
-            <button
-              type="button"
-              onClick={guardaJornada.tentarFechar}
-              className="px-4 py-2 text-sm font-bold text-white/60 bg-white/10 rounded-xl hover:bg-white/15 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleCreateJornada}
-              disabled={savingJornada}
-              className="px-4 py-2 text-sm font-bold text-white bg-csc-dark rounded-xl hover:bg-csc-dark/90 transition-colors disabled:opacity-40 cursor-pointer"
-            >
+            <Botao aparencia="vidro" onClick={guardaJornada.tentarFechar}>Cancelar</Botao>
+            <Botao onClick={handleCreateJornada} disabled={savingJornada}>
               {savingJornada ? 'A criar...' : 'Criar Jornada'}
-            </button>
+            </Botao>
           </>
         }
       >
