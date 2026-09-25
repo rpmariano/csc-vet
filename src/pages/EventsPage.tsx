@@ -9,14 +9,12 @@ import {
   CheckCircle2, 
   XCircle, 
   HelpCircle, 
-  X, 
   UserPlus, 
   Search, 
   ExternalLink, 
   Repeat, 
   CalendarRange, 
   Calendar,
-  Sparkles,
   PartyPopper,
   Trophy,
   Edit,
@@ -34,9 +32,8 @@ import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { QuickFieldModal } from '../components/QuickFieldModal'
 import { QuickOpponentModal } from '../components/QuickOpponentModal'
-import { ResendCallupsModal } from '../components/ResendCallupsModal'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { MatchReportModal, parseMatchReportMetadata, buildDescriptionWithMatchReport } from '../components/MatchReportModal'
+import { MatchReportModal } from '../components/MatchReportModal'
 import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
 import { CallupRow } from '../components/callups/CallupRow'
 import { FichaConvocado } from '../components/callups/FichaConvocado'
@@ -47,6 +44,7 @@ import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { hasMatchReport } from '../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 import { EcraDetalhe } from '../components/EcraDetalhe'
+import { EditarEvento } from '../components/eventos/EditarEvento'
 import { useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../components/BottomSheet'
 import { Pastilha, Botao } from '../components/ui'
@@ -292,14 +290,12 @@ const EventsPage: React.FC = () => {
 
   // Quick Field Modal
   const [isQuickFieldModalOpen, setIsQuickFieldModalOpen] = useState(false)
-  const [quickFieldTarget, setQuickFieldTarget] = useState<'create' | 'edit'>('create')
   const [quickFieldName, setQuickFieldName] = useState('')
   const [quickFieldAddress, setQuickFieldAddress] = useState('')
   const [isSavingQuickField, setIsSavingQuickField] = useState(false)
 
   // Quick Opponent Modal
   const [isQuickOpponentModalOpen, setIsQuickOpponentModalOpen] = useState(false)
-  const [quickOppTarget, setQuickOppTarget] = useState<'create' | 'edit'>('create')
   const [quickOppName, setQuickOppName] = useState('')
   const [quickOppInitials, setQuickOppInitials] = useState('')
   const [quickOppHomeFieldId, setQuickOppHomeFieldId] = useState('')
@@ -307,36 +303,15 @@ const EventsPage: React.FC = () => {
   const [quickOppContactPhone, setQuickOppContactPhone] = useState('')
   const [isSavingQuickOpp, setIsSavingQuickOpp] = useState(false)
 
-  // Estados para Edição de Evento
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
-  const [editTitle, setEditTitle] = useState('')
-  const [editType, setEditType] = useState<'practice' | 'match' | 'gathering'>('gathering')
-  const [editEventDate, setEditEventDate] = useState('')
-  const [editEventTime, setEditEventTime] = useState('20:00')
-  const [editMeetingTime, setEditMeetingTime] = useState('')
-  const [editFieldId, setEditFieldId] = useState('')
-  const [editLocationText, setEditLocationText] = useState('')
-  const [editDescription, setEditDescription] = useState('')
-  const [editIsFriendly, setEditIsFriendly] = useState(false)
-  const [editTournamentId, setEditTournamentId] = useState('')
-  const [editMatchday, setEditMatchday] = useState('')
-  const [editOpponentId, setEditOpponentId] = useState('')
-  const [editHomeAway, setEditHomeAway] = useState<'home' | 'away' | 'neutral'>('home')
-  const [editPlayerSearchTerm, setEditPlayerSearchTerm] = useState('')
-  const [isBatchCalling, setIsBatchCalling] = useState(false)
-  // Guarda síncrona (não é estado) contra duplo-clique: entre o clique e o próximo repaint,
-  // `isBatchCalling` (estado) ainda não travou o botão, o que já causou convocações em duplicado.
-  const isBatchCallingRef = useRef(false)
-  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  /* O evento em edição — o formulário é o `EditarEvento`, o mesmo da Agenda. */
+  const [eventoAEditar, setEventoAEditar] = useState<Event | null>(null)
   // Evita duplo-submit ao criar/publicar um evento (duplo clique/toque em ligação lenta
-  // criava o evento e enviava a convocatória duas vezes). Mesmo padrão do isBatchCallingRef
+  // criava o evento e enviava a convocatória duas vezes). Guarda síncrona com ref
   // acima: o estado só serve para desativar o botão na UI, a guarda real é o ref síncrono.
   const [isCreatingEvent, setIsCreatingEvent] = useState(false)
   const isCreatingEventRef = useRef(false)
-  const [isResendPromptOpen, setIsResendPromptOpen] = useState(false)
   // Ativação e Publicação de Convocatórias
   const [isActiveOnCreate, setIsActiveOnCreate] = useState(true)
-  const [editIsActive, setEditIsActive] = useState(true)
 
   // Estados para Filtros da Lista de Eventos Agendados
   const [eventListSearch, setEventListSearch] = useState('')
@@ -349,28 +324,6 @@ const EventsPage: React.FC = () => {
   const [eventoAConvocar, setEventoAConvocar] = useState<EventoCriado | null>(null)
   const [preEscolhidos, setPreEscolhidos] = useState<string[]>([])
   const [viewModeTab, setViewModeTab] = useState<'create' | 'list'>('list')
-
-  /*
-    O guarda do formulário de edição. Perguntava sempre — fechar um evento que
-    só se tinha aberto para ver dava o aviso na mesma. A caixa de procura de
-    jogadores fica de fora: escrever nela não altera o evento.
-  */
-  const guardaEdicao = useAlteracoesPorGravar({
-    aberto: !!editingEvent,
-    valores: [
-      editTitle, editType, editEventDate, editEventTime, editMeetingTime, editFieldId,
-      editLocationText, editDescription, editIsFriendly, editTournamentId, editMatchday, editOpponentId,
-      editHomeAway, editIsActive,
-    ],
-    // Sair da edição de um evento é sempre deliberado: gravá-la pode reenviar
-    // os pedidos de resposta ao plantel todo — ver `sempre` no hook.
-    sempre: true,
-    // Guardar um evento já convocado pergunta antes se reenvia os pedidos.
-    aoGravar: () => setIsResendPromptOpen(true),
-    aoSair: () => setEditingEvent(null),
-    descricao: 'As alterações a este evento ainda não foram gravadas. Se saíres agora, perdem-se.',
-  })
-  const handleAttemptCloseEditModal = guardaEdicao.tentarFechar
 
   /*
     O guarda do formulário de criação. Não tinha nenhum: fechar a folha de
@@ -432,13 +385,8 @@ const EventsPage: React.FC = () => {
 
       const formattedLoc = resolvedField.address ? `${resolvedField.name} (${resolvedField.address})` : resolvedField.name
 
-      if (quickFieldTarget === 'create') {
-        setFieldId(resolvedField.id)
-        setLocationText(formattedLoc)
-      } else {
-        setEditFieldId(resolvedField.id)
-        setEditLocationText(formattedLoc)
-      }
+      setFieldId(resolvedField.id)
+      setLocationText(formattedLoc)
 
       setIsQuickFieldModalOpen(false)
       setQuickFieldName('')
@@ -485,20 +433,11 @@ const EventsPage: React.FC = () => {
       const resolvedOpp = (data as Opponent) || newOppPayload
       setOpponents(prev => [...prev.filter(o => o.id !== resolvedOpp.id), resolvedOpp].sort((a, b) => a.name.localeCompare(b.name)))
 
-      if (quickOppTarget === 'create') {
-        setOpponentId(resolvedOpp.id)
-        if (homeAway === 'away' && resolvedOpp.home_field_id) {
-          setFieldId(resolvedOpp.home_field_id)
-          const f = fields.find(item => item.id === resolvedOpp.home_field_id)
-          if (f) setLocationText(f.address ? `${f.name} (${f.address})` : f.name)
-        }
-      } else {
-        setEditOpponentId(resolvedOpp.id)
-        if (editHomeAway === 'away' && resolvedOpp.home_field_id) {
-          setEditFieldId(resolvedOpp.home_field_id)
-          const f = fields.find(item => item.id === resolvedOpp.home_field_id)
-          if (f) setEditLocationText(f.address ? `${f.name} (${f.address})` : f.name)
-        }
+      setOpponentId(resolvedOpp.id)
+      if (homeAway === 'away' && resolvedOpp.home_field_id) {
+        setFieldId(resolvedOpp.home_field_id)
+        const f = fields.find(item => item.id === resolvedOpp.home_field_id)
+        if (f) setLocationText(f.address ? `${f.name} (${f.address})` : f.name)
       }
 
       setIsQuickOpponentModalOpen(false)
@@ -521,37 +460,7 @@ const EventsPage: React.FC = () => {
       toast.error('Este jogo já tem ficha de jogo lançada — o evento já não pode ser editado.')
       return
     }
-    setEditingEvent(ev)
-    setEditTitle(ev.title)
-    setEditType(ev.type)
-    
-    // Parse date and time
-    const d = new Date(ev.date_time)
-    if (!isNaN(d.getTime())) {
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      const hours = String(d.getHours()).padStart(2, '0')
-      const minutes = String(d.getMinutes()).padStart(2, '0')
-      setEditEventDate(`${year}-${month}-${day}`)
-      setEditEventTime(`${hours}:${minutes}`)
-    } else {
-      setEditEventDate(new Date().toISOString().split('T')[0])
-      setEditEventTime('20:00')
-    }
-
-    setEditMeetingTime(ev.meeting_time ? ev.meeting_time.substring(0, 5) : '')
-    setEditFieldId(ev.field_id || '')
-    setEditLocationText(ev.location || '')
-    const parsedDesc = parseMatchReportMetadata(ev.description)
-    setEditDescription(parsedDesc.cleanDescription)
-    setEditIsFriendly(ev.is_friendly ?? false)
-    setEditIsActive(ev.is_active !== false)
-    setEditTournamentId(ev.tournament_id || '')
-    setEditMatchday(ev.matchday ? String(ev.matchday) : '')
-    setEditOpponentId(ev.opponent_id || '')
-    setEditHomeAway(ev.home_away || 'home')
-    setEditPlayerSearchTerm('')
+    setEventoAEditar(ev)
   }
 
   /*
@@ -570,105 +479,6 @@ const EventsPage: React.FC = () => {
   const faltaAJornada = (tipo: string, amigavel: boolean, prova: string, jornada: string) =>
     tipo === 'match' && !amigavel && Boolean(prova) && !Number(jornada)
 
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingEvent) return
-    if (faltaAJornada(editType, editIsFriendly, editTournamentId, editMatchday)) {
-      toast.warning('Escolhe a jornada em que este jogo conta para a prova.')
-      return
-    }
-    setIsResendPromptOpen(true)
-  }
-
-  const handleConfirmSaveEdit = async (resendCallups: boolean) => {
-    if (!editingEvent) return
-    if (faltaAJornada(editType, editIsFriendly, editTournamentId, editMatchday)) {
-      toast.warning('Escolhe a jornada em que este jogo conta para a prova.')
-      return
-    }
-    setIsSavingEdit(true)
-    try {
-      const editOppObj = opponents.find(o => o.id === editOpponentId)
-      const editTourObj = tournaments.find(t => t.id === editTournamentId)
-      const computedEditTitle = editType === 'match'
-        ? (editOppObj ? `Jogo vs ${editOppObj.name}` : (editIsFriendly ? 'Jogo Amigável' : (editTourObj ? `Jogo ${editTourObj.name}` : 'Jogo')))
-        : editType === 'practice'
-        ? 'Treino'
-        : (editTitle.trim() || 'Convívio')
-
-      const fullIsoDateTime = new Date(`${editEventDate}T${editEventTime}:00`).toISOString()
-      const parsedOriginal = parseMatchReportMetadata(editingEvent.description)
-      const finalDescription = (parsedOriginal.tacticalFormation !== '4-3-3' && parsedOriginal.tacticalFormation !== '1-4-3-3' || parsedOriginal.occurrences)
-        ? buildDescriptionWithMatchReport(editDescription, parsedOriginal.tacticalFormation, parsedOriginal.occurrences)
-        : (editDescription.trim() || null)
-
-      const payload: any = {
-        title: computedEditTitle,
-        type: editType,
-        date_time: fullIsoDateTime,
-        meeting_time: editMeetingTime ? `${editMeetingTime}:00` : null,
-        field_id: editFieldId || null,
-        location: !editFieldId ? (editLocationText.trim() || null) : null,
-        description: finalDescription,
-        max_players: null,
-        is_friendly: editType === 'match' ? editIsFriendly : false,
-        is_active: editIsActive,
-        tournament_id: (editType === 'match' && !editIsFriendly) ? (editTournamentId || null) : null,
-        matchday: (editType === 'match' && !editIsFriendly && editTournamentId) ? Number(editMatchday) : null,
-        opponent_id: editType === 'match' ? (editOpponentId || null) : null,
-        home_away: editType === 'match' ? editHomeAway : null,
-      }
-
-      try {
-        const { error } = await supabase
-          .from('events')
-          .update(payload)
-          .eq('id', editingEvent.id)
-
-        if (error) {
-          if (error.message?.includes('is_active')) {
-            const { is_active: _is_active, ...withoutActive } = payload
-            const { error: fbErr } = await supabase
-              .from('events')
-              .update(withoutActive)
-              .eq('id', editingEvent.id)
-            if (fbErr) throw fbErr
-          } else {
-            throw error
-          }
-        }
-      } catch (err: any) {
-        if (!err.message?.includes('is_active')) throw err
-      }
-
-      /* A jornada acompanha a edição: mudar de prova, de jornada, de
-         adversário ou de casa/fora reescreve a linha da tabela — e tirar a
-         prova ao jogo tira-o de lá. */
-      await espelharNaJornada({ ...editingEvent, ...payload, id: editingEvent.id } as EventoParaJornada)
-
-      // Se o utilizador escolheu reenviar confirmações:
-      if (resendCallups) {
-        await supabase
-          .from('callups')
-          .update({ status: 'called' })
-          .eq('event_id', editingEvent.id)
-      }
-
-      setIsResendPromptOpen(false)
-      setEditingEvent(null)
-      const successText = resendCallups 
-        ? 'Evento atualizado e pedidos de confirmação reenviados aos atletas!' 
-        : 'Evento atualizado com sucesso!'
-      setSuccessMessage(successText)
-      toast.success(successText)
-      await fetchData()
-    } catch (err: any) {
-      console.error(err)
-      toast.error('Erro ao atualizar evento: ' + (err.message || 'Erro de ligação'))
-    } finally {
-      setIsSavingEdit(false)
-    }
-  }
 
   // Ativar evento inativo e disparar convocatória
   const handleActivateEvent = async (ev: Event) => {
@@ -933,25 +743,6 @@ const EventsPage: React.FC = () => {
     }
   }, [type, homeAway, opponentId, opponents, fields, clubSettings])
 
-  // Gestão automática de campo na edição de jogos
-  useEffect(() => {
-    if (editingEvent && editType === 'match') {
-      if (editHomeAway === 'home') {
-        const cascais = getCascaisHomeField()
-        if (cascais) {
-          setEditFieldId(cascais.id)
-          setEditLocationText(cascais.address ? `${cascais.name} (${cascais.address})` : cascais.name)
-        }
-      } else if (editHomeAway === 'away' && editOpponentId) {
-        const opp = opponents.find(o => o.id === editOpponentId)
-        if (opp?.home_field_id) {
-          setEditFieldId(opp.home_field_id)
-          const f = fields.find(item => item.id === opp.home_field_id)
-          if (f) setEditLocationText(f.address ? `${f.name} (${f.address})` : f.name)
-        }
-      }
-    }
-  }, [editingEvent, editType, editHomeAway, editOpponentId, opponents, fields, clubSettings])
 
   const getActiveLocationString = () => {
     if (fieldId) {
@@ -1567,7 +1358,6 @@ const EventsPage: React.FC = () => {
                       value={opponentId}
                       onChange={(e) => {
                         if (e.target.value === '__new__') {
-                          setQuickOppTarget('create')
                           setIsQuickOpponentModalOpen(true)
                         } else {
                           setOpponentId(e.target.value)
@@ -1651,7 +1441,7 @@ const EventsPage: React.FC = () => {
                   {currentLocationStr && <span className="text-[10px] text-csc-verde-texto font-bold bg-csc-light/15 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {currentLocationStr}</span>}
                 </label>
                 <select required value={fieldId} onChange={(e) => {
-                    if (e.target.value === '__new__') { setQuickFieldTarget('create'); setIsQuickFieldModalOpen(true) } else { setFieldId(e.target.value); const sel = fields.find(f => f.id === e.target.value); setLocationText(sel ? (sel.address ? `${sel.name} (${sel.address})` : sel.name) : '') }
+                    if (e.target.value === '__new__') { setIsQuickFieldModalOpen(true) } else { setFieldId(e.target.value); const sel = fields.find(f => f.id === e.target.value); setLocationText(sel ? (sel.address ? `${sel.name} (${sel.address})` : sel.name) : '') }
                   }} className={CAMPO_FORM}>
                   <option value="">-- Escolher Campo / Instalação --</option>
                   <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo campo…</option>
@@ -2447,437 +2237,26 @@ const EventsPage: React.FC = () => {
         )
       })()}
       </div>
-      {/* Editar um evento é um ecrã, por cima do dossier de onde se abre, e
-          o "‹ Convocatória" volta a ele pelo guarda das alterações. A Agenda
-          tem a sua própria cópia deste formulário, também em ecrã. */}
-      <EcraDetalhe
-        aberto={Boolean(editingEvent)}
+      {/* Editar um evento: o mesmo ecrã da Agenda (`EditarEvento`). Abre por
+          cima do dossier de onde se veio, e o "‹" volta a ele. */}
+      <EditarEvento
+        evento={eventoAEditar}
         voltarPara={dossierAberto ? 'Convocatória' : 'Eventos'}
-        aoVoltar={handleAttemptCloseEditModal}
-        sobrancelha="Editar evento"
-        titulo={editTitle.trim() || (editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino')}
-      >
-            <form onSubmit={handleSaveEdit} className="space-y-4">
-              {/* Tipo */}
-              <div>
-                <label className={ETIQUETA_FORM}>Tipo de Evento</label>
-                <div className="w-full px-3 py-2.5 border border-white/10 bg-white/5 text-white rounded-xl text-xs font-black flex items-center justify-between shadow-2xs">
-                  <span className="flex items-center gap-1.5">
-                    <span>{editType === 'match' ? 'Jogo' : editType === 'practice' ? 'Treino' : 'Convívio'}</span>
-                  </span>
-                  <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-md">
-                    Tipo bloqueado
-                  </span>
-                </div>
-              </div>
-
-              {/* Título (Apenas para Convívios) */}
-              {editType === 'gathering' && (
-                <div>
-                  <label className={ETIQUETA_FORM}>Título do Convívio *</label>
-                  <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} required={editType === 'gathering'} className={CAMPO_FORM} placeholder="Ex: Jantar de Natal / Reentré" />
-                </div>
-              )}
-
-              {/* Data e Hora */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={ETIQUETA_FORM}>Data</label>
-                  <input type="date" value={editEventDate} onChange={e => setEditEventDate(e.target.value)} required className={CAMPO_FORM} />
-                </div>
-                <div>
-                  <label className={ETIQUETA_FORM}>Hora</label>
-                  <input type="time" value={editEventTime} onChange={e => setEditEventTime(e.target.value)} required className={CAMPO_FORM} />
-                </div>
-              </div>
-
-              {/* Hora de Concentração */}
-              <div>
-                <label className={ETIQUETA_FORM}>Hora de Concentração (opcional)</label>
-                <input type="time" value={editMeetingTime} onChange={e => setEditMeetingTime(e.target.value)} className={CAMPO_FORM} />
-              </div>
-
-              {/* Campos específicos para Jogos */}
-              {editType === 'match' && (
-                <div className="space-y-3 border-t border-b border-white/10 py-3 bg-amber-500/10 p-3 rounded-2xl">
-                  <div className="flex items-center gap-3">
-                    <label className="text-xs font-bold text-white/70 cursor-pointer">Amigável?</label>
-                    <input 
-                      type="checkbox" 
-                      checked={editIsFriendly} 
-                      onChange={e => {
-                        setEditIsFriendly(e.target.checked)
-                        if (e.target.checked) { setEditTournamentId(''); setEditMatchday('') }
-                      }} 
-                      className="w-4 h-4 rounded cursor-pointer" 
-                    />
-                  </div>
-
-                  {!editIsFriendly && (
-                    <div className="flex gap-2.5">
-                      <div className="flex-1 min-w-0">
-                        <label className={ETIQUETA_FORM} htmlFor="prova-edicao">Torneio/Competição</label>
-                        <select id="prova-edicao" value={editTournamentId} onChange={e => setEditTournamentId(e.target.value)} className={CAMPO_FORM}>
-                          <option value="">-- Selecionar --</option>
-                          {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                        </select>
-                      </div>
-                      {editTournamentId && (
-                        <div className="w-[96px] flex-none">
-                          <label className={ETIQUETA_FORM} htmlFor="jornada-edicao">Jornada *</label>
-                          <input
-                            id="jornada-edicao"
-                            type="number"
-                            min="1"
-                            inputMode="numeric"
-                            value={editMatchday}
-                            onChange={e => setEditMatchday(e.target.value)}
-                            placeholder="1"
-                            className={CAMPO_FORM}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div>
-                      <label className={ETIQUETA_FORM}>Adversário</label>
-                      <select 
-                        value={editOpponentId} 
-                        onChange={e => {
-                          if (e.target.value === '__new__') {
-                            setQuickOppTarget('edit')
-                            setIsQuickOpponentModalOpen(true)
-                          } else {
-                            setEditOpponentId(e.target.value)
-                          }
-                        }} 
-                        className={CAMPO_FORM}
-                      >
-                        <option value="">-- Selecionar Adversário --</option>
-                        <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo adversário…</option>
-                        {opponents.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className={ETIQUETA_FORM}>Condição de Jogo</label>
-                      <select value={editHomeAway} onChange={e => setEditHomeAway(e.target.value as any)} className={CAMPO_FORM}>
-                        <option value="home">Casa</option>
-                        <option value="away">Fora</option>
-                        <option value="neutral">Campo neutro</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Local / Campo */}
-              {editType === 'match' && editHomeAway === 'home' ? (
-                <div className="p-3.5 bg-emerald-500/10 border-2 border-emerald-400/40 rounded-2xl flex items-center justify-between shadow-2xs">
-                  <div className="space-y-1 min-w-0 flex-1 pr-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
-                      <MapPin size={13} className="text-emerald-400 shrink-0" />
-                      <span>Campo do Jogo (Automático - Em Casa)</span>
-                    </span>
-                    <p className="text-xs font-black text-white truncate">
-                      {(() => {
-                        const cascais = getCascaisHomeField()
-                        return cascais ? `${cascais.name} ${cascais.address ? `(${cascais.address})` : ''}` : 'Estádio do Dramático de Cascais'
-                      })()}
-                    </p>
-                  </div>
-                  {editLocationText && (
-                    <a
-                      href={getGoogleMapsUrl(editLocationText)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
-                      title="Ver no Google Maps"
-                    >
-                      <MapPin size={12} className="text-red-500" />
-                      <span>Maps</span>
-                      <ExternalLink size={11} />
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-white/70 flex items-center justify-between">
-                    <span>Campo / Instalação</span>
-                    {editLocationText && <span className="text-[10px] text-csc-verde-texto font-bold bg-csc-light/15 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {editLocationText}</span>}
-                  </label>
-                  <select
-                    required
-                    value={editFieldId}
-                    onChange={(e) => {
-                      if (e.target.value === '__new__') {
-                        setQuickFieldTarget('edit')
-                        setIsQuickFieldModalOpen(true)
-                      } else {
-                        setEditFieldId(e.target.value)
-                        const sel = fields.find(f => f.id === e.target.value)
-                        if (sel) {
-                          setEditLocationText(sel.address ? `${sel.name} (${sel.address})` : sel.name)
-                        } else {
-                          setEditLocationText('')
-                        }
-                      }
-                    }}
-                    className={CAMPO_FORM}
-                  >
-                    <option value="">-- Escolher Campo / Instalação --</option>
-                    <option value="__new__" className="font-bold text-csc-gold bg-csc-gold/10">Criar novo campo…</option>
-                    {fields.map(f => (
-                      <option key={f.id} value={f.id}>{f.name} {f.address ? `(${f.address})` : ''}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Gestão de Convocatórias */}
-              {editType === 'practice' ? (
-                <div className="p-4 bg-emerald-500/10 border-2 border-emerald-400/30 rounded-2xl space-y-2 text-center">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white mx-auto flex items-center justify-center font-black text-lg shadow-xs">
-                    <Sparkles size={20} className="text-amber-300" />
-                  </div>
-                  <p className="text-xs font-black text-emerald-200">Convocatória Automática de Treino</p>
-                  <p className="text-[11px] text-emerald-300/80 leading-snug">
-                    Para os treinos todos os membros ativos do clube estão automaticamente convocados.
-                  </p>
-                </div>
-              ) : editingEvent && (() => {
-                const rawCurrentCallups = eventCallups[editingEvent.id] || []
-                const eligibleMembers = allPlayers.filter(p => isPlayerEligible(p, editingEvent.type, editingEvent.tournament_id))
-                const currentCallups = rawCurrentCallups.filter(c => {
-                  const p = allPlayers.find(pl => pl.id === c.player_id) || c.player
-                  return p ? isPlayerEligible(p, editingEvent.type, editingEvent.tournament_id) : false
-                })
-                const calledPlayerIds = currentCallups.map(c => c.player_id)
-
-                const isMemberCalled = (player: Profile) => {
-                  /* Só pelo id: o nome repete-se entre sócios e o email da ficha é
-                     escrevível pelo próprio — nenhum dos dois identifica ninguém. */
-                  return calledPlayerIds.includes(player.id) ||
-                    currentCallups.some(c => c.player_id === player.id || c.player?.id === player.id)
-                }
-
-                const calledMembersCount = eligibleMembers.filter(p => isMemberCalled(p)).length
-                const editUncalledPlayers = eligibleMembers.filter(p => !isMemberCalled(p))
-
-                const handleEditAddAll = async () => {
-                  if (editUncalledPlayers.length === 0 || isBatchCallingRef.current) return
-                  isBatchCallingRef.current = true
-                  setIsBatchCalling(true)
-                  try {
-                    const validIds = await ensurePlayerIdsForSupabase(editUncalledPlayers.map(p => p.id), allPlayers)
-                    if (validIds.length > 0) {
-                      const { data: existingDbCallups } = await supabase
-                        .from('callups')
-                        .select('player_id')
-                        .eq('event_id', editingEvent.id)
-
-                      const existingPlayerIds = new Set((existingDbCallups || []).map(c => c.player_id))
-                      const toInsert = validIds.filter(pId => pId && !existingPlayerIds.has(pId))
-
-                      if (toInsert.length > 0) {
-                        const payload = toInsert.map(pId => ({
-                          event_id: editingEvent.id,
-                          player_id: pId,
-                          status: 'called' as const
-                        }))
-                        const { error } = await supabase.from('callups').upsert(payload, {
-                          onConflict: 'event_id, player_id',
-                          ignoreDuplicates: true
-                        })
-                        if (error) {
-                          const { error: insertErr } = await supabase.from('callups').insert(payload)
-                          if (insertErr) throw insertErr
-                        }
-                      }
-                      await fetchData()
-                      // Mensagem com a contagem real inserida, não uma afirmação genérica de "todos" — se
-                      // um clique duplo ou uma corrida com outra ação já tinha adicionado alguns entretanto,
-                      // o toast até agora dizia sempre "sucesso total" mesmo quando só entrou 1.
-                      toast.success(
-                        toInsert.length > 0
-                          ? `${toInsert.length} membro(s) convocado(s) com sucesso!`
-                          : 'Já estavam todos convocados.'
-                      )
-                    }
-                  } catch (err: any) {
-                    toast.error('Erro ao convocar todos: ' + err.message)
-                  } finally {
-                    isBatchCallingRef.current = false
-                    setIsBatchCalling(false)
-                  }
-                }
-
-                const handleEditRemoveAll = () => {
-                  if (currentCallups.length === 0 || isBatchCallingRef.current) return
-                  setConfirmModalConfig({
-                    isOpen: true,
-                    title: 'Limpar Todos os Convocados',
-                    description: 'Tens a certeza que desejas remover todos os membros e atletas convocados para este evento?',
-                    confirmText: 'Sim, Limpar Convocatória',
-                    cancelText: 'Cancelar',
-                    variant: 'danger',
-                    onConfirm: async () => {
-                      if (isBatchCallingRef.current) return
-                      isBatchCallingRef.current = true
-                      setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
-                      setIsBatchCalling(true)
-                      try {
-                        const { error } = await supabase.from('callups').delete().eq('event_id', editingEvent.id)
-                        if (error) throw error
-                        await fetchData()
-                        toast.info('Todos os convocados foram removidos.')
-                      } catch (err: any) {
-                        toast.error('Erro ao remover todos: ' + err.message)
-                      } finally {
-                        isBatchCallingRef.current = false
-                        setIsBatchCalling(false)
-                      }
-                    }
-                  })
-                }
-
-                const filteredMembers = allPlayers.filter(p => 
-                  p.name.toLowerCase().includes(editPlayerSearchTerm.toLowerCase()) ||
-                  (p.jersey_number && p.jersey_number.toString().includes(editPlayerSearchTerm))
-                )
-
-                return (
-                  <div className="p-4 bg-white/5 border-2 border-amber-400/30 rounded-2xl space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-white flex items-center gap-1.5">
-                        <Users size={15} className="text-csc-gold" />
-                        <span>Convocatória ({calledMembersCount} convocados)</span>
-                      </span>
-                      <span className="text-[10px] bg-white/10 text-csc-gold font-bold px-2 py-0.5 rounded-full">
-                        {eligibleMembers.length} Membros
-                      </span>
-                    </div>
-
-                    {/* Botões Rápidos */}
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <button
-                        type="button"
-                        onClick={handleEditAddAll}
-                        disabled={editUncalledPlayers.length === 0 || isBatchCalling}
-                        className="px-2.5 py-1.5 bg-csc-gold hover:brightness-95 text-csc-tinta rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 disabled:opacity-40"
-                      >
-                        <Sparkles size={12} className="text-csc-tinta" />
-                        <span>{isBatchCalling ? 'A processar...' : `Convocar todos (${editUncalledPlayers.length})`}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleEditRemoveAll}
-                        disabled={currentCallups.length === 0 || isBatchCalling}
-                        className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
-                      >
-                        <X size={12} />
-                        <span>Remover todos</span>
-                      </button>
-                    </div>
-
-                    {/* Barra de Pesquisa de Membros na Edição */}
-                    <div className="relative">
-                      <Search size={13} className="absolute left-3 top-2.5 text-white/62" />
-                      <input
-                        type="text"
-                        value={editPlayerSearchTerm}
-                        onChange={(e) => setEditPlayerSearchTerm(e.target.value)}
-                        placeholder="Pesquisar membro na convocatória..."
-                        className={`${CAMPO_FORM} pl-9`}
-                      />
-                    </div>
-
-                    {/* Lista de membros um a um */}
-                    <div className="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto p-1.5 bg-white/5 border border-white/12 rounded-2xl">
-                      {filteredMembers.map(p => {
-                        const callup = currentCallups.find(
-                          c => c.player_id === p.id || c.player?.id === p.id,
-                        )
-                        const isCalled = isMemberCalled(p)
-
-                        return (
-                          <div
-                            key={p.id}
-                            onClick={() => {
-                              if (isCalled && callup) {
-                                handleRemovePlayerFromCallup(callup.id, editingEvent.id)
-                              } else {
-                                handleAddPlayerToCallup(editingEvent.id, p.id)
-                              }
-                            }}
-                            className={`flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer ${
-                              isCalled
-                                ? 'bg-csc-gold/15 font-black text-white border border-csc-gold/35'
-                                : 'text-white/80 hover:bg-white/6'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <input
-                                type="checkbox"
-                                checked={isCalled}
-                                onChange={() => {}}
-                                className="h-4 w-4 text-csc-tinta rounded border-white/15 pointer-events-none"
-                              />
-                              <div className="w-6 h-6 rounded-lg bg-csc-dark text-csc-gold flex items-center justify-center font-black text-[10px] shrink-0">
-                                {p.jersey_number ? `#${p.jersey_number}` : p.name.charAt(0)}
-                              </div>
-                              <span className="truncate">{getPlayerDisplayName(p)}</span>
-                            </div>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isCalled ? 'bg-csc-light/18 text-csc-verde-texto' : 'bg-white/10 text-white/62'}`}>
-                              {isCalled ? 'Convocado' : 'Convocar'}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })()}
-
-              {/* Estado do Evento (Ativo vs Rascunho) */}
-              <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
-                <div>
-                  <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
-                    <Send size={14} className={editIsActive ? 'text-csc-light' : 'text-csc-gold'} />
-                    <span>Estado: {editIsActive ? 'Ativo (Publicado)' : 'Rascunho (Inativo)'}</span>
-                  </label>
-                  <p className="text-[10.5px] text-white/70 mt-0.5">
-                    {editIsActive ? 'Visível a todos os atletas na agenda' : 'Oculto aos atletas até ser ativado'}
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editIsActive}
-                    onChange={(e) => setEditIsActive(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white/20 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-csc-light"></div>
-                </label>
-              </div>
-
-              {/* Descrição */}
-              <div>
-                <label className={ETIQUETA_FORM}>Descrição / Notas</label>
-                <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} className={`${CAMPO_FORM} h-auto py-3 leading-relaxed resize-none`} placeholder="Informações adicionais, ementa do convívio..." />
-              </div>
-
-              {/* Sair sem gravar é o "‹ Convocatória"; aqui fica só gravar. */}
-              <div className="pt-2">
-                <Botao type="submit" largo disabled={isSavingEdit}>
-                  {isSavingEdit ? 'A guardar...' : 'Guardar alterações'}
-                </Botao>
-              </div>
-            </form>
-      </EcraDetalhe>
+        aoFechar={() => setEventoAEditar(null)}
+        aoGravado={async gravado => {
+          setActiveCallupModalEvent(prev => (prev && prev.id === gravado.id ? { ...prev, ...gravado } as Event : prev))
+          setEventoAEditar(null)
+          await fetchData()
+        }}
+        aoMudarConvocatoria={() => fetchData()}
+        convocatorias={eventoAEditar ? (eventCallups[eventoAEditar.id] || []) : []}
+        plantel={allPlayers}
+        campos={fields}
+        adversarios={opponents}
+        provas={tournaments}
+        aoCriarCampo={campo => setFields(prev => [...prev.filter(f => f.id !== campo.id), campo].sort((x, y) => x.name.localeCompare(y.name)))}
+        aoCriarAdversario={adv => setOpponents(prev => [...prev.filter(o => o.id !== adv.id), adv as Opponent].sort((x, y) => x.name.localeCompare(y.name)))}
+      />
 
       {/* Criação rápida de campo e de adversário, a partir do formulário de evento */}
       <QuickFieldModal
@@ -2910,15 +2289,7 @@ const EventsPage: React.FC = () => {
       />
 
       {/* Guardar a edição de um evento já convocado: reenviar pedidos ou manter respostas */}
-      <ResendCallupsModal
-        isOpen={isResendPromptOpen}
-        onResend={() => handleConfirmSaveEdit(true)}
-        onKeepAnswers={() => handleConfirmSaveEdit(false)}
-        onBack={() => setIsResendPromptOpen(false)}
-        isSaving={isSavingEdit}
-      />
 
-      <UnsavedChangesModal {...guardaEdicao.props} />
       <UnsavedChangesModal {...guardaCriacao.props} />
 
       {/* Modal de Ficha de Jogo (Esquema Tático, Marcadores, Cartões e Ocorrências) */}

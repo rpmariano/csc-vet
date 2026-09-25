@@ -885,8 +885,7 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   **As fichas empilham-se:** a ficha de jogo abre-se a partir do evento e do
   dossier como o ecrã seguinte, e só a de cima se vê.
   **Um formulário longo também é ecrã; o modal é para uma pergunta** (revisão
-  de 2026-09-25). Criar e editar atleta, evento (as duas cópias, Agenda e
-  Eventos), torneio e encargo, editar a ficha de jogo e os grupos de uma prova
+  de 2026-09-25). Criar e editar atleta, evento, torneio e encargo, editar a ficha de jogo e os grupos de uma prova
   abrem num `<EcraDetalhe>`: o "‹" passa pelo `tentarFechar()` do guarda, e o
   gravar fica no fim do formulário — ou preso ao fundo, por cima da barra
   (`sticky bottom-[108px]`), quando há uma lista comprida pelo meio. Aberto a
@@ -897,8 +896,22 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   campos, no máximo. Fundir fichas passou a persiana: é escolher numa lista.
   **Estes formulários não vão no endereço**, como não iam como modais: o
   retroceder do browser sai da página sem os perguntar, a menos que a página
-  registe um `useGuardaDeSaida`. As duas cópias do editar evento estão por
-  fundir num componente só.
+  registe um `useGuardaDeSaida`.
+- **Editar um evento é um componente só, o `EditarEvento`**
+  (`src/components/eventos/`), usado pela Agenda e pelos Eventos. Eram duas
+  cópias e tinham divergido — a mesma edição gravava coisas diferentes
+  conforme a porta: a Agenda escrevia o `location` com campo escolhido e
+  intitulava o jogo sem o adversário, os Eventos apagavam o `max_players` e
+  perguntavam sempre se reenviavam os pedidos. O componente tem o seu estado e
+  a sua gravação, e fica com o mais completo de cada uma: data e hora
+  separadas (como o criar), "Jogo vs Adversário", a formação e as ocorrências
+  da ficha preservadas na descrição, as regras da prova (inscritos, suspensos,
+  limite de convocados, exceções de idade) aplicadas nas duas páginas, e a
+  pergunta de reenvio só com convocados num evento publicado. A convocatória
+  lá dentro segue a regra de cima: é o que está em `callups`, e um convocado
+  que ficou impedido aparece marcado, com o impedimento escrito.
+  `editar-evento.spec.ts` faz a mesma edição pelas duas portas e compara o
+  corpo do PATCH, campo a campo.
   `tests/e2e/ecra-detalhe.spec.ts` cobre o contrato — título com foco,
   nenhum diálogo, voltar pelo "‹" e pelo browser, o foco de volta ao cartão.
 - **Um deploy com a app aberta não pode acabar num ecrã em inglês.** Cada
