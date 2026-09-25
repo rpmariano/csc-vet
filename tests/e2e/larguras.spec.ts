@@ -200,6 +200,79 @@ test('sobrepostos iguais em janela estreita e larga', async ({ page }) => {
   expect(problemas, problemas.join('\n')).toEqual([])
 })
 
+/**
+ * O título de um ecrã nunca passa por baixo do canto.
+ *
+ * O título estava ao lado do canto, e com o sinal de € o canto leva quatro
+ * coisas: a 390px sobravam 148px para um título de 36px, e dez dos dezasseis
+ * passavam por baixo do € — "Comunicados" em 104px. O canto passou a ter uma
+ * linha sua e o título a largura toda por baixo (ver `CabecalhoEcra`).
+ *
+ * Mede-se o texto, e não a caixa do `<h1>`: a caixa tem sempre a largura da
+ * coluna, e é o texto que transborda dela. E só vale com o € no canto — é o
+ * pior caso, e sem ele o teste passava por não medir nada.
+ */
+const TITULOS: [string, string][] = [
+  ['Agenda', '/csc-vet/calendar'],
+  ['Competição', '/csc-vet/competicao'],
+  ['Plantel', '/csc-vet/team-management'],
+  ['Clube', '/csc-vet/clube'],
+  ['Dados do clube', '/csc-vet/clube?ver=dados'],
+  ['Campos', '/csc-vet/clube?ver=campos'],
+  ['Adversários', '/csc-vet/clube?ver=adversarios'],
+  ['Torneios', '/csc-vet/clube?ver=torneios'],
+  ['Visão geral', '/csc-vet/finance'],
+  ['Movimentos', '/csc-vet/finance?ver=movements'],
+  ['Por atleta', '/csc-vet/finance?ver=atletas'],
+  ['Quotas', '/csc-vet/finance?ver=quotas'],
+  ['Encargos', '/csc-vet/finance?ver=charges'],
+  ['Despesas e receitas', '/csc-vet/finance?ver=expenses'],
+  ['Definições', '/csc-vet/finance?ver=settings'],
+  ['Comunicados', '/csc-vet/announcements'],
+]
+
+test('o título de cada ecrã nunca passa por baixo do canto', async ({ page }) => {
+  await montarSupabaseFalso(page, FIXTURES)
+  const problemas: string[] = []
+
+  for (const largura of [390, 360]) {
+    await page.setViewportSize({ width: largura, height: 844 })
+    for (const [nome, caminho] of TITULOS) {
+      await page.goto(caminho)
+      const titulo = page.locator('header h1')
+      await expect(titulo).toHaveText(nome, { timeout: 15000 })
+      // O Archivo a chegar muda a largura do texto; mede-se com ele.
+      await page.evaluate(async () => { await document.fonts.ready })
+
+      const r = await titulo.evaluate(h1 => {
+        const header = h1.closest('header')!
+        const range = document.createRange()
+        range.selectNodeContents(h1)
+        const texto = Array.from(range.getClientRects())
+        /* Tudo o que se vê no cabeçalho e não é o título — as folhas, para a
+           caixa ser a do que está pintado: o €, o estado, o sino, a
+           fotografia, a sobrancelha. Sem depender de como estão arrumados. */
+        const outros = Array.from(header.querySelectorAll('*'))
+          .filter(el => el !== h1 && !h1.contains(el) && !el.contains(h1) && el.children.length === 0)
+          .map(el => el.getBoundingClientRect())
+          .filter(k => k.width > 0 && k.height > 0)
+        return {
+          comEuro: Array.from(header.querySelectorAll('button')).some(b => (b.textContent ?? '').includes('€')),
+          passa: Math.max(...texto.map(t => t.right)) - header.getBoundingClientRect().right,
+          toca: texto.some(t => outros.some(k =>
+            t.left < k.right && t.right > k.left && t.top < k.bottom && t.bottom > k.top)),
+        }
+      })
+
+      if (!r.comEuro) problemas.push(`${nome} a ${largura}px: sem o € no canto — não é o pior caso`)
+      if (r.passa > 0.5) problemas.push(`${nome} a ${largura}px: o título passa ${Math.round(r.passa)}px da coluna`)
+      if (r.toca) problemas.push(`${nome} a ${largura}px: o título passa por baixo do canto`)
+    }
+  }
+
+  expect(problemas, problemas.join('\n')).toEqual([])
+})
+
 
 /*
   A comparação de capturas — outra coisa da comparação de texto acima.

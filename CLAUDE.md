@@ -468,6 +468,19 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   fazia o cabeçalho mudar de altura de ecrã para ecrã. **A fotografia não leva
   lápis**: é sempre a mesma porta, e um lápis num ecrã e não nos outros fazia
   parecer que abriam sítios diferentes.
+  **O canto tem uma linha sua, com a sobrancelha à esquerda, e o título fica
+  por baixo com a largura toda.** Estava ao lado do canto, e com o sinal de €
+  o canto leva quatro coisas: a 390px sobravam 148px (92 no Plantel, que tem o
+  "+"), e dez dos dezasseis títulos de 36px passavam por baixo do € —
+  "Comunicados" em 104px. Encolher cada título até caber dava 21px num ecrã e
+  36px no do lado, e no Financeiro o título mudava de tamanho a cada
+  separador. Assim os títulos ficam todos a 36px, como no handoff (que já os
+  punha inteiros por baixo de uma linha de topo), o canto fica no mesmo sítio
+  em todos os ecrãs, Home incluída, e o cabeçalho tem a mesma altura — 82px —
+  em todos os de título numa linha. Custa 23px aos títulos curtos, que
+  cabiam ao lado. A sobrancelha continua com a largura que já tinha.
+  `larguras.spec.ts` mede o texto do título contra tudo o resto do cabeçalho,
+  a 390 e a 360px, com o € no canto.
 - **A prova escolhida na Classificação vai no endereço** (`?torneio=`), como o
   separador vai no `?ver=`. Sem isso não havia como ligar a uma classificação
   em concreto, e a ficha do adversário — onde um adversário pode estar em mais
