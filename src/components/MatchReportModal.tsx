@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { toast } from '../context/ToastContext'
 import { EcraDetalhe } from './EcraDetalhe'
-import { Modal } from './Modal'
+import { Botao } from './ui'
 import { CLUBE_SIGLA } from '../lib/clube'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
@@ -812,37 +812,17 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       </div>
     </EcraDetalhe>
 
-    {/* Edição da Ficha de Jogo — um formulário, por isso um Modal por cima do
-        ecrã da ficha. Já não é `stacked`: a ficha deixou de ser persiana, e
-        este é o único diálogo aberto. */}
-    <Modal
-      isOpen={isEditModalOpen && !loading && !jogoPorRealizar}
-      onClose={guardaFicha.tentarFechar}
-      size="3xl"
-      title="Editar ficha de jogo"
-      description={`${leftSigla} vs ${rightSigla}`}
-      icon={<Pencil size={20} className="text-csc-gold" />}
-      closeOnOverlayClick={false}
-      footer={
-        <>
-          <button
-            type="button"
-            onClick={guardaFicha.tentarFechar}
-            className="px-4 py-2.5 text-xs font-bold text-white hover:text-white bg-white/10 hover:bg-white/20 rounded-xl cursor-pointer transition-all"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSaveReport()}
-            disabled={saving}
-            className="px-5 py-2.5 text-xs font-black text-csc-dark bg-csc-gold hover:brightness-95 rounded-xl cursor-pointer shadow-md flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-          >
-            <Save size={16} className="text-csc-dark" />
-            <span>{saving ? 'A guardar…' : 'Guardar ficha de jogo'}</span>
-          </button>
-        </>
-      }
+    {/* Editar a ficha de jogo é o ecrã seguinte ao da ficha: resultado,
+        onze, suplentes, golos, assistências e cartões do plantel inteiro não
+        cabem num modal. O "‹ Ficha de jogo" volta a ela pelo guarda das
+        alterações por gravar, e o gravar fica preso ao fundo, por cima da
+        barra, para não se ter de rolar o plantel inteiro até ele. */}
+    <EcraDetalhe
+      aberto={isEditModalOpen && !loading && !jogoPorRealizar}
+      voltarPara="Ficha de jogo"
+      aoVoltar={guardaFicha.tentarFechar}
+      sobrancelha="Editar ficha de jogo"
+      titulo={`${leftSigla} vs ${rightSigla}`}
     >
       <div className="space-y-5">
         {/* Resultado */}
@@ -1082,8 +1062,15 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             />
           </div>
         )}
+
+        <div className="sticky bottom-[108px] z-20 p-2 rounded-[28px] bg-csc-superficie/95 border border-white/10 backdrop-blur-sm">
+          <Botao largo onClick={() => handleSaveReport()} disabled={saving}>
+            <Save size={16} />
+            {saving ? 'A guardar…' : 'Guardar ficha de jogo'}
+          </Botao>
+        </div>
       </div>
-    </Modal>
+    </EcraDetalhe>
 
     <UnsavedChangesModal {...guardaFicha.props} />
     <ConfirmModal
