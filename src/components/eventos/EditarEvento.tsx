@@ -256,6 +256,8 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
 
   const guarda = useAlteracoesPorGravar({
     aberto,
+    // É um ecrã: o retroceder do browser é o "‹".
+    ecraDeFormulario: true,
     // A caixa de procura fica de fora: escrever nela não altera o evento.
     valores: [titulo, tipo, data, hora, concentracao, campoId, local, descricao, amigavel, provaId, jornada, adversarioId, casaFora, publicado],
     sempre: true,

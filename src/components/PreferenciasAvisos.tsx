@@ -235,6 +235,8 @@ export const PreferenciasAvisos: React.FC<{
   */
   const guarda = useAlteracoesPorGravar({
     aberto,
+    // É um ecrã: o retroceder do browser é o "‹".
+    ecraDeFormulario: true,
     pronto: !aCarregar,
     valores: prefs,
     aoGravar: guardar,

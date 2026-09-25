@@ -196,6 +196,8 @@ const TeamManagementPage: React.FC = () => {
   */
   const guardaFicha = useAlteracoesPorGravar({
     aberto: isFormModalOpen,
+    // É um ecrã: o retroceder do browser é o "‹".
+    ecraDeFormulario: true,
     valores: [
       formId, formName, formShirtName, formEmail, formPhone, formRoles, formStatus,
       formJerseyNumber, formKitSize, formPreferredFoot, formBirthDate, formNationality,

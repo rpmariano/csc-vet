@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useEcraDeFormulario } from '../context/SaidaGuardadaContext'
 import type { UnsavedChangesModalProps } from '../components/UnsavedChangesModal'
 
 /**
@@ -46,6 +47,12 @@ export interface OpcoesAlteracoesPorGravar {
   aoSair: () => void
   titulo?: string
   descricao?: string
+  /**
+   * O formulário ocupa um ecrã (`EcraDetalhe`), sem endereço próprio. Com
+   * isto, o retroceder do browser passa pelo `tentarFechar()` — é o "‹" —
+   * em vez de saltar por cima do formulário. Ver `useEcraDeFormulario`.
+   */
+  ecraDeFormulario?: boolean
 }
 
 export interface AlteracoesPorGravar {
@@ -87,6 +94,7 @@ export function useAlteracoesPorGravar({
   aoSair,
   titulo,
   descricao,
+  ecraDeFormulario = false,
 }: OpcoesAlteracoesPorGravar): AlteracoesPorGravar {
   const [avisoAberto, setAvisoAberto] = useState(false)
   const [aGravar, setAGravar] = useState(false)
@@ -118,6 +126,8 @@ export function useAlteracoesPorGravar({
     if (sujo) setAvisoAberto(true)
     else aoSair()
   }, [sujo, aoSair])
+
+  useEcraDeFormulario({ aberto: ecraDeFormulario && aberto, sujo: ecraDeFormulario && sujo, aoRetroceder: tentarFechar })
 
   const marcarComoGravado = useCallback(() => {
     setFotografia(f => ({ ...f, refazer: true }))

@@ -443,6 +443,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
   const guardaFicha = useAlteracoesPorGravar({
     aberto: isEditModalOpen && !jogoPorRealizar,
+    // É um ecrã: o retroceder do browser é o "‹".
+    ecraDeFormulario: true,
     // A ficha vem da rede depois de o diálogo abrir; sem isto o próprio
     // carregamento contava como alteração do utilizador.
     pronto: !loading,

@@ -89,7 +89,11 @@ test('uma ficha abre no topo, e voltar dela não perde o lugar na lista', async 
   const antes = await scroll(page)
 
   await page.getByRole('button', { name: /^Ver a ficha/ }).last().click()
-  await expect(page.getByText('Gestão do atleta')).toBeVisible()
+  /* 15 segundos e não 5: a ficha abre num segundo render (o ecrã passa ao
+     topo da pilha), e com a bateria inteira a correr falhou uma vez em cerca
+     de 350 aos cinco — isolado passa sempre. A espera acaba assim que a ficha
+     aparece; só o caminho da falha paga por ela. */
+  await expect(page.getByText('Gestão do atleta')).toBeVisible({ timeout: 15_000 })
   await expect.poll(() => scroll(page)).toBe(0)
 
   await page.goBack()

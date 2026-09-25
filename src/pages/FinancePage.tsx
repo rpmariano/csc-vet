@@ -530,6 +530,8 @@ const FinancePage: React.FC = () => {
   */
   const guardaEncargo = useAlteracoesPorGravar({
     aberto: isNewChargeModalOpen,
+    // É um ecrã: o retroceder do browser é o "‹".
+    ecraDeFormulario: true,
     valores: [
       newChargeCategoryId, newChargeTitle, newChargeAmount, newChargeDueDate,
       newChargeIsIntermediary, valorAPagarNoFormulario, newChargePayableDueDate,

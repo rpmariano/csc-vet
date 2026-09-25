@@ -894,9 +894,16 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   campo e o adversário rápidos (vivem por cima de um formulário), criar campo
   e adversário, novo grupo, nova jornada e editar comunicado — meia dúzia de
   campos, no máximo. Fundir fichas passou a persiana: é escolher numa lista.
-  **Estes formulários não vão no endereço**, como não iam como modais: o
-  retroceder do browser sai da página sem os perguntar, a menos que a página
-  registe um `useGuardaDeSaida`.
+  **Estes formulários não vão no endereço**, como não iam como modais — e por
+  isso **o retroceder do browser é o "‹"**: com `ecraDeFormulario: true` no
+  `useAlteracoesPorGravar`, o formulário regista-se no `SaidaGuardadaProvider`
+  (`useEcraDeFormulario`) e o retroceder fica onde está e chama o
+  `tentarFechar()` — fecha se estiver limpo, pergunta se não. Antes saltava-lhes
+  por cima: fechava a ficha de baixo e deixava o formulário aberto sobre a
+  lista, ou saía da página sem perguntar. Uma navegação para a frente (a barra
+  de baixo) só pára com alterações por gravar, e aí também é o guarda do
+  formulário que pergunta; depois de sair, toca-se outra vez.
+  `alteracoes-por-gravar.spec.ts` cobre os dois casos.
 - **Editar um evento é um componente só, o `EditarEvento`**
   (`src/components/eventos/`), usado pela Agenda e pelos Eventos. Eram duas
   cópias e tinham divergido — a mesma edição gravava coisas diferentes

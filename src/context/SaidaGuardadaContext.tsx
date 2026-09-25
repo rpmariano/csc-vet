@@ -38,9 +38,25 @@ export interface RegistoDeSaida {
   descricao?: string
 }
 
+/**
+ * Um formulário que ocupa um ecrã (`EcraDetalhe`) — editar atleta, evento,
+ * torneio, encargo… Não é uma página: vive por cima de uma, sem endereço
+ * próprio, e o "‹" do topo fecha-o pelo seu guarda.
+ */
+export interface EcraDeFormulario {
+  /** Se o ecrã está aberto. */
+  aberto: boolean
+  /** Se há alterações por gravar. */
+  sujo: boolean
+  /** O mesmo que o "‹": fecha, ou pergunta primeiro (`tentarFechar()`). */
+  aoRetroceder: () => void
+}
+
 interface ValorContexto {
   /** A página regista-se (ou desregista-se, com `null`). */
   registar: (registo: RegistoDeSaida | null) => void
+  /** Um ecrã de formulário regista-se (ou desregista-se, com `null`). */
+  registarEcra: (quem: object, ecra: EcraDeFormulario | null) => void
   /**
    * Perguntar antes de navegar. Devolve `true` se pode seguir já; `false` se
    * ficou pendente à espera da resposta ao aviso — nesse caso quem chamou tem
@@ -51,6 +67,7 @@ interface ValorContexto {
 
 const Contexto = createContext<ValorContexto>({
   registar: () => {},
+  registarEcra: () => {},
   pedirSaida: prosseguir => { prosseguir(); return true },
 })
 
@@ -79,7 +96,36 @@ export const SaidaGuardadaProvider: React.FC<{ children: React.ReactNode }> = ({
     setDescricaoAtual(novo?.descricao)
   }, [])
 
+  /*
+    Os ecrãs de formulário abertos, pela ordem em que abriram — o de cima é o
+    último. Numa ref pela mesma razão do registo da página.
+  */
+  const ecras = useRef(new Map<object, EcraDeFormulario>())
+  const ecraDeCima = () => {
+    let topo: EcraDeFormulario | null = null
+    for (const e of ecras.current.values()) if (e.aberto) topo = e
+    return topo
+  }
+  /* Porque é que a navegação ficou bloqueada — o ecrã de formulário trata do
+     bloqueio sozinho, e o aviso daqui não aparece. */
+  const bloqueioDoEcra = useRef(false)
+  // O mesmo, para o render (o aviso não se desenha): uma ref não se lê a pintar.
+  const [bloqueioPeloEcra, setBloqueioPeloEcra] = useState(false)
+
+  const registarEcra = useCallback((quem: object, ecra: EcraDeFormulario | null) => {
+    if (ecra) ecras.current.set(quem, ecra)
+    else ecras.current.delete(quem)
+    informarTrabalhoPorGravar(Boolean(registo.current?.sujo || ecraDeCima()?.sujo))
+  }, [])
+
   const pedirSaida = useCallback((prosseguir: () => void) => {
+    /* Um ecrã de formulário por gravar fecha-se primeiro, pelo seu guarda; a
+       navegação não fica pendente — quem a pediu toca outra vez. */
+    const ecra = ecraDeCima()
+    if (ecra?.sujo) {
+      ecra.aoRetroceder()
+      return false
+    }
     if (!registo.current?.sujo) {
       prosseguir()
       return true
@@ -92,17 +138,42 @@ export const SaidaGuardadaProvider: React.FC<{ children: React.ReactNode }> = ({
     O retroceder do browser, e qualquer outra navegação que mude de ecrã. Só o
     caminho conta: trocar de `?ver=` ou abrir uma persiana de detalhe não é
     sair do formulário.
+
+    **Com um ecrã de formulário aberto, o retroceder é o "‹".** O formulário
+    não tem endereço: o retroceder saltava-lhe por cima — saía da página sem
+    perguntar, ou fechava a ficha de baixo e deixava o formulário aberto por
+    cima da lista. Agora o retroceder fica e o formulário fecha pelo seu
+    guarda, esteja ou não sujo. Uma navegação para a frente (um link) só pára
+    se houver alterações por gravar, e também aí é o guarda do formulário que
+    pergunta.
   */
-  const bloqueio = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      Boolean(registo.current?.sujo) && currentLocation.pathname !== nextLocation.pathname,
-  )
+  const bloqueio = useBlocker(({ currentLocation, nextLocation, historyAction }) => {
+    const mudou =
+      currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search
+    const ecra = ecraDeCima()
+    if (ecra) {
+      bloqueioDoEcra.current = mudou && (historyAction === 'POP' || ecra.sujo)
+    } else {
+      bloqueioDoEcra.current = false
+    }
+    setBloqueioPeloEcra(bloqueioDoEcra.current)
+    if (bloqueioDoEcra.current) return true
+    return Boolean(registo.current?.sujo) && currentLocation.pathname !== nextLocation.pathname
+  })
   const bloqueado = bloqueio.state === 'blocked'
+
+  useEffect(() => {
+    if (!bloqueado || !bloqueioDoEcra.current) return
+    // A bandeira fica levantada até à próxima navegação: o efeito de baixo
+    // corre a seguir, no mesmo render, e não pode dar o bloqueio por seu.
+    bloqueio.reset()
+    ecraDeCima()?.aoRetroceder()
+  }, [bloqueado, bloqueio])
 
   /* Deixar de estar sujo enquanto o aviso está de pé — porque se gravou por
      outro caminho — liberta a navegação em vez de a deixar pendurada. */
   useEffect(() => {
-    if (bloqueado && !registo.current?.sujo) bloqueio.proceed()
+    if (bloqueado && !bloqueioDoEcra.current && !registo.current?.sujo) bloqueio.proceed()
   }, [bloqueado, bloqueio])
 
   const seguirEmFrente = () => {
@@ -121,17 +192,17 @@ export const SaidaGuardadaProvider: React.FC<{ children: React.ReactNode }> = ({
   */
   useEffect(() => {
     const aoSair = (e: BeforeUnloadEvent) => {
-      if (registo.current?.sujo) e.preventDefault()
+      if (registo.current?.sujo || ecraDeCima()?.sujo) e.preventDefault()
     }
     window.addEventListener('beforeunload', aoSair)
     return () => window.removeEventListener('beforeunload', aoSair)
   }, [])
 
   return (
-    <Contexto.Provider value={{ registar, pedirSaida }}>
+    <Contexto.Provider value={{ registar, registarEcra, pedirSaida }}>
       {children}
       <UnsavedChangesModal
-        isOpen={bloqueado || pendente !== null}
+        isOpen={(bloqueado && !bloqueioPeloEcra) || pendente !== null}
         description={bloqueado ? descricaoAtual : pendente?.descricao}
         isSaving={aGravar}
         onSaveAndExit={async () => {
@@ -170,4 +241,19 @@ export const useGuardaDeSaida = (registo: RegistoDeSaida) => {
     registar({ sujo, gravar, descartar, descricao })
     return () => registar(null)
   }, [registar, sujo, gravar, descartar, descricao])
+}
+
+/**
+ * Um ecrã de formulário regista-se com isto — o `useAlteracoesPorGravar` fá-lo
+ * sozinho com `ecraDeFormulario: true`. Enquanto estiver aberto, o retroceder
+ * do browser passa pelo seu guarda em vez de sair da página.
+ */
+export const useEcraDeFormulario = (ecra: EcraDeFormulario) => {
+  const { registarEcra } = useSaidaGuardada()
+  const [eu] = useState(() => ({}))
+  const { aberto, sujo, aoRetroceder } = ecra
+  useEffect(() => {
+    registarEcra(eu, { aberto, sujo, aoRetroceder })
+  }, [registarEcra, eu, aberto, sujo, aoRetroceder])
+  useEffect(() => () => registarEcra(eu, null), [registarEcra, eu])
 }

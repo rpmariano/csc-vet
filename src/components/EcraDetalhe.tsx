@@ -128,7 +128,7 @@ export const EcraDetalhe: React.FC<EcraDetalheProps> = ({
   const area = useContext(ContextoAreaDoEcra)
   const raiz = useRef<HTMLElement>(null)
   const focoAnterior = useRef<HTMLElement | null>(null)
-  const eu = useRef({}).current
+  const [eu] = useState(() => ({}))
   const idTitulo = useId()
 
   const registar = area?.abrir
