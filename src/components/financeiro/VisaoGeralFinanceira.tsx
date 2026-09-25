@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { TrendingUp, Receipt, AlertTriangle, ListChecks, Activity } from 'lucide-react'
-import { getSeasonMonths } from '../../lib/finance'
+import { getSeasonMonths, prazoPassou } from '../../lib/finance'
 import type { FinancialSettings, SeasonMonth } from '../../lib/finance'
 import { CartaoVidro } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
@@ -458,9 +458,9 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
   const maxReceita = Math.max(1, ...receitaPorCategoria.map(([, v]) => v))
   const maxDespesa = Math.max(1, ...despesaPorCategoria.map(([, v]) => v))
 
-  const pagamentosEmAtraso = pendingScheduledPayments.filter(
-    p => p.due_date && new Date(p.due_date) < hoje,
-  ).length
+  /* A mesma regra das linhas que a banda resume: com a hora de agora, no dia
+     do prazo a banda dizia "1 em atraso" e a linha lá dentro "Vence hoje". */
+  const pagamentosEmAtraso = pendingScheduledPayments.filter(p => prazoPassou(p.due_date, hoje)).length
 
   return (
     <div className="space-y-4">

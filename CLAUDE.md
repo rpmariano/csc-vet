@@ -391,7 +391,7 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   É a conta de **uma** pessoa, a que tem sessão. A da tesouraria, de toda a
   gente ao mesmo tempo, é o `contasDosAtletas` (ver "Contas por atleta"): lê as
   quotas da vista, como o separador Quotas, e decide os encargos com o mesmo
-  `encargoVencido` que este hook usa — são duas contas, mas com as mesmas
+  `prazoPassou` que este hook usa — são duas contas, mas com as mesmas
   regras. **E mostra-se a quem tem o papel de jogador**, não a
   quem "não é da equipa técnica": a faixa antiga testava `!eAdmin &&
   !eTreinador`, e metade da direção deste clube também joga.
@@ -620,13 +620,19 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   WhatsApp Web) ou copiada; a partilha da lista mostra a mensagem antes de
   sair, porque leva nomes e valores para o grupo da equipa.
   `contas-por-atleta.spec.ts` cobre-o, com o texto inteiro das mensagens.
-- **O prazo de um encargo é o último dia** (`encargoVencido`, em
-  `lib/finance.ts`): no próprio dia ainda se está a tempo. O separador Encargos
-  comparava `new Date() > new Date(due_date)` — meia-noite UTC, uma da manhã em
-  Lisboa — e dava por devedor, às dez da manhã do dia do prazo, quem o sinal de
-  € ainda dizia "a vencer". A mesma função decide agora o separador Encargos, o
-  sinal de € e as contas por atleta. (Os Pagamentos Programados, o que o clube
-  paga a terceiros, ainda comparam à maneira antiga.)
+- **Um prazo é o último dia** (`prazoPassou` e `diasAtePrazo`, em
+  `lib/finance.ts`): no próprio dia ainda se está a tempo, e conta-se em dias
+  de calendário, nunca com a hora. O separador Encargos comparava `new Date() >
+  new Date(due_date)` — meia-noite UTC, uma da manhã em Lisboa — e dava por
+  devedor, às dez da manhã do dia do prazo, quem o sinal de € ainda dizia "a
+  vencer". **Os Pagamentos Programados**, o que o clube paga a terceiros,
+  tinham as duas falhas ao mesmo tempo: a banda da Visão Geral comparava com a
+  hora de agora e dizia "1 em atraso" no dia do prazo, com a linha lá dentro a
+  dizer "Vence hoje"; a lista normalizava a meia-noite local, que acerta em
+  Lisboa mas não a oeste de UTC — nos Açores, no inverno, o prazo de hoje era
+  ainda a véspera às onze da noite. A mesma função decide agora o separador
+  Encargos, o sinal de €, as contas por atleta e os Pagamentos Programados
+  (com os seus 30 dias de aviso). `financeiro.spec.ts` cobre os dois fusos.
 - **Uma fila de separadores que não cabe mostra que há mais**
   (`<FilaSeparadores>`): do lado onde há separadores escondidos, a fila
   desvanece-se e aparece uma seta que rola para lá. O desvanecer é uma máscara

@@ -1,6 +1,7 @@
 import React from 'react'
 import { ChevronRight } from 'lucide-react'
 import type { ScheduledPayment } from './tipos'
+import { diasAtePrazo, prazoPassou } from '../../lib/finance'
 import { ETIQUETA_GRUPO, BARRA_ATRASO, BARRA_AVISO, BARRA_NEUTRA, fmtEuro, fmtData } from './estilos'
 
 /**
@@ -68,7 +69,6 @@ export const PagamentosProgramados: React.FC<PagamentosProgramadosProps> = ({
   accao = 'ver',
 }) => {
   const hoje = new Date()
-  hoje.setHours(0, 0, 0, 0)
 
   return (
     <div className="space-y-2.5">
@@ -88,10 +88,10 @@ export const PagamentosProgramados: React.FC<PagamentosProgramadosProps> = ({
             </div>
 
             {linhas.map((p, i) => {
-              const prazo = p.due_date ? new Date(p.due_date) : null
-              const emAtraso = prazo ? prazo < hoje : false
-              const aVencer = prazo !== null && !emAtraso
-                && (prazo.getTime() - hoje.getTime()) / 86400000 <= DIAS_DE_AVISO
+              // Dias de calendário: o prazo é o último dia, em qualquer fuso.
+              const dias = p.due_date ? diasAtePrazo(p.due_date, hoje) : null
+              const emAtraso = prazoPassou(p.due_date, hoje)
+              const aVencer = dias !== null && !emAtraso && dias <= DIAS_DE_AVISO
               const barra = emAtraso ? BARRA_ATRASO : aVencer ? BARRA_AVISO : BARRA_NEUTRA
               const corPrazo = emAtraso ? 'text-csc-vermelho-texto' : aVencer ? 'text-amber-300' : 'text-white/50'
               const nome = semRepetirGrupo(p.title, categoria)

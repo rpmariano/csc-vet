@@ -1,4 +1,4 @@
-import { dataLocalISO, encargoVencido, formatMonthYear, nomeMes } from '../../lib/finance'
+import { dataLocalISO, formatMonthYear, nomeMes, prazoPassou } from '../../lib/finance'
 import { MESES_CURTOS, fmtData, fmtEuro } from './estilos'
 
 /**
@@ -10,7 +10,7 @@ import { MESES_CURTOS, fmtData, fmtEuro } from './estilos'
  *
  * - **Em dívida** é o que passou do prazo. A quota é a que a vista
  *   `v_quota_status` dá como `late`; o encargo é o que tem alguma coisa por
- *   pagar depois do último dia (`encargoVencido`, a regra do separador
+ *   pagar depois do último dia (`prazoPassou`, a regra do separador
  *   Encargos e do sinal de € do cabeçalho).
  * - **A pagamento** é o encargo em aberto ainda dentro do prazo. **As quotas
  *   não entram**: a de março paga-se em março, e pô-la aqui em setembro era
@@ -185,7 +185,7 @@ export function contasDosAtletas(dados: DadosDasContas): ContaDoAtleta[] {
         pagoEm: null,
         parcial: pago > 0 ? { pago, total: valor } : null,
       }
-      if (encargoVencido(prazo, hoje)) conta.divida.push(linha)
+      if (prazoPassou(prazo, hoje)) conta.divida.push(linha)
       else conta['a-pagamento'].push(linha)
     }
   }

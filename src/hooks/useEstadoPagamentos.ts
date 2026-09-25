@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import {
   comOmissoes, getSeasonLabel, getPlayerQuotaMonths,
   getQuotaDueDate, computeQuotaMonthStatus, formatMonthYear,
-  diasAtePrazo, encargoVencido,
+  diasAtePrazo, prazoPassou,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaEligiblePlayer } from '../lib/finance'
 
@@ -198,7 +198,7 @@ export function useEstadoPagamentos(
                 ? 'pago'
                 : dias === null
                   ? 'por-vencer'
-                  : encargoVencido(e.due_date, hoje)
+                  : prazoPassou(e.due_date, hoje)
                     ? 'atraso'
                     : dias <= DIAS_DE_AVISO
                       ? 'a-vencer'

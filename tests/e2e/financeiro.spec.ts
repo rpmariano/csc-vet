@@ -559,3 +559,68 @@ test('com as definições por gravar, trocar de separador pergunta', async ({ pa
   await expect(page.getByRole('dialog', { name: 'Tens alterações por guardar' })).toBeVisible()
   await expect(page).toHaveURL(/ver=settings/)
 })
+
+/**
+ * Pagamentos Programados — o prazo é o último dia, também no que o clube paga.
+ *
+ * A Visão Geral comparava o prazo com a hora de agora: `new Date('2026-09-20')`
+ * é meia-noite UTC, uma da manhã em Lisboa, e às dez da manhã do dia do prazo
+ * o bloco já dizia "1 em atraso" — com a própria linha, lá dentro, a dizer
+ * "Vence 20/09". A lista normalizava a meia-noite local e acertava em Lisboa,
+ * mas não num fuso a oeste de UTC (os Açores no inverno). Os dois passam a
+ * contar dias de calendário, com a regra das contas dos atletas.
+ *
+ * O relógio fica no passado: a sessão falsa expira 24 horas depois da hora
+ * real, e um relógio à frente dela deixava a app no rodopio.
+ */
+const pagamentoAoTerceiro = (id: string, title: string, categoria: string, prazo: string, valor: number) => ({
+  id, title, amount: 25, category_id: categoria, due_date: prazo,
+  is_intermediary: true, payable_amount: valor, payable_paid: false, payable_due_date: prazo,
+})
+
+const FIXTURES_PRAZOS = (prazos: { hoje: string; ontem: string }) => ({
+  ...FIXTURES_BASE,
+  financial_settings: [{
+    id: 1, season_start_month: 8, quota_amount: 10, quota_due_day: 8, quota_excluded_months: [], initial_balance: 0,
+  }],
+  expense_categories: [
+    { id: 'c1', name: 'Seguro Desportivo', allow_income: true },
+    { id: 'c3', name: 'Arbitragem', allow_income: true },
+  ],
+  charges: [
+    pagamentoAoTerceiro('pp-hoje', 'Seguro desportivo 26/27', 'c1', prazos.hoje, 700),
+    pagamentoAoTerceiro('pp-ontem', 'Arbitragens da época', 'c3', prazos.ontem, 300),
+  ],
+})
+
+test('um pagamento programado que vence hoje não está em atraso', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-20T10:00:00'))
+  await montarSupabaseFalso(page, FIXTURES_PRAZOS({ hoje: '2026-09-20', ontem: '2026-09-19' }))
+  await page.goto('/csc-vet/finance')
+
+  const bloco = page.getByRole('region', { name: 'Pagamentos programados' })
+  await expect(bloco).toBeVisible({ timeout: 15000 })
+
+  // Só o de ontem conta — e a banda diz o mesmo que as linhas lá dentro.
+  await expect(bloco).toContainText('1 em atraso')
+  await expect(bloco.getByRole('button', { name: /^Seguro desportivo 26\/27/ })).toContainText('Vence 20/09/2026')
+  await expect(bloco.getByRole('button', { name: /^Arbitragens da época/ })).toContainText('Em atraso desde 19/09/2026')
+})
+
+test.describe('num fuso a oeste de UTC', () => {
+  // Os Açores no inverno estão a UTC-1: a meia-noite UTC do prazo é ainda a
+  // véspera, às onze da noite.
+  test.use({ timezoneId: 'Atlantic/Azores' })
+
+  test('o prazo de hoje continua a ser hoje', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-01-20T11:00:00Z'))
+    await montarSupabaseFalso(page, FIXTURES_PRAZOS({ hoje: '2026-01-20', ontem: '2026-01-19' }))
+    await page.goto('/csc-vet/finance?ver=expenses')
+
+    const hoje = page.getByRole('button', { name: /Registar o pagamento de Seguro desportivo 26\/27/ })
+    await expect(hoje).toBeVisible({ timeout: 15000 })
+    await expect(hoje).toContainText('Vence 20/01/2026')
+    await expect(page.getByRole('button', { name: /Registar o pagamento de Arbitragens da época/ }))
+      .toContainText('Em atraso desde 19/01/2026')
+  })
+})
