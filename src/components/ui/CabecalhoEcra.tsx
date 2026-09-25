@@ -19,6 +19,19 @@ import { SinalPagamentos } from '../SinalPagamentos'
  *
  * A sobrancelha ("ÉPOCA 25/26", "GESTÃO") é opcional e serve para situar sem
  * gastar uma linha de texto corrido.
+ *
+ * **O canto tem uma linha sua, e o título fica por baixo com a largura toda.**
+ * O título estava ao lado do canto, e com o sinal de € o canto leva quatro
+ * coisas: sobravam 148px a 390px de largura, e dez dos dezasseis títulos
+ * passavam por baixo do € — "Comunicados" em 104px, "Movimentos" em 78px. Um
+ * título de 36px não cabe em 148px, e encolhê-lo até caber punha-o a 21px num
+ * ecrã e a 36px no do lado: no Financeiro mudava de tamanho a cada separador.
+ * É também o desenho do handoff, com o título inteiro por baixo de uma linha
+ * de topo, e deixa o canto no mesmo sítio em todos os ecrãs — o da Home
+ * incluído, que já estava na linha de cima.
+ *
+ * A sobrancelha fica na linha do canto, com a largura que já tinha ao lado
+ * dele: numa linha só, cortada se não couber.
  */
 
 export interface CabecalhoEcraProps {
@@ -39,25 +52,23 @@ export const CabecalhoEcra: React.FC<CabecalhoEcraProps> = ({
   acoes,
   className = '',
 }) => (
-  <header className={`flex items-center gap-3 pt-safe ${className}`}>
-    <div className="flex-1 min-w-0">
-      {sobrancelha && (
-        /* Numa linha só, e cortada se não couber: com o canto sempre a levar
-           o estado, o sino e a fotografia, uma sobrancelha que quebrasse fazia
-           o cabeçalho mudar de altura de ecrã para ecrã. */
-        <p className="font-display font-extrabold text-[10px] tracking-[0.24em] text-csc-gold uppercase truncate">
-          {sobrancelha}
-        </p>
-      )}
-      <TituloEcra className={sobrancelha ? 'mt-2' : ''}>{titulo}</TituloEcra>
-      {legenda && <p className="text-[11px] text-white/62 mt-1.5">{legenda}</p>}
+  <header className={`pt-safe ${className}`}>
+    <div className="flex items-center gap-3">
+      {/* Numa linha só, e cortada se não couber: uma sobrancelha que
+          quebrasse fazia o cabeçalho mudar de altura de ecrã para ecrã. */}
+      <p className="flex-1 min-w-0 font-display font-extrabold text-[10px] tracking-[0.24em] text-csc-gold uppercase truncate">
+        {sobrancelha}
+      </p>
+      {acoes}
+      <SinalPagamentos />
+      <PastilhaEstado />
+      <AnnouncementsInboxButton tone="dark" size="md" />
+      <AvatarPerfil tamanho={38} />
     </div>
-
-    {acoes}
-    <SinalPagamentos />
-    <PastilhaEstado />
-    <AnnouncementsInboxButton tone="dark" size="md" />
-    <AvatarPerfil tamanho={38} />
+    {/* `break-words` é a última rede: nenhum título de hoje precisa dela com a
+        largura toda, mas uma palavra que não coubesse nunca passaria da coluna. */}
+    <TituloEcra className="mt-2 break-words">{titulo}</TituloEcra>
+    {legenda && <p className="text-[11px] text-white/62 mt-1.5">{legenda}</p>}
   </header>
 )
 
