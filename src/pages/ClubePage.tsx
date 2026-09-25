@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   Landmark,
-  Megaphone,
   CalendarPlus,
   Trophy,
   MapPin,
@@ -73,9 +72,10 @@ interface Entrada {
 
 /*
   O que a barra de baixo e o canto do cabeçalho já dão não se repete aqui: a
-  Competição é um lugar da barra e o Perfil abre na fotografia. Sobra o que só
-  tem esta porta — o Plantel, que saiu da barra para lhe dar o lugar, e os
-  Comunicados, cujo sino do cabeçalho só serve para ler.
+  Competição é um lugar da barra, o Perfil abre na fotografia e os Comunicados
+  no sino — que desde 2026-09-25 leva ao ecrã inteiro, onde também se publica.
+  Sobra o que só tem esta porta: o Plantel, que saiu da barra para lhe dar o
+  lugar.
 */
 const EQUIPA: readonly Entrada[] = [
   {
@@ -83,12 +83,6 @@ const EQUIPA: readonly Entrada[] = [
     titulo: 'Plantel',
     descricao: 'Fichas, posições e estado dos atletas',
     Icone: Users,
-  },
-  {
-    para: '/announcements',
-    titulo: 'Comunicados',
-    descricao: 'Publicar e editar os avisos à equipa',
-    Icone: Megaphone,
   },
 ]
 

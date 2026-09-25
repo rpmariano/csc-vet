@@ -186,16 +186,17 @@ const router = createBrowserRouter(
                 { path: '/stats', element: <ParaCompeticao ver="estatisticas" /> },
                 { path: '/standings', element: <ParaCompeticao ver="classificacoes" /> },
                 { path: '/settings', element: <SettingsPage /> },
+                /* Os comunicados leem-se aqui, e é para cá que o sino do
+                   cabeçalho leva. Quem gere publica e edita no mesmo ecrã; o
+                   formulário e as ações só aparecem a treinador e direção, e
+                   quem protege a escrita é a RLS. */
+                { path: '/announcements', element: <AnnouncementsPage /> },
 
                 // Treinador e direção
                 {
                   element: <ProtectedRoute allowedRoles={['coach', 'admin']} />,
                   children: [
                     { path: '/events', element: <EventsPage /> },
-                    /* Comunicados é o ecrã de *gestão*: publicar, editar,
-                       apagar. Quem só lê tem-nos na persiana do sino, que é
-                       onde o handoff os põe. */
-                    { path: '/announcements', element: <AnnouncementsPage /> },
                     /* O Clube é a gestão inteira: o índice, e as quatro secções
                        que o `?ver=` abre — dados, campos, adversarios,
                        torneios. */

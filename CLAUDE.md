@@ -329,8 +329,8 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   mesma; o aviso do que falhou vai num `toast.warning`, não num erro que
   desfaça o resto.
 - **E por isso alguém tem de perguntar.** Nascerem desligados é a decisão certa
-  e tem um preço: o ecrã 12b está a quatro toques — fotografia do cabeçalho,
-  Definições, um cartão, uma persiana — e ninguém lá vai por iniciativa
+  e tem um preço: o ecrã 12b está a três toques — fotografia do cabeçalho,
+  Definições, o cartão "Avisos" (que abre um ecrã, desde 2026-09-25) — e ninguém lá vai por iniciativa
   própria. Enquanto assim foi, a app só avisava quem se lembrava de a abrir, e
   é a explicação mais provável para 1191 convocatórias sem resposta.
   O `ConvidarAvisos` (`src/components/ConvidarAvisos.tsx`) faz a pergunta em
@@ -433,8 +433,13 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
 - **Não há duas portas para o mesmo sítio.** A app tem cinco superfícies de
   navegação — a barra de baixo, o canto do cabeçalho, a folha do [+], o ecrã
   Clube e as ligações dentro das páginas — e um destino escolhe uma. O Perfil
-  saiu da lista do Clube porque já é a fotografia do cabeçalho; ficam lá o
-  Plantel e os Comunicados, cujo sino só serve para ler.
+  saiu da lista do Clube porque já é a fotografia do cabeçalho; fica lá o
+  Plantel. **Os Comunicados saíram também (2026-09-25):** o sino leva ao
+  ecrã `/announcements`, aberto a toda a gente — lê-se ali, e quem gere
+  publica e edita no mesmo sítio, com o formulário recolhido atrás de
+  "Escrever comunicado". Até aí o sino abria uma persiana com a mesma lista e
+  o ecrã era só da gestão. **Abrir o ecrã é lê-los:** os que estavam por ler
+  levam "Novo" nessa visita e passam logo a lidos.
 - **A barra de quem gere é `Hoje · Agenda · [+] · Competição · Clube`.** O
   handoff dava o quarto lugar ao Plantel, e com isso o treinador chegava às
   classificações e às estatísticas um nível mais fundo do que o jogador, que as
@@ -847,7 +852,9 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   esses números alimentam as estatísticas e — desde que o jogo se espelha na
   jornada — também a classificação. **Os nossos golos são os da visita quando
   jogamos fora**: `home_score` é o da casa do jogo, não o nosso.
-- **Guardar um evento leva à convocatória**, e é lá que as linhas de `callups`
+- **Guardar um evento leva à convocatória** — um ecrã, o passo 2 de criar
+  (era persiana até 2026-09-25), com "‹ Eventos" no lugar do "Agora não" e as
+  ações presas ao fundo por cima da barra —, e é lá que as linhas de `callups`
   são escritas — em mais lado nenhum do fluxo de criação
   (`ConvocatoriaAoCriar`, ecrãs 4f/4g). Era um bloco no meio do formulário, e
   ter dois sítios a escrever a mesma tabela é como se perde a conta de quem

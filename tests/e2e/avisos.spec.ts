@@ -135,3 +135,34 @@ test.describe('Avisos desligados à partida', () => {
     expect(gravados.join(' ')).toContain('"convocatorias":true')
   })
 })
+
+/**
+ * As preferências são um ecrã do Perfil, e não uma persiana.
+ *
+ * É um formulário, e uma persiana fecha-se com um arrasto — o gesto de quem
+ * quer sair. Desde 2026-09-25 abre como ecrã ("‹ Perfil", título "Avisos"), e
+ * voltar com escolhas por gravar pergunta antes.
+ */
+test.describe('O ecrã dos avisos', () => {
+  test('abre como ecrã, com título e sem diálogo', async ({ page }) => {
+    await montarSupabaseFalso(page, { notification_preferences: [PREFS] })
+    await abrePreferencias(page)
+
+    const titulo = page.getByRole('heading', { level: 1, name: 'Avisos' })
+    await expect(titulo).toBeVisible()
+    await expect(titulo).toBeFocused()
+    await expect(page.locator('[role="dialog"]')).toHaveCount(0)
+  })
+
+  test('voltar com escolhas por gravar pergunta antes', async ({ page }) => {
+    await montarSupabaseFalso(page, { notification_preferences: [PREFS] })
+    await abrePreferencias(page)
+
+    await page.getByRole('switch', { name: /Silêncio à noite/ }).click()
+    await page.getByRole('button', { name: 'Perfil', exact: true }).click()
+
+    // O aviso de alterações por gravar, e o ecrã continua lá por baixo.
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Avisos' })).toBeVisible()
+  })
+})
