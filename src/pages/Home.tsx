@@ -7,9 +7,7 @@ import { toast } from '../context/ToastContext'
 import { formatClubSigla } from '../lib/siglas'
 import { convocatoriaFechada, textoConvocatoriaFechada } from '../lib/eventos'
 import { triggerHaptic } from '../utils/haptics'
-import { AvatarPerfil, CartaoVidro, CartaoSimples, EtiquetaSeccao, PastilhaEstado } from '../components/ui'
-import { AnnouncementsInboxButton } from '../components/AnnouncementsInbox'
-import { SinalPagamentos } from '../components/SinalPagamentos'
+import { CartaoVidro, CartaoSimples, EtiquetaSeccao } from '../components/ui'
 import {
   useEventosSemConvocatoria,
   FaixaSemConvocatoria,
@@ -26,7 +24,6 @@ import { CartaoProximoJogo, type JogoDaHome } from '../components/home/CartaoPro
 import { PorResponder, type PendenteDaHome } from '../components/home/PorResponder'
 import { UltimoJogo, type UltimoJogoDaHome } from '../components/home/UltimoJogo'
 import { ProvasEmCurso, type ProvaDaHome } from '../components/home/ProvasEmCurso'
-import { comOmissoes, getSeasonLabel } from '../lib/finance'
 import { calcularClassificacao, janelaDoClube } from '../lib/classificacao'
 
 /**
@@ -56,13 +53,6 @@ interface Aniversariante {
   dia: number
 }
 
-/** Bom dia até às 12h, boa tarde até às 20h, boa noite depois disso. */
-function saudacao(agora = new Date()): string {
-  const h = agora.getHours()
-  if (h < 12) return 'Bom dia,'
-  if (h < 20) return 'Boa tarde,'
-  return 'Boa noite,'
-}
 
 /**
  * O nome por que a pessoa é tratada: alcunha ou nome da camisola, e só depois
@@ -134,7 +124,6 @@ const Home: React.FC = () => {
   const [ultimo, setUltimo] = useState<UltimoJogoDaHome | null>(null)
   const [provas, setProvas] = useState<ProvaDaHome[]>([])
   const [aniversariantes, setAniversariantes] = useState<Aniversariante[]>([])
-  const [epoca, setEpoca] = useState<string | null>(null)
   const [aCarregar, setACarregar] = useState(true)
 
   /*
@@ -193,13 +182,11 @@ const Home: React.FC = () => {
         const agora = new Date().toISOString()
 
         const [
-          { data: defs },
           { data: futuros },
           { data: ultimos },
           { data: torneios },
           { data: plantel },
         ] = await Promise.all([
-          supabase.from('financial_settings').select('*').maybeSingle(),
           supabase
             .from('events')
             .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name), field:fields(name, address)')
@@ -221,7 +208,6 @@ const Home: React.FC = () => {
 
         if (cancelado) return
 
-        setEpoca(getSeasonLabel(comOmissoes(defs)))
 
         // Rascunhos ficam de fora: a Home mostra o que está marcado a sério.
         const marcados = ((futuros as unknown as EventoBruto[]) ?? []).filter(e => e.is_active !== false)
@@ -485,34 +471,7 @@ const Home: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-2">
-      {/*
-        Cabeçalho: o clube, a época, o estado clínico e o sino dos comunicados
-        — que só existe aqui.
-
-        Eram duas linhas: uma com "Bom dia, Ricardo" e outra, por baixo, com o
-        clube e a época. O desenho junta tudo numa, e é o que liberta a altura
-        para o jogo abrir a página. O nome do próprio ficou onde faz falta:
-        atrás do avatar, que é a porta do perfil.
-      */}
-      <header className="flex items-center gap-3 pt-safe">
-        <img
-          src={emblema}
-          alt=""
-          className="w-[38px] h-[38px] rounded-full bg-white object-contain p-[3px] flex-none"
-        />
-        <div className="flex-1 min-w-0">
-          <p className="font-display font-extrabold text-[13.5px] text-white truncate">
-            {semFicha ? `${sigla} Veteranos` : `${sigla} Veteranos`}
-          </p>
-          <p className="text-[10.5px] text-white/60 truncate mt-px">
-            {epoca ? `Época ${epoca}` : saudacao()}
-          </p>
-        </div>
-        {!semFicha && <SinalPagamentos />}
-        {!semFicha && <PastilhaEstado />}
-        <AnnouncementsInboxButton tone="dark" size="md" />
-        <AvatarPerfil tamanho={38} />
-      </header>
+      {/* O cabeçalho (clube, época, canto) é o da moldura — `CabecalhoApp`. */}
 
       {estadoDaFicha === 'a-verificar' ? (
         <CartaoVidro className="h-40 animate-pulse" />

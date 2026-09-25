@@ -326,6 +326,10 @@ test('a barra de separadores mostra que há mais, e o realce acompanha o ativo',
      chega, os separadores ganham um ou dois píxeis e a fila volta a centrar
      o ativo — com razão, a geometria mudou. Espera-se por ele. */
   await page.evaluate(async () => { await document.fonts.ready })
+  /* E espera-se que a fila assente outra vez só com a seta da direita: sob a
+     carga da bateria inteira, a recentragem que o tipo de letra provoca ainda
+     estava a meio quando se clicava, e havia duas setas no ecrã. */
+  await expect(setas).toHaveCount(1)
   await setas.click()
   await expect.poll(() => fila.evaluate(el => el.scrollLeft)).toBeGreaterThan(0)
   /* E a fila fica onde a seta a pôs: medições que não mudam nada — a do

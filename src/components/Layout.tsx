@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { FaixaTopo } from './ui'
 import { BarraNavegacao, type ItemNavegacao } from './nav/BarraNavegacao'
 import { FolhaCriar } from './nav/FolhaCriar'
+import { CabecalhoApp } from './nav/CabecalhoApp'
 import { AreaDoEcra } from './EcraDetalhe'
 
 /**
@@ -84,7 +85,11 @@ const Layout: React.FC = () => {
           conjuntos de blocos inclinados sobrepostos. */}
       <FaixaTopo altura={location.pathname === '/' ? 340 : 250} />
 
-      <main className="flex-1 px-[18px] pt-3" style={{ marginBottom: `${margemFinal}px` }}>
+      {/* O cabeçalho da app, o mesmo em todos os ecrãs e preso ao topo ao
+          rolar — ver `CabecalhoApp`. */}
+      <CabecalhoApp />
+
+      <main className="flex-1 px-[18px] pt-1" style={{ marginBottom: `${margemFinal}px` }}>
         <AreaDoEcra>
           <Outlet />
         </AreaDoEcra>

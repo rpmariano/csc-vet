@@ -204,16 +204,14 @@ test('sobrepostos iguais em janela estreita e larga', async ({ page }) => {
 })
 
 /**
- * O título de um ecrã nunca passa por baixo do canto.
+ * O título de um ecrã cabe na coluna, a 390 e a 360px.
  *
- * O título estava ao lado do canto, e com o sinal de € o canto leva quatro
- * coisas: a 390px sobravam 148px para um título de 36px, e dez dos dezasseis
- * passavam por baixo do € — "Comunicados" em 104px. O canto passou a ter uma
- * linha sua e o título a largura toda por baixo (ver `CabecalhoEcra`).
- *
- * Mede-se o texto, e não a caixa do `<h1>`: a caixa tem sempre a largura da
- * coluna, e é o texto que transborda dela. E só vale com o € no canto — é o
- * pior caso, e sem ele o teste passava por não medir nada.
+ * Nasceu para outra coisa: o título estava ao lado do canto do cabeçalho, e
+ * com o sinal de € dez dos dezasseis passavam por baixo dele. O canto passou
+ * a ter uma linha sua, e a 2026-09-25 saiu do cabeçalho de cada ecrã para o da
+ * app (`CabecalhoApp`), preso ao topo. O que sobra verificar é que o texto do
+ * título — medido, e não a caixa do `<h1>`, que tem sempre a largura da
+ * coluna — não passa dela.
  */
 const TITULOS: [string, string][] = [
   ['Agenda', '/csc-vet/calendar'],
@@ -234,7 +232,7 @@ const TITULOS: [string, string][] = [
   ['Comunicados', '/csc-vet/announcements'],
 ]
 
-test('o título de cada ecrã nunca passa por baixo do canto', async ({ page }) => {
+test('o título de cada ecrã cabe na coluna', async ({ page }) => {
   await montarSupabaseFalso(page, FIXTURES)
   const problemas: string[] = []
 
@@ -242,34 +240,18 @@ test('o título de cada ecrã nunca passa por baixo do canto', async ({ page }) 
     await page.setViewportSize({ width: largura, height: 844 })
     for (const [nome, caminho] of TITULOS) {
       await page.goto(caminho)
-      const titulo = page.locator('header h1')
+      const titulo = page.locator('main h1')
       await expect(titulo).toHaveText(nome, { timeout: 15000 })
       // O Archivo a chegar muda a largura do texto; mede-se com ele.
       await page.evaluate(async () => { await document.fonts.ready })
 
-      const r = await titulo.evaluate(h1 => {
-        const header = h1.closest('header')!
+      const passa = await titulo.evaluate(h1 => {
         const range = document.createRange()
         range.selectNodeContents(h1)
-        const texto = Array.from(range.getClientRects())
-        /* Tudo o que se vê no cabeçalho e não é o título — as folhas, para a
-           caixa ser a do que está pintado: o €, o estado, o sino, a
-           fotografia, a sobrancelha. Sem depender de como estão arrumados. */
-        const outros = Array.from(header.querySelectorAll('*'))
-          .filter(el => el !== h1 && !h1.contains(el) && !el.contains(h1) && el.children.length === 0)
-          .map(el => el.getBoundingClientRect())
-          .filter(k => k.width > 0 && k.height > 0)
-        return {
-          comEuro: Array.from(header.querySelectorAll('button')).some(b => (b.textContent ?? '').includes('€')),
-          passa: Math.max(...texto.map(t => t.right)) - header.getBoundingClientRect().right,
-          toca: texto.some(t => outros.some(k =>
-            t.left < k.right && t.right > k.left && t.top < k.bottom && t.bottom > k.top)),
-        }
+        const direita = Math.max(...Array.from(range.getClientRects()).map(t => t.right))
+        return direita - (h1.closest('main')!.getBoundingClientRect().right)
       })
-
-      if (!r.comEuro) problemas.push(`${nome} a ${largura}px: sem o € no canto — não é o pior caso`)
-      if (r.passa > 0.5) problemas.push(`${nome} a ${largura}px: o título passa ${Math.round(r.passa)}px da coluna`)
-      if (r.toca) problemas.push(`${nome} a ${largura}px: o título passa por baixo do canto`)
+      if (passa > 0.5) problemas.push(`${nome} a ${largura}px: o título passa ${Math.round(passa)}px da coluna`)
     }
   }
 
