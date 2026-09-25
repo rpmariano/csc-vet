@@ -198,16 +198,19 @@ export const diasAtePrazo = (prazo: string, hoje: Date = new Date()): number => 
 }
 
 /**
- * Se o prazo de um encargo já passou. **O prazo é o último dia**: no próprio
- * dia ainda se está a tempo, e só no seguinte se passa a dever.
+ * Se um prazo já passou — o de um encargo que se cobra aos atletas, ou o de um
+ * pagamento que o clube tem de fazer. **O prazo é o último dia**: no próprio
+ * dia ainda se está a tempo, e só no seguinte se passa a estar em atraso.
  *
- * Havia duas regras. O separador Encargos comparava `new Date() > new
+ * Havia três regras. O separador Encargos comparava `new Date() > new
  * Date(due_date)`, e uma data sem hora é meia-noite UTC — em Lisboa, a uma da
  * manhã do próprio dia: quem tinha até 30/09 aparecia como devedor às dez da
  * manhã de 30/09, enquanto o sinal de € do próprio atleta ainda lhe dizia
- * "a vencer". Compara-se o dia do calendário, e é a mesma conta nos dois.
+ * "a vencer". A Visão Geral fazia o mesmo aos Pagamentos Programados, e a
+ * lista deles normalizava a meia-noite local, que acerta em Lisboa mas não a
+ * oeste de UTC. Compara-se o dia do calendário, e é a mesma conta em todos.
  */
-export const encargoVencido = (prazo: string | null | undefined, hoje: Date = new Date()): boolean =>
+export const prazoPassou = (prazo: string | null | undefined, hoje: Date = new Date()): boolean =>
   !!prazo && diasAtePrazo(prazo, hoje) < 0
 
 /** Prazo-limite do seguro para uma época (mês/dia de definições, no ano em que esse mês cai dentro da época). */

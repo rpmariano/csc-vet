@@ -15,7 +15,7 @@ import { Modal } from '../components/Modal'
 // das vistas v_quota_status e v_financial_movements. De finance.ts só sobra o
 // que é regra de negócio pura — a época e o prazo do seguro.
 import {
-  DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes, formatMonthYear, encargoVencido,
+  DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes, formatMonthYear, prazoPassou,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
@@ -1703,7 +1703,7 @@ const FinancePage: React.FC = () => {
                       grupos dizem o estado uma vez, e a linha fica com o nome
                       e o número.
                     */
-                    const isPastDeadline = encargoVencido(c.due_date)
+                    const isPastDeadline = prazoPassou(c.due_date)
                     const participantes = c.participantIds
                       .map(playerId => {
                         const p = players.find(pl => pl.id === playerId)
