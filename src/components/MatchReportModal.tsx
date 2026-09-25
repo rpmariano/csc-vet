@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { X, Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock, AlertTriangle } from 'lucide-react'
+import { Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock, AlertTriangle } from 'lucide-react'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJogo'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { toast } from '../context/ToastContext'
-import { VistaDetalhe } from './VistaDetalhe'
+import { EcraDetalhe } from './EcraDetalhe'
 import { Modal } from './Modal'
 import { CLUBE_SIGLA } from '../lib/clube'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -19,6 +19,8 @@ interface MatchReportModalProps {
   isCoachOrAdmin: boolean
   onSaved?: () => void
   tournamentRules?: any
+  /** Nome do ecrã de onde se abriu, para o "‹" do topo. */
+  voltarPara?: string
 }
 
 interface PlayerMatchStat {
@@ -93,7 +95,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   event,
   isCoachOrAdmin,
   onSaved,
-  tournamentRules
+  tournamentRules,
+  voltarPara = 'Fichas',
 }) => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -479,68 +482,40 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
   return (
     <>
-    <VistaDetalhe
-      isOpen={isOpen}
-      onClose={onClose}
-      tone="dark"
-      size="3xl"
-      showCloseButton={false}
-      ariaLabel={`Ficha de jogo: ${leftSigla} vs ${rightSigla}`}
-      voltarTexto="Voltar"
-      className="border-2 border-csc-gold/60"
+    <EcraDetalhe
+      aberto={isOpen}
+      voltarPara={voltarPara}
+      aoVoltar={onClose}
+      sobrancelha="Ficha oficial de jogo"
+      titulo={`${leftSigla} vs ${rightSigla}`}
+      legenda={[
+        event?.tournament?.name ?? (event?.is_friendly ? 'Jogo amigável' : 'Sem prova associada'),
+        event?.date_time
+          ? new Date(event.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+          : null,
+      ].filter(Boolean).join(' · ')}
     >
       <div className="space-y-5">
 
-        {/* Fechar a ficha. */}
-        <button
-          onClick={onClose}
-          aria-label="Fechar"
-          className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer z-20 transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          title="Fechar"
-        >
-          <X size={19} className="stroke-[2.5]" />
-        </button>
-
         {/*
-          Cabeçalho da ficha (ecrã 2a): a sobrancelha dourada diz o que isto é,
-          a prova em baixo diz de que jogo se trata, e o confronto é o título.
-
-          Estava tudo em pastilhas na mesma linha — "Ficha Oficial de Jogo",
-          "Amigável", o nome do torneio — três etiquetas a competir pela mesma
-          atenção. Só uma delas é o assunto.
+          O confronto é o título do ecrã, a prova e a data a legenda; aqui fica
+          só o que se faz com a ficha. Era um cabeçalho próprio dentro da
+          persiana — sobrancelha, prova, "CSC vs X", data —, e passou para o
+          cabeçalho do ecrã quando a ficha deixou de ser persiana.
         */}
-        <div className="pb-3 border-b border-white/10 pr-12 space-y-2">
-          <div>
-            <p className="font-display font-extrabold text-[9px] tracking-[0.16em] uppercase text-csc-gold">
-              Ficha oficial de jogo
-            </p>
-            <p className="text-[11px] text-white/62 mt-0.5">
-              {event?.tournament?.name ?? (event?.is_friendly ? 'Jogo amigável' : 'Sem prova associada')}
-            </p>
-          </div>
-
-          <h2 className="font-display font-black text-[26px] leading-none text-white tracking-[-0.02em]">
-            {leftSigla} <span className="text-white/35">vs</span> {rightSigla}
-          </h2>
-
-          <p className="text-[11px] text-white/62">
-            {event?.date_time && new Date(event.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
-          </p>
-
-          {isCoachOrAdmin && !jogoPorRealizar && !loading && (
-            <button
-              type="button"
-              onClick={() => setIsEditModalOpen(true)}
-              className="w-full min-h-12 mt-1 px-5 rounded-3xl bg-csc-gold text-csc-tinta border border-csc-gold
-                font-display font-extrabold text-[12.5px] flex items-center justify-center gap-2 cursor-pointer
-                transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
-              <Pencil size={14} />
-              <span>Editar ficha de jogo</span>
-            </button>
-          )}
-        </div>
+        {isCoachOrAdmin && !jogoPorRealizar && !loading && (
+          <button
+            type="button"
+            onClick={() => setIsEditModalOpen(true)}
+            className="w-full min-h-12 px-5 rounded-3xl bg-csc-gold text-csc-tinta border border-csc-gold
+              font-display font-extrabold text-[12.5px] flex items-center justify-center gap-2 cursor-pointer
+              transition-transform duration-150 active:scale-97
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+          >
+            <Pencil size={14} />
+            <span>Editar ficha de jogo</span>
+          </button>
+        )}
 
         {saveSuccess && (
           <div className="p-3 bg-csc-light/12 border border-csc-light/30 rounded-2xl text-csc-verde-texto text-xs font-black flex items-center gap-2">
@@ -835,16 +810,15 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         )}
 
       </div>
-    </VistaDetalhe>
+    </EcraDetalhe>
 
-    {/* Edição da Ficha de Jogo — formulário próprio, não a persiana de consulta:
-        pede um contentor mais deliberado, sem o gesto de arrastar que a fecharia
-        por engano com alterações por guardar. */}
+    {/* Edição da Ficha de Jogo — um formulário, por isso um Modal por cima do
+        ecrã da ficha. Já não é `stacked`: a ficha deixou de ser persiana, e
+        este é o único diálogo aberto. */}
     <Modal
       isOpen={isEditModalOpen && !loading && !jogoPorRealizar}
       onClose={guardaFicha.tentarFechar}
       size="3xl"
-      stacked
       title="Editar ficha de jogo"
       description={`${leftSigla} vs ${rightSigla}`}
       icon={<Pencil size={20} className="text-csc-gold" />}

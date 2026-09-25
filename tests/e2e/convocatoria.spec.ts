@@ -29,15 +29,21 @@ const convocatoriaMinha = (eventId: string) => ({
   status: 'called', responded_at: null, player: EU,
 })
 
-/** O bloco de resposta, na persiana do evento. */
+/**
+ * O ecrã do evento (`EcraDetalhe`): uma região com o nome do evento. Era uma
+ * persiana até 2026-09-25, e os testes procuravam-na como diálogo.
+ */
+const fichaDoEvento = (page: import('@playwright/test').Page) => page.getByRole('region').first()
+
+/** O bloco de resposta, no ecrã do evento. */
 const perguntaDaConvocatoria = (page: import('@playwright/test').Page) =>
-  page.getByRole('dialog').getByText(/Contamos contigo\?|Disseste que (sim|não)/)
+  fichaDoEvento(page).getByText(/Contamos contigo\?|Disseste que (sim|não)/)
 
 async function abre(page: import('@playwright/test').Page, fixtures: Fixtures, id: string) {
   await montarSupabaseFalso(page, fixtures)
   await page.goto(`/csc-vet/calendar?event=${id}`)
   await page.waitForLoadState('networkidle')
-  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(fichaDoEvento(page)).toBeVisible()
 }
 
 test('num treino perto, pergunta-se como em tudo o resto', async ({ page }) => {
@@ -52,7 +58,7 @@ test('um treino longe ainda não abriu — e diz isso, não que fechou', async (
   await abre(page, { events: [treino], callups: [convocatoriaMinha('tr')] }, 'tr')
 
   await expect(perguntaDaConvocatoria(page)).toHaveCount(0)
-  await expect(page.getByRole('dialog').getByText(/A resposta abre 6 dias antes do treino/)).toBeVisible()
+  await expect(fichaDoEvento(page).getByText(/A resposta abre 6 dias antes do treino/)).toBeVisible()
 })
 
 test('um treino fecha à hora a que começa, e não à de concentração', async ({ page }) => {
@@ -64,7 +70,7 @@ test('um treino fecha à hora a que começa, e não à de concentração', async
   await abre(page, { events: [treino], callups: [convocatoriaMinha('tr')] }, 'tr')
 
   await expect(perguntaDaConvocatoria(page)).toHaveCount(0)
-  await expect(page.getByRole('dialog').getByText(/o treino já começou/)).toBeVisible()
+  await expect(fichaDoEvento(page).getByText(/o treino já começou/)).toBeVisible()
 })
 
 test('num jogo publicado e com convocados, pergunta-se', async ({ page }) => {
@@ -73,7 +79,7 @@ test('num jogo publicado e com convocados, pergunta-se', async ({ page }) => {
 
   // Vinte dias antes: com a regra antiga só abriria a seis dias.
   await expect(perguntaDaConvocatoria(page)).toBeVisible()
-  await expect(page.getByRole('dialog').getByRole('button', { name: 'Sim' })).toBeVisible()
+  await expect(fichaDoEvento(page).getByRole('button', { name: 'Sim' })).toBeVisible()
 })
 
 test('num convívio, o mesmo que num jogo', async ({ page }) => {
@@ -88,7 +94,7 @@ test('um rascunho não aceita resposta', async ({ page }) => {
   await abre(page, { events: [rascunho], callups: [convocatoriaMinha('rs')] }, 'rs')
 
   await expect(perguntaDaConvocatoria(page)).toHaveCount(0)
-  await expect(page.getByRole('dialog').getByText(/Em rascunho/)).toBeVisible()
+  await expect(fichaDoEvento(page).getByText(/Em rascunho/)).toBeVisible()
 })
 
 test('sem ninguém convocado não há a quem perguntar', async ({ page }) => {
@@ -96,7 +102,7 @@ test('sem ninguém convocado não há a quem perguntar', async ({ page }) => {
   await abre(page, { events: [jogo], callups: [] }, 'vz')
 
   await expect(perguntaDaConvocatoria(page)).toHaveCount(0)
-  await expect(page.getByRole('dialog').getByText(/Convocatória por fazer/)).toBeVisible()
+  await expect(fichaDoEvento(page).getByText(/Convocatória por fazer/)).toBeVisible()
 })
 
 /**
@@ -267,7 +273,7 @@ test.describe('O cartão por convocar abre o evento', () => {
 
     await page.getByRole('button', { name: /Ver jogo por convocar/ }).click()
     await expect(page).toHaveURL(/\?event=pc/)
-    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(fichaDoEvento(page)).toBeVisible()
   })
 
   test('o "Convocar" não abre o detalhe por baixo', async ({ page }) => {
@@ -446,7 +452,7 @@ test.describe('Convocados que ficaram sem condições', () => {
     await page.goto('/csc-vet/calendar?event=lz')
     await page.waitForLoadState('networkidle')
     // E a persiana também — antes dizia 1.
-    await expect(page.getByRole('dialog').getByText(/Convocatória \(2\)/)).toBeVisible()
+    await expect(fichaDoEvento(page).getByText(/Convocatória \(2\)/)).toBeVisible()
   })
 
   test('o lesionado aparece marcado, e a recusa dele conta', async ({ page }) => {
@@ -454,7 +460,7 @@ test.describe('Convocados que ficaram sem condições', () => {
     await page.goto('/csc-vet/calendar?event=lz')
     await page.waitForLoadState('networkidle')
 
-    const persiana = page.getByRole('dialog')
+    const persiana = fichaDoEvento(page)
     await expect(persiana.getByText('1 sem condições')).toBeVisible()
     // A resposta que estava a ser engolida pelo filtro.
     await expect(persiana.getByText('1 recusado')).toBeVisible()
@@ -469,7 +475,7 @@ test.describe('Convocados que ficaram sem condições', () => {
     await page.goto('/csc-vet/calendar?event=lz')
     await page.waitForLoadState('networkidle')
 
-    const persiana = page.getByRole('dialog')
+    const persiana = fichaDoEvento(page)
     await persiana.getByRole('button', { name: /Expandir|Recolher/ }).first().click()
     await expect(persiana.getByText('1 convocado sem condições')).toBeVisible()
     await persiana.getByRole('button', { name: 'Tirar', exact: true }).click()
@@ -619,9 +625,9 @@ test.describe('A contagem de respostas é de quem gere', () => {
   test('na persiana, o atleta não leva a contagem por responder', async ({ page }) => {
     await montarSupabaseFalso(page, { events: [jogo], callups: convocatorias, ...comoJogador })
     await page.goto('/csc-vet/calendar?event=cg')
-    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(fichaDoEvento(page)).toBeVisible()
 
-    const persiana = page.getByRole('dialog')
+    const persiana = fichaDoEvento(page)
     await expect(persiana.getByText(/Convocatória \(2/)).toBeVisible()
     await expect(persiana.getByText(/sem resposta/i)).toHaveCount(0)
     await expect(persiana.getByText(/0 confirmados/)).toHaveCount(0)
@@ -732,11 +738,11 @@ test.describe('Um jogo só pergunta a quem foi convocado', () => {
     const jogo = { ...base, id: 'jg', title: null, type: 'match', date_time: DAQUI_A_DIAS(3), opponent_id: null }
     await montarSupabaseFalso(page, { events: [jogo], ...comOutroConvocado('jg') })
     await page.goto('/csc-vet/calendar?event=jg')
-    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(fichaDoEvento(page)).toBeVisible()
 
-    await expect(page.getByRole('dialog').getByText(/Contamos contigo\?/)).toHaveCount(0)
+    await expect(fichaDoEvento(page).getByText(/Contamos contigo\?/)).toHaveCount(0)
     /* E não fica calada: quem abre o jogo tem de perceber porquê. */
-    await expect(page.getByRole('dialog').getByText(/Não estás nesta convocatória/)).toBeVisible()
+    await expect(fichaDoEvento(page).getByText(/Não estás nesta convocatória/)).toBeVisible()
   })
 
   test('mas o treino continua a perguntar a todos os aptos', async ({ page }) => {

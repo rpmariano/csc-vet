@@ -108,7 +108,36 @@ body {
  * fundo do elemento raiz é que se propaga para a tela e lhes fica por baixo.
  */
 
-/* 
+/*
+ * A página por baixo de uma ficha aberta (`<EcraDetalhe>`).
+ *
+ * Fica montada — com o estado, os dados e o botão que abriu a ficha — mas sem
+ * ocupar espaço nem se ver: altura zero, e `visibility: hidden`, que também a
+ * tira da árvore de acessibilidade e da ordem do Tab.
+ *
+ * **Os diálogos que ela abre têm de continuar a ver-se.** O formulário de
+ * edição do atleta, a confirmação de apagar, o Editar da ficha de jogo: abrem
+ * por cima da ficha, mas vivem na árvore da página. São todos `fixed` — não
+ * são cortados pelo `overflow` de um antepassado, porque o bloco que os contém
+ * é a janela — e a regra de baixo devolve-lhes a visibilidade. Por isso não se
+ * usa `display: none` (que os levava com a página) nem `aria-hidden`.
+ */
+.pagina-por-baixo {
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+.pagina-por-baixo .fixed {
+  visibility: visible;
+}
+
+/* O título de um ecrã recebe o foco ao abrir (para um leitor de ecrã o
+   anunciar), mas não é um controlo: não desenha anel. */
+h1[tabindex='-1']:focus {
+  outline: none;
+}
+
+/*
  * Correção do bug de renderização de sombras nos cantos arredondados em mobile (Tailwind v4)
  * Elimina o efeito visual de "cantos dobrados/cortados" em cartões e círculos
  */

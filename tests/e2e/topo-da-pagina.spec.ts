@@ -76,20 +76,23 @@ test('trocar de secção dentro do Clube abre no topo', async ({ page }) => {
 })
 
 /*
-  A contrapartida: uma persiana de detalhe abre por cima da lista, e fechá-la
-  tem de devolver a pessoa ao sítio de onde a abriu. Se o salto ao topo também
-  valesse aqui, perdia-se o lugar a cada ficha que se espreitasse.
+  A contrapartida: uma ficha é um ecrã e abre no topo, mas voltar dela tem de
+  devolver a pessoa ao sítio da lista de onde a abriu. Se o salto ao topo
+  valesse também no regresso, perdia-se o lugar a cada ficha que se
+  espreitasse. (Até 2026-09-25 a ficha era uma persiana por cima da lista, e
+  o teste era só a segunda metade.)
 */
-test('abrir e fechar uma ficha não perde o lugar na lista', async ({ page }) => {
+test('uma ficha abre no topo, e voltar dela não perde o lugar na lista', async ({ page }) => {
   await page.goto('/csc-vet/team-management')
   await expect(page.getByRole('heading', { name: 'Plantel' }).first()).toBeVisible()
   await desceAoFundo(page)
   const antes = await scroll(page)
 
   await page.getByRole('button', { name: /^Ver a ficha/ }).last().click()
-  await expect(page.locator('[role="dialog"]')).toHaveCount(1)
-  await page.goBack()
-  await expect(page.locator('[role="dialog"]')).toHaveCount(0)
+  await expect(page.getByText('Gestão do atleta')).toBeVisible()
+  await expect.poll(() => scroll(page)).toBe(0)
 
-  expect(await scroll(page)).toBe(antes)
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Plantel' }).first()).toBeVisible()
+  await expect.poll(() => scroll(page)).toBe(antes)
 })

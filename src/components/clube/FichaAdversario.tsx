@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin, Pencil, Trash2, Phone, User, Shield } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
-import { VistaDetalhe } from '../VistaDetalhe'
+import { EcraDetalhe } from '../EcraDetalhe'
 import { formatOpponentSigla } from '../../lib/siglas'
 import { EtiquetaSeccao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
@@ -53,6 +53,8 @@ interface ProvaDoAdversario {
 }
 
 interface FichaAdversarioProps {
+  /** Há um `?adversario=` no endereço — mesmo que ainda esteja a carregar. */
+  aberto: boolean
   adversario: AdversarioDaFicha | null
   /** Nome do campo principal, já resolvido pela página. */
   campoPrincipal: { id: string; name: string; address: string } | null
@@ -84,6 +86,7 @@ function comoNosCorreu(jogo: Confronto): keyof typeof RESULTADO | null {
 }
 
 export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
+  aberto,
   adversario,
   campoPrincipal,
   siglaClube,
@@ -177,18 +180,19 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
   )
 
   return (
-    <VistaDetalhe
-      isOpen={Boolean(adversario)}
-      onClose={aoFechar}
-      title={adversario?.name ?? ''}
-      description="Adversário"
-      ariaLabel={'Ficha do adversário ' + (adversario?.name ?? '')}
+    <EcraDetalhe
+      aberto={aberto}
+      voltarPara="Adversários"
+      aoVoltar={aoFechar}
+      titulo={adversario?.name ?? 'Adversário'}
     >
-      {adversario && (
+      {!adversario ? (
+        <div className="cartao-simples h-40 animate-pulse" role="status" aria-label="A carregar o adversário" />
+      ) : (
         <div className="space-y-3">
           {/*
-            O cartão de identidade **não repete o nome**: esse é o título da
-            persiana, logo por cima. Repetia-o truncado e punha-lhe por baixo o
+            O cartão de identidade **não repete o nome**: esse é o título do
+            ecrã, logo por cima. Repetia-o truncado e punha-lhe por baixo o
             nome do campo — que num clube como o "Grupo Desportivo dos
             Pescadores da Costa da Caparica" é quase a mesma frase, e lia-se o
             nome três vezes seguidas. O campo tem a sua secção mais abaixo.
@@ -440,7 +444,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
           )}
         </div>
       )}
-    </VistaDetalhe>
+    </EcraDetalhe>
   )
 }
 

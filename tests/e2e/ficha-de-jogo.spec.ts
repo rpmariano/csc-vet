@@ -54,12 +54,14 @@ const FIXTURES = {
 const abreFicha = async (page: import('@playwright/test').Page) => {
   await montarSupabaseFalso(page, FIXTURES)
   await page.goto('/csc-vet/competicao?ver=fichas&jogo=j1')
-  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 })
-  /* O botão de dentro da ficha, e não o cartão da lista — que também se chama
-     "Editar a ficha do jogo com…" e está por baixo da persiana. */
-  await page.getByRole('dialog').getByRole('button', { name: /Editar ficha de jogo/i }).click()
-  // O painel de edição é o de cima da pilha.
-  await expect(page.getByRole('dialog').last()).toContainText('Esquema Tático')
+  /* A ficha é um ecrã; o botão é o de dentro dela, e não o cartão da lista —
+     que também se chama "Editar a ficha do jogo com…" e está escondido por
+     baixo. */
+  const ficha = page.getByRole('region', { name: / vs / })
+  await expect(ficha).toBeVisible({ timeout: 15000 })
+  await ficha.getByRole('button', { name: /Editar ficha de jogo/i }).click()
+  // A edição é o único diálogo: um formulário por cima do ecrã da ficha.
+  await expect(page.getByRole('dialog')).toContainText('Esquema Tático')
 }
 
 test('somar mais golos do que o resultado não grava', async ({ page }) => {

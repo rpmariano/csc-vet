@@ -11,13 +11,12 @@ import {
   Users,
   Swords,
   ChevronRight,
-  ChevronLeft,
   ExternalLink,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
-import { CabecalhoEcra, EtiquetaSeccao, CartaoSimples } from '../components/ui'
+import { BotaoVoltar, CabecalhoEcra, EtiquetaSeccao, CartaoSimples } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import { CLUBE_NOME } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
@@ -233,16 +232,7 @@ const ClubePage: React.FC = () => {
   if (seccao) {
     return (
       <div className="relative">
-        <button
-          type="button"
-          onClick={voltarAoIndice}
-          className="min-h-11 -ml-1 pr-3 flex items-center gap-1 text-csc-gold font-display font-extrabold text-[11px] cursor-pointer
-            transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-        >
-          <ChevronLeft size={16} />
-          <span>Clube</span>
-        </button>
+        <BotaoVoltar para="Clube" aoVoltar={voltarAoIndice} />
         <CabecalhoEcra titulo={seccao.titulo} className="mb-4" />
         <seccao.Componente />
       </div>

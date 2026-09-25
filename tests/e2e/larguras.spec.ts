@@ -95,9 +95,14 @@ const ECRAS = [
   ['Conta de um atleta', `/csc-vet/finance?ver=atletas&conta=${COLEGA.id}`],
   ['Comunicados', '/csc-vet/announcements'],
   ['Definições', '/csc-vet/settings'],
+  /* As fichas são ecrãs desde 2026-09-25 (ver `EcraDetalhe`), e entram aqui
+     como os outros; a de atleta e o dossier estavam nos sobrepostos. */
   ['Detalhe do evento', '/csc-vet/calendar?event=e2'],
   ['Ficha do adversário', '/csc-vet/clube?ver=adversarios&adversario=o1'],
   ['Ficha do campo', '/csc-vet/clube?ver=campos&campo=f1'],
+  ['Ficha de atleta', `/csc-vet/team-management?atleta=${UTILIZADOR_TESTE.id}`],
+  ['Dossier de convocatória', '/csc-vet/events?convocatoria=e1'],
+  ['Ficha de jogo', '/csc-vet/competicao?ver=fichas&jogo=j1'],
 ] as const
 
 /** O que se compara: texto visível, largura da coluna, e se a página faz scroll lateral. */
@@ -161,8 +166,6 @@ const SOBREPOSTOS: [string, string, (p: Page) => Promise<void>][] = [
     await p.getByRole('button', { name: /Ver .* na convocatória/ }).first().click({ timeout: 4000 })
   }],
   ['Confirmar eliminar', '/csc-vet/calendar?event=e2', async p => { await p.getByRole('button', { name: /Eliminar evento/ }).click({ timeout: 4000 }) }],
-  ['Ficha de atleta', '/csc-vet/team-management', async p => { await p.getByRole('button', { name: /^Ver a ficha de / }).first().click({ timeout: 4000 }) }],
-  ['Dossier de convocatória', '/csc-vet/events', async p => { await p.getByRole('button', { name: /^Ver os detalhes de / }).first().click({ timeout: 4000 }) }],
   ['Partilhar as contas', '/csc-vet/finance?ver=atletas', async p => { await p.getByRole('button', { name: 'Partilhar' }).click({ timeout: 4000 }) }],
   ['Filtros das contas', '/csc-vet/finance?ver=atletas', async p => { await p.getByRole('button', { name: 'Filtros', exact: true }).click({ timeout: 4000 }) }],
 ]

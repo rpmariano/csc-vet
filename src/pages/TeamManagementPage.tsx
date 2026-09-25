@@ -30,7 +30,7 @@ import { useAuth, extractRolesFromProfile, cleanNotesFromRolesTag } from '../con
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector from '../components/SoccerPitchSelector'
 import { parsePositions, normalizePositionName, siglasDasPosicoes } from '../lib/posicoes'
-import { VistaDetalhe } from '../components/VistaDetalhe'
+import { EcraDetalhe } from '../components/EcraDetalhe'
 import { useSearchParams } from 'react-router-dom'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -448,8 +448,7 @@ const TeamManagementPage: React.FC = () => {
   }
 
   // Ver uma ficha é navegar: o endereço passa a ter ?atleta=<id>, portanto a
-  // ficha tem link próprio e o botão de retroceder do browser fecha-a. No
-  // desktop deixa de ser uma persiana e passa a ser a página (ver VistaDetalhe).
+  // ficha tem link próprio e o botão de retroceder do browser volta à lista.
   const openDetailModal = (p: Profile) => {
     setSelectedProfile(p)
     setSearchParams({ atleta: p.id })
@@ -2200,51 +2199,27 @@ const TeamManagementPage: React.FC = () => {
       )}
       </div>
 
-      {/* MODAL 2: DETALHES COMPLETOS DA FICHA DE ATLETA (DOSSIER PC & MOBILE).
-          A condição usa só `selectedProfile` (nunca é limpo ao fechar) — a persiana
-          abre e fecha pelo endereço; o conteúdo fica retido para poder deslizar
-          para fora suavemente em vez de desaparecer no instante em que se fecha. */}
+      {/* A ficha do atleta (ecrã 3b) é um ecrã, não uma persiana — ver
+          `EcraDetalhe`. Continua no endereço (`?atleta=`). */}
       {selectedProfile && (
-        <VistaDetalhe
-          isOpen={isDetailModalOpen}
-          onClose={() => fecharFicha()}
-          tone="dark"
-          size="6xl"
-          showCloseButton={false}
-          ariaLabel={`Ficha de ${selectedProfile.name}`}
-          voltarTexto="Voltar ao plantel"
-          className="border-2 border-amber-400/40"
+        <EcraDetalhe
+          aberto={isDetailModalOpen}
+          voltarPara="Plantel"
+          aoVoltar={() => fecharFicha()}
+          titulo={selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name}
+          legenda={[
+            (selectedProfile.shirt_name || selectedProfile.nickname) ? selectedProfile.name : null,
+            selectedProfile.jersey_number ? `nº ${selectedProfile.jersey_number}` : 'sem número',
+            parsePositions(selectedProfile.position).length > 0 && extractRolesFromProfile(selectedProfile).includes('player')
+              ? normalizePositionName(parsePositions(selectedProfile.position)[0])
+              : null,
+          ].filter(Boolean).join(' · ')}
         >
           <div className="space-y-6">
-            {/* Fechar a persiana. */}
-            <button
-              type="button"
-              onClick={() => fecharFicha()}
-              aria-label="Fechar"
-              title="Fechar"
-              className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center z-30 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
-              <X size={18} />
-            </button>
-
             {/*
-              Ficha do atleta (ecrã 3b). A fotografia grande, o nome, o número
-              e o estado — e as posições logo a seguir, porque é o que se vem
-              cá ver.
-
-              Era uma grelha de doze colunas com um dossier ao lado do cartão
-              de identidade, desenhada para o desktop que já não existe. Numa
-              coluna de 480px isso empilhava-se em qualquer ordem menos a
-              certa.
-            */}
-            {/*
-              Sem `pr-12`. O botão de fechar flutua por cima do canto, e a
-              margem à direita servia para lhe dar lugar — mas num cartão
-              centrado ela estreita a caixa só de um lado, e o `items-center`
-              passa a centrar em relação ao que sobra: a fotografia, o nome e
-              o estado ficavam meia dúzia de píxeis à esquerda do centro real.
-              A fotografia é de 88px e fica bem longe do botão; o nome vem
-              abaixo dele.
+              O nome, o número e a posição são o título e a legenda do ecrã;
+              o cartão fica com o que eles não dizem — a fotografia, o estado
+              e as funções. (Um cartão não repete o título do ecrã em que está.)
             */}
             <div className="cartao-vidro p-4 flex flex-col items-center text-center gap-2.5">
               {selectedProfile.photo_url ? (
@@ -2263,20 +2238,6 @@ const TeamManagementPage: React.FC = () => {
                 </span>
               )}
 
-              <div>
-                <h2 className="font-display font-black text-[22px] leading-none text-white tracking-[-0.02em]">
-                  {selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name}
-                </h2>
-                {(selectedProfile.shirt_name || selectedProfile.nickname) && (
-                  <p className="text-[11px] text-white/62 mt-1">{selectedProfile.name}</p>
-                )}
-                <p className="font-display font-bold text-[11.5px] text-csc-gold mt-1">
-                  {selectedProfile.jersey_number ? `nº ${selectedProfile.jersey_number}` : 'sem número'}
-                  {parsePositions(selectedProfile.position).length > 0 && extractRolesFromProfile(selectedProfile).includes('player')
-                    ? ` · ${normalizePositionName(parsePositions(selectedProfile.position)[0])}`
-                    : ''}
-                </p>
-              </div>
 
               <button
                 type="button"
@@ -2777,7 +2738,7 @@ const TeamManagementPage: React.FC = () => {
             )}
 
           </div>
-        </VistaDetalhe>
+        </EcraDetalhe>
       )}
 
       {/* MODAL 3: ASSOCIAR UTILIZADOR A JOGADOR */}

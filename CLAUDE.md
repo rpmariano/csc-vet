@@ -240,8 +240,11 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   **E um emblema em falta desenha um escudo, nunca as iniciais** — a mesma
   regra que já valia no cartão da Agenda: com a sigla ao lado, as iniciais no
   lugar do emblema eram lê-la duas vezes.
-  Só a ficha do adversário e a do campo dão `title` à `<VistaDetalhe>`, e é
-  onde isto pode acontecer (verificado a 2026-09-09).
+  Desde que as fichas são ecrãs (ver "Uma ficha com nome próprio é um ecrã"),
+  **todas** têm título — o nome da entidade —, e a regra vale nas seis: a do
+  atleta tirou o nome do cartão de identidade, a de jogo tirou o "CSC vs X" e a
+  data do seu cabeçalho interno, e o evento deixou de repetir o título num
+  convívio.
 - **Um cabeçalho de grupo escreve-se como etiqueta; a linha, como conteúdo.**
   Numa lista agrupada — "Os meus pagamentos" — o cabeçalho leva maiúsculas
   pequenas e espaçadas (`9.5px`, `tracking-[0.16em]`, `text-white/70`) sobre
@@ -454,9 +457,11 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   tocava no Plantel caía a meio da lista, sem cabeçalho. Está em
   `useLayoutEffect` e não em `useEffect` — o navegador pinta entre o render e o
   efeito, e via-se o ecrã novo a meio antes de saltar.
-  **As persianas de detalhe ficam de fora**: `?event=`, `?atleta=`, `?jogo=`,
-  `?campo=`, `?adversario=` e `?convocatoria=` abrem por cima da lista, e
-  fechá-las tem de devolver a pessoa ao sítio de onde abriu.
+  **As fichas não passam por aqui**: `?event=`, `?atleta=`, `?jogo=`,
+  `?campo=`, `?adversario=` e `?convocatoria=` também abrem no topo, mas quem
+  trata disso é a `<AreaDoEcra>` — que, ao voltar, devolve a lista ao sítio de
+  onde a ficha se abriu. Um salto ao topo no regresso perdia o lugar a cada
+  ficha que se espreitasse. As persianas (`?conta=`) não mexem no scroll.
   `tests/e2e/topo-da-pagina.spec.ts` cobre as duas metades.
 - **O canto do cabeçalho é o mesmo em todos os ecrãs**: estado clínico
   (`<PastilhaEstado>`), sino dos comunicados e fotografia, por esta ordem,
@@ -847,12 +852,34 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   (`ConvocatoriaAoCriar`, ecrãs 4f/4g). Era um bloco no meio do formulário, e
   ter dois sítios a escrever a mesma tabela é como se perde a conta de quem
   está chamado.
-- **Detalhe é persiana, e vai no endereço.** Ver um evento ou uma ficha de atleta
-  abre o `<VistaDetalhe>` e põe o item no endereço (`?event=`, `?atleta=`), portanto
-  há link próprio e o retroceder do browser fecha (ver Riscos, ponto 6). Modais ficam
-  para inserções curtas (criar um campo, confirmar) — não para consultar uma
-  entidade. Assim estão o detalhe do evento, a ficha de atleta, o dossier de
-  convocatória e a ficha de jogo.
+- **Uma ficha com nome próprio é um ecrã; a persiana é para espreitar.** O
+  detalhe do evento, a ficha de atleta, o dossier de convocatória, a ficha de
+  jogo e as fichas do adversário e do campo abrem num `<EcraDetalhe>`
+  (`src/components/EcraDetalhe.tsx`): "‹" para onde se volta, o cabeçalho de
+  sempre com o nome como título principal, e o scroll da janela. Continuam no
+  endereço (`?event=`, `?atleta=`…), portanto há link próprio e o retroceder do
+  browser volta à lista (ver Riscos, ponto 6).
+  Até 2026-09-25 eram persianas (`VistaDetalhe`, apagada), e a revisão de
+  acessibilidade desse dia mediu o custo: um diálogo modal a 90% da altura,
+  sem título principal nem regiões para um leitor de ecrã saltar; com o texto
+  a 200% sobrava uma fresta; e o que se abria lá dentro empilhava diálogo sobre
+  diálogo. **Ficam persiana** os filtros, a folha do [+], partilhar, os
+  alertas, o convite aos avisos, os pagamentos do próprio, a ficha rápida do
+  convocado e a conta de um atleta na Tesouraria (`?conta=`) — o pormenor de
+  uma linha, quando o trabalho é a lista.
+  **A lista não se desmonta, esconde-se.** A página fica montada — dados,
+  estado, o cartão tocado — e a `<AreaDoEcra>` (no `Layout`) põe-lhe a classe
+  `.pagina-por-baixo`: altura zero e `visibility: hidden`. A ficha desenha-se
+  ao lado, por portal. Ao voltar, a lista reaparece onde estava e o foco volta
+  ao cartão que a abriu. **Os diálogos da página continuam a ver-se** por cima
+  da ficha porque são todos `fixed` e a classe lhes devolve a visibilidade —
+  um diálogo novo que não seja `fixed`, ou um `display: none`/`aria-hidden` na
+  página por baixo, levava-os com ela.
+  **As fichas empilham-se:** a ficha de jogo abre-se a partir do evento e do
+  dossier como o ecrã seguinte, e só a de cima se vê. Modais ficam para
+  inserções curtas (criar um campo, confirmar, editar).
+  `tests/e2e/ecra-detalhe.spec.ts` cobre o contrato — título com foco,
+  nenhum diálogo, voltar pelo "‹" e pelo browser, o foco de volta ao cartão.
 - **Um deploy com a app aberta não pode acabar num ecrã em inglês.** Cada
   página é um `React.lazy` com hash no nome; o push para a `main` troca os
   hashes e a janela que ficou aberta pede ficheiros que já não existem
@@ -961,11 +988,13 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    ficha) esse fica retido, para a persiana poder deslizar para fora antes de
    desaparecer. Foi assim que as fichas do adversário e do campo nasceram, e são
    as únicas que nunca falharam.
-   Medido depois da correção: `vista-detalhe` e `dialogos`, nos dois perfis, com
+   Medido depois da correção: `vista-detalhe` (hoje `ecra-detalhe`) e `dialogos`, nos dois perfis, com
    `--retries=0 --repeat-each=3` — 126 execuções, zero falhas. Antes eram ~7%.
    **Com a causa resolvida, o `React.lazy` voltou às cinco páginas** que tinham
    sido tiradas dele, e o arranque desceu de ~157 kB para ~64 kB comprimidos.
-   O `tests/e2e/vista-detalhe.spec.ts` é o que impede isto de voltar.
+   O `tests/e2e/ecra-detalhe.spec.ts` é o que impede isto de voltar. (A regra
+   de derivar a abertura do endereço continua a valer com as fichas passadas a
+   ecrã.)
 
 **A identidade de uma pessoa é o endereço de email, e mais nada.** Uma conta liga-se
 à ficha que a direção criou quando — e só quando — o email do registo é igual ao

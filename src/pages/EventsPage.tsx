@@ -47,7 +47,7 @@ import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { hasMatchReport } from '../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 import { useModalA11y } from '../hooks/useModalA11y'
-import { VistaDetalhe } from '../components/VistaDetalhe'
+import { EcraDetalhe } from '../components/EcraDetalhe'
 import { useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../components/BottomSheet'
 import { Pastilha, Botao } from '../components/ui'
@@ -2248,34 +2248,22 @@ const EventsPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* MODAL DETALHADO DE CONVOCATÓRIA & GESTÃO COMPLETA DE RSVP                */}
       {/* ========================================================================= */}
-      {/* A ficha de jogo abre a partir do dossier de convocatória — uma
-          persiana por cima da outra, um nível abaixo na navegação. */}
+      {/* O dossier de convocatória é um ecrã, não uma persiana — ver
+          `EcraDetalhe`. A ficha de jogo abre a partir dele, como o ecrã
+          seguinte; a ficha rápida do convocado continua persiana, por cima. */}
       <div>
       {activeCallupModalEvent && (
-        <VistaDetalhe
-          isOpen={dossierAberto}
-          onClose={fecharDossier}
-          tone="dark"
-          size="2xl"
-          showCloseButton={false}
-          ariaLabel={`Convocatória: ${activeCallupModalEvent.title}`}
-          voltarTexto="Voltar aos eventos"
-          className="border-2 border-amber-400/40"
+        <EcraDetalhe
+          aberto={dossierAberto}
+          voltarPara="Eventos"
+          aoVoltar={fecharDossier}
+          sobrancelha="Convocatória"
+          titulo={activeCallupModalEvent.title || 'Convocatória'}
         >
           <div className="relative">
-            {/* Fechar o dossier. */}
-            <button
-              onClick={fecharDossier}
-              aria-label="Fechar"
-              title="Fechar"
-              className="absolute -top-1 right-0 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-all z-20 cursor-pointer active:scale-90 shadow-md border-2 border-white/40"
-            >
-              <X size={20} className="stroke-[2.5]" />
-            </button>
-
             {/* Topo Premium da Persiana/Modal de Dossier & RSVP */}
             <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold mb-5 relative overflow-hidden">
-              <div className="flex items-center justify-between gap-3 pr-8">
+              <div className="flex items-center justify-between gap-3">
                 {/* 1. Símbolo + 2. Pílula de Tipo + 3. Data e Hora */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   {/* Símbolo Oficial do CSC */}
@@ -2467,10 +2455,10 @@ const EventsPage: React.FC = () => {
             })()}
 
           </div>
-        </VistaDetalhe>
+        </EcraDetalhe>
       )}
 
-      {/* A ficha rápida do convocado (4a), empilhada sobre o dossier. */}
+      {/* A ficha rápida do convocado (4a), uma persiana por cima do dossier. */}
       {activeCallupModalEvent && (() => {
         const tira = (eventCallups[activeCallupModalEvent.id] || []) as CallupWithPlayer[]
         const aberta = tira.find(c => c.id === convocadoAberto) ?? null
@@ -2992,6 +2980,7 @@ const EventsPage: React.FC = () => {
           event={activeCallupModalEvent}
           isCoachOrAdmin={!!isCoachOrAdmin}
           tournamentRules={tournaments.find(t => t.id === activeCallupModalEvent.tournament_id)?.rules}
+          voltarPara="Convocatória"
           onSaved={() => {
             fetchData()
           }}

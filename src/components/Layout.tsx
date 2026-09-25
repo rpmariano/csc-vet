@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { FaixaTopo } from './ui'
 import { BarraNavegacao, type ItemNavegacao } from './nav/BarraNavegacao'
 import { FolhaCriar } from './nav/FolhaCriar'
+import { AreaDoEcra } from './EcraDetalhe'
 
 /**
  * A moldura da app depois do redesenho de 2026.
@@ -84,7 +85,9 @@ const Layout: React.FC = () => {
       <FaixaTopo altura={location.pathname === '/' ? 340 : 250} />
 
       <main className="flex-1 px-[18px] pt-3" style={{ marginBottom: `${margemFinal}px` }}>
-        <Outlet />
+        <AreaDoEcra>
+          <Outlet />
+        </AreaDoEcra>
       </main>
 
       {/* O conteúdo passa por trás da barra translúcida; sem este esbatimento

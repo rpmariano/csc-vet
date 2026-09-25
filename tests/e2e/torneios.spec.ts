@@ -201,5 +201,5 @@ test('a linha do nosso jogo abre a ficha, e distingue quem ainda não a tem', as
 
   await comFicha.click()
   await expect(page).toHaveURL(/ver=fichas&jogo=ev1/)
-  await expect(page.locator('[role="dialog"]')).toBeVisible()
+  await expect(page.getByRole('region', { name: / vs / })).toBeVisible()
 })
