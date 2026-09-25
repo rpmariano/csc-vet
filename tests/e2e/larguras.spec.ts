@@ -91,8 +91,9 @@ const ECRAS = [
   ['Clube · adversários', '/csc-vet/clube?ver=adversarios'],
   ['Clube · torneios', '/csc-vet/clube?ver=torneios'],
   ['Financeiro', '/csc-vet/finance'],
-  ['Financeiro · por atleta', '/csc-vet/finance?ver=atletas'],
-  ['Conta de um atleta', `/csc-vet/finance?ver=atletas&conta=${COLEGA.id}`],
+  ['Relatórios', '/csc-vet/clube?ver=relatorios'],
+  ['Relatórios · contas por atleta', '/csc-vet/clube?ver=relatorios&relatorio=contas'],
+  ['Conta de um atleta', `/csc-vet/clube?ver=relatorios&relatorio=contas&conta=${COLEGA.id}`],
   ['Comunicados', '/csc-vet/announcements'],
   ['Definições', '/csc-vet/settings'],
   /* As fichas são ecrãs desde 2026-09-25 (ver `EcraDetalhe`), e entram aqui
@@ -133,6 +134,10 @@ test('todos os ecrãs iguais em janela estreita e larga', async ({ page }) => {
     await page.goto(caminho)
     await page.waitForLoadState('networkidle')
     await page.waitForTimeout(250)
+    /* E que o ecrã pare de mudar: sob a carga da bateria inteira, a lista dos
+       adversários chegou uma vez entre as duas medições, e a larga tinha cinco
+       linhas que a estreita ainda não tinha. */
+    await assentar(page)
     const estreita = await medir(page)
 
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -166,8 +171,8 @@ const SOBREPOSTOS: [string, string, (p: Page) => Promise<void>][] = [
     await p.getByRole('button', { name: /Ver .* na convocatória/ }).first().click({ timeout: 4000 })
   }],
   ['Confirmar eliminar', '/csc-vet/calendar?event=e2', async p => { await p.getByRole('button', { name: /Eliminar evento/ }).click({ timeout: 4000 }) }],
-  ['Partilhar as contas', '/csc-vet/finance?ver=atletas', async p => { await p.getByRole('button', { name: 'Partilhar' }).click({ timeout: 4000 }) }],
-  ['Filtros das contas', '/csc-vet/finance?ver=atletas', async p => { await p.getByRole('button', { name: 'Filtros', exact: true }).click({ timeout: 4000 }) }],
+  ['Partilhar as contas', '/csc-vet/clube?ver=relatorios&relatorio=contas', async p => { await p.getByRole('button', { name: 'Partilhar' }).click({ timeout: 4000 }) }],
+  ['Filtros das contas', '/csc-vet/clube?ver=relatorios&relatorio=contas', async p => { await p.getByRole('button', { name: 'Filtros', exact: true }).click({ timeout: 4000 }) }],
 ]
 
 test('sobrepostos iguais em janela estreita e larga', async ({ page }) => {
@@ -224,7 +229,8 @@ const TITULOS: [string, string][] = [
   ['Torneios', '/csc-vet/clube?ver=torneios'],
   ['Visão geral', '/csc-vet/finance'],
   ['Movimentos', '/csc-vet/finance?ver=movements'],
-  ['Por atleta', '/csc-vet/finance?ver=atletas'],
+  ['Relatórios', '/csc-vet/clube?ver=relatorios'],
+  ['Contas por atleta', '/csc-vet/clube?ver=relatorios&relatorio=contas'],
   ['Quotas', '/csc-vet/finance?ver=quotas'],
   ['Encargos', '/csc-vet/finance?ver=charges'],
   ['Despesas e receitas', '/csc-vet/finance?ver=expenses'],
@@ -240,7 +246,8 @@ test('o título de cada ecrã cabe na coluna', async ({ page }) => {
     await page.setViewportSize({ width: largura, height: 844 })
     for (const [nome, caminho] of TITULOS) {
       await page.goto(caminho)
-      const titulo = page.locator('main h1')
+      // O visível: uma ficha aberta esconde o título da lista por baixo.
+      const titulo = page.locator('main h1').filter({ visible: true })
       await expect(titulo).toHaveText(nome, { timeout: 15000 })
       // O Archivo a chegar muda a largura do texto; mede-se com ele.
       await page.evaluate(async () => { await document.fonts.ready })
