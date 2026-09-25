@@ -1,6 +1,5 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
 import { CartaoSimples, EtiquetaSeccao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 
@@ -81,7 +80,6 @@ export const UltimoJogo: React.FC<{ jogo: UltimoJogoDaHome; siglaClube: string }
               {jogo.prova ? ` · ${jogo.prova}` : ''}
             </span>
           </span>
-          <ChevronRight size={16} className="text-white/35 flex-none" />
         </div>
 
         {jogo.marcadores.length > 0 && (

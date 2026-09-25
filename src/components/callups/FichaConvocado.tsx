@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { nomeDoEcra } from '../../lib/rotas'
-import { CheckCircle2, XCircle, Trash2, Phone, MessageCircle, ChevronRight, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, XCircle, Trash2, Phone, MessageCircle, ShieldAlert } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { BottomSheet } from '../BottomSheet'
 import { EtiquetaSeccao } from '../ui'
@@ -388,7 +388,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => { triggerHaptic('success'); aoConfirmar() }}
+              onClick={() => { triggerHaptic('light'); aoConfirmar() }}
               aria-pressed={confirmado}
               className={`flex-1 h-12 rounded-3xl border font-display font-extrabold text-[12.5px] cursor-pointer
                 flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
@@ -420,7 +420,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
               transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
-            <Trash2 size={15} /> Remover da convocatória
+            <Trash2 size={15} /> Tirar da convocatória
           </button>
 
           {/* A ficha a sério — posições, contactos, documentos — é a do
@@ -437,7 +437,6 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
               <span className="flex-1 font-display font-extrabold text-[12.5px] text-white">
                 Abrir ficha completa
               </span>
-              <ChevronRight size={16} className="text-white/35 flex-none" />
             </Link>
           )}
         </div>

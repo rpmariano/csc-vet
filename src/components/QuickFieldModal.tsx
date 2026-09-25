@@ -133,7 +133,7 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
               className="px-5 py-2 bg-csc-dark hover:bg-black text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
             >
               <Plus size={14} className="text-csc-gold" />
-              <span>{isSaving ? 'A guardar...' : 'Guardar & Selecionar'}</span>
+              <span>{isSaving ? 'A guardar…' : 'Guardar e escolher'}</span>
             </button>
           </div>
         </form>

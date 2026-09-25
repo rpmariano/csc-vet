@@ -16,6 +16,7 @@ import { ResendCallupsModal } from '../ResendCallupsModal'
 import { ConfirmModal } from '../ConfirmModal'
 import { Botao } from '../ui'
 import type { TournamentRules } from '../clube/torneios'
+import { mensagemDeErro } from '../../lib/erros'
 
 /**
  * Editar um evento — o mesmo ecrã na Agenda e nos Eventos.
@@ -313,7 +314,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       await aoMudarConvocatoria()
       toast.success(novos.length > 0 ? texto(novos.length) : 'Já estavam todos convocados.')
     } catch (err) {
-      toast.error('Erro ao convocar: ' + (err instanceof Error ? err.message : 'erro inesperado'))
+      toast.error('Erro ao convocar: ' + mensagemDeErro(err))
     } finally {
       aConvocarRef.current = false
       setAConvocar(false)
@@ -329,9 +330,9 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       const { error } = await supabase.from('callups').delete().eq('event_id', evento.id)
       if (error) throw error
       await aoMudarConvocatoria()
-      toast.info('Todos os convocados foram removidos.')
+      toast.info('Todos os convocados foram tirados da convocatória.')
     } catch (err) {
-      toast.error('Erro ao remover todos: ' + (err instanceof Error ? err.message : 'erro inesperado'))
+      toast.error('Erro ao tirar todos: ' + mensagemDeErro(err))
     } finally {
       aConvocarRef.current = false
       setAConvocar(false)
@@ -363,7 +364,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     const existente = convocadoDe(p)
     if (existente) {
       const { error } = await supabase.from('callups').delete().eq('id', existente.id)
-      if (error) toast.error('Erro ao remover: ' + error.message)
+      if (error) toast.error('Erro ao tirar da convocatória: ' + mensagemDeErro(error))
       else await aoMudarConvocatoria()
       return
     }
@@ -381,7 +382,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       [{ event_id: evento.id, player_id: p.id, status: 'called' }],
       { onConflict: 'event_id, player_id', ignoreDuplicates: true },
     )
-    if (error) toast.error('Erro ao convocar: ' + error.message)
+    if (error) toast.error('Erro ao convocar: ' + mensagemDeErro(error))
     else await aoMudarConvocatoria()
   }
 
@@ -472,7 +473,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
         : 'Evento atualizado.')
       await aoGravado({ ...evento, ...payload })
     } catch (err) {
-      toast.error('Erro ao atualizar evento: ' + (err instanceof Error ? err.message : 'erro de ligação'))
+      toast.error('Erro ao atualizar evento: ' + mensagemDeErro(err))
     } finally {
       setAGravar(false)
     }
@@ -495,7 +496,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       setCampoRapido({ aberto: false, nome: '', morada: '', aGravar: false })
       toast.success('Campo criado e escolhido.')
     } catch (err) {
-      toast.error('Erro ao criar campo: ' + (err instanceof Error ? err.message : 'erro de ligação'))
+      toast.error('Erro ao criar campo: ' + mensagemDeErro(err))
       setCampoRapido(c => ({ ...c, aGravar: false }))
     }
   }
@@ -521,7 +522,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       setAdvRapido({ aberto: false, nome: '', sigla: '', campoId: '', contacto: '', telefone: '', aGravar: false })
       toast.success('Adversário registado.')
     } catch (err) {
-      toast.error('Erro ao criar adversário: ' + (err instanceof Error ? err.message : 'erro de ligação'))
+      toast.error('Erro ao criar adversário: ' + mensagemDeErro(err))
       setAdvRapido(a => ({ ...a, aGravar: false }))
     }
   }

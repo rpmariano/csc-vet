@@ -13,6 +13,7 @@ import { ConfirmModal } from '../ConfirmModal'
 import { FichaCampo } from './FichaCampo'
 import { formatClubSigla } from '../../lib/siglas'
 import { CAMPO, ETIQUETA, urlDoGoogleMaps, type Campo } from './comum'
+import { mensagemDeErro } from '../../lib/erros'
 
 /*
   Campos (ecrã 9f), com a ficha de cada um (9i) no endereço.
@@ -67,18 +68,22 @@ export const GestaoCampos: React.FC = () => {
     setModalAberto(true)
   }
 
+  const [aGravar, setAGravar] = useState(false)
+
   const gravar = async () => {
     if (!nome.trim()) {
       toast.warning('O nome do campo é obrigatório.')
       return
     }
     const valores = { name: nome.trim(), address: morada.trim() }
+    setAGravar(true)
     const { error } = emEdicao
       ? await supabase.from('fields').update(valores).eq('id', emEdicao)
       : await supabase.from('fields').insert([valores])
+    setAGravar(false)
 
     if (error) {
-      toast.error(`Erro ao ${emEdicao ? 'atualizar' : 'criar'} campo: ${error.message}`)
+      toast.error(`Erro ao ${emEdicao ? 'atualizar' : 'criar'} campo: ${mensagemDeErro(error)}`)
       return
     }
     toast.success(emEdicao ? 'Campo atualizado com sucesso!' : 'Campo criado com sucesso!')
@@ -100,12 +105,12 @@ export const GestaoCampos: React.FC = () => {
     setConfirmacao({
       isOpen: true,
       title: 'Eliminar campo',
-      description: `Tens a certeza que desejas eliminar o campo "${nomeDoCampo}"?`,
+      description: `Tens a certeza que queres eliminar o campo "${nomeDoCampo}"?`,
       onConfirm: async () => {
         setConfirmacao(prev => ({ ...prev, isOpen: false }))
         const { error } = await supabase.from('fields').delete().eq('id', id)
         if (error) {
-          toast.error('Erro ao eliminar campo: ' + error.message)
+          toast.error('Erro ao eliminar campo: ' + mensagemDeErro(error))
           return
         }
         toast.success('Campo eliminado!')
@@ -313,16 +318,17 @@ export const GestaoCampos: React.FC = () => {
                 <button
                   type="button"
                   onClick={guarda.tentarFechar}
-                  className="px-5 py-2.5 border border-white/15 rounded-xl font-bold text-sm text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  className="min-h-11 px-5 py-2.5 border border-white/15 rounded-xl font-bold text-sm text-white hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98"
+                  disabled={aGravar}
+                  className="min-h-11 px-6 py-2.5 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98 disabled:opacity-60 disabled:cursor-wait"
                 >
                   <Save size={16} className="text-csc-tinta" />
-                  <span>{emEdicao ? 'Atualizar campo' : 'Guardar campo'}</span>
+                  <span>{aGravar ? 'A guardar…' : emEdicao ? 'Guardar alterações' : 'Criar campo'}</span>
                 </button>
               </div>
             </form>

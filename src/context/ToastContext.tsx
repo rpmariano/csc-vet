@@ -4,11 +4,18 @@ import { triggerHaptic } from '../utils/haptics'
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
 
+/** Um botão no próprio toast — hoje só o "Anular". */
+export interface AcaoToast {
+  rotulo: string
+  aoTocar: () => void
+}
+
 export interface ToastItem {
   id: string
   message: string
   type: ToastType
   duration: number
+  acao?: AcaoToast
 }
 
 export interface ToastContextType {
@@ -22,7 +29,7 @@ export interface ToastContextType {
 const ToastContext = createContext<ToastContextType | null>(null)
 
 // Singleton global para permitir chamadas diretas como toast.success(...)
-let globalShowToast: ((message: string, type?: ToastType, duration?: number) => void) | null = null
+let globalShowToast: ((message: string, type?: ToastType, duration?: number, acao?: AcaoToast) => void) | null = null
 
 export const toast = {
   show: (message: string, type: ToastType = 'info', duration?: number) => {
@@ -32,7 +39,18 @@ export const toast = {
   success: (message: string, duration?: number) => toast.show(message, 'success', duration),
   error: (message: string, duration?: number) => toast.show(message, 'error', duration),
   info: (message: string, duration?: number) => toast.show(message, 'info', duration),
-  warning: (message: string, duration?: number) => toast.show(message, 'warning', duration)
+  warning: (message: string, duration?: number) => toast.show(message, 'warning', duration),
+  /**
+   * Uma ação que se faz logo e se desfaz no toast: tirar um atleta da
+   * convocatória, desmarcar um mês de quota. São gestos frequentes e
+   * reversíveis — uma pergunta a cada toque cansava, e fazê-los sem volta
+   * deixava um engano sem remédio. Ficam mais tempo à vista, para dar tempo
+   * de chegar ao botão.
+   */
+  comAnular: (message: string, aoAnular: () => void) => {
+    if (globalShowToast) globalShowToast(message, 'success', 7000, { rotulo: 'Anular', aoTocar: aoAnular })
+    else console.log(`[Toast success]: ${message}`)
+  },
 }
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -42,7 +60,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 3800) => {
+  const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 3800, acao?: AcaoToast) => {
     // Aciona feedback háptico de acordo com o tipo de mensagem
     if (type === 'success') triggerHaptic('success')
     else if (type === 'error') triggerHaptic('error')
@@ -50,7 +68,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else triggerHaptic('medium')
 
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    const newToast: ToastItem = { id, message, type, duration }
+    const newToast: ToastItem = { id, message, type, duration, acao }
 
     setToasts(prev => [newToast, ...prev.slice(0, 3)]) // Máximo 4 toasts simultâneos
 
@@ -110,6 +128,20 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   {t.message}
                 </p>
               </div>
+
+              {t.acao && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeToast(t.id)
+                    t.acao?.aoTocar()
+                  }}
+                  className="alvo-toque shrink-0 -my-1 px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 font-display font-extrabold text-[11px] text-csc-gold cursor-pointer"
+                >
+                  {t.acao.rotulo}
+                </button>
+              )}
 
               <button
                 type="button"

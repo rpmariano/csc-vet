@@ -40,6 +40,7 @@ import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao } from '../components/ui
 import { SlidersHorizontal, Shield } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { getPlayerDisplayName, hasMatchReport, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, ROTULO_RESPOSTA } from '../lib/eventos'
+import { mensagemDeErro } from '../lib/erros'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -622,9 +623,9 @@ const CalendarPage: React.FC = () => {
   const handleDeleteSpecificEvent = (eventId: string) => {
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Eliminar Evento da Agenda',
-      description: 'Tens a certeza que desejas eliminar permanentemente este evento da agenda? Todas as convocatórias e respostas associadas serão apagadas.',
-      confirmText: 'Sim, Eliminar Evento',
+      title: 'Eliminar evento',
+      description: 'Tens a certeza que queres eliminar este evento? Todas as convocatórias e respostas associadas são eliminadas.',
+      confirmText: 'Sim, eliminar evento',
       cancelText: 'Cancelar',
       variant: 'danger',
       onConfirm: async () => {
@@ -637,7 +638,7 @@ const CalendarPage: React.FC = () => {
           fetchEventsAndData()
           toast.success('Evento eliminado com sucesso!')
         } catch (err: any) {
-          toast.error('Erro ao eliminar evento: ' + (err.message || 'Erro'))
+          toast.error('Erro ao eliminar evento: ' + mensagemDeErro(err))
         }
       }
     })
@@ -697,7 +698,7 @@ const CalendarPage: React.FC = () => {
       toast.success(status === 'confirmed' ? 'Contamos contigo.' : 'Resposta registada.')
     } catch (err: any) {
       console.error('Erro ao atualizar resposta:', err)
-      toast.error('Erro ao atualizar resposta: ' + (err.message || 'Erro'))
+      toast.error('Erro ao atualizar resposta: ' + mensagemDeErro(err))
     }
   }
 
@@ -716,12 +717,15 @@ const CalendarPage: React.FC = () => {
       }))
       toast.success(`Resposta marcada: ${ROTULO_RESPOSTA[newStatus]}`)
     } catch (err: any) {
-      toast.error('Erro ao marcar a resposta: ' + err.message)
+      toast.error('Erro ao marcar a resposta: ' + mensagemDeErro(err))
     }
   }
 
   // Treinador remove jogador de uma convocatória existente
   const handleRemovePlayerFromCallup = async (callupId: string, eventId: string) => {
+    /* Faz-se logo e desfaz-se no toast (decisão da auditoria de design):
+       tirar um atleta é um gesto frequente, e uma pergunta a cada um cansava. */
+    const removida = (eventCallups[eventId] || []).find(c => c.id === callupId)
     try {
       const { error } = await supabase.from('callups').delete().eq('id', callupId)
       if (error) throw error
@@ -730,9 +734,27 @@ const CalendarPage: React.FC = () => {
         ...prev,
         [eventId]: (prev[eventId] || []).filter(c => c.id !== callupId)
       }))
-      toast.info('Jogador removido da convocatória.')
+      if (!removida) {
+        toast.success('Atleta tirado da convocatória.')
+        return
+      }
+      toast.comAnular('Atleta tirado da convocatória.', async () => {
+        const { data, error: erroRepor } = await supabase
+          .from('callups')
+          .insert({ event_id: eventId, player_id: removida.player_id, status: removida.status })
+          .select('id')
+          .single()
+        if (erroRepor || !data) {
+          toast.error('Não foi possível repor o atleta: ' + mensagemDeErro(erroRepor))
+          return
+        }
+        setEventCallups(prev => ({
+          ...prev,
+          [eventId]: [...(prev[eventId] || []), { ...removida, id: data.id }]
+        }))
+      })
     } catch (err: any) {
-      toast.error('Erro ao remover jogador: ' + err.message)
+      toast.error('Erro ao tirar da convocatória: ' + mensagemDeErro(err))
     }
   }
 
@@ -2436,7 +2458,7 @@ const CalendarPage: React.FC = () => {
                                           : `${indisponiveis.length} convocados retirados da convocatória.`,
                                       )
                                     } catch (err: any) {
-                                      toast.error('Erro ao atualizar a convocatória: ' + err.message)
+                                      toast.error('Erro ao atualizar a convocatória: ' + mensagemDeErro(err))
                                     }
                                   },
                                 })

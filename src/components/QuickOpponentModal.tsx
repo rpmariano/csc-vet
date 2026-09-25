@@ -185,7 +185,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
               disabled={isSaving || !name.trim()}
               className="flex-1 px-4 py-2.5 bg-csc-dark hover:bg-csc-dark/90 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
-              <span>{isSaving ? 'A registar...' : '➕ Criar Adversário'}</span>
+              <span>{isSaving ? 'A guardar…' : 'Guardar e escolher'}</span>
             </button>
           </div>
         </form>

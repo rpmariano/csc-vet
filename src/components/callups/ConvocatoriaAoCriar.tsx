@@ -5,6 +5,7 @@ import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
 import { EcraDetalhe } from '../EcraDetalhe'
 import { Botao } from '../ui'
+import { mensagemDeErro } from '../../lib/erros'
 
 /**
  * Convocar, logo a seguir a guardar o evento (ecrãs 4f e 4g).
@@ -141,7 +142,7 @@ export const ConvocatoriaAoCriar: React.FC<{
       aoConvocar()
       aoFechar()
     } catch (err) {
-      toast.error('Não foi possível convocar: ' + (err instanceof Error ? err.message : 'erro inesperado'))
+      toast.error('Não foi possível convocar: ' + mensagemDeErro(err))
     } finally {
       setAGravar(false)
     }

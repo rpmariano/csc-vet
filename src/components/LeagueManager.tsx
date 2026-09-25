@@ -11,6 +11,7 @@ import { useClub } from '../context/ClubContext'
 import { equipaDoTorneio } from '../lib/classificacao'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
+import { mensagemDeErro } from '../lib/erros'
 
 interface LeagueManagerProps {
   tournamentId: string
@@ -54,6 +55,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     isOpen: boolean
     title: string
     description?: string
+    confirmText?: string
     onConfirm: () => void | Promise<void>
   }>({
     isOpen: false,
@@ -81,7 +83,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
 
     const firstError = tourRes.error || groupsRes.error || teamsRes.error || oppsRes.error
     if (firstError) {
-      toast.error('Erro ao carregar dados da liga: ' + firstError.message)
+      toast.error('Erro ao carregar dados da liga: ' + mensagemDeErro(firstError))
     }
 
     setLoading(false)
@@ -96,7 +98,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     const phase = parseInt(newGroupPhase) || 1
     const { error } = await supabase.from('tournament_groups').insert([{ tournament_id: tournamentId, name: newGroupName.trim(), phase }])
     if (error) {
-      toast.error('Não foi possível criar o grupo: ' + error.message)
+      toast.error('Não foi possível criar o grupo: ' + mensagemDeErro(error))
       return
     }
     toast.success('Grupo criado com sucesso!')
@@ -126,7 +128,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     }])
 
     if (error) {
-      toast.error('Não foi possível adicionar a equipa: ' + error.message)
+      toast.error('Não foi possível adicionar a equipa: ' + mensagemDeErro(error))
       return
     }
 
@@ -138,13 +140,14 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   const handleRemoveTeam = (id: string) => {
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Remover Equipa do Grupo',
-      description: 'Esta equipa deixa de fazer parte do grupo. Os resultados já registados não são apagados.',
+      title: 'Tirar equipa do grupo',
+      description: 'Esta equipa deixa de fazer parte do grupo. Os resultados já registados não são eliminados.',
+      confirmText: 'Sim, tirar do grupo',
       onConfirm: async () => {
         closeConfirmModal()
         const { error } = await supabase.from('tournament_teams').delete().eq('id', id)
         if (error) {
-          toast.error('Não foi possível remover a equipa: ' + error.message)
+          toast.error('Não foi possível tirar a equipa: ' + mensagemDeErro(error))
           return
         }
         fetchData()
@@ -188,7 +191,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                       onChange={e => setSelectedGroupForTeam(e.target.value)}
                       className="w-full px-3 py-2 bg-white/6 border border-white/12 rounded-lg text-sm"
                     >
-                      <option value="">Selecione o Grupo</option>
+                      <option value="">Escolhe o grupo</option>
                       {groups.map(g => (
                         <option key={g.id} value={g.id}>{g.name} (Fase {g.phase})</option>
                       ))}
@@ -201,7 +204,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                       onChange={e => setSelectedOpponentToAdd(e.target.value)}
                       className="w-full px-3 py-2 bg-white/6 border border-white/12 rounded-lg text-sm"
                     >
-                      <option value="">Selecione a Equipa</option>
+                      <option value="">Escolhe a equipa</option>
                       <option value="csc">{CLUBE_SIGLA} (nós)</option>
                       {opponents.map(o => (
                         <option key={o.id} value={o.id}>{o.name}</option>
@@ -314,6 +317,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
         isOpen={confirmModalConfig.isOpen}
         title={confirmModalConfig.title}
         description={confirmModalConfig.description}
+        confirmText={confirmModalConfig.confirmText}
         onConfirm={confirmModalConfig.onConfirm}
         onCancel={closeConfirmModal}
       />

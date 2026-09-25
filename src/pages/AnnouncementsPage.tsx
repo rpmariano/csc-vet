@@ -21,6 +21,7 @@ import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { CabecalhoEcra } from '../components/ui'
+import { mensagemDeErro } from '../lib/erros'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -188,7 +189,7 @@ const AnnouncementsPage: React.FC = () => {
       toast.success('Comunicado publicado com sucesso!')
       fetchAnnouncements()
     } catch (err: any) {
-      toast.error('Erro ao publicar comunicado: ' + (err.message || 'Erro'))
+      toast.error('Erro ao publicar comunicado: ' + mensagemDeErro(err))
     } finally {
       setIsPublishing(false)
     }
@@ -261,7 +262,7 @@ const AnnouncementsPage: React.FC = () => {
       setEditingAnn(null)
       toast.success('Alterações guardadas com sucesso!')
     } catch (err: any) {
-      toast.error('Erro ao guardar alterações: ' + (err.message || 'Erro'))
+      toast.error('Erro ao guardar alterações: ' + mensagemDeErro(err))
     } finally {
       setIsSavingEdit(false)
     }
@@ -285,7 +286,7 @@ const AnnouncementsPage: React.FC = () => {
     } catch {
       setAnnouncements(prev => prev.filter(ann => ann.id !== deletingAnn.id))
       setDeletingAnn(null)
-      showToast('Comunicado removido.')
+      showToast('Comunicado eliminado.')
     } finally {
       setIsDeleting(false)
     }
@@ -641,7 +642,7 @@ const AnnouncementsPage: React.FC = () => {
                               title="Eliminar comunicado"
                             >
                               <Trash2 size={14} />
-                              <span>Apagar</span>
+                              <span>Eliminar</span>
                             </button>
                           </div>
                         </div>
@@ -754,7 +755,7 @@ const AnnouncementsPage: React.FC = () => {
                   disabled={isSavingEdit || !editTitle.trim() || !editContent.trim()}
                   className="flex-1 px-4 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark font-black text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-md"
                 >
-                  {isSavingEdit ? 'A guardar...' : 'Guardar alterações'}
+                  {isSavingEdit ? 'A guardar…' : 'Guardar alterações'}
                 </button>
               </div>
             </form>
@@ -764,13 +765,13 @@ const AnnouncementsPage: React.FC = () => {
 
       <UnsavedChangesModal {...guardaEdicao.props} />
 
-      {/* Apagar pergunta pela confirmação partilhada, como em todo o lado.
+      {/* Eliminar pergunta pela confirmação partilhada, como em todo o lado.
           Era um diálogo escrito à mão, com botões de 40px. */}
       <ConfirmModal
         isOpen={!!deletingAnn}
-        title="Apagar este comunicado?"
+        title="Eliminar comunicado"
         description={deletingAnn ? `"${deletingAnn.title}" deixa de aparecer a toda a gente. Não há como desfazer.` : undefined}
-        confirmText="Apagar"
+        confirmText="Sim, eliminar comunicado"
         cancelText="Cancelar"
         variant="danger"
         isLoading={isDeleting}

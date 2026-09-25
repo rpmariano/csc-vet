@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
-import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, ChevronsUpDown, ChevronRight, ScrollText } from 'lucide-react'
+import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, ChevronsUpDown, ScrollText } from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
 import { useClub } from '../context/ClubContext'
@@ -12,6 +12,7 @@ import { Botao, Pastilha } from '../components/ui'
 import { calcularClassificacao, equipaDoTorneio, jogoTerminado } from '../lib/classificacao'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
+import { mensagemDeErro } from '../lib/erros'
 
 /** Campo e etiqueta dos formulários, o mesmo desenho da Agenda e dos Eventos. */
 const CAMPO =
@@ -217,10 +218,9 @@ export const StandingsPage = () => {
     const { error } = await supabase.from('tournament_matches').insert(rows)
     setSavingJornada(false)
     if (error) {
-      toast.error('Não foi possível criar a jornada: ' + error.message)
+      toast.error('Não foi possível criar a jornada: ' + mensagemDeErro(error))
       return
     }
-    triggerHaptic('success')
     toast.success(`Jornada ${matchday} criada com ${validFixtures.length} ${validFixtures.length === 1 ? 'jogo' : 'jogos'}.`)
     /* Quem acabou de criar a jornada quer vê-la, não a que estava aberta. */
     setJornadaAberta(prev => ({ ...prev, [jornadaModalGroupId]: matchday }))
@@ -244,10 +244,9 @@ export const StandingsPage = () => {
       status: hasScore ? 'finished' : 'scheduled',
     }).eq('id', matchId)
     if (error) {
-      toast.error('Não foi possível guardar o resultado: ' + error.message)
+      toast.error('Não foi possível guardar o resultado: ' + mensagemDeErro(error))
       return
     }
-    triggerHaptic('success')
     toast.success(hasScore ? 'Resultado registado!' : 'Jogo atualizado.')
     setEditingMatchId(null)
     fetchStandingsData()
@@ -262,10 +261,10 @@ export const StandingsPage = () => {
        continuava a achar que havia um resultado por gravar. */
     setEditingMatchId(null)
     if (error) {
-      toast.error('Não foi possível apagar o jogo: ' + error.message)
+      toast.error('Não foi possível eliminar o jogo: ' + mensagemDeErro(error))
       return
     }
-    toast.success('Jogo apagado.')
+    toast.success('Jogo eliminado.')
     fetchStandingsData()
   }
 
@@ -664,8 +663,8 @@ export const StandingsPage = () => {
                                       type="button"
                                       onClick={() => setMatchToDelete(m.id)}
                                       className="w-11 h-11 rounded-xl bg-csc-red/15 border border-csc-red/35 text-csc-vermelho-texto flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                                      title="Apagar jogo"
-                                      aria-label={`Apagar o jogo de ${casa.sigla} com ${fora.sigla}`}
+                                      title="Eliminar jogo"
+                                      aria-label={`Eliminar o jogo de ${casa.sigla} com ${fora.sigla}`}
                                     >
                                       <Trash2 size={14} />
                                     </button>
@@ -731,7 +730,6 @@ export const StandingsPage = () => {
                                   {conteudo}
                                   <span className="shrink-0 flex items-center gap-0.5 text-csc-gold" aria-hidden="true">
                                     <ScrollText size={13} />
-                                    <ChevronRight size={12} className="opacity-70" />
                                   </span>
                                 </Link>
                               )
@@ -791,7 +789,7 @@ export const StandingsPage = () => {
           <>
             <Botao aparencia="vidro" onClick={guardaJornada.tentarFechar}>Cancelar</Botao>
             <Botao onClick={handleCreateJornada} disabled={savingJornada}>
-              {savingJornada ? 'A criar...' : 'Criar Jornada'}
+              {savingJornada ? 'A guardar…' : 'Criar jornada'}
             </Botao>
           </>
         }
@@ -854,7 +852,7 @@ export const StandingsPage = () => {
                   <button
                     type="button"
                     onClick={() => removeFixtureRow(idx)}
-                    aria-label={`Remover o jogo ${idx + 1}`}
+                    aria-label={`Tirar o jogo ${idx + 1} da jornada`}
                     className="w-11 h-11 flex items-center justify-center text-csc-vermelho-texto rounded-xl cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                   >
                     <Trash2 size={14} />
@@ -880,8 +878,9 @@ export const StandingsPage = () => {
 
       <ConfirmModal
         isOpen={!!matchToDelete}
-        title="Apagar Jogo"
-        description="Este jogo é apagado e, se já tinha resultado, deixa de contar para a classificação do grupo."
+        title="Eliminar jogo"
+        description="Este jogo é eliminado e, se já tinha resultado, deixa de contar para a classificação do grupo."
+        confirmText="Sim, eliminar jogo"
         onConfirm={handleDeleteMatch}
         onCancel={() => setMatchToDelete(null)}
       />

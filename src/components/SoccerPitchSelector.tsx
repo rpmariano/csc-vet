@@ -132,7 +132,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
                   type="button"
                   onClick={() => togglePosition(pos)}
                   className="p-0.5 hover:bg-white/20 rounded-full transition-colors"
-                  title="Remover posição"
+                  title="Tirar posição"
                 >
                   <X size={12} />
                 </button>

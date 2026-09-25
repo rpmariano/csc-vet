@@ -58,7 +58,7 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
         </div>
 
         <div className="space-y-2.5 pt-1">
-          {/* Opção 1: Gravar e Sair */}
+          {/* Opção 1: guardar e sair */}
           <button
             type="button"
             disabled={isSaving}
@@ -68,10 +68,10 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
               disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
             <Save size={16} />
-            <span>{isSaving ? 'A guardar...' : 'Gravar e Sair'}</span>
+            <span>{isSaving ? 'A guardar…' : 'Guardar e sair'}</span>
           </button>
 
-          {/* Opção 2: Sair sem Gravar */}
+          {/* Opção 2: sair sem guardar */}
           <button
             type="button"
             disabled={isSaving}
@@ -79,10 +79,10 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
             className="w-full min-h-12 px-4 bg-csc-red/10 hover:bg-csc-red/15 text-csc-vermelho-texto font-bold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 border border-csc-red/25 disabled:opacity-50"
           >
             <LogOut size={16} />
-            <span>Sair sem Gravar</span>
+            <span>Sair sem guardar</span>
           </button>
 
-          {/* Opção 3: Cancelar / Continuar a Editar */}
+          {/* Opção 3: continuar a editar */}
           <button
             type="button"
             disabled={isSaving}
@@ -90,7 +90,7 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
             className="w-full min-h-11 px-4 bg-white/10 hover:bg-white/15 text-white/80 font-bold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             <ArrowLeft size={14} />
-            <span>Cancelar (Continuar a Editar)</span>
+            <span>Continuar a editar</span>
           </button>
         </div>
       </div>

@@ -138,7 +138,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               flex items-center justify-center gap-2 cursor-pointer active:scale-97 disabled:opacity-45
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${vStyles.confirmBtn}`}
           >
-            <span>{isLoading ? 'A processar...' : confirmText}</span>
+            <span>{isLoading ? 'A processar…' : confirmText}</span>
           </button>
 
           {/* Botão Cancelar */}

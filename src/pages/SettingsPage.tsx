@@ -34,6 +34,7 @@ import { OsMeusPagamentos } from '../components/OsMeusPagamentos'
 import { PreferenciasAvisos } from '../components/PreferenciasAvisos'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
+import { mensagemDeErro } from '../lib/erros'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -220,7 +221,7 @@ const SettingsPage: React.FC = () => {
 
       toast.success('Ficheiro carregado com sucesso!')
     } catch (err: any) {
-      toast.error('Erro ao carregar ficheiro: ' + err.message)
+      toast.error('Erro ao carregar ficheiro: ' + mensagemDeErro(err))
     } finally {
       setUploadingDoc(null)
     }
@@ -294,7 +295,7 @@ const SettingsPage: React.FC = () => {
       toast.success('Alterações guardadas com sucesso!')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err: any) {
-      const errTxt = 'Erro ao guardar alterações: ' + (err.message || 'Verifique os dados')
+      const errTxt = 'Erro ao guardar alterações: ' + mensagemDeErro(err)
       setSaveError(errTxt)
       toast.error(errTxt)
     } finally {

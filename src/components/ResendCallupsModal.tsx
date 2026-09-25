@@ -58,7 +58,7 @@ export const ResendCallupsModal: React.FC<ResendCallupsModalProps> = ({
 
         <div className="bg-csc-gold/10 border border-csc-gold/25 rounded-2xl p-4 text-xs text-csc-gold space-y-2">
           <p className="font-bold text-white">
-            Foram alterados os detalhes deste evento. Desejas reenviar o pedido de confirmação a todos os atletas convocados?
+            Foram alterados os detalhes deste evento. Queres reenviar o pedido de confirmação a todos os atletas convocados?
           </p>
           <ul className="space-y-1.5 text-white/80 text-[11.5px]">
             <li className="flex items-start gap-1.5">
@@ -82,7 +82,7 @@ export const ResendCallupsModal: React.FC<ResendCallupsModalProps> = ({
               disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
             <Send size={16} />
-            <span>{isSaving ? 'A processar...' : 'Sim, Reenviar Pedidos aos Atletas'}</span>
+            <span>{isSaving ? 'A processar…' : 'Sim, reenviar os pedidos'}</span>
           </button>
 
           <button

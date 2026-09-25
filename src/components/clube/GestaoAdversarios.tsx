@@ -13,6 +13,7 @@ import { ConfirmModal } from '../ConfirmModal'
 import { FichaAdversario } from './FichaAdversario'
 import { formatClubSigla } from '../../lib/siglas'
 import { CAMPO, ETIQUETA, urlDoGoogleMaps, type Adversario, type Campo } from './comum'
+import { mensagemDeErro } from '../../lib/erros'
 
 /*
   Adversários (ecrã 9d), com a ficha de cada um (9h) no endereço.
@@ -125,7 +126,7 @@ export const GestaoAdversarios: React.FC = () => {
       setModalAberto(false)
       carregar()
     } catch (err: any) {
-      toast.error('Erro ao guardar adversário: ' + err.message)
+      toast.error('Erro ao guardar adversário: ' + mensagemDeErro(err))
     } finally {
       setAEnviar(false)
     }
@@ -148,12 +149,12 @@ export const GestaoAdversarios: React.FC = () => {
     setConfirmacao({
       isOpen: true,
       title: 'Eliminar adversário',
-      description: `Tens a certeza que desejas eliminar o adversário "${nomeDoAdversario}"?`,
+      description: `Tens a certeza que queres eliminar o adversário "${nomeDoAdversario}"?`,
       onConfirm: async () => {
         setConfirmacao(prev => ({ ...prev, isOpen: false }))
         const { error } = await supabase.from('opponents').delete().eq('id', id)
         if (error) {
-          toast.error('Erro ao eliminar adversário: ' + error.message)
+          toast.error('Erro ao eliminar adversário: ' + mensagemDeErro(error))
           return
         }
         toast.success('Adversário eliminado!')
@@ -478,11 +479,11 @@ export const GestaoAdversarios: React.FC = () => {
                   className="px-6 py-2.5 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98"
                 >
                   {aEnviar ? (
-                    <span>A enviar dados...</span>
+                    <span>A guardar…</span>
                   ) : (
                     <>
                       <Save size={16} className="text-csc-tinta" />
-                      <span>{emEdicao ? 'Atualizar adversário' : 'Guardar adversário'}</span>
+                      <span>{emEdicao ? 'Guardar alterações' : 'Criar adversário'}</span>
                     </>
                   )}
                 </button>

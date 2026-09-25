@@ -172,7 +172,7 @@ test.describe('Comunicados', () => {
     await abrePagina(page, 'announcements', { announcements: [comunicado] })
 
     await verificaDialogo(page, () => page.getByRole('button', { name: 'Editar' }).first().click())
-    await verificaDialogo(page, () => page.getByRole('button', { name: 'Apagar' }).first().click())
+    await verificaDialogo(page, () => page.getByRole('button', { name: 'Eliminar' }).first().click())
   })
 })
 
@@ -214,7 +214,7 @@ test.describe('Eventos', () => {
 
     // Editar e eliminar vivem no detalhe.
     await expect(page.getByRole('button', { name: 'Modificar evento' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Apagar evento' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Eliminar evento' })).toBeVisible()
   })
 })
 

@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { BellRing, Check, ChevronRight, Moon } from 'lucide-react'
+import { BellRing, Check, Moon } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from './BottomSheet'
 import { Botao } from './ui'
 import { estadoDoPush, ligarAvisos, type EstadoPush } from '../lib/push'
+import { mensagemDeErro } from '../lib/erros'
 
 /**
  * O convite para ligar os avisos.
@@ -195,7 +196,6 @@ export const FaixaConvidarAvisos: React.FC<{ aoAbrir: () => void }> = ({ aoAbrir
         Sabes que foste convocado só se abrires a app
       </span>
     </span>
-    <ChevronRight size={16} className="text-white/35 shrink-0" />
   </button>
 )
 
@@ -220,7 +220,7 @@ export const PersianaConvidarAvisos: React.FC<{
 
   const ligar = async () => {
     if (!perfilId) return
-    triggerHaptic('success')
+    triggerHaptic('light')
     setALigar(true)
     try {
       const { error } = await supabase
@@ -247,7 +247,7 @@ export const PersianaConvidarAvisos: React.FC<{
       }
       aoLigado()
     } catch (err) {
-      toast.error('Não foi possível ligar os avisos: ' + (err instanceof Error ? err.message : 'erro inesperado'))
+      toast.error('Não foi possível ligar os avisos: ' + mensagemDeErro(err))
     } finally {
       setALigar(false)
     }

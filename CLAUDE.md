@@ -827,7 +827,26 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
 - **A cor de um tipo de evento vive em `CORES_TIPO`**, num sítio só. O ponto do
   calendário e a pastilha do cartão diziam a mesma coisa em tons diferentes —
   o convívio era `csc-azul-texto` no ponto e `blue-300` no rótulo.
-- Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
+- **O toque vibra `light`; o resultado vibra pelo toast.** O `toast.*` já
+  chama o `triggerHaptic` do seu tipo (`ToastContext`), por isso um
+  `triggerHaptic('success')` antes de um `toast.success` vibrava duas vezes —
+  o Financeiro e a Classificação faziam-no em cinco sítios. O `triggerHaptic`
+  à mão é para o gesto (`light`, ou `warning` antes de uma ação destrutiva).
+- **Eliminar é o verbo de tudo o que se apaga** (decisão de 2026-09-25): no
+  botão, no título da confirmação ("Eliminar encargo") e no botão que
+  confirma ("Sim, eliminar encargo"), e no toast ("Encargo eliminado.").
+  "Apagar" e "Remover" saíram. **Tirar** fica para desfazer uma pertença que
+  não apaga nada — um atleta da convocatória, uma equipa de um grupo.
+- **O que é frequente e reversível faz-se logo e desfaz-se no toast.** Tirar
+  um atleta da convocatória e desmarcar um mês de quota não perguntam: o
+  `toast.comAnular()` mostra "Anular" durante 7 s e repõe a linha. Eliminar
+  uma entidade (evento, encargo, categoria…) pergunta sempre, pelo
+  `<ConfirmModal>`.
+- **Um erro diz-se em português, pelo `mensagemDeErro()`** (`lib/erros.ts`).
+  Os toasts colavam o `error.message` do Supabase — "new row violates
+  row-level security policy…" — com cinco remendos diferentes para quando
+  vinha vazio. Os códigos do Postgres (42501, 23505, 23503…) e as falhas de
+  rede traduzem-se; o original vai para a consola.
 - **As três listas do plantel inteiro leem-se da mesma maneira.** Plantel,
   Quotas e Encargos mostram as mesmas pessoas, e mostravam-nas de três
   maneiras: no Plantel uma bola verde com o número, nas Quotas um número

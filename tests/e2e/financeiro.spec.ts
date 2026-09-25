@@ -92,7 +92,7 @@ test('registar um pagamento programado pergunta primeiro', async ({ page }) => {
   await expect(linha).toBeVisible({ timeout: 15000 })
   await linha.click()
 
-  const aviso = page.getByRole('dialog', { name: 'Registar Pagamento' })
+  const aviso = page.getByRole('dialog', { name: 'Registar pagamento' })
   await expect(aviso).toBeVisible()
   await expect(aviso).toContainText('700,00')
 
@@ -222,7 +222,7 @@ test('marcar um mês não devolve a lista ao topo', async ({ page }, testInfo) =
   expect(antes).toBeGreaterThan(0)
 
   await page.getByRole('button', { name: /outubro de 2026/i }).first().click()
-  await expect(page.getByText(/Quota registada|Pagamento de quota removido/)).toBeVisible()
+  await expect(page.getByText(/Quota registada|Quota desmarcada/)).toBeVisible()
   await page.waitForTimeout(600)
 
   expect(await page.evaluate(() => window.scrollY)).toBe(antes)
@@ -461,7 +461,7 @@ test('apagar um lançamento pergunta primeiro', async ({ page }) => {
      da página que despejava logo. */
   const aviso = page.locator('[role="dialog"]')
   await expect(aviso).toBeVisible()
-  await expect(aviso).toContainText('Eliminar Movimento')
+  await expect(aviso).toContainText('Eliminar movimento')
 
   // Desistir deixa a linha onde estava.
   await page.getByRole('button', { name: /Cancelar/ }).click()
@@ -540,13 +540,13 @@ test('com a despesa por gravar, trocar de separador pergunta — e a pergunta v�
   await expect(page).toHaveURL(/ver=expenses/)
 
   // Continuar a editar deixa tudo como estava.
-  await aviso.getByRole('button', { name: /Continuar a Editar/ }).click()
+  await aviso.getByRole('button', { name: /Continuar a editar/ }).click()
   await expect(aviso).toHaveCount(0)
   await expect(descricao).toHaveValue('Água para o jogo')
 
   // Sair sem gravar sai mesmo.
   await page.getByRole('tab', { name: 'Quotas' }).click()
-  await aviso.getByRole('button', { name: 'Sair sem Gravar' }).click()
+  await aviso.getByRole('button', { name: 'Sair sem guardar' }).click()
   await expect(page).toHaveURL(/ver=quotas/)
 })
 
@@ -625,5 +625,68 @@ test.describe('num fuso a oeste de UTC', () => {
     await expect(hoje).toContainText('Vence 20/01/2026')
     await expect(page.getByRole('button', { name: /Registar o pagamento de Arbitragens da época/ }))
       .toContainText('Em atraso desde 19/01/2026')
+  })
+})
+
+/**
+ * Regras de ação (vaga 3 da auditoria de design, 2026-09-25).
+ *
+ * Desmarcar um mês de quota apagava o pagamento sem volta; eliminar uma
+ * categoria despejava ao primeiro toque, sem pergunta. Hoje o que é frequente
+ * e reversível faz-se logo e desfaz-se no toast ("Anular"), e eliminar uma
+ * entidade pergunta sempre.
+ */
+test.describe('Regras de ação', () => {
+  const escritasDe = (page: import('@playwright/test').Page) => {
+    const escritas: string[] = []
+    page.on('request', r => {
+      if (!['GET', 'HEAD', 'OPTIONS'].includes(r.method()) && r.url().includes('/rest/v1/')) {
+        escritas.push(`${r.method()} ${new URL(r.url()).pathname}`)
+      }
+    })
+    return escritas
+  }
+
+  test('desmarcar um mês de quota faz-se logo, e o "Anular" repõe-no', async ({ page }) => {
+    await montarSupabaseFalso(page, {
+      ...FIXTURES_QUOTAS,
+      dues: [{
+        id: 'd-p3-2026-09', player_id: 'p3', month_year: '2026-09', amount: 10,
+        status: 'paid', paid_at: '2026-09-03T10:00:00Z', created_by: null,
+      }],
+    })
+    const escritas = escritasDe(page)
+    await page.goto('/csc-vet/finance?ver=quotas')
+    await expect(page.getByText(/em atraso a partir do dia/)).toBeVisible({ timeout: 15000 })
+
+    await page.locator('button[aria-expanded]').filter({ hasText: 'Alves' }).click()
+    await page.getByRole('button', { name: /setembro de 2026 — pago/i }).click()
+
+    // Sem pergunta: a linha sai logo.
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect.poll(() => escritas).toEqual(['DELETE /rest/v1/dues'])
+
+    await page.getByRole('button', { name: 'Anular' }).click()
+    await expect.poll(() => escritas).toEqual(['DELETE /rest/v1/dues', 'POST /rest/v1/dues'])
+  })
+
+  test('eliminar uma categoria pergunta primeiro', async ({ page }) => {
+    await montarSupabaseFalso(page, FIXTURES)
+    const escritas = escritasDe(page)
+    await page.goto('/csc-vet/finance?ver=settings')
+
+    const botao = page.getByRole('button', { name: 'Eliminar a categoria Seguro Desportivo' })
+    await expect(botao).toBeVisible({ timeout: 15000 })
+    await botao.click()
+
+    const aviso = page.getByRole('dialog', { name: 'Eliminar categoria' })
+    await expect(aviso).toBeVisible()
+    await aviso.getByRole('button', { name: 'Cancelar' }).click()
+    await expect(aviso).toHaveCount(0)
+    expect(escritas).toEqual([])
+
+    await botao.click()
+    await aviso.getByRole('button', { name: 'Sim, eliminar categoria' }).click()
+    await expect.poll(() => escritas).toEqual(['DELETE /rest/v1/expense_categories'])
   })
 })

@@ -8,6 +8,7 @@ import { Botao } from './ui'
 import { estadoDoPush, ligarAvisos, desligarAvisos, type EstadoPush } from '../lib/push'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
+import { mensagemDeErro } from '../lib/erros'
 
 /**
  * Preferências de avisos (ecrã 12b) — o que cada um escolhe receber.
@@ -220,7 +221,7 @@ export const PreferenciasAvisos: React.FC<{
       }
       aoFechar()
     } catch (err) {
-      toast.error('Não foi possível guardar: ' + (err instanceof Error ? err.message : 'erro inesperado'))
+      toast.error('Não foi possível guardar: ' + mensagemDeErro(err))
     } finally {
       setAGuardar(false)
     }

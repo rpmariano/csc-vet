@@ -17,6 +17,7 @@ import {
   DEFAULT_TOURNAMENT_RULES, redistributeInstallments,
   type Torneio, type TournamentRules,
 } from './torneios'
+import { mensagemDeErro } from '../../lib/erros'
 
 /*
   Torneios e jornadas (ecrã 9a, e o gestor de liga).
@@ -220,7 +221,7 @@ export const GestaoTorneios: React.FC = () => {
       setIsTourModalOpen(false)
       carregar()
     } catch (err: any) {
-      toast.error('Erro ao guardar torneio: ' + (err.message || 'Erro'))
+      toast.error('Erro ao guardar torneio: ' + mensagemDeErro(err))
     } finally {
       setUploadingTourImage(false)
     }
@@ -251,12 +252,12 @@ export const GestaoTorneios: React.FC = () => {
     setConfirmacao({
       isOpen: true,
       title: 'Eliminar torneio',
-      description: 'Tens a certeza que desejas eliminar o torneio "' + nome + '"?',
+      description: 'Tens a certeza que queres eliminar o torneio "' + nome + '"?',
       onConfirm: async () => {
         setConfirmacao(prev => ({ ...prev, isOpen: false }))
         const { error } = await supabase.from('tournaments').delete().eq('id', id)
         if (error) {
-          toast.error('Erro ao eliminar torneio: ' + error.message)
+          toast.error('Erro ao eliminar torneio: ' + mensagemDeErro(error))
           return
         }
         toast.success('Torneio eliminado!')
@@ -340,7 +341,7 @@ export const GestaoTorneios: React.FC = () => {
             <div className="text-center py-12 text-white/60">
               <Trophy size={40} className="mx-auto mb-2 opacity-60" />
               <p className="font-bold text-sm text-white/70">Nenhum torneio encontrado</p>
-              <p className="text-xs text-white/65 mt-0.5">Tente alterar os filtros ou adicione uma nova competição.</p>
+              <p className="text-xs text-white/65 mt-0.5">Tenta mudar a procura ou cria uma competição nova.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2.5">
@@ -792,7 +793,7 @@ export const GestaoTorneios: React.FC = () => {
               <div className="pt-4">
                 <Botao type="submit" largo disabled={uploadingTourImage}>
                   <Save size={16} />
-                  {uploadingTourImage ? 'A guardar...' : editingTourId ? 'Atualizar torneio' : 'Guardar torneio'}
+                  {uploadingTourImage ? 'A guardar…' : editingTourId ? 'Guardar alterações' : 'Criar torneio'}
                 </Botao>
               </div>
             </form>

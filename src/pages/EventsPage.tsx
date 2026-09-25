@@ -50,6 +50,7 @@ import { VoltarAOrigem } from '../components/VoltarAOrigem'
 import { BottomSheet } from '../components/BottomSheet'
 import { Pastilha, Botao } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
+import { mensagemDeErro } from '../lib/erros'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -398,7 +399,7 @@ const EventsPage: React.FC = () => {
       toast.success('Campo criado e selecionado com sucesso!')
     } catch (err: any) {
       console.error(err)
-      toast.error('Erro ao criar campo: ' + (err.message || 'Erro de ligação'))
+      toast.error('Erro ao criar campo: ' + mensagemDeErro(err))
     } finally {
       setIsSavingQuickField(false)
     }
@@ -453,7 +454,7 @@ const EventsPage: React.FC = () => {
       toast.success('Adversário registado com sucesso!')
     } catch (err: any) {
       console.error(err)
-      toast.error('Erro ao criar adversário: ' + (err.message || 'Erro de ligação'))
+      toast.error('Erro ao criar adversário: ' + mensagemDeErro(err))
     } finally {
       setIsSavingQuickOpp(false)
     }
@@ -490,7 +491,7 @@ const EventsPage: React.FC = () => {
     
     // Se o evento não tiver convocatórias gravadas e não for treino automático:
     if (callups.length === 0 && ev.type !== 'practice') {
-      toast.warning('Ainda não foram escolhidos jogadores para este evento. Por favor selecione os atletas a convocar na convocatória.')
+      toast.warning('Ainda não há atletas escolhidos para este evento. Escolhe quem convocar na convocatória.')
       openEditModal(ev)
       return
     }
@@ -502,8 +503,8 @@ const EventsPage: React.FC = () => {
     setConfirmModalConfig({
       isOpen: true,
       title: 'Ativar evento e enviar convocatória',
-      description: `Desejas ativar este evento e disparar a convocatória para os ${countToNotify} membros selecionados? O evento ficará imediatamente visível para todos os atletas na agenda e página principal.`,
-      confirmText: 'Sim, Ativar e Enviar Convocatória',
+      description: `Queres ativar este evento e disparar a convocatória para os ${countToNotify} membros selecionados? O evento ficará imediatamente visível para todos os atletas na agenda e página principal.`,
+      confirmText: 'Sim, ativar e enviar convocatória',
       cancelText: 'Cancelar',
       variant: 'success',
       onConfirm: async () => {
@@ -543,7 +544,7 @@ const EventsPage: React.FC = () => {
           toast.success(`Evento ativado com sucesso! Convocatória enviada a ${countToNotify} membros.`)
         } catch (err: any) {
           console.error(err)
-          toast.error('Erro ao ativar evento: ' + (err.message || 'Erro'))
+          toast.error('Erro ao ativar evento: ' + mensagemDeErro(err))
         }
       }
     })
@@ -774,7 +775,7 @@ const EventsPage: React.FC = () => {
     if (!eventDate || !eventTime) {
       isCreatingEventRef.current = false
       setIsCreatingEvent(false)
-      toast.warning('Por favor selecione a Data e a Hora do evento.')
+      toast.warning('Escolhe a data e a hora do evento.')
       return
     }
 
@@ -983,7 +984,7 @@ const EventsPage: React.FC = () => {
       setViewModeTab('list') // Fechar modal e voltar à lista
     } catch (err: any) {
       console.error(err)
-      toast.error("Erro ao criar evento: " + (err.message || 'Verifique a base de dados'))
+      toast.error("Erro ao criar evento: " + mensagemDeErro(err))
     } finally {
       isCreatingEventRef.current = false
       setIsCreatingEvent(false)
@@ -993,9 +994,9 @@ const EventsPage: React.FC = () => {
   const handleDeleteEvent = (id: string) => {
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Eliminar Evento',
-      description: 'Tens a certeza que desejas eliminar este evento? Todos os registos e convocatórias associados serão permanentemente apagados.',
-      confirmText: 'Sim, Eliminar Evento',
+      title: 'Eliminar evento',
+      description: 'Tens a certeza que queres eliminar este evento? Todas as convocatórias e respostas associadas são eliminadas.',
+      confirmText: 'Sim, eliminar evento',
       cancelText: 'Cancelar',
       variant: 'danger',
       onConfirm: async () => {
@@ -1005,7 +1006,7 @@ const EventsPage: React.FC = () => {
           setEvents(prev => prev.filter(e => e.id !== id))
           toast.success('Evento eliminado com sucesso!')
         } else {
-          toast.error('Erro ao eliminar evento: ' + error.message)
+          toast.error('Erro ao eliminar evento: ' + mensagemDeErro(error))
         }
       }
     })
@@ -1026,7 +1027,7 @@ const EventsPage: React.FC = () => {
       }))
       toast.success(`Resposta marcada: ${ROTULO_RESPOSTA[newStatus]}`)
     } catch (err: any) {
-      toast.error('Erro ao marcar a resposta: ' + err.message)
+      toast.error('Erro ao marcar a resposta: ' + mensagemDeErro(err))
     }
   }
 
@@ -1099,11 +1100,14 @@ const EventsPage: React.FC = () => {
       }))
       toast.success('Atleta adicionado à convocatória!')
     } catch (err: any) {
-      toast.error('Erro ao adicionar atleta: ' + err.message)
+      toast.error('Erro ao adicionar atleta: ' + mensagemDeErro(err))
     }
   }
 
   const handleRemovePlayerFromCallup = async (callupId: string, eventId: string) => {
+    /* Faz-se logo e desfaz-se no toast (decisão da auditoria de design):
+       tirar um atleta é um gesto frequente, e uma pergunta a cada um cansava. */
+    const removida = (eventCallups[eventId] || []).find(c => c.id === callupId)
     try {
       const { error } = await supabase.from('callups').delete().eq('id', callupId)
       if (error) throw error
@@ -1112,9 +1116,27 @@ const EventsPage: React.FC = () => {
         ...prev,
         [eventId]: (prev[eventId] || []).filter(c => c.id !== callupId)
       }))
-      toast.info('Jogador removido da convocatória.')
+      if (!removida) {
+        toast.success('Atleta tirado da convocatória.')
+        return
+      }
+      toast.comAnular('Atleta tirado da convocatória.', async () => {
+        const { data, error: erroRepor } = await supabase
+          .from('callups')
+          .insert({ event_id: eventId, player_id: removida.player_id, status: removida.status })
+          .select('id')
+          .single()
+        if (erroRepor || !data) {
+          toast.error('Não foi possível repor o atleta: ' + mensagemDeErro(erroRepor))
+          return
+        }
+        setEventCallups(prev => ({
+          ...prev,
+          [eventId]: [...(prev[eventId] || []), { ...removida, id: data.id }]
+        }))
+      })
     } catch (err: any) {
-      toast.error('Erro ao remover: ' + err.message)
+      toast.error('Erro ao tirar da convocatória: ' + mensagemDeErro(err))
     }
   }
 
@@ -1864,7 +1886,7 @@ const EventsPage: React.FC = () => {
                 <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6">
                   <Calendar size={40} className="mx-auto text-white/20 mb-2" />
                   <p className="font-bold text-white/70">Nenhum evento encontrado com os filtros atuais.</p>
-                  <p className="text-xs text-white/65 mt-1">Tente alterar os filtros ou o termo de pesquisa.</p>
+                  <p className="text-xs text-white/65 mt-1">Tenta mudar os filtros ou a procura.</p>
                 </div>
               ) : (
                 <div className="space-y-3.5">
@@ -2090,8 +2112,8 @@ const EventsPage: React.FC = () => {
                         handleDeleteEvent(evId)
                       }}
                       className="w-11 h-11 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs"
-                      title="Apagar evento"
-                      aria-label="Apagar evento"
+                      title="Eliminar evento"
+                      aria-label="Eliminar evento"
                     >
                       <Trash2 size={14} />
                     </button>

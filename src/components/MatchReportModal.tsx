@@ -403,7 +403,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {
       console.error('Error saving match report:', err)
-      toast.error('Erro ao guardar a ficha de jogo. Por favor tenta novamente.')
+      toast.error('Erro ao guardar a ficha de jogo. Tenta outra vez.')
     } finally {
       setSaving(false)
     }
@@ -1084,7 +1084,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         ' Um autogolo do adversário conta para nós e não tem marcador — se não foi isso,' +
         ' falta atribuir o golo a alguém.'
       }
-      confirmText="Gravar assim"
+      confirmText="Guardar assim"
       variant="warning"
       onConfirm={() => { setGolosSemMarcador(false); handleSaveReport(true) }}
       onCancel={() => setGolosSemMarcador(false)}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { nomeDoEcra } from '../lib/rotas'
-import { TriangleAlert, ChevronRight } from 'lucide-react'
+import { TriangleAlert } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from './BottomSheet'
@@ -163,7 +163,6 @@ export const FaixaSemConvocatoria: React.FC<{
               : `faltam ${primeiro.diasQueFaltam} dias`}
         </span>
       </span>
-      <ChevronRight size={16} className="text-white/35 shrink-0" />
     </button>
   )
 }

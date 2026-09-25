@@ -49,6 +49,7 @@ import {
   DEFAULT_FINANCIAL_SETTINGS,
   type FinancialSettings,
 } from '../lib/finance'
+import { mensagemDeErro } from '../lib/erros'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -496,7 +497,7 @@ const TeamManagementPage: React.FC = () => {
 
       toast.success('Ficheiro carregado com sucesso!')
     } catch (err: any) {
-      toast.error('Erro ao carregar ficheiro: ' + err.message)
+      toast.error('Erro ao carregar ficheiro: ' + mensagemDeErro(err))
     } finally {
       setUploadingDoc(null)
     }
@@ -592,7 +593,7 @@ const TeamManagementPage: React.FC = () => {
       }
       toast.success(newStatus === 'injured' ? 'Atleta marcado como lesionado.' : 'Atleta marcado como apto.')
     } catch (err: any) {
-      toast.error('Erro ao atualizar estado físico: ' + (err.message || 'Erro desconhecido'))
+      toast.error('Erro ao atualizar estado físico: ' + mensagemDeErro(err))
     }
   }
 
@@ -778,16 +779,16 @@ const TeamManagementPage: React.FC = () => {
       fetchProfiles()
     } catch (err: any) {
       console.error('Erro ao gravar membro:', err)
-      toast.error('Erro ao gravar membro: ' + (err.message || 'Verifique a base de dados'))
+      toast.error('Erro ao gravar membro: ' + mensagemDeErro(err))
     }
   }
 
   const handleDeleteMember = (id: string, name: string) => {
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Eliminar Membro',
-      description: `Tens a certeza que desejas eliminar o membro "${name}"? Todas as fichas e dados associados serão removidos.`,
-      confirmText: 'Sim, Eliminar Membro',
+      title: 'Eliminar membro',
+      description: `Tens a certeza que queres eliminar "${name}"? A ficha e os dados associados são eliminados.`,
+      confirmText: 'Sim, eliminar membro',
       cancelText: 'Cancelar',
       variant: 'danger',
       onConfirm: async () => {
@@ -803,7 +804,7 @@ const TeamManagementPage: React.FC = () => {
           if (selectedProfile?.id === id) fecharFicha()
           toast.success('Membro eliminado com sucesso!')
         } catch (err: any) {
-          toast.error('Erro ao eliminar membro: ' + err.message)
+          toast.error('Erro ao eliminar membro: ' + mensagemDeErro(err))
         }
       }
     })
@@ -842,8 +843,8 @@ const TeamManagementPage: React.FC = () => {
     setConfirmModalConfig({
       isOpen: true,
       title: 'Fundir Fichas',
-      description: `Vais fundir "${apagar.name}" em "${manter.name}": os dados em falta em "${manter.name}" são preenchidos a partir de "${apagar.name}", todo o histórico (convocatórias e respostas, estatísticas, quotas, encargos, seguros) passa para "${manter.name}", e a ficha "${apagar.name}" é apagada. Tens a certeza?`,
-      confirmText: 'Sim, Fundir Fichas',
+      description: `Vais fundir "${apagar.name}" em "${manter.name}": os dados em falta em "${manter.name}" são preenchidos a partir de "${apagar.name}", todo o histórico (convocatórias e respostas, estatísticas, quotas, encargos, seguros) passa para "${manter.name}", e a ficha "${apagar.name}" é eliminada. Tens a certeza?`,
+      confirmText: 'Sim, fundir fichas',
       cancelText: 'Cancelar',
       variant: 'warning',
       onConfirm: async () => {
@@ -864,7 +865,7 @@ const TeamManagementPage: React.FC = () => {
           }
           fetchProfiles()
         } catch (err: any) {
-          toast.error('Erro ao fundir fichas: ' + (err.message || 'Verifique a base de dados'))
+          toast.error('Erro ao fundir fichas: ' + mensagemDeErro(err))
         } finally {
           setAssociatingLoading(false)
         }
@@ -1262,7 +1263,7 @@ const TeamManagementPage: React.FC = () => {
         <div className="bg-csc-dark text-white rounded-2xl border border-dashed border-white/15 p-12 text-center">
           <Users size={48} className="mx-auto text-white/20 mb-3" />
           <p className="font-bold text-white/70 text-lg">Nenhum atleta encontrado</p>
-          <p className="text-xs text-white/65 mt-1">Ajuste os filtros de pesquisa ou adicione um novo membro.</p>
+          <p className="text-xs text-white/65 mt-1">Tenta mudar os filtros ou a procura, ou cria uma ficha nova.</p>
         </div>
       ) : viewMode === 'list' ? (
         /*
@@ -1708,7 +1709,7 @@ const TeamManagementPage: React.FC = () => {
                 {/* 4.2 Papéis no Sistema (1, 2 ou 3 funções) */}
                 <div className="pt-2 border-t border-white/10">
                   <label className="block text-xs font-bold text-white/70 mb-2">
-                    Papel / Funções no Sistema (Selecione 1, 2 ou 3):
+                    Papel / Funções no Sistema (escolhe 1, 2 ou 3):
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {/* Jogador */}
@@ -2721,7 +2722,7 @@ const TeamManagementPage: React.FC = () => {
             isOpen
             onClose={fecharFusao}
             title={`Fundir a ficha de ${associatingPlayer.name}`}
-            description="Os dados em falta na que ficar vêm da outra, e a que sobra é apagada"
+            description="Os dados em falta na que ficar vêm da outra, e a que sobra é eliminada"
             tone="dark"
           >
             <div>
