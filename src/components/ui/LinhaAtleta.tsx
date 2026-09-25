@@ -65,7 +65,10 @@ export const LinhaAtleta: React.FC<LinhaAtletaProps> = ({
 
     <span className="flex-1 min-w-0">
       <span className="block font-display font-black text-[13px] text-white truncate">{nome}</span>
-      {detalhe && <span className="block text-[10px] text-white/62 truncate mt-0.5">{detalhe}</span>}
+      {/* Quebra em vez de cortar: nas contas por atleta a letra pequena diz de
+          que é a dívida ("Quotas set, out · Seguro Desportivo"), e cortada a
+          meio escondia precisamente a parte que interessa. */}
+      {detalhe && <span className="block text-[10px] leading-snug text-white/62 break-words mt-0.5">{detalhe}</span>}
     </span>
 
     {direita}

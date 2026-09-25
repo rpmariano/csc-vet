@@ -64,6 +64,17 @@ const FIXTURES = {
   ],
   v_players_public: [...FIXTURES_BASE.v_players_public, COLEGA],
   announcements: [{ id: 'a1', title: 'Aviso', content: 'Corpo do aviso', created_at: ONTEM, is_active: true, priority: 'normal' }],
+  // As contas por atleta: uma quota vencida, uma paga e um encargo pago em parte.
+  v_quota_status: [
+    { player_id: COLEGA.id, month_year: '2026-08', status: 'late', expected_amount: 10, owed_amount: 10,
+      paid_amount: null, paid_at: null, due_id: null, due_date: '2026-08-08' },
+    { player_id: COLEGA.id, month_year: '2026-09', status: 'paid', expected_amount: 10, owed_amount: 0,
+      paid_amount: 10, paid_at: '2026-09-02T10:00:00Z', due_id: 'd1', due_date: '2026-09-08' },
+  ],
+  expense_categories: [{ id: 'cat1', name: 'Seguro Desportivo', allow_income: true }],
+  charges: [{ id: 'ch1', title: 'Seguro desportivo 26/27', amount: 25, category_id: 'cat1', due_date: '2026-10-31' }],
+  charge_players: [{ id: 'cp1', charge_id: 'ch1', player_id: COLEGA.id }],
+  charge_payments: [{ id: 'pg1', charge_id: 'ch1', player_id: COLEGA.id, amount: 10, paid_at: '2026-09-03' }],
 }
 
 const ECRAS = [
@@ -80,6 +91,8 @@ const ECRAS = [
   ['Clube · adversários', '/csc-vet/clube?ver=adversarios'],
   ['Clube · torneios', '/csc-vet/clube?ver=torneios'],
   ['Financeiro', '/csc-vet/finance'],
+  ['Financeiro · por atleta', '/csc-vet/finance?ver=atletas'],
+  ['Conta de um atleta', `/csc-vet/finance?ver=atletas&conta=${COLEGA.id}`],
   ['Comunicados', '/csc-vet/announcements'],
   ['Definições', '/csc-vet/settings'],
   ['Detalhe do evento', '/csc-vet/calendar?event=e2'],
@@ -150,6 +163,8 @@ const SOBREPOSTOS: [string, string, (p: Page) => Promise<void>][] = [
   ['Confirmar eliminar', '/csc-vet/calendar?event=e2', async p => { await p.getByRole('button', { name: /Eliminar evento/ }).click({ timeout: 4000 }) }],
   ['Ficha de atleta', '/csc-vet/team-management', async p => { await p.getByRole('button', { name: /^Ver a ficha de / }).first().click({ timeout: 4000 }) }],
   ['Dossier de convocatória', '/csc-vet/events', async p => { await p.getByRole('button', { name: /^Ver os detalhes de / }).first().click({ timeout: 4000 }) }],
+  ['Partilhar as contas', '/csc-vet/finance?ver=atletas', async p => { await p.getByRole('button', { name: 'Partilhar' }).click({ timeout: 4000 }) }],
+  ['Filtros das contas', '/csc-vet/finance?ver=atletas', async p => { await p.getByRole('button', { name: 'Filtros', exact: true }).click({ timeout: 4000 }) }],
 ]
 
 test('sobrepostos iguais em janela estreita e larga', async ({ page }) => {

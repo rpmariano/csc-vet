@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import {
   comOmissoes, getSeasonLabel, getPlayerQuotaMonths,
   getQuotaDueDate, computeQuotaMonthStatus, formatMonthYear,
+  diasAtePrazo, encargoVencido,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaEligiblePlayer } from '../lib/finance'
 
@@ -179,8 +180,9 @@ export function useEstadoPagamentos(
           }[]).map(e => {
             const pago = pagoPorEncargo.get(e.id)
             const emFalta = Number(e.amount) - (pago?.total ?? 0)
-            const prazo = e.due_date ? new Date(e.due_date) : null
-            const dias = prazo ? diasAte(prazo, hoje) : null
+            // Dias de calendário, e não horas: o prazo é o último dia, e a
+            // mesma regra decide o separador Encargos e as contas por atleta.
+            const dias = e.due_date ? diasAtePrazo(e.due_date, hoje) : null
 
             return {
               chave: `encargo-${e.id}`,
@@ -196,7 +198,7 @@ export function useEstadoPagamentos(
                 ? 'pago'
                 : dias === null
                   ? 'por-vencer'
-                  : dias < 0
+                  : encargoVencido(e.due_date, hoje)
                     ? 'atraso'
                     : dias <= DIAS_DE_AVISO
                       ? 'a-vencer'

@@ -183,6 +183,33 @@ export const computeQuotaMonthStatus = (
   return today >= getQuotaDueDate(m, settings) ? 'late' : 'pending'
 }
 
+/** A data de hoje no calendário de quem está a usar a app, 'AAAA-MM-DD'. */
+export const dataLocalISO = (d: Date = new Date()): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/**
+ * Dias de calendário entre hoje e um prazo 'AAAA-MM-DD' — 0 no próprio dia,
+ * negativo depois dele.
+ */
+export const diasAtePrazo = (prazo: string, hoje: Date = new Date()): number => {
+  const [py, pm, pd] = prazo.slice(0, 10).split('-').map(Number)
+  const [hy, hm, hd] = dataLocalISO(hoje).split('-').map(Number)
+  return Math.round((Date.UTC(py, pm - 1, pd) - Date.UTC(hy, hm - 1, hd)) / 86400000)
+}
+
+/**
+ * Se o prazo de um encargo já passou. **O prazo é o último dia**: no próprio
+ * dia ainda se está a tempo, e só no seguinte se passa a dever.
+ *
+ * Havia duas regras. O separador Encargos comparava `new Date() > new
+ * Date(due_date)`, e uma data sem hora é meia-noite UTC — em Lisboa, a uma da
+ * manhã do próprio dia: quem tinha até 30/09 aparecia como devedor às dez da
+ * manhã de 30/09, enquanto o sinal de € do próprio atleta ainda lhe dizia
+ * "a vencer". Compara-se o dia do calendário, e é a mesma conta nos dois.
+ */
+export const encargoVencido = (prazo: string | null | undefined, hoje: Date = new Date()): boolean =>
+  !!prazo && diasAtePrazo(prazo, hoje) < 0
+
 /** Prazo-limite do seguro para uma época (mês/dia de definições, no ano em que esse mês cai dentro da época). */
 export const getInsuranceDeadline = (settings: FinancialSettings, seasonLabel: string): Date => {
   const startYear = parseInt(seasonLabel.split('/')[0] || seasonLabel, 10)

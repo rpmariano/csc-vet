@@ -41,8 +41,8 @@ interface Geometria {
   esquerda: number
   /** Largura do item ativo. */
   largura: number
-  /** Largura total do conteúdo da fila (inclui o que está fora do ecrã). */
-  total: number
+  /** Largura da parte visível da fila — a caixa a partir da qual se mede o `right`. */
+  caixa: number
   /** Sentido do movimento que trouxe o realce aqui — decide que aresta lidera. */
   avanca: boolean
 }
@@ -82,6 +82,16 @@ export function useRealceDeslizante(
   // viemos, que é o que diz se o realce avança ou recua.
   const refAnterior = useRef(indiceAtivo)
 
+  /*
+    Para onde a fila rolou sozinha da última vez, e com que medidas. Só volta
+    a centrar quando alguma coisa mudou — o ativo, a largura da fila, a do
+    conteúdo, o sítio do item. Centrava a cada medição, e há medições que não
+    vêm de mudança nenhuma (um observador novo mede logo ao nascer): quem
+    rolasse a fila à mão, ou pela seta, via-a voltar ao ativo sem ter tocado
+    em nada.
+  */
+  const refCentrado = useRef<{ indice: number; caixa: number; conteudo: number; item: number } | null>(null)
+
   const medir = useCallback(() => {
     const fila = refFila.current
     const item = refsItens.current[indiceAtivo]
@@ -92,30 +102,46 @@ export function useRealceDeslizante(
     const esquerda = larguraFixa
       ? item.offsetLeft + item.offsetWidth / 2 - larguraFixa / 2
       : item.offsetLeft
-    // `scrollWidth` e `offsetLeft` contam ambos a partir da caixa de
-    // preenchimento da fila, por isso são comparáveis mesmo quando a fila
-    // rola. Com `offsetWidth` — que inclui as bordas — a aresta direita
-    // ficaria uns pixels ao lado.
-    const total = fila.scrollWidth
+    // O `right` de um elemento absoluto mede-se a partir da aresta direita da
+    // caixa da fila, que é a parte visível (`clientWidth`) — e não do fim do
+    // conteúdo. Media-se com o `scrollWidth`: numa fila mais larga do que o
+    // ecrã a aresta direita do realce caía à esquerda da esquerda, e o realce
+    // desaparecia. Nunca se viu na Competição, onde os três separadores
+    // cabem; viu-se no Financeiro, que tem sete. Com `offsetWidth` — que
+    // inclui as bordas — a aresta ficaria uns pixels ao lado.
+    const caixa = fila.clientWidth
 
     // Centrar o item — não o realce, que pode ser mais estreito do que ele.
-    const querido = Math.max(
-      0,
-      Math.min(
-        item.offsetLeft + item.offsetWidth / 2 - fila.clientWidth / 2,
-        fila.scrollWidth - fila.clientWidth,
-      ),
-    )
-    if (Math.abs(fila.scrollLeft - querido) > 2) fila.scrollLeft = querido
+    const medidas = {
+      indice: indiceAtivo,
+      caixa: fila.clientWidth,
+      conteudo: fila.scrollWidth,
+      item: item.offsetLeft + item.offsetWidth / 2,
+    }
+    const antes = refCentrado.current
+    if (
+      !antes ||
+      antes.indice !== medidas.indice ||
+      antes.caixa !== medidas.caixa ||
+      antes.conteudo !== medidas.conteudo ||
+      antes.item !== medidas.item
+    ) {
+      refCentrado.current = medidas
+      const querido = Math.max(
+        0,
+        Math.min(medidas.item - medidas.caixa / 2, medidas.conteudo - medidas.caixa),
+      )
+      if (Math.abs(fila.scrollLeft - querido) > 2) fila.scrollLeft = querido
+    }
 
     setGeo(atual =>
       atual &&
       atual.esquerda === esquerda &&
       atual.largura === largura &&
-      atual.total === total &&
+      atual.caixa === caixa &&
       atual.avanca === avanca
         ? atual
-        : { esquerda, largura, total, avanca },
+        : { esquerda, largura, caixa, avanca },
     )
   }, [indiceAtivo, larguraFixa])
 
@@ -136,9 +162,14 @@ export function useRealceDeslizante(
     for (const item of refsItens.current) if (item) observador.observe(item)
 
     window.addEventListener('resize', medir)
-    document.fonts?.ready.then(medir).catch(() => {})
+    // Uma promessa não se desregista: sem o `vivo`, a medição de um ativo
+    // antigo corria quando o Archivo chegasse, e levava o realce e a fila para
+    // o separador de onde já se tinha saído.
+    let vivo = true
+    document.fonts?.ready.then(() => { if (vivo) medir() }).catch(() => {})
 
     return () => {
+      vivo = false
       observador.disconnect()
       window.removeEventListener('resize', medir)
     }
@@ -158,7 +189,9 @@ export function useRealceDeslizante(
   const estiloRealce: React.CSSProperties = geo && indiceAtivo >= 0
     ? {
         left: `${geo.esquerda}px`,
-        right: `${Math.max(0, geo.total - geo.esquerda - geo.largura)}px`,
+        // Negativo quando o item está para lá da parte visível — e é isso
+        // que o põe no sítio certo depois de a fila rolar até ele.
+        right: `${geo.caixa - geo.esquerda - geo.largura}px`,
         transition: movimentoReduzido()
           ? 'none'
           : geo.avanca

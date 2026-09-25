@@ -387,7 +387,12 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   podiam discordar, e o `usePlayerQuotaDebt` só via quotas vencidas: um encargo
   por pagar não aparecia em aviso nenhum.
   **Com um vencido e outro a aproximar-se manda o vermelho** — é o que precisa
-  de ser tratado primeiro. **E mostra-se a quem tem o papel de jogador**, não a
+  de ser tratado primeiro.
+  É a conta de **uma** pessoa, a que tem sessão. A da tesouraria, de toda a
+  gente ao mesmo tempo, é o `contasDosAtletas` (ver "Contas por atleta"): lê as
+  quotas da vista, como o separador Quotas, e decide os encargos com o mesmo
+  `encargoVencido` que este hook usa — são duas contas, mas com as mesmas
+  regras. **E mostra-se a quem tem o papel de jogador**, não a
   quem "não é da equipa técnica": a faixa antiga testava `!eAdmin &&
   !eTreinador`, e metade da direção deste clube também joga.
   O texto de como se paga é o `COMO_PAGAR` do `SinalPagamentos`, um só para os
@@ -599,6 +604,46 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   deixava o que se paga à seguradora nos 700 € de quando eram 28. Escrever
   outro valor solta-o — o terceiro pode cobrar outra coisa —, e o formulário
   diz então quanto se cobra, com um botão para o usar.
+- **Contas por atleta (Financeiro, `?ver=atletas`): quem deve o quê, e o mesmo
+  em texto para o WhatsApp.** Três secções — Em dívida, A pagamento, Pago — e
+  um atleta aparece em cada uma onde tiver alguma coisa. É de propósito: cada
+  banda soma as linhas que tem por baixo, e agrupar cada atleta pelo seu pior
+  estado punha na banda "A pagamento" um total que não era o que estava a
+  pagamento. **Em dívida** é a quota `late` da vista e o encargo com o prazo
+  passado; **a pagamento** é só o encargo dentro do prazo — as quotas não
+  entram, pela razão das Quotas; **pago** são os meses pagos e o que entrou de
+  cada encargo, e um encargo pago em parte fica nas duas. A conta de um atleta
+  abre por cima (`?conta=`). As contas vivem em
+  `components/financeiro/contasDosAtletas.ts`, e a mensagem sai das mesmas
+  linhas que o ecrã desenha (`textoDaLista`, `textoDaConta`) — diz o que o ecrã
+  diz. Vai pelo `wa.me/?text=` (no telemóvel abre a app, no computador o
+  WhatsApp Web) ou copiada; a partilha da lista mostra a mensagem antes de
+  sair, porque leva nomes e valores para o grupo da equipa.
+  `contas-por-atleta.spec.ts` cobre-o, com o texto inteiro das mensagens.
+- **O prazo de um encargo é o último dia** (`encargoVencido`, em
+  `lib/finance.ts`): no próprio dia ainda se está a tempo. O separador Encargos
+  comparava `new Date() > new Date(due_date)` — meia-noite UTC, uma da manhã em
+  Lisboa — e dava por devedor, às dez da manhã do dia do prazo, quem o sinal de
+  € ainda dizia "a vencer". A mesma função decide agora o separador Encargos, o
+  sinal de € e as contas por atleta. (Os Pagamentos Programados, o que o clube
+  paga a terceiros, ainda comparam à maneira antiga.)
+- **Uma fila de separadores que não cabe mostra que há mais**
+  (`<FilaSeparadores>`): do lado onde há separadores escondidos, a fila
+  desvanece-se e aparece uma seta que rola para lá. O desvanecer é uma máscara
+  sobre a própria fila — ela assenta na faixa verde, e um degradê da cor do
+  fundo via-se ali como uma mancha. O Financeiro tinha uma fila feita à mão com
+  pastilhas, que são de filtros (`aria-pressed`), cortada no fim de um
+  separador sem nada a espreitar: quem lá chegava via quatro e não sabia que
+  havia sete.
+  **O realce do ativo mede o `right` a partir da parte visível** (`clientWidth`)
+  e não do fim do conteúdo: com o `scrollWidth`, numa fila que rola a aresta
+  direita caía à esquerda da esquerda e o realce não aparecia. A Competição,
+  com três separadores que cabem, nunca o mostrou. **E a fila só volta a
+  centrar o ativo quando alguma coisa mudou** — o ativo, a largura, o conteúdo
+  —, senão desfazia a rolagem de quem a rolou à mão; a medição do
+  `document.fonts.ready` de um ativo antigo é ignorada. Os testes que tocam na
+  seta esperam pelo `document.fonts.ready`: o Archivo a chegar alarga os
+  separadores, e aí recentrar é o certo.
 - **Meses dispensados de quota (ecrã 3c): a fila segue a época, não o
   calendário.** Começa em `season_start_month` e dá a volta aos doze meses. Os
   que o clube inteiro não paga (`financial_settings.quota_excluded_months`) e os
