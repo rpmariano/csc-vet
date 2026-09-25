@@ -3,7 +3,7 @@ import { BellRing, BellOff, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
-import { BottomSheet } from './BottomSheet'
+import { EcraDetalhe } from './EcraDetalhe'
 import { Botao } from './ui'
 import { estadoDoPush, ligarAvisos, desligarAvisos, type EstadoPush } from '../lib/push'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -24,6 +24,12 @@ import { UnsavedChangesModal } from './UnsavedChangesModal'
  *
  * A secção de gestão só aparece a quem gere: são avisos sobre o trabalho da
  * equipa técnica, e a um jogador não dizem nada.
+ *
+ * **É um ecrã do Perfil, não uma persiana** (desde 2026-09-25). É um
+ * formulário, e o próprio `BottomSheet` diz que formulários não vão para uma
+ * superfície que fecha com um arrasto: o guarda apanhava o gesto, mas o gesto
+ * era o de quem quer sair. Abre-se do cartão "Avisos" das Definições e volta-se
+ * pelo "‹ Perfil", que passa pelo mesmo guarda.
  */
 
 interface Preferencias {
@@ -223,9 +229,9 @@ export const PreferenciasAvisos: React.FC<{
   const silencioLigado = prefs.silencio_inicio !== prefs.silencio_fim
 
   /*
-    As escolhas de avisos não se perdem num Escape ou num arrasto da persiana.
-    A fotografia espera pelo `aCarregar`: as preferências vêm da base depois de
-    a persiana abrir, e sem isso o próprio carregamento contava como escolha.
+    As escolhas de avisos não se perdem ao voltar pelo "‹ Perfil". A fotografia
+    espera pelo `aCarregar`: as preferências vêm da base depois de o ecrã
+    abrir, e sem isso o próprio carregamento contava como escolha.
   */
   const guarda = useAlteracoesPorGravar({
     aberto,
@@ -238,19 +244,12 @@ export const PreferenciasAvisos: React.FC<{
 
   return (
     <>
-    <BottomSheet
-      isOpen={aberto}
-      onClose={guarda.tentarFechar}
-      title="O que quero saber"
-      description="Avisos que a app te vai enviar"
-      footer={
-        <>
-          <Botao aparencia="vidro" onClick={guarda.tentarFechar}>Cancelar</Botao>
-          <Botao onClick={guardar} disabled={aGuardar || aCarregar}>
-            {aGuardar ? 'A guardar…' : 'Guardar'}
-          </Botao>
-        </>
-      }
+    <EcraDetalhe
+      aberto={aberto}
+      voltarPara="Perfil"
+      aoVoltar={guarda.tentarFechar}
+      titulo="Avisos"
+      legenda="O que a app te envia para o telemóvel"
     >
       {aCarregar ? (
         <div className="flex justify-center py-10" role="status" aria-live="polite">
@@ -394,7 +393,16 @@ export const PreferenciasAvisos: React.FC<{
           </div>
         </div>
       )}
-    </BottomSheet>
+
+      {/* Guardar no fim do formulário; sair sem gravar é o "‹ Perfil". */}
+      {!aCarregar && (
+        <div className="mt-6">
+          <Botao className="w-full" onClick={guardar} disabled={aGuardar}>
+            {aGuardar ? 'A guardar…' : 'Guardar'}
+          </Botao>
+        </div>
+      )}
+    </EcraDetalhe>
 
     <UnsavedChangesModal {...guarda.props} />
     </>

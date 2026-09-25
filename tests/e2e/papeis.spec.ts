@@ -45,10 +45,13 @@ function fixtures(papel: 'player' | 'coach' | 'admin') {
 }
 
 /** Rotas de todos, e as que cada papel tem a mais. */
+/* Os Comunicados abrem a todos desde 2026-09-25: é para lá que o sino leva, e
+   quem só lê lê-os ali. O que é da gestão — publicar, editar — só aparece a
+   treinador e direção. */
 const DE_TODOS: string[] = ['', 'calendar', 'competicao?ver=classificacoes', 'competicao?ver=fichas',
-  'competicao?ver=estatisticas', 'settings']
+  'competicao?ver=estatisticas', 'settings', 'announcements']
 const DE_GESTAO: string[] = [
-  'announcements', 'events', 'team-management',
+  'events', 'team-management',
   // O Clube é o índice da gestão, e as quatro secções que ele abre.
   'clube', 'clube?ver=dados', 'clube?ver=campos', 'clube?ver=adversarios', 'clube?ver=torneios',
 ]

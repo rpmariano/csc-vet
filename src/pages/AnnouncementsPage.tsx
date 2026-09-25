@@ -12,6 +12,7 @@ import {
   Megaphone
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useAnnouncements } from '../context/AnnouncementsContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { useModalA11y } from '../hooks/useModalA11y'
@@ -65,6 +66,31 @@ const AnnouncementsPage: React.FC = () => {
   const [deletingAnn, setDeletingAnn] = useState<Announcement | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  /*
+    O sino do cabeçalho abre este ecrã, e é aqui que se leem os comunicados —
+    quem só lê e quem gere. Era uma persiana à parte, com a mesma lista; uma
+    mensagem longa lia-se mal a 90% da altura, e eram duas portas para o
+    mesmo sítio.
+
+    **Abrir o ecrã é lê-los.** A persiana marcava cada um como lido ao
+    expandi-lo; aqui o conteúdo está à vista, por isso os que estavam por ler
+    ficam marcados como "Novo" durante esta visita e passam a lidos logo ao
+    entrar — o sino apaga-se, e o "Novo" continua a dizer o que era novo.
+  */
+  const { announcements: ativos, isRead, markAsRead, loading: aCarregarLeituras } = useAnnouncements()
+  const [novos, setNovos] = useState<Set<string> | null>(null)
+
+  /* O formulário de publicar começa recolhido: quem gere também chega aqui
+     pelo sino, para ler, e abrir o ecrã num formulário vazio empurrava os
+     comunicados para baixo da dobra. */
+  const [aEscrever, setAEscrever] = useState(false)
+  useEffect(() => {
+    if (novos !== null || aCarregarLeituras) return
+    const porLer = ativos.filter(a => !isRead(a.id)).map(a => a.id)
+    setNovos(new Set(porLer))
+    porLer.forEach(markAsRead)
+  }, [novos, aCarregarLeituras, ativos, isRead, markAsRead])
+
   const showToast = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
     if (type === 'success') toast.success(text)
     else if (type === 'error') toast.error(text)
@@ -80,29 +106,14 @@ const AnnouncementsPage: React.FC = () => {
         .order('published_at', { ascending: false })
 
       if (error) throw error
-      if (data && data.length > 0) {
-        setAnnouncements(data.map(item => ({
-          ...item,
-          is_active: item.is_active !== false // Por defeito é ativo se null/undefined
-        })) as Announcement[])
-      } else {
-        setAnnouncements([
-          {
-            id: '1',
-            title: '1º Treino da época dia 2',
-            content: 'No primeiro treino, devem chegar mais cedo, 21h, para palestra de abertura!',
-            published_at: new Date().toISOString(),
-            is_active: true
-          },
-          {
-            id: '2',
-            title: 'Pagamento quota Setembro',
-            content: 'Lembramos a todos os jogadores que a quota mensal de Setembro de 10€ já se encontra a pagamento.',
-            published_at: new Date(Date.now() - 86400000).toISOString(),
-            is_active: true
-          }
-        ])
-      }
+      /* Sem comunicados, a lista fica vazia e diz isso. Havia aqui dois
+         comunicados inventados ("1º Treino da época dia 2") para quando a
+         tabela vinha vazia — a gestão via-os como se fossem reais, e com o
+         ecrã aberto a toda a gente passavam a chegar ao plantel. */
+      setAnnouncements((data ?? []).map(item => ({
+        ...item,
+        is_active: item.is_active !== false, // Por defeito é ativo se null/undefined
+      })) as Announcement[])
     } catch (err) {
       console.error(err)
     } finally {
@@ -343,7 +354,7 @@ const AnnouncementsPage: React.FC = () => {
       <CabecalhoEcra
         titulo="Comunicados"
         sobrancelha="Avisos à equipa"
-        legenda="Quem só lê tem-nos no sino da Home. Aqui publicam-se e editam-se."
+        legenda={isCoachOrAdmin ? 'Os avisos à equipa: aqui leem-se, publicam-se e editam-se.' : undefined}
         className="mb-1"
       />
 
@@ -351,7 +362,20 @@ const AnnouncementsPage: React.FC = () => {
         {/* Publicar e editar. A rota é de treinador e direção (ver App.tsx);
             este `isCoachOrAdmin` fica como segunda linha, porque um papel
             simulado muda o que se pode fazer sem mudar de rota. */}
-        {isCoachOrAdmin && (
+        {isCoachOrAdmin && !aEscrever && (
+          <button
+            type="button"
+            onClick={() => setAEscrever(true)}
+            className="w-full min-h-12 flex items-center justify-center gap-2 px-5 bg-csc-gold text-csc-tinta rounded-3xl
+              font-display font-extrabold text-[12.5px] cursor-pointer transition-transform duration-150 active:scale-97
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+          >
+            <Plus size={16} />
+            <span>Escrever comunicado</span>
+          </button>
+        )}
+
+        {isCoachOrAdmin && aEscrever && (
           <div className="cartao-vidro p-5 space-y-4">
             <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
               <div className="w-8 h-8 rounded-xl bg-csc-gold text-csc-dark flex items-center justify-center text-sm font-bold">
@@ -525,6 +549,13 @@ const AnnouncementsPage: React.FC = () => {
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="space-y-1 flex-1 min-w-[200px]">
                           <div className="flex items-center gap-2">
+                            {novos?.has(ann.id) && (
+                              <span className="shrink-0 inline-flex items-center gap-1 h-5 px-2 rounded-full bg-csc-gold/16 border border-csc-gold/35
+                                font-display font-extrabold text-[9px] tracking-[0.1em] uppercase text-csc-gold">
+                                <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-csc-gold" />
+                                Novo
+                              </span>
+                            )}
                             <h4 className="font-black text-sm text-white leading-snug">
                               {ann.title}
                             </h4>

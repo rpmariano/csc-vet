@@ -3,7 +3,7 @@ import { Check, Users, RotateCcw, X, TriangleAlert } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
-import { BottomSheet } from '../BottomSheet'
+import { EcraDetalhe } from '../EcraDetalhe'
 import { Botao } from '../ui'
 
 /**
@@ -15,8 +15,15 @@ import { Botao } from '../ui'
  * Agora guardar leva sempre aqui, e o passo tem nome: "falta convocar".
  *
  * **Num treino não há escolha a fazer** (4g): entram todos os aptos, ficam de
- * fora lesionados e inativos. A persiana mostra quem foi convocado e pede uma
+ * fora lesionados e inativos. O ecrã mostra quem foi convocado e pede uma
  * confirmação, com a porta aberta para ajustar a lista.
+ *
+ * **É um ecrã, o passo 2 de criar** (desde 2026-09-25). Era uma persiana, e é
+ * uma tarefa: escolher de uma lista de vinte e tal atletas e escrever em
+ * `callups`. Voltar pelo "‹ Eventos" é o "Agora não" — o evento fica criado e
+ * sem ninguém chamado, e o alerta de convocatórias (4c) lembra-o. Os botões
+ * ficam presos ao fundo, por cima da barra, para não se ter de rolar a lista
+ * inteira até eles.
  *
  * **Num rascunho ninguém é avisado.** A convocatória fica guardada na mesma —
  * é o que a app já fazia — mas o botão diz o que acontece, para não haver
@@ -143,39 +150,34 @@ export const ConvocatoriaAoCriar: React.FC<{
   const quando = new Date(evento.quando)
   const listaVisivel = eTreino && !aAjustar ? todos.filter(p => escolhidos.has(p.id)) : todos
 
+  const acoes = eTreino && !aAjustar ? (
+    <>
+      <Botao aparencia="vidro" className="flex-1" onClick={() => setAAjustar(true)}>Ajustar lista</Botao>
+      <Botao className="flex-1" onClick={convocar} disabled={aGravar}>
+        {aGravar ? 'A guardar…' : 'Está bem assim'}
+      </Botao>
+    </>
+  ) : (
+    <>
+      <Botao aparencia="vidro" className="flex-1" onClick={aoFechar} disabled={aGravar}>Agora não</Botao>
+      <Botao className="flex-1" onClick={convocar} disabled={aGravar}>
+        {aGravar
+          ? 'A guardar…'
+          : escolhidos.size === 0
+            ? 'Guardar sem convocar'
+            : `Convocar ${escolhidos.size}`}
+      </Botao>
+    </>
+  )
+
   return (
-    <BottomSheet
-      isOpen={Boolean(evento)}
-      onClose={aoFechar}
-      title={ROTULO_TIPO[evento.tipo]}
-      description={eTreino ? 'A convocatória é automática' : 'Falta convocar'}
-      closeOnOverlayClick={false}
-      icon={
-        <div className="w-9 h-9 rounded-xl bg-csc-light/20 text-csc-verde-texto flex items-center justify-center shrink-0">
-          <Check size={18} />
-        </div>
-      }
-      footer={
-        eTreino && !aAjustar ? (
-          <>
-            <Botao aparencia="vidro" onClick={() => setAAjustar(true)}>Ajustar lista</Botao>
-            <Botao onClick={convocar} disabled={aGravar}>
-              {aGravar ? 'A guardar…' : 'Está bem assim'}
-            </Botao>
-          </>
-        ) : (
-          <>
-            <Botao aparencia="vidro" onClick={aoFechar} disabled={aGravar}>Agora não</Botao>
-            <Botao onClick={convocar} disabled={aGravar}>
-              {aGravar
-                ? 'A guardar…'
-                : escolhidos.size === 0
-                  ? 'Guardar sem convocar'
-                  : `Convocar ${escolhidos.size}`}
-            </Botao>
-          </>
-        )
-      }
+    <EcraDetalhe
+      aberto={Boolean(evento)}
+      voltarPara="Eventos"
+      aoVoltar={aoFechar}
+      sobrancelha={ROTULO_TIPO[evento.tipo]}
+      titulo={eTreino ? 'Convocatória' : 'Falta convocar'}
+      legenda={eTreino ? 'A convocatória dos treinos é automática' : undefined}
     >
       <div className="space-y-4">
         {/* O evento que acabou de nascer. */}
@@ -313,8 +315,13 @@ export const ConvocatoriaAoCriar: React.FC<{
             ? 'Convocar avisa logo os escolhidos.'
             : 'Em rascunho o evento fica só para a equipa técnica: ninguém é avisado e não entra no alerta de convocatórias.'}
         </p>
+
+        {/* As ações presas ao fundo, por cima da barra de baixo. */}
+        <div className="sticky bottom-[108px] z-20 flex gap-2 p-2 rounded-[28px] bg-csc-superficie/95 border border-white/10 backdrop-blur-sm">
+          {acoes}
+        </div>
       </div>
-    </BottomSheet>
+    </EcraDetalhe>
   )
 }
 
