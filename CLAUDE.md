@@ -456,6 +456,26 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   **os campos não tinham porta nenhuma** — só se lá chegava pela fila de
   separadores lá dentro. O endereço `/admin` redireciona, com tradução do
   separador antigo, porque anda em links partilhados.
+  **O índice arruma-se pelo que se vem cá fazer** (2026-09-25): *Equipa*
+  (Plantel), *Época* (Eventos, Torneios — o de todas as semanas), *Direção*
+  (Financeiro, Relatórios — dinheiro e dados pessoais, só `admin`) e
+  *Configuração* (Adversários, Campos, Dados do clube — tocados uma vez). O
+  cartão "Campo principal" saiu: repetia os Dados do clube, e o campo de casa
+  ficou dito no subtítulo da linha Campos. **Uma secção da direção aberta pelo
+  endereço por quem não é da direção cai no índice** — o `ProtectedRoute` do
+  `/clube` deixa entrar o treinador. `clube.spec.ts` cobre os blocos e isso.
+- **Relatórios (`/clube?ver=relatorios`, só da direção): o que se tira da app
+  para fora.** Cada relatório abre num `EcraDetalhe` pelo `&relatorio=`
+  (`src/components/clube/Relatorios.tsx`). O primeiro são as Contas por
+  atleta, que eram o separador "Por atleta" do Financeiro: saíram de lá, não
+  ficaram nos dois sítios, e `/finance?ver=atletas` redireciona (com a
+  `&conta=`, se vier). O relatório carrega as mesmas tabelas e usa a mesma
+  `contasDosAtletas()`, por isso diz o mesmo que as Quotas e os Encargos.
+  **Decidido para o relatório de documentos** (por fazer): só a direção; um
+  `.zip` com tudo, para descarregar ou partilhar por email/WhatsApp pela
+  partilha nativa do telemóvel; e cada exportação fica registada (quem, quando,
+  que documentos), numa tabela escrita pelo servidor — é uma exportação em
+  bloco de documentos de identificação, e o RGPD pede rasto.
 - **Um ecrã abre sempre no topo.** O `<SubirAoTopo>` (na moldura do router)
   põe a janela a zero a cada mudança de caminho e de `?ver=`. Numa app de
   página única o browser não repõe o scroll: quem estava no fim da Agenda e
@@ -625,7 +645,7 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   deixava o que se paga à seguradora nos 700 € de quando eram 28. Escrever
   outro valor solta-o — o terceiro pode cobrar outra coisa —, e o formulário
   diz então quanto se cobra, com um botão para o usar.
-- **Contas por atleta (Financeiro, `?ver=atletas`): quem deve o quê, e o mesmo
+- **Contas por atleta (Relatórios, `?relatorio=contas`): quem deve o quê, e o mesmo
   em texto para o WhatsApp.** Três secções — Em dívida, A pagamento, Pago — e
   um atleta aparece em cada uma onde tiver alguma coisa. É de propósito: cada
   banda soma as linhas que tem por baixo, e agrupar cada atleta pelo seu pior

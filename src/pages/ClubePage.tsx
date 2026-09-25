@@ -10,7 +10,7 @@ import {
   Users,
   Swords,
   ChevronRight,
-  ExternalLink,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -24,6 +24,7 @@ import { DadosDoClube } from '../components/clube/DadosDoClube'
 import { GestaoCampos } from '../components/clube/GestaoCampos'
 import { GestaoAdversarios } from '../components/clube/GestaoAdversarios'
 import { GestaoTorneios } from '../components/clube/GestaoTorneios'
+import { Relatorios } from '../components/clube/Relatorios'
 
 /*
   As secções de gestão, cada uma um ecrã por direito. O `?ver=` no endereço é
@@ -35,6 +36,8 @@ const SECCOES = {
   campos: { titulo: 'Campos', sobrancelha: 'Clube', Componente: GestaoCampos },
   adversarios: { titulo: 'Adversários', sobrancelha: 'Clube', Componente: GestaoAdversarios },
   torneios: { titulo: 'Torneios', sobrancelha: 'Clube', Componente: GestaoTorneios },
+  /* Só da direção: as dívidas de cada um, e (a seguir) os documentos. */
+  relatorios: { titulo: 'Relatórios', sobrancelha: 'Direção', Componente: Relatorios, soDirecao: true },
 } as const
 
 type ChaveDeSeccao = keyof typeof SECCOES
@@ -89,11 +92,16 @@ const EQUIPA: readonly Entrada[] = [
 /*
   A gestão vive dentro deste ecrã, e não numa página à parte: é o que o
   handoff manda — "a página Admin desapareceu: tudo o que era gestão vive no
-  ecrã Clube, num bloco marcado com 🔒". Enquanto o backoffice existiu como
-  página, três destas linhas caíam todas nela, em separadores diferentes, e os
-  campos não tinham porta nenhuma.
+  ecrã Clube, num bloco marcado com 🔒".
+
+  **Arrumada pelo que se vem cá fazer** (2026-09-25), e não num bloco só de
+  seis linhas: o que se usa todas as semanas em cima (a época), o dinheiro e
+  os dados pessoais num bloco da direção, e o que se configura uma vez e
+  raramente se toca no fim. Estava tudo em "Gestão", por uma ordem que não
+  dizia nada, com o Financeiro no fim da lista e os campos antes dos dados do
+  clube.
 */
-const GESTAO: readonly Entrada[] = [
+const EPOCA: readonly Entrada[] = [
   {
     para: '/events',
     titulo: 'Eventos e convocatórias',
@@ -106,6 +114,28 @@ const GESTAO: readonly Entrada[] = [
     descricao: 'Competições, grupos, equipas e jogos',
     Icone: Trophy,
   },
+]
+
+/* O dinheiro e os dados pessoais — só a direção os vê. */
+const DIRECAO: readonly Entrada[] = [
+  {
+    para: '/finance',
+    titulo: 'Financeiro e quotas',
+    descricao: 'Quotas, encargos, despesas e receitas',
+    Icone: Landmark,
+    soDirecao: true,
+  },
+  {
+    para: '/clube?ver=relatorios',
+    titulo: 'Relatórios',
+    descricao: 'Contas por atleta, para partilhar no WhatsApp',
+    Icone: ClipboardList,
+    soDirecao: true,
+  },
+]
+
+/* Configura-se uma vez e raramente se volta a tocar. */
+const CONFIGURACAO: readonly Entrada[] = [
   {
     para: '/clube?ver=adversarios',
     titulo: 'Adversários',
@@ -124,14 +154,28 @@ const GESTAO: readonly Entrada[] = [
     descricao: 'Nome, sigla, emblema e campo de casa',
     Icone: Shield,
   },
-  {
-    para: '/finance',
-    titulo: 'Financeiro e quotas',
-    descricao: 'Quotas, encargos, despesas e receitas',
-    Icone: Landmark,
-    soDirecao: true,
-  },
 ]
+
+/** Um bloco do índice: a etiqueta (com cadeado, se for de gestão) e as linhas. */
+const Bloco: React.FC<{
+  titulo: string
+  cadeado?: boolean
+  entradas: readonly Entrada[]
+  contagens: Record<string, string | undefined>
+}> = ({ titulo, cadeado = false, entradas, contagens }) =>
+  entradas.length === 0 ? null : (
+    <section className="mb-6">
+      <div className="flex items-center gap-1.5 mb-2.5">
+        {cadeado && <Lock size={11} className="text-csc-gold" aria-hidden="true" />}
+        <EtiquetaSeccao como="h2">{titulo}</EtiquetaSeccao>
+      </div>
+      <div className="space-y-2">
+        {entradas.map(entrada => (
+          <LinhaEntrada key={entrada.titulo} entrada={entrada} contagem={contagens[entrada.titulo]} />
+        ))}
+      </div>
+    </section>
+  )
 
 const LinhaEntrada: React.FC<{ entrada: Entrada; contagem?: string }> = ({ entrada, contagem }) => (
   <CartaoSimples
@@ -161,7 +205,9 @@ const ClubePage: React.FC = () => {
   const eDirecao = profile?.role === 'admin'
 
   const chave = params.get('ver') as ChaveDeSeccao | null
-  const seccao = chave && chave in SECCOES ? SECCOES[chave] : null
+  const candidata = chave && chave in SECCOES ? SECCOES[chave] : null
+  // Uma secção da direção aberta por quem não é da direção cai no índice.
+  const seccao = candidata && (!('soDirecao' in candidata) || eDirecao) ? candidata : null
 
   /* Voltar ao índice limpa a secção e o que ela tenha aberto por endereço. */
   const voltarAoIndice = () => {
@@ -169,7 +215,7 @@ const ClubePage: React.FC = () => {
     pedirSaida(() => setParams(new URLSearchParams()))
   }
 
-  const gestaoVisivel = GESTAO.filter(e => !e.soDirecao || eDirecao)
+  const direcaoVisivel = DIRECAO.filter(e => !e.soDirecao || eDirecao)
 
   /*
     Os três números do topo (ecrã 6a): quantos somos, quantos jogos se
@@ -180,7 +226,7 @@ const ClubePage: React.FC = () => {
     plantel, e a vista é a que qualquer autenticado pode ler.
   */
   const [numeros, setNumeros] = useState<{ atletas: number; jogos: number; torneios: number } | null>(null)
-  const [campoPrincipal, setCampoPrincipal] = useState<{ name: string; address: string | null } | null>(null)
+  const [campoDeCasa, setCampoDeCasa] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelado = false
@@ -207,17 +253,20 @@ const ClubePage: React.FC = () => {
     let cancelado = false
     const id = clubSettings?.home_field_id
     if (!id) {
-      setCampoPrincipal(null)
+      setCampoDeCasa(null)
       return
     }
     supabase.from('fields').select('name, address').eq('id', id).maybeSingle().then(({ data }) => {
-      if (!cancelado) setCampoPrincipal((data as { name: string; address: string | null }) ?? null)
+      if (!cancelado) setCampoDeCasa((data as { name: string } | null)?.name ?? null)
     })
     return () => { cancelado = true }
   }, [clubSettings?.home_field_id])
 
   const contagens: Record<string, string | undefined> = {
     Plantel: numeros ? `${numeros.atletas} ${numeros.atletas === 1 ? 'atleta' : 'atletas'}` : undefined,
+    /* O campo de casa era um cartão no fim do índice, que repetia o que os
+       Dados do clube já dizem; fica dito aqui, na linha dos campos. */
+    Campos: campoDeCasa ? `Campo de casa: ${campoDeCasa}` : undefined,
     'Torneios e jornadas': numeros
       ? numeros.torneios === 0 ? 'nenhuma prova a decorrer' : `${numeros.torneios} a decorrer`
       : undefined,
@@ -259,61 +308,11 @@ const ClubePage: React.FC = () => {
         ))}
       </div>
 
-      <section className="mb-6">
-        <EtiquetaSeccao className="mb-2.5">Equipa</EtiquetaSeccao>
-        <div className="space-y-2">
-          {EQUIPA.map(entrada => (
-            <LinhaEntrada key={entrada.titulo} entrada={entrada} contagem={contagens[entrada.titulo]} />
-          ))}
-        </div>
-      </section>
+      <Bloco titulo="Equipa" entradas={EQUIPA} contagens={contagens} />
 
-      <section className="mb-6">
-        <div className="flex items-center gap-1.5 mb-2.5">
-          <Lock size={11} className="text-csc-gold" />
-          <EtiquetaSeccao como="h2">Gestão</EtiquetaSeccao>
-        </div>
-        <div className="space-y-2">
-          {gestaoVisivel.map(entrada => (
-            <LinhaEntrada key={entrada.titulo} entrada={entrada} contagem={contagens[entrada.titulo]} />
-          ))}
-        </div>
-      </section>
-
-      {/* O campo de casa (ecrã 6a): onde se joga, com o caminho lá para. */}
-      {campoPrincipal && (
-        <section>
-          <EtiquetaSeccao className="mb-2.5">Campo principal</EtiquetaSeccao>
-          <CartaoSimples className="p-4 flex items-center gap-3.5">
-            <MapPin size={20} className="shrink-0 text-csc-gold" />
-            <span className="min-w-0 flex-1">
-              <span className="block font-display font-extrabold text-sm text-white truncate">
-                {campoPrincipal.name}
-              </span>
-              {campoPrincipal.address && (
-                <span className="block text-[11px] leading-snug text-white/62 mt-0.5 truncate">
-                  {campoPrincipal.address}
-                </span>
-              )}
-            </span>
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                campoPrincipal.address ? `${campoPrincipal.name}, ${campoPrincipal.address}` : campoPrincipal.name,
-              )}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => triggerHaptic('light')}
-              className="min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/15 text-csc-gold
-                font-display font-extrabold text-[11px] flex items-center gap-1.5 shrink-0
-                transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
-              Mapa
-              <ExternalLink size={12} />
-            </a>
-          </CartaoSimples>
-        </section>
-      )}
+      <Bloco titulo="Época" cadeado entradas={EPOCA} contagens={contagens} />
+      <Bloco titulo="Direção" cadeado entradas={direcaoVisivel} contagens={contagens} />
+      <Bloco titulo="Configuração" cadeado entradas={CONFIGURACAO} contagens={contagens} />
     </div>
   )
 }

@@ -1,12 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Landmark, Plus, Settings, Wallet, Users,
+  Landmark, Plus, Settings, Wallet,
   ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check, AlertTriangle
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
-import { useClub } from '../context/ClubContext'
-import { CLUBE_SIGLA } from '../lib/clube'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -22,8 +20,6 @@ import { useSearchParams } from 'react-router-dom'
 import { Botao, CabecalhoEcra, FilaSeparadores, LinhaAtleta } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
 import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
-import { ContasPorAtleta } from '../components/financeiro/ContasPorAtleta'
-import { contasDosAtletas } from '../components/financeiro/contasDosAtletas'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
@@ -123,12 +119,11 @@ interface TournamentRow {
   rules?: any
 }
 
-type TabId = 'overview' | 'atletas' | 'quotas' | 'charges' | 'expenses' | 'movements' | 'settings'
+type TabId = 'overview' | 'quotas' | 'charges' | 'expenses' | 'movements' | 'settings'
 
 const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { id: 'overview', label: 'Visão Geral', Icon: Landmark },
   { id: 'movements', label: 'Movimentos', Icon: Wallet },
-  { id: 'atletas', label: 'Por atleta', Icon: Users },
   { id: 'quotas', label: 'Quotas', Icon: ListChecks },
   { id: 'charges', label: 'Encargos', Icon: ShieldCheck },
   { id: 'expenses', label: 'Despesas/Receitas', Icon: Receipt },
@@ -138,7 +133,6 @@ const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: numbe
 /** O título do ecrã muda com o separador — o "Financeiro" está no Clube. */
 const TITULO_SEPARADOR: Record<TabId, string> = {
   overview: 'Visão geral',
-  atletas: 'Por atleta',
   quotas: 'Quotas',
   charges: 'Encargos',
   expenses: 'Despesas e receitas',
@@ -177,7 +171,6 @@ const agruparPorCategoria = (tipo: 'income' | 'expense', movements: MovementRow[
 
 const FinancePage: React.FC = () => {
   const { profile } = useAuth()
-  const { clubSettings } = useClub()
   const isAdmin = profile?.role === 'admin'
 
   const [loading, setLoading] = useState(true)
@@ -404,16 +397,6 @@ const FinancePage: React.FC = () => {
   const incomeCategories = categories.filter(c => c.allow_income)
   const activePlayers = players.filter(p => p.status !== 'inactive')
 
-  /* A conta de cada atleta — quotas e encargos juntos, por estado. Dos mesmos
-     dados que as Quotas e os Encargos, para os três ecrãs dizerem o mesmo. */
-  const contas = useMemo(() => contasDosAtletas({
-    atletas: players,
-    quotas: quotaRows,
-    encargos: charges,
-    participacoes: chargePlayers,
-    pagamentos: chargePayments,
-    categorias: categories,
-  }), [players, quotaRows, charges, chargePlayers, chargePayments, categories])
 
   const chargesWithStats = useMemo(() => charges.map(c => {
     const participantIds = chargePlayers.filter(cp => cp.charge_id === c.id).map(cp => cp.player_id)
@@ -1406,9 +1389,6 @@ const FinancePage: React.FC = () => {
       )}
 
       {/* ================= POR ATLETA ================= */}
-      {activeTab === 'atletas' && (
-        <ContasPorAtleta contas={contas} clube={clubSettings?.initials || CLUBE_SIGLA} />
-      )}
 
       {/* ================= QUOTAS ================= */}
       {activeTab === 'quotas' && (

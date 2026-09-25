@@ -105,7 +105,9 @@ const mensagemAberta = async (page: Page) => {
   return decodeURIComponent(abertos[0].slice('https://wa.me/?text='.length))
 }
 
-const abrir = async (page: Page, endereco = '/csc-vet/finance?ver=atletas') => {
+/* As contas vivem nos Relatórios do Clube desde 2026-09-25; eram o separador
+   "Por atleta" do Financeiro, cujo endereço redireciona (ver o último teste). */
+const abrir = async (page: Page, endereco = '/csc-vet/clube?ver=relatorios&relatorio=contas') => {
   await page.clock.setFixedTime(HOJE)
   await montarSupabaseFalso(page, FIXTURES)
   await page.goto(endereco)
@@ -271,7 +273,7 @@ test('partilhar a lista: a mensagem é a do ecrã, e abre o WhatsApp com ela', a
 
 test('a conta de um atleta sai para o WhatsApp tal como se lê', async ({ page }) => {
   await apanharPartilhas(page)
-  await abrir(page, '/csc-vet/finance?ver=atletas&conta=p1')
+  await abrir(page, '/csc-vet/clube?ver=relatorios&relatorio=contas&conta=p1')
 
   const conta = page.getByRole('dialog', { name: 'Bruno' })
   await expect(conta).toBeVisible()
@@ -302,13 +304,15 @@ test('a conta de um atleta sai para o WhatsApp tal como se lê', async ({ page }
  */
 test('a barra de separadores mostra que há mais, e o realce acompanha o ativo', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await abrir(page, '/csc-vet/finance?ver=atletas')
+  await page.clock.setFixedTime(HOJE)
+  await montarSupabaseFalso(page, FIXTURES)
+  await page.goto('/csc-vet/finance?ver=quotas')
 
   const fila = page.getByRole('tablist', { name: 'Secções do financeiro' })
   const setas = fila.locator('xpath=..').locator('button[aria-hidden="true"]')
 
-  // "Por atleta" é o terceiro de sete: há separadores dos dois lados.
-  await expect(page.getByRole('tab', { name: 'Por atleta' })).toBeInViewport()
+  // "Quotas" é o terceiro de seis: há separadores dos dois lados.
+  await expect(page.getByRole('tab', { name: 'Quotas' })).toBeInViewport({ timeout: 15000 })
   await expect(setas).toHaveCount(2)
 
   // O realce está por baixo do ativo, com a largura dele.
@@ -341,4 +345,21 @@ test('a barra de separadores mostra que há mais, e o realce acompanha o ativo',
   const filaEsquerda = (await fila.boundingBox())!.x
   const bordas = await setas.evaluateAll(botoes => botoes.map(b => b.getBoundingClientRect().left))
   expect(bordas.some(x => Math.abs(x - filaEsquerda) <= 1)).toBe(true)
+})
+
+/**
+ * As contas saíram do Financeiro para os Relatórios do Clube, que são só da
+ * direção. O endereço antigo anda em links e continua a abrir — com a conta
+ * que lá vinha, se vinha.
+ */
+test('o endereço antigo do Financeiro abre as contas nos Relatórios', async ({ page }) => {
+  await page.clock.setFixedTime(HOJE)
+  await montarSupabaseFalso(page, FIXTURES)
+  await page.goto('/csc-vet/finance?ver=atletas&conta=p1')
+  await expect(page).toHaveURL(/\/clube\?ver=relatorios&relatorio=contas&conta=p1$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Contas por atleta' })).toBeVisible()
+  // O Financeiro já não tem o separador.
+  await page.goto('/csc-vet/finance')
+  await expect(page.getByRole('tab', { name: 'Visão Geral' })).toBeVisible({ timeout: 15000 })
+  await expect(page.getByRole('tab', { name: 'Por atleta' })).toHaveCount(0)
 })

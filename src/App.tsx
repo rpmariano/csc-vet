@@ -76,6 +76,21 @@ const ParaClube: React.FC = () => {
   return <Navigate to={query ? `/clube?${query}` : '/clube'} replace />
 }
 
+/**
+ * As contas por atleta saíram do Financeiro para os Relatórios do Clube
+ * (2026-09-25). O separador antigo — `/finance?ver=atletas`, com ou sem uma
+ * `&conta=` aberta — anda em links, e continua a abrir no sítio novo.
+ */
+const Financeiro: React.FC = () => {
+  const { search } = useLocation()
+  const params = new URLSearchParams(search)
+  if (params.get('ver') !== 'atletas') return <FinancePage />
+  const novos = new URLSearchParams({ ver: 'relatorios', relatorio: 'contas' })
+  const conta = params.get('conta')
+  if (conta) novos.set('conta', conta)
+  return <Navigate to={`/clube?${novos.toString()}`} replace />
+}
+
 /** Mostrado enquanto o pedaço de código da rota é descarregado. */
 const EcraACarregar: React.FC = () => (
   <div className="min-h-[60vh] flex items-center justify-center" role="status" aria-live="polite">
@@ -212,7 +227,7 @@ const router = createBrowserRouter(
                 {
                   element: <ProtectedRoute allowedRoles={['admin']} />,
                   children: [
-                    { path: '/finance', element: <FinancePage /> },
+                    { path: '/finance', element: <Financeiro /> },
                   ],
                 },
               ],
