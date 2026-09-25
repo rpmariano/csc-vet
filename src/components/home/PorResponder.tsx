@@ -44,7 +44,7 @@ export const PorResponder: React.FC<{
     const diaSemana = DIA_SEMANA.format(quando)
     const abrir = () => {
       triggerHaptic('light')
-      navegar(`/calendar?event=${p.id}`)
+      navegar(`/calendar?event=${p.id}`, { state: { origem: 'Hoje' } })
     }
 
     return (

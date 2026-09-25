@@ -7,6 +7,7 @@ import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
 import { useModalA11y } from '../../hooks/useModalA11y'
 import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
+import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
 import { UnsavedChangesModal } from '../UnsavedChangesModal'
 import { ConfirmModal } from '../ConfirmModal'
 import { FichaAdversario } from './FichaAdversario'
@@ -173,11 +174,7 @@ export const GestaoAdversarios: React.FC = () => {
     setParams(seguintes)
   }
 
-  const fecharFicha = () => {
-    const seguintes = new URLSearchParams(params)
-    seguintes.delete('adversario')
-    setParams(seguintes)
-  }
+  const { voltarPara, aoVoltar: fecharFicha } = useVoltarDaFicha(['adversario'], 'Adversários')
 
   const filtrados = adversarios.filter(a => {
     const q = procura.toLowerCase().trim()
@@ -517,6 +514,7 @@ export const GestaoAdversarios: React.FC = () => {
         }
         siglaClube={formatClubSigla(clubSettings?.initials)}
         aoFechar={fecharFicha}
+        voltarPara={voltarPara}
         aoEditar={() => {
           if (!adversarioAberto) return
           const alvo = adversarioAberto

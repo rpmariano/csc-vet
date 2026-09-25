@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { haEntradaAnterior } from '../lib/rotas'
 import {
   Landmark,
   CalendarPlus,
@@ -9,7 +10,6 @@ import {
   Lock,
   Users,
   Swords,
-  ChevronRight,
   ClipboardList,
   type LucideIcon,
 } from 'lucide-react'
@@ -32,10 +32,10 @@ import { Relatorios } from '../components/clube/Relatorios'
   a mesma convenção da Competição e do Financeiro.
 */
 const SECCOES = {
-  dados: { titulo: 'Dados do clube', sobrancelha: 'Clube', Componente: DadosDoClube },
-  campos: { titulo: 'Campos', sobrancelha: 'Clube', Componente: GestaoCampos },
-  adversarios: { titulo: 'Adversários', sobrancelha: 'Clube', Componente: GestaoAdversarios },
-  torneios: { titulo: 'Torneios', sobrancelha: 'Clube', Componente: GestaoTorneios },
+  dados: { titulo: 'Dados do clube', Componente: DadosDoClube },
+  campos: { titulo: 'Campos', Componente: GestaoCampos },
+  adversarios: { titulo: 'Adversários', Componente: GestaoAdversarios },
+  torneios: { titulo: 'Torneios', Componente: GestaoTorneios },
   /* Só da direção: as dívidas de cada um, e (a seguir) os documentos. */
   relatorios: { titulo: 'Relatórios', sobrancelha: 'Direção', Componente: Relatorios, soDirecao: true },
 } as const
@@ -181,6 +181,9 @@ const LinhaEntrada: React.FC<{ entrada: Entrada; contagem?: string }> = ({ entra
   <CartaoSimples
     como={Link}
     to={entrada.para}
+    /* Os destinos com rota própria (Plantel, Eventos, Financeiro) mostram
+       "‹ Clube" por causa disto — ver `VoltarAOrigem`. */
+    state={{ origem: 'Clube' }}
     onClick={() => triggerHaptic('light')}
     className="min-h-14 flex items-center gap-3.5 px-4 py-3 cursor-pointer
       transition-transform duration-150 active:scale-97
@@ -193,7 +196,6 @@ const LinhaEntrada: React.FC<{ entrada: Entrada; contagem?: string }> = ({ entra
         {contagem ?? entrada.descricao}
       </span>
     </span>
-    <ChevronRight size={16} className="shrink-0 text-white/35" />
   </CartaoSimples>
 )
 
@@ -202,6 +204,7 @@ const ClubePage: React.FC = () => {
   const { clubSettings } = useClub()
   const [params, setParams] = useSearchParams()
   const { pedirSaida } = useSaidaGuardada()
+  const navegar = useNavigate()
   const eDirecao = profile?.role === 'admin'
 
   const chave = params.get('ver') as ChaveDeSeccao | null
@@ -209,10 +212,16 @@ const ClubePage: React.FC = () => {
   // Uma secção da direção aberta por quem não é da direção cai no índice.
   const seccao = candidata && (!('soDirecao' in candidata) || eDirecao) ? candidata : null
 
-  /* Voltar ao índice limpa a secção e o que ela tenha aberto por endereço. */
+  /* Voltar ao índice é o retroceder do browser, como nas fichas (ver
+     `useVoltarDaFicha`): tirar o `?ver=` com um push deixava a secção no
+     histórico, e o retroceder a seguir reabria-a. Aberta por um link, sem
+     nada para trás, cai no índice. */
   const voltarAoIndice = () => {
     triggerHaptic('light')
-    pedirSaida(() => setParams(new URLSearchParams()))
+    pedirSaida(() => {
+      if (haEntradaAnterior()) navegar(-1)
+      else setParams(new URLSearchParams(), { replace: true })
+    })
   }
 
   const direcaoVisivel = DIRECAO.filter(e => !e.soDirecao || eDirecao)
@@ -276,7 +285,13 @@ const ClubePage: React.FC = () => {
     return (
       <div className="relative">
         <BotaoVoltar para="Clube" aoVoltar={voltarAoIndice} />
-        <CabecalhoEcra titulo={seccao.titulo} className="mb-4" />
+        {/* A sobrancelha só onde diz alguma coisa: "Clube" repetia o "‹ Clube"
+            logo por cima; "Direção" diz de quem é a secção. */}
+        <CabecalhoEcra
+          titulo={seccao.titulo}
+          sobrancelha={'sobrancelha' in seccao ? seccao.sobrancelha : undefined}
+          className="mb-4"
+        />
         <seccao.Componente />
       </div>
     )

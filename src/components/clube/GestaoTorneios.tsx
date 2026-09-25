@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
 import { Trophy, Shield, Plus, Search, X, Edit2, Trash2, Save, ChevronDown } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { extractRolesFromProfile } from '../../context/AuthContext'
@@ -37,7 +38,16 @@ export const GestaoTorneios: React.FC = () => {
   const [tourStatusFilter, setTourStatusFilter] = useState<'all' | 'agendado' | 'ativo' | 'terminado'>('all')
 
   const [isTourModalOpen, setIsTourModalOpen] = useState(false)
-  const [gestorDeLiga, setGestorDeLiga] = useState<string | null>(null)
+  /* Os grupos e equipas de uma prova são um ecrã, e vão no endereço
+     (`?liga=`) como as fichas: era estado local, e o retroceder do browser
+     saía da página em vez de voltar aos Torneios. */
+  const gestorDeLiga = params.get('liga')
+  const abrirGestorDeLiga = (id: string) => {
+    const seguintes = new URLSearchParams(params)
+    seguintes.set('liga', id)
+    setParams(seguintes)
+  }
+  const { aoVoltar: fecharGestorDeLiga } = useVoltarDaFicha(['liga'], 'Torneios')
   const [editingTourId, setEditingTourId] = useState<string | null>(null)
   const [tourName, setTourName] = useState('')
   const [tourSeason, setTourSeason] = useState('')
@@ -79,9 +89,9 @@ export const GestaoTorneios: React.FC = () => {
   useEffect(() => {
     if (params.get('criar') !== 'jornada' || tournaments.length === 0) return
     const emCurso = tournaments.find(t => t.status === 'ativo') ?? tournaments[0]
-    setGestorDeLiga(emCurso.id)
     const seguintes = new URLSearchParams(params)
     seguintes.delete('criar')
+    seguintes.set('liga', emCurso.id)
     setParams(seguintes, { replace: true })
   }, [params, setParams, tournaments])
 
@@ -362,7 +372,7 @@ export const GestaoTorneios: React.FC = () => {
 
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => setGestorDeLiga(t.id)}
+                      onClick={() => abrirGestorDeLiga(t.id)}
                       className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-blue-400 text-blue-300 hover:bg-blue-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                       title="Gerir Grupos e Equipas"
                       aria-label={`Gerir Grupos e Equipas: ${t.name}`}
@@ -791,7 +801,7 @@ export const GestaoTorneios: React.FC = () => {
       {gestorDeLiga && (
         <LeagueManager
           tournamentId={gestorDeLiga}
-          onClose={() => setGestorDeLiga(null)}
+          onClose={fecharGestorDeLiga}
         />
       )}
 

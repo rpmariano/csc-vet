@@ -922,6 +922,26 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   de baixo) só pára com alterações por gravar, e aí também é o guarda do
   formulário que pergunta; depois de sair, toca-se outra vez.
   `alteracoes-por-gravar.spec.ts` cobre os dois casos.
+- **O "‹" é o retroceder do browser, e diz para onde vai** (vaga 2 da
+  auditoria de design, 2026-09-25 — `docs/auditoria-design-2026-09.md`).
+  Havia três comportamentos para a mesma seta: as fichas tiravam o parâmetro
+  com `replace` (e deixavam uma entrada morta no histórico), as do Clube com
+  `push` (e o retroceder a seguir **reabria** a ficha), e uma ficha aberta de
+  fora da sua lista voltava à lista e não à origem — o jogo tocado na Home
+  dizia "‹ Agenda" e caía na Agenda, com o retroceder a levar à Home.
+  Hoje uma ficha no endereço fecha-se pelo `useVoltarDaFicha(chaves, lista)`:
+  com uma entrada anterior nesta visita (`haEntradaAnterior()`, pelo
+  `history.state.idx` do data router) faz `navigate(-1)`; aberta por um link,
+  tira os parâmetros com `replace` e cai na lista. **Quem abre uma ficha de
+  fora da lista dela passa `state={{ origem }}`** (`nomeDoEcra()`, em
+  `lib/rotas.ts`), e o "‹" diz esse nome. O mesmo vale para as rotas abertas
+  pelo Clube (Plantel, Eventos, Financeiro): o `<VoltarAOrigem>` só aparece
+  com origem, e **um `replace` nesses ecrãs tem de passar o `state` adiante**,
+  senão o "‹ Clube" desaparece ao trocar de separador. O Perfil volta ao ecrã
+  de onde a fotografia foi tocada. `voltar.spec.ts` cobre-o.
+- **Uma linha que se toca não leva `›`.** O cartão ou a linha já diz que se
+  toca; a seta aparecia em metade das listas e faltava na outra metade. O
+  `ChevronDown` de expandir no sítio fica — esse diz outra coisa.
 - **Editar um evento é um componente só, o `EditarEvento`**
   (`src/components/eventos/`), usado pela Agenda e pelos Eventos. Eram duas
   cópias e tinham divergido — a mesma edição gravava coisas diferentes

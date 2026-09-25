@@ -158,16 +158,15 @@ export const ConvocatoriaAoCriar: React.FC<{
       </Botao>
     </>
   ) : (
-    <>
-      <Botao aparencia="vidro" className="flex-1" onClick={aoFechar} disabled={aGravar}>Agora não</Botao>
-      <Botao className="flex-1" onClick={convocar} disabled={aGravar}>
+    /* Sem "Agora não": sair sem convocar é o "‹ Eventos" lá em cima. Eram
+       dois controlos para a mesma coisa. */
+    <Botao className="flex-1" onClick={convocar} disabled={aGravar}>
         {aGravar
           ? 'A guardar…'
           : escolhidos.size === 0
             ? 'Guardar sem convocar'
             : `Convocar ${escolhidos.size}`}
-      </Botao>
-    </>
+    </Botao>
   )
 
   return (

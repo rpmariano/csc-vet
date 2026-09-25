@@ -12,10 +12,11 @@ import {
   AlertCircle,
   Lock,
   LogOut,
-  ChevronLeft,
   Bell,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { haEntradaAnterior } from '../lib/rotas'
+import { BotaoVoltar } from '../components/ui'
 import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { CLUBE_NOME, CLUBE_SIGLA } from '../lib/clube'
@@ -55,6 +56,8 @@ const SettingsPage: React.FC = () => {
   const { profile, assignedRoles, actualRole, setSimulatedRole, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
   const { clubSettings } = useClub()
   const navegar = useNavigate()
+  const estadoDaEntrada = useLocation().state as { origem?: unknown } | null
+  const origemDoPerfil = typeof estadoDaEntrada?.origem === 'string' ? estadoDaEntrada.origem : null
   
   // 1. Identificação Pessoal & Fiscal
   const [formName, setFormName] = useState('')
@@ -305,19 +308,14 @@ const SettingsPage: React.FC = () => {
   return (
     <div className="space-y-4 pb-2">
       
-      {/* Voltar: o Perfil abre-se da fotografia de qualquer ecrã, e o caminho
-          de volta é sempre para trás — não para um destino fixo. */}
-      <button
-        type="button"
-        onClick={() => navegar(-1)}
-        className="flex items-center gap-3 min-h-11 -ml-1 pr-3 cursor-pointer
-          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-      >
-        <span className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white flex-none">
-          <ChevronLeft size={18} />
-        </span>
-        <span className="font-display font-bold text-xs text-white/60">Voltar</span>
-      </button>
+      {/* Voltar: o Perfil abre-se da fotografia de qualquer ecrã, e volta
+          para esse ecrã — o mesmo "‹ Nome" das fichas. Era um disco à parte
+          com "Voltar", a única seta da app que não dizia para onde ia; e
+          aberto por um link, o `navigate(-1)` saía da app. */}
+      <BotaoVoltar
+        para={origemDoPerfil ?? 'Hoje'}
+        aoVoltar={() => (haEntradaAnterior() ? navegar(-1) : navegar('/', { replace: true }))}
+      />
 
       {/* Quem sou eu, em grande. */}
       <div className="flex items-center gap-4 pt-1">

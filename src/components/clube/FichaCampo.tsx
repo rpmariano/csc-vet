@@ -45,6 +45,8 @@ interface FichaCampoProps {
   eCampoDoClube: boolean
   siglaClube: string
   aoFechar: () => void
+  /** Nome do ecrã para onde o "‹" volta — a origem, se a ficha veio de fora. */
+  voltarPara?: string
   aoEditar: () => void
   aoEliminar: () => void
 }
@@ -61,6 +63,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
   eCampoDoClube,
   siglaClube,
   aoFechar,
+  voltarPara = 'Campos',
   aoEditar,
   aoEliminar,
 }) => {
@@ -109,7 +112,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
   return (
     <EcraDetalhe
       aberto={aberto}
-      voltarPara="Campos"
+      voltarPara={voltarPara}
       aoVoltar={aoFechar}
       titulo={campo?.name ?? 'Campo'}
     >

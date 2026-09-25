@@ -60,6 +60,7 @@ export const UltimoJogo: React.FC<{ jogo: UltimoJogoDaHome; siglaClube: string }
       <CartaoSimples
         como={Link}
         to={`/competicao?ver=fichas&jogo=${jogo.id}`}
+        state={{ origem: 'Hoje' }}
         onClick={() => triggerHaptic('light')}
         className="block px-4 py-3.5 cursor-pointer transition-transform duration-150 active:scale-97
           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"

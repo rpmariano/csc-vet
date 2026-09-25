@@ -16,7 +16,8 @@ import {
   DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes, formatMonthYear, prazoPassou,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
+import { VoltarAOrigem } from '../components/VoltarAOrigem'
 import { Botao, CabecalhoEcra, FilaSeparadores, LinhaAtleta } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
 import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
@@ -175,6 +176,7 @@ const FinancePage: React.FC = () => {
 
   const [loading, setLoading] = useState(true)
   const [params, setParams] = useSearchParams()
+  const estadoDaEntrada = useLocation().state
 
   /* O separador vai no endereço; ver a nota no cabeçalho. */
   const verAtual = (params.get('ver') ?? '') as TabId
@@ -182,7 +184,8 @@ const FinancePage: React.FC = () => {
   const trocarSeparador = (seguinte: TabId) => {
     const seguintes = new URLSearchParams(params)
     seguintes.set('ver', seguinte)
-    setParams(seguintes, { replace: true })
+    // O `state` segue: é nele que vem a origem do "‹ Clube".
+    setParams(seguintes, { replace: true, state: estadoDaEntrada })
   }
 
   const [settings, setSettings] = useState<FinancialSettings>(DEFAULT_FINANCIAL_SETTINGS)
@@ -1343,6 +1346,7 @@ const FinancePage: React.FC = () => {
         endereço (`?ver=`), como na Competição e nos dados do clube: dá link
         próprio e faz o retroceder do browser funcionar.
       */}
+      <VoltarAOrigem />
       <CabecalhoEcra
         titulo={TITULO_SEPARADOR[activeTab]}
         sobrancelha={`Época ${seasonLabel}`}

@@ -21,8 +21,7 @@ import {
   Send,
   AlertTriangle,
   ClipboardList,
-  SlidersHorizontal,
-  ChevronRight
+  SlidersHorizontal
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -45,7 +44,9 @@ import { hasMatchReport, ROTULO_RESPOSTA } from '../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 import { EcraDetalhe } from '../components/EcraDetalhe'
 import { EditarEvento } from '../components/eventos/EditarEvento'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
+import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
+import { VoltarAOrigem } from '../components/VoltarAOrigem'
 import { BottomSheet } from '../components/BottomSheet'
 import { Pastilha, Botao } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
@@ -236,6 +237,7 @@ const EventsPage: React.FC = () => {
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
   const [searchParams, setSearchParams] = useSearchParams()
+  const estadoDaEntrada = useLocation().state
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
   /* A ficha rápida do convocado (4a), por cima do dossier de convocatória. */
   const [convocadoAberto, setConvocadoAberto] = useState<string | null>(null)
@@ -1165,13 +1167,7 @@ const EventsPage: React.FC = () => {
     setSearchParams({ convocatoria: ev.id })
   }
 
-  const fecharDossier = () => {
-    if (searchParams.get('convocatoria')) {
-      const restantes = new URLSearchParams(searchParams)
-      restantes.delete('convocatoria')
-      setSearchParams(restantes, { replace: true })
-    }
-  }
+  const { voltarPara: voltarDoDossier, aoVoltar: fecharDossier } = useVoltarDaFicha(['convocatoria'], 'Eventos')
 
   /*
     O [+] da barra manda para cá com `?criar=match|practice|gathering`.
@@ -1194,8 +1190,9 @@ const EventsPage: React.FC = () => {
     }
     const restantes = new URLSearchParams(searchParams)
     restantes.delete('criar')
-    setSearchParams(restantes, { replace: true })
-  }, [searchParams, setSearchParams])
+    // O `state` segue: é nele que vem a origem do "‹".
+    setSearchParams(restantes, { replace: true, state: estadoDaEntrada })
+  }, [searchParams, setSearchParams, estadoDaEntrada])
 
   /*
     O dossier aberto pelo endereço. Só enche o evento — quem manda em estar
@@ -1215,7 +1212,9 @@ const EventsPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <div className="space-y-6">
-      {/* Page Header removido a pedido do utilizador */}
+      {/* Page Header removido a pedido do utilizador; fica só o "‹ Clube"
+          quando se entra pelo Clube. */}
+      <VoltarAOrigem />
 
       {successMessage && (
         <div className="bg-csc-light/12 text-csc-verde-texto p-4 rounded-2xl border border-csc-light/30 text-sm font-bold flex items-center gap-2.5 shadow-sm">
@@ -1920,8 +1919,6 @@ const EventsPage: React.FC = () => {
                             )}
                           </div>
                         </div>
-
-                        <ChevronRight size={18} className="shrink-0 text-white/35 mt-0.5" aria-hidden="true" />
                       </div>
 
                       {/* Event Meta Details */}
@@ -2019,7 +2016,7 @@ const EventsPage: React.FC = () => {
       {activeCallupModalEvent && (
         <EcraDetalhe
           aberto={dossierAberto}
-          voltarPara="Eventos"
+          voltarPara={voltarDoDossier}
           aoVoltar={fecharDossier}
           sobrancelha="Convocatória"
           titulo={activeCallupModalEvent.title || 'Convocatória'}

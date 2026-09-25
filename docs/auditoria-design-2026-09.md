@@ -231,3 +231,5 @@ Editar com 4 glifos (`Pencil`, `Edit`, `Edit2`, `Edit3`); X em 7 tamanhos; `Tras
 
 - **Vaga 1 — feita** (texto ilegível, erros silenciosos, vocabulário, `div` clicável, X de fechar < 44px).
   Ficou para a vaga 3 a validação dupla (`required` + toast), por ser uma regra de comportamento e não um defeito.
+- **Vaga 2 — feita.** `useVoltarDaFicha` em todas as fichas no endereço (evento, dossier, jogo, atleta, adversário, campo, relatório, grupos da prova — este passou a `?liga=`); origem passada por quem abre de fora (Home, Classificação, ficha do convocado, Agenda, alerta sem convocatória); `VoltarAOrigem` no Plantel, Eventos e Financeiro; Perfil com `BotaoVoltar`; secções do Clube sem sobrancelha repetida; "Agora não" duplicado fora; `›` fora das linhas (decisão 2).
+  Não se repôs o cabeçalho dos Eventos: foi retirado a pedido ("Page Header removido a pedido do utilizador").

@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react'
 import {
   Trophy,
   Search,
-  ChevronRight,
   SlidersHorizontal,
   Home,
   Plane,
@@ -13,6 +12,7 @@ import { useClub } from '../context/ClubContext'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { useSearchParams } from 'react-router-dom'
+import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
 import { BottomSheet } from '../components/BottomSheet'
 import { Pastilha, Botao } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
@@ -226,13 +226,7 @@ export const MatchReportsPage: React.FC = () => {
     setSearchParams(seguintes)
   }
 
-  const fecharFicha = () => {
-    if (searchParams.get('jogo')) {
-      const restantes = new URLSearchParams(searchParams)
-      restantes.delete('jogo')
-      setSearchParams(restantes, { replace: true })
-    }
-  }
+  const { voltarPara: voltarDaFicha, aoVoltar: fecharFicha } = useVoltarDaFicha(['jogo'], 'Fichas de Jogo')
 
   /*
     A ficha aberta pelo endereço. Só enche o jogo — quem manda em estar aberta
@@ -585,7 +579,6 @@ export const MatchReportsPage: React.FC = () => {
 
                   <span className="flex items-center gap-0.5 text-csc-gold font-display font-black text-[11px] shrink-0">
                     {isCoachOrAdmin ? 'Editar ficha' : 'Ver ficha'}
-                    <ChevronRight size={14} />
                   </span>
                 </div>
               </button>
@@ -602,6 +595,7 @@ export const MatchReportsPage: React.FC = () => {
         <MatchReportModal
           isOpen={isReportModalOpen}
           onClose={fecharFicha}
+          voltarPara={voltarDaFicha}
           eventId={selectedEventForReport.id}
           event={selectedEventForReport}
           isCoachOrAdmin={!!isCoachOrAdmin}

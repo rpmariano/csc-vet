@@ -1,5 +1,4 @@
 import React from 'react'
-import { ChevronRight } from 'lucide-react'
 import type { ScheduledPayment } from './tipos'
 import { diasAtePrazo, prazoPassou } from '../../lib/finance'
 import { ETIQUETA_GRUPO, BARRA_ATRASO, BARRA_AVISO, BARRA_NEUTRA, fmtEuro, fmtData } from './estilos'
@@ -132,9 +131,7 @@ export const PagamentosProgramados: React.FC<PagamentosProgramadosProps> = ({
                     >
                       Pagar
                     </span>
-                  ) : (
-                    <ChevronRight size={16} className="shrink-0 self-center mr-2 text-white/35" aria-hidden="true" />
-                  )}
+                  ) : null}
                 </button>
               )
             })}

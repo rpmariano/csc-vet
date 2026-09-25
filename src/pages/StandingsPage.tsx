@@ -723,6 +723,7 @@ export const StandingsPage = () => {
                                 <Link
                                   key={m.id}
                                   to={`/competicao?ver=fichas&jogo=${m.event_id}`}
+                                  state={{ origem: 'Classificações' }}
                                   onClick={() => triggerHaptic('light')}
                                   aria-label={`Abrir a ficha de jogo de ${casa.sigla} com ${fora.sigla}`}
                                   className={`${linha} cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}

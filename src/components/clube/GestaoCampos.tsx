@@ -7,6 +7,7 @@ import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
 import { useModalA11y } from '../../hooks/useModalA11y'
 import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
+import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
 import { UnsavedChangesModal } from '../UnsavedChangesModal'
 import { ConfirmModal } from '../ConfirmModal'
 import { FichaCampo } from './FichaCampo'
@@ -126,11 +127,7 @@ export const GestaoCampos: React.FC = () => {
     setParams(seguintes)
   }
 
-  const fecharFicha = () => {
-    const seguintes = new URLSearchParams(params)
-    seguintes.delete('campo')
-    setParams(seguintes)
-  }
+  const { voltarPara, aoVoltar: fecharFicha } = useVoltarDaFicha(['campo'], 'Campos')
 
   const filtrados = campos.filter(c => {
     const q = procura.toLowerCase().trim()
@@ -353,6 +350,7 @@ export const GestaoCampos: React.FC = () => {
         eCampoDoClube={Boolean(campoAberto && clubSettings?.home_field_id === campoAberto.id)}
         siglaClube={formatClubSigla(clubSettings?.initials)}
         aoFechar={fecharFicha}
+        voltarPara={voltarPara}
         aoEditar={() => {
           if (!campoAberto) return
           const alvo = campoAberto

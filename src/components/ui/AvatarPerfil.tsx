@@ -1,5 +1,6 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { nomeDoEcra } from '../../lib/rotas'
 import { useAuth } from '../../context/AuthContext'
 
 /**
@@ -26,7 +27,14 @@ export const AvatarPerfil: React.FC<AvatarPerfilProps> = ({
   className = '',
 }) => {
   const { profile } = useAuth()
+  const location = useLocation()
   if (!profile) return null
+
+  /* O Perfil volta para o ecrã de onde se abriu, e diz qual ("‹ Agenda").
+     Tocado no próprio Perfil, a origem é a que já lá estava. */
+  const origem = location.pathname === '/settings'
+    ? location.state
+    : { origem: nomeDoEcra(location.pathname, location.search) }
 
   /*
     O `name` é `NOT NULL` na base mas pode não estar aqui: um registo pelo
@@ -39,6 +47,7 @@ export const AvatarPerfil: React.FC<AvatarPerfilProps> = ({
   return (
     <Link
       to="/settings"
+      state={origem}
       aria-label="Ver o meu perfil"
       className={`alvo-toque flex-none rounded-full border-2 border-csc-gold/60 flex items-center justify-center overflow-visible
         font-display font-extrabold text-csc-gold transition-transform duration-150 active:scale-97

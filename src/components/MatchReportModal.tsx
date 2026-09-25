@@ -96,7 +96,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   isCoachOrAdmin,
   onSaved,
   tournamentRules,
-  voltarPara = 'Fichas',
+  voltarPara = 'Fichas de Jogo',
 }) => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { nomeDoEcra } from '../lib/rotas'
 import { TriangleAlert, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { triggerHaptic } from '../utils/haptics'
@@ -172,7 +173,9 @@ export const PersianaSemConvocatoria: React.FC<{
   aberto: boolean
   aoFechar: () => void
   eventos: EventoEmFalta[]
-}> = ({ aberto, aoFechar, eventos }) => (
+}> = ({ aberto, aoFechar, eventos }) => {
+  const location = useLocation()
+  return (
   <BottomSheet
     isOpen={aberto}
     onClose={aoFechar}
@@ -205,6 +208,7 @@ export const PersianaSemConvocatoria: React.FC<{
           <Link
             key={e.id}
             to={`/events?convocatoria=${e.id}`}
+            state={{ origem: nomeDoEcra(location.pathname, location.search) }}
             onClick={() => { triggerHaptic('light'); aoFechar() }}
             className="cartao-simples flex items-center gap-3 px-3.5 py-3 cursor-pointer
               transition-transform duration-150 active:scale-97
@@ -247,4 +251,5 @@ export const PersianaSemConvocatoria: React.FC<{
       </p>
     </div>
   </BottomSheet>
-)
+  )
+}

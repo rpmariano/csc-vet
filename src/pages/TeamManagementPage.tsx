@@ -31,6 +31,8 @@ import SoccerPitchSelector from '../components/SoccerPitchSelector'
 import { parsePositions, normalizePositionName, siglasDasPosicoes } from '../lib/posicoes'
 import { EcraDetalhe } from '../components/EcraDetalhe'
 import { useSearchParams } from 'react-router-dom'
+import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
+import { VoltarAOrigem } from '../components/VoltarAOrigem'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -463,13 +465,7 @@ const TeamManagementPage: React.FC = () => {
     if (alvo) setSelectedProfile(alvo)
   }, [searchParams, profiles])
 
-  const fecharFicha = () => {
-    if (searchParams.get('atleta')) {
-      const restantes = new URLSearchParams(searchParams)
-      restantes.delete('atleta')
-      setSearchParams(restantes, { replace: true })
-    }
-  }
+  const { voltarPara: voltarDaFicha, aoVoltar: fecharFicha } = useVoltarDaFicha(['atleta'], 'Plantel')
 
   // Upload handler for document/photo fields
   const handleUploadFile = async (
@@ -1033,6 +1029,7 @@ const TeamManagementPage: React.FC = () => {
         época, e a ação de adicionar é um botão redondo ao lado do título em
         vez de uma barra própria em cima de tudo.
       */}
+      <VoltarAOrigem />
       <CabecalhoEcra
         titulo="Plantel"
         /* Só a contagem: com a época atrás, a sobrancelha não cabia ao lado
@@ -2158,7 +2155,7 @@ const TeamManagementPage: React.FC = () => {
       {selectedProfile && (
         <EcraDetalhe
           aberto={isDetailModalOpen}
-          voltarPara="Plantel"
+          voltarPara={voltarDaFicha}
           aoVoltar={() => fecharFicha()}
           titulo={selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name}
           legenda={[

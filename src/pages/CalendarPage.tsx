@@ -20,7 +20,9 @@ import {
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
+import { nomeDoEcra } from '../lib/rotas'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
 import { EcraDetalhe } from '../components/EcraDetalhe'
@@ -239,6 +241,7 @@ const CalendarPage: React.FC = () => {
   const [opponents, setOpponents] = useState<Opponent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   /*
     O detalhe do evento **não tem estado de aberto/fechado**: quem manda é o
@@ -318,15 +321,12 @@ const CalendarPage: React.FC = () => {
     setSearchParams({ event: ev.id })
   }
 
+  const voltaDoEvento = useVoltarDaFicha(['event'], 'Agenda')
   const handleCloseEventModal = () => {
-    // `selectedEvent` fica retido; o que fecha o detalhe é o endereço, abaixo.
+    // `selectedEvent` fica retido; o que fecha o detalhe é o endereço.
     setPlayerSearchTerm('')
     setModalCallupStatusFilter('all')
-    if (searchParams.get('event')) {
-      const restantes = new URLSearchParams(searchParams)
-      restantes.delete('event')
-      setSearchParams(restantes, { replace: true })
-    }
+    voltaDoEvento.aoVoltar()
   }
 
   const handleCarouselTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -1105,6 +1105,7 @@ const CalendarPage: React.FC = () => {
           </span>
           <Link
             to={`/events?convocatoria=${event.id}`}
+            state={{ origem: nomeDoEcra(location.pathname, location.search) }}
             onClick={e => { e.stopPropagation(); triggerHaptic('light') }}
             className="h-11 px-4 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[11.5px]
               flex items-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97
@@ -1888,7 +1889,7 @@ const CalendarPage: React.FC = () => {
       {selectedEvent && (
         <EcraDetalhe
           aberto={isEventSheetOpen}
-          voltarPara="Agenda"
+          voltarPara={voltaDoEvento.voltarPara}
           aoVoltar={handleCloseEventModal}
           titulo={
             selectedEvent.type === 'match' && selectedEvent.opponent

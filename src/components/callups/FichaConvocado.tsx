@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { nomeDoEcra } from '../../lib/rotas'
 import { CheckCircle2, XCircle, Trash2, Phone, MessageCircle, ChevronRight, ShieldAlert } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { BottomSheet } from '../BottomSheet'
@@ -108,6 +109,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
   aoRecusar,
   aoRemover,
 }) => {
+  const location = useLocation()
   const jogadorId = convocatoria?.player?.id ?? null
   const [historico, setHistorico] = useState<HistoricoDoAtleta | null>(null)
 
@@ -426,6 +428,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
           {jogadorId && (
             <Link
               to={'/team-management?atleta=' + jogadorId}
+              state={{ origem: nomeDoEcra(location.pathname, location.search) }}
               onClick={() => { triggerHaptic('light'); aoFechar() }}
               className="cartao-simples min-h-12 flex items-center gap-3 px-4 py-3 cursor-pointer
                 transition-transform duration-150 active:scale-97
