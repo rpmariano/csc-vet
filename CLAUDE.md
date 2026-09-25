@@ -468,29 +468,27 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   onde a ficha se abriu. Um salto ao topo no regresso perdia o lugar a cada
   ficha que se espreitasse. As persianas (`?conta=`) não mexem no scroll.
   `tests/e2e/topo-da-pagina.spec.ts` cobre as duas metades.
-- **O canto do cabeçalho é o mesmo em todos os ecrãs**: estado clínico
-  (`<PastilhaEstado>`), sino dos comunicados e fotografia, por esta ordem,
-  dentro do `<CabecalhoEcra>` — a Home tem o seu próprio cabeçalho (o clube e a
-  época no lugar do título) mas com o mesmo canto. Estavam só na Home, e nos
-  outros ecrãs ficava a fotografia sozinha: um comunicado novo não tinha por
-  onde ser visto sem passar pela Home. A sobrancelha é `truncate`, numa linha
-  só — com o canto sempre a levar três coisas, uma sobrancelha que quebrasse
-  fazia o cabeçalho mudar de altura de ecrã para ecrã. **A fotografia não leva
-  lápis**: é sempre a mesma porta, e um lápis num ecrã e não nos outros fazia
-  parecer que abriam sítios diferentes.
-  **O canto tem uma linha sua, com a sobrancelha à esquerda, e o título fica
-  por baixo com a largura toda.** Estava ao lado do canto, e com o sinal de €
-  o canto leva quatro coisas: a 390px sobravam 148px (92 no Plantel, que tem o
-  "+"), e dez dos dezasseis títulos de 36px passavam por baixo do € —
-  "Comunicados" em 104px. Encolher cada título até caber dava 21px num ecrã e
-  36px no do lado, e no Financeiro o título mudava de tamanho a cada
-  separador. Assim os títulos ficam todos a 36px, como no handoff (que já os
-  punha inteiros por baixo de uma linha de topo), o canto fica no mesmo sítio
-  em todos os ecrãs, Home incluída, e o cabeçalho tem a mesma altura — 82px —
-  em todos os de título numa linha. Custa 23px aos títulos curtos, que
-  cabiam ao lado. A sobrancelha continua com a largura que já tinha.
-  `larguras.spec.ts` mede o texto do título contra tudo o resto do cabeçalho,
-  a 390 e a 360px, com o € no canto.
+- **O cabeçalho da app é um só, e fica preso ao topo ao rolar**
+  (`CabecalhoApp`, em `src/components/nav/`, montado no `Layout`, 2026-09-25).
+  À esquerda o emblema, "CSC Veteranos" e a época (`getSeasonLabel`, a mesma
+  regra do Financeiro); no canto o sinal de €, o estado clínico, o sino e a
+  fotografia, por esta ordem. Era o cabeçalho da Home; os outros ecrãs
+  desenhavam o canto no seu `<CabecalhoEcra>`, e o clube só se via na Home.
+  **Preso ao topo** como a barra de baixo está presa ao fundo: o canto é para
+  onde se olha à procura de comunicados e pagamentos, e não deve obrigar a
+  voltar ao princípio de uma lista. Por cima da faixa é transparente; quando o
+  conteúdo lhe passa por baixo ganha fundo (`csc-dark` translúcido, com
+  desfoque) e uma linha. **O título do ecrã não sobe para lá** — rola com o
+  conteúdo; a barra de baixo já diz onde se está.
+  **8px entre as peças do canto:** com 12, a 390px e com o € no canto, o nome
+  do clube cortava-se ("CSC Vetera…"). **A fotografia não leva lápis**: é
+  sempre a mesma porta.
+  O `<CabecalhoEcra>` de cada ecrã ficou com a sobrancelha (e as `acoes`, como
+  o "+" do Plantel) numa linha e o título por baixo, com a largura toda — foi
+  para isso que o canto saiu de ao lado do título, e continua a não haver nada
+  ao lado dele. `cabecalho.spec.ts` cobre o cabeçalho (o mesmo nos ecrãs, preso
+  ao rolar, o nome inteiro a 390px com o €) e `larguras.spec.ts` que nenhum
+  título passa da coluna, a 390 e a 360px.
 - **A prova escolhida na Classificação vai no endereço** (`?torneio=`), como o
   separador vai no `?ver=`. Sem isso não havia como ligar a uma classificação
   em concreto, e a ficha do adversário — onde um adversário pode estar em mais

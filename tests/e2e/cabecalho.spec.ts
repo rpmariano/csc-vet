@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { montarSupabaseFalso } from './supabase-mock'
+import { montarSupabaseFalso, FIXTURES_BASE } from './supabase-mock'
 
 /**
  * O canto do cabeçalho é o mesmo em todos os ecrãs.
@@ -61,5 +61,61 @@ test.describe('O sino dos comunicados', () => {
 
     // Abrir o ecrã é lê-lo: o sino deixa de dizer que há por ler.
     await expect(page.getByRole('link', { name: 'Comunicados', exact: true }).first()).toBeVisible()
+  })
+})
+
+/**
+ * O cabeçalho da app é um só, e fica preso ao topo ao rolar.
+ *
+ * Era da Home; os outros ecrãs desenhavam o canto no seu próprio cabeçalho.
+ * Hoje é o `CabecalhoApp`, na moldura — o clube, a época e o canto — e, como
+ * a barra de baixo, não sai do sítio quando a página rola.
+ */
+test.describe('O cabeçalho da app', () => {
+  const plantel = Array.from({ length: 40 }, (_, i) => ({
+    id: `p-${i}`, name: `Atleta Número ${i + 1}`, shirt_name: `Atleta ${i + 1}`,
+    jersey_number: i + 1, status: 'active', role: 'player', roles: ['player'],
+  }))
+
+  test('é o mesmo em todos os ecrãs: clube, época e canto', async ({ page }) => {
+    await montarSupabaseFalso(page, {})
+    for (const url of ['/csc-vet/', '/csc-vet/calendar', '/csc-vet/competicao', '/csc-vet/clube']) {
+      await page.goto(url)
+      const cabecalho = page.locator('header.sticky')
+      await expect(cabecalho).toHaveCount(1)
+      await expect(cabecalho.getByText(/Veteranos$/)).toBeVisible()
+      await expect(cabecalho.getByText(/^Época \d{4}\/\d{4}$/)).toBeVisible()
+      await expect(cabecalho.getByRole('link', { name: /Comunicados/ })).toBeVisible()
+      await expect(cabecalho.getByRole('link', { name: 'Ver o meu perfil' })).toBeVisible()
+    }
+  })
+
+  test('fica preso ao topo ao rolar, e ganha fundo', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await montarSupabaseFalso(page, { profiles: [...FIXTURES_BASE.profiles, ...plantel], v_players_public: [...FIXTURES_BASE.profiles, ...plantel] })
+    await page.goto('/csc-vet/team-management')
+    const cabecalho = page.locator('header.sticky')
+    await expect(cabecalho).toBeVisible()
+    await expect.poll(() => page.evaluate(() => document.body.scrollHeight - window.innerHeight)).toBeGreaterThan(300)
+
+    await page.evaluate(() => window.scrollTo(0, 600))
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300)
+    // Continua no topo da janela, e com fundo para o texto que passa por baixo.
+    await expect.poll(async () => (await cabecalho.boundingBox())?.y).toBe(0)
+    await expect.poll(() => cabecalho.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')
+  })
+
+  test('a 390px, com o € no canto, o nome do clube cabe', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await montarSupabaseFalso(page, {})
+    await page.goto('/csc-vet/calendar')
+    const cabecalho = page.locator('header.sticky')
+    const nome = cabecalho.getByText(/Veteranos$/)
+    await expect(nome).toBeVisible()
+    // O pior caso: com o sinal de pagamentos no canto.
+    await expect(cabecalho.getByRole('button').filter({ hasText: '€' })).toHaveCount(1)
+    await page.evaluate(async () => { await document.fonts.ready })
+    const corta = await nome.evaluate(el => el.scrollWidth > el.clientWidth)
+    expect(corta).toBe(false)
   })
 })

@@ -1,37 +1,22 @@
 import React from 'react'
-import { AvatarPerfil } from './AvatarPerfil'
-import { PastilhaEstado } from './PastilhaEstado'
 import { TituloEcra } from './Tipografia'
-import { AnnouncementsInboxButton } from '../AnnouncementsInbox'
-import { SinalPagamentos } from '../SinalPagamentos'
 
 /**
- * O cabeçalho de um ecrã: uma sobrancelha dourada, o nome do ecrã em grande e,
- * no canto, o sinal de pagamentos, o estado clínico, o sino dos comunicados e
- * a fotografia.
+ * O cabeçalho de um ecrã: uma sobrancelha dourada e o nome do ecrã em grande.
  *
- * No redesenho não há barra de topo, mas **o canto é o mesmo em todos os
- * ecrãs**: o estado ("Apto"), o sino e a fotografia que abre o Perfil. Estavam
- * só na Home, e nos outros ecrãs ficava a fotografia sozinha — um comunicado
- * novo não tinha por onde ser visto sem passar pela Home, e o estado clínico
- * só se lia lá. A Home tem o seu próprio cabeçalho (o clube e a época no lugar
- * do título), mas com o mesmo canto.
+ * **O canto já não é daqui.** O clube, a época, o sinal de pagamentos, o
+ * estado clínico, o sino e a fotografia são o `CabecalhoApp`, na moldura: um
+ * só, igual em todos os ecrãs e preso ao topo ao rolar (2026-09-25). Até aí o
+ * canto era desenhado em cada ecrã, numa linha sua ao lado da sobrancelha, e o
+ * da Home era outro.
  *
  * A sobrancelha ("ÉPOCA 25/26", "GESTÃO") é opcional e serve para situar sem
- * gastar uma linha de texto corrido.
+ * gastar uma linha de texto corrido; fica numa linha só, cortada se não
+ * couber. As `acoes` (o "+" do Plantel, por exemplo) ficam na mesma linha, à
+ * direita.
  *
- * **O canto tem uma linha sua, e o título fica por baixo com a largura toda.**
- * O título estava ao lado do canto, e com o sinal de € o canto leva quatro
- * coisas: sobravam 148px a 390px de largura, e dez dos dezasseis títulos
- * passavam por baixo do € — "Comunicados" em 104px, "Movimentos" em 78px. Um
- * título de 36px não cabe em 148px, e encolhê-lo até caber punha-o a 21px num
- * ecrã e a 36px no do lado: no Financeiro mudava de tamanho a cada separador.
- * É também o desenho do handoff, com o título inteiro por baixo de uma linha
- * de topo, e deixa o canto no mesmo sítio em todos os ecrãs — o da Home
- * incluído, que já estava na linha de cima.
- *
- * A sobrancelha fica na linha do canto, com a largura que já tinha ao lado
- * dele: numa linha só, cortada se não couber.
+ * O título tem a largura toda — foi para isso que o canto saiu de ao lado
+ * dele, e continua a não ter nada ao lado.
  */
 
 export interface CabecalhoEcraProps {
@@ -40,7 +25,7 @@ export interface CabecalhoEcraProps {
   sobrancelha?: string
   /** Linha discreta por baixo do título. */
   legenda?: string
-  /** Ações à direita, antes da fotografia. */
+  /** Ações à direita da sobrancelha. */
   acoes?: React.ReactNode
   /** `id` do título, para uma região se nomear por ele (`aria-labelledby`). */
   idTitulo?: string
@@ -55,21 +40,17 @@ export const CabecalhoEcra: React.FC<CabecalhoEcraProps> = ({
   idTitulo,
   className = '',
 }) => (
-  <header className={`pt-safe ${className}`}>
-    <div className="flex items-center gap-3">
-      {/* Numa linha só, e cortada se não couber: uma sobrancelha que
-          quebrasse fazia o cabeçalho mudar de altura de ecrã para ecrã. */}
-      <p className="flex-1 min-w-0 font-display font-extrabold text-[10px] tracking-[0.24em] text-csc-gold uppercase truncate">
-        {sobrancelha}
-      </p>
-      {acoes}
-      <SinalPagamentos />
-      <PastilhaEstado />
-      <AnnouncementsInboxButton tone="dark" size="md" />
-      <AvatarPerfil tamanho={38} />
-    </div>
-    {/* `break-words` é a última rede: nenhum título de hoje precisa dela com a
-        largura toda, mas uma palavra que não coubesse nunca passaria da coluna. */}
+  <header className={className}>
+    {(sobrancelha || acoes) && (
+      <div className="flex items-center gap-3 min-h-7">
+        <p className="flex-1 min-w-0 font-display font-extrabold text-[10px] tracking-[0.24em] text-csc-gold uppercase truncate">
+          {sobrancelha}
+        </p>
+        {acoes}
+      </div>
+    )}
+    {/* `break-words` é a última rede: uma palavra que não coubesse nunca
+        passaria da coluna. */}
     <TituloEcra id={idTitulo} className="mt-2 break-words">{titulo}</TituloEcra>
     {legenda && <p className="text-[11px] text-white/62 mt-1.5">{legenda}</p>}
   </header>
