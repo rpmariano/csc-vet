@@ -19,6 +19,7 @@ import { useModalA11y } from '../hooks/useModalA11y'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
+import { ConfirmModal } from '../components/ConfirmModal'
 import { CabecalhoEcra } from '../components/ui'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
@@ -347,7 +348,6 @@ const AnnouncementsPage: React.FC = () => {
     gravar: () => handlePublish(EVENTO_FALSO),
     descricao: 'O comunicado que escreveste ainda não foi publicado. Se saíres agora, perde-se.',
   })
-  const painelApagarRef = useModalA11y({ isOpen: !!deletingAnn, onClose: () => setDeletingAnn(null) })
 
   return (
     <div className="relative space-y-4 pb-2">
@@ -764,52 +764,19 @@ const AnnouncementsPage: React.FC = () => {
 
       <UnsavedChangesModal {...guardaEdicao.props} />
 
-      {/* MODAL: CONFIRMAÇÃO DE ELIMINAÇÃO */}
-      {deletingAnn && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-modal-confirm animate-fade-in select-none">
-          <div
-            ref={painelApagarRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="apagar-comunicado-titulo"
-            tabIndex={-1}
-            className="bg-csc-superficie text-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-csc-red/15 text-csc-vermelho-texto flex items-center justify-center shrink-0">
-                <Trash2 size={24} />
-              </div>
-              <div>
-                <h3 id="apagar-comunicado-titulo" className="text-base font-black text-white leading-tight">Apagar Comunicado?</h3>
-                <p className="text-xs text-white/70 mt-0.5">Esta ação não pode ser revertida.</p>
-              </div>
-            </div>
-
-            <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-xs text-white/70">
-              <span className="font-bold text-white block truncate">{deletingAnn.title}</span>
-              <span className="text-[11px] text-white/70 line-clamp-2 mt-0.5">{deletingAnn.content}</span>
-            </div>
-
-            <div className="flex gap-2.5 pt-1">
-              <button
-                type="button"
-                onClick={() => setDeletingAnn(null)}
-                className="flex-1 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={handleConfirmDelete}
-                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-md"
-              >
-                {isDeleting ? 'A apagar...' : 'Sim, Apagar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Apagar pergunta pela confirmação partilhada, como em todo o lado.
+          Era um diálogo escrito à mão, com botões de 40px. */}
+      <ConfirmModal
+        isOpen={!!deletingAnn}
+        title="Apagar este comunicado?"
+        description={deletingAnn ? `"${deletingAnn.title}" deixa de aparecer a toda a gente. Não há como desfazer.` : undefined}
+        confirmText="Apagar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingAnn(null)}
+      />
     </div>
   )
 }

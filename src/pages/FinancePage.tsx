@@ -19,7 +19,7 @@ import {
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
-import { CabecalhoEcra, FilaSeparadores, LinhaAtleta } from '../components/ui'
+import { Botao, CabecalhoEcra, FilaSeparadores, LinhaAtleta } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
 import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
 import { ContasPorAtleta } from '../components/financeiro/ContasPorAtleta'
@@ -1893,21 +1893,10 @@ const FinancePage: React.FC = () => {
         closeOnOverlayClick={false}
         footer={
           <>
-            <button
-              type="button"
-              onClick={guardaEncargo.tentarFechar}
-              className="px-4 py-2 text-sm font-bold text-white/60 bg-white/10 rounded-xl hover:bg-white/15 transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveCharge}
-              disabled={savingCharge}
-              className="min-h-11 px-4 font-display font-extrabold text-[12px] text-csc-tinta bg-csc-gold rounded-[22px] transition-transform duration-150 active:scale-97 disabled:opacity-40 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
+            <Botao aparencia="vidro" onClick={guardaEncargo.tentarFechar}>Cancelar</Botao>
+            <Botao onClick={handleSaveCharge} disabled={savingCharge}>
               {savingCharge ? 'A guardar...' : editingChargeId ? 'Guardar Alterações' : 'Criar Encargo'}
-            </button>
+            </Botao>
           </>
         }
       >
