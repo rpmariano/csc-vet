@@ -90,3 +90,47 @@ test('sem alterações, o retroceder não pergunta nada', async ({ page }) => {
   await expect(page).toHaveURL(/calendar$/)
   await expect(dialogos(page)).toHaveCount(0)
 })
+
+/**
+ * Num formulário que ocupa um ecrã, o retroceder do browser é o "‹".
+ *
+ * Editar atleta, evento, torneio ou encargo não têm endereço próprio — vivem
+ * por cima da página. O retroceder saltava-lhes por cima: fechava a ficha de
+ * baixo, e o formulário ficava aberto sobre a lista, ou saía da página sem
+ * perguntar. Hoje fica onde está e passa pelo guarda do formulário.
+ */
+test.describe('O retroceder num ecrã de formulário', () => {
+  const abreEdicaoDoAtleta = async (pagina: import('@playwright/test').Page) => {
+    await montarSupabaseFalso(pagina, { profiles: [perfil], v_players_public: [perfil] })
+    await pagina.goto('/csc-vet/team-management')
+    await pagina.getByRole('button', { name: /^Ver a ficha de / }).first().click()
+    await expect(pagina).toHaveURL(/\?atleta=/)
+    await pagina.getByRole('button', { name: 'Editar atleta' }).click()
+    await expect(pagina.getByText('Editar atleta', { exact: true }).filter({ visible: true })).toHaveCount(1)
+  }
+
+  test('com o formulário limpo, fecha-o e volta à ficha', async ({ page }) => {
+    await abreEdicaoDoAtleta(page)
+
+    await page.goBack()
+    // A ficha continua aberta, com o endereço dela, e o formulário fechou.
+    await expect(page).toHaveURL(/\?atleta=/)
+    await expect(page.getByText('Gestão do atleta')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Guardar alterações' })).toHaveCount(0)
+    await expect(dialogos(page)).toHaveCount(0)
+  })
+
+  test('com alterações, pergunta — e continuar a editar fica onde estava', async ({ page }) => {
+    await abreEdicaoDoAtleta(page)
+    const campoNome = page.getByRole('textbox').filter({ visible: true }).first()
+    await campoNome.fill('Nome Mudado')
+
+    await page.goBack()
+    await expect(dialogos(page)).toHaveCount(1)
+    await expect(page).toHaveURL(/\?atleta=/)
+
+    await page.getByRole('button', { name: /Continuar a Editar/ }).click()
+    await expect(dialogos(page)).toHaveCount(0)
+    await expect(campoNome).toHaveValue('Nome Mudado')
+  })
+})

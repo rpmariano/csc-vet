@@ -219,6 +219,8 @@ export const GestaoTorneios: React.FC = () => {
      chegam da rede não é uma alteração de quem está a editar. */
   const guarda = useAlteracoesPorGravar({
     aberto: isTourModalOpen,
+    // É um ecrã: o retroceder do browser é o "‹".
+    ecraDeFormulario: true,
     pronto: inscritosCarregados,
     valores: [
       editingTourId, tourName, tourSeason, tourStatus, tourOrganizerName,

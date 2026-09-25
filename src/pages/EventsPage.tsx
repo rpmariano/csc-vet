@@ -332,6 +332,8 @@ const EventsPage: React.FC = () => {
   */
   const guardaCriacao = useAlteracoesPorGravar({
     aberto: viewModeTab === 'create',
+    // É um ecrã: o retroceder do browser é o "‹".
+    ecraDeFormulario: true,
     valores: [
       title, type, eventDate, eventTime, meetingTime, fieldId, locationText, description,
       maxPlayers, isFriendly, tournamentId, matchday, opponentId, homeAway,
