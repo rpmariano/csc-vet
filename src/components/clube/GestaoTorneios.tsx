@@ -5,7 +5,8 @@ import { supabase } from '../../lib/supabaseClient'
 import { extractRolesFromProfile } from '../../context/AuthContext'
 import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
-import { useModalA11y } from '../../hooks/useModalA11y'
+import { EcraDetalhe } from '../EcraDetalhe'
+import { Botao } from '../ui'
 import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../UnsavedChangesModal'
 import { ConfirmModal } from '../ConfirmModal'
@@ -227,7 +228,6 @@ export const GestaoTorneios: React.FC = () => {
     aoSair: () => setIsTourModalOpen(false),
     descricao: 'As alterações a este torneio ainda não foram gravadas. Se saíres agora, perdem-se.',
   })
-  const painelRef = useModalA11y({ isOpen: isTourModalOpen, onClose: guarda.tentarFechar })
 
   const eliminar = (id: string, nome: string) => {
     setConfirmacao({
@@ -357,6 +357,7 @@ export const GestaoTorneios: React.FC = () => {
                       onClick={() => setGestorDeLiga(t.id)}
                       className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-blue-400 text-blue-300 hover:bg-blue-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                       title="Gerir Grupos e Equipas"
+                      aria-label={`Gerir Grupos e Equipas: ${t.name}`}
                     >
                       <Shield size={14} />
                     </button>
@@ -364,6 +365,7 @@ export const GestaoTorneios: React.FC = () => {
                       onClick={() => abrirEdicao(t)}
                       className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-csc-gold text-white/70 hover:text-csc-gold rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                       title="Editar Regras e Detalhes"
+                      aria-label={`Editar Regras e Detalhes: ${t.name}`}
                     >
                       <Edit2 size={14} />
                     </button>
@@ -371,6 +373,7 @@ export const GestaoTorneios: React.FC = () => {
                       onClick={() => eliminar(t.id, t.name)}
                       className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-red-400 text-red-400 hover:bg-red-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                       title="Eliminar Torneio"
+                      aria-label={`Eliminar Torneio: ${t.name}`}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -382,33 +385,17 @@ export const GestaoTorneios: React.FC = () => {
         </div>
       </div>
 
-      {isTourModalOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div
-            ref={painelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="clube-torneio-titulo"
-            tabIndex={-1}
-            className="bg-csc-superficie text-white w-full max-w-3xl rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in flex flex-col max-h-[90vh] outline-none"
-          >
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Trophy size={22} className="text-csc-gold" />
-                <h3 id="clube-torneio-titulo" className="font-black text-lg">
-                  {editingTourId ? 'Editar Torneio' : 'Criar Novo Torneio'}
-                </h3>
-              </div>
-              <button
-                onClick={guarda.tentarFechar}
-                aria-label="Fechar"
-                className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-              >
-                <X size={18} className="stroke-[2.5]" />
-              </button>
-            </div>
-
-            <form onSubmit={aoSubmeter} className="p-6 space-y-4 overflow-y-auto flex-1">
+      {/* Criar e editar um torneio é um ecrã, não um modal: são 22 campos —
+          regras, pontuação, desempates, inscritos —, e numa caixa a 90% da
+          altura liam-se a rolar por dentro de outra página. */}
+      <EcraDetalhe
+        aberto={isTourModalOpen}
+        voltarPara="Torneios"
+        aoVoltar={guarda.tentarFechar}
+        sobrancelha={editingTourId ? 'Editar torneio' : undefined}
+        titulo={editingTourId ? (tourName.trim() || 'Torneio') : 'Novo torneio'}
+      >
+            <form onSubmit={aoSubmeter} className="space-y-4">
               <div>
                 <label className={ETIQUETA}>
                   Nome da Competição *
@@ -783,27 +770,15 @@ export const GestaoTorneios: React.FC = () => {
                 </div>
               )}
 
-              <div className="pt-4 flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={guarda.tentarFechar}
-                  className="px-5 py-2.5 border border-white/15 rounded-xl font-bold text-sm text-white hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploadingTourImage}
-                  className="px-6 py-2.5 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98 disabled:opacity-60"
-                >
-                  <Save size={16} className="text-csc-tinta" />
-                  <span>{uploadingTourImage ? 'A guardar...' : editingTourId ? 'Atualizar Torneio' : 'Guardar Torneio'}</span>
-                </button>
+              {/* Sair sem gravar é o "‹ Torneios"; aqui fica só gravar. */}
+              <div className="pt-4">
+                <Botao type="submit" largo disabled={uploadingTourImage}>
+                  <Save size={16} />
+                  {uploadingTourImage ? 'A guardar...' : editingTourId ? 'Atualizar torneio' : 'Guardar torneio'}
+                </Botao>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </EcraDetalhe>
 
       {gestorDeLiga && (
         <LeagueManager

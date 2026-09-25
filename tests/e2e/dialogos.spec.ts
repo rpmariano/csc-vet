@@ -79,8 +79,30 @@ test.describe('Gestão do Clube', () => {
     await abrePagina(page, 'clube?ver=adversarios')
     await verificaDialogo(page, () => page.getByRole('button', { name: 'Criar adversário' }).click())
 
+    /* O torneio deixou de ser modal a 2026-09-25: são 22 campos, e é um ecrã
+       (ver `EcraDetalhe`). O que se verifica é o contrato de ecrã. */
     await abrePagina(page, 'clube?ver=torneios')
-    await verificaDialogo(page, () => page.getByRole('button', { name: 'Criar torneio' }).click())
+    await page.getByRole('button', { name: 'Criar torneio' }).click()
+    const titulo = page.getByRole('heading', { level: 1, name: 'Novo torneio' })
+    await expect(titulo).toBeFocused()
+    await expect(dialogos(page)).toHaveCount(0)
+    await page.getByRole('button', { name: 'Torneios', exact: true }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Torneios' })).toBeVisible()
+  })
+
+  /* Os grupos e equipas de uma prova eram a única janela sem role="dialog",
+     sem Escape e sem prisão de foco. Passaram a ecrã. */
+  test('os grupos de um torneio abrem como ecrã', async ({ page }) => {
+    await abrePagina(page, 'clube?ver=torneios', {
+      tournaments: [{ id: 't1', name: 'Liga Masters +35', season: '2026/2027', status: 'ativo' }],
+    })
+    await page.getByRole('button', { name: 'Gerir Grupos e Equipas: Liga Masters +35' }).click()
+    const titulo = page.getByRole('heading', { level: 1, name: 'Liga Masters +35' })
+    await expect(titulo).toBeFocused()
+    await expect(dialogos(page)).toHaveCount(0)
+
+    // O novo grupo continua a ser um modal, e já não empilhado sobre outro.
+    await verificaDialogo(page, () => page.getByRole('button', { name: 'Novo grupo' }).click())
   })
 
   test('Escape num formulário sujo pede confirmação, e só fecha essa', async ({ page }) => {
