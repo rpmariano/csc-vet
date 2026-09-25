@@ -883,8 +883,22 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   um diálogo novo que não seja `fixed`, ou um `display: none`/`aria-hidden` na
   página por baixo, levava-os com ela.
   **As fichas empilham-se:** a ficha de jogo abre-se a partir do evento e do
-  dossier como o ecrã seguinte, e só a de cima se vê. Modais ficam para
-  inserções curtas (criar um campo, confirmar, editar).
+  dossier como o ecrã seguinte, e só a de cima se vê.
+  **Um formulário longo também é ecrã; o modal é para uma pergunta** (revisão
+  de 2026-09-25). Criar e editar atleta, evento (as duas cópias, Agenda e
+  Eventos), torneio e encargo, editar a ficha de jogo e os grupos de uma prova
+  abrem num `<EcraDetalhe>`: o "‹" passa pelo `tentarFechar()` do guarda, e o
+  gravar fica no fim do formulário — ou preso ao fundo, por cima da barra
+  (`sticky bottom-[108px]`), quando há uma lista comprida pelo meio. Aberto a
+  partir de uma ficha, fica por cima dela e o "‹" volta à ficha, em vez de a
+  fechar primeiro. **Ficam modal** as confirmações, o aviso de alterações, o
+  campo e o adversário rápidos (vivem por cima de um formulário), criar campo
+  e adversário, novo grupo, nova jornada e editar comunicado — meia dúzia de
+  campos, no máximo. Fundir fichas passou a persiana: é escolher numa lista.
+  **Estes formulários não vão no endereço**, como não iam como modais: o
+  retroceder do browser sai da página sem os perguntar, a menos que a página
+  registe um `useGuardaDeSaida`. As duas cópias do editar evento estão por
+  fundir num componente só.
   `tests/e2e/ecra-detalhe.spec.ts` cobre o contrato — título com foco,
   nenhum diálogo, voltar pelo "‹" e pelo browser, o foco de volta ao cartão.
 - **Um deploy com a app aberta não pode acabar num ecrã em inglês.** Cada
@@ -980,7 +994,10 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    `handle_new_user`, sendo gatilho e não RPC, saiu da API para os dois lados.
 5. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
    Não há modais escritos à mão sem acessibilidade — todos passaram pelo `<Modal>`,
-   `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`.
+   `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`. Até
+   2026-09-25 isto não era verdade para três: os grupos e equipas de uma prova
+   (passaram a ecrã) e dois avisos de instalar a app que ninguém importava
+   (apagados).
    O redesenho parte-os por secções à medida que cada área é tocada — não como
    refactor à parte.
 6. **~~P2 — O retroceder do browser nem sempre fecha a persiana.~~ Corrigido em
