@@ -185,9 +185,13 @@ test.describe('Eventos', () => {
     meeting_time: null, home_score: null, away_score: null, is_active: true,
   }
 
-  test('criar evento', async ({ page }) => {
+  /* Criar e editar evento deixaram de ser modal a 2026-09-25: são ecrãs,
+     como o passo 2 (convocar) já era. */
+  test('criar evento abre um ecrã', async ({ page }) => {
     await abrePagina(page, 'events')
-    await verificaDialogo(page, () => page.getByRole('button', { name: 'Novo Evento' }).first().click())
+    await page.getByRole('button', { name: 'Novo Evento' }).first().click()
+    await expect(page.getByRole('heading', { level: 1, name: /^Novo / })).toBeFocused()
+    await expect(dialogos(page)).toHaveCount(0)
   })
 
   /*
@@ -242,23 +246,22 @@ test.describe('Calendário', () => {
     await page.getByRole('button', { name: 'Editar evento' }).click()
   }
 
-  // O detalhe do evento é um ecrã e não conta como diálogo; a contagem de
-  // partida é a do formulário de edição, e o que se verifica é o que se
-  // empilha por cima dele.
+  // O detalhe do evento e a edição são ecrãs, e não contam como diálogos.
   test('editar evento', async ({ page }) => {
     await abrePagina(page, 'calendar', { events: [treino] })
     await abreEdicaoDoEvento(page)
+    await expect(page.getByRole('heading', { level: 1, name: 'Treino de teste' })).toBeFocused()
+    await expect(dialogos(page)).toHaveCount(0)
 
-    const base = await dialogos(page).count()
+    // Sair da edição é sempre deliberado: o "‹ Evento" pede confirmação.
+    await page.getByRole('button', { name: 'Evento', exact: true }).click()
+    await expect(dialogos(page)).toHaveCount(1)
     await verificaContrato(dialogos(page).last())
 
-    // A edição fecha-se sempre de forma deliberada: o Escape pede confirmação.
+    // O Escape fecha só essa confirmação, e a edição continua.
     await page.keyboard.press('Escape')
-    await expect(dialogos(page)).toHaveCount(base + 1)
-
-    // E o Escape seguinte fecha só essa confirmação.
-    await page.keyboard.press('Escape')
-    await expect(dialogos(page)).toHaveCount(base)
+    await expect(dialogos(page)).toHaveCount(0)
+    await expect(page.getByText('Editar evento', { exact: true }).filter({ visible: true })).toHaveCount(1)
   })
 
   test('criar campo a partir da edição do evento', async ({ page }) => {

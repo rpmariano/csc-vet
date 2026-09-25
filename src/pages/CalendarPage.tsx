@@ -39,7 +39,6 @@ import { AniversariosDoMes } from '../components/AniversariosDoMes'
 import { FichaConvocado } from '../components/callups/FichaConvocado'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
-import { useModalA11y } from '../hooks/useModalA11y'
 import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
@@ -1838,7 +1837,6 @@ const CalendarPage: React.FC = () => {
   }
 
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
-  const painelEditarEventoRef = useModalA11y({ isOpen: isEditModalOpen, onClose: handleAttemptCloseEditModal })
 
   /**
    * O que está escondido na persiana de filtros. Um filtro que não se vê é um
@@ -2969,42 +2967,18 @@ const CalendarPage: React.FC = () => {
       })()}
       </div>
 
-      {/* MODAL 3: EDITAR EVENTO ESPECÍFICO (Versão Larga 2 Colunas) */}
-      {isEditModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto animate-fade-in"
-          onMouseDown={e => {
-            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-            if (e.target === e.currentTarget) handleAttemptCloseEditModal()
-          }}
-        >
-          <div
-            ref={painelEditarEventoRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="editar-evento-titulo"
-            tabIndex={-1}
-            className="bg-csc-dark text-white rounded-3xl max-w-5xl xl:max-w-6xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto shadow-2xl border border-white/10 outline-none"
-          >
-            <button
-              type="button"
-              onClick={handleAttemptCloseEditModal}
-              aria-label="Fechar"
-              className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 z-20 cursor-pointer active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-              title="Fechar"
-            >
-              <X size={20} className="stroke-[2.5]" />
-            </button>
-
-            <div className="flex items-center gap-2 mb-1">
-              <Edit size={22} className="text-csc-gold" />
-              <h2 id="editar-evento-titulo" className="text-2xl font-black text-white">Editar Dados do Evento</h2>
-            </div>
-            <p className="text-xs text-white/60 mb-6">
-              Altera a data, horário, localização, notas ou gere a convocatória deste evento na agenda.
-            </p>
-
-            <form onSubmit={handleSaveEditedEvent} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* Editar um evento é um ecrã, não um modal: são 13 campos mais a
+          convocatória, e o campo rápido e o aviso de alterações abriam por
+          cima — três janelas empilhadas. Abre por cima do ecrã do evento, e o
+          "‹ Evento" volta a ele pelo guarda das alterações por gravar. */}
+      <EcraDetalhe
+        aberto={isEditModalOpen}
+        voltarPara="Evento"
+        aoVoltar={handleAttemptCloseEditModal}
+        sobrancelha="Editar evento"
+        titulo={editTitle.trim() || (editType === 'match' ? 'Jogo' : editType === 'practice' ? 'Treino' : 'Convívio')}
+      >
+            <form onSubmit={handleSaveEditedEvent} className="grid grid-cols-1 gap-6 items-start">
               
               {/* COLUNA ESQUERDA: Dados do Evento (6 Colunas) */}
               <div className="lg:col-span-6 space-y-4">
@@ -3614,28 +3588,15 @@ const CalendarPage: React.FC = () => {
                 </label>
               </div>
 
-              {/* FOOTER */}
-              <div className="col-span-full pt-5 border-t border-white/10 flex items-center justify-end gap-3 mt-2">
-                <button
-                  type="button"
-                  onClick={handleAttemptCloseEditModal}
-                  className="px-5 py-2.5 border border-white/15 hover:border-white/25 bg-white/5 hover:bg-white/10 rounded-xl text-xs sm:text-sm font-bold text-white transition-colors cursor-pointer shadow-2xs"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer active:scale-95"
-                >
-                  <Save size={16} className="text-csc-dark" />
-                  <span>Guardar Alterações</span>
-                </button>
+              {/* Sair sem gravar é o "‹ Evento"; aqui fica só gravar. */}
+              <div className="pt-2">
+                <Botao type="submit" largo>
+                  <Save size={16} />
+                  Guardar alterações
+                </Botao>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </EcraDetalhe>
 
       {/* Criação rápida de campo e de adversário, a partir do formulário de evento */}
       <QuickFieldModal

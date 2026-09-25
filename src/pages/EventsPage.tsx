@@ -46,7 +46,6 @@ import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { hasMatchReport } from '../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
-import { useModalA11y } from '../hooks/useModalA11y'
 import { EcraDetalhe } from '../components/EcraDetalhe'
 import { useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../components/BottomSheet'
@@ -1364,8 +1363,6 @@ const EventsPage: React.FC = () => {
   const currentLocationStr = getActiveLocationString()
 
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
-  const painelCriarEventoRef = useModalA11y({ isOpen: viewModeTab === 'create', onClose: guardaCriacao.tentarFechar })
-  const painelEditarEventoRef = useModalA11y({ isOpen: !!editingEvent, onClose: handleAttemptCloseEditModal })
 
   // Ver a convocatória de um evento é navegar: o endereço passa a ter
   // ?convocatoria=<id>, portanto o dossier tem link próprio e o retroceder do
@@ -1446,39 +1443,16 @@ const EventsPage: React.FC = () => {
         </button>
       )}
 
-      {/* MODAL DE CRIAÇÃO DE EVENTO (OVERLAY) */}
-      {viewModeTab === 'create' && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in overflow-y-auto">
-          <div
-            ref={painelCriarEventoRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="criar-evento-titulo"
-            tabIndex={-1}
-            className="bg-csc-superficie w-full sm:rounded-3xl sm:max-w-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto shadow-2xl border-0 sm:border-2 sm:border-csc-gold/60 flex flex-col outline-none"
-          >
-            {/* Header fixo do modal */}
-            <div className="sticky top-0 bg-csc-superficie z-10 flex items-center justify-between px-5 py-4 border-b border-white/10 rounded-t-3xl">
-              <h3 id="criar-evento-titulo" className="text-lg font-black text-white flex items-center gap-2">
-                <Plus size={20} className="text-csc-tinta" />
-                <span>Novo Evento / Atividade</span>
-              </h3>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold border border-csc-gold/35">
-                  CSC Organizer
-                </span>
-                <button
-                  type="button"
-                  onClick={guardaCriacao.tentarFechar}
-                  aria-label="Voltar à lista"
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/15 text-white/60 hover:text-white flex items-center justify-center cursor-pointer transition-all active:scale-90"
-                >
-                  <X size={18} className="stroke-[2.5]" />
-                </button>
-              </div>
-            </div>
-
-            <div className="px-5 sm:px-7 py-5">
+      {/* Criar um evento é um ecrã: o passo 1 de um fluxo cujo passo 2, a
+          convocatória, já era ecrã. Era um modal de 14 campos, e o fluxo
+          mudava de forma a meio. */}
+      <EcraDetalhe
+        aberto={viewModeTab === 'create'}
+        voltarPara="Eventos"
+        aoVoltar={guardaCriacao.tentarFechar}
+        sobrancelha="Novo evento"
+        titulo={type === 'match' ? 'Novo jogo' : type === 'practice' ? 'Novo treino' : 'Novo convívio'}
+      >
           <form onSubmit={handleCreateEvent} className="space-y-5">
             
             {/* 1. Tipo de Evento */}
@@ -1845,10 +1819,7 @@ const EventsPage: React.FC = () => {
               )}
             </button>
           </form>
-            </div>
-          </div>
-        </div>
-      )}
+      </EcraDetalhe>
 
       {/* LISTA DE EVENTOS REGISTADOS & RSVP — sempre visível */}
       {(() => {
@@ -2314,11 +2285,7 @@ const EventsPage: React.FC = () => {
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
-                      onClick={() => {
-                        const ev = activeCallupModalEvent
-                        fecharDossier()
-                        openEditModal(ev)
-                      }}
+                      onClick={() => openEditModal(activeCallupModalEvent)}
                       className="w-11 h-11 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs"
                       title="Modificar evento"
                       aria-label="Modificar evento"
@@ -2480,29 +2447,17 @@ const EventsPage: React.FC = () => {
         )
       })()}
       </div>
-      {/* ====== MODAL DE EDIÇÃO DE EVENTO ====== */}
-      {editingEvent && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal p-4"
-          onMouseDown={e => {
-            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-            if (e.target === e.currentTarget) handleAttemptCloseEditModal()
-          }}
-        >
-          <div
-            ref={painelEditarEventoRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="editar-evento-titulo"
-            tabIndex={-1}
-            className="bg-csc-superficie text-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/10 outline-none"
-          >
-            <div className="sticky top-0 bg-csc-superficie border-b border-white/10 p-5 rounded-t-3xl flex justify-between items-center z-10">
-              <h3 id="editar-evento-titulo" className="text-lg font-black text-white">Editar {editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino'}</h3>
-              <button onClick={handleAttemptCloseEditModal} aria-label="Fechar" className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 shrink-0"><X size={16} className="stroke-[2.5]" /></button>
-            </div>
-
-            <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
+      {/* Editar um evento é um ecrã, por cima do dossier de onde se abre, e
+          o "‹ Convocatória" volta a ele pelo guarda das alterações. A Agenda
+          tem a sua própria cópia deste formulário, também em ecrã. */}
+      <EcraDetalhe
+        aberto={Boolean(editingEvent)}
+        voltarPara={dossierAberto ? 'Convocatória' : 'Eventos'}
+        aoVoltar={handleAttemptCloseEditModal}
+        sobrancelha="Editar evento"
+        titulo={editTitle.trim() || (editType === 'gathering' ? 'Convívio' : editType === 'match' ? 'Jogo' : 'Treino')}
+      >
+            <form onSubmit={handleSaveEdit} className="space-y-4">
               {/* Tipo */}
               <div>
                 <label className={ETIQUETA_FORM}>Tipo de Evento</label>
@@ -2915,19 +2870,14 @@ const EventsPage: React.FC = () => {
                 <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} className={`${CAMPO_FORM} h-auto py-3 leading-relaxed resize-none`} placeholder="Informações adicionais, ementa do convívio..." />
               </div>
 
-              {/* Botões */}
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={handleAttemptCloseEditModal} className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={isSavingEdit} className="flex-1 px-4 py-2.5 bg-csc-gold hover:brightness-95 text-csc-tinta font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50">
+              {/* Sair sem gravar é o "‹ Convocatória"; aqui fica só gravar. */}
+              <div className="pt-2">
+                <Botao type="submit" largo disabled={isSavingEdit}>
                   {isSavingEdit ? 'A guardar...' : 'Guardar alterações'}
-                </button>
+                </Botao>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </EcraDetalhe>
 
       {/* Criação rápida de campo e de adversário, a partir do formulário de evento */}
       <QuickFieldModal
