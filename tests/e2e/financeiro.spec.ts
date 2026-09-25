@@ -518,7 +518,7 @@ test('depois de lançar uma despesa, os separadores continuam a funcionar', asyn
   await expect(page.getByText('Movimento registado com sucesso!')).toBeVisible()
   await expect(descricao).toHaveValue('')
 
-  await page.getByRole('button', { name: 'Visão Geral', exact: true }).click()
+  await page.getByRole('tab', { name: 'Visão Geral' }).click()
   await expect(page).toHaveURL(/ver=overview/)
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
@@ -530,7 +530,7 @@ test('com a despesa por gravar, trocar de separador pergunta — e a pergunta v�
   const descricao = page.getByLabel('Descrição')
   await expect(descricao).toBeVisible({ timeout: 15000 })
   await descricao.fill('Água para o jogo')
-  await page.getByRole('button', { name: 'Quotas', exact: true }).click()
+  await page.getByRole('tab', { name: 'Quotas' }).click()
 
   const aviso = page.getByRole('dialog', { name: 'Tens alterações por guardar' })
   await expect(aviso).toBeVisible()
@@ -542,7 +542,7 @@ test('com a despesa por gravar, trocar de separador pergunta — e a pergunta v�
   await expect(descricao).toHaveValue('Água para o jogo')
 
   // Sair sem gravar sai mesmo.
-  await page.getByRole('button', { name: 'Quotas', exact: true }).click()
+  await page.getByRole('tab', { name: 'Quotas' }).click()
   await aviso.getByRole('button', { name: 'Sair sem Gravar' }).click()
   await expect(page).toHaveURL(/ver=quotas/)
 })
@@ -554,7 +554,7 @@ test('com as definições por gravar, trocar de separador pergunta', async ({ pa
   const quota = page.getByLabel('Valor da Quota (€)')
   await expect(quota).toBeVisible({ timeout: 15000 })
   await quota.fill('12')
-  await page.getByRole('button', { name: 'Visão Geral', exact: true }).click()
+  await page.getByRole('tab', { name: 'Visão Geral' }).click()
 
   await expect(page.getByRole('dialog', { name: 'Tens alterações por guardar' })).toBeVisible()
   await expect(page).toHaveURL(/ver=settings/)

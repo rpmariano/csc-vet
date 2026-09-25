@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Landmark, Plus, Settings, Wallet,
+  Landmark, Plus, Settings, Wallet, Users,
   ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check, AlertTriangle
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
+import { useClub } from '../context/ClubContext'
+import { CLUBE_SIGLA } from '../lib/clube'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -13,13 +15,15 @@ import { Modal } from '../components/Modal'
 // das vistas v_quota_status e v_financial_movements. De finance.ts só sobra o
 // que é regra de negócio pura — a época e o prazo do seguro.
 import {
-  DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes, formatMonthYear,
+  DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes, formatMonthYear, encargoVencido,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useSearchParams } from 'react-router-dom'
-import { CabecalhoEcra, Pastilha, LinhaAtleta } from '../components/ui'
+import { CabecalhoEcra, FilaSeparadores, LinhaAtleta } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
 import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
+import { ContasPorAtleta } from '../components/financeiro/ContasPorAtleta'
+import { contasDosAtletas } from '../components/financeiro/contasDosAtletas'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
@@ -119,11 +123,12 @@ interface TournamentRow {
   rules?: any
 }
 
-type TabId = 'overview' | 'quotas' | 'charges' | 'expenses' | 'movements' | 'settings'
+type TabId = 'overview' | 'atletas' | 'quotas' | 'charges' | 'expenses' | 'movements' | 'settings'
 
 const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { id: 'overview', label: 'Visão Geral', Icon: Landmark },
   { id: 'movements', label: 'Movimentos', Icon: Wallet },
+  { id: 'atletas', label: 'Por atleta', Icon: Users },
   { id: 'quotas', label: 'Quotas', Icon: ListChecks },
   { id: 'charges', label: 'Encargos', Icon: ShieldCheck },
   { id: 'expenses', label: 'Despesas/Receitas', Icon: Receipt },
@@ -133,6 +138,7 @@ const TABS: { id: TabId; label: string; Icon: React.ComponentType<{ size?: numbe
 /** O título do ecrã muda com o separador — o "Financeiro" está no Clube. */
 const TITULO_SEPARADOR: Record<TabId, string> = {
   overview: 'Visão geral',
+  atletas: 'Por atleta',
   quotas: 'Quotas',
   charges: 'Encargos',
   expenses: 'Despesas e receitas',
@@ -171,6 +177,7 @@ const agruparPorCategoria = (tipo: 'income' | 'expense', movements: MovementRow[
 
 const FinancePage: React.FC = () => {
   const { profile } = useAuth()
+  const { clubSettings } = useClub()
   const isAdmin = profile?.role === 'admin'
 
   const [loading, setLoading] = useState(true)
@@ -222,7 +229,7 @@ const FinancePage: React.FC = () => {
       ] = await Promise.all([
         supabase.from('financial_settings').select('*').eq('id', 1).maybeSingle(),
         supabase.from('v_players_public').select('id, name, shirt_name, jersey_number, status, quota_start_date, quota_end_date, role, roles').order('jersey_number', { ascending: true, nullsFirst: false }),
-        supabase.from('v_quota_status').select('player_id, month_year, expected_amount, due_id, paid_amount, due_date, status, owed_amount').order('month_year'),
+        supabase.from('v_quota_status').select('player_id, month_year, expected_amount, due_id, paid_amount, paid_at, due_date, status, owed_amount').order('month_year'),
         supabase.from('v_financial_movements').select('*').order('entry_date', { ascending: false }),
         supabase.from('charges').select('*').order('created_at', { ascending: false }),
         supabase.from('charge_players').select('*'),
@@ -396,6 +403,17 @@ const FinancePage: React.FC = () => {
   // -------------------------------------------------------------------------
   const incomeCategories = categories.filter(c => c.allow_income)
   const activePlayers = players.filter(p => p.status !== 'inactive')
+
+  /* A conta de cada atleta — quotas e encargos juntos, por estado. Dos mesmos
+     dados que as Quotas e os Encargos, para os três ecrãs dizerem o mesmo. */
+  const contas = useMemo(() => contasDosAtletas({
+    atletas: players,
+    quotas: quotaRows,
+    encargos: charges,
+    participacoes: chargePlayers,
+    pagamentos: chargePayments,
+    categorias: categories,
+  }), [players, quotaRows, charges, chargePlayers, chargePayments, categories])
 
   const chargesWithStats = useMemo(() => charges.map(c => {
     const participantIds = chargePlayers.filter(cp => cp.charge_id === c.id).map(cp => cp.player_id)
@@ -1346,22 +1364,15 @@ const FinancePage: React.FC = () => {
         className="mb-3"
       />
 
-      <div className="relative">
-        <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
-          {TABS.map(tab => (
-            <Pastilha
-              key={tab.id}
-              ativa={activeTab === tab.id}
-              onClick={() => { triggerHaptic('selection'); pedirTrocaDeSeparador(tab.id) }}
-              className="flex-none"
-            >
-              {tab.label}
-            </Pastilha>
-          ))}
-        </div>
-        {/* Indicador visual de que há mais separadores à direita */}
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-csc-fundo to-transparent pointer-events-none" />
-      </div>
+      {/* Separadores, e não pastilhas: são as secções da página, e é o
+          primitivo que as outras páginas usam — com o realce que desliza, as
+          setas do teclado e a indicação de que há mais para os lados. */}
+      <FilaSeparadores
+        itens={TABS.map(t => t.label)}
+        ativo={TABS.findIndex(t => t.id === activeTab)}
+        onEscolher={i => pedirTrocaDeSeparador(TABS[i].id)}
+        ariaLabel="Secções do financeiro"
+      />
 
       {/* ================= VISÃO GERAL ================= */}
       {activeTab === 'overview' && (
@@ -1390,6 +1401,11 @@ const FinancePage: React.FC = () => {
           corOutras={COR_OUTRAS}
           irParaDespesas={() => trocarSeparador('expenses')}
         />
+      )}
+
+      {/* ================= POR ATLETA ================= */}
+      {activeTab === 'atletas' && (
+        <ContasPorAtleta contas={contas} clube={clubSettings?.initials || CLUBE_SIGLA} />
       )}
 
       {/* ================= QUOTAS ================= */}
@@ -1687,7 +1703,7 @@ const FinancePage: React.FC = () => {
                       grupos dizem o estado uma vez, e a linha fica com o nome
                       e o número.
                     */
-                    const isPastDeadline = c.due_date ? new Date() > new Date(c.due_date) : false
+                    const isPastDeadline = encargoVencido(c.due_date)
                     const participantes = c.participantIds
                       .map(playerId => {
                         const p = players.find(pl => pl.id === playerId)

@@ -30,6 +30,8 @@ export interface QuotaStatusRow {
   expected_amount: number
   due_id: string | null
   paid_amount: number | null
+  /** Quando a quota foi registada como paga. */
+  paid_at?: string | null
   due_date: string
   status: 'paid' | 'late' | 'pending'
   owed_amount: number
