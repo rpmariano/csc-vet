@@ -10,7 +10,7 @@ import { CLUBE_SIGLA } from '../lib/clube'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { Modal } from '../components/Modal'
+import { EcraDetalhe } from '../components/EcraDetalhe'
 // O cálculo dos meses de quota e do seu estado deixou de ser feito aqui: vem
 // das vistas v_quota_status e v_financial_movements. De finance.ts só sobra o
 // que é regra de negócio pura — a época e o prazo do seguro.
@@ -1882,28 +1882,21 @@ const FinancePage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: Novo Encargo / Editar Encargo — moldura partilhada (Escape, prisão de foco, rodapé fixo) */}
-      <Modal
-        isOpen={isNewChargeModalOpen}
-        onClose={guardaEncargo.tentarFechar}
-        size="lg"
-        headerStyle="brand"
-        icon={<ShieldCheck size={18} className="text-csc-gold" />}
-        title={editingChargeId ? 'Editar Encargo' : 'Novo Encargo'}
-        closeOnOverlayClick={false}
-        footer={
-          <>
-            <Botao aparencia="vidro" onClick={guardaEncargo.tentarFechar}>Cancelar</Botao>
-            <Botao onClick={handleSaveCharge} disabled={savingCharge}>
-              {savingCharge ? 'A guardar...' : editingChargeId ? 'Guardar Alterações' : 'Criar Encargo'}
-            </Botao>
-          </>
-        }
+      {/* Novo e editar encargo são um ecrã, não um modal: os campos cabiam,
+          a lista dos participantes — o plantel inteiro — não. É o mesmo gesto
+          do "Falta convocar", e as ações ficam presas ao fundo da mesma
+          maneira. O "‹ Encargos" passa pelo guarda das alterações. */}
+      <EcraDetalhe
+        aberto={isNewChargeModalOpen}
+        voltarPara="Encargos"
+        aoVoltar={guardaEncargo.tentarFechar}
+        sobrancelha={editingChargeId ? 'Editar encargo' : undefined}
+        titulo={editingChargeId ? (newChargeTitle.trim() || 'Encargo') : 'Novo encargo'}
       >
         <div className="space-y-4">
           <div>
             <label className={ETIQUETA} htmlFor="encargo-titulo">Título *</label>
-            <input id="encargo-titulo" type="text" value={newChargeTitle} onChange={e => setNewChargeTitle(e.target.value)} placeholder="Ex: Equipamento Inverno 2026, Viagem Torneio Faro" className={CAMPO} autoFocus />
+            <input id="encargo-titulo" type="text" value={newChargeTitle} onChange={e => setNewChargeTitle(e.target.value)} placeholder="Ex: Equipamento Inverno 2026, Viagem Torneio Faro" className={CAMPO} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -2042,8 +2035,14 @@ const FinancePage: React.FC = () => {
               })}
             </div>
           </div>
+
+          <div className="sticky bottom-[108px] z-20 p-2 rounded-[28px] bg-csc-superficie/95 border border-white/10 backdrop-blur-sm">
+            <Botao largo onClick={handleSaveCharge} disabled={savingCharge}>
+              {savingCharge ? 'A guardar...' : editingChargeId ? 'Guardar alterações' : 'Criar encargo'}
+            </Botao>
+          </div>
         </div>
-      </Modal>
+      </EcraDetalhe>
 
       <ConfirmModal
         isOpen={!!chargeToDelete}

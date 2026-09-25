@@ -348,8 +348,11 @@ const abreEdicaoDoSeguro = async (page: import('@playwright/test').Page, fixture
   const editar = page.getByRole('button', { name: 'Editar o encargo Seguro desportivo 26/27' })
   await expect(editar).toBeVisible({ timeout: 15000 })
   await editar.click()
-  const formulario = page.getByRole('dialog', { name: 'Editar Encargo' })
+  /* O encargo é um ecrã desde 2026-09-25, com o título do encargo: a lista
+     de participantes não cabia num modal. */
+  const formulario = page.getByRole('region', { name: 'Seguro desportivo 26/27' })
   await expect(formulario).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   return formulario
 }
 
@@ -363,8 +366,8 @@ test('o valor a pagar ao terceiro acompanha os participantes', async ({ page }) 
   await expect(valor).toHaveValue('100')
   await expect(formulario).toContainText('acompanha-o')
 
-  // Abrir e fechar não é mexer: o valor derivado não suja o formulário.
-  await page.keyboard.press('Escape')
+  // Abrir e voltar não é mexer: o valor derivado não suja o formulário.
+  await page.getByRole('button', { name: 'Encargos', exact: true }).click()
   await expect(formulario).toHaveCount(0)
   await expect(page.getByRole('dialog')).toHaveCount(0)
 

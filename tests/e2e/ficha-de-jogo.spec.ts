@@ -60,8 +60,10 @@ const abreFicha = async (page: import('@playwright/test').Page) => {
   const ficha = page.getByRole('region', { name: / vs / })
   await expect(ficha).toBeVisible({ timeout: 15000 })
   await ficha.getByRole('button', { name: /Editar ficha de jogo/i }).click()
-  // A edição é o único diálogo: um formulário por cima do ecrã da ficha.
-  await expect(page.getByRole('dialog')).toContainText('Esquema Tático')
+  /* A edição é o ecrã seguinte (desde 2026-09-25), e não um diálogo: a ficha
+     fica escondida por baixo, e a região visível é a da edição. */
+  await expect(page.getByRole('region', { name: / vs / })).toContainText('Esquema Tático')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 }
 
 test('somar mais golos do que o resultado não grava', async ({ page }) => {

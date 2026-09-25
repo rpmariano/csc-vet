@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { Botao } from './ui'
 import { supabase } from '../lib/supabaseClient'
-import { Trophy, Trash2, Shield, Plus, Users, X } from 'lucide-react'
+import { Trash2, Shield, Plus } from 'lucide-react'
 import { toast } from '../context/ToastContext'
 import { ConfirmModal } from './ConfirmModal'
 import { Modal } from './Modal'
+import { EcraDetalhe } from './EcraDetalhe'
 import { CLUBE_SIGLA } from '../lib/clube'
 import { useClub } from '../context/ClubContext'
 import { equipaDoTorneio } from '../lib/classificacao'
@@ -19,6 +20,11 @@ interface LeagueManagerProps {
 // Gestão de Grupos e Equipas de um torneio. A introdução de jornadas e
 // resultados passou para a Classificação (StandingsPage) — faz mais sentido
 // ficar junto da tabela que esses resultados alimentam, em vez de aqui.
+//
+// É um ecrã (`EcraDetalhe`), com "‹ Torneios", desde 2026-09-25. Era uma
+// janela escrita à mão sem role="dialog", sem Escape e sem prisão de foco — o
+// Tab continuava na lista por baixo —, e é uma área de trabalho, com o seu
+// próprio modal de novo grupo por cima.
 export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onClose }) => {
   const { clubSettings } = useClub()
   const [tournament, setTournament] = useState<any>(null)
@@ -147,51 +153,26 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-csc-superficie border border-white/12 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        <div className="p-4 sm:p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center overflow-hidden shrink-0">
-              {tournament?.image_url ? (
-                <img src={tournament.image_url} alt="" className="w-full h-full object-contain" />
-              ) : (
-                <Trophy size={20} />
-              )}
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-black text-white leading-tight">
-                Grupos e Equipas
-              </h2>
-              <p className="text-sm font-bold text-white/62">{tournament?.name} {tournament?.season}</p>
-              {tournament?.organizer_name && (
-                <p className="text-xs font-semibold text-white/62">Organização: {tournament.organizer_name}</p>
-              )}
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            aria-label="Fechar"
-            className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <X size={17} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+    <>
+    <EcraDetalhe
+      aberto
+      voltarPara="Torneios"
+      aoVoltar={onClose}
+      sobrancelha="Grupos e equipas"
+      titulo={tournament?.name ?? 'Torneio'}
+      legenda={[tournament?.season, tournament?.organizer_name ? `Organização: ${tournament.organizer_name}` : null]
+        .filter(Boolean).join(' · ') || undefined}
+    >
+        <div>
           {loading ? (
             <div className="text-center py-10 text-white/62 font-bold">A carregar...</div>
           ) : (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-black text-white flex items-center gap-2">
-                  <Users size={18} className="text-csc-gold" />
-                  Grupos e Equipas
-                </h3>
-                <button onClick={() => setIsNewGroupModalOpen(true)} className="text-xs px-3 py-1.5 bg-csc-blue/20 text-csc-azul-texto rounded-lg font-bold hover:bg-csc-blue/30 transition-colors cursor-pointer">
-                  + Novo Grupo
-                </button>
-              </div>
+              {/* "Grupos e equipas" é a sobrancelha do ecrã; aqui fica só a ação. */}
+              <Botao aparencia="vidro" largo onClick={() => setIsNewGroupModalOpen(true)}>
+                <Plus size={15} />
+                Novo grupo
+              </Botao>
 
               <p className="text-xs text-white/62 -mt-2">
                 As jornadas (jogos, datas e resultados) gerem-se na página de Classificações, depois de criares aqui os grupos e as equipas.
@@ -282,14 +263,13 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
             </div>
           )}
         </div>
-      </div>
+    </EcraDetalhe>
 
       {/* MODAL: Criar Novo Grupo — mesma moldura partilhada da Nova Jornada */}
       <Modal
         isOpen={isNewGroupModalOpen}
         onClose={guardaGrupo.tentarFechar}
         size="md"
-        stacked
         headerStyle="brand"
         icon={<Plus size={18} className="text-csc-gold" />}
         title="Novo Grupo"
@@ -339,6 +319,6 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       />
 
       <UnsavedChangesModal {...guardaGrupo.props} />
-    </div>
+    </>
   )
 }

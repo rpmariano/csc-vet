@@ -79,8 +79,30 @@ test.describe('Gestão do Clube', () => {
     await abrePagina(page, 'clube?ver=adversarios')
     await verificaDialogo(page, () => page.getByRole('button', { name: 'Criar adversário' }).click())
 
+    /* O torneio deixou de ser modal a 2026-09-25: são 22 campos, e é um ecrã
+       (ver `EcraDetalhe`). O que se verifica é o contrato de ecrã. */
     await abrePagina(page, 'clube?ver=torneios')
-    await verificaDialogo(page, () => page.getByRole('button', { name: 'Criar torneio' }).click())
+    await page.getByRole('button', { name: 'Criar torneio' }).click()
+    const titulo = page.getByRole('heading', { level: 1, name: 'Novo torneio' })
+    await expect(titulo).toBeFocused()
+    await expect(dialogos(page)).toHaveCount(0)
+    await page.getByRole('button', { name: 'Torneios', exact: true }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Torneios' })).toBeVisible()
+  })
+
+  /* Os grupos e equipas de uma prova eram a única janela sem role="dialog",
+     sem Escape e sem prisão de foco. Passaram a ecrã. */
+  test('os grupos de um torneio abrem como ecrã', async ({ page }) => {
+    await abrePagina(page, 'clube?ver=torneios', {
+      tournaments: [{ id: 't1', name: 'Liga Masters +35', season: '2026/2027', status: 'ativo' }],
+    })
+    await page.getByRole('button', { name: 'Gerir Grupos e Equipas: Liga Masters +35' }).click()
+    const titulo = page.getByRole('heading', { level: 1, name: 'Liga Masters +35' })
+    await expect(titulo).toBeFocused()
+    await expect(dialogos(page)).toHaveCount(0)
+
+    // O novo grupo continua a ser um modal, e já não empilhado sobre outro.
+    await verificaDialogo(page, () => page.getByRole('button', { name: 'Novo grupo' }).click())
   })
 
   test('Escape num formulário sujo pede confirmação, e só fecha essa', async ({ page }) => {
@@ -104,10 +126,34 @@ test.describe('Gestão do Clube', () => {
   })
 })
 
+/* Criar e editar atleta deixaram de ser modal a 2026-09-25 (28 campos): são
+   um ecrã, e da ficha o "‹" volta à ficha. Fundir fichas passou a persiana. */
 test.describe('Plantel', () => {
-  test('criar ficha de membro', async ({ page }) => {
+  test('criar ficha de membro abre um ecrã', async ({ page }) => {
     await abrePagina(page, 'team-management')
-    await verificaDialogo(page, () => page.getByRole('button', { name: /Adicionar membro ao plantel/ }).first().click())
+    await page.getByRole('button', { name: /Adicionar membro ao plantel/ }).first().click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Criar ficha' })).toBeFocused()
+    await expect(dialogos(page)).toHaveCount(0)
+    await page.getByRole('button', { name: 'Plantel', exact: true }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Plantel' })).toBeVisible()
+  })
+
+  test('editar a partir da ficha volta à ficha', async ({ page }) => {
+    await abrePagina(page, `team-management?atleta=${UTILIZADOR_TESTE.id}`)
+    await page.getByRole('button', { name: 'Editar atleta' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toBeFocused()
+    await expect(page.getByText('Editar atleta', { exact: true }).filter({ visible: true })).toHaveCount(1)
+    await expect(dialogos(page)).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Ficha do atleta', exact: true }).click()
+    await expect(page.getByText('Gestão do atleta')).toBeVisible()
+  })
+
+  test('fundir fichas abre uma persiana por cima da ficha', async ({ page }) => {
+    await abrePagina(page, `team-management?atleta=${UTILIZADOR_TESTE.id}`)
+    await verificaDialogo(page, () => page.getByRole('button', { name: 'Fundir com outra ficha' }).click())
+    // Fechada a persiana, a ficha continua lá.
+    await expect(page.getByText('Gestão do atleta')).toBeVisible()
   })
 })
 
@@ -139,9 +185,13 @@ test.describe('Eventos', () => {
     meeting_time: null, home_score: null, away_score: null, is_active: true,
   }
 
-  test('criar evento', async ({ page }) => {
+  /* Criar e editar evento deixaram de ser modal a 2026-09-25: são ecrãs,
+     como o passo 2 (convocar) já era. */
+  test('criar evento abre um ecrã', async ({ page }) => {
     await abrePagina(page, 'events')
-    await verificaDialogo(page, () => page.getByRole('button', { name: 'Novo Evento' }).first().click())
+    await page.getByRole('button', { name: 'Novo Evento' }).first().click()
+    await expect(page.getByRole('heading', { level: 1, name: /^Novo / })).toBeFocused()
+    await expect(dialogos(page)).toHaveCount(0)
   })
 
   /*
@@ -196,23 +246,22 @@ test.describe('Calendário', () => {
     await page.getByRole('button', { name: 'Editar evento' }).click()
   }
 
-  // O detalhe do evento é um ecrã e não conta como diálogo; a contagem de
-  // partida é a do formulário de edição, e o que se verifica é o que se
-  // empilha por cima dele.
+  // O detalhe do evento e a edição são ecrãs, e não contam como diálogos.
   test('editar evento', async ({ page }) => {
     await abrePagina(page, 'calendar', { events: [treino] })
     await abreEdicaoDoEvento(page)
+    await expect(page.getByRole('heading', { level: 1, name: 'Treino de teste' })).toBeFocused()
+    await expect(dialogos(page)).toHaveCount(0)
 
-    const base = await dialogos(page).count()
+    // Sair da edição é sempre deliberado: o "‹ Evento" pede confirmação.
+    await page.getByRole('button', { name: 'Evento', exact: true }).click()
+    await expect(dialogos(page)).toHaveCount(1)
     await verificaContrato(dialogos(page).last())
 
-    // A edição fecha-se sempre de forma deliberada: o Escape pede confirmação.
+    // O Escape fecha só essa confirmação, e a edição continua.
     await page.keyboard.press('Escape')
-    await expect(dialogos(page)).toHaveCount(base + 1)
-
-    // E o Escape seguinte fecha só essa confirmação.
-    await page.keyboard.press('Escape')
-    await expect(dialogos(page)).toHaveCount(base)
+    await expect(dialogos(page)).toHaveCount(0)
+    await expect(page.getByText('Editar evento', { exact: true }).filter({ visible: true })).toHaveCount(1)
   })
 
   test('criar campo a partir da edição do evento', async ({ page }) => {
