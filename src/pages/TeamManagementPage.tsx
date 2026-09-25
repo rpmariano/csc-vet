@@ -519,11 +519,12 @@ const TeamManagementPage: React.FC = () => {
   const syncPlayerPracticeCallups = async (targetPlayerId: string, status: ProfileStatus) => {
     try {
       const nowIso = new Date().toISOString()
-      const { data: upcomingPractices } = await supabase
+      const { data: upcomingPractices, error: erroTreinos } = await supabase
         .from('events')
         .select('id')
         .eq('type', 'practice')
         .gte('date_time', nowIso)
+      if (erroTreinos) throw erroTreinos
 
       if (!upcomingPractices || upcomingPractices.length === 0) return
 
@@ -531,11 +532,12 @@ const TeamManagementPage: React.FC = () => {
 
       if (status === 'active') {
         // Jogador passou a apto: adicionar a todos os treinos futuros onde ainda não esteja convocado
-        const { data: existingCallups } = await supabase
+        const { data: existingCallups, error: erroExistentes } = await supabase
           .from('callups')
           .select('event_id')
           .eq('player_id', targetPlayerId)
           .in('event_id', practiceIds)
+        if (erroExistentes) throw erroExistentes
 
         const alreadyCalledEventIds = new Set((existingCallups || []).map(c => c.event_id))
         const toCallEventIds = practiceIds.filter(id => !alreadyCalledEventIds.has(id))
@@ -546,18 +548,24 @@ const TeamManagementPage: React.FC = () => {
             player_id: targetPlayerId,
             status: 'called'
           }))
-          await supabase.from('callups').insert(insertPayload)
+          const { error: erroInserir } = await supabase.from('callups').insert(insertPayload)
+          if (erroInserir) throw erroInserir
         }
       } else {
         // Jogador passou a lesionado ('injured') ou inativo ('inactive'): retirar de todos os treinos futuros
-        await supabase
+        const { error: erroApagar } = await supabase
           .from('callups')
           .delete()
           .eq('player_id', targetPlayerId)
           .in('event_id', practiceIds)
+        if (erroApagar) throw erroApagar
       }
     } catch (syncErr) {
+      /* O estado da ficha já ficou gravado; o que falhou foi acertar os
+         treinos futuros. Dizê-lo, senão o atleta fica convocado (ou de fora)
+         sem ninguém saber. */
       console.error('Erro ao sincronizar convocatórias de treino:', syncErr)
+      toast.warning('O estado foi gravado, mas não foi possível atualizar os treinos futuros.')
     }
   }
 
@@ -2856,10 +2864,12 @@ const TeamManagementPage: React.FC = () => {
                       const isSelected = selectedUserToAssociate?.id === user.id
 
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={user.id}
                           onClick={() => setSelectedUserToAssociate(user)}
-                          className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between ${
+                          aria-pressed={isSelected}
+                          className={`w-full text-left p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between ${
                             isSelected 
                               ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50 shadow-xs' 
                               : 'border-white/10 hover:border-white/20 hover:bg-white/10 bg-white/5'
@@ -2875,7 +2885,7 @@ const TeamManagementPage: React.FC = () => {
                             </span>
                             {isSelected && <Check size={16} className="text-csc-gold font-black" />}
                           </div>
-                        </div>
+                        </button>
                       )
                     })
                   )}

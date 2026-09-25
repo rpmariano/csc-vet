@@ -142,21 +142,21 @@ export const GestaoCampos: React.FC = () => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <div className="relative flex-1 min-w-0">
-          <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/62" />
+          <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
           <input
             type="text"
             value={procura}
             onChange={e => setProcura(e.target.value)}
             placeholder="Pesquisar por nome ou morada do campo..."
             aria-label="Pesquisar campos"
-            className={`${CAMPO} pl-9.5`}
+            className={`${CAMPO} pl-9.5 pr-11`}
           />
           {procura && (
             <button
               type="button"
               onClick={() => setProcura('')}
               aria-label="Limpar pesquisa"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/62 hover:text-white/80"
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-[14px] text-black/40 hover:text-black/70 cursor-pointer"
             >
               <X size={15} />
             </button>

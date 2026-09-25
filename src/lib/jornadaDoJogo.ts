@@ -49,21 +49,32 @@ export type ResultadoSincronizacao =
 export const sincronizarJogoNaJornada = async (
   evento: EventoParaJornada,
 ): Promise<ResultadoSincronizacao> => {
-  const { data: espelhoAtual } = await supabase
+  const { data: espelhoAtual, error: erroEspelho } = await supabase
     .from('tournament_matches')
     .select('id')
     .eq('event_id', evento.id)
     .maybeSingle()
+  if (erroEspelho) return { estado: 'erro', mensagem: erroEspelho.message }
 
-  if (!evento.tournament_id || !evento.matchday || !evento.opponent_id) {
-    if (espelhoAtual) await supabase.from('tournament_matches').delete().eq('id', espelhoAtual.id)
-    return { estado: 'sem-jornada' }
+  /* Tirar a linha de um jogo que deixou de caber na tabela. Uma falha aqui
+     não é silenciosa: a linha ficava lá a contar na classificação. */
+  const tirarEspelho = async (): Promise<string | null> => {
+    if (!espelhoAtual) return null
+    const { error } = await supabase.from('tournament_matches').delete().eq('id', espelhoAtual.id)
+    return error ? error.message : null
   }
 
-  const [{ data: grupos }, { data: equipas }] = await Promise.all([
+  if (!evento.tournament_id || !evento.matchday || !evento.opponent_id) {
+    const erro = await tirarEspelho()
+    return erro ? { estado: 'erro', mensagem: erro } : { estado: 'sem-jornada' }
+  }
+
+  const [{ data: grupos, error: erroGrupos }, { data: equipas, error: erroEquipas }] = await Promise.all([
     supabase.from('tournament_groups').select('id, phase').eq('tournament_id', evento.tournament_id),
     supabase.from('tournament_teams').select('id, group_id, opponent_id').eq('tournament_id', evento.tournament_id),
   ])
+  const erroLeitura = erroGrupos ?? erroEquipas
+  if (erroLeitura) return { estado: 'erro', mensagem: erroLeitura.message }
 
   /* O grupo é aquele onde estamos nós **e** o adversário: num torneio com
      fases, o mesmo adversário pode aparecer em duas, e a jornada é a do
@@ -88,8 +99,8 @@ export const sincronizarJogoNaJornada = async (
   if (!nossa || !deles || !grupoId) {
     /* Sem os dois no mesmo grupo não há linha possível. A anterior sai: o
        jogo pode ter mudado de adversário para um que ainda não está inscrito. */
-    if (espelhoAtual) await supabase.from('tournament_matches').delete().eq('id', espelhoAtual.id)
-    return { estado: 'sem-equipas' }
+    const erro = await tirarEspelho()
+    return erro ? { estado: 'erro', mensagem: erro } : { estado: 'sem-equipas' }
   }
 
   const fora = evento.home_away === 'away'
@@ -117,7 +128,7 @@ export const sincronizarJogoNaJornada = async (
   /* Antes de inserir, adotar a linha que a direção possa ter escrito à mão
      para este mesmo jogo — senão a jornada ficava com o jogo duas vezes, e a
      classificação a contá-lo a dobrar. */
-  const { data: aMao } = await supabase
+  const { data: aMao, error: erroAMao } = await supabase
     .from('tournament_matches')
     .select('id')
     .eq('tournament_id', evento.tournament_id)
@@ -126,6 +137,7 @@ export const sincronizarJogoNaJornada = async (
     .eq('away_team_id', linha.away_team_id)
     .is('event_id', null)
     .maybeSingle()
+  if (erroAMao) return { estado: 'erro', mensagem: erroAMao.message }
 
   if (aMao) {
     const { error } = await supabase.from('tournament_matches').update(linha).eq('id', aMao.id)

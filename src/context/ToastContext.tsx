@@ -117,8 +117,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   e.stopPropagation()
                   removeToast(t.id)
                 }}
-                className="shrink-0 p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-                title="Fechar"
+                className="alvo-toque shrink-0 p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                aria-label="Fechar"
               >
                 <X size={16} />
               </button>

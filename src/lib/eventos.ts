@@ -17,6 +17,17 @@ export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: stri
   return player.name || 'Atleta'
 }
 
+/**
+ * O nome de cada resposta à convocatória, para quem a marca à mão. Nesta app
+ * não há "presenças" nem "RSVP" — há quem disse que sim, quem disse que não e
+ * quem ainda não respondeu (ver CLAUDE.md).
+ */
+export const ROTULO_RESPOSTA: Record<'confirmed' | 'declined' | 'called', string> = {
+  confirmed: 'Disse que sim',
+  declined: 'Disse que não',
+  called: 'Sem resposta',
+}
+
 export const getGoogleMapsUrl = (query: string) => query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : '#'
 
 /**

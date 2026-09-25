@@ -86,7 +86,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
           type="button"
           onClick={guarda.tentarFechar}
           aria-label="Fechar"
-          className="absolute top-4 right-4 text-white/62 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+          className="absolute top-3 right-3 w-11 h-11 flex items-center justify-center text-white/62 hover:text-white/80 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
@@ -96,7 +96,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
             🛡️
           </div>
           <div>
-            <h3 id="quick-opp-titulo" className="text-base font-black text-csc-dark">Criar Novo Adversário</h3>
+            <h3 id="quick-opp-titulo" className="text-base font-black text-white">Criar Novo Adversário</h3>
             <p className="text-[11px] text-white/62">Regista uma nova equipa/clube adversário para seleção imediata.</p>
           </div>
         </div>

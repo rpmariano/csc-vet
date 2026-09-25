@@ -76,7 +76,7 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
           type="button"
           onClick={guarda.tentarFechar}
           aria-label="Fechar"
-          className="absolute top-4 right-4 text-white/62 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+          className="absolute top-3 right-3 w-11 h-11 flex items-center justify-center text-white/62 hover:text-white/80 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
@@ -86,7 +86,7 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
             🏟️
           </div>
           <div>
-            <h3 id="quick-field-titulo" className="text-base font-black text-csc-dark">Criar Novo Campo / Instalação</h3>
+            <h3 id="quick-field-titulo" className="text-base font-black text-white">Criar Novo Campo / Instalação</h3>
             <p className="text-[11px] text-white/62">Regista um novo campo para ser imediatamente selecionado.</p>
           </div>
         </div>

@@ -41,7 +41,7 @@ import { ConvocatoriaAoCriar } from '../components/callups/ConvocatoriaAoCriar'
 import type { EventoCriado } from '../components/callups/ConvocatoriaAoCriar'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
-import { hasMatchReport } from '../lib/eventos'
+import { hasMatchReport, ROTULO_RESPOSTA } from '../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 import { EcraDetalhe } from '../components/EcraDetalhe'
 import { EditarEvento } from '../components/eventos/EditarEvento'
@@ -507,16 +507,15 @@ const EventsPage: React.FC = () => {
       onConfirm: async () => {
         setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
         try {
-          try {
-            const { error } = await supabase
-              .from('events')
-              .update({ is_active: true })
-              .eq('id', ev.id)
-            if (error && !error.message?.includes('is_active')) {
-              throw error
-            }
-          } catch (dbErr) {
-            console.warn('Erro ao atualizar is_active no supabase:', dbErr)
+          /* Uma falha aqui já não se engole: era assim que a app dizia
+             "Evento ativado com sucesso!" com o evento ainda em rascunho. Só
+             se tolera a base sem a coluna `is_active`. */
+          const { error: erroAtivar } = await supabase
+            .from('events')
+            .update({ is_active: true })
+            .eq('id', ev.id)
+          if (erroAtivar && !erroAtivar.message?.includes('is_active')) {
+            throw erroAtivar
           }
 
           // Se for treino e ainda não tiver callups na BD, insere-as agora
@@ -529,7 +528,8 @@ const EventsPage: React.FC = () => {
               status: 'called' as const
             }))
             if (rows.length > 0) {
-              await supabase.from('callups').insert(rows)
+              const { error: erroConvocar } = await supabase.from('callups').insert(rows)
+              if (erroConvocar) throw erroConvocar
             }
           }
 
@@ -1022,9 +1022,9 @@ const EventsPage: React.FC = () => {
         ...prev,
         [eventId]: (prev[eventId] || []).map(c => c.id === callupId ? { ...c, status: newStatus } : c)
       }))
-      toast.success(`Estado atualizado para: ${newStatus === 'confirmed' ? 'Confirmado' : newStatus === 'declined' ? 'Recusado' : 'Convocado'}`)
+      toast.success(`Resposta marcada: ${ROTULO_RESPOSTA[newStatus]}`)
     } catch (err: any) {
-      toast.error('Erro ao atualizar: ' + err.message)
+      toast.error('Erro ao marcar a resposta: ' + err.message)
     }
   }
 
@@ -1515,6 +1515,7 @@ const EventsPage: React.FC = () => {
                             <button
                               key={d.val}
                               type="button"
+                              aria-pressed={isChecked}
                               onClick={() => {
                                 if (isChecked) {
                                   setRecurrenceWeekdays(prev => prev.filter(x => x !== d.val))
@@ -1522,10 +1523,10 @@ const EventsPage: React.FC = () => {
                                   setRecurrenceWeekdays(prev => [...prev, d.val])
                                 }
                               }}
-                              className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                              className={`min-w-11 min-h-11 px-2 rounded-lg text-[11px] font-bold transition-colors cursor-pointer border ${
                                 isChecked
-                                  ? 'bg-csc-dark text-white'
-                                  : 'bg-white border border-white/15 text-white/80 hover:bg-white/6'
+                                  ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                                  : 'bg-white/10 border-white/15 text-white/80 hover:bg-white/15'
                               }`}
                             >
                               {d.label}

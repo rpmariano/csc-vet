@@ -185,18 +185,24 @@ export const GestaoTorneios: React.FC = () => {
         if (error) throw error
         /* Apagar e reinserir: a lista de inscritos é curta, e um diff não
            compensa o risco de a deixar meia escrita. */
-        await supabase.from('tournament_players').delete().eq('tournament_id', id)
+        const { error: erroApagar } = await supabase.from('tournament_players').delete().eq('tournament_id', id)
+        if (erroApagar) throw erroApagar
         if (tourPlayers.length > 0) {
-          await supabase.from('tournament_players')
+          const { error: erroInscrever } = await supabase.from('tournament_players')
             .insert(tourPlayers.map(pid => ({ tournament_id: id, player_id: pid })))
+          if (erroInscrever) throw erroInscrever
         }
         toast.success('Torneio atualizado com sucesso!')
       } else {
         const { data, error } = await supabase.from('tournaments').insert([valores]).select().single()
         if (error) throw error
+        /* O torneio já existe: se a inscrição falhar a seguir, gravar outra
+           vez tem de o atualizar, e não criar um segundo. */
+        if (data) setEditingTourId(data.id)
         if (data && tourPlayers.length > 0) {
-          await supabase.from('tournament_players')
+          const { error: erroInscrever } = await supabase.from('tournament_players')
             .insert(tourPlayers.map(pid => ({ tournament_id: data.id, player_id: pid })))
+          if (erroInscrever) throw erroInscrever
         }
         toast.success('Torneio criado com sucesso!')
       }
@@ -266,21 +272,21 @@ export const GestaoTorneios: React.FC = () => {
         */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
-            <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/62" />
+            <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
             <input
               type="text"
               value={tourSearch}
               onChange={e => setTourSearch(e.target.value)}
               placeholder="Pesquisar por nome ou época da competição..."
               aria-label="Pesquisar torneios"
-              className={`${CAMPO} pl-9.5`}
+              className={`${CAMPO} pl-9.5 pr-11`}
             />
             {tourSearch && (
               <button
                 type="button"
                 onClick={() => setTourSearch('')}
                 aria-label="Limpar pesquisa"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/62 hover:text-white/80"
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-[14px] text-black/40 hover:text-black/70 cursor-pointer"
               >
                 <X size={15} />
               </button>

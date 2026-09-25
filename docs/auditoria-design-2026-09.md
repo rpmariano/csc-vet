@@ -218,8 +218,16 @@ Editar com 4 glifos (`Pencil`, `Edit`, `Edit2`, `Edit3`); X em 7 tamanhos; `Tras
 | **4 — Primitivos em falta** | `<Campo>`/`<Selecao>`/`<Interruptor>`/`<BotaoIcone>` (44px) em `components/ui`; `<EstadoVazio>`/`<ACarregar>`; todos os diálogos por `<Modal>`; uma só `EtiquetaSeccao` | L | Sem isto as vagas seguintes voltam a divergir |
 | **5 — Migração** | Filtros de estado para o funil (Comunicados, Torneios, Movimentos, mosaico do Plantel), grupos "caixa com banda", seta `›` em todas as linhas tocáveis, cores para tokens, `sm:` fora, formatadores únicos | L | Feita ecrã a ecrã, como o CLAUDE.md manda |
 
-**Decisões que são tuas antes da vaga 2/3:**
-1. Verbo destrutivo único: **Apagar** ou **Eliminar**?
-2. Linhas tocáveis levam sempre `›`, ou nunca (e o cartão basta)?
-3. Tirar um atleta / desmarcar quota: confirmar antes, ou apagar logo com "Anular" no toast?
-4. O "‹" de uma ficha aberta de fora: volta à **origem** (Home, Classificação) ou à **lista dona** da ficha?
+## 7. Decisões (2026-09-25)
+
+| # | Pergunta | Decisão |
+|---|---|---|
+| 1 | Verbo destrutivo | **Eliminar** — em botões, títulos de confirmação e toasts ("Apagar" e "Remover" saem) |
+| 2 | `›` em linhas tocáveis | **Nunca** — o cartão/linha basta; sai dos Eventos, Clube, Relatórios e Pagamentos Programados. O `ChevronDown` de expandir fica |
+| 3 | Tirar um atleta, desmarcar quota | **Faz logo, com "Anular" no toast** — sem confirmação |
+| 4 | "‹" de ficha aberta de fora | **Volta à origem** (Home, Classificação, o evento), como o retroceder do browser |
+
+## 8. Estado
+
+- **Vaga 1 — feita** (texto ilegível, erros silenciosos, vocabulário, `div` clicável, X de fechar < 44px).
+  Ficou para a vaga 3 a validação dupla (`required` + toast), por ser uma regra de comportamento e não um defeito.

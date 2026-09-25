@@ -389,11 +389,12 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
       const nonParticipants = playerStats.filter(p => p.lineup_status === 'none' && p.goals === 0 && p.yellow_cards === 0 && p.red_cards === 0)
       for (const p of nonParticipants) {
-        await supabase
+        const { error: erroApagar } = await supabase
           .from('stats')
           .delete()
           .eq('event_id', eventId)
           .eq('player_id', p.player_id)
+        if (erroApagar) throw erroApagar
       }
 
       setSaveSuccess(true)
