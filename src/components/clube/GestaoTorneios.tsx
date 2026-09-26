@@ -19,6 +19,7 @@ import {
 } from './torneios'
 import { mensagemDeErro } from '../../lib/erros'
 import { ProcuraEFiltros } from '../ProcuraEFiltros'
+import type { PropsDaSeccao } from './seccao'
 import BottomSheet from '../BottomSheet'
 
 /*
@@ -34,7 +35,7 @@ import BottomSheet from '../BottomSheet'
 
 const ROTULO_ESTADO = { ativo: 'A decorrer', agendado: 'Agendados', terminado: 'Terminados' } as const
 
-export const GestaoTorneios: React.FC = () => {
+export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   const [params, setParams] = useSearchParams()
 
   const [tournaments, setTorneios] = useState<Torneio[]>([])
@@ -284,6 +285,7 @@ export const GestaoTorneios: React.FC = () => {
         {/* Procura, funil e [+]. O estado era uma fila segmentada à vista,
             com os valores da base em `capitalize` ("ativo"); é filtro, e vai
             para a persiana como em todas as listas. */}
+        {cabecalho(<BotaoCriar rotulo="Criar torneio" onClick={abrirCriacao} />)}
         <ProcuraEFiltros
           procura={tourSearch}
           aoProcurar={setTourSearch}
@@ -294,9 +296,6 @@ export const GestaoTorneios: React.FC = () => {
           resumo={tourStatusFilter === 'all' ? [] : [ROTULO_ESTADO[tourStatusFilter]]}
           contagem={`${filtrados.length} de ${tournaments.length}`}
           aoLimpar={() => { setTourSearch(''); setTourStatusFilter('all') }}
-          acao={
-            <BotaoCriar rotulo="Criar torneio" onClick={abrirCriacao} />
-          }
         />
 
         <BottomSheet
@@ -381,7 +380,7 @@ export const GestaoTorneios: React.FC = () => {
         aberto={isTourModalOpen}
         voltarPara="Torneios"
         aoVoltar={guarda.tentarFechar}
-        sobrancelha={editingTourId ? 'Editar torneio' : undefined}
+        sobrancelha={editingTourId ? 'Editar torneio' : 'Torneio'}
         titulo={editingTourId ? (tourName.trim() || 'Torneio') : 'Novo torneio'}
       >
             <form onSubmit={aoSubmeter} className="space-y-4">

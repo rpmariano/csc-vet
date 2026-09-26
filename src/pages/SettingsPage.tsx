@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { haEntradaAnterior } from '../lib/rotas'
-import { BotaoVoltar } from '../components/ui'
+import { BotaoVoltar, CabecalhoEcra } from '../components/ui'
 import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { CLUBE_NOME, CLUBE_SIGLA } from '../lib/clube'
@@ -310,13 +310,21 @@ const SettingsPage: React.FC = () => {
           para esse ecrã — o mesmo "‹ Nome" das fichas. Era um disco à parte
           com "Voltar", a única seta da app que não dizia para onde ia; e
           aberto por um link, o `navigate(-1)` saía da app. */}
-      <BotaoVoltar
-        para={origemDoPerfil ?? 'Hoje'}
-        aoVoltar={() => (haEntradaAnterior() ? navegar(-1) : navegar('/', { replace: true }))}
+      <CabecalhoEcra
+        voltar={
+          <BotaoVoltar
+            para={origemDoPerfil ?? 'Hoje'}
+            aoVoltar={() => (haEntradaAnterior() ? navegar(-1) : navegar('/', { replace: true }))}
+          />
+        }
+        sobrancelha="Perfil"
+        titulo={profile?.nickname?.trim() || formShirtName?.trim() || formName?.split(' ')[0] || 'O meu perfil'}
       />
 
-      {/* Quem sou eu, em grande. */}
-      <div className="flex items-center gap-4 pt-1">
+      {/* A fotografia e o nome completo. O nome curto é o título do ecrã
+          (o cabeçalho de todos, desde 2026-09-26); era um texto de 26px feito
+          à mão, e o Perfil era o único ecrã sem título principal. */}
+      <div className="flex items-center gap-4">
         <span
           className="relative w-[74px] h-[74px] rounded-full border-[2.5px] border-csc-gold/55 flex items-center justify-center
             font-display font-extrabold text-[22px] text-csc-gold flex-none"
@@ -329,10 +337,7 @@ const SettingsPage: React.FC = () => {
           )}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="font-display font-black text-[26px] leading-[1.05] text-white tracking-[-0.02em] truncate">
-            {profile?.nickname?.trim() || formShirtName?.trim() || formName?.split(' ')[0] || 'O meu perfil'}
-          </p>
-          <p className="text-[11px] text-white/62 mt-1 truncate">{formName}</p>
+          <p className="font-display font-extrabold text-[14px] text-white truncate">{formName}</p>
           <p className="text-[10px] leading-snug text-white/62 mt-1">
             Ficha cadastral de atleta · {clubSettings?.initials ?? CLUBE_SIGLA}
           </p>

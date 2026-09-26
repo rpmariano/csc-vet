@@ -18,7 +18,7 @@ import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { CabecalhoEcra, Interruptor, BotaoIcone, ACarregar, EstadoVazio, Botao, Pastilha } from '../components/ui'
+import { CabecalhoEcra, Interruptor, BotaoIcone, ACarregar, EstadoVazio, Botao, Pastilha, BotaoCriar } from '../components/ui'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
@@ -351,25 +351,18 @@ const AnnouncementsPage: React.FC = () => {
         titulo="Comunicados"
         sobrancelha="Avisos à equipa"
         legenda={isCoachOrAdmin ? 'Os avisos à equipa: aqui leem-se, publicam-se e editam-se.' : undefined}
-        className="mb-1"
+        /* Escrever é o [+] do canto, como criar em todos os ecrãs; era uma
+           barra dourada à mão por baixo do título. Com o formulário aberto
+           não há nada a criar. */
+        acoes={isCoachOrAdmin && !aEscrever ? (
+          <BotaoCriar rotulo="Escrever comunicado" onClick={() => setAEscrever(true)} />
+        ) : undefined}
       />
 
       <div className="space-y-4">
         {/* Publicar e editar. A rota é de treinador e direção (ver App.tsx);
             este `isCoachOrAdmin` fica como segunda linha, porque um papel
             simulado muda o que se pode fazer sem mudar de rota. */}
-        {isCoachOrAdmin && !aEscrever && (
-          <button
-            type="button"
-            onClick={() => setAEscrever(true)}
-            className="w-full min-h-12 flex items-center justify-center gap-2 px-5 bg-csc-gold text-csc-tinta rounded-3xl
-              font-display font-extrabold text-[12.5px] cursor-pointer transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <Plus size={16} />
-            <span>Escrever comunicado</span>
-          </button>
-        )}
 
         {isCoachOrAdmin && aEscrever && (
           <div className="cartao-vidro p-5 space-y-4">
@@ -435,23 +428,24 @@ const AnnouncementsPage: React.FC = () => {
 
         {/* Lista e Histórico de Comunicados */}
         <div className="space-y-4">
+          {/* Procura à vista; o estado (ativos/inativos) é filtro e vai
+              para trás do funil, como em todas as listas. Era um controlo
+              segmentado à vista, com uma cor diferente por opção. Ver
+              ativos e inativos é gestão, por isso quem só lê não tem funil. */}
+          <ProcuraEFiltros
+            procura={searchTerm}
+            aoProcurar={setSearchTerm}
+            placeholder="Título ou texto"
+            rotulo="Procurar nos comunicados"
+            aoAbrirFiltros={isCoachOrAdmin ? () => setFiltrosAbertos(true) : undefined}
+            filtrosAtivos={statusFilter !== 'all'}
+            resumo={statusFilter === 'all' ? [] : [statusFilter === 'active' ? 'Ativos' : 'Inativos']}
+            contagem={`${filteredAnnouncements.length} ${filteredAnnouncements.length === 1 ? 'comunicado' : 'comunicados'}`}
+            aoLimpar={() => { setSearchTerm(''); setStatusFilter('all') }}
+          />
+
           <div className="cartao-simples p-5 space-y-4">
             
-            {/* Procura à vista; o estado (ativos/inativos) é filtro e vai
-                para trás do funil, como em todas as listas. Era um controlo
-                segmentado à vista, com uma cor diferente por opção. Ver
-                ativos e inativos é gestão, por isso quem só lê não tem funil. */}
-            <ProcuraEFiltros
-              procura={searchTerm}
-              aoProcurar={setSearchTerm}
-              placeholder="Título ou texto"
-              rotulo="Procurar nos comunicados"
-              aoAbrirFiltros={isCoachOrAdmin ? () => setFiltrosAbertos(true) : undefined}
-              filtrosAtivos={statusFilter !== 'all'}
-              resumo={statusFilter === 'all' ? [] : [statusFilter === 'active' ? 'Ativos' : 'Inativos']}
-              contagem={`${filteredAnnouncements.length} ${filteredAnnouncements.length === 1 ? 'comunicado' : 'comunicados'}`}
-              aoLimpar={() => { setSearchTerm(''); setStatusFilter('all') }}
-            />
 
             <BottomSheet
               isOpen={filtrosAbertos}

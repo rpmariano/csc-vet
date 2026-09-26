@@ -16,6 +16,7 @@ import { CAMPO, ETIQUETA, urlDoGoogleMaps, type Campo } from './comum'
 import { mensagemDeErro } from '../../lib/erros'
 import { BotaoIcone, EstadoVazio, Botao, BotaoCriar } from '../ui'
 import { ProcuraEFiltros } from '../ProcuraEFiltros'
+import type { PropsDaSeccao } from './seccao'
 
 /*
   Campos (ecrã 9f), com a ficha de cada um (9i) no endereço.
@@ -26,7 +27,7 @@ import { ProcuraEFiltros } from '../ProcuraEFiltros'
   dados, em vez de os receber de uma página que carregava tudo de uma vez.
 */
 
-export const GestaoCampos: React.FC = () => {
+export const GestaoCampos: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   const { clubSettings } = useClub()
   const [params, setParams] = useSearchParams()
 
@@ -143,6 +144,7 @@ export const GestaoCampos: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {cabecalho(<BotaoCriar rotulo="Criar campo" onClick={abrirCriacao} />)}
       <ProcuraEFiltros
         procura={procura}
         aoProcurar={setProcura}
@@ -150,9 +152,6 @@ export const GestaoCampos: React.FC = () => {
         rotulo="Procurar campos"
         contagem={`${filtrados.length} de ${campos.length}`}
         aoLimpar={() => setProcura('')}
-        acao={
-          <BotaoCriar rotulo="Criar campo" onClick={abrirCriacao} />
-        }
       />
 
       <div className="cartao-simples text-white p-4 space-y-3">

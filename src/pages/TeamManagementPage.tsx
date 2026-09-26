@@ -994,13 +994,12 @@ const TeamManagementPage: React.FC = () => {
         época, e a ação de adicionar é um botão redondo ao lado do título em
         vez de uma barra própria em cima de tudo.
       */}
-      <VoltarAOrigem />
       <CabecalhoEcra
+        voltar={<VoltarAOrigem />}
         titulo="Plantel"
         /* Só a contagem: com a época atrás, a sobrancelha não cabia ao lado
            do canto do cabeçalho e saía cortada a meio do ano. */
         sobrancelha={`${totalCount} ${totalCount === 1 ? 'membro' : 'membros'}`}
-        className="mb-1"
         acoes={isCoachOrAdmin ? (
           <BotaoCriar rotulo="Adicionar membro ao plantel" onClick={() => { triggerHaptic('light'); openCreateModal() }} />
         ) : undefined}
@@ -2056,6 +2055,7 @@ const TeamManagementPage: React.FC = () => {
           aberto={isDetailModalOpen}
           voltarPara={voltarDaFicha}
           aoVoltar={() => fecharFicha()}
+          sobrancelha="Ficha do atleta"
           titulo={selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name}
           legenda={[
             (selectedProfile.shirt_name || selectedProfile.nickname) ? selectedProfile.name : null,

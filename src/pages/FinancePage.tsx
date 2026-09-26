@@ -32,7 +32,7 @@ import {
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { VoltarAOrigem } from '../components/VoltarAOrigem'
-import { Botao, CabecalhoEcra, FilaSeparadores, LinhaAtleta, BotaoIcone, ACarregar, EstadoVazio } from '../components/ui'
+import { Botao, BotaoCriar, CabecalhoEcra, FilaSeparadores, LinhaAtleta, BotaoIcone, ACarregar, EstadoVazio } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
 import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -1388,11 +1388,20 @@ const FinancePage: React.FC = () => {
         endereço (`?ver=`), como na Competição e nos dados do clube: dá link
         próprio e faz o retroceder do browser funcionar.
       */}
-      <VoltarAOrigem />
       <CabecalhoEcra
+        voltar={<VoltarAOrigem />}
         titulo={TITULO_SEPARADOR[activeTab]}
         sobrancelha={`Época ${seasonLabel}`}
-        className="mb-3"
+        /* Criar vive no canto da sobrancelha, como em todos os ecrãs. Era
+           uma barra dourada feita à mão, no meio do separador. */
+        acoes={activeTab === 'charges' && isAdmin ? (
+          <BotaoCriar
+            rotulo="Novo encargo"
+            onClick={openNewChargeModal}
+            disabled={incomeCategories.length === 0}
+            title={incomeCategories.length === 0 ? 'Cria primeiro uma categoria que possa ser usada para receitas (separador Definições)' : undefined}
+          />
+        ) : undefined}
       />
 
       {/* Separadores, e não pastilhas: são as secções da página, e é o
@@ -1601,21 +1610,6 @@ const FinancePage: React.FC = () => {
             </p>
           )}
 
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={openNewChargeModal}
-              disabled={incomeCategories.length === 0}
-              title={incomeCategories.length === 0 ? 'Cria primeiro uma categoria que possa ser usada para receitas (aba Despesas/Receitas)' : undefined}
-              className="w-full min-h-12 flex items-center justify-center gap-1.5 px-4 bg-csc-gold text-csc-tinta rounded-[22px]
-                font-display font-extrabold text-[12px] cursor-pointer transition-transform duration-150 active:scale-97
-                disabled:opacity-40 disabled:cursor-not-allowed
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
-              <Plus size={15} />
-              Novo encargo
-            </button>
-          )}
 
           {chargesWithStats.length === 0 ? (
             <p className="cartao-simples p-6 text-center text-[11.5px] text-white/62">
@@ -1903,7 +1897,7 @@ const FinancePage: React.FC = () => {
         aberto={isNewChargeModalOpen}
         voltarPara="Encargos"
         aoVoltar={guardaEncargo.tentarFechar}
-        sobrancelha={editingChargeId ? 'Editar encargo' : undefined}
+        sobrancelha={editingChargeId ? 'Editar encargo' : 'Encargo'}
         titulo={editingChargeId ? (newChargeTitle.trim() || 'Encargo') : 'Novo encargo'}
       >
         <div className="space-y-4">

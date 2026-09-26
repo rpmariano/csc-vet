@@ -184,14 +184,13 @@ export const EcraDetalhe: React.FC<EcraDetalheProps> = ({
       aria-labelledby={idTitulo}
       className={noTopo ? undefined : 'pagina-por-baixo'}
     >
-      <BotaoVoltar para={voltarPara} aoVoltar={aoVoltar} />
       <CabecalhoEcra
+        voltar={<BotaoVoltar para={voltarPara} aoVoltar={aoVoltar} />}
         titulo={titulo}
         idTitulo={idTitulo}
         sobrancelha={sobrancelha}
         legenda={legenda}
         acoes={acoes}
-        className="mb-4"
       />
       {children}
     </section>,

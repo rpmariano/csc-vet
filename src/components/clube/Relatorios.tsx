@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import type { PropsDaSeccao } from './seccao'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
 import { Wallet, type LucideIcon } from 'lucide-react'
@@ -43,7 +44,7 @@ const RELATORIOS: readonly Relatorio[] = [
   },
 ]
 
-export const Relatorios: React.FC = () => {
+export const Relatorios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   const [params] = useSearchParams()
   const aberto = params.get('relatorio')
 
@@ -51,6 +52,7 @@ export const Relatorios: React.FC = () => {
 
   return (
     <>
+      {cabecalho()}
       <div className="space-y-2">
         {RELATORIOS.map(r => {
           const seguintes = new URLSearchParams(params)

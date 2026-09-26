@@ -1301,7 +1301,6 @@ const CalendarPage: React.FC = () => {
       <CabecalhoEcra
         titulo="Agenda"
         sobrancelha={`${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
-        className="mb-3"
       />
 
       {/*
@@ -1665,6 +1664,7 @@ const CalendarPage: React.FC = () => {
           aberto={isEventSheetOpen}
           voltarPara={voltaDoEvento.voltarPara}
           aoVoltar={handleCloseEventModal}
+          sobrancelha="Evento"
           titulo={
             selectedEvent.type === 'match' && selectedEvent.opponent
               ? selectedEvent.home_away === 'away'
