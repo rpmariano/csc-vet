@@ -2134,7 +2134,13 @@ const EventsPage: React.FC = () => {
               }
 
               const calledPlayerIds = callups.map(c => c.player_id)
-              const uncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
+              /* Só quem pode ir: jogadores aptos num jogo ou treino, toda a
+                 gente menos os inativos num convívio. A lista mostrava o
+                 plantel inteiro, e tocar num treinador para um jogo dava um
+                 aviso em vez de o esconder à partida. */
+              const uncalledPlayers = allPlayers.filter(p =>
+                !calledPlayerIds.includes(p.id) &&
+                isPlayerEligible(p, activeCallupModalEvent.type, activeCallupModalEvent.tournament_id))
               const evId = activeCallupModalEvent.id
 
               /* O bloco é o da Agenda (`BlocoConvocatoria`); aqui leva as

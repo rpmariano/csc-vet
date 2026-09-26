@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
+import { sincronizarTreinosFuturos } from '../lib/treinosFuturos'
 
 export type UserRole = 'player' | 'coach' | 'admin'
 export type ProfileStatus = 'active' | 'inactive' | 'injured'
@@ -276,41 +277,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error
 
-      // 2. Sincronizar convocatórias de treinos futuros
-      const nowIso = new Date().toISOString()
-      const { data: upcomingPractices } = await supabase
-        .from('events')
-        .select('id')
-        .eq('type', 'practice')
-        .gte('date_time', nowIso)
-
-      if (upcomingPractices && upcomingPractices.length > 0) {
-        const practiceIds = upcomingPractices.map(p => p.id)
-        if (newStatus === 'active') {
-          const { data: existingCallups } = await supabase
-            .from('callups')
-            .select('event_id')
-            .eq('player_id', actualProfile.id)
-            .in('event_id', practiceIds)
-
-          const alreadyCalledEventIds = new Set((existingCallups || []).map(c => c.event_id))
-          const toCallEventIds = practiceIds.filter(id => !alreadyCalledEventIds.has(id))
-
-          if (toCallEventIds.length > 0) {
-            const insertPayload = toCallEventIds.map(eventId => ({
-              event_id: eventId,
-              player_id: actualProfile.id,
-              status: 'called'
-            }))
-            await supabase.from('callups').insert(insertPayload)
-          }
-        } else if (newStatus === 'injured') {
-          await supabase
-            .from('callups')
-            .delete()
-            .eq('player_id', actualProfile.id)
-            .in('event_id', practiceIds)
-        }
+      // 2. Acertar os treinos futuros — só quem joga é convocado para eles.
+      //    O estado já ficou gravado; uma falha aqui não o desfaz.
+      try {
+        await sincronizarTreinosFuturos(
+          actualProfile.id,
+          newStatus,
+          extractRolesFromProfile(actualProfile).includes('player'),
+        )
+      } catch (syncErr) {
+        console.error('Erro ao sincronizar convocatórias de treino:', syncErr)
       }
 
       // 3. Atualizar estado local
