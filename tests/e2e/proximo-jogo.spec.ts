@@ -56,3 +56,22 @@ test('um jogo amanhã continua a dizer "É amanhã"', async ({ page }) => {
 
   await expect(page.getByText('É amanhã')).toBeVisible()
 })
+
+/**
+ * Debaixo de cada emblema, o nome do clube — dizia "Casa" e "Fora", que a
+ * linha por baixo do título já diz ("· em casa") sem dizer de quem é cada
+ * emblema. Num jogo fora, o adversário fica à esquerda, com o nome dele.
+ */
+test('debaixo dos emblemas estão os nomes dos clubes, pela ordem do jogo', async ({ page }) => {
+  const adversario = { name: 'Barreiro Moinhos Almada', initials: 'BM Almada', logo_url: null }
+  await abrirHome(page, {
+    club_settings: [{ id: 1, name: 'Grupo Dramático e Sportivo de Cascais', initials: 'CSC', logo_url: null }],
+    events: [{ ...base, id: 'jg-fora', home_away: 'away', date_time: amanha(), opponent: adversario }],
+  })
+
+  const cartao = page.getByRole('button', { name: /^Ver o jogo/ })
+  await expect(cartao).toBeVisible()
+  const nomes = cartao.getByText(/^(Barreiro Moinhos Almada|Grupo Dramático e Sportivo de Cascais)$/)
+  await expect(nomes).toHaveText(['Barreiro Moinhos Almada', 'Grupo Dramático e Sportivo de Cascais'])
+  await expect(cartao.getByText(/^(Casa|Fora)$/)).toHaveCount(0)
+})
