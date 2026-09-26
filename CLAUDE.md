@@ -499,10 +499,10 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   dispensados de quota, que se perdiam na cascata) — o `associate_my_profile()`
   não copiava as colunas, e um cartão de cidadão carregado pela direção
   perdia-se quando o atleta ligava a conta.
-  **As três colunas antigas saem na segunda parte**
-  (`supabase_documentos_por_epoca_colunas_migration.sql`), **a aplicar só
-  depois de a app nova estar no ar**: traz o que a app antiga ainda tenha
-  escrito, tira as colunas do `admin_merge_profiles()` e larga-as.
+  **As três colunas antigas saíram na segunda parte**
+  (`supabase_documentos_por_epoca_colunas_migration.sql`, aplicada a
+  2026-09-26 depois do deploy): trouxe o que a app antiga ainda tivesse
+  escrito (nada), tirou as colunas do `admin_merge_profiles()` e largou-as.
   `documentos.spec.ts` cobre os links, a época em curso e as anteriores, os 4
   ficheiros, o carregar e o eliminar, e o relatório.
 - **Tudo se responde, treinos incluídos — mas o treino tem janela.**
@@ -820,6 +820,11 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   `<FaixaTopo>` da Home é mais alta — 340px contra os 250px do resto —, altura
   que vem do `Layout` pela rota e não de uma segunda faixa desenhada pela Home,
   que sobreporia dois conjuntos de blocos inclinados.
+  **Debaixo de cada emblema vai o nome do clube por extenso** (2026-09-26),
+  e não "Casa"/"Fora": isso já o diz a linha por baixo do título ("· em
+  casa"), e o nome é o que diz de quem é cada emblema — o título só tem as
+  siglas. Quebra em vez de cortar, e o "VS" alinha-se ao meio dos emblemas,
+  não da coluna.
 - **O cartão de evento da Agenda desenha-se como o cartão do jogo da Home**:
   bandas de largura inteira separadas por uma linha — emblemas com o "VS"
   vazado a dourado, as duas horas divididas, o campo com a morada por baixo do

@@ -71,9 +71,11 @@ function quantoFalta(iso: string): string {
 export const CartaoProximoJogo: React.FC<{
   jogo: JogoDaHome
   siglaClube: string
+  /** O nome por extenso, para debaixo do emblema — a sigla já está no título. */
+  nomeClube: string
   emblemaClube: string
   aoResponder: (id: string, status: 'confirmed' | 'declined') => void
-}> = ({ jogo, siglaClube, emblemaClube, aoResponder }) => {
+}> = ({ jogo, siglaClube, nomeClube, emblemaClube, aoResponder }) => {
   const navegar = useNavigate()
   const fora = jogo.home_away === 'away'
   const sigla = jogo.opponent?.initials || jogo.opponent?.name?.slice(0, 3).toUpperCase() || 'ADV'
@@ -102,18 +104,19 @@ export const CartaoProximoJogo: React.FC<{
       </span>
     )
 
-  const nos = (
-    <span className="w-[100px] flex flex-col items-center gap-2">
-      {emblema(emblemaClube, siglaClube)}
-      <span className="font-display font-bold text-[12px] text-white/85">{fora ? 'Fora' : 'Casa'}</span>
+  /* Debaixo de cada emblema, o nome do clube por extenso. Dizia "Casa" e
+     "Fora", que já está na linha por baixo do título ("· em casa") e não diz
+     de quem é cada emblema; o nome di-lo, e o título só tem as siglas. Quebra
+     em vez de cortar — "Grupo Dramático e Sportivo de Cascais" não cabe numa
+     linha, e cortado a meio ficava por ler. */
+  const equipa = (url: string | null, nome: string) => (
+    <span className="flex-1 min-w-0 flex flex-col items-center gap-2">
+      {emblema(url, nome)}
+      <span className="font-display font-bold text-[12px] leading-tight text-white/85 text-center break-words">{nome}</span>
     </span>
   )
-  const eles = (
-    <span className="w-[100px] flex flex-col items-center gap-2">
-      {emblema(jogo.opponent?.logo_url ?? null, jogo.opponent?.name ?? 'Adversário')}
-      <span className="font-display font-bold text-[12px] text-white/85">{fora ? 'Casa' : 'Fora'}</span>
-    </span>
-  )
+  const nos = equipa(emblemaClube, nomeClube)
+  const eles = equipa(jogo.opponent?.logo_url ?? null, jogo.opponent?.name ?? 'Adversário')
 
   /* Todo o bloco abre o evento na Agenda. Não pode ser um `<button>`: tem lá
      dentro o link do Maps e os dois botões de resposta. Fica o papel e o
@@ -163,10 +166,12 @@ export const CartaoProximoJogo: React.FC<{
 
       <CartaoVidro className="overflow-hidden">
         {/* Os emblemas, com o "VS" vazado a dourado entre eles. */}
-        <div className="flex items-center justify-center gap-6 px-[18px] pt-[18px] pb-4">
+        <div className="flex items-start justify-center gap-3 px-[18px] pt-[18px] pb-4">
           {fora ? eles : nos}
+          {/* Alinhado ao meio dos emblemas (58px), e não da coluna: os nomes
+              têm alturas diferentes. */}
           <span
-            className="flex-none font-display font-black text-[28px] mb-5 text-transparent"
+            className="flex-none font-display font-black text-[28px] leading-[58px] text-transparent"
             style={{ WebkitTextStroke: '1.5px var(--color-csc-gold)' }}
             aria-hidden="true"
           >

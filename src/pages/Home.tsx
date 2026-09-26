@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { ShieldAlert, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
+import { CLUBE_NOME } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla } from '../lib/siglas'
@@ -530,6 +531,7 @@ const Home: React.FC = () => {
                   key={jogo.id}
                   jogo={jogo}
                   siglaClube={sigla}
+                  nomeClube={clubSettings?.name || CLUBE_NOME}
                   emblemaClube={emblema}
                   aoResponder={responder}
                 />
