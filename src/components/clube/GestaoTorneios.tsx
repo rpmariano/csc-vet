@@ -323,48 +323,40 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
         </BottomSheet>
 
         {/* Lista de Torneios */}
-        <div className="cartao-simples text-white p-4 space-y-3">
+        {/* Um cartão, e os torneios como linhas lá dentro. Era um cartão cujo
+            único conteúdo eram outros cartões, com três botões em caixa e
+            sombra em cada um. */}
+        <div className="cartao-leve text-white overflow-hidden">
           {filtrados.length === 0 ? (
             <EstadoVazio icone={Trophy} titulo="Nenhum torneio encontrado." texto="Tenta mudar a procura ou cria uma competição nova." />
           ) : (
-            <div className="grid grid-cols-1 gap-2.5">
+            <div>
               {filtrados.map(t => (
-                <div 
-                  key={t.id} 
-                  className="flex justify-between items-center p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all"
+                <div
+                  key={t.id}
+                  className="linha-leve flex justify-between items-center gap-3 pl-4 pr-2 py-3"
                 >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <Trophy size={17} className="text-csc-gold" />
-                      <div>
-                        <h4 className="font-black text-sm text-white">{t.name}</h4>
-                        {t.season && (
-                          <p className="text-xs text-white/70 font-semibold">Época: {t.season}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <span className={`inline-block text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                        t.status === 'ativo' ? 'bg-csc-light/15 text-csc-verde-texto border border-csc-light/35' :
-                        t.status === 'terminado' ? 'bg-white/10 text-white/70' :
-                        'bg-csc-gold/15 text-csc-gold border border-csc-gold/35'
+                  {/* O estado é a cor da letra pequena, e não uma pastilha
+                      com moldura por baixo do nome. */}
+                  <div className="min-w-0">
+                    <h4 className="font-display font-extrabold text-[13.5px] text-white truncate">{t.name}</h4>
+                    <p className="text-[11px] mt-0.5 truncate">
+                      <span className={`font-bold ${
+                        t.status === 'ativo' ? 'text-csc-verde-texto' :
+                        t.status === 'terminado' ? 'text-white/55' : 'text-csc-gold'
                       }`}>
                         {({ ativo: 'A decorrer', agendado: 'Agendado', terminado: 'Terminado' } as Record<string, string>)[t.status] ?? t.status}
                       </span>
-                    </div>
+                      {t.season && <span className="text-white/55"> · {t.season}</span>}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => abrirGestorDeLiga(t.id)}
-                      className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-csc-azul-texto/60 text-csc-azul-texto hover:bg-csc-blue/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
-                      title="Gerir Grupos e Equipas"
-                      aria-label={`Gerir Grupos e Equipas: ${t.name}`}
-                    >
-                      <Shield size={14} />
-                    </button>
-                    <BotaoIcone rotulo={`Editar o torneio ${t.name}`} icone={Pencil} onClick={() => abrirEdicao(t)} />
-                    <BotaoIcone rotulo={`Eliminar o torneio ${t.name}`} icone={Trash2} perigo onClick={() => eliminar(t.id, t.name)} />
+                  {/* Os três botões sem caixa (`discreto`): continuam com 44px
+                      de alvo, e deixam de ser três quadrados por linha. */}
+                  <div className="flex items-center shrink-0">
+                    <BotaoIcone discreto rotulo={`Gerir Grupos e Equipas: ${t.name}`} icone={Shield} onClick={() => abrirGestorDeLiga(t.id)} />
+                    <BotaoIcone discreto rotulo={`Editar o torneio ${t.name}`} icone={Pencil} onClick={() => abrirEdicao(t)} />
+                    <BotaoIcone discreto rotulo={`Eliminar o torneio ${t.name}`} icone={Trash2} perigo onClick={() => eliminar(t.id, t.name)} />
                   </div>
                 </div>
               ))}

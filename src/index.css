@@ -253,6 +253,19 @@ h1[tabindex='-1']:focus {
   box-shadow: 0 20px 46px -24px rgba(0, 0, 0, 0.95);
 }
 
+/* Cartão leve — o protótipo da app mais leve (2026-09-26, Eventos e
+ * Torneios). Um sinal só: fundo, sem borda nem sombra. As linhas vivem lá
+ * dentro separadas por um fio (`.linha-leve`), sem caixa própria. Havia até
+ * cinco caixas encaixadas umas nas outras, cada uma com fundo e borda, e os
+ * brancos translúcidos somavam-se até um cinzento opaco. */
+.cartao-leve {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 22px;
+}
+.linha-leve + .linha-leve {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
 /* Cartão simples — listas e blocos secundários. Sem blur: são muitos por
  * ecrã, e o `backdrop-filter` repetido dezenas de vezes custa caro a pintar
  * num telemóvel antigo. */
