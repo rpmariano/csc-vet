@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from 'react'
-import { 
-  Users, 
-  Search, 
-  Plus, 
-  Edit2, 
-  Trash2, 
+import {
+  Users,
+  Search,
+  Plus,
+  Trash2,
   Phone,
-  FileText, 
-  Shield, 
-  HeartPulse, 
-  CheckCircle2, 
-  XCircle, 
+  FileText,
+  Shield,
+  HeartPulse,
+  CheckCircle2,
+  XCircle,
   ExternalLink,
   Save,
   Link2,
@@ -23,6 +22,7 @@ import {
   ClipboardList,
   Landmark,
   User as UserIcon,
+  Pencil
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth, extractRolesFromProfile, cleanNotesFromRolesTag } from '../context/AuthContext'
@@ -31,13 +31,15 @@ import SoccerPitchSelector from '../components/SoccerPitchSelector'
 import { parsePositions, normalizePositionName, siglasDasPosicoes } from '../lib/posicoes'
 import { EcraDetalhe } from '../components/EcraDetalhe'
 import { useSearchParams } from 'react-router-dom'
+import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
+import { VoltarAOrigem } from '../components/VoltarAOrigem'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
 import { CLUBE_NOME } from '../lib/clube'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, Botao, LinhaAtleta } from '../components/ui'
+import { CabecalhoEcra, Pastilha, Botao, LinhaAtleta, ACarregar, EstadoVazio } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import {
   getSeasonLabel,
@@ -47,6 +49,9 @@ import {
   DEFAULT_FINANCIAL_SETTINGS,
   type FinancialSettings,
 } from '../lib/finance'
+import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
+import { fmtData } from '../lib/datas'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -55,12 +60,6 @@ const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
-const CAMPO =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
-
-const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /** Como se lê cada filtro escondido, na linha de resumo. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -463,13 +462,7 @@ const TeamManagementPage: React.FC = () => {
     if (alvo) setSelectedProfile(alvo)
   }, [searchParams, profiles])
 
-  const fecharFicha = () => {
-    if (searchParams.get('atleta')) {
-      const restantes = new URLSearchParams(searchParams)
-      restantes.delete('atleta')
-      setSearchParams(restantes, { replace: true })
-    }
-  }
+  const { voltarPara: voltarDaFicha, aoVoltar: fecharFicha } = useVoltarDaFicha(['atleta'], 'Plantel')
 
   // Upload handler for document/photo fields
   const handleUploadFile = async (
@@ -500,7 +493,7 @@ const TeamManagementPage: React.FC = () => {
 
       toast.success('Ficheiro carregado com sucesso!')
     } catch (err: any) {
-      toast.error('Erro ao carregar ficheiro: ' + err.message)
+      toast.error('Erro ao carregar ficheiro: ' + mensagemDeErro(err))
     } finally {
       setUploadingDoc(null)
     }
@@ -519,11 +512,12 @@ const TeamManagementPage: React.FC = () => {
   const syncPlayerPracticeCallups = async (targetPlayerId: string, status: ProfileStatus) => {
     try {
       const nowIso = new Date().toISOString()
-      const { data: upcomingPractices } = await supabase
+      const { data: upcomingPractices, error: erroTreinos } = await supabase
         .from('events')
         .select('id')
         .eq('type', 'practice')
         .gte('date_time', nowIso)
+      if (erroTreinos) throw erroTreinos
 
       if (!upcomingPractices || upcomingPractices.length === 0) return
 
@@ -531,11 +525,12 @@ const TeamManagementPage: React.FC = () => {
 
       if (status === 'active') {
         // Jogador passou a apto: adicionar a todos os treinos futuros onde ainda não esteja convocado
-        const { data: existingCallups } = await supabase
+        const { data: existingCallups, error: erroExistentes } = await supabase
           .from('callups')
           .select('event_id')
           .eq('player_id', targetPlayerId)
           .in('event_id', practiceIds)
+        if (erroExistentes) throw erroExistentes
 
         const alreadyCalledEventIds = new Set((existingCallups || []).map(c => c.event_id))
         const toCallEventIds = practiceIds.filter(id => !alreadyCalledEventIds.has(id))
@@ -546,18 +541,24 @@ const TeamManagementPage: React.FC = () => {
             player_id: targetPlayerId,
             status: 'called'
           }))
-          await supabase.from('callups').insert(insertPayload)
+          const { error: erroInserir } = await supabase.from('callups').insert(insertPayload)
+          if (erroInserir) throw erroInserir
         }
       } else {
         // Jogador passou a lesionado ('injured') ou inativo ('inactive'): retirar de todos os treinos futuros
-        await supabase
+        const { error: erroApagar } = await supabase
           .from('callups')
           .delete()
           .eq('player_id', targetPlayerId)
           .in('event_id', practiceIds)
+        if (erroApagar) throw erroApagar
       }
     } catch (syncErr) {
+      /* O estado da ficha já ficou gravado; o que falhou foi acertar os
+         treinos futuros. Dizê-lo, senão o atleta fica convocado (ou de fora)
+         sem ninguém saber. */
       console.error('Erro ao sincronizar convocatórias de treino:', syncErr)
+      toast.warning('O estado foi gravado, mas não foi possível atualizar os treinos futuros.')
     }
   }
 
@@ -588,7 +589,7 @@ const TeamManagementPage: React.FC = () => {
       }
       toast.success(newStatus === 'injured' ? 'Atleta marcado como lesionado.' : 'Atleta marcado como apto.')
     } catch (err: any) {
-      toast.error('Erro ao atualizar estado físico: ' + (err.message || 'Erro desconhecido'))
+      toast.error('Erro ao atualizar estado físico: ' + mensagemDeErro(err))
     }
   }
 
@@ -774,16 +775,16 @@ const TeamManagementPage: React.FC = () => {
       fetchProfiles()
     } catch (err: any) {
       console.error('Erro ao gravar membro:', err)
-      toast.error('Erro ao gravar membro: ' + (err.message || 'Verifique a base de dados'))
+      toast.error('Erro ao gravar membro: ' + mensagemDeErro(err))
     }
   }
 
   const handleDeleteMember = (id: string, name: string) => {
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Eliminar Membro',
-      description: `Tens a certeza que desejas eliminar o membro "${name}"? Todas as fichas e dados associados serão removidos.`,
-      confirmText: 'Sim, Eliminar Membro',
+      title: 'Eliminar membro',
+      description: `Tens a certeza que queres eliminar "${name}"? A ficha e os dados associados são eliminados.`,
+      confirmText: 'Sim, eliminar membro',
       cancelText: 'Cancelar',
       variant: 'danger',
       onConfirm: async () => {
@@ -799,7 +800,7 @@ const TeamManagementPage: React.FC = () => {
           if (selectedProfile?.id === id) fecharFicha()
           toast.success('Membro eliminado com sucesso!')
         } catch (err: any) {
-          toast.error('Erro ao eliminar membro: ' + err.message)
+          toast.error('Erro ao eliminar membro: ' + mensagemDeErro(err))
         }
       }
     })
@@ -838,8 +839,8 @@ const TeamManagementPage: React.FC = () => {
     setConfirmModalConfig({
       isOpen: true,
       title: 'Fundir Fichas',
-      description: `Vais fundir "${apagar.name}" em "${manter.name}": os dados em falta em "${manter.name}" são preenchidos a partir de "${apagar.name}", todo o histórico (convocatórias e respostas, estatísticas, quotas, encargos, seguros) passa para "${manter.name}", e a ficha "${apagar.name}" é apagada. Tens a certeza?`,
-      confirmText: 'Sim, Fundir Fichas',
+      description: `Vais fundir "${apagar.name}" em "${manter.name}": os dados em falta em "${manter.name}" são preenchidos a partir de "${apagar.name}", todo o histórico (convocatórias e respostas, estatísticas, quotas, encargos, seguros) passa para "${manter.name}", e a ficha "${apagar.name}" é eliminada. Tens a certeza?`,
+      confirmText: 'Sim, fundir fichas',
       cancelText: 'Cancelar',
       variant: 'warning',
       onConfirm: async () => {
@@ -860,7 +861,7 @@ const TeamManagementPage: React.FC = () => {
           }
           fetchProfiles()
         } catch (err: any) {
-          toast.error('Erro ao fundir fichas: ' + (err.message || 'Verifique a base de dados'))
+          toast.error('Erro ao fundir fichas: ' + mensagemDeErro(err))
         } finally {
           setAssociatingLoading(false)
         }
@@ -1025,6 +1026,7 @@ const TeamManagementPage: React.FC = () => {
         época, e a ação de adicionar é um botão redondo ao lado do título em
         vez de uma barra própria em cima de tudo.
       */}
+      <VoltarAOrigem />
       <CabecalhoEcra
         titulo="Plantel"
         /* Só a contagem: com a época atrás, a sobrancelha não cabia ao lado
@@ -1250,15 +1252,9 @@ const TeamManagementPage: React.FC = () => {
 
       {/* Profiles View */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold"></div>
-        </div>
+        <ACarregar />
       ) : filteredProfiles.length === 0 ? (
-        <div className="bg-csc-dark text-white rounded-2xl border border-dashed border-white/15 p-12 text-center">
-          <Users size={48} className="mx-auto text-white/20 mb-3" />
-          <p className="font-bold text-white/70 text-lg">Nenhum atleta encontrado</p>
-          <p className="text-xs text-white/65 mt-1">Ajuste os filtros de pesquisa ou adicione um novo membro.</p>
-        </div>
+        <EstadoVazio icone={Users} titulo="Nenhum atleta encontrado." texto="Tenta mudar os filtros ou a procura, ou cria uma ficha nova." />
       ) : viewMode === 'list' ? (
         /*
           Lista do plantel (ecrã 3a): número, alcunha, nome, posições e a
@@ -1375,7 +1371,7 @@ const TeamManagementPage: React.FC = () => {
           que a app já dava e foi decidido mantê-la, agora escolhida na
           persiana de filtros em vez de num alternador sempre à vista.
 
-          Duas colunas, e não `sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4`:
+          Duas colunas, e não ``:
           os pontos de corte do Tailwind estão desligados nesta app, e olhavam
           para a janela e não para a coluna de 480px.
         */
@@ -1703,7 +1699,7 @@ const TeamManagementPage: React.FC = () => {
                 {/* 4.2 Papéis no Sistema (1, 2 ou 3 funções) */}
                 <div className="pt-2 border-t border-white/10">
                   <label className="block text-xs font-bold text-white/70 mb-2">
-                    Papel / Funções no Sistema (Selecione 1, 2 ou 3):
+                    Papel / Funções no Sistema (escolhe 1, 2 ou 3):
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {/* Jogador */}
@@ -1987,7 +1983,7 @@ const TeamManagementPage: React.FC = () => {
               {/* 6. SAÚDE & EMERGÊNCIA */}
               <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                  <HeartPulse size={14} className="text-red-400" />
+                  <HeartPulse size={14} className="text-csc-vermelho-texto" />
                   <span>7. Saúde & Contacto de Emergência</span>
                 </h3>
 
@@ -2150,7 +2146,7 @@ const TeamManagementPage: React.FC = () => {
       {selectedProfile && (
         <EcraDetalhe
           aberto={isDetailModalOpen}
-          voltarPara="Plantel"
+          voltarPara={voltarDaFicha}
           aoVoltar={() => fecharFicha()}
           titulo={selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name}
           legenda={[
@@ -2183,7 +2179,6 @@ const TeamManagementPage: React.FC = () => {
                   {(selectedProfile.name || '?').charAt(0).toUpperCase()}
                 </span>
               )}
-
 
               <button
                 type="button"
@@ -2292,7 +2287,7 @@ const TeamManagementPage: React.FC = () => {
                       <p className="text-white/65 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.birth_date ? (
-                          `${new Date(selectedProfile.birth_date).toLocaleDateString('pt-PT')} (${calculateAge(selectedProfile.birth_date)} anos)`
+                          `${fmtData(selectedProfile.birth_date)} (${calculateAge(selectedProfile.birth_date)} anos)`
                         ) : '-'}
                       </p>
                     </div>
@@ -2310,7 +2305,7 @@ const TeamManagementPage: React.FC = () => {
                     <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Validade do CC</p>
                       <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.id_card_expiry ? new Date(selectedProfile.id_card_expiry).toLocaleDateString('pt-PT') : '-'}
+                        {selectedProfile.id_card_expiry ? fmtData(selectedProfile.id_card_expiry) : '-'}
                       </p>
                     </div>
 
@@ -2436,7 +2431,7 @@ const TeamManagementPage: React.FC = () => {
                   <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-white/65 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
-                      <p className="font-black text-white font-mono text-xs sm:text-sm mt-0.5">
+                      <p className="font-black text-white font-mono text-xs mt-0.5">
                         {selectedProfile.iban || 'Nenhum IBAN registado'}
                       </p>
                     </div>
@@ -2455,7 +2450,7 @@ const TeamManagementPage: React.FC = () => {
                       <p className="text-white/65 font-bold uppercase text-[9px]">Início de atividade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.quota_start_date
-                          ? new Date(selectedProfile.quota_start_date).toLocaleDateString('pt-PT')
+                          ? fmtData(selectedProfile.quota_start_date)
                           : 'Do estado do perfil'}
                       </p>
                     </div>
@@ -2464,7 +2459,7 @@ const TeamManagementPage: React.FC = () => {
                       <p className="text-white/65 font-bold uppercase text-[9px]">Fim de atividade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.quota_end_date
-                          ? new Date(selectedProfile.quota_end_date).toLocaleDateString('pt-PT')
+                          ? fmtData(selectedProfile.quota_end_date)
                           : 'Sem fim marcado'}
                       </p>
                     </div>
@@ -2486,14 +2481,14 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 4. Saúde & Contacto de Emergência */}
-                <div className="bg-red-500/10 p-4 rounded-2xl border border-red-400/30 space-y-3">
-                  <h4 className="text-xs font-black text-red-200 uppercase tracking-wider flex items-center gap-1.5">
-                    <HeartPulse size={14} className="text-red-400" />
+                <div className="bg-csc-red/10 p-4 rounded-2xl border border-csc-red/30 space-y-3">
+                  <h4 className="text-xs font-black text-csc-vermelho-texto uppercase tracking-wider flex items-center gap-1.5">
+                    <HeartPulse size={14} className="text-csc-vermelho-texto" />
                     <span>4. Saúde & Contacto de Emergência</span>
                   </h4>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/10 p-3 rounded-xl border border-red-400/20">
+                    <div className="bg-white/10 p-3 rounded-xl border border-csc-red/20">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Contacto de Emergência</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.emergency_contact_name || 'Não registado'}
@@ -2508,7 +2503,7 @@ const TeamManagementPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-red-400/20">
+                    <div className="bg-white/10 p-3 rounded-xl border border-csc-red/20">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Notas Médicas / Alergias</p>
                       <p className="font-medium text-white/80 mt-0.5">
                         {cleanNotesFromRolesTag(selectedProfile.medical_notes) || 'Nenhuma restrição médica registada'}
@@ -2609,16 +2604,10 @@ const TeamManagementPage: React.FC = () => {
                   Gestão do atleta
                 </h4>
 
-                <button
-                  type="button"
-                  onClick={() => openEditModal(selectedProfile)}
-                  className="w-full min-h-12 px-4 rounded-2xl bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px]
-                    flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
-                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                >
-                  <Edit2 size={15} />
+                <Botao largo onClick={() => openEditModal(selectedProfile)}>
+                  <Pencil size={15} aria-hidden="true" />
                   Editar atleta
-                </button>
+                </Botao>
 
                 <p className="text-[10.5px] leading-relaxed text-white/60">
                   Marcar como lesionado retira-o dos treinos futuros; ao voltar a apto entra outra vez.
@@ -2658,19 +2647,17 @@ const TeamManagementPage: React.FC = () => {
                 )}
 
                 {isAdmin && (
-                  <button
-                    type="button"
+                  <Botao
+                    aparencia="perigo"
+                    largo
                     onClick={() => {
                       const alvo = selectedProfile
                       handleDeleteMember(alvo.id, alvo.name)
                     }}
-                    className="w-full min-h-12 px-4 rounded-2xl text-csc-vermelho-texto font-display font-extrabold text-[12px]
-                      flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
-                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={15} aria-hidden="true" />
                     Eliminar atleta
-                  </button>
+                  </Botao>
                 )}
               </div>
             )}
@@ -2716,7 +2703,7 @@ const TeamManagementPage: React.FC = () => {
             isOpen
             onClose={fecharFusao}
             title={`Fundir a ficha de ${associatingPlayer.name}`}
-            description="Os dados em falta na que ficar vêm da outra, e a que sobra é apagada"
+            description="Os dados em falta na que ficar vêm da outra, e a que sobra é eliminada"
             tone="dark"
           >
             <div>
@@ -2856,10 +2843,12 @@ const TeamManagementPage: React.FC = () => {
                       const isSelected = selectedUserToAssociate?.id === user.id
 
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={user.id}
                           onClick={() => setSelectedUserToAssociate(user)}
-                          className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between ${
+                          aria-pressed={isSelected}
+                          className={`w-full text-left p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between ${
                             isSelected 
                               ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50 shadow-xs' 
                               : 'border-white/10 hover:border-white/20 hover:bg-white/10 bg-white/5'
@@ -2875,7 +2864,7 @@ const TeamManagementPage: React.FC = () => {
                             </span>
                             {isSelected && <Check size={16} className="text-csc-gold font-black" />}
                           </div>
-                        </div>
+                        </button>
                       )
                     })
                   )}

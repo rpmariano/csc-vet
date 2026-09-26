@@ -1,4 +1,5 @@
 import React, { useId } from 'react'
+import { CLASSE_ETIQUETA_CAMPO } from './formulario'
 
 /**
  * Campo de formulário dos ecrãs de entrada: etiqueta pequena em maiúsculas por
@@ -32,7 +33,7 @@ export const CampoEntrada: React.FC<CampoEntradaProps> = ({
     <div className={className}>
       <label
         htmlFor={id}
-        className="block font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-1.5"
+        className={CLASSE_ETIQUETA_CAMPO}
       >
         {etiqueta}
       </label>

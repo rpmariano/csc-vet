@@ -146,6 +146,17 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   principal de um ecrã (translúcido, deixa passar a faixa do topo) e `<CartaoSimples>`
   para listas e blocos. Idem `<Botao>`, `<Pastilha>`, `<TituloEcra>`,
   `<EtiquetaSeccao>` e `<FilaSeparadores>` (`src/components/ui`).
+- **E o resto também tem primitivo** (vaga 4 da auditoria de design,
+  2026-09-26): `<BotaoIcone>` para editar/eliminar/tirar só com ícone (44px,
+  lápis e caixote a 15px, `rotulo` como nome acessível — havia quatro glifos
+  de "editar"); `<Interruptor>` para um sim/não (`role="switch"`, a linha
+  inteira é o alvo); `<ACarregar>` e `<EstadoVazio>` para a lista que ainda
+  não é lista; e `CLASSE_CAMPO` / `CLASSE_ETIQUETA_CAMPO`
+  (`components/ui/formulario.ts`) para os campos de formulário, que estavam
+  copiados em treze ficheiros e já tinham divergido. **Um formulário num
+  diálogo passa pelo `<Modal>`**; as três confirmações partilhadas
+  (`ConfirmModal`, `UnsavedChangesModal`, `ResendCallupsModal`) têm moldura
+  própria mas os botões são `<Botao>`.
 - **Todos os alvos de toque têm no mínimo 44px de altura**, sem exceções — inclui
   pastilhas, separadores e botões de linha.
 - O fim da coluna acaba acima da barra inferior com `margin-bottom`, nunca
@@ -824,10 +835,55 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   "Oficiais", e o funil fica apagado.
   As Estatísticas não têm procura porque não há lá texto para procurar; ficam
   só com o funil.
-- **A cor de um tipo de evento vive em `CORES_TIPO`**, num sítio só. O ponto do
-  calendário e a pastilha do cartão diziam a mesma coisa em tons diferentes —
-  o convívio era `csc-azul-texto` no ponto e `blue-300` no rótulo.
-- Ações do utilizador disparam `triggerHaptic(...)` e confirmam com `toast.*`.
+- **A cor de um tipo de evento vive em `CORES_TIPO`** (`src/lib/eventos.ts`,
+  desde a vaga 5), num sítio só. O ponto do calendário e a pastilha do cartão
+  diziam a mesma coisa em tons diferentes — o convívio era `csc-azul-texto` no
+  ponto e `blue-300` no rótulo —, e o dossier dos Eventos pintava o jogo de
+  azul e o convívio de roxo, com a Agenda a pintar o jogo de vermelho.
+- **Não há cores da paleta do Tailwind fora dos gráficos** (vaga 5,
+  2026-09-26). Eram 163 (`emerald-*`, `amber-*`, `red-*`, `blue-*`…) e
+  passaram aos tokens: verde → `csc-light`/`csc-verde-texto`, vermelho →
+  `csc-red`/`csc-vermelho-texto`, âmbar → `csc-gold`, azul →
+  `csc-blue`/`csc-azul-texto`. O "âmbar a vencer" do dinheiro é hoje o
+  dourado do clube. **A exceção são as paletas categóricas dos gráficos**
+  (`RECEITA_CORES`, `DESPESA_CORES` no Financeiro, os Encargos na Visão
+  Geral): cinco categorias precisam de cinco tons, e o clube tem três. E a
+  bolha verde da pré-visualização do WhatsApp nas Contas por atleta, que
+  imita o WhatsApp de propósito. Os toasts deixaram os quatro gradientes
+  (verde-azulado, rosa, âmbar, cinzento) e são a superfície da app com a cor
+  do tipo na moldura.
+- **O padrão procura + funil tem componente, o `<ProcuraEFiltros>`**
+  (`src/components/`): a procura, o funil que acende, a linha de resumo com o
+  "Limpar", e um lugar para o [+]. Nasceu na vaga 5 para os Comunicados, as
+  três Gestões do Clube e os Movimentos do Financeiro; a Agenda, os Eventos,
+  as Fichas, o Plantel e as Contas por atleta ainda têm a sua cópia à mão, e
+  passam a ele quando forem tocados.
+- **Uma data sem hora escreve-se com o `fmtData()`** (`src/lib/datas.ts`),
+  nunca com `new Date(x).toLocaleDateString()`: a data `AAAA-MM-DD` é a
+  meia-noite UTC, e a oeste de Greenwich sai o dia anterior. Prazos,
+  pagamentos, janela de quota, nascimento e validade do cartão passaram a
+  ele; um instante com hora (`published_at`, `date_time`) continua no
+  `toLocaleDateString`. O euro é o `fmtEuro()`, e mais nenhum `Intl` à mão.
+- **O toque vibra `light`; o resultado vibra pelo toast.** O `toast.*` já
+  chama o `triggerHaptic` do seu tipo (`ToastContext`), por isso um
+  `triggerHaptic('success')` antes de um `toast.success` vibrava duas vezes —
+  o Financeiro e a Classificação faziam-no em cinco sítios. O `triggerHaptic`
+  à mão é para o gesto (`light`, ou `warning` antes de uma ação destrutiva).
+- **Eliminar é o verbo de tudo o que se apaga** (decisão de 2026-09-25): no
+  botão, no título da confirmação ("Eliminar encargo") e no botão que
+  confirma ("Sim, eliminar encargo"), e no toast ("Encargo eliminado.").
+  "Apagar" e "Remover" saíram. **Tirar** fica para desfazer uma pertença que
+  não apaga nada — um atleta da convocatória, uma equipa de um grupo.
+- **O que é frequente e reversível faz-se logo e desfaz-se no toast.** Tirar
+  um atleta da convocatória e desmarcar um mês de quota não perguntam: o
+  `toast.comAnular()` mostra "Anular" durante 7 s e repõe a linha. Eliminar
+  uma entidade (evento, encargo, categoria…) pergunta sempre, pelo
+  `<ConfirmModal>`.
+- **Um erro diz-se em português, pelo `mensagemDeErro()`** (`lib/erros.ts`).
+  Os toasts colavam o `error.message` do Supabase — "new row violates
+  row-level security policy…" — com cinco remendos diferentes para quando
+  vinha vazio. Os códigos do Postgres (42501, 23505, 23503…) e as falhas de
+  rede traduzem-se; o original vai para a consola.
 - **As três listas do plantel inteiro leem-se da mesma maneira.** Plantel,
   Quotas e Encargos mostram as mesmas pessoas, e mostravam-nas de três
   maneiras: no Plantel uma bola verde com o número, nas Quotas um número
@@ -922,6 +978,26 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   de baixo) só pára com alterações por gravar, e aí também é o guarda do
   formulário que pergunta; depois de sair, toca-se outra vez.
   `alteracoes-por-gravar.spec.ts` cobre os dois casos.
+- **O "‹" é o retroceder do browser, e diz para onde vai** (vaga 2 da
+  auditoria de design, 2026-09-25 — `docs/auditoria-design-2026-09.md`).
+  Havia três comportamentos para a mesma seta: as fichas tiravam o parâmetro
+  com `replace` (e deixavam uma entrada morta no histórico), as do Clube com
+  `push` (e o retroceder a seguir **reabria** a ficha), e uma ficha aberta de
+  fora da sua lista voltava à lista e não à origem — o jogo tocado na Home
+  dizia "‹ Agenda" e caía na Agenda, com o retroceder a levar à Home.
+  Hoje uma ficha no endereço fecha-se pelo `useVoltarDaFicha(chaves, lista)`:
+  com uma entrada anterior nesta visita (`haEntradaAnterior()`, pelo
+  `history.state.idx` do data router) faz `navigate(-1)`; aberta por um link,
+  tira os parâmetros com `replace` e cai na lista. **Quem abre uma ficha de
+  fora da lista dela passa `state={{ origem }}`** (`nomeDoEcra()`, em
+  `lib/rotas.ts`), e o "‹" diz esse nome. O mesmo vale para as rotas abertas
+  pelo Clube (Plantel, Eventos, Financeiro): o `<VoltarAOrigem>` só aparece
+  com origem, e **um `replace` nesses ecrãs tem de passar o `state` adiante**,
+  senão o "‹ Clube" desaparece ao trocar de separador. O Perfil volta ao ecrã
+  de onde a fotografia foi tocada. `voltar.spec.ts` cobre-o.
+- **Uma linha que se toca não leva `›`.** O cartão ou a linha já diz que se
+  toca; a seta aparecia em metade das listas e faltava na outra metade. O
+  `ChevronDown` de expandir no sítio fica — esse diz outra coisa.
 - **Editar um evento é um componente só, o `EditarEvento`**
   (`src/components/eventos/`), usado pela Agenda e pelos Eventos. Eram duas
   cópias e tinham divergido — a mesma edição gravava coisas diferentes

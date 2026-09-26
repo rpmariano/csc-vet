@@ -1,7 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Landmark, Plus, Settings, Wallet,
-  ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check, AlertTriangle
+  Landmark,
+  Plus,
+  Settings,
+  Wallet,
+  ShieldCheck,
+  Receipt,
+  ListChecks,
+  X,
+  Paperclip,
+  ExternalLink,
+  Trash2,
+  ChevronDown,
+  Pencil,
+  Check,
+  AlertTriangle,
+  ArrowLeftRight
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -16,8 +30,9 @@ import {
   DEFAULT_FINANCIAL_SETTINGS, comOmissoes, getSeasonLabel, nomeMes, formatMonthYear, prazoPassou,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
-import { useSearchParams } from 'react-router-dom'
-import { Botao, CabecalhoEcra, FilaSeparadores, LinhaAtleta } from '../components/ui'
+import { useLocation, useSearchParams } from 'react-router-dom'
+import { VoltarAOrigem } from '../components/VoltarAOrigem'
+import { Botao, CabecalhoEcra, FilaSeparadores, LinhaAtleta, BotaoIcone, ACarregar, EstadoVazio } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
 import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -31,27 +46,26 @@ import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 */
 import {
   ETIQUETA_SECCAO,
-  BARRA_ATRASO, BARRA_AVISO, BARRA_PAGO, BARRA_NEUTRA, fmtEuro,
+  BARRA_ATRASO, BARRA_AVISO, BARRA_PAGO, BARRA_NEUTRA, fmtEuro, ETIQUETA_GRUPO,
 } from '../components/financeiro/estilos'
 import type {
   PlayerRow, QuotaStatusRow, MovementRow, ScheduledPayment, EncargoPorReceber,
 } from '../components/financeiro/tipos'
+import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_ETIQUETA_CAMPO as ETIQUETA, CLASSE_CAMPO as CAMPO } from '../components/ui/formulario'
+import BottomSheet from '../components/BottomSheet'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
+import { fmtData } from '../lib/datas'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
-const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /** Botão redondo de ação numa linha — 44px, como todos os alvos de toque. */
 const BOTAO_LINHA =
   'w-11 h-11 flex items-center justify-center rounded-xl shrink-0 cursor-pointer transition-colors ' +
   'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold'
-
-const CAMPO =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -175,6 +189,7 @@ const FinancePage: React.FC = () => {
 
   const [loading, setLoading] = useState(true)
   const [params, setParams] = useSearchParams()
+  const estadoDaEntrada = useLocation().state
 
   /* O separador vai no endereço; ver a nota no cabeçalho. */
   const verAtual = (params.get('ver') ?? '') as TabId
@@ -182,7 +197,8 @@ const FinancePage: React.FC = () => {
   const trocarSeparador = (seguinte: TabId) => {
     const seguintes = new URLSearchParams(params)
     seguintes.set('ver', seguinte)
-    setParams(seguintes, { replace: true })
+    // O `state` segue: é nele que vem a origem do "‹ Clube".
+    setParams(seguintes, { replace: true, state: estadoDaEntrada })
   }
 
   const [settings, setSettings] = useState<FinancialSettings>(DEFAULT_FINANCIAL_SETTINGS)
@@ -347,7 +363,7 @@ const FinancePage: React.FC = () => {
   // Para pagar vários meses de uma vez, basta clicar em cada um sequencialmente.
   const handlePayQuotas = async (playerId: string, monthYears: string[]) => {
     if (monthYears.length === 0) return
-    triggerHaptic('success')
+    triggerHaptic('light')
     try {
       const rows = monthYears.map(my => ({
         player_id: playerId,
@@ -362,19 +378,38 @@ const FinancePage: React.FC = () => {
       toast.success(`${monthYears.length === 1 ? 'Quota registada' : `${monthYears.length} quotas registadas`} com sucesso!`)
       fetchAll(true)
     } catch (err: any) {
-      toast.error('Erro ao registar quota: ' + (err.message || 'Erro'))
+      toast.error('Erro ao registar quota: ' + mensagemDeErro(err))
     }
   }
 
+  /* Desmarcar um mês faz-se logo e desfaz-se no toast (decisão da auditoria
+     de design): um toque enganado apagava o pagamento sem volta. O "Anular"
+     repõe a linha tal como estava — valor, data e quem a registou. */
   const handleUnpayQuota = async (dueId: string) => {
     triggerHaptic('light')
     try {
+      const { data: antes } = await supabase
+        .from('dues')
+        .select('player_id, month_year, amount, status, paid_at, created_by')
+        .eq('id', dueId)
+        .maybeSingle()
       const { error } = await supabase.from('dues').delete().eq('id', dueId)
       if (error) throw error
-      toast.success('Pagamento de quota removido.')
       fetchAll(true)
+      if (!antes) {
+        toast.success('Quota desmarcada.')
+        return
+      }
+      toast.comAnular('Quota desmarcada.', async () => {
+        const { error: erroRepor } = await supabase.from('dues').upsert([antes], { onConflict: 'player_id,month_year' })
+        if (erroRepor) {
+          toast.error('Não foi possível repor a quota: ' + mensagemDeErro(erroRepor))
+          return
+        }
+        fetchAll(true)
+      })
     } catch (err: any) {
-      toast.error('Erro ao remover pagamento: ' + (err.message || 'Erro'))
+      toast.error('Erro ao desmarcar a quota: ' + mensagemDeErro(err))
     }
   }
 
@@ -396,7 +431,6 @@ const FinancePage: React.FC = () => {
   // -------------------------------------------------------------------------
   const incomeCategories = categories.filter(c => c.allow_income)
   const activePlayers = players.filter(p => p.status !== 'inactive')
-
 
   const chargesWithStats = useMemo(() => charges.map(c => {
     const participantIds = chargePlayers.filter(cp => cp.charge_id === c.id).map(cp => cp.player_id)
@@ -639,7 +673,6 @@ const FinancePage: React.FC = () => {
           const { error: eRemove } = await supabase.from('charge_players').delete().eq('charge_id', editingChargeId).in('player_id', toRemove)
           if (eRemove) throw eRemove
         }
-        triggerHaptic('success')
         toast.success('Encargo atualizado!')
       } else {
         const { data: chargeRow, error } = await supabase.from('charges').insert([{
@@ -657,13 +690,12 @@ const FinancePage: React.FC = () => {
           Array.from(newChargePlayerIds).map(pid => ({ charge_id: chargeRow.id, player_id: pid }))
         )
         if (e2) throw e2
-        triggerHaptic('success')
         toast.success('Encargo criado!')
       }
       fecharModalEncargo()
       fetchAll()
     } catch (err: any) {
-      toast.error('Erro ao guardar encargo: ' + (err.message || 'Erro'))
+      toast.error('Erro ao guardar encargo: ' + mensagemDeErro(err))
     } finally {
       setSavingCharge(false)
     }
@@ -674,10 +706,10 @@ const FinancePage: React.FC = () => {
     const { error } = await supabase.from('charges').delete().eq('id', chargeToDelete)
     setChargeToDelete(null)
     if (error) {
-      toast.error('Erro ao apagar encargo: ' + error.message)
+      toast.error('Erro ao eliminar encargo: ' + mensagemDeErro(error))
       return
     }
-    toast.success('Encargo apagado.')
+    toast.success('Encargo eliminado.')
     fetchAll()
   }
 
@@ -707,7 +739,7 @@ const FinancePage: React.FC = () => {
       toast.success('Pagamento ao terceiro registado!')
       fetchAll()
     } catch (err: any) {
-      toast.error('Erro ao registar pagamento: ' + (err.message || 'Erro'))
+      toast.error('Erro ao registar pagamento: ' + mensagemDeErro(err))
     }
   }
 
@@ -745,7 +777,7 @@ const FinancePage: React.FC = () => {
       toast.success('Tranche paga — despesa registada!')
       fetchAll()
     } catch (err: any) {
-      toast.error('Erro ao pagar tranche: ' + (err.message || 'Erro'))
+      toast.error('Erro ao pagar tranche: ' + mensagemDeErro(err))
     }
   }
 
@@ -756,12 +788,18 @@ const FinancePage: React.FC = () => {
     setPayFormNotes('')
   }
 
+  /* Um segundo toque enquanto o primeiro grava lançava o pagamento duas
+     vezes: é um INSERT, e o botão não tinha estado de gravação. */
+  const [aRegistarPagamento, setARegistarPagamento] = useState(false)
+
   const handleAddChargePayment = async (chargeId: string, playerId: string) => {
+    if (aRegistarPagamento) return
     const val = parseFloat(payFormAmount)
     if (isNaN(val) || val <= 0) {
       toast.warning('Indica um valor válido.')
       return
     }
+    setARegistarPagamento(true)
     try {
       const { error } = await supabase.from('charge_payments').insert([{
         charge_id: chargeId,
@@ -772,12 +810,13 @@ const FinancePage: React.FC = () => {
         created_by: profile?.id || null,
       }])
       if (error) throw error
-      triggerHaptic('success')
       toast.success('Pagamento registado!')
       setPayFormKey(null)
       fetchAll()
     } catch (err: any) {
-      toast.error('Erro ao registar pagamento: ' + (err.message || 'Erro'))
+      toast.error('Erro ao registar pagamento: ' + mensagemDeErro(err))
+    } finally {
+      setARegistarPagamento(false)
     }
   }
 
@@ -796,7 +835,7 @@ const FinancePage: React.FC = () => {
     }
     const { error } = await supabase.from('charge_payments').update({ amount: val, paid_at: editPaymentDate }).eq('id', editingPaymentId)
     if (error) {
-      toast.error('Erro ao corrigir pagamento: ' + error.message)
+      toast.error('Erro ao corrigir pagamento: ' + mensagemDeErro(error))
       return
     }
     toast.success('Pagamento corrigido!')
@@ -809,10 +848,10 @@ const FinancePage: React.FC = () => {
     const { error } = await supabase.from('charge_payments').delete().eq('id', paymentToDelete)
     setPaymentToDelete(null)
     if (error) {
-      toast.error('Erro ao apagar pagamento: ' + error.message)
+      toast.error('Erro ao eliminar pagamento: ' + mensagemDeErro(error))
       return
     }
-    toast.success('Pagamento apagado.')
+    toast.success('Pagamento eliminado.')
     fetchAll()
   }
 
@@ -821,6 +860,8 @@ const FinancePage: React.FC = () => {
   // -------------------------------------------------------------------------
   const [movFilterMonth, setMovFilterMonth] = useState<string>('all')
   const [movFilterYear, setMovFilterYear] = useState<string>('all')
+  const [movProcura, setMovProcura] = useState('')
+  const [movFiltrosAbertos, setMovFiltrosAbertos] = useState(false)
   const [collapsedMovCategories, setCollapsedMovCategories] = useState<Set<string>>(new Set())
   const toggleMovCategory = (key: string) => setCollapsedMovCategories(prev => {
     const next = new Set(prev)
@@ -856,8 +897,9 @@ const FinancePage: React.FC = () => {
     const d = new Date(m.date)
     if (movFilterYear !== 'all' && d.getFullYear() !== parseInt(movFilterYear)) return false
     if (movFilterMonth !== 'all' && (d.getMonth() + 1) !== parseInt(movFilterMonth)) return false
+    if (movProcura.trim() && !m.description.toLowerCase().includes(movProcura.trim().toLowerCase())) return false
     return true
-  }), [allMovements, movFilterMonth, movFilterYear])
+  }), [allMovements, movFilterMonth, movFilterYear, movProcura])
 
   // Ordem fixa: Quotas e Outras Receitas primeiro, depois cada categoria (de despesa
   // e/ou encargo) pela ordem em que foram criadas, e por fim os movimentos sem categoria.
@@ -910,18 +952,23 @@ const FinancePage: React.FC = () => {
       setNewCategoryAllowIncome(false)
       fetchAll()
     } catch (err: any) {
-      toast.error('Erro ao criar categoria: ' + (err.message || 'Já existe uma categoria com esse nome?'))
+      toast.error('Erro ao criar categoria: ' + mensagemDeErro(err))
     }
   }
 
+  /* Eliminar uma categoria pergunta primeiro, como tudo o que se elimina:
+     era o único caixote do Financeiro que despejava ao primeiro toque. */
+  const [categoriaAEliminar, setCategoriaAEliminar] = useState<ExpenseCategory | null>(null)
+
   const handleDeleteCategory = async (id: string) => {
+    setCategoriaAEliminar(null)
     try {
       const { error } = await supabase.from('expense_categories').delete().eq('id', id)
       if (error) throw error
       toast.success('Categoria eliminada.')
       fetchAll()
     } catch (err: any) {
-      toast.error('Erro ao eliminar categoria: ' + (err.message || 'Erro'))
+      toast.error('Erro ao eliminar categoria: ' + mensagemDeErro(err))
     }
   }
 
@@ -936,7 +983,7 @@ const FinancePage: React.FC = () => {
       toast.success(cat.allow_income ? 'Categoria deixou de poder ser usada para receitas.' : 'Categoria já pode ser usada para receitas (ex.: Encargos).')
       fetchAll()
     } catch (err: any) {
-      toast.error('Erro ao atualizar categoria: ' + (err.message || 'Erro'))
+      toast.error('Erro ao atualizar categoria: ' + mensagemDeErro(err))
     }
   }
 
@@ -974,7 +1021,7 @@ const FinancePage: React.FC = () => {
       fetchAll()
       return true
     } catch (err: any) {
-      toast.error('Erro ao registar movimento: ' + (err.message || 'Erro'))
+      toast.error('Erro ao registar movimento: ' + mensagemDeErro(err))
       return false
     } finally {
       setTxSaving(false)
@@ -995,7 +1042,7 @@ const FinancePage: React.FC = () => {
         window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
       }
     } catch (err: any) {
-      toast.error('Erro ao abrir documento: ' + (err.message || 'Erro'))
+      toast.error('Erro ao abrir documento: ' + mensagemDeErro(err))
     }
   }
 
@@ -1009,7 +1056,7 @@ const FinancePage: React.FC = () => {
       toast.success('Movimento eliminado.')
       fetchAll()
     } catch (err: any) {
-      toast.error('Erro ao eliminar movimento: ' + (err.message || 'Erro'))
+      toast.error('Erro ao eliminar movimento: ' + mensagemDeErro(err))
     }
   }
 
@@ -1199,7 +1246,7 @@ const FinancePage: React.FC = () => {
       fetchAll()
       return true
     } catch (err: any) {
-      toast.error('Erro ao guardar definições: ' + (err.message || 'Erro'))
+      toast.error('Erro ao guardar definições: ' + mensagemDeErro(err))
       return false
     } finally {
       setSavingSettings(false)
@@ -1330,9 +1377,7 @@ const FinancePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold"></div>
-      </div>
+      <ACarregar />
     )
   }
 
@@ -1343,6 +1388,7 @@ const FinancePage: React.FC = () => {
         endereço (`?ver=`), como na Competição e nos dados do clube: dá link
         próprio e faz o retroceder do browser funcionar.
       */}
+      <VoltarAOrigem />
       <CabecalhoEcra
         titulo={TITULO_SEPARADOR[activeTab]}
         sobrancelha={`Época ${seasonLabel}`}
@@ -1618,7 +1664,7 @@ const FinancePage: React.FC = () => {
                           {c.categoryName && <>{c.categoryName} · </>}
                           {fmtEuro(c.amount)}/jogador · {c.participantIds.length}{' '}
                           {c.participantIds.length === 1 ? 'participante' : 'participantes'}
-                          {c.due_date && <> · prazo {new Date(c.due_date).toLocaleDateString('pt-PT')}</>}
+                          {c.due_date && <> · prazo {fmtData(c.due_date)}</>}
                           {/* O "N por pagar" saiu: a banda dos Devedores, aqui
                               por baixo, já diz quantos são e quanto falta. */}
                         </span>
@@ -1646,24 +1692,8 @@ const FinancePage: React.FC = () => {
 
                     {isAdmin && (
                       <div className="flex items-center gap-0.5 pr-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => openEditChargeModal(c)}
-                          aria-label={`Editar o encargo ${c.title}`}
-                          title="Editar encargo"
-                          className={`${BOTAO_LINHA} text-csc-azul-texto hover:bg-csc-blue/20`}
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setChargeToDelete(c.id)}
-                          aria-label={`Apagar o encargo ${c.title}`}
-                          title="Apagar encargo"
-                          className={`${BOTAO_LINHA} text-csc-vermelho-texto hover:bg-csc-red/15`}
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <BotaoIcone rotulo={`Editar o encargo ${c.title}`} icone={Pencil} discreto onClick={() => openEditChargeModal(c)} />
+                        <BotaoIcone rotulo={`Eliminar o encargo ${c.title}`} icone={Trash2} perigo discreto onClick={() => setChargeToDelete(c.id)} />
                       </div>
                     )}
                   </div>
@@ -1716,7 +1746,7 @@ const FinancePage: React.FC = () => {
                       {
                         chave: 'falta-pagar',
                         titulo: 'Falta pagar',
-                        cor: 'text-amber-300',
+                        cor: 'text-csc-gold',
                         lista: participantes.filter(faltaPagar),
                       },
                       {
@@ -1813,12 +1843,12 @@ const FinancePage: React.FC = () => {
                                             ) : (
                                               <>
                                                 <span className="font-display font-black text-white/85 tabular-nums">{fmtEuro(pay.amount)}</span>
-                                                <span className="tabular-nums">{new Date(pay.paid_at).toLocaleDateString('pt-PT')}</span>
+                                                <span className="tabular-nums">{fmtData(pay.paid_at)}</span>
                                                 {pay.notes && <span className="italic truncate">({pay.notes})</span>}
                                                 {isAdmin && (
                                                   <span className="ml-auto flex items-center shrink-0">
-                                                    <button type="button" onClick={() => startEditPayment(pay)} aria-label="Corrigir este pagamento" title="Corrigir valor" className={`${BOTAO_LINHA} text-csc-azul-texto hover:bg-csc-blue/20`}><Pencil size={13} /></button>
-                                                    <button type="button" onClick={() => setPaymentToDelete(pay.id)} aria-label="Apagar este pagamento" title="Apagar" className={`${BOTAO_LINHA} text-csc-vermelho-texto hover:bg-csc-red/15`}><Trash2 size={13} /></button>
+                                                    <BotaoIcone rotulo="Corrigir este pagamento" icone={Pencil} discreto onClick={() => startEditPayment(pay)} />
+                                                    <BotaoIcone rotulo="Eliminar este pagamento" icone={Trash2} perigo discreto onClick={() => setPaymentToDelete(pay.id)} />
                                                   </span>
                                                 )}
                                               </>
@@ -1840,11 +1870,12 @@ const FinancePage: React.FC = () => {
                                         <button
                                           type="button"
                                           onClick={() => handleAddChargePayment(c.id, playerId)}
+                                          disabled={aRegistarPagamento}
                                           className="min-h-11 px-4 bg-csc-gold text-csc-tinta rounded-[14px] font-display font-extrabold text-[11.5px] cursor-pointer shrink-0
-                                            transition-transform duration-150 active:scale-97
+                                            transition-transform duration-150 active:scale-97 disabled:opacity-60 disabled:cursor-wait
                                             focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                                         >
-                                          Guardar
+                                          {aRegistarPagamento ? 'A guardar…' : 'Guardar'}
                                         </button>
                                       </div>
                                     )}
@@ -2010,7 +2041,7 @@ const FinancePage: React.FC = () => {
                   <label key={p.id} className={`flex items-center gap-2 px-3 py-1.5 text-sm text-white hover:bg-white/6 ${lockedIn ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                     <input type="checkbox" checked={newChargePlayerIds.has(p.id)} disabled={lockedIn} onChange={() => toggleNewChargePlayer(p.id)} className={lockedIn ? '' : 'cursor-pointer'} />
                     <span className="truncate">{p.shirt_name || p.name}</span>
-                    {lockedIn && <span className="text-[9px] text-white/62 ml-auto shrink-0" title="Já tem pagamentos registados — não pode ser removido">tem pagamentos</span>}
+                    {lockedIn && <span className="text-[9px] text-white/62 ml-auto shrink-0" title="Já tem pagamentos registados — não pode ser tirado">tem pagamentos</span>}
                     {!lockedIn && p.status === 'inactive' && <span className="text-[9px] text-white/62 ml-auto shrink-0">inativo</span>}
                   </label>
                 )
@@ -2020,38 +2051,51 @@ const FinancePage: React.FC = () => {
 
           <div className="sticky bottom-[108px] z-20 p-2 rounded-[28px] bg-csc-superficie/95 border border-white/10 backdrop-blur-sm">
             <Botao largo onClick={handleSaveCharge} disabled={savingCharge}>
-              {savingCharge ? 'A guardar...' : editingChargeId ? 'Guardar alterações' : 'Criar encargo'}
+              {savingCharge ? 'A guardar…' : editingChargeId ? 'Guardar alterações' : 'Criar encargo'}
             </Botao>
           </div>
         </div>
       </EcraDetalhe>
 
       <ConfirmModal
+        isOpen={!!categoriaAEliminar}
+        title="Eliminar categoria"
+        description={categoriaAEliminar
+          ? `A categoria "${categoriaAEliminar.name}" deixa de aparecer para escolher. Os movimentos já lançados nela ficam sem categoria.`
+          : undefined}
+        confirmText="Sim, eliminar categoria"
+        onConfirm={() => { if (categoriaAEliminar) handleDeleteCategory(categoriaAEliminar.id) }}
+        onCancel={() => setCategoriaAEliminar(null)}
+      />
+      <ConfirmModal
         isOpen={!!chargeToDelete}
-        title="Apagar Encargo"
-        description="O encargo e todos os pagamentos já registados para ele são apagados."
+        title="Eliminar encargo"
+        description="O encargo e todos os pagamentos já registados para ele são eliminados."
+        confirmText="Sim, eliminar encargo"
         onConfirm={handleDeleteCharge}
         onCancel={() => setChargeToDelete(null)}
       />
       <ConfirmModal
         isOpen={!!paymentToDelete}
-        title="Apagar Pagamento"
-        description="Este pagamento é apagado e deixa de contar para o valor recebido deste encargo."
+        title="Eliminar pagamento"
+        description="Este pagamento é eliminado e deixa de contar para o valor recebido deste encargo."
+        confirmText="Sim, eliminar pagamento"
         onConfirm={handleDeletePayment}
         onCancel={() => setPaymentToDelete(null)}
       />
       <ConfirmModal
         isOpen={!!transactionToDelete}
-        title="Eliminar Movimento"
-        description="Esta despesa ou receita é apagada e deixa de contar para o saldo do clube."
+        title="Eliminar movimento"
+        description="Esta despesa ou receita é eliminada e deixa de contar para o saldo do clube."
+        confirmText="Sim, eliminar movimento"
         onConfirm={handleDeleteTransaction}
         onCancel={() => setTransactionToDelete(null)}
       />
       <ConfirmModal
         isOpen={!!pagamentoAConfirmar}
-        title="Registar Pagamento"
+        title="Registar pagamento"
         description={pagamentoAConfirmar
-          ? `${pagamentoAConfirmar.title}: fica lançada uma despesa de ${fmtEuro(pagamentoAConfirmar.amount)} com a data de hoje, e o pagamento sai dos Pagamentos Programados. Se for engano, basta apagar essa despesa para ele voltar à lista.`
+          ? `${pagamentoAConfirmar.title}: fica lançada uma despesa de ${fmtEuro(pagamentoAConfirmar.amount)} com a data de hoje, e o pagamento sai dos Pagamentos Programados. Se for engano, basta eliminar essa despesa para ele voltar à lista.`
           : undefined}
         confirmText="Registar pagamento"
         variant="warning"
@@ -2115,7 +2159,7 @@ const FinancePage: React.FC = () => {
                 </div>
                 <button type="submit" disabled={txSaving} className="w-full flex items-center justify-center gap-2 bg-csc-gold text-csc-tinta py-2.5 rounded-xl text-xs font-black hover:brightness-95 transition-colors cursor-pointer disabled:opacity-60">
                   <Plus size={16} />
-                  <span>{txSaving ? 'A guardar...' : 'Registar'}</span>
+                  <span>{txSaving ? 'A guardar…' : 'Registar'}</span>
                 </button>
               </form>
             </div>
@@ -2224,15 +2268,7 @@ const FinancePage: React.FC = () => {
                             <Paperclip size={14} />
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => setTransactionToDelete(t.id)}
-                          title="Eliminar"
-                          aria-label={`Eliminar ${t.description}`}
-                          className={`${BOTAO_LINHA} text-white/50 hover:text-csc-vermelho-texto hover:bg-csc-red/15`}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <BotaoIcone rotulo={`Eliminar ${t.description}`} icone={Trash2} perigo discreto onClick={() => setTransactionToDelete(t.id)} />
                       </div>
                     )
                   })}
@@ -2245,45 +2281,93 @@ const FinancePage: React.FC = () => {
 
       {/* ================= MOVIMENTOS (relatório) ================= */}
       {activeTab === 'movements' && (
-        <div className="cartao-simples text-white p-4 space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <h3 className={ETIQUETA_SECCAO}>Relatório de Movimentos</h3>
-            <div className="flex items-center gap-2">
-              <select value={movFilterMonth} onChange={e => setMovFilterMonth(e.target.value)} className={`${CAMPO} w-auto px-2.5`}>
-                <option value="all">Todos os meses</option>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                  <option key={m} value={m}>{nomeMes(m)}</option>
-                ))}
-              </select>
-              <select value={movFilterYear} onChange={e => setMovFilterYear(e.target.value)} className={`${CAMPO} w-auto px-2.5`}>
-                <option value="all">Todos os anos</option>
-                {movementYears.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+        <div className="space-y-4">
+          {/* O período era um par de seletores à vista, sem resumo nem
+              "Limpar": vai para o funil, como em todas as listas, e a lista
+              ganha procura pela descrição. */}
+          <ProcuraEFiltros
+            procura={movProcura}
+            aoProcurar={setMovProcura}
+            placeholder="Descrição"
+            rotulo="Procurar nos movimentos"
+            aoAbrirFiltros={() => setMovFiltrosAbertos(true)}
+            filtrosAtivos={movFilterMonth !== 'all' || movFilterYear !== 'all'}
+            resumo={[
+              movFilterMonth !== 'all' ? nomeMes(parseInt(movFilterMonth)) : null,
+              movFilterYear !== 'all' ? movFilterYear : null,
+            ].filter((x): x is string => Boolean(x))}
+            contagem={`${filteredMovements.length} ${filteredMovements.length === 1 ? 'movimento' : 'movimentos'}`}
+            aoLimpar={() => { setMovProcura(''); setMovFilterMonth('all'); setMovFilterYear('all') }}
+          />
+
+          <BottomSheet
+            isOpen={movFiltrosAbertos}
+            onClose={() => setMovFiltrosAbertos(false)}
+            title="Filtrar movimentos"
+            tone="dark"
+            footer={
+              <>
+                <Botao
+                  aparencia="vidro"
+                  onClick={() => { setMovFilterMonth('all'); setMovFilterYear('all') }}
+                  disabled={movFilterMonth === 'all' && movFilterYear === 'all'}
+                >
+                  Limpar
+                </Botao>
+                <Botao onClick={() => setMovFiltrosAbertos(false)}>Ver {filteredMovements.length}</Botao>
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <div>
+                <label className={ETIQUETA} htmlFor="mov-mes">Mês</label>
+                <select id="mov-mes" value={movFilterMonth} onChange={e => setMovFilterMonth(e.target.value)} className={CAMPO}>
+                  <option value="all">Todos os meses</option>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                    <option key={m} value={m}>{nomeMes(m)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={ETIQUETA} htmlFor="mov-ano">Ano</label>
+                <select id="mov-ano" value={movFilterYear} onChange={e => setMovFilterYear(e.target.value)} className={CAMPO}>
+                  <option value="all">Todos os anos</option>
+                  {movementYears.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          </BottomSheet>
 
           {groupedMovements.length === 0 ? (
-            <p className="text-xs text-white/60 py-6 text-center">Sem movimentos registados{movFilterMonth !== 'all' || movFilterYear !== 'all' ? ' neste período' : ''}.</p>
+            <EstadoVazio
+              icone={ArrowLeftRight}
+              titulo={movFilterMonth !== 'all' || movFilterYear !== 'all' || movProcura.trim() ? 'Nenhum movimento encontrado.' : 'Ainda não há movimentos.'}
+              texto={movFilterMonth !== 'all' || movFilterYear !== 'all' || movProcura.trim() ? 'Limpa os filtros para ver os movimentos todos.' : undefined}
+            />
           ) : (
             <div className="space-y-4">
               {groupedMovements.map(group => {
                 const groupTotal = group.rows.reduce((s, m) => s + (m.type === 'income' ? m.amount : -m.amount), 0)
                 const isCollapsed = collapsedMovCategories.has(group.key)
                 return (
-                  <div key={group.key} className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 overflow-hidden">
+                  /* Um grupo é uma caixa só, com a banda em cima — a forma das
+                     Quotas e das Despesas. Era um cartão com sombra e um título
+                     `text-xs tracking-wider`, o estilo antigo. */
+                  <section key={group.key} aria-label={group.label} className="rounded-2xl border border-white/12 overflow-hidden">
                     <button
                       type="button"
                       onClick={() => toggleMovCategory(group.key)}
-                      className="w-full px-4 py-2.5 bg-white/5 hover:bg-white/10 flex items-center justify-between gap-3 cursor-pointer transition-colors"
+                      aria-expanded={!isCollapsed}
+                      className="w-full min-h-11 px-3 py-2 bg-white/[0.07] border-b border-white/10 flex items-center justify-between gap-3 cursor-pointer"
                     >
                       <span className="flex items-center gap-1.5">
-                        <ChevronDown size={14} className={`text-white/60 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
-                        <h4 className="text-xs font-black text-white uppercase tracking-wider">{group.label}</h4>
-                        <span className="text-[10px] font-bold text-white/62">({group.rows.length})</span>
+                        <ChevronDown size={14} className={`text-white/60 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} aria-hidden="true" />
+                        <span className={ETIQUETA_GRUPO}>{group.label}</span>
+                        <span className="text-[10px] font-bold text-white/62">{group.rows.length}</span>
                       </span>
-                      <span className={`text-xs font-black ${groupTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      <span className={`text-xs font-black ${groupTotal >= 0 ? 'text-csc-verde-texto' : 'text-csc-vermelho-texto'}`}>
                         {groupTotal >= 0 ? '+' : ''}{fmtEuro(groupTotal)}
                       </span>
                     </button>
@@ -2293,9 +2377,9 @@ const FinancePage: React.FC = () => {
                           <tbody className="divide-y divide-white/10">
                             {group.rows.map(m => (
                               <tr key={m.id}>
-                                <td className="px-4 py-2 text-white/60 whitespace-nowrap">{new Date(m.date).toLocaleDateString('pt-PT')}</td>
+                                <td className="px-4 py-2 text-white/60 whitespace-nowrap">{fmtData(m.date)}</td>
                                 <td className="px-4 py-2 font-bold text-white">{m.description}</td>
-                                <td className={`px-4 py-2 text-right font-black whitespace-nowrap ${m.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                <td className={`px-4 py-2 text-right font-black whitespace-nowrap ${m.type === 'income' ? 'text-csc-verde-texto' : 'text-csc-vermelho-texto'}`}>
                                   {m.type === 'income' ? '+' : '-'}{fmtEuro(m.amount)}
                                 </td>
                                 <td className="px-4 py-2 text-right w-8">
@@ -2311,20 +2395,20 @@ const FinancePage: React.FC = () => {
                         </table>
                       </div>
                     )}
-                  </div>
+                  </section>
                 )
               })}
             </div>
           )}
 
-          <div className="pt-4 border-t border-white/10 grid grid-cols-3 gap-3 text-center">
+          <div className="cartao-simples p-4 grid grid-cols-3 gap-3 text-center">
             <div>
               <p className="text-[10px] font-bold uppercase text-white/60">Total Receitas</p>
-              <p className="text-base font-black text-emerald-400">+{fmtEuro(filteredIncomeTotal)}</p>
+              <p className="text-base font-black text-csc-verde-texto">+{fmtEuro(filteredIncomeTotal)}</p>
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase text-white/60">Total Despesas</p>
-              <p className="text-base font-black text-red-400">-{fmtEuro(filteredExpenseTotal)}</p>
+              <p className="text-base font-black text-csc-vermelho-texto">-{fmtEuro(filteredExpenseTotal)}</p>
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase text-white/60">Saldo</p>
@@ -2381,7 +2465,7 @@ const FinancePage: React.FC = () => {
                       quota_excluded_months: excluded ? s.quota_excluded_months.filter(x => x !== m) : [...s.quota_excluded_months, m],
                     }))}
                     className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
-                      excluded ? 'bg-red-500/20 border-red-400/40 text-red-300' : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/10'
+                      excluded ? 'bg-csc-red/20 border-csc-red/40 text-csc-vermelho-texto' : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/10'
                     }`}
                   >
                     {nomeMes(m).slice(0, 3)}
@@ -2392,12 +2476,12 @@ const FinancePage: React.FC = () => {
           </div>
 
           <button type="button" onClick={handleSaveSettings} disabled={savingSettings} className="px-5 py-2.5 bg-csc-gold text-csc-tinta rounded-xl text-xs font-black hover:brightness-95 transition-all cursor-pointer disabled:opacity-60">
-            {savingSettings ? 'A guardar...' : 'Guardar Definições'}
+            {savingSettings ? 'A guardar…' : 'Guardar definições'}
           </button>
         </div>
 
         {/* Categorias — bloco à parte, ao lado no desktop; gravam logo ao criar/apagar,
-            sem passar pelo botão "Guardar Definições" do bloco anterior. */}
+            sem passar pelo botão "Guardar definições" do bloco anterior. */}
         <div className="cartao-simples text-white p-4">
           <h3 className={`${ETIQUETA_SECCAO} mb-3`}>Categorias</h3>
           <div className="flex gap-2 mb-2">
@@ -2412,7 +2496,7 @@ const FinancePage: React.FC = () => {
           </label>
           <div className="flex flex-wrap gap-1.5">
             {categories.map(c => (
-              <span key={c.id} className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${c.allow_income ? 'bg-sky-400/20 text-sky-200' : 'bg-white/10 text-white/80'}`}>
+              <span key={c.id} className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${c.allow_income ? 'bg-csc-blue/20 text-csc-azul-texto' : 'bg-white/10 text-white/80'}`}>
                 <button
                   type="button"
                   onClick={() => handleToggleCategoryIncome(c)}
@@ -2420,9 +2504,14 @@ const FinancePage: React.FC = () => {
                   title={c.allow_income ? 'Clica para deixar de poder ser usada para receitas' : 'Clica para também poder ser usada para receitas (ex.: Encargos)'}
                 >
                   <span>{c.name}</span>
-                  {c.allow_income && <span className="text-[9px] font-black uppercase text-sky-300">receita</span>}
+                  {c.allow_income && <span className="text-[9px] font-black uppercase text-csc-azul-texto">receita</span>}
                 </button>
-                <button type="button" onClick={() => handleDeleteCategory(c.id)} className="text-white/62 hover:text-red-400 cursor-pointer" title="Eliminar categoria">
+                <button
+                  type="button"
+                  onClick={() => setCategoriaAEliminar(c)}
+                  className="alvo-toque text-white/62 hover:text-csc-vermelho-texto cursor-pointer"
+                  aria-label={`Eliminar a categoria ${c.name}`}
+                >
                   <X size={11} />
                 </button>
               </span>

@@ -1,26 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { 
-  MapPin, 
-  X, 
-  Users, 
+import {
+  MapPin,
+  X,
+  Users,
   CheckCircle2,
   XCircle,
   Trash2,
   ClipboardList,
-  Search, 
+  Search,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Edit,
   CalendarRange,
   PartyPopper,
   Trophy,
+  Pencil
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
+import { nomeDoEcra } from '../lib/rotas'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
 import { EcraDetalhe } from '../components/EcraDetalhe'
@@ -34,10 +36,12 @@ import { FichaConvocado } from '../components/callups/FichaConvocado'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao } from '../components/ui'
+import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao, ACarregar, EstadoVazio } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
-import { getPlayerDisplayName, hasMatchReport, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento } from '../lib/eventos'
+import { getPlayerDisplayName, hasMatchReport, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, ROTULO_RESPOSTA, CORES_TIPO } from '../lib/eventos'
+import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO as CAMPO_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -61,57 +65,12 @@ const ROTULOS_ESTADO: Record<string, string> = {
  */
 const ESTADO_POR_OMISSAO = 'upcoming'
 
-/**
- * A cor de cada tipo de evento, num sítio só.
- *
- * O ponto do calendário e o rótulo do cartão diziam a mesma coisa em tons
- * diferentes — o convívio era `csc-azul-texto` no ponto e `blue-300` no
- * rótulo — e nenhum dos dois se via bem: pontos de 4px e uma palavra de 10px
- * sem fundo. O ponto passa a 6px e o rótulo a pastilha da mesma cor, para o
- * tipo de evento se ler de relance no calendário e no cartão.
- */
-const CORES_TIPO = {
-  /*
-    O jogo é vermelho, e chegou lá por eliminação. Dourado é a moldura — a
-    data no topo do próprio cartão, os títulos, os botões —, e branco é o
-    lettering de tudo o resto: os dois liam-se como mais do mesmo, e não como
-    o tipo do evento. Verde é o treino e azul o convívio. Sobra o vermelho do
-    clube, que é o que a paleta tem para o dizer.
-
-    O risco assumido: nesta app o vermelho costuma querer dizer que há um
-    problema (recusou, lesionado, sem condições). No cartão da Agenda não há
-    nenhum desses — as pastilhas de estado ali são verdes ou douradas — e o
-    vermelho fica livre para o que é, à conta do desenho não voltar a pôr um
-    estado vermelho ao lado deste.
-  */
-  match: {
-    ponto: 'bg-csc-vermelho-texto',
-    halo: 'shadow-csc-vermelho-texto/70',
-    texto: 'text-csc-vermelho-texto',
-    pastilha: 'bg-csc-red/12 border-csc-red/50',
-  },
-  practice: {
-    ponto: 'bg-csc-verde-texto',
-    halo: 'shadow-csc-verde-texto/70',
-    texto: 'text-csc-verde-texto',
-    pastilha: 'bg-csc-light/14 border-csc-verde-texto/45',
-  },
-  gathering: {
-    ponto: 'bg-csc-azul-texto',
-    halo: 'shadow-csc-azul-texto/70',
-    texto: 'text-csc-azul-texto',
-    pastilha: 'bg-csc-blue/16 border-csc-azul-texto/45',
-  },
-} as const
 
 /**
  * Campo branco dos formulários de evento (ecrã 2e) — 46px, como no handoff.
  * É o mesmo desenho dos campos do Perfil, dois pixels mais alto porque aqui
  * há menos campos por ecrã e mais dedo a preencher.
  */
-const CAMPO_FORM =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 const ROTULOS_TIPO: Record<string, string> = {
   match: 'Jogos',
@@ -135,7 +94,6 @@ const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
     return getPlayerDisplayName(a).localeCompare(getPlayerDisplayName(b))
   })
 }
-
 
 // A tabela `callups` cresce sem parar (uma linha por atleta por evento, anos de jogos e
 // treinos). Um único `.select(...).limit(5000)` corta em silêncio a partir desse número de
@@ -239,6 +197,7 @@ const CalendarPage: React.FC = () => {
   const [opponents, setOpponents] = useState<Opponent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   /*
     O detalhe do evento **não tem estado de aberto/fechado**: quem manda é o
@@ -286,7 +245,6 @@ const CalendarPage: React.FC = () => {
   const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(false)
   const [isMatchReportOpen, setIsMatchReportOpen] = useState(false)
 
-
   // Generic Confirmation Modal State
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
     isOpen: boolean
@@ -318,15 +276,12 @@ const CalendarPage: React.FC = () => {
     setSearchParams({ event: ev.id })
   }
 
+  const voltaDoEvento = useVoltarDaFicha(['event'], 'Agenda')
   const handleCloseEventModal = () => {
-    // `selectedEvent` fica retido; o que fecha o detalhe é o endereço, abaixo.
+    // `selectedEvent` fica retido; o que fecha o detalhe é o endereço.
     setPlayerSearchTerm('')
     setModalCallupStatusFilter('all')
-    if (searchParams.get('event')) {
-      const restantes = new URLSearchParams(searchParams)
-      restantes.delete('event')
-      setSearchParams(restantes, { replace: true })
-    }
+    voltaDoEvento.aoVoltar()
   }
 
   const handleCarouselTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -370,11 +325,6 @@ const CalendarPage: React.FC = () => {
 
   /* O evento em edição — o formulário é o `EditarEvento`, o mesmo dos Eventos. */
   const [eventoAEditar, setEventoAEditar] = useState<Event | null>(null)
-
-
-
-
-
 
   /**
    * O mesmo que `getEventLocation`, mas com o nome e a morada separados —
@@ -525,7 +475,6 @@ const CalendarPage: React.FC = () => {
     }
   }
 
-
   useEffect(() => {
     fetchEventsAndData()
   }, [profile?.id])
@@ -604,12 +553,6 @@ const CalendarPage: React.FC = () => {
     return player.status === 'active'
   }
 
-
-
-
-
-
-
   // --- EDITAR EVENTO ---
   const handleStartEditEvent = (ev: Event) => {
     if (hasMatchReport(ev)) {
@@ -622,9 +565,9 @@ const CalendarPage: React.FC = () => {
   const handleDeleteSpecificEvent = (eventId: string) => {
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Eliminar Evento da Agenda',
-      description: 'Tens a certeza que desejas eliminar permanentemente este evento da agenda? Todas as convocatórias e respostas associadas serão apagadas.',
-      confirmText: 'Sim, Eliminar Evento',
+      title: 'Eliminar evento',
+      description: 'Tens a certeza que queres eliminar este evento? Todas as convocatórias e respostas associadas são eliminadas.',
+      confirmText: 'Sim, eliminar evento',
       cancelText: 'Cancelar',
       variant: 'danger',
       onConfirm: async () => {
@@ -637,7 +580,7 @@ const CalendarPage: React.FC = () => {
           fetchEventsAndData()
           toast.success('Evento eliminado com sucesso!')
         } catch (err: any) {
-          toast.error('Erro ao eliminar evento: ' + (err.message || 'Erro'))
+          toast.error('Erro ao eliminar evento: ' + mensagemDeErro(err))
         }
       }
     })
@@ -697,7 +640,7 @@ const CalendarPage: React.FC = () => {
       toast.success(status === 'confirmed' ? 'Contamos contigo.' : 'Resposta registada.')
     } catch (err: any) {
       console.error('Erro ao atualizar resposta:', err)
-      toast.error('Erro ao atualizar resposta: ' + (err.message || 'Erro'))
+      toast.error('Erro ao atualizar resposta: ' + mensagemDeErro(err))
     }
   }
 
@@ -714,14 +657,17 @@ const CalendarPage: React.FC = () => {
         ...prev,
         [eventId]: (prev[eventId] || []).map(c => c.id === callupId ? { ...c, status: newStatus } : c)
       }))
-      toast.success('Estado de presença atualizado!')
+      toast.success(`Resposta marcada: ${ROTULO_RESPOSTA[newStatus]}`)
     } catch (err: any) {
-      toast.error('Erro ao atualizar RSVP: ' + err.message)
+      toast.error('Erro ao marcar a resposta: ' + mensagemDeErro(err))
     }
   }
 
   // Treinador remove jogador de uma convocatória existente
   const handleRemovePlayerFromCallup = async (callupId: string, eventId: string) => {
+    /* Faz-se logo e desfaz-se no toast (decisão da auditoria de design):
+       tirar um atleta é um gesto frequente, e uma pergunta a cada um cansava. */
+    const removida = (eventCallups[eventId] || []).find(c => c.id === callupId)
     try {
       const { error } = await supabase.from('callups').delete().eq('id', callupId)
       if (error) throw error
@@ -730,9 +676,27 @@ const CalendarPage: React.FC = () => {
         ...prev,
         [eventId]: (prev[eventId] || []).filter(c => c.id !== callupId)
       }))
-      toast.info('Jogador removido da convocatória.')
+      if (!removida) {
+        toast.success('Atleta tirado da convocatória.')
+        return
+      }
+      toast.comAnular('Atleta tirado da convocatória.', async () => {
+        const { data, error: erroRepor } = await supabase
+          .from('callups')
+          .insert({ event_id: eventId, player_id: removida.player_id, status: removida.status })
+          .select('id')
+          .single()
+        if (erroRepor || !data) {
+          toast.error('Não foi possível repor o atleta: ' + mensagemDeErro(erroRepor))
+          return
+        }
+        setEventCallups(prev => ({
+          ...prev,
+          [eventId]: [...(prev[eventId] || []), { ...removida, id: data.id }]
+        }))
+      })
     } catch (err: any) {
-      toast.error('Erro ao remover jogador: ' + err.message)
+      toast.error('Erro ao tirar da convocatória: ' + mensagemDeErro(err))
     }
   }
 
@@ -1105,6 +1069,7 @@ const CalendarPage: React.FC = () => {
           </span>
           <Link
             to={`/events?convocatoria=${event.id}`}
+            state={{ origem: nomeDoEcra(location.pathname, location.search) }}
             onClick={e => { e.stopPropagation(); triggerHaptic('light') }}
             className="h-11 px-4 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[11.5px]
               flex items-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97
@@ -1547,10 +1512,7 @@ const CalendarPage: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-12" role="status" aria-live="polite">
-          <div className="animate-spin rounded-full h-9 w-9 border-2 border-csc-gold border-t-transparent" />
-          <span className="sr-only">A carregar…</span>
-        </div>
+        <ACarregar />
       ) : (
         <>
         <div className="space-y-4">
@@ -1695,7 +1657,7 @@ const CalendarPage: React.FC = () => {
           </div>
 
           {/* Coluna Direita: Eventos do Dia Selecionado Diretamente */}
-          <div className="lg:col-span-5 space-y-3 lg:sticky lg:top-6">
+          <div className="space-y-3">
             {/*
               Com a agenda toda vazia (ecrã 11b) este painel calava-se: dizia
               "Sem eventos neste dia" logo por cima de "Nada marcado ainda", e
@@ -1759,11 +1721,7 @@ const CalendarPage: React.FC = () => {
               branco.
             */
             temFiltros ? (
-              <div className="cartao-simples border-dashed text-center px-5 py-10">
-                <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
-                <p className="font-display font-extrabold text-sm text-white">Nenhum evento encontrado.</p>
-                <p className="text-[11px] text-white/62 mt-1.5">Limpa os filtros para ver o resto da agenda.</p>
-              </div>
+              <EstadoVazio icone={CalendarRange} titulo="Nenhum evento encontrado." texto="Limpa os filtros para ver o resto da agenda." />
             ) : haRealizados ? (
               /*
                 Nada por realizar, mas a época tem jogos feitos — o vazio de
@@ -1840,7 +1798,7 @@ const CalendarPage: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+            <p className={ETIQUETA_FILTRO}>
               Tipo de evento
             </p>
             <div className="flex flex-wrap gap-2">
@@ -1862,7 +1820,7 @@ const CalendarPage: React.FC = () => {
           </div>
 
           <div>
-            <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+            <p className={ETIQUETA_FILTRO}>
               Estado
             </p>
             <div className="flex flex-wrap gap-2">
@@ -1888,7 +1846,7 @@ const CalendarPage: React.FC = () => {
       {selectedEvent && (
         <EcraDetalhe
           aberto={isEventSheetOpen}
-          voltarPara="Agenda"
+          voltarPara={voltaDoEvento.voltarPara}
           aoVoltar={handleCloseEventModal}
           titulo={
             selectedEvent.type === 'match' && selectedEvent.opponent
@@ -2020,10 +1978,10 @@ const CalendarPage: React.FC = () => {
             </div>
 
             {/* Grelha Responsiva Versão Web (2 Colunas Amplas no Desktop) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+            <div className="grid grid-cols-1 gap-6 items-start">
               
               {/* COLUNA ESQUERDA (5 Colunas): Detalhes do Evento, Matchup VS e Presença Pessoal */}
-              <div className="lg:col-span-5 space-y-5">
+              <div className="space-y-5">
 
                 {/* O confronto era aqui um cartão com os dois emblemas e a
                     linha "Condição: Visitado". Passou a ser o título do ecrã
@@ -2191,8 +2149,8 @@ const CalendarPage: React.FC = () => {
                             <p className="text-[10px] font-black uppercase tracking-widest text-white/60">A tua convocatória para este evento</p>
                             <p className="text-sm font-black text-white mt-0.5">
                               Estado: <span className={
-                                myCallup.status === 'confirmed' ? 'text-emerald-300' :
-                                myCallup.status === 'declined' ? 'text-red-300' : 'text-csc-gold'
+                                myCallup.status === 'confirmed' ? 'text-csc-verde-texto' :
+                                myCallup.status === 'declined' ? 'text-csc-vermelho-texto' : 'text-csc-gold'
                               }>
                                 {myCallup.status === 'confirmed' ? 'Disseste que sim' :
                                  myCallup.status === 'declined' ? 'Disseste que não' : 'Aguarda a tua resposta'}
@@ -2258,7 +2216,7 @@ const CalendarPage: React.FC = () => {
                 })
 
                 return (
-                  <div className="lg:col-span-7 bg-white/[0.07] p-4 sm:p-5 rounded-3xl space-y-3.5 transition-all border border-white/10 border-t-white/20 shadow-lg shadow-black/20">
+                  <div className="bg-white/[0.07] p-4 rounded-3xl space-y-3.5 transition-all border border-white/10 border-t-white/20 shadow-lg shadow-black/20">
                     {/* Topo da Convocatória com Botão de Colapsar / Expandir */}
                     <button
                       type="button"
@@ -2318,7 +2276,7 @@ const CalendarPage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {/* O `hidden sm:inline` que aqui estava nunca mostrava
+                        {/* O `hidden` que aqui estava nunca mostrava
                             nada: os pontos de corte estão desligados no
                             `@theme`, e o botão ficava só com a seta. */}
                         <span className="text-xs font-bold text-white/70 group-hover:text-white">
@@ -2356,7 +2314,7 @@ const CalendarPage: React.FC = () => {
                           />
 
                           {/* Campo de Pesquisa e Limpeza de Filtros */}
-                          <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                          <div className="flex flex-col items-center gap-2 pt-1">
                             <div className="relative flex-1 w-full">
                               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/65" />
                               <input
@@ -2435,7 +2393,7 @@ const CalendarPage: React.FC = () => {
                                           : `${indisponiveis.length} convocados retirados da convocatória.`,
                                       )
                                     } catch (err: any) {
-                                      toast.error('Erro ao atualizar a convocatória: ' + err.message)
+                                      toast.error('Erro ao atualizar a convocatória: ' + mensagemDeErro(err))
                                     }
                                   },
                                 })
@@ -2471,7 +2429,7 @@ const CalendarPage: React.FC = () => {
                           </div>
                         ) : (
                           <div className="max-h-[480px] overflow-y-auto pr-1">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div className="grid grid-cols-1 gap-2.5">
                               {filteredCallups.map(c => (
                                 <CallupRow
                                   key={c.id}
@@ -2511,16 +2469,10 @@ const CalendarPage: React.FC = () => {
 
                 <div className="flex flex-col gap-2.5 mt-3">
                   {!hasMatchReport(selectedEvent) && (
-                    <button
-                      type="button"
-                      onClick={() => handleStartEditEvent(selectedEvent)}
-                      className="min-h-11 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px]
-                        flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
-                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                    >
-                      <Edit size={15} />
+                    <Botao onClick={() => handleStartEditEvent(selectedEvent)}>
+                      <Pencil size={15} aria-hidden="true" />
                       <span>Editar evento</span>
-                    </button>
+                    </Botao>
                   )}
 
                   {selectedEvent.type === 'match' &&
@@ -2538,17 +2490,10 @@ const CalendarPage: React.FC = () => {
                       </button>
                     )}
 
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
-                    className="min-h-11 rounded-[22px] bg-csc-red/10 border border-csc-red/35 text-csc-vermelho-texto
-                      font-display font-bold text-xs flex items-center justify-center gap-2 cursor-pointer
-                      transition-transform duration-150 active:scale-97
-                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                  >
-                    <Trash2 size={15} />
+                  <Botao aparencia="perigo" largo onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}>
+                    <Trash2 size={15} aria-hidden="true" />
                     <span>Eliminar evento</span>
-                  </button>
+                  </Botao>
                 </div>
 
                 <p className="text-[10px] leading-snug text-white/62 mt-2.5">

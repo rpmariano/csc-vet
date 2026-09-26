@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { CheckCircle2, XCircle, Trash2, Phone, MessageCircle, ChevronRight, ShieldAlert } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { nomeDoEcra } from '../../lib/rotas'
+import { CheckCircle2, XCircle, Trash2, Phone, MessageCircle, ShieldAlert } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { BottomSheet } from '../BottomSheet'
-import { EtiquetaSeccao } from '../ui'
+import { EtiquetaSeccao, Botao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 
 /**
@@ -108,6 +109,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
   aoRecusar,
   aoRemover,
 }) => {
+  const location = useLocation()
   const jogadorId = convocatoria?.player?.id ?? null
   const [historico, setHistorico] = useState<HistoricoDoAtleta | null>(null)
 
@@ -386,7 +388,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => { triggerHaptic('success'); aoConfirmar() }}
+              onClick={() => { triggerHaptic('light'); aoConfirmar() }}
               aria-pressed={confirmado}
               className={`flex-1 h-12 rounded-3xl border font-display font-extrabold text-[12.5px] cursor-pointer
                 flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
@@ -410,22 +412,16 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => { triggerHaptic('warning'); aoRemover() }}
-            className="w-full h-12 rounded-3xl bg-csc-red/15 border border-csc-red/35 text-csc-vermelho-texto
-              font-display font-extrabold text-[12.5px] cursor-pointer flex items-center justify-center gap-2
-              transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <Trash2 size={15} /> Remover da convocatória
-          </button>
+          <Botao aparencia="perigo" largo onClick={() => { triggerHaptic('warning'); aoRemover() }}>
+            <Trash2 size={15} aria-hidden="true" /> Tirar da convocatória
+          </Botao>
 
           {/* A ficha a sério — posições, contactos, documentos — é a do
               Plantel, que já existe e já tem endereço próprio. */}
           {jogadorId && (
             <Link
               to={'/team-management?atleta=' + jogadorId}
+              state={{ origem: nomeDoEcra(location.pathname, location.search) }}
               onClick={() => { triggerHaptic('light'); aoFechar() }}
               className="cartao-simples min-h-12 flex items-center gap-3 px-4 py-3 cursor-pointer
                 transition-transform duration-150 active:scale-97
@@ -434,7 +430,6 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
               <span className="flex-1 font-display font-extrabold text-[12.5px] text-white">
                 Abrir ficha completa
               </span>
-              <ChevronRight size={16} className="text-white/35 flex-none" />
             </Link>
           )}
         </div>

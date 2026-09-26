@@ -1,28 +1,27 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { 
-  Plus, 
-  Trash2, 
-  MapPin, 
-  Clock, 
-  Check, 
-  Users, 
-  CheckCircle2, 
-  XCircle, 
-  HelpCircle, 
-  UserPlus, 
-  Search, 
-  ExternalLink, 
-  Repeat, 
-  CalendarRange, 
+import {
+  Plus,
+  Trash2,
+  MapPin,
+  Clock,
+  Check,
+  Users,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
+  UserPlus,
+  Search,
+  ExternalLink,
+  Repeat,
+  CalendarRange,
   Calendar,
   PartyPopper,
   Trophy,
-  Edit,
   Send,
   AlertTriangle,
   ClipboardList,
   SlidersHorizontal,
-  ChevronRight
+  Pencil
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -41,25 +40,24 @@ import { ConvocatoriaAoCriar } from '../components/callups/ConvocatoriaAoCriar'
 import type { EventoCriado } from '../components/callups/ConvocatoriaAoCriar'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
-import { hasMatchReport } from '../lib/eventos'
+import { hasMatchReport, ROTULO_RESPOSTA, CORES_TIPO } from '../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 import { EcraDetalhe } from '../components/EcraDetalhe'
 import { EditarEvento } from '../components/eventos/EditarEvento'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
+import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
+import { VoltarAOrigem } from '../components/VoltarAOrigem'
 import { BottomSheet } from '../components/BottomSheet'
-import { Pastilha, Botao } from '../components/ui'
+import { Pastilha, Botao, Interruptor, BotaoIcone, ACarregar, EstadoVazio } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
+import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO as CAMPO_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
+import { fmtData } from '../lib/datas'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** Campo branco dos formulários de evento (ecrã 2e), o mesmo da Agenda. */
-const CAMPO_FORM =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
-
-const ETIQUETA_FORM =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /**
  * Como se lê cada filtro escondido, na linha de resumo por baixo das pastilhas.
@@ -236,6 +234,7 @@ const EventsPage: React.FC = () => {
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
   const [searchParams, setSearchParams] = useSearchParams()
+  const estadoDaEntrada = useLocation().state
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
   /* A ficha rápida do convocado (4a), por cima do dossier de convocatória. */
   const [convocadoAberto, setConvocadoAberto] = useState<string | null>(null)
@@ -396,7 +395,7 @@ const EventsPage: React.FC = () => {
       toast.success('Campo criado e selecionado com sucesso!')
     } catch (err: any) {
       console.error(err)
-      toast.error('Erro ao criar campo: ' + (err.message || 'Erro de ligação'))
+      toast.error('Erro ao criar campo: ' + mensagemDeErro(err))
     } finally {
       setIsSavingQuickField(false)
     }
@@ -451,7 +450,7 @@ const EventsPage: React.FC = () => {
       toast.success('Adversário registado com sucesso!')
     } catch (err: any) {
       console.error(err)
-      toast.error('Erro ao criar adversário: ' + (err.message || 'Erro de ligação'))
+      toast.error('Erro ao criar adversário: ' + mensagemDeErro(err))
     } finally {
       setIsSavingQuickOpp(false)
     }
@@ -481,14 +480,13 @@ const EventsPage: React.FC = () => {
   const faltaAJornada = (tipo: string, amigavel: boolean, prova: string, jornada: string) =>
     tipo === 'match' && !amigavel && Boolean(prova) && !Number(jornada)
 
-
   // Ativar evento inativo e disparar convocatória
   const handleActivateEvent = async (ev: Event) => {
     const callups = eventCallups[ev.id] || []
     
     // Se o evento não tiver convocatórias gravadas e não for treino automático:
     if (callups.length === 0 && ev.type !== 'practice') {
-      toast.warning('Ainda não foram escolhidos jogadores para este evento. Por favor selecione os atletas a convocar na convocatória.')
+      toast.warning('Ainda não há atletas escolhidos para este evento. Escolhe quem convocar na convocatória.')
       openEditModal(ev)
       return
     }
@@ -500,23 +498,22 @@ const EventsPage: React.FC = () => {
     setConfirmModalConfig({
       isOpen: true,
       title: 'Ativar evento e enviar convocatória',
-      description: `Desejas ativar este evento e disparar a convocatória para os ${countToNotify} membros selecionados? O evento ficará imediatamente visível para todos os atletas na agenda e página principal.`,
-      confirmText: 'Sim, Ativar e Enviar Convocatória',
+      description: `Queres ativar este evento e disparar a convocatória para os ${countToNotify} membros selecionados? O evento ficará imediatamente visível para todos os atletas na agenda e página principal.`,
+      confirmText: 'Sim, ativar e enviar convocatória',
       cancelText: 'Cancelar',
       variant: 'success',
       onConfirm: async () => {
         setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
         try {
-          try {
-            const { error } = await supabase
-              .from('events')
-              .update({ is_active: true })
-              .eq('id', ev.id)
-            if (error && !error.message?.includes('is_active')) {
-              throw error
-            }
-          } catch (dbErr) {
-            console.warn('Erro ao atualizar is_active no supabase:', dbErr)
+          /* Uma falha aqui já não se engole: era assim que a app dizia
+             "Evento ativado com sucesso!" com o evento ainda em rascunho. Só
+             se tolera a base sem a coluna `is_active`. */
+          const { error: erroAtivar } = await supabase
+            .from('events')
+            .update({ is_active: true })
+            .eq('id', ev.id)
+          if (erroAtivar && !erroAtivar.message?.includes('is_active')) {
+            throw erroAtivar
           }
 
           // Se for treino e ainda não tiver callups na BD, insere-as agora
@@ -529,7 +526,8 @@ const EventsPage: React.FC = () => {
               status: 'called' as const
             }))
             if (rows.length > 0) {
-              await supabase.from('callups').insert(rows)
+              const { error: erroConvocar } = await supabase.from('callups').insert(rows)
+              if (erroConvocar) throw erroConvocar
             }
           }
 
@@ -541,7 +539,7 @@ const EventsPage: React.FC = () => {
           toast.success(`Evento ativado com sucesso! Convocatória enviada a ${countToNotify} membros.`)
         } catch (err: any) {
           console.error(err)
-          toast.error('Erro ao ativar evento: ' + (err.message || 'Erro'))
+          toast.error('Erro ao ativar evento: ' + mensagemDeErro(err))
         }
       }
     })
@@ -745,7 +743,6 @@ const EventsPage: React.FC = () => {
     }
   }, [type, homeAway, opponentId, opponents, fields, clubSettings])
 
-
   const getActiveLocationString = () => {
     if (fieldId) {
       const f = fields.find(item => item.id === fieldId)
@@ -772,7 +769,7 @@ const EventsPage: React.FC = () => {
     if (!eventDate || !eventTime) {
       isCreatingEventRef.current = false
       setIsCreatingEvent(false)
-      toast.warning('Por favor selecione a Data e a Hora do evento.')
+      toast.warning('Escolhe a data e a hora do evento.')
       return
     }
 
@@ -880,8 +877,8 @@ const EventsPage: React.FC = () => {
         }
 
         const successText = isActiveOnCreate
-          ? `${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
-          : `${createdEventsList.length} eventos guardados como Rascunho (Inativos) até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
+          ? `${createdEventsList.length} eventos criados com sucesso até ${fmtData(recurrenceEndDate)}!`
+          : `${createdEventsList.length} eventos guardados como Rascunho (Inativos) até ${fmtData(recurrenceEndDate)}!`
         setSuccessMessage(successText)
         toast.success(successText)
       } else {
@@ -981,7 +978,7 @@ const EventsPage: React.FC = () => {
       setViewModeTab('list') // Fechar modal e voltar à lista
     } catch (err: any) {
       console.error(err)
-      toast.error("Erro ao criar evento: " + (err.message || 'Verifique a base de dados'))
+      toast.error("Erro ao criar evento: " + mensagemDeErro(err))
     } finally {
       isCreatingEventRef.current = false
       setIsCreatingEvent(false)
@@ -991,9 +988,9 @@ const EventsPage: React.FC = () => {
   const handleDeleteEvent = (id: string) => {
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Eliminar Evento',
-      description: 'Tens a certeza que desejas eliminar este evento? Todos os registos e convocatórias associados serão permanentemente apagados.',
-      confirmText: 'Sim, Eliminar Evento',
+      title: 'Eliminar evento',
+      description: 'Tens a certeza que queres eliminar este evento? Todas as convocatórias e respostas associadas são eliminadas.',
+      confirmText: 'Sim, eliminar evento',
       cancelText: 'Cancelar',
       variant: 'danger',
       onConfirm: async () => {
@@ -1003,7 +1000,7 @@ const EventsPage: React.FC = () => {
           setEvents(prev => prev.filter(e => e.id !== id))
           toast.success('Evento eliminado com sucesso!')
         } else {
-          toast.error('Erro ao eliminar evento: ' + error.message)
+          toast.error('Erro ao eliminar evento: ' + mensagemDeErro(error))
         }
       }
     })
@@ -1022,9 +1019,9 @@ const EventsPage: React.FC = () => {
         ...prev,
         [eventId]: (prev[eventId] || []).map(c => c.id === callupId ? { ...c, status: newStatus } : c)
       }))
-      toast.success(`Estado atualizado para: ${newStatus === 'confirmed' ? 'Confirmado' : newStatus === 'declined' ? 'Recusado' : 'Convocado'}`)
+      toast.success(`Resposta marcada: ${ROTULO_RESPOSTA[newStatus]}`)
     } catch (err: any) {
-      toast.error('Erro ao atualizar: ' + err.message)
+      toast.error('Erro ao marcar a resposta: ' + mensagemDeErro(err))
     }
   }
 
@@ -1097,11 +1094,14 @@ const EventsPage: React.FC = () => {
       }))
       toast.success('Atleta adicionado à convocatória!')
     } catch (err: any) {
-      toast.error('Erro ao adicionar atleta: ' + err.message)
+      toast.error('Erro ao adicionar atleta: ' + mensagemDeErro(err))
     }
   }
 
   const handleRemovePlayerFromCallup = async (callupId: string, eventId: string) => {
+    /* Faz-se logo e desfaz-se no toast (decisão da auditoria de design):
+       tirar um atleta é um gesto frequente, e uma pergunta a cada um cansava. */
+    const removida = (eventCallups[eventId] || []).find(c => c.id === callupId)
     try {
       const { error } = await supabase.from('callups').delete().eq('id', callupId)
       if (error) throw error
@@ -1110,9 +1110,27 @@ const EventsPage: React.FC = () => {
         ...prev,
         [eventId]: (prev[eventId] || []).filter(c => c.id !== callupId)
       }))
-      toast.info('Jogador removido da convocatória.')
+      if (!removida) {
+        toast.success('Atleta tirado da convocatória.')
+        return
+      }
+      toast.comAnular('Atleta tirado da convocatória.', async () => {
+        const { data, error: erroRepor } = await supabase
+          .from('callups')
+          .insert({ event_id: eventId, player_id: removida.player_id, status: removida.status })
+          .select('id')
+          .single()
+        if (erroRepor || !data) {
+          toast.error('Não foi possível repor o atleta: ' + mensagemDeErro(erroRepor))
+          return
+        }
+        setEventCallups(prev => ({
+          ...prev,
+          [eventId]: [...(prev[eventId] || []), { ...removida, id: data.id }]
+        }))
+      })
     } catch (err: any) {
-      toast.error('Erro ao remover: ' + err.message)
+      toast.error('Erro ao tirar da convocatória: ' + mensagemDeErro(err))
     }
   }
 
@@ -1165,13 +1183,7 @@ const EventsPage: React.FC = () => {
     setSearchParams({ convocatoria: ev.id })
   }
 
-  const fecharDossier = () => {
-    if (searchParams.get('convocatoria')) {
-      const restantes = new URLSearchParams(searchParams)
-      restantes.delete('convocatoria')
-      setSearchParams(restantes, { replace: true })
-    }
-  }
+  const { voltarPara: voltarDoDossier, aoVoltar: fecharDossier } = useVoltarDaFicha(['convocatoria'], 'Eventos')
 
   /*
     O [+] da barra manda para cá com `?criar=match|practice|gathering`.
@@ -1194,8 +1206,9 @@ const EventsPage: React.FC = () => {
     }
     const restantes = new URLSearchParams(searchParams)
     restantes.delete('criar')
-    setSearchParams(restantes, { replace: true })
-  }, [searchParams, setSearchParams])
+    // O `state` segue: é nele que vem a origem do "‹".
+    setSearchParams(restantes, { replace: true, state: estadoDaEntrada })
+  }, [searchParams, setSearchParams, estadoDaEntrada])
 
   /*
     O dossier aberto pelo endereço. Só enche o evento — quem manda em estar
@@ -1215,7 +1228,9 @@ const EventsPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <div className="space-y-6">
-      {/* Page Header removido a pedido do utilizador */}
+      {/* Page Header removido a pedido do utilizador; fica só o "‹ Clube"
+          quando se entra pelo Clube. */}
+      <VoltarAOrigem />
 
       {successMessage && (
         <div className="bg-csc-light/12 text-csc-verde-texto p-4 rounded-2xl border border-csc-light/30 text-sm font-bold flex items-center gap-2.5 shadow-sm">
@@ -1353,7 +1368,7 @@ const EventsPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 gap-2.5">
                   <div>
                     <label className={ETIQUETA_FORM}>Adversário</label>
                     <select
@@ -1392,7 +1407,7 @@ const EventsPage: React.FC = () => {
             )}
 
             {/* 3. Data/Hora */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 gap-2.5">
               <div>
                 <label className={ETIQUETA_FORM}>Data *</label>
                 <input type="date" required value={eventDate} onChange={(e) => setEventDate(e.target.value)} className={CAMPO_FORM} />
@@ -1430,7 +1445,7 @@ const EventsPage: React.FC = () => {
                     className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
                     title="Ver no Google Maps"
                   >
-                    <MapPin size={12} className="text-red-500" />
+                    <MapPin size={12} className="text-csc-vermelho-texto" />
                     <span>Maps</span>
                     <ExternalLink size={11} />
                   </a>
@@ -1515,6 +1530,7 @@ const EventsPage: React.FC = () => {
                             <button
                               key={d.val}
                               type="button"
+                              aria-pressed={isChecked}
                               onClick={() => {
                                 if (isChecked) {
                                   setRecurrenceWeekdays(prev => prev.filter(x => x !== d.val))
@@ -1522,10 +1538,10 @@ const EventsPage: React.FC = () => {
                                   setRecurrenceWeekdays(prev => [...prev, d.val])
                                 }
                               }}
-                              className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                              className={`min-w-11 min-h-11 px-2 rounded-lg text-[11px] font-bold transition-colors cursor-pointer border ${
                                 isChecked
-                                  ? 'bg-csc-dark text-white'
-                                  : 'bg-white border border-white/15 text-white/80 hover:bg-white/6'
+                                  ? 'bg-csc-gold border-csc-gold text-csc-tinta'
+                                  : 'bg-white/10 border-white/15 text-white/80 hover:bg-white/15'
                               }`}
                             >
                               {d.label}
@@ -1557,32 +1573,21 @@ const EventsPage: React.FC = () => {
               guardar leva à convocatória, e é lá que se escolhe.
             */}
 
-
             {/* 8. Opção de Ativação / Envio de Convocatória */}
-            <div className="p-4 bg-csc-gold/8 rounded-2xl border border-csc-gold/22 space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
-                    <Send size={15} className={isActiveOnCreate ? 'text-csc-light' : 'text-csc-gold'} />
-                    <span>Publicar já na agenda</span>
-                  </label>
-                  <p className="text-[11px] text-white/60 mt-0.5">
-                    {isActiveOnCreate 
-                      ? 'Ao guardar, escolhes quem convocas. O evento fica visível na agenda.' 
-                      : 'O evento fica em rascunho: ninguém é avisado e não entra no alerta de convocatórias. A convocatória fica guardada.'}
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={isActiveOnCreate}
-                    onChange={(e) => setIsActiveOnCreate(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white/20 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-csc-light"></div>
-                </label>
-              </div>
-            </div>
+            <Interruptor
+              ligado={isActiveOnCreate}
+              aoMudar={setIsActiveOnCreate}
+              titulo={
+                <span className="flex items-center gap-1.5">
+                  <Send size={15} className={isActiveOnCreate ? 'text-csc-light' : 'text-csc-gold'} aria-hidden="true" />
+                  Publicar já na agenda
+                </span>
+              }
+              nota={isActiveOnCreate
+                ? 'Ao guardar, escolhes quem convocas. O evento fica visível na agenda.'
+                : 'O evento fica em rascunho: ninguém é avisado e não entra no alerta de convocatórias. A convocatória fica guardada.'}
+              className="bg-csc-gold/8 rounded-2xl border border-csc-gold/22"
+            />
 
             <button
               type="submit"
@@ -1775,7 +1780,7 @@ const EventsPage: React.FC = () => {
             >
               <div className="space-y-4">
                 <div>
-                  <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+                  <p className={ETIQUETA_FILTRO}>
                     Tipo de evento
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -1797,7 +1802,7 @@ const EventsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+                  <p className={ETIQUETA_FILTRO}>
                     Quando
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -1820,7 +1825,7 @@ const EventsPage: React.FC = () => {
                 {/* Rascunhos são coisa de quem gere: um atleta nunca os vê. */}
                 {isCoachOrAdmin && (
                   <div>
-                    <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+                    <p className={ETIQUETA_FILTRO}>
                       Publicação
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1857,15 +1862,9 @@ const EventsPage: React.FC = () => {
               </div>
 
               {loading ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold"></div>
-                </div>
+                <ACarregar />
               ) : filteredScheduledEvents.length === 0 ? (
-                <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6">
-                  <Calendar size={40} className="mx-auto text-white/20 mb-2" />
-                  <p className="font-bold text-white/70">Nenhum evento encontrado com os filtros atuais.</p>
-                  <p className="text-xs text-white/65 mt-1">Tente alterar os filtros ou o termo de pesquisa.</p>
-                </div>
+                <EstadoVazio icone={Calendar} titulo="Nenhum evento encontrado." texto="Tenta mudar os filtros ou a procura." />
               ) : (
                 <div className="space-y-3.5">
                   {filteredScheduledEvents.map((event) => {
@@ -1902,8 +1901,8 @@ const EventsPage: React.FC = () => {
                       className={`p-4 rounded-2xl border-2 transition-all shadow-2xs space-y-3 cursor-pointer
                         active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                         event.is_active === false
-                          ? 'bg-amber-500/10 border-amber-400/40 hover:border-amber-400/60'
-                          : 'bg-white/5 hover:bg-amber-500/10 border-white/10 hover:border-amber-400/40'
+                          ? 'bg-csc-gold/10 border-csc-gold/40 hover:border-csc-gold/60'
+                          : 'bg-white/5 hover:bg-csc-gold/10 border-white/10 hover:border-csc-gold/40'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -1919,12 +1918,10 @@ const EventsPage: React.FC = () => {
                             )}
                           </div>
                         </div>
-
-                        <ChevronRight size={18} className="shrink-0 text-white/35 mt-0.5" aria-hidden="true" />
                       </div>
 
                       {/* Event Meta Details */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-white/70 bg-white/5 p-2.5 rounded-xl border border-white/10">
+                      <div className="grid grid-cols-1 gap-2 text-xs text-white/70 bg-white/5 p-2.5 rounded-xl border border-white/10">
                         <div className="flex items-center gap-1.5">
                           <Clock size={13} className="text-csc-gold shrink-0" />
                           <span className="font-bold">
@@ -1939,7 +1936,7 @@ const EventsPage: React.FC = () => {
 
                         <div className="flex items-center justify-between gap-1">
                           <div className="flex items-center gap-1.5 truncate">
-                            <MapPin size={13} className="text-red-500 shrink-0" />
+                            <MapPin size={13} className="text-csc-vermelho-texto shrink-0" />
                             <span className="truncate">{locationName}</span>
                           </div>
 
@@ -1960,7 +1957,7 @@ const EventsPage: React.FC = () => {
                       </div>
 
                       {/* RSVP Summary Bar & Action Button */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-white/10">
+                      <div className="flex flex-col justify-between gap-2.5 pt-2 border-t border-white/10">
                         <div className="flex items-center gap-2 text-xs">
                           <span className="flex items-center gap-1 font-black text-csc-verde-texto bg-csc-light/15 border border-csc-light/35 px-2 py-0.5 rounded-lg">
                             <CheckCircle2 size={12} className="text-csc-verde-texto" />
@@ -1980,15 +1977,15 @@ const EventsPage: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {isCoachOrAdmin && event.is_active === false && (
                             <button
                               type="button"
                               onClick={e => { e.stopPropagation(); handleActivateEvent(event) }}
-                              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                              className="px-3.5 py-2 bg-csc-light hover:bg-csc-light text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                               title="Ativar evento e enviar convocatória aos membros"
                             >
-                              <Send size={13} className="text-emerald-100" />
+                              <Send size={13} className="text-csc-verde-texto" />
                               <span>Ativar e Convocar</span>
                             </button>
                           )}
@@ -2018,19 +2015,19 @@ const EventsPage: React.FC = () => {
       {activeCallupModalEvent && (
         <EcraDetalhe
           aberto={dossierAberto}
-          voltarPara="Eventos"
+          voltarPara={voltarDoDossier}
           aoVoltar={fecharDossier}
           sobrancelha="Convocatória"
           titulo={activeCallupModalEvent.title || 'Convocatória'}
         >
           <div className="relative">
             {/* Topo Premium da Persiana/Modal de Dossier & RSVP */}
-            <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold mb-5 relative overflow-hidden">
+            <div className="bg-gradient-to-r from-csc-dark via-csc-dark to-csc-dark text-white p-3.5 rounded-2xl shadow-xl border-2 border-csc-gold mb-5 relative overflow-hidden">
               <div className="flex items-center justify-between gap-3">
                 {/* 1. Símbolo + 2. Pílula de Tipo + 3. Data e Hora */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   {/* Símbolo Oficial do CSC */}
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white p-1 shadow-md shrink-0 border border-csc-gold flex items-center justify-center">
+                  <div className="w-11 h-11 rounded-2xl bg-white p-1 shadow-md shrink-0 border border-csc-gold flex items-center justify-center">
                     <img 
                       src="/csc-vet/cascais-emblem.png" 
                       alt="CSC" 
@@ -2040,18 +2037,16 @@ const EventsPage: React.FC = () => {
 
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider shadow-2xs ${
-                        activeCallupModalEvent.type === 'match' 
-                          ? 'bg-blue-600 text-white' 
-                          : activeCallupModalEvent.type === 'practice' 
-                          ? 'bg-emerald-700 text-white' 
-                          : 'bg-purple-700 text-white'
-                      }`}>
+                      {/* A cor de cada tipo é a da Agenda (`CORES_TIPO`): aqui o jogo
+                          era azul e o convívio roxo, e lá o jogo é vermelho. */}
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider border ${
+                        CORES_TIPO[activeCallupModalEvent.type as keyof typeof CORES_TIPO]?.pastilha ?? ''
+                      } ${CORES_TIPO[activeCallupModalEvent.type as keyof typeof CORES_TIPO]?.texto ?? 'text-white'}`}>
                         {activeCallupModalEvent.type === 'match' ? 'Jogo' : activeCallupModalEvent.type === 'practice' ? 'Treino' : 'Convívio'}
                       </span>
                     </div>
 
-                    <p className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 truncate">
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
                       <Clock size={13} className="text-csc-gold shrink-0" />
                       <span>
                         {new Date(activeCallupModalEvent.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })}, {new Date(activeCallupModalEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
@@ -2065,7 +2060,7 @@ const EventsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsMatchReportOpen(true)}
-                    className="px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-tinta font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
+                    className="px-3 py-1.5 bg-csc-gold hover:bg-csc-gold text-csc-tinta font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
                   >
                     <ClipboardList size={13} />
                     <span>Ficha de Jogo</span>
@@ -2075,28 +2070,17 @@ const EventsPage: React.FC = () => {
                 {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
                 {isCoachOrAdmin && (
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(activeCallupModalEvent)}
-                      className="w-11 h-11 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs"
-                      title="Modificar evento"
-                      aria-label="Modificar evento"
-                    >
-                      <Edit size={14} />
-                    </button>
-                    <button
-                      type="button"
+                    <BotaoIcone rotulo="Modificar evento" icone={Pencil} onClick={() => openEditModal(activeCallupModalEvent)} />
+                    <BotaoIcone
+                      rotulo="Eliminar evento"
+                      icone={Trash2}
+                      perigo
                       onClick={() => {
                         const evId = activeCallupModalEvent.id
                         fecharDossier()
                         handleDeleteEvent(evId)
                       }}
-                      className="w-11 h-11 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs"
-                      title="Apagar evento"
-                      aria-label="Apagar evento"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    />
                   </div>
                 )}
               </div>
@@ -2104,18 +2088,18 @@ const EventsPage: React.FC = () => {
 
             {/* Se o evento estiver inativo, alerta proeminente */}
             {activeCallupModalEvent.is_active === false && (
-              <div className="mb-4 p-3.5 bg-amber-500/10 border-2 border-amber-400/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
-                  <AlertTriangle size={18} className="text-amber-400 shrink-0" />
+              <div className="mb-4 p-3.5 bg-csc-gold/10 border-2 border-csc-gold/40 rounded-2xl flex flex-col items-start justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2 text-xs font-bold text-csc-gold">
+                  <AlertTriangle size={18} className="text-csc-gold shrink-0" />
                   <span>Este evento está em modo <strong>Rascunho (Inativo)</strong>. A convocatória não foi enviada e não está visível para os atletas.</span>
                 </div>
                 {isCoachOrAdmin && (
                   <button
                     type="button"
                     onClick={() => handleActivateEvent(activeCallupModalEvent)}
-                    className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 shrink-0"
+                    className="w-full px-4 py-2 bg-csc-light hover:bg-csc-light text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 shrink-0"
                   >
-                    <Send size={13} className="text-emerald-100" />
+                    <Send size={13} className="text-csc-verde-texto" />
                     <span>Ativar e Enviar Convocatória</span>
                   </button>
                 )}

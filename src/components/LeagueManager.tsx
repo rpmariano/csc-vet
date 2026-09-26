@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Botao } from './ui'
+import { Botao, BotaoIcone } from './ui'
 import { supabase } from '../lib/supabaseClient'
 import { Trash2, Shield, Plus } from 'lucide-react'
 import { toast } from '../context/ToastContext'
@@ -11,6 +11,8 @@ import { useClub } from '../context/ClubContext'
 import { equipaDoTorneio } from '../lib/classificacao'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
+import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO } from './ui/formulario'
 
 interface LeagueManagerProps {
   tournamentId: string
@@ -54,6 +56,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     isOpen: boolean
     title: string
     description?: string
+    confirmText?: string
     onConfirm: () => void | Promise<void>
   }>({
     isOpen: false,
@@ -81,7 +84,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
 
     const firstError = tourRes.error || groupsRes.error || teamsRes.error || oppsRes.error
     if (firstError) {
-      toast.error('Erro ao carregar dados da liga: ' + firstError.message)
+      toast.error('Erro ao carregar dados da liga: ' + mensagemDeErro(firstError))
     }
 
     setLoading(false)
@@ -96,7 +99,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     const phase = parseInt(newGroupPhase) || 1
     const { error } = await supabase.from('tournament_groups').insert([{ tournament_id: tournamentId, name: newGroupName.trim(), phase }])
     if (error) {
-      toast.error('Não foi possível criar o grupo: ' + error.message)
+      toast.error('Não foi possível criar o grupo: ' + mensagemDeErro(error))
       return
     }
     toast.success('Grupo criado com sucesso!')
@@ -126,7 +129,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     }])
 
     if (error) {
-      toast.error('Não foi possível adicionar a equipa: ' + error.message)
+      toast.error('Não foi possível adicionar a equipa: ' + mensagemDeErro(error))
       return
     }
 
@@ -138,13 +141,14 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   const handleRemoveTeam = (id: string) => {
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Remover Equipa do Grupo',
-      description: 'Esta equipa deixa de fazer parte do grupo. Os resultados já registados não são apagados.',
+      title: 'Tirar equipa do grupo',
+      description: 'Esta equipa deixa de fazer parte do grupo. Os resultados já registados não são eliminados.',
+      confirmText: 'Sim, tirar do grupo',
       onConfirm: async () => {
         closeConfirmModal()
         const { error } = await supabase.from('tournament_teams').delete().eq('id', id)
         if (error) {
-          toast.error('Não foi possível remover a equipa: ' + error.message)
+          toast.error('Não foi possível tirar a equipa: ' + mensagemDeErro(error))
           return
         }
         fetchData()
@@ -186,9 +190,9 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                     <select
                       value={selectedGroupForTeam}
                       onChange={e => setSelectedGroupForTeam(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/6 border border-white/12 rounded-lg text-sm"
+                      className={CLASSE_CAMPO}
                     >
-                      <option value="">Selecione o Grupo</option>
+                      <option value="">Escolhe o grupo</option>
                       {groups.map(g => (
                         <option key={g.id} value={g.id}>{g.name} (Fase {g.phase})</option>
                       ))}
@@ -199,9 +203,9 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                     <select
                       value={selectedOpponentToAdd}
                       onChange={e => setSelectedOpponentToAdd(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/6 border border-white/12 rounded-lg text-sm"
+                      className={CLASSE_CAMPO}
                     >
-                      <option value="">Selecione a Equipa</option>
+                      <option value="">Escolhe a equipa</option>
                       <option value="csc">{CLUBE_SIGLA} (nós)</option>
                       {opponents.map(o => (
                         <option key={o.id} value={o.id}>{o.name}</option>
@@ -211,7 +215,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                   <button
                     onClick={handleAddTeamToGroup}
                     disabled={!selectedGroupForTeam || !selectedOpponentToAdd}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
+                    className="px-4 py-2 bg-csc-blue text-white rounded-lg text-sm font-bold hover:bg-csc-blue disabled:opacity-50 cursor-pointer"
                   >
                     Adicionar Equipa
                   </button>
@@ -223,7 +227,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                   Nenhum grupo configurado. Cria o "Grupo Único" ou "Grupo A", "Grupo B".
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {groups.map(g => (
                     <div key={g.id} className="cartao-simples p-4">
                       <h4 className="font-black text-white mb-3">{g.name} <span className="text-xs text-white/62 font-medium">(Fase {g.phase})</span></h4>
@@ -247,9 +251,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                                 </span>
                               )
                             })()}
-                            <button onClick={() => handleRemoveTeam(t.id)} className="text-red-500 hover:bg-csc-red/10 p-1 rounded cursor-pointer">
-                              <Trash2 size={14} />
-                            </button>
+                            <BotaoIcone rotulo="Tirar a equipa do grupo" icone={Trash2} perigo discreto onClick={() => handleRemoveTeam(t.id)} />
                           </div>
                         ))}
                         {teams.filter(t => t.group_id === g.id).length === 0 && (
@@ -291,7 +293,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
               value={newGroupName}
               onChange={e => setNewGroupName(e.target.value)}
               placeholder="Ex: Grupo A, Apuramento Campeão"
-              className="w-full h-[46px] px-3.5 bg-white text-csc-tinta border-0 rounded-[14px] font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+              className={CLASSE_CAMPO}
               autoFocus
             />
           </div>
@@ -301,7 +303,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
               id="novo-grupo-fase"
               value={newGroupPhase}
               onChange={e => setNewGroupPhase(e.target.value)}
-              className="w-full h-[46px] px-3.5 bg-white text-csc-tinta border-0 rounded-[14px] font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+              className={CLASSE_CAMPO}
             >
               <option value="1">Fase 1 (Fase Inicial)</option>
               <option value="2">Fase 2 (Fase Final)</option>
@@ -314,6 +316,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
         isOpen={confirmModalConfig.isOpen}
         title={confirmModalConfig.title}
         description={confirmModalConfig.description}
+        confirmText={confirmModalConfig.confirmText}
         onConfirm={confirmModalConfig.onConfirm}
         onCancel={closeConfirmModal}
       />

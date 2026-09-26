@@ -17,6 +17,17 @@ export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: stri
   return player.name || 'Atleta'
 }
 
+/**
+ * O nome de cada resposta à convocatória, para quem a marca à mão. Nesta app
+ * não há "presenças" nem "RSVP" — há quem disse que sim, quem disse que não e
+ * quem ainda não respondeu (ver CLAUDE.md).
+ */
+export const ROTULO_RESPOSTA: Record<'confirmed' | 'declined' | 'called', string> = {
+  confirmed: 'Disse que sim',
+  declined: 'Disse que não',
+  called: 'Sem resposta',
+}
+
 export const getGoogleMapsUrl = (query: string) => query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : '#'
 
 /**
@@ -217,3 +228,46 @@ export const formatDataCurta = (iso: string): string =>
 /* As siglas mudaram-se para `src/lib/siglas.ts` — a Home também precisa
    delas, e uma página não é sítio para as guardar. Continuam a sair daqui
    para quem já as importava. */
+
+/**
+ * A cor de cada tipo de evento, num sítio só.
+ *
+ * O ponto do calendário e o rótulo do cartão diziam a mesma coisa em tons
+ * diferentes — o convívio era `csc-azul-texto` no ponto e `blue-300` no
+ * rótulo — e nenhum dos dois se via bem: pontos de 4px e uma palavra de 10px
+ * sem fundo. O ponto passa a 6px e o rótulo a pastilha da mesma cor, para o
+ * tipo de evento se ler de relance no calendário e no cartão.
+ */
+export const CORES_TIPO = {
+  /*
+    O jogo é vermelho, e chegou lá por eliminação. Dourado é a moldura — a
+    data no topo do próprio cartão, os títulos, os botões —, e branco é o
+    lettering de tudo o resto: os dois liam-se como mais do mesmo, e não como
+    o tipo do evento. Verde é o treino e azul o convívio. Sobra o vermelho do
+    clube, que é o que a paleta tem para o dizer.
+
+    O risco assumido: nesta app o vermelho costuma querer dizer que há um
+    problema (recusou, lesionado, sem condições). No cartão da Agenda não há
+    nenhum desses — as pastilhas de estado ali são verdes ou douradas — e o
+    vermelho fica livre para o que é, à conta do desenho não voltar a pôr um
+    estado vermelho ao lado deste.
+  */
+  match: {
+    ponto: 'bg-csc-vermelho-texto',
+    halo: 'shadow-csc-vermelho-texto/70',
+    texto: 'text-csc-vermelho-texto',
+    pastilha: 'bg-csc-red/12 border-csc-red/50',
+  },
+  practice: {
+    ponto: 'bg-csc-verde-texto',
+    halo: 'shadow-csc-verde-texto/70',
+    texto: 'text-csc-verde-texto',
+    pastilha: 'bg-csc-light/14 border-csc-verde-texto/45',
+  },
+  gathering: {
+    ponto: 'bg-csc-azul-texto',
+    halo: 'shadow-csc-azul-texto/70',
+    texto: 'text-csc-azul-texto',
+    pastilha: 'bg-csc-blue/16 border-csc-azul-texto/45',
+  },
+} as const

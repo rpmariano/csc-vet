@@ -542,13 +542,13 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
             escala={escalaComposicao}
             fatias={[
               { rotulo: 'Pagamentos programados', valor: totalScheduledPaymentsTarget, cor: 'bg-csc-red' },
-              { rotulo: 'Outras despesas', valor: outrasDespesas, cor: 'bg-amber-400' },
+              { rotulo: 'Outras despesas', valor: outrasDespesas, cor: 'bg-csc-gold' },
             ]}
           />
           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
             <Legenda cor="bg-csc-red">Programados {fmtEuroCurto(totalScheduledPaymentsTarget)}</Legenda>
             {outrasDespesas > 0 && (
-              <Legenda cor="bg-amber-400">Outras despesas {fmtEuroCurto(outrasDespesas)}</Legenda>
+              <Legenda cor="bg-csc-gold">Outras despesas {fmtEuroCurto(outrasDespesas)}</Legenda>
             )}
           </div>
         </div>
@@ -758,7 +758,7 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
                 >
                   <div className="h-2 rounded-full bg-white/10 overflow-hidden flex">
                     <div className="h-full bg-csc-light" style={{ width: `${pagoPct}%` }} />
-                    <div className="h-full bg-amber-400" style={{ width: `${100 - pagoPct}%` }} />
+                    <div className="h-full bg-csc-gold" style={{ width: `${100 - pagoPct}%` }} />
                   </div>
                 </LinhaCategoria>
               )
@@ -766,7 +766,7 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
           </div>
           <div className="flex items-center gap-4 px-3 py-2 border-t border-white/10">
             <Legenda cor="bg-csc-light">Pago</Legenda>
-            <Legenda cor="bg-amber-400">Por pagar</Legenda>
+            <Legenda cor="bg-csc-gold">Por pagar</Legenda>
           </div>
         </Bloco>
       )}

@@ -481,6 +481,32 @@ test.describe('Convocados que ficaram sem condições', () => {
     await persiana.getByRole('button', { name: 'Tirar', exact: true }).click()
     await expect(page.getByText(/Tirar da convocatória o convocado/)).toBeVisible()
   })
+
+  /* Tirar um atleta faz-se logo e desfaz-se no toast (vaga 3 da auditoria
+     de design): um toque enganado apagava a linha, com a resposta dentro. */
+  test('tirar um atleta faz-se logo, e o "Anular" repõe-no', async ({ page }) => {
+    await montarSupabaseFalso(page, fixtures)
+    const escritas: string[] = []
+    page.on('request', r => {
+      if (!['GET', 'HEAD', 'OPTIONS'].includes(r.method()) && r.url().includes('/rest/v1/callups')) {
+        escritas.push(r.method())
+      }
+    })
+    await page.goto('/csc-vet/calendar?event=lz')
+    await page.waitForLoadState('networkidle')
+
+    const persiana = fichaDoEvento(page)
+    await persiana.getByRole('button', { name: /Expandir|Recolher/ }).first().click()
+    await persiana.getByRole('button', { name: 'Tirar da convocatória' }).first().click()
+
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect.poll(() => escritas).toEqual(['DELETE'])
+    await expect(fichaDoEvento(page).getByText(/Convocatória \(1\)/)).toBeVisible()
+
+    await page.getByRole('button', { name: 'Anular' }).click()
+    await expect.poll(() => escritas).toEqual(['DELETE', 'POST'])
+    await expect(fichaDoEvento(page).getByText(/Convocatória \(2\)/)).toBeVisible()
+  })
 })
 
 /**

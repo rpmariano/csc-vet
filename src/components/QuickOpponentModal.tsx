@@ -1,15 +1,13 @@
 import React from 'react'
-import { X } from 'lucide-react'
-import { useModalA11y } from '../hooks/useModalA11y'
+import { Shield } from 'lucide-react'
+import Modal from './Modal'
+import { Botao } from './ui'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
+import { CLASSE_CAMPO as CAMPO_DIALOGO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from './ui/formulario'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
-
-/** Campo branco do handoff, o mesmo dos formulários de evento. */
-const CAMPO_DIALOGO =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 /**
  * Criação rápida de um adversário sem sair do formulário de evento.
@@ -61,49 +59,23 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
     aoSair: onClose,
     descricao: 'O adversário que estás a criar ainda não foi gravado. Se saíres agora, perde-se.',
   })
-  const painelRef = useModalA11y({ isOpen, onClose: guarda.tentarFechar })
 
   if (!isOpen) return null
 
   return (
     <>
-    <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-modal-top animate-fade-in"
-      onMouseDown={e => {
-        // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-        if (e.target === e.currentTarget) guarda.tentarFechar()
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={guarda.tentarFechar}
+      title="Criar adversário"
+      description="Fica logo escolhido neste evento."
+      icon={<Shield size={20} className="text-csc-gold" aria-hidden="true" />}
+      size="md"
+      stacked
     >
-      <div
-        ref={painelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="quick-opp-titulo"
-        tabIndex={-1}
-        className="bg-csc-superficie rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-white/10 space-y-4 outline-none"
-      >
-        <button
-          type="button"
-          onClick={guarda.tentarFechar}
-          aria-label="Fechar"
-          className="absolute top-4 right-4 text-white/62 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
-        >
-          <X size={20} />
-        </button>
-
-        <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-csc-gold flex items-center justify-center text-lg font-black shadow-xs" aria-hidden="true">
-            🛡️
-          </div>
-          <div>
-            <h3 id="quick-opp-titulo" className="text-base font-black text-csc-dark">Criar Novo Adversário</h3>
-            <p className="text-[11px] text-white/62">Regista uma nova equipa/clube adversário para seleção imediata.</p>
-          </div>
-        </div>
-
         <form onSubmit={onSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-opp-nome">Nome do Clube / Equipa *</label>
+            <label className={ETIQUETA} htmlFor="quick-opp-nome">Nome do Clube / Equipa *</label>
             <input
               id="quick-opp-nome"
               type="text"
@@ -116,9 +88,9 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-opp-sigla">Sigla (opcional)</label>
+              <label className={ETIQUETA} htmlFor="quick-opp-sigla">Sigla (opcional)</label>
               <input
                 id="quick-opp-sigla"
                 type="text"
@@ -131,7 +103,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-opp-campo">Campo Habitual</label>
+              <label className={ETIQUETA} htmlFor="quick-opp-campo">Campo Habitual</label>
               <select
                 id="quick-opp-campo"
                 value={homeFieldId}
@@ -146,9 +118,9 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 gap-2.5">
             <div>
-              <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-opp-contacto">Nome do Contacto</label>
+              <label className={ETIQUETA} htmlFor="quick-opp-contacto">Nome do Contacto</label>
               <input
                 id="quick-opp-contacto"
                 type="text"
@@ -160,7 +132,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-opp-telefone">Telefone Contacto</label>
+              <label className={ETIQUETA} htmlFor="quick-opp-telefone">Telefone Contacto</label>
               <input
                 id="quick-opp-telefone"
                 type="tel"
@@ -172,25 +144,14 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
             </div>
           </div>
 
-          <div className="flex gap-2.5 pt-2">
-            <button
-              type="button"
-              onClick={guarda.tentarFechar}
-              className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white/80 font-bold text-xs rounded-xl transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving || !name.trim()}
-              className="flex-1 px-4 py-2.5 bg-csc-dark hover:bg-csc-dark/90 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
-            >
-              <span>{isSaving ? 'A registar...' : '➕ Criar Adversário'}</span>
-            </button>
+          <div className="flex gap-2.5 pt-3 border-t border-white/12">
+            <Botao aparencia="vidro" className="flex-1" onClick={guarda.tentarFechar}>Cancelar</Botao>
+            <Botao type="submit" className="flex-1" disabled={isSaving || !name.trim()}>
+              {isSaving ? 'A guardar…' : 'Guardar e escolher'}
+            </Botao>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
     <UnsavedChangesModal {...guarda.props} />
     </>
   )

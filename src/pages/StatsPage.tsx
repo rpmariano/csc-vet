@@ -1,17 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { Award, Footprints, Flame, Users, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
-import { Pastilha, Botao } from '../components/ui'
+import { Pastilha, Botao, ACarregar } from '../components/ui'
 import { BottomSheet } from '../components/BottomSheet'
 import { triggerHaptic } from '../utils/haptics'
+import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 
 /** Campo, etiqueta e sobrancelha de mosaico — o desenho do resto da app. */
-const CAMPO =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold'
-
-const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /** O ponto de partida das estatísticas — ver a nota no `filterType`. */
 const FILTRO_POR_OMISSAO = 'global_official' as const
@@ -314,10 +309,7 @@ const StatsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[40vh]">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark mb-3"></div>
-        <p className="text-xs font-bold text-white/62">A carregar estatísticas desportivas...</p>
-      </div>
+      <ACarregar texto="A carregar estatísticas…" className="min-h-[40vh]" />
     )
   }
 

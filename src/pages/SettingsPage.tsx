@@ -12,10 +12,11 @@ import {
   AlertCircle,
   Lock,
   LogOut,
-  ChevronLeft,
   Bell,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { haEntradaAnterior } from '../lib/rotas'
+import { BotaoVoltar } from '../components/ui'
 import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { CLUBE_NOME, CLUBE_SIGLA } from '../lib/clube'
@@ -24,7 +25,6 @@ import { RELACOES_EMERGENCIA } from './TeamManagementPage'
 import { useEstadoPagamentos } from '../hooks/useEstadoPagamentos'
 
 /** Euros em português — a mesma notação do Financeiro. */
-const EUROS_PERFIL = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
 import SoccerPitchSelector from '../components/SoccerPitchSelector'
 import { parsePositions } from '../lib/posicoes'
 import { toast } from '../context/ToastContext'
@@ -33,18 +33,17 @@ import { OsMeusPagamentos } from '../components/OsMeusPagamentos'
 import { PreferenciasAvisos } from '../components/PreferenciasAvisos'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
+import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
+import { fmtData } from '../lib/datas'
+import { fmtEuro } from '../components/financeiro/estilos'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** Campo branco de 44px do handoff (ecrã 5b). */
-const CAMPO =
-  'w-full h-11 px-3 rounded-[13px] bg-white text-csc-tinta font-display font-bold text-xs ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold'
 
 /** Etiqueta pequena, em maiúsculas, por cima do campo. */
-const ETIQUETA =
-  'block font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-1'
 
 /** Cabeçalho numerado de secção ("1 · IDENTIFICAÇÃO…"). */
 const SECCAO =
@@ -55,6 +54,8 @@ const SettingsPage: React.FC = () => {
   const { profile, assignedRoles, actualRole, setSimulatedRole, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
   const { clubSettings } = useClub()
   const navegar = useNavigate()
+  const estadoDaEntrada = useLocation().state as { origem?: unknown } | null
+  const origemDoPerfil = typeof estadoDaEntrada?.origem === 'string' ? estadoDaEntrada.origem : null
   
   // 1. Identificação Pessoal & Fiscal
   const [formName, setFormName] = useState('')
@@ -217,7 +218,7 @@ const SettingsPage: React.FC = () => {
 
       toast.success('Ficheiro carregado com sucesso!')
     } catch (err: any) {
-      toast.error('Erro ao carregar ficheiro: ' + err.message)
+      toast.error('Erro ao carregar ficheiro: ' + mensagemDeErro(err))
     } finally {
       setUploadingDoc(null)
     }
@@ -291,7 +292,7 @@ const SettingsPage: React.FC = () => {
       toast.success('Alterações guardadas com sucesso!')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err: any) {
-      const errTxt = 'Erro ao guardar alterações: ' + (err.message || 'Verifique os dados')
+      const errTxt = 'Erro ao guardar alterações: ' + mensagemDeErro(err)
       setSaveError(errTxt)
       toast.error(errTxt)
     } finally {
@@ -305,19 +306,14 @@ const SettingsPage: React.FC = () => {
   return (
     <div className="space-y-4 pb-2">
       
-      {/* Voltar: o Perfil abre-se da fotografia de qualquer ecrã, e o caminho
-          de volta é sempre para trás — não para um destino fixo. */}
-      <button
-        type="button"
-        onClick={() => navegar(-1)}
-        className="flex items-center gap-3 min-h-11 -ml-1 pr-3 cursor-pointer
-          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-      >
-        <span className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white flex-none">
-          <ChevronLeft size={18} />
-        </span>
-        <span className="font-display font-bold text-xs text-white/60">Voltar</span>
-      </button>
+      {/* Voltar: o Perfil abre-se da fotografia de qualquer ecrã, e volta
+          para esse ecrã — o mesmo "‹ Nome" das fichas. Era um disco à parte
+          com "Voltar", a única seta da app que não dizia para onde ia; e
+          aberto por um link, o `navigate(-1)` saía da app. */}
+      <BotaoVoltar
+        para={origemDoPerfil ?? 'Hoje'}
+        aoVoltar={() => (haEntradaAnterior() ? navegar(-1) : navegar('/', { replace: true }))}
+      />
 
       {/* Quem sou eu, em grande. */}
       <div className="flex items-center gap-4 pt-1">
@@ -407,7 +403,7 @@ const SettingsPage: React.FC = () => {
               pagamentos.cor === 'vermelho'
                 ? 'bg-csc-red/12 border-csc-red/32'
                 : pagamentos.cor === 'laranja'
-                  ? 'bg-amber-500/12 border-amber-400/32'
+                  ? 'bg-csc-gold/12 border-csc-gold/32'
                   : ''
             }`}
         >
@@ -415,7 +411,7 @@ const SettingsPage: React.FC = () => {
             pagamentos.cor === 'vermelho'
               ? 'bg-csc-red/22 text-csc-vermelho-texto'
               : pagamentos.cor === 'laranja'
-                ? 'bg-amber-500/22 text-amber-300'
+                ? 'bg-csc-gold/22 text-csc-gold'
                 : 'bg-csc-gold/18 text-csc-gold'
           }`}>
             €
@@ -428,13 +424,13 @@ const SettingsPage: React.FC = () => {
               pagamentos.cor === 'vermelho'
                 ? 'text-csc-vermelho-texto'
                 : pagamentos.cor === 'laranja'
-                  ? 'text-amber-300'
+                  ? 'text-csc-gold'
                   : 'text-white/62'
             }`}>
               {pagamentos.cor === 'vermelho'
-                ? `${pagamentos.emAtraso.length} em atraso · ${EUROS_PERFIL.format(pagamentos.emAtraso.reduce((t, i) => t + i.valor, 0))}`
+                ? `${pagamentos.emAtraso.length} em atraso · ${fmtEuro(pagamentos.emAtraso.reduce((t, i) => t + i.valor, 0))}`
                 : pagamentos.cor === 'laranja'
-                  ? `${pagamentos.aVencer.length} a vencer · ${EUROS_PERFIL.format(pagamentos.totalEmAviso)}`
+                  ? `${pagamentos.aVencer.length} a vencer · ${fmtEuro(pagamentos.totalEmAviso)}`
                   : 'Quotas e encargos'}
             </span>
           </span>
@@ -669,7 +665,7 @@ const SettingsPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-2.5">
             <div>
               <label className={ETIQUETA}>Email de Acesso (Apenas Leitura)</label>
-              <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white/70 font-medium font-mono">
+              <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white/70 font-medium font-mono">
                 <Mail size={15} className="mr-2 text-white/60" />
                 <span>{formEmail}</span>
               </div>
@@ -688,23 +684,23 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* 4. O QUE A EQUIPA TÉCNICA ATRIBUI — SÓ DE LEITURA */}
-        <div className="bg-csc-dark p-5 sm:p-6 rounded-3xl border-2 border-amber-400/40 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-amber-400/20 pb-3">
-            <h3 className="text-xs font-black text-amber-200 uppercase tracking-wider flex items-center gap-2">
-              <Shield size={16} className="text-amber-400" />
+        <div className="bg-csc-dark p-5 rounded-3xl border-2 border-csc-gold/40 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-csc-gold/20 pb-3">
+            <h3 className="text-xs font-black text-csc-gold uppercase tracking-wider flex items-center gap-2">
+              <Shield size={16} className="text-csc-gold" />
               <span>4. Posições, Funções & Camisola</span>
             </h3>
-            <span className="text-[11px] font-bold text-amber-200 bg-amber-500/20 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+            <span className="text-[11px] font-bold text-csc-gold bg-csc-gold/20 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
               <Lock size={12} />
               <span>Atribuído pelo clube</span>
             </span>
           </div>
 
           {/* Banner explicativo obrigatório */}
-          <div className="p-3.5 bg-amber-500/10 border border-amber-400/30 rounded-2xl flex items-start gap-2.5 text-xs text-amber-100 font-medium">
-            <AlertCircle size={17} className="text-amber-400 shrink-0 mt-0.5" />
+          <div className="p-3.5 bg-csc-gold/10 border border-csc-gold/30 rounded-2xl flex items-start gap-2.5 text-xs text-csc-gold font-medium">
+            <AlertCircle size={17} className="text-csc-gold shrink-0 mt-0.5" />
             <div>
-              <p className="font-extrabold text-amber-200">Nota da Equipa Técnica:</p>
+              <p className="font-extrabold text-csc-gold">Nota da Equipa Técnica:</p>
               <p className="mt-0.5">
                 As posições no campo, as funções no clube e o número de camisola são atribuídos pelo <strong>treinador / equipa técnica</strong>. O tamanho de equipamento e o pé preferido são teus — estão mais abaixo e podes mudá-los.
               </p>
@@ -725,7 +721,7 @@ const SettingsPage: React.FC = () => {
           </div>
 
           {/* Funções e Atribuições */}
-          <div className="pt-3 border-t border-amber-400/20 space-y-2">
+          <div className="pt-3 border-t border-csc-gold/20 space-y-2">
             <label className="block text-xs font-bold text-white/70">
               Funções Atribuídas no Clube:
             </label>
@@ -748,9 +744,9 @@ const SettingsPage: React.FC = () => {
           </div>
 
           {/* O número da camisola é atribuído: fica de leitura, com o resto. */}
-          <div className="pt-3 border-t border-amber-400/20">
+          <div className="pt-3 border-t border-csc-gold/20">
             <label className={ETIQUETA}>Nº da Camisola (Dorsal)</label>
-            <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
+            <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs font-extrabold text-white">
               {formJerseyNumber ? `#${formJerseyNumber}` : 'Não atribuído'}
             </div>
           </div>
@@ -834,17 +830,17 @@ const SettingsPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-2.5">
             <div>
               <label className={ETIQUETA}>Início de atividade</label>
-              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
+              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs font-extrabold text-white">
                 {profile?.quota_start_date
-                  ? new Date(profile.quota_start_date).toLocaleDateString('pt-PT')
+                  ? fmtData(profile.quota_start_date)
                   : 'Desde o registo'}
               </div>
             </div>
             <div>
               <label className={ETIQUETA}>Fim de atividade</label>
-              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs sm:text-sm font-extrabold text-white">
+              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs font-extrabold text-white">
                 {profile?.quota_end_date
-                  ? new Date(profile.quota_end_date).toLocaleDateString('pt-PT')
+                  ? fmtData(profile.quota_end_date)
                   : 'Sem fim marcado'}
               </div>
             </div>
@@ -989,7 +985,7 @@ const SettingsPage: React.FC = () => {
           </div>
 
           {/* Consentimento RGPD */}
-          <div className="p-3.5 bg-emerald-500/10 border border-emerald-400/30 rounded-2xl">
+          <div className="p-3.5 bg-csc-light/10 border border-csc-light/30 rounded-2xl">
             <label className="flex items-start gap-2.5 cursor-pointer">
               <input
                 type="checkbox"

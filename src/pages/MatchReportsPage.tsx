@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react'
 import {
   Trophy,
   Search,
-  ChevronRight,
   SlidersHorizontal,
   Home,
   Plane,
@@ -13,17 +12,13 @@ import { useClub } from '../context/ClubContext'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { useSearchParams } from 'react-router-dom'
+import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
 import { BottomSheet } from '../components/BottomSheet'
-import { Pastilha, Botao } from '../components/ui'
+import { Pastilha, Botao, ACarregar, EstadoVazio } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
+import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
-const CAMPO =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
-
-const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /** Como se lê cada filtro escondido, na linha de resumo. */
 const ROTULOS_TIPO: Record<string, string> = {
@@ -226,13 +221,7 @@ export const MatchReportsPage: React.FC = () => {
     setSearchParams(seguintes)
   }
 
-  const fecharFicha = () => {
-    if (searchParams.get('jogo')) {
-      const restantes = new URLSearchParams(searchParams)
-      restantes.delete('jogo')
-      setSearchParams(restantes, { replace: true })
-    }
-  }
+  const { voltarPara: voltarDaFicha, aoVoltar: fecharFicha } = useVoltarDaFicha(['jogo'], 'Fichas de Jogo')
 
   /*
     A ficha aberta pelo endereço. Só enche o jogo — quem manda em estar aberta
@@ -437,18 +426,19 @@ export const MatchReportsPage: React.FC = () => {
 
       {/* Lista de Jogos Ocorridos */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center min-h-[35vh] text-white">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold mb-3"></div>
-          <p className="text-xs font-bold text-white/70">A carregar fichas de jogo...</p>
-        </div>
+        <ACarregar texto="A carregar fichas de jogo…" />
       ) : filteredMatches.length === 0 ? (
-        <div className="bg-csc-dark text-white rounded-3xl p-10 text-center border border-dashed border-white/15 space-y-3">
-          <Trophy size={42} className="mx-auto text-white/20" />
-          <p className="font-black text-white text-sm sm:text-base">Nenhum jogo ocorrido encontrado</p>
-          <p className="text-xs text-white/70 max-w-sm mx-auto">
-            Assim que os jogos da época forem realizados ou tiverem resultado registado, as suas fichas técnicas aparecerão aqui.
-          </p>
-        </div>
+        /* Com filtros ligados, o vazio é dos filtros — dizia "Nenhum jogo
+           ocorrido" e fazia crer que a época não tinha jogos. */
+        temFiltros ? (
+          <EstadoVazio icone={Trophy} titulo="Nenhum jogo encontrado." texto="Limpa os filtros para ver as fichas todas." />
+        ) : (
+          <EstadoVazio
+            icone={Trophy}
+            titulo="Ainda não há jogos realizados."
+            texto="Assim que um jogo tiver resultado lançado, a ficha dele aparece aqui."
+          />
+        )
       ) : (
         <div className="space-y-3">
           {filteredMatches.map(m => {
@@ -585,7 +575,6 @@ export const MatchReportsPage: React.FC = () => {
 
                   <span className="flex items-center gap-0.5 text-csc-gold font-display font-black text-[11px] shrink-0">
                     {isCoachOrAdmin ? 'Editar ficha' : 'Ver ficha'}
-                    <ChevronRight size={14} />
                   </span>
                 </div>
               </button>
@@ -602,6 +591,7 @@ export const MatchReportsPage: React.FC = () => {
         <MatchReportModal
           isOpen={isReportModalOpen}
           onClose={fecharFicha}
+          voltarPara={voltarDaFicha}
           eventId={selectedEventForReport.id}
           event={selectedEventForReport}
           isCoachOrAdmin={!!isCoachOrAdmin}

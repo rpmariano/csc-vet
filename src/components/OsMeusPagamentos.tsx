@@ -5,6 +5,8 @@ import { COMO_PAGAR } from './SinalPagamentos'
 import { useEstadoPagamentos, DIAS_DE_AVISO, type ItemPagamento } from '../hooks/useEstadoPagamentos'
 import type { QuotaEligiblePlayer } from '../lib/finance'
 import { triggerHaptic } from '../utils/haptics'
+import { ACarregar } from './ui'
+import { fmtEuro } from './financeiro/estilos'
 
 /**
  * Os meus pagamentos (ecrã 12c) — o que o jogador deve, o que já pagou, e como
@@ -23,8 +25,6 @@ import { triggerHaptic } from '../utils/haptics'
  * cabeçalho — havia dois cálculos e podiam discordar.
  */
 
-const EUROS = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
-const fmt = (n: number) => EUROS.format(n)
 
 const ESTADO: Record<ItemPagamento['estado'], { texto: string; classe: string; barra: string }> = {
   pago: {
@@ -39,8 +39,8 @@ const ESTADO: Record<ItemPagamento['estado'], { texto: string; classe: string; b
   },
   'a-vencer': {
     texto: 'a vencer',
-    classe: 'bg-amber-500/15 border-amber-400/35 text-amber-300',
-    barra: 'bg-amber-400',
+    classe: 'bg-csc-gold/15 border-csc-gold/35 text-csc-gold',
+    barra: 'bg-csc-gold',
   },
   'por-vencer': {
     texto: 'a haver',
@@ -110,7 +110,7 @@ export const OsMeusPagamentos: React.FC<{
           estado.cor === 'vermelho'
             ? 'bg-csc-red/20 text-csc-vermelho-texto'
             : estado.cor === 'laranja'
-              ? 'bg-amber-500/20 text-amber-300'
+              ? 'bg-csc-gold/20 text-csc-gold'
               : 'bg-csc-light/18 text-csc-verde-texto'
         }`}>
           €
@@ -118,10 +118,7 @@ export const OsMeusPagamentos: React.FC<{
       }
     >
       {estado.loading ? (
-        <div className="flex justify-center py-10" role="status" aria-live="polite">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-csc-gold border-t-transparent" />
-          <span className="sr-only">A carregar…</span>
-        </div>
+        <ACarregar className="py-10" />
       ) : (
         <div className="space-y-4">
           {/* O estado, em grande: a mesma cor do sinal do cabeçalho. */}
@@ -132,7 +129,7 @@ export const OsMeusPagamentos: React.FC<{
                 Em atraso
               </p>
               <p className="font-display font-black text-[30px] text-white mt-1 tabular-nums leading-none">
-                {fmt(emDivida)}
+                {fmtEuro(emDivida)}
               </p>
               <p className="text-[11px] leading-relaxed text-white/65 mt-2">
                 {estado.emAtraso.length === 1
@@ -141,13 +138,13 @@ export const OsMeusPagamentos: React.FC<{
               </p>
             </div>
           ) : estado.cor === 'laranja' ? (
-            <div className="cartao-simples bg-amber-500/10 border-amber-400/30 p-4">
-              <p className="flex items-center gap-1.5 font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-amber-300">
+            <div className="cartao-simples bg-csc-gold/10 border-csc-gold/30 p-4">
+              <p className="flex items-center gap-1.5 font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
                 <TriangleAlert size={12} />
                 A vencer
               </p>
               <p className="font-display font-black text-[30px] text-white mt-1 tabular-nums leading-none">
-                {fmt(estado.totalEmAviso)}
+                {fmtEuro(estado.totalEmAviso)}
               </p>
               <p className="text-[11px] leading-relaxed text-white/65 mt-2">
                 {estado.aVencer.length === 1
@@ -204,7 +201,7 @@ export const OsMeusPagamentos: React.FC<{
                     </span>
                     <span className="block text-[10.5px] text-white/50 mt-1">
                       {g.pagos} de {g.itens.length} {g.itens.length === 1 ? 'pago' : 'pagos'}
-                      {g.emFalta > 0 && ` · falta ${fmt(g.emFalta)}`}
+                      {g.emFalta > 0 && ` · falta ${fmtEuro(g.emFalta)}`}
                     </span>
                   </span>
 
@@ -253,7 +250,7 @@ export const OsMeusPagamentos: React.FC<{
                           <span className={`font-display font-black text-[13px] tabular-nums ${
                             item.estado === 'pago' ? 'text-white/40 line-through' : 'text-white'
                           }`}>
-                            {fmt(item.valor)}
+                            {fmtEuro(item.valor)}
                           </span>
                           <span
                             className={`font-display font-black text-[8.5px] tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border ${ESTADO[item.estado].classe}`}

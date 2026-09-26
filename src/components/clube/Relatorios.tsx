@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ChevronRight, Wallet, type LucideIcon } from 'lucide-react'
+import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
+import { Wallet, type LucideIcon } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useClub } from '../../context/ClubContext'
 import { CLUBE_SIGLA } from '../../lib/clube'
@@ -43,15 +44,10 @@ const RELATORIOS: readonly Relatorio[] = [
 ]
 
 export const Relatorios: React.FC = () => {
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const aberto = params.get('relatorio')
 
-  const fechar = () => {
-    const seguintes = new URLSearchParams(params)
-    seguintes.delete('relatorio')
-    seguintes.delete('conta')
-    setParams(seguintes)
-  }
+  const { voltarPara, aoVoltar: fechar } = useVoltarDaFicha(['relatorio', 'conta'], 'Relatórios')
 
   return (
     <>
@@ -74,13 +70,12 @@ export const Relatorios: React.FC = () => {
                 <span className="block font-display font-extrabold text-sm text-white">{r.titulo}</span>
                 <span className="block text-[11px] leading-snug text-white/62 mt-0.5">{r.descricao}</span>
               </span>
-              <ChevronRight size={16} className="shrink-0 text-white/35" />
             </CartaoSimples>
           )
         })}
       </div>
 
-      <RelatorioContas aberto={aberto === 'contas'} aoVoltar={fechar} />
+      <RelatorioContas aberto={aberto === 'contas'} voltarPara={voltarPara} aoVoltar={fechar} />
     </>
   )
 }
@@ -90,7 +85,7 @@ export const Relatorios: React.FC = () => {
  * mesmas tabelas e vistas —, e a conta é a mesma função (`contasDosAtletas`),
  * por isso diz o mesmo que as Quotas e os Encargos.
  */
-const RelatorioContas: React.FC<{ aberto: boolean; aoVoltar: () => void }> = ({ aberto, aoVoltar }) => {
+const RelatorioContas: React.FC<{ aberto: boolean; voltarPara: string; aoVoltar: () => void }> = ({ aberto, voltarPara, aoVoltar }) => {
   const { clubSettings } = useClub()
   const [dados, setDados] = useState<DadosDasContas | null>(null)
 
@@ -121,7 +116,7 @@ const RelatorioContas: React.FC<{ aberto: boolean; aoVoltar: () => void }> = ({ 
   const contas = useMemo(() => (dados ? contasDosAtletas(dados) : null), [dados])
 
   return (
-    <EcraDetalhe aberto={aberto} voltarPara="Relatórios" aoVoltar={aoVoltar} sobrancelha="Relatórios" titulo="Contas por atleta">
+    <EcraDetalhe aberto={aberto} voltarPara={voltarPara} aoVoltar={aoVoltar} sobrancelha="Relatório" titulo="Contas por atleta">
       {contas === null ? (
         <div className="cartao-simples h-40 animate-pulse" role="status" aria-label="A carregar as contas" />
       ) : (

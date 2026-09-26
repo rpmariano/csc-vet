@@ -25,6 +25,7 @@ import { PorResponder, type PendenteDaHome } from '../components/home/PorRespond
 import { UltimoJogo, type UltimoJogoDaHome } from '../components/home/UltimoJogo'
 import { ProvasEmCurso, type ProvaDaHome } from '../components/home/ProvasEmCurso'
 import { calcularClassificacao, janelaDoClube } from '../lib/classificacao'
+import { mensagemDeErro } from '../lib/erros'
 
 /**
  * Hoje — o primeiro ecrã, e o único que responde a "o que é que me diz
@@ -440,7 +441,7 @@ const Home: React.FC = () => {
       .eq('player_id', profile.id)
 
     if (error) {
-      toast.error('Não foi possível guardar a resposta: ' + error.message)
+      toast.error('Não foi possível guardar a resposta: ' + mensagemDeErro(error))
       return
     }
     toast.success(status === 'confirmed' ? 'Contamos contigo.' : 'Resposta registada.')

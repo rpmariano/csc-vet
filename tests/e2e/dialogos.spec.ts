@@ -172,7 +172,7 @@ test.describe('Comunicados', () => {
     await abrePagina(page, 'announcements', { announcements: [comunicado] })
 
     await verificaDialogo(page, () => page.getByRole('button', { name: 'Editar' }).first().click())
-    await verificaDialogo(page, () => page.getByRole('button', { name: 'Apagar' }).first().click())
+    await verificaDialogo(page, () => page.getByRole('button', { name: 'Eliminar' }).first().click())
   })
 })
 
@@ -214,7 +214,7 @@ test.describe('Eventos', () => {
 
     // Editar e eliminar vivem no detalhe.
     await expect(page.getByRole('button', { name: 'Modificar evento' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Apagar evento' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Eliminar evento' })).toBeVisible()
   })
 })
 
@@ -274,7 +274,7 @@ test.describe('Calendário', () => {
     await expect(dialogos(page)).toHaveCount(base + 1)
     const painelCampo = dialogos(page).last()
     await verificaContrato(painelCampo)
-    await expect(painelCampo).toContainText('Criar Novo Campo / Instalação')
+    await expect(painelCampo).toContainText('Criar campo')
 
     // Escape fecha só a janela de cima; a edição continua aberta por baixo.
     await page.keyboard.press('Escape')

@@ -4,11 +4,18 @@ import { triggerHaptic } from '../utils/haptics'
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
 
+/** Um botão no próprio toast — hoje só o "Anular". */
+export interface AcaoToast {
+  rotulo: string
+  aoTocar: () => void
+}
+
 export interface ToastItem {
   id: string
   message: string
   type: ToastType
   duration: number
+  acao?: AcaoToast
 }
 
 export interface ToastContextType {
@@ -22,7 +29,7 @@ export interface ToastContextType {
 const ToastContext = createContext<ToastContextType | null>(null)
 
 // Singleton global para permitir chamadas diretas como toast.success(...)
-let globalShowToast: ((message: string, type?: ToastType, duration?: number) => void) | null = null
+let globalShowToast: ((message: string, type?: ToastType, duration?: number, acao?: AcaoToast) => void) | null = null
 
 export const toast = {
   show: (message: string, type: ToastType = 'info', duration?: number) => {
@@ -32,7 +39,18 @@ export const toast = {
   success: (message: string, duration?: number) => toast.show(message, 'success', duration),
   error: (message: string, duration?: number) => toast.show(message, 'error', duration),
   info: (message: string, duration?: number) => toast.show(message, 'info', duration),
-  warning: (message: string, duration?: number) => toast.show(message, 'warning', duration)
+  warning: (message: string, duration?: number) => toast.show(message, 'warning', duration),
+  /**
+   * Uma ação que se faz logo e se desfaz no toast: tirar um atleta da
+   * convocatória, desmarcar um mês de quota. São gestos frequentes e
+   * reversíveis — uma pergunta a cada toque cansava, e fazê-los sem volta
+   * deixava um engano sem remédio. Ficam mais tempo à vista, para dar tempo
+   * de chegar ao botão.
+   */
+  comAnular: (message: string, aoAnular: () => void) => {
+    if (globalShowToast) globalShowToast(message, 'success', 7000, { rotulo: 'Anular', aoTocar: aoAnular })
+    else console.log(`[Toast success]: ${message}`)
+  },
 }
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -42,7 +60,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 3800) => {
+  const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 3800, acao?: AcaoToast) => {
     // Aciona feedback háptico de acordo com o tipo de mensagem
     if (type === 'success') triggerHaptic('success')
     else if (type === 'error') triggerHaptic('error')
@@ -50,7 +68,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else triggerHaptic('medium')
 
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    const newToast: ToastItem = { id, message, type, duration }
+    const newToast: ToastItem = { id, message, type, duration, acao }
 
     setToasts(prev => [newToast, ...prev.slice(0, 3)]) // Máximo 4 toasts simultâneos
 
@@ -75,7 +93,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       {/* Contentor Visual dos Toasts (Top-Center no Mobile, Top-Right no Desktop) */}
       <div 
-        className="fixed top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 z-[9999] flex flex-col gap-2.5 w-[92%] max-w-sm sm:max-w-md pointer-events-none select-none"
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2.5 w-[92%] max-w-sm pointer-events-none select-none"
         aria-live="polite"
       >
         {toasts.map((t) => {
@@ -88,28 +106,46 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             <div
               key={t.id}
               onClick={() => removeToast(t.id)}
-              className={`pointer-events-auto p-4 rounded-2xl shadow-2xl border flex items-start gap-3 transition-all transform animate-scale-in cursor-pointer ${
+              /* Nas cores do clube, sobre a superfície da app, com a cor do tipo
+                 na moldura e no ícone. Eram quatro gradientes da paleta do
+                 Tailwind — verde-azulado, rosa, âmbar e cinzento — que não
+                 existiam em mais lado nenhum da app. */
+              className={`pointer-events-auto p-4 rounded-2xl shadow-2xl shadow-black/50 border bg-csc-superficie text-white flex items-start gap-3 transition-all transform animate-scale-in cursor-pointer ${
                 isSuccess
-                  ? 'bg-gradient-to-r from-emerald-900 to-teal-950 text-white border-emerald-600/80 shadow-emerald-950/40'
+                  ? 'border-csc-light/70'
                   : isError
-                  ? 'bg-gradient-to-r from-red-900 to-rose-950 text-white border-red-600/80 shadow-red-950/40'
+                  ? 'border-csc-red/70'
                   : isWarning
-                  ? 'bg-gradient-to-r from-amber-800 to-amber-950 text-white border-amber-500/80 shadow-amber-950/40'
-                  : 'bg-gradient-to-r from-csc-dark via-gray-900 to-black text-white border-csc-gold/60 shadow-black/50'
+                  ? 'border-csc-gold/70'
+                  : 'border-white/20'
               }`}
             >
               <div className="shrink-0 mt-0.5">
-                {isSuccess && <CheckCircle2 size={20} className="text-emerald-400" />}
-                {isError && <AlertCircle size={20} className="text-red-400" />}
-                {isWarning && <AlertTriangle size={20} className="text-amber-400" />}
+                {isSuccess && <CheckCircle2 size={20} className="text-csc-verde-texto" />}
+                {isError && <AlertCircle size={20} className="text-csc-vermelho-texto" />}
+                {isWarning && <AlertTriangle size={20} className="text-csc-gold" />}
                 {isInfo && <Info size={20} className="text-csc-gold" />}
               </div>
 
               <div className="flex-1 min-w-0 pr-1">
-                <p className="text-xs sm:text-sm font-black leading-snug tracking-tight whitespace-pre-line break-words">
+                <p className="text-xs font-black leading-snug tracking-tight whitespace-pre-line break-words">
                   {t.message}
                 </p>
               </div>
+
+              {t.acao && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeToast(t.id)
+                    t.acao?.aoTocar()
+                  }}
+                  className="alvo-toque shrink-0 -my-1 px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 font-display font-extrabold text-[11px] text-csc-gold cursor-pointer"
+                >
+                  {t.acao.rotulo}
+                </button>
+              )}
 
               <button
                 type="button"
@@ -117,8 +153,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   e.stopPropagation()
                   removeToast(t.id)
                 }}
-                className="shrink-0 p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-                title="Fechar"
+                className="alvo-toque shrink-0 p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                aria-label="Fechar"
               >
                 <X size={16} />
               </button>

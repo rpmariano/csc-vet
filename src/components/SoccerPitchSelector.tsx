@@ -81,7 +81,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
             >
               {/* Círculo do Jogador */}
               <div
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-xs transition-all shadow-md ${
+                className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs transition-all shadow-md ${
                   selected
                     ? 'bg-csc-gold text-csc-tinta ring-2 ring-csc-gold/50 scale-110'
                     : 'bg-white/85 text-csc-tinta hover:bg-white border border-white/60'
@@ -132,7 +132,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
                   type="button"
                   onClick={() => togglePosition(pos)}
                   className="p-0.5 hover:bg-white/20 rounded-full transition-colors"
-                  title="Remover posição"
+                  title="Tirar posição"
                 >
                   <X size={12} />
                 </button>

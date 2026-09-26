@@ -62,7 +62,7 @@ test('cancelar o aviso deixa ficar o que estava escrito', async ({ page }) => {
   const nome = await abreOPerfilComAlteracoes(page)
 
   await page.goBack()
-  await dialogos(page).first().getByRole('button', { name: /Continuar a Editar/ }).click()
+  await dialogos(page).first().getByRole('button', { name: /Continuar a editar/ }).click()
 
   await expect(dialogos(page)).toHaveCount(0)
   await expect(page).toHaveURL(/settings$/)
@@ -73,7 +73,7 @@ test('sair sem gravar deixa mesmo sair', async ({ page }) => {
   await abreOPerfilComAlteracoes(page)
 
   await page.goBack()
-  await dialogos(page).first().getByRole('button', { name: 'Sair sem Gravar' }).click()
+  await dialogos(page).first().getByRole('button', { name: 'Sair sem guardar' }).click()
 
   await expect(page).toHaveURL(/calendar$/)
   await expect(dialogos(page)).toHaveCount(0)
@@ -129,7 +129,7 @@ test.describe('O retroceder num ecrã de formulário', () => {
     await expect(dialogos(page)).toHaveCount(1)
     await expect(page).toHaveURL(/\?atleta=/)
 
-    await page.getByRole('button', { name: /Continuar a Editar/ }).click()
+    await page.getByRole('button', { name: /Continuar a editar/ }).click()
     await expect(dialogos(page)).toHaveCount(0)
     await expect(campoNome).toHaveValue('Nome Mudado')
   })

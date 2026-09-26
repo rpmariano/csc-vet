@@ -7,6 +7,7 @@ import { toast } from '../../context/ToastContext'
 import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../../context/SaidaGuardadaContext'
 import { CAMPO, ETIQUETA, type Campo } from './comum'
+import { mensagemDeErro } from '../../lib/erros'
 
 /*
   Dados do clube — nome, sigla, emblema e campo de casa.
@@ -45,19 +46,23 @@ export const DadosDoClube: React.FC = () => {
     setCarregado(true)
   }, [clubSettings])
 
+  const [aGravar, setAGravar] = useState(false)
+
   const gravar = async () => {
     if (!nome.trim() || !sigla.trim()) {
       toast.warning('O nome e a sigla do clube são obrigatórios.')
       return
     }
     localStorage.setItem('csc_club_home_field_id', campoDeCasa)
+    setAGravar(true)
     const { error } = await supabase
       .from('club_settings')
       .update({ name: nome.trim(), initials: sigla.trim(), home_field_id: campoDeCasa || null })
       .eq('id', 1)
+    setAGravar(false)
 
     if (error) {
-      toast.error('Erro ao guardar os dados do clube: ' + error.message)
+      toast.error('Erro ao guardar os dados do clube: ' + mensagemDeErro(error))
       return
     }
     toast.success('Dados do clube atualizados!')
@@ -105,7 +110,7 @@ export const DadosDoClube: React.FC = () => {
       toast.success('Emblema atualizado com sucesso!')
       refreshSettings()
     } catch (err: any) {
-      toast.error('Erro ao carregar o emblema: ' + err.message)
+      toast.error('Erro ao carregar o emblema: ' + mensagemDeErro(err))
     } finally {
       setAEnviarEmblema(false)
     }
@@ -180,10 +185,11 @@ export const DadosDoClube: React.FC = () => {
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full min-h-12 px-6 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              disabled={aGravar}
+              className="w-full min-h-12 px-6 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-60 disabled:cursor-wait"
             >
               <Save size={17} className="text-csc-tinta" />
-              <span>Guardar dados do clube</span>
+              <span>{aGravar ? 'A guardar…' : 'Guardar dados do clube'}</span>
             </button>
           </div>
         </form>

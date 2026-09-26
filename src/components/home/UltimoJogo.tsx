@@ -1,6 +1,5 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
 import { CartaoSimples, EtiquetaSeccao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 
@@ -60,6 +59,7 @@ export const UltimoJogo: React.FC<{ jogo: UltimoJogoDaHome; siglaClube: string }
       <CartaoSimples
         como={Link}
         to={`/competicao?ver=fichas&jogo=${jogo.id}`}
+        state={{ origem: 'Hoje' }}
         onClick={() => triggerHaptic('light')}
         className="block px-4 py-3.5 cursor-pointer transition-transform duration-150 active:scale-97
           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -80,7 +80,6 @@ export const UltimoJogo: React.FC<{ jogo: UltimoJogoDaHome; siglaClube: string }
               {jogo.prova ? ` · ${jogo.prova}` : ''}
             </span>
           </span>
-          <ChevronRight size={16} className="text-white/35 flex-none" />
         </div>
 
         {jogo.marcadores.length > 0 && (

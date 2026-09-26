@@ -1,26 +1,28 @@
 import React, { useEffect, useState } from 'react'
-import { 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Eye, 
-  EyeOff, 
-  Search, 
-  X, 
-  Clock, 
+import {
+  Plus,
+  Trash2,
+  Eye,
+  EyeOff,
+  Clock,
   Calendar,
-  Megaphone
+  Megaphone,
+  Pencil
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useAnnouncements } from '../context/AnnouncementsContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
-import { useModalA11y } from '../hooks/useModalA11y'
+import Modal from '../components/Modal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { CabecalhoEcra } from '../components/ui'
+import { CabecalhoEcra, Interruptor, BotaoIcone, ACarregar, EstadoVazio, Botao, Pastilha } from '../components/ui'
+import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
+import BottomSheet from '../components/BottomSheet'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -35,12 +37,6 @@ interface Announcement {
 }
 
 /** Campo branco do handoff, o mesmo do Perfil (ecrã 5b). */
-const CAMPO =
-  'w-full h-11 px-3 rounded-[13px] bg-white text-csc-tinta font-display font-bold text-xs ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
-
-const ETIQUETA =
-  'block font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-1.5'
 
 const AnnouncementsPage: React.FC = () => {
   const { profile } = useAuth()
@@ -55,6 +51,7 @@ const AnnouncementsPage: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
   // Estados para Modal de Edição
   const [editingAnn, setEditingAnn] = useState<Announcement | null>(null)
@@ -188,7 +185,7 @@ const AnnouncementsPage: React.FC = () => {
       toast.success('Comunicado publicado com sucesso!')
       fetchAnnouncements()
     } catch (err: any) {
-      toast.error('Erro ao publicar comunicado: ' + (err.message || 'Erro'))
+      toast.error('Erro ao publicar comunicado: ' + mensagemDeErro(err))
     } finally {
       setIsPublishing(false)
     }
@@ -261,7 +258,7 @@ const AnnouncementsPage: React.FC = () => {
       setEditingAnn(null)
       toast.success('Alterações guardadas com sucesso!')
     } catch (err: any) {
-      toast.error('Erro ao guardar alterações: ' + (err.message || 'Erro'))
+      toast.error('Erro ao guardar alterações: ' + mensagemDeErro(err))
     } finally {
       setIsSavingEdit(false)
     }
@@ -285,7 +282,7 @@ const AnnouncementsPage: React.FC = () => {
     } catch {
       setAnnouncements(prev => prev.filter(ann => ann.id !== deletingAnn.id))
       setDeletingAnn(null)
-      showToast('Comunicado removido.')
+      showToast('Comunicado eliminado.')
     } finally {
       setIsDeleting(false)
     }
@@ -328,7 +325,6 @@ const AnnouncementsPage: React.FC = () => {
     aoSair: () => setEditingAnn(null),
     descricao: 'As alterações a este comunicado ainda não foram gravadas. Se saíres agora, perdem-se.',
   })
-  const painelEdicaoRef = useModalA11y({ isOpen: !!editingAnn, onClose: guardaEdicao.tentarFechar })
 
   /*
     O formulário de publicar ocupa a página e não se fecha — sai-se dele a
@@ -417,25 +413,13 @@ const AnnouncementsPage: React.FC = () => {
               </div>
 
               {/* Opção de Ativar de Imediato */}
-              <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-white/80 block">Ativar de Imediato</span>
-                  <span className="text-[10.5px] text-white/70 block">Fica visível no sino dos comunicados, na Home</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsActiveOnCreate(!isActiveOnCreate)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    isActiveOnCreate ? 'bg-emerald-600' : 'bg-white/20'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                      isActiveOnCreate ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
+              <Interruptor
+                ligado={isActiveOnCreate}
+                aoMudar={setIsActiveOnCreate}
+                titulo="Ativar de imediato"
+                nota="Fica visível no sino dos comunicados, na Home"
+                className="cartao-simples"
+              />
 
               <button
                 type="submit"
@@ -453,84 +437,65 @@ const AnnouncementsPage: React.FC = () => {
         <div className="space-y-4">
           <div className="cartao-simples p-5 space-y-4">
             
-            {/* Barra de Filtros e Pesquisa */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
-              {/* Separadores de Filtro — ver ativos/inativos é gestão, não faz sentido para quem só lê */}
-              {isCoachOrAdmin && (
-                <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-2xl w-fit">
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter('all')}
-                    className={`min-h-11 px-3.5 rounded-[18px] font-display text-xs font-bold transition-colors cursor-pointer ${
-                      statusFilter === 'all'
-                        ? 'bg-csc-gold text-csc-tinta'
-                        : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    Todos ({announcements.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter('active')}
-                    className={`min-h-11 px-3.5 rounded-[18px] font-display text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      statusFilter === 'active'
-                        ? 'bg-csc-light text-white'
-                        : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    <span>Ativos</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      statusFilter === 'active' ? 'bg-csc-dark text-white' : 'bg-white/10 text-white/60'
-                    }`}>{activeCount}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter('inactive')}
-                    className={`min-h-11 px-3.5 rounded-[18px] font-display text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      statusFilter === 'inactive'
-                        ? 'bg-white/20 text-white shadow-2xs'
-                        : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    <span>Inativos</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      statusFilter === 'inactive' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
-                    }`}>{inactiveCount}</span>
-                  </button>
-                </div>
-              )}
+            {/* Procura à vista; o estado (ativos/inativos) é filtro e vai
+                para trás do funil, como em todas as listas. Era um controlo
+                segmentado à vista, com uma cor diferente por opção. Ver
+                ativos e inativos é gestão, por isso quem só lê não tem funil. */}
+            <ProcuraEFiltros
+              procura={searchTerm}
+              aoProcurar={setSearchTerm}
+              placeholder="Título ou texto"
+              rotulo="Procurar nos comunicados"
+              aoAbrirFiltros={isCoachOrAdmin ? () => setFiltrosAbertos(true) : undefined}
+              filtrosAtivos={statusFilter !== 'all'}
+              resumo={statusFilter === 'all' ? [] : [statusFilter === 'active' ? 'Ativos' : 'Inativos']}
+              contagem={`${filteredAnnouncements.length} ${filteredAnnouncements.length === 1 ? 'comunicado' : 'comunicados'}`}
+              aoLimpar={() => { setSearchTerm(''); setStatusFilter('all') }}
+            />
 
-              {/* Input de Pesquisa */}
-              <div className="relative flex-1 sm:max-w-[220px]">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40 z-1" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Pesquisar..."
-                  className={`${CAMPO} pl-9`}
-                />
+            <BottomSheet
+              isOpen={filtrosAbertos}
+              onClose={() => setFiltrosAbertos(false)}
+              title="Filtrar comunicados"
+              tone="dark"
+              footer={
+                <>
+                  <Botao aparencia="vidro" onClick={() => setStatusFilter('all')} disabled={statusFilter === 'all'}>
+                    Limpar
+                  </Botao>
+                  <Botao onClick={() => setFiltrosAbertos(false)}>
+                    Ver {filteredAnnouncements.length}
+                  </Botao>
+                </>
+              }
+            >
+              <p className={ETIQUETA}>Estado</p>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ['all', `Todos · ${announcements.length}`],
+                  ['active', `Ativos · ${activeCount}`],
+                  ['inactive', `Inativos · ${inactiveCount}`],
+                ] as const).map(([valor, rotulo]) => (
+                  <Pastilha key={valor} ativa={statusFilter === valor} onClick={() => setStatusFilter(valor)}>
+                    {rotulo}
+                  </Pastilha>
+                ))}
               </div>
-            </div>
+            </BottomSheet>
 
             {/* Listagem */}
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-12 text-white/65 space-y-2">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-csc-gold border-t-transparent"></div>
-                <span className="text-xs font-medium">A carregar comunicados...</span>
-              </div>
+              <ACarregar texto="A carregar comunicados…" />
             ) : filteredAnnouncements.length === 0 ? (
-              <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6 space-y-2">
-                <Megaphone size={34} className="mx-auto text-white/20" />
-                <p className="text-xs font-bold text-white/70">Nenhum comunicado encontrado.</p>
-                <p className="text-[11px] text-white/65">
-                  {searchTerm
-                    ? 'Experimenta ajustar o termo de pesquisa.'
-                    : isCoachOrAdmin
-                      ? 'Cria um novo comunicado no formulário ao lado.'
-                      : 'Ainda não há comunicados publicados.'}
-                </p>
-              </div>
+              <EstadoVazio
+                icone={Megaphone}
+                titulo={searchTerm ? 'Nenhum comunicado encontrado.' : 'Ainda não há comunicados.'}
+                texto={searchTerm
+                  ? 'Tenta mudar a procura.'
+                  : isCoachOrAdmin
+                    ? 'Escreve o primeiro em "Escrever comunicado", lá em cima.'
+                    : 'Quando a direção ou a equipa técnica publicar um, aparece aqui.'}
+              />
             ) : (
               <div className="space-y-3.5">
                 {filteredAnnouncements.map((ann) => {
@@ -539,9 +504,9 @@ const AnnouncementsPage: React.FC = () => {
                   return (
                     <div 
                       key={ann.id} 
-                      className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-3 ${
+                      className={`p-4 rounded-2xl border transition-all space-y-3 ${
                         isActive 
-                          ? 'bg-white/5 border-emerald-400/30 shadow-xs hover:border-emerald-400/50' 
+                          ? 'bg-white/5 border-csc-light/30 shadow-xs hover:border-csc-light/50' 
                           : 'bg-white/5 border-white/10 opacity-60'
                       }`}
                     >
@@ -579,7 +544,7 @@ const AnnouncementsPage: React.FC = () => {
                           <div>
                             {isActive ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-csc-light/15 text-csc-verde-texto border border-csc-light/35">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-csc-light animate-pulse"></span>
                                 <span>Ativo na Home</span>
                               </span>
                             ) : (
@@ -624,25 +589,9 @@ const AnnouncementsPage: React.FC = () => {
                           </button>
 
                           <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleStartEdit(ann)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                              title="Editar comunicado"
-                            >
-                              <Edit3 size={13} className="text-white/70" />
-                              <span>Editar</span>
-                            </button>
+                            <BotaoIcone rotulo="Editar comunicado" icone={Pencil} discreto onClick={() => handleStartEdit(ann)} />
 
-                            <button
-                              type="button"
-                              onClick={() => setDeletingAnn(ann)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-red-400 hover:bg-red-500/10 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-transparent hover:border-red-400/30"
-                              title="Eliminar comunicado"
-                            >
-                              <Trash2 size={14} />
-                              <span>Apagar</span>
-                            </button>
+                            <BotaoIcone rotulo="Eliminar comunicado" icone={Trash2} perigo discreto onClick={() => setDeletingAnn(ann)} />
                           </div>
                         </div>
                       )}
@@ -656,46 +605,16 @@ const AnnouncementsPage: React.FC = () => {
       </div>
 
       {/* MODAL: EDITAR COMUNICADO */}
-      {editingAnn && (
-        <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in"
-          onMouseDown={(e) => {
-            // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-            if (e.target === e.currentTarget) guardaEdicao.tentarFechar()
-          }}
-        >
-          <div
-            ref={painelEdicaoRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="editar-comunicado-titulo"
-            tabIndex={-1}
-            className="bg-csc-superficie text-white rounded-3xl max-w-lg w-full p-6 relative shadow-2xl border border-white/10 space-y-4 animate-scale-in outline-none"
-          >
-            <button
-              type="button"
-              onClick={guardaEdicao.tentarFechar}
-              aria-label="Fechar"
-              className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 cursor-pointer active:scale-97"
-            >
-              <X size={18} className="stroke-[2.5]" />
-            </button>
-
-            <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
-              <div className="w-10 h-10 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center shadow-xs">
-                <Edit3 size={17} />
-              </div>
-              <div>
-                <h3 id="editar-comunicado-titulo" className="text-base font-black text-white">Editar Comunicado</h3>
-                <p className="text-[11px] text-white/70">Atualiza os dados e visibilidade deste aviso.</p>
-              </div>
-            </div>
-
+      <Modal
+        isOpen={!!editingAnn}
+        onClose={guardaEdicao.tentarFechar}
+        title="Editar comunicado"
+        description="Muda o texto e se fica visível para a equipa."
+        icon={<Pencil size={20} className="text-csc-gold" aria-hidden="true" />}
+      >
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1">
-                  Título do Comunicado *
-                </label>
+                <label className={ETIQUETA}>Título *</label>
                 <input
                   type="text"
                   required
@@ -706,9 +625,7 @@ const AnnouncementsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-1">
-                  Conteúdo da Mensagem *
-                </label>
+                <label className={ETIQUETA}>Mensagem *</label>
                 <textarea
                   required
                   value={editContent}
@@ -719,58 +636,32 @@ const AnnouncementsPage: React.FC = () => {
               </div>
 
               {/* Switch de Ativo no Modal de Edição */}
-              <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-white/80 block">Estado de Publicação</span>
-                  <span className="text-[10.5px] text-white/70 block">
-                    {editIsActive ? 'Ativo (visível para a equipa)' : 'Inativo (oculto)'}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditIsActive(!editIsActive)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    editIsActive ? 'bg-emerald-600' : 'bg-white/20'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                      editIsActive ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
+              <Interruptor
+                ligado={editIsActive}
+                aoMudar={setEditIsActive}
+                titulo="Estado de publicação"
+                nota={editIsActive ? 'Ativo (visível para a equipa)' : 'Inativo (oculto)'}
+                className="cartao-simples"
+              />
 
-              <div className="flex gap-2.5 pt-2 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={guardaEdicao.tentarFechar}
-                  className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingEdit || !editTitle.trim() || !editContent.trim()}
-                  className="flex-1 px-4 py-2.5 bg-csc-gold hover:brightness-95 text-csc-dark font-black text-xs rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-md"
-                >
-                  {isSavingEdit ? 'A guardar...' : 'Guardar alterações'}
-                </button>
+              <div className="flex gap-2.5 pt-3 border-t border-white/10">
+                <Botao aparencia="vidro" className="flex-1" onClick={guardaEdicao.tentarFechar}>Cancelar</Botao>
+                <Botao type="submit" className="flex-1" disabled={isSavingEdit || !editTitle.trim() || !editContent.trim()}>
+                  {isSavingEdit ? 'A guardar…' : 'Guardar alterações'}
+                </Botao>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       <UnsavedChangesModal {...guardaEdicao.props} />
 
-      {/* Apagar pergunta pela confirmação partilhada, como em todo o lado.
+      {/* Eliminar pergunta pela confirmação partilhada, como em todo o lado.
           Era um diálogo escrito à mão, com botões de 40px. */}
       <ConfirmModal
         isOpen={!!deletingAnn}
-        title="Apagar este comunicado?"
+        title="Eliminar comunicado"
         description={deletingAnn ? `"${deletingAnn.title}" deixa de aparecer a toda a gente. Não há como desfazer.` : undefined}
-        confirmText="Apagar"
+        confirmText="Sim, eliminar comunicado"
         cancelText="Cancelar"
         variant="danger"
         isLoading={isDeleting}

@@ -1,24 +1,22 @@
 import React from 'react'
-import { X, Plus } from 'lucide-react'
-import { useModalA11y } from '../hooks/useModalA11y'
+import { MapPin } from 'lucide-react'
+import Modal from './Modal'
+import { Botao } from './ui'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
+import { CLASSE_CAMPO as CAMPO_DIALOGO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from './ui/formulario'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
-/** Campo branco do handoff, o mesmo dos formulários de evento. */
-const CAMPO_DIALOGO =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
-
 /**
  * Criação rápida de um campo/instalação sem sair do formulário de evento.
  *
- * Vivia duplicado no Calendário e nos Eventos; a moldura é a mesma dos outros
- * diálogos "rápidos" (cartão branco arredondado, cabeçalho com emoji), por isso
- * usa o hook de acessibilidade em vez do componente <Modal>.
+ * Vivia duplicado no Calendário e nos Eventos. Tinha moldura própria, com um
+ * título escuro sobre o painel escuro (não se lia) e um fechar de 32px; passou
+ * ao `<Modal>` na vaga 4 da auditoria de design.
  *
- * Abre sempre por cima do modal de evento — daí o `z-modal-top`.
+ * Abre sempre por cima do formulário de evento — daí o `stacked`.
  */
 
 export interface QuickFieldModalProps {
@@ -51,49 +49,23 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
     aoSair: onClose,
     descricao: 'O campo que estás a criar ainda não foi gravado. Se saíres agora, perde-se.',
   })
-  const painelRef = useModalA11y({ isOpen, onClose: guarda.tentarFechar })
 
   if (!isOpen) return null
 
   return (
     <>
-    <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-modal-top animate-fade-in"
-      onMouseDown={e => {
-        // mousedown no fundo, e não um arrasto que começou dentro do painel (ex.: a selecionar texto)
-        if (e.target === e.currentTarget) guarda.tentarFechar()
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={guarda.tentarFechar}
+      title="Criar campo"
+      description="Fica logo escolhido neste evento."
+      icon={<MapPin size={20} className="text-csc-gold" aria-hidden="true" />}
+      size="md"
+      stacked
     >
-      <div
-        ref={painelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="quick-field-titulo"
-        tabIndex={-1}
-        className="bg-csc-superficie rounded-3xl max-w-md w-full p-6 relative shadow-2xl border border-white/10 space-y-4 outline-none"
-      >
-        <button
-          type="button"
-          onClick={guarda.tentarFechar}
-          aria-label="Fechar"
-          className="absolute top-4 right-4 text-white/62 hover:text-white/80 p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
-        >
-          <X size={20} />
-        </button>
-
-        <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
-          <div className="w-10 h-10 rounded-xl bg-csc-dark text-csc-gold flex items-center justify-center text-lg font-black shadow-xs" aria-hidden="true">
-            🏟️
-          </div>
-          <div>
-            <h3 id="quick-field-titulo" className="text-base font-black text-csc-dark">Criar Novo Campo / Instalação</h3>
-            <p className="text-[11px] text-white/62">Regista um novo campo para ser imediatamente selecionado.</p>
-          </div>
-        </div>
-
         <form onSubmit={onSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-field-nome">Nome do Campo / Estádio *</label>
+            <label className={ETIQUETA} htmlFor="quick-field-nome">Nome do Campo / Estádio *</label>
             <input
               id="quick-field-nome"
               type="text"
@@ -107,7 +79,7 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-white/80 mb-1" htmlFor="quick-field-morada">Morada / Localização</label>
+            <label className={ETIQUETA} htmlFor="quick-field-morada">Morada / Localização</label>
             <input
               id="quick-field-morada"
               type="text"
@@ -119,26 +91,14 @@ export const QuickFieldModal: React.FC<QuickFieldModalProps> = ({
             <p className="text-[10.5px] text-white/62 mt-1">Usada para navegação e rotas com Google Maps.</p>
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/12">
-            <button
-              type="button"
-              onClick={guarda.tentarFechar}
-              className="px-4 py-2 border border-white/15 hover:bg-white/10 text-white/80 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving || !name.trim()}
-              className="px-5 py-2 bg-csc-dark hover:bg-black text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
-            >
-              <Plus size={14} className="text-csc-gold" />
-              <span>{isSaving ? 'A guardar...' : 'Guardar & Selecionar'}</span>
-            </button>
+          <div className="flex gap-2.5 pt-3 border-t border-white/12">
+            <Botao aparencia="vidro" className="flex-1" onClick={guarda.tentarFechar}>Cancelar</Botao>
+            <Botao type="submit" className="flex-1" disabled={isSaving || !name.trim()}>
+              {isSaving ? 'A guardar…' : 'Guardar e escolher'}
+            </Botao>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
     <UnsavedChangesModal {...guarda.props} />
     </>
   )

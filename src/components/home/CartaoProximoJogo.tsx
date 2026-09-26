@@ -120,7 +120,7 @@ export const CartaoProximoJogo: React.FC<{
      tratamento das teclas à mão, a convenção do CLAUDE.md. */
   const abrirEvento = () => {
     triggerHaptic('light')
-    navegar(`/calendar?event=${jogo.id}`)
+    navegar(`/calendar?event=${jogo.id}`, { state: { origem: 'Hoje' } })
   }
 
   return (

@@ -1,5 +1,4 @@
 import React from 'react'
-import { ChevronRight } from 'lucide-react'
 import type { ScheduledPayment } from './tipos'
 import { diasAtePrazo, prazoPassou } from '../../lib/finance'
 import { ETIQUETA_GRUPO, BARRA_ATRASO, BARRA_AVISO, BARRA_NEUTRA, fmtEuro, fmtData } from './estilos'
@@ -93,7 +92,7 @@ export const PagamentosProgramados: React.FC<PagamentosProgramadosProps> = ({
               const emAtraso = prazoPassou(p.due_date, hoje)
               const aVencer = dias !== null && !emAtraso && dias <= DIAS_DE_AVISO
               const barra = emAtraso ? BARRA_ATRASO : aVencer ? BARRA_AVISO : BARRA_NEUTRA
-              const corPrazo = emAtraso ? 'text-csc-vermelho-texto' : aVencer ? 'text-amber-300' : 'text-white/50'
+              const corPrazo = emAtraso ? 'text-csc-vermelho-texto' : aVencer ? 'text-csc-gold' : 'text-white/50'
               const nome = semRepetirGrupo(p.title, categoria)
               return (
                 <button
@@ -132,9 +131,7 @@ export const PagamentosProgramados: React.FC<PagamentosProgramadosProps> = ({
                     >
                       Pagar
                     </span>
-                  ) : (
-                    <ChevronRight size={16} className="shrink-0 self-center mr-2 text-white/35" aria-hidden="true" />
-                  )}
+                  ) : null}
                 </button>
               )
             })}

@@ -154,7 +154,7 @@ export const Modal: React.FC<ModalProps> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className={`shrink-0 -mt-1 -mr-1 p-2 rounded-xl transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-light ${corBotaoFechar}`}
+                className={`shrink-0 -mt-2 -mr-2 w-11 h-11 flex items-center justify-center rounded-xl transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-light ${corBotaoFechar}`}
               >
                 <X size={20} />
               </button>
