@@ -1295,6 +1295,13 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    função nova, e `anon` herda de lá. **Uma função nova precisa de
    `REVOKE ... FROM PUBLIC, anon` e de um `GRANT` explícito a quem a deve chamar.**
    `handle_new_user`, sendo gatilho e não RPC, saiu da API para os dois lados.
+   **E leva sempre `SET search_path`** — `public` se ler tabelas, vazio se só usar
+   o que é do `pg_catalog`. Sem ele a função resolve os nomes pelo caminho de
+   quem a chama. As quatro que o herdavam (`nome_do_mes`, `nome_mes_ano`,
+   `nome_palavras` e o gatilho `profiles_janela_de_atividade`) ficaram com o
+   caminho vazio a 2026-09-26 (`supabase_funcoes_search_path_migration.sql`,
+   aplicada, com os mesmos resultados antes e depois); o `get_advisors` deixou
+   de as marcar.
 5. **P2 — Ficheiros grandes:** `CalendarPage` tem ~3100 linhas e `EventsPage` ~2900.
    Não há modais escritos à mão sem acessibilidade — todos passaram pelo `<Modal>`,
    `<ConfirmModal>`, `<UnsavedChangesModal>` ou pelo hook `useModalA11y`. Até
