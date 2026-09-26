@@ -1,4 +1,5 @@
 import React from 'react'
+import { Plus } from 'lucide-react'
 
 /**
  * Botões e pastilhas do redesenho.
@@ -140,3 +141,39 @@ export const BotaoIcone: React.FC<BotaoIconeProps> = ({
     </button>
   )
 }
+
+export interface BotaoCriarProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+  /** O que se cria — é o nome acessível ("Adicionar membro ao plantel"). */
+  rotulo: string
+  /** Com texto é uma barra da largura da coluna ("Novo evento"); sem ele, o círculo. */
+  texto?: string
+}
+
+/**
+ * O botão de criar de um ecrã: dourado, com o "+" em tinta e a mesma sombra
+ * do [+] da barra de baixo (`sombra-fab`), para se ler como da mesma família.
+ *
+ * O do Plantel era um círculo de vidro cinzento, igual a um botão secundário,
+ * e perdia-se ao lado do título; o dos Eventos era dourado com o "+" também
+ * dourado, invisível; as Gestões do Clube tinham um terceiro, dourado sem
+ * sombra. Criar é a ação principal destes ecrãs e tem de se ver.
+ */
+export const BotaoCriar: React.FC<BotaoCriarProps> = ({
+  rotulo,
+  texto,
+  className = '',
+  type = 'button',
+  ...resto
+}) => (
+  <button
+    type={type}
+    aria-label={texto ? undefined : rotulo}
+    className={`${BASE} ${APARENCIAS.dourado} sombra-fab shrink-0 ${
+      texto ? 'w-full h-12 px-5 rounded-3xl text-[12.5px]' : 'w-12 h-12 rounded-full'
+    } ${className}`}
+    {...resto}
+  >
+    <Plus size={texto ? 18 : 22} strokeWidth={2.5} aria-hidden="true" />
+    {texto && <span>{texto}</span>}
+  </button>
+)

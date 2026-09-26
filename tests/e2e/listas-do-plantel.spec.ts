@@ -100,3 +100,27 @@ test('a bola com o número está nas três listas; a foto e a posição só no P
   const noEncargo = page.getByRole('region', { name: /Devedores/ }).locator('div').filter({ hasText: /^11Vieira/ }).first()
   await expect(noEncargo).toBeVisible()
 })
+
+/**
+ * Os números do plantel contam jogadores, não fichas (2026-09-26). Com 34
+ * membros, os mosaicos diziam "Aptos 29" somando o treinador e a direção, e o
+ * Clube dizia "N atletas" pela mesma conta. Aqui são seis pessoas — quatro
+ * jogam, um treina, um dirige — todas aptas.
+ */
+test('os mosaicos e o Clube contam só quem joga', async ({ page }) => {
+  await montarSupabaseFalso(page, FIXTURES)
+  await page.goto('/csc-vet/team-management')
+
+  const aptos = page.getByRole('button', { name: /Aptos/ })
+  await expect(aptos).toContainText('4', { timeout: 15000 })
+  await expect(page.getByRole('button', { name: /Lesionados/ })).toContainText('0')
+
+  // Tocar em "Aptos" mostra os jogadores aptos, e não o treinador.
+  await aptos.click()
+  await expect(page.getByRole('region', { name: 'Jogadores' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Equipa técnica' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Jogadores aptos/ })).toBeVisible()
+
+  await page.goto('/csc-vet/clube')
+  await expect(page.getByText('4 atletas')).toBeVisible({ timeout: 15000 })
+})

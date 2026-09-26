@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { MapPin, Plus, Trash2, ExternalLink, Save, Pencil } from 'lucide-react'
+import { MapPin, Trash2, ExternalLink, Save, Pencil } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useClub } from '../../context/ClubContext'
 import { toast } from '../../context/ToastContext'
@@ -14,7 +14,7 @@ import { FichaCampo } from './FichaCampo'
 import { formatClubSigla } from '../../lib/siglas'
 import { CAMPO, ETIQUETA, urlDoGoogleMaps, type Campo } from './comum'
 import { mensagemDeErro } from '../../lib/erros'
-import { BotaoIcone, EstadoVazio, Botao } from '../ui'
+import { BotaoIcone, EstadoVazio, Botao, BotaoCriar } from '../ui'
 import { ProcuraEFiltros } from '../ProcuraEFiltros'
 
 /*
@@ -151,14 +151,7 @@ export const GestaoCampos: React.FC = () => {
         contagem={`${filtrados.length} de ${campos.length}`}
         aoLimpar={() => setProcura('')}
         acao={
-          <button
-            type="button"
-            onClick={abrirCriacao}
-            aria-label="Criar campo"
-            className="w-11 h-11 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <Plus size={19} aria-hidden="true" />
-          </button>
+          <BotaoCriar rotulo="Criar campo" onClick={abrirCriacao} />
         }
       />
 

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import {
   Users,
   Search,
-  Plus,
   Trash2,
   Phone,
   FileText,
@@ -39,7 +38,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
 import { CLUBE_NOME } from '../lib/clube'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, Botao, LinhaAtleta, ACarregar, EstadoVazio } from '../components/ui'
+import { CabecalhoEcra, Pastilha, Botao, LinhaAtleta, ACarregar, EstadoVazio, BotaoCriar } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import {
   getSeasonLabel,
@@ -52,6 +51,7 @@ import {
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 import { fmtData } from '../lib/datas'
+import { eJogador } from '../lib/papeis'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -59,13 +59,11 @@ const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 /** As abreviaturas dos meses, para as pastilhas de quota dispensada. */
 const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
-/** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
-
 /** Como se lê cada filtro escondido, na linha de resumo. */
 const ROTULOS_ESTADO: Record<string, string> = {
-  active: 'Aptos',
-  injured: 'Lesionados',
-  inactive: 'Inativos',
+  active: 'Jogadores aptos',
+  injured: 'Jogadores lesionados',
+  inactive: 'Jogadores inativos',
 }
 
 const ROTULOS_ORDEM: Record<string, string> = {
@@ -509,7 +507,11 @@ const TeamManagementPage: React.FC = () => {
     }
   }
 
-  const syncPlayerPracticeCallups = async (targetPlayerId: string, status: ProfileStatus) => {
+  /* Só quem joga é convocado para os treinos. Esta sincronização corria para
+     qualquer ficha que passasse a apta — o treinador e a direção que não
+     jogam ganhavam uma convocatória em cada treino futuro, escrita na base.
+     Quem não joga sai dos treinos, como um lesionado. */
+  const syncPlayerPracticeCallups = async (targetPlayerId: string, status: ProfileStatus, joga: boolean) => {
     try {
       const nowIso = new Date().toISOString()
       const { data: upcomingPractices, error: erroTreinos } = await supabase
@@ -523,7 +525,7 @@ const TeamManagementPage: React.FC = () => {
 
       const practiceIds = upcomingPractices.map(p => p.id)
 
-      if (status === 'active') {
+      if (status === 'active' && joga) {
         // Jogador passou a apto: adicionar a todos os treinos futuros onde ainda não esteja convocado
         const { data: existingCallups, error: erroExistentes } = await supabase
           .from('callups')
@@ -576,7 +578,7 @@ const TeamManagementPage: React.FC = () => {
       if (error) throw error
 
       // 2. Sincronizar treinos
-      await syncPlayerPracticeCallups(player.id, newStatus)
+      await syncPlayerPracticeCallups(player.id, newStatus, eJogador(player))
 
       // 3. Atualizar estados locais
       setProfiles(prev => prev.map(p => p.id === player.id ? { ...p, status: newStatus } : p))
@@ -768,7 +770,7 @@ const TeamManagementPage: React.FC = () => {
           }
           return p
         }))
-        await syncPlayerPracticeCallups(savedPlayerId, formStatus)
+        await syncPlayerPracticeCallups(savedPlayerId, formStatus, formRoles.includes('player'))
       }
 
       setIsFormModalOpen(false)
@@ -916,7 +918,9 @@ const TeamManagementPage: React.FC = () => {
       (p.position && p.position.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (p.jersey_number && p.jersey_number.toString().includes(searchTerm))
 
-    const matchesStatus = statusFilter === 'all' || p.status === statusFilter
+    /* O estado é o dos mosaicos, que contam só os jogadores (ver lá em
+       baixo): "Aptos" mostra os jogadores aptos, e não o treinador apto. */
+    const matchesStatus = statusFilter === 'all' || (p.status === statusFilter && eJogador(p))
     const matchesPosition = positionFilter === 'all' || (() => {
       if (!p.position) return false
       const playerPosList = parsePositions(p.position).map(pos => normalizePositionName(pos).toLowerCase())
@@ -1012,9 +1016,13 @@ const TeamManagementPage: React.FC = () => {
 
   // Quick Metrics
   const totalCount = profiles.length
-  const activeCount = profiles.filter(p => p.status === 'active').length
-  const injuredCount = profiles.filter(p => p.status === 'injured').length
-  const inactiveCount = profiles.filter(p => p.status === 'inactive').length
+  /* Os mosaicos contam **jogadores**, não pessoas. Contavam as fichas todas —
+     com 34 membros, "Aptos 29" somava o treinador e a direção aos jogadores
+     aptos, e o grupo "Jogadores" logo abaixo dizia outro número. */
+  const jogadores = profiles.filter(p => eJogador(p))
+  const activeCount = jogadores.filter(p => p.status === 'active').length
+  const injuredCount = jogadores.filter(p => p.status === 'injured').length
+  const inactiveCount = jogadores.filter(p => p.status === 'inactive').length
 
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
 
@@ -1034,16 +1042,7 @@ const TeamManagementPage: React.FC = () => {
         sobrancelha={`${totalCount} ${totalCount === 1 ? 'membro' : 'membros'}`}
         className="mb-1"
         acoes={isCoachOrAdmin ? (
-          <button
-            type="button"
-            onClick={() => { triggerHaptic('light'); openCreateModal() }}
-            aria-label="Adicionar membro ao plantel"
-            className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center shrink-0 cursor-pointer
-              transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <Plus size={19} />
-          </button>
+          <BotaoCriar rotulo="Adicionar membro ao plantel" onClick={() => { triggerHaptic('light'); openCreateModal() }} />
         ) : undefined}
       />
 
