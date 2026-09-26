@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { montarSupabaseFalso } from './supabase-mock'
+import { montarSupabaseFalso, FIXTURES_BASE, UTILIZADOR_TESTE } from './supabase-mock'
 
 /**
  * Os controlos do mês, na Agenda.
@@ -100,4 +100,36 @@ test('rolar a página não muda o mês', async ({ page }) => {
   await rola(page)
   await page.waitForTimeout(200)
   await expect(seletor).toHaveValue(inicial)
+})
+
+/**
+ * No cartão de um jogo, debaixo de cada emblema está o nome do clube — como
+ * no cartão do próximo jogo da Home. Tinha a sigla e "Casa"/"Fora"; o onde se
+ * joga passou para uma pastilha no cabeçalho do cartão.
+ */
+test('o cartão de um jogo tem os nomes dos clubes, e o onde se joga numa pastilha', async ({ page }) => {
+  const daquiA = (dias: number) => new Date(Date.now() + dias * 864e5).toISOString()
+  await montarSupabaseFalso(page, {
+    club_settings: [{ id: 1, name: 'Grupo Dramático e Sportivo de Cascais', initials: 'CSC', logo_url: null }],
+    events: [{
+      id: 'jg-fora', type: 'match', title: 'Jogo', date_time: daquiA(3), home_away: 'away',
+      is_friendly: true, is_active: true, meeting_time: null, location: 'Campo de Teste',
+      field_id: null, tournament_id: null,
+      opponent: { id: 'op1', name: 'Barreiro Moinhos Almada', initials: 'BM Almada', logo_url: null },
+    }],
+    // Com convocados: sem eles, a quem gere o jogo aparece no aviso "por convocar", e não na lista.
+    callups: [{
+      id: 'c1', event_id: 'jg-fora', player_id: UTILIZADOR_TESTE.id, status: 'called', responded_at: null,
+      player: FIXTURES_BASE.profiles[0],
+    }],
+  })
+  await page.goto('/csc-vet/calendar')
+
+  const cartao = page.getByRole('button', { name: /^Ver jogo:/ })
+  await expect(cartao).toBeVisible({ timeout: 15000 })
+  // Num jogo fora, o adversário à esquerda.
+  await expect(cartao.getByText(/^(Barreiro Moinhos Almada|Grupo Dramático e Sportivo de Cascais)$/))
+    .toHaveText(['Barreiro Moinhos Almada', 'Grupo Dramático e Sportivo de Cascais'])
+  await expect(cartao.getByText('Fora', { exact: true })).toBeVisible()
+  await expect(cartao.getByText('Casa', { exact: true })).toHaveCount(0)
 })
