@@ -14,7 +14,8 @@ import {
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
-import { supabase } from '../lib/supabaseClient'
+import { supabase } from '../lib/supabaseClient'
+import { CLUBE_NOME } from '../lib/clube'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
 import { nomeDoEcra } from '../lib/rotas'
@@ -957,18 +958,19 @@ const CalendarPage: React.FC = () => {
     // Bloco equipa Cascais
     /*
       O confronto, com o mesmo desenho do cartão do jogo da Home: o emblema
-      grande em cima, a sigla por baixo e a condição — Casa, Fora, Neutro —
-      em terceiro. Era uma linha de emblema de 32px com a sigla ao lado, mais
-      uma frase "Condição: Visitante" numa linha própria por baixo; o cartão
-      da Agenda e o da Home mostravam o mesmo jogo de duas maneiras.
+      grande em cima e, por baixo, o nome do clube por extenso. Tinha a sigla
+      e a condição — "Casa", "Fora" — em duas linhas; a condição passou para
+      uma pastilha no cabeçalho do cartão, ao lado do "Amigável", e o nome é o
+      que diz de quem é cada emblema (2026-09-26). Quebra em vez de cortar.
 
       Aqui os emblemas são de 46px e não de 58px: na Home há um jogo por
       ecrã, na Agenda há uma lista.
     */
-    const condicao = event.home_away === 'neutral' ? 'Neutro' : null
+    const nomeClube = clubSettings?.name || CLUBE_NOME
+    const nomeAdversario = event.opponent?.name || oppSigla
 
-    const blocoEquipa = (logo: string | null | undefined, sigla: string, emCasa: boolean) => (
-      <div className="w-[92px] flex flex-col items-center gap-1.5 min-w-0">
+    const blocoEquipa = (logo: string | null | undefined, sigla: string, nome: string) => (
+      <div className="flex-1 min-w-0 flex flex-col items-center gap-1.5">
         {logo ? (
           <img
             src={logo}
@@ -986,18 +988,14 @@ const CalendarPage: React.FC = () => {
           </div>
         )}
 
-        <span className="font-display font-extrabold text-[13px] text-white uppercase tracking-tight truncate max-w-full">
-          {sigla}
-        </span>
-
-        <span className="font-display font-bold text-[10px] text-white/62">
-          {condicao ?? (emCasa ? 'Casa' : 'Fora')}
+        <span className="font-display font-bold text-[12px] leading-tight text-white/85 text-center break-words">
+          {nome}
         </span>
       </div>
     )
 
-    const cscBlock = () => blocoEquipa(clubSettings?.logo_url, cscSigla, !isAway)
-    const opponentBlock = () => blocoEquipa(event.opponent?.logo_url, oppSigla, isAway)
+    const cscBlock = () => blocoEquipa(clubSettings?.logo_url, cscSigla, nomeClube)
+    const opponentBlock = () => blocoEquipa(event.opponent?.logo_url, oppSigla, nomeAdversario)
 
     const TipoIcon = isMatch ? Trophy : isPractice ? TrainingIcon : PartyPopper
     const cores = CORES_TIPO[event.type]
@@ -1057,6 +1055,13 @@ const CalendarPage: React.FC = () => {
               </span>
             )}
 
+            {/* Onde se joga — estava debaixo dos emblemas, onde hoje estão os nomes. */}
+            {isMatch && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white/10 text-white">
+                {event.home_away === 'neutral' ? 'Campo neutro' : isAway ? 'Fora' : 'Em casa'}
+              </span>
+            )}
+
             {isMatch && event.tournament?.name && !event.is_friendly && (
               <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-white/10 text-white truncate max-w-[150px] flex items-center gap-1">
                 {event.tournament.image_url && (
@@ -1105,10 +1110,11 @@ const CalendarPage: React.FC = () => {
         <div className="flex flex-col">
           {/* O confronto (só num jogo com adversário definido). */}
           {isMatch && event.opponent && (
-            <div className="flex items-center justify-center gap-4 px-5 pt-3 pb-4">
+            <div className="flex items-start justify-center gap-3 px-5 pt-3 pb-4">
               {isAway ? opponentBlock() : cscBlock()}
+              {/* Ao meio dos emblemas (46px), e não da coluna: os nomes têm alturas diferentes. */}
               <span
-                className="flex-none font-display font-black text-[22px] mb-5 text-transparent"
+                className="flex-none font-display font-black text-[22px] leading-[46px] text-transparent"
                 style={{ WebkitTextStroke: '1.3px var(--color-csc-gold)' }}
                 aria-hidden="true"
               >

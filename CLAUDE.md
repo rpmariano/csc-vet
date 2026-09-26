@@ -831,9 +831,12 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   nome, e o pedido de resposta na faixa dourada com "Sim, vou / Não posso". Não
   são caixas arredondadas soltas dentro de um `p-5`: o mesmo jogo aparecia de
   duas maneiras conforme o ecrã. Um emblema em falta desenha um escudo e nunca
-  as iniciais — quem identifica o clube é a linha de baixo, e repeti-las era
-  ler a sigla duas vezes; tirar a linha de baixo desalinhava os dois blocos
-  quando só um dos clubes tem emblema.
+  as iniciais — quem identifica o clube é a linha de baixo.
+  **Debaixo de cada emblema vai o nome do clube por extenso**, como na Home
+  (2026-09-26): tinha a sigla e "Casa"/"Fora", e o onde se joga passou para
+  uma pastilha no cabeçalho do cartão ("Em casa", "Fora", "Campo neutro"), ao
+  lado do "Amigável" — ao contrário da Home, a Agenda não o dizia em mais
+  lado nenhum. `calendario.spec.ts` cobre-o.
 - **"Aniversários deste mês" é uma fila de fotografias, não uma frase**
   (decisão de 2026-09-26, `src/components/home/Aniversariantes.tsx`). Era um
   `<CartaoSimples>` isolado com um ícone pequeno e uma linha de texto a
