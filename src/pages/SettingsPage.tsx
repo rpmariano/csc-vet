@@ -21,6 +21,8 @@ import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { CLUBE_NOME, CLUBE_SIGLA } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
+import { carregarDocumento } from '../lib/documentos'
+import { LinkDocumento } from '../components/LinkDocumento'
 import { RELACOES_EMERGENCIA } from './TeamManagementPage'
 import { useEstadoPagamentos } from '../hooks/useEstadoPagamentos'
 
@@ -201,6 +203,19 @@ const SettingsPage: React.FC = () => {
 
     try {
       setUploadingDoc(field)
+      /* Os documentos vão para o bucket privado, na pasta do próprio, e guarda-se
+         o caminho; só a fotografia continua no público (ver lib/documentos). */
+      if (field !== 'photo') {
+        if (!profile?.id) return
+        const tipo = field === 'idDoc' ? 'cc' : field === 'insurance' ? 'seguro' : 'atestado'
+        const caminho = await carregarDocumento(profile.id, tipo, file)
+        if (field === 'idDoc') setIdDocUrl(caminho)
+        if (field === 'insurance') setInsuranceDocUrl(caminho)
+        if (field === 'medical') setMedicalExamDocUrl(caminho)
+        toast.success('Documento carregado.')
+        return
+      }
+
       const { error: uploadErr } = await supabase.storage
         .from('club_assets')
         .upload(fileName, file, { upsert: true })
@@ -212,9 +227,6 @@ const SettingsPage: React.FC = () => {
         .getPublicUrl(fileName)
 
       if (field === 'photo') setPhotoUrl(publicUrl)
-      if (field === 'idDoc') setIdDocUrl(publicUrl)
-      if (field === 'insurance') setInsuranceDocUrl(publicUrl)
-      if (field === 'medical') setMedicalExamDocUrl(publicUrl)
 
       toast.success('Ficheiro carregado com sucesso!')
     } catch (err: any) {
@@ -921,8 +933,9 @@ const SettingsPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-2.5">
             {/* Foto de Perfil */}
             <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
-              <label className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
+              <label htmlFor="perfil-foto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
               <input
+                id="perfil-foto"
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleUploadFile(e, 'photo')}
@@ -939,8 +952,9 @@ const SettingsPage: React.FC = () => {
 
             {/* Documento de Identificação */}
             <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
-              <label className="block text-xs font-bold text-white/80">Doc. Identificação (CC / Passaporte)</label>
+              <label htmlFor="perfil-doc-cc" className="block text-xs font-bold text-white/80">Doc. Identificação (CC / Passaporte)</label>
               <input
+                id="perfil-doc-cc"
                 type="file"
                 accept="image/*,application/pdf"
                 onChange={(e) => handleUploadFile(e, 'idDoc')}
@@ -948,16 +962,17 @@ const SettingsPage: React.FC = () => {
                 className="text-xs w-full"
               />
               {idDocUrl && (
-                <a href={idDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
+                <LinkDocumento valor={idDocUrl} className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
                   <ExternalLink size={11} /> Ver Documento CC anexado
-                </a>
+                </LinkDocumento>
               )}
             </div>
 
             {/* Seguro Desportivo */}
             <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
-              <label className="block text-xs font-bold text-white/80">Apólice de Seguro Desportivo</label>
+              <label htmlFor="perfil-doc-seguro" className="block text-xs font-bold text-white/80">Apólice de Seguro Desportivo</label>
               <input
+                id="perfil-doc-seguro"
                 type="file"
                 accept="image/*,application/pdf"
                 onChange={(e) => handleUploadFile(e, 'insurance')}
@@ -965,16 +980,17 @@ const SettingsPage: React.FC = () => {
                 className="text-xs w-full"
               />
               {insuranceDocUrl && (
-                <a href={insuranceDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
+                <LinkDocumento valor={insuranceDocUrl} className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
                   <ExternalLink size={11} /> Ver Seguro anexado
-                </a>
+                </LinkDocumento>
               )}
             </div>
 
             {/* Atestado Médico */}
             <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
-              <label className="block text-xs font-bold text-white/80">Atestado / Exame Médico Desportivo</label>
+              <label htmlFor="perfil-doc-atestado" className="block text-xs font-bold text-white/80">Atestado / Exame Médico Desportivo</label>
               <input
+                id="perfil-doc-atestado"
                 type="file"
                 accept="image/*,application/pdf"
                 onChange={(e) => handleUploadFile(e, 'medical')}
@@ -982,9 +998,9 @@ const SettingsPage: React.FC = () => {
                 className="text-xs w-full"
               />
               {medicalExamDocUrl && (
-                <a href={medicalExamDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-verde-texto font-bold hover:underline flex items-center gap-1">
+                <LinkDocumento valor={medicalExamDocUrl} className="text-[11px] text-csc-verde-texto font-bold hover:underline flex items-center gap-1">
                   <ExternalLink size={11} /> Ver Atestado anexado
-                </a>
+                </LinkDocumento>
               )}
             </div>
           </div>

@@ -25,6 +25,8 @@ import {
   Pencil
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { carregarDocumento, migrarDocumentosPublicos } from '../lib/documentos'
+import { LinkDocumento } from '../components/LinkDocumento'
 import { sincronizarTreinosFuturos } from '../lib/treinosFuturos'
 import { useAuth, extractRolesFromProfile, cleanNotesFromRolesTag } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
@@ -167,6 +169,9 @@ const TeamManagementPage: React.FC = () => {
   // Upload URLs & Status
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [idDocUrl, setIdDocUrl] = useState<string | null>(null)
+  /* O id de uma ficha nova, escolhido ao abrir o formulário e não ao gravar:
+     os documentos carregados antes de gravar já vão para a pasta dela. */
+  const [idDaFichaNova, setIdDaFichaNova] = useState(() => crypto.randomUUID())
   const [insuranceDocUrl, setInsuranceDocUrl] = useState<string | null>(null)
   const [medicalExamDocUrl, setMedicalExamDocUrl] = useState<string | null>(null)
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
@@ -231,6 +236,18 @@ const TeamManagementPage: React.FC = () => {
         console.warn('Supabase query error, fallback to merged dataset:', error)
       }
       setProfiles(ordenarPlantel((data as Profile[]) || []))
+
+      /* Os documentos antigos, ainda no bucket público, passam para o privado
+         da primeira vez que alguém da equipa técnica abre o Plantel (ver
+         `migrarDocumentosPublicos`). Se passou algum, a ficha aponta agora
+         para a cópia, e a lista recarrega-se para o mostrar. */
+      if (data && ['coach', 'admin'].includes(currentUserProfile?.role ?? '')) {
+        const passaram = await migrarDocumentosPublicos(data as Profile[])
+        if (passaram > 0) {
+          const { data: depois } = await supabase.from('profiles').select('*').order('name', { ascending: true })
+          if (depois) setProfiles(ordenarPlantel(depois as Profile[]))
+        }
+      }
     } catch (err) {
       console.error(err)
       setProfiles(ordenarPlantel([]))
@@ -390,6 +407,7 @@ const TeamManagementPage: React.FC = () => {
   }
 
   const openCreateModal = () => {
+    setIdDaFichaNova(crypto.randomUUID())
     resetForm()
     setIsFormModalOpen(true)
   }
@@ -476,6 +494,20 @@ const TeamManagementPage: React.FC = () => {
     
     try {
       setUploadingDoc(field)
+      /* Os documentos vão para o bucket privado, na pasta da ficha — a que se
+         edita, ou o id que a ficha nova vai ter ao gravar —, e guarda-se o
+         caminho. Só a fotografia continua no público (ver lib/documentos). */
+      if (field !== 'photo') {
+        const pasta = isEditing && formId ? formId : idDaFichaNova
+        const tipo = field === 'idDoc' ? 'cc' : field === 'insurance' ? 'seguro' : 'atestado'
+        const caminho = await carregarDocumento(pasta, tipo, file)
+        if (field === 'idDoc') setIdDocUrl(caminho)
+        if (field === 'insurance') setInsuranceDocUrl(caminho)
+        if (field === 'medical') setMedicalExamDocUrl(caminho)
+        toast.success('Documento carregado.')
+        return
+      }
+
       const { error: uploadErr } = await supabase.storage
         .from('club_assets')
         .upload(fileName, file, { upsert: true })
@@ -487,9 +519,6 @@ const TeamManagementPage: React.FC = () => {
         .getPublicUrl(fileName)
 
       if (field === 'photo') setPhotoUrl(publicUrl)
-      if (field === 'idDoc') setIdDocUrl(publicUrl)
-      if (field === 'insurance') setInsuranceDocUrl(publicUrl)
-      if (field === 'medical') setMedicalExamDocUrl(publicUrl)
 
       toast.success('Ficheiro carregado com sucesso!')
     } catch (err: any) {
@@ -705,7 +734,9 @@ const TeamManagementPage: React.FC = () => {
           savedPlayerId = existingId
           toast.success('Ficha de membro atualizada na base de dados!')
         } else {
-          const newId = crypto.randomUUID()
+          // O id foi escolhido ao abrir o formulário: é o nome da pasta onde os
+          // documentos desta ficha já foram carregados.
+          const newId = idDaFichaNova
           const { error } = await supabase
             .from('profiles')
             .insert([{
@@ -1955,8 +1986,9 @@ const TeamManagementPage: React.FC = () => {
                 <div className="grid grid-cols-1 gap-3">
                   {/* Foto de Perfil */}
                   <div className="p-3 bg-white/5 rounded-lg space-y-2">
-                    <label className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
+                    <label htmlFor="ficha-foto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
                     <input
+                      id="ficha-foto"
                       type="file"
                       accept="image/*"
                       onChange={(e) => handleUploadFile(e, 'photo')}
@@ -1973,8 +2005,9 @@ const TeamManagementPage: React.FC = () => {
 
                   {/* Documento de Identificação */}
                   <div className="p-3 bg-white/5 rounded-lg space-y-2">
-                    <label className="block text-xs font-bold text-white/80">Doc. Identificação (CC / Passaporte)</label>
+                    <label htmlFor="ficha-doc-cc" className="block text-xs font-bold text-white/80">Doc. Identificação (CC / Passaporte)</label>
                     <input
+                      id="ficha-doc-cc"
                       type="file"
                       accept="image/*,application/pdf"
                       onChange={(e) => handleUploadFile(e, 'idDoc')}
@@ -1982,16 +2015,17 @@ const TeamManagementPage: React.FC = () => {
                       className="text-xs w-full"
                     />
                     {idDocUrl && (
-                      <a href={idDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
+                      <LinkDocumento valor={idDocUrl} className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
                         <ExternalLink size={11} /> Ver Documento CC anexado
-                      </a>
+                      </LinkDocumento>
                     )}
                   </div>
 
                   {/* Seguro Desportivo */}
                   <div className="p-3 bg-white/5 rounded-lg space-y-2">
-                    <label className="block text-xs font-bold text-white/80">Apólice de Seguro Desportivo</label>
+                    <label htmlFor="ficha-doc-seguro" className="block text-xs font-bold text-white/80">Apólice de Seguro Desportivo</label>
                     <input
+                      id="ficha-doc-seguro"
                       type="file"
                       accept="image/*,application/pdf"
                       onChange={(e) => handleUploadFile(e, 'insurance')}
@@ -1999,16 +2033,17 @@ const TeamManagementPage: React.FC = () => {
                       className="text-xs w-full"
                     />
                     {insuranceDocUrl && (
-                      <a href={insuranceDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
+                      <LinkDocumento valor={insuranceDocUrl} className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
                         <ExternalLink size={11} /> Ver Seguro anexado
-                      </a>
+                      </LinkDocumento>
                     )}
                   </div>
 
                   {/* Atestado Médico */}
                   <div className="p-3 bg-white/5 rounded-lg space-y-2">
-                    <label className="block text-xs font-bold text-white/80">Atestado / Exame Médico Desportivo</label>
+                    <label htmlFor="ficha-doc-atestado" className="block text-xs font-bold text-white/80">Atestado / Exame Médico Desportivo</label>
                     <input
+                      id="ficha-doc-atestado"
                       type="file"
                       accept="image/*,application/pdf"
                       onChange={(e) => handleUploadFile(e, 'medical')}
@@ -2016,9 +2051,9 @@ const TeamManagementPage: React.FC = () => {
                       className="text-xs w-full"
                     />
                     {medicalExamDocUrl && (
-                      <a href={medicalExamDocUrl} target="_blank" rel="noreferrer" className="text-[11px] text-csc-verde-texto font-bold hover:underline flex items-center gap-1">
+                      <LinkDocumento valor={medicalExamDocUrl} className="text-[11px] text-csc-verde-texto font-bold hover:underline flex items-center gap-1">
                         <ExternalLink size={11} /> Ver Atestado anexado
-                      </a>
+                      </LinkDocumento>
                     )}
                   </div>
                 </div>
@@ -2443,16 +2478,14 @@ const TeamManagementPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 gap-2 text-xs">
                     {selectedProfile.id_document_url ? (
-                      <a
-                        href={selectedProfile.id_document_url}
-                        target="_blank"
-                        rel="noreferrer"
+                      <LinkDocumento
+                        valor={selectedProfile.id_document_url}
                         className="p-3 bg-csc-blue/12 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-azul-texto font-bold hover:bg-csc-blue/20 transition-colors text-center"
                       >
                         <FileText size={18} />
                         <span>Doc. Identificação</span>
                         <span className="text-[10px] underline flex items-center gap-0.5">Abrir Documento <ExternalLink size={10}/></span>
-                      </a>
+                      </LinkDocumento>
                     ) : (
                       <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/60 text-center">
                         <FileText size={18} />
@@ -2461,16 +2494,14 @@ const TeamManagementPage: React.FC = () => {
                     )}
 
                     {selectedProfile.insurance_doc_url ? (
-                      <a
-                        href={selectedProfile.insurance_doc_url}
-                        target="_blank"
-                        rel="noreferrer"
+                      <LinkDocumento
+                        valor={selectedProfile.insurance_doc_url}
                         className="p-3 bg-csc-blue/12 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-azul-texto font-bold hover:bg-csc-blue/20 transition-colors text-center"
                       >
                         <Shield size={18} />
                         <span>Seguro Desportivo</span>
                         <span className="text-[10px] underline flex items-center gap-0.5">Abrir Apólice <ExternalLink size={10}/></span>
-                      </a>
+                      </LinkDocumento>
                     ) : (
                       <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/60 text-center">
                         <Shield size={18} />
@@ -2479,16 +2510,14 @@ const TeamManagementPage: React.FC = () => {
                     )}
 
                     {selectedProfile.medical_exam_doc_url ? (
-                      <a
-                        href={selectedProfile.medical_exam_doc_url}
-                        target="_blank"
-                        rel="noreferrer"
+                      <LinkDocumento
+                        valor={selectedProfile.medical_exam_doc_url}
                         className="p-3 bg-csc-light/10 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-verde-texto font-bold hover:bg-csc-light/15 transition-colors text-center"
                       >
                         <HeartPulse size={18} />
                         <span>Atestado Médico</span>
                         <span className="text-[10px] underline flex items-center gap-0.5">Abrir Exame <ExternalLink size={10}/></span>
-                      </a>
+                      </LinkDocumento>
                     ) : (
                       <div className="p-3 bg-white/5 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 text-white/60 text-center">
                         <HeartPulse size={18} />
