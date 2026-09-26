@@ -1,17 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   MapPin,
-  X,
   Users,
   CheckCircle2,
   XCircle,
-  Trash2,
-  ClipboardList,
   Search,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   CalendarRange,
   PartyPopper,
   Trophy,
@@ -20,26 +16,23 @@ import {
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
 import { nomeDoEcra } from '../lib/rotas'
 import type { Profile } from '../context/AuthContext'
 import { TrainingIcon } from './EventsPage'
 import { EcraDetalhe } from '../components/EcraDetalhe'
-import { EditarEvento } from '../components/eventos/EditarEvento'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
-import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
-import { CallupRow } from '../components/callups/CallupRow'
+import { parseMatchReportMetadata } from '../components/MatchReportModal'
+import { BlocoConvocatoria } from '../components/callups/BlocoConvocatoria'
 import { AniversariosDoMes } from '../components/AniversariosDoMes'
-import { FichaConvocado } from '../components/callups/FichaConvocado'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao, ACarregar, EstadoVazio } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
-import { getPlayerDisplayName, hasMatchReport, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, ROTULO_RESPOSTA, CORES_TIPO } from '../lib/eventos'
+import { getPlayerDisplayName, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, CORES_TIPO } from '../lib/eventos'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
 
@@ -175,20 +168,6 @@ interface Field {
   address?: string | null
 }
 
-interface Tournament {
-  id: string
-  name: string
-  season?: string | null
-}
-
-interface Opponent {
-  id: string
-  name: string
-  initials?: string
-  logo_url?: string
-  home_field_id?: string | null
-}
-
 /*
   Quem pode ser convocado para um evento. Fora do componente porque não
   depende de estado nenhum — e porque é usado a carregar a Agenda, antes de
@@ -208,10 +187,9 @@ const CalendarPage: React.FC = () => {
   const { clubSettings } = useClub()
   const [events, setEvents] = useState<Event[]>([])
   const [fields, setFields] = useState<Field[]>([])
-  const [opponents, setOpponents] = useState<Opponent[]>([])
-  const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   /*
     O detalhe do evento **não tem estado de aberto/fechado**: quem manda é o
@@ -232,10 +210,6 @@ const CalendarPage: React.FC = () => {
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
-  /* A ficha rápida do convocado (4a), numa persiana por cima do evento. Guarda-se
-     o id da convocatória e não a linha, para a ficha acompanhar as alterações
-     de estado feitas nos seus próprios botões. */
-  const [convocadoAberto, setConvocadoAberto] = useState<string | null>(null)
   const [typeFilter, setTypeFilter] = useState<'all' | 'match' | 'practice' | 'gathering'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'past' | 'my_confirmed' | 'my_declined' | 'my_pending' | 'my_called'>(ESTADO_POR_OMISSAO)
@@ -243,21 +217,6 @@ const CalendarPage: React.FC = () => {
   // Callups state
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
   const [allPlayers, setAllPlayers] = useState<Profile[]>([])
-  const [playerSearchTerm, setPlayerSearchTerm] = useState('')
-  const [modalCallupStatusFilter, setModalCallupStatusFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
-  /*
-    A convocatória, no detalhe do evento, começa recolhida.
-
-    Começava aberta ou fechada conforme `window.innerWidth >= 640` — resto do
-    tempo em que havia duas UIs. Com uma só, isso passou a ser um bug: o mesmo
-    evento mostrava a lista de convocados numa janela larga e escondia-a num
-    telemóvel, e a regra é que as duas larguras têm de mostrar a mesma coisa.
-    Fica o comportamento do telemóvel, que é o que toda a gente vê: o detalhe
-    abre curto, com a hora, o local e a resposta do próprio à vista, e a lista
-    do plantel a um toque.
-  */
-  const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(false)
-  const [isMatchReportOpen, setIsMatchReportOpen] = useState(false)
 
   // Generic Confirmation Modal State
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
@@ -278,11 +237,6 @@ const CalendarPage: React.FC = () => {
   // pendentes no carrossel do topo.
   const carouselDragRef = React.useRef<{ startX: number; startY: number; lastDeltaX: number; lastDeltaY: number } | null>(null)
 
-  // Abrir outro evento repõe a convocatória recolhida.
-  useEffect(() => {
-    if (selectedEvent) setIsModalCallupsExpanded(false)
-  }, [selectedEvent])
-
   // Ver um evento é navegar: o endereço passa a ter ?event=<id>, portanto o
   // detalhe tem link próprio e o botão de retroceder do browser volta à agenda.
   const abrirEvento = (ev: Event) => {
@@ -293,8 +247,6 @@ const CalendarPage: React.FC = () => {
   const voltaDoEvento = useVoltarDaFicha(['event'], 'Agenda')
   const handleCloseEventModal = () => {
     // `selectedEvent` fica retido; o que fecha o detalhe é o endereço.
-    setPlayerSearchTerm('')
-    setModalCallupStatusFilter('all')
     voltaDoEvento.aoVoltar()
   }
 
@@ -337,9 +289,6 @@ const CalendarPage: React.FC = () => {
     }
   }
 
-  /* O evento em edição — o formulário é o `EditarEvento`, o mesmo dos Eventos. */
-  const [eventoAEditar, setEventoAEditar] = useState<Event | null>(null)
-
   /**
    * O mesmo que `getEventLocation`, mas com o nome e a morada separados —
    * é assim que o cartão os desenha, um por linha, como no cartão do jogo da
@@ -368,7 +317,7 @@ const CalendarPage: React.FC = () => {
             .eq('player_id', profile.id)
         : Promise.resolve({ data: [] } as any)
 
-      const [evRes, callupsRes, myCallupsRes, profilesRes, fieldsRes, tourRes, oppsRes] = await Promise.all([
+      const [evRes, callupsRes, myCallupsRes, profilesRes, fieldsRes] = await Promise.all([
         supabase
           .from('events')
           .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season, image_url, organizer_name), field:fields(id, name, address)')
@@ -385,25 +334,10 @@ const CalendarPage: React.FC = () => {
         supabase
           .from('fields')
           .select('id, name, address'),
-        supabase
-          .from('tournaments')
-          .select('id, name, season'),
-        supabase
-          .from('opponents')
-          .select('id, name, initials, logo_url, home_field_id')
-          .order('name')
       ])
 
       if (fieldsRes.data) {
         setFields(fieldsRes.data as Field[])
-      }
-
-      if (oppsRes.data) {
-        setOpponents(oppsRes.data as Opponent[])
-      }
-
-      if (tourRes.data) {
-        setTournaments(tourRes.data as Tournament[])
       }
 
       if (evRes.data) {
@@ -561,39 +495,6 @@ const CalendarPage: React.FC = () => {
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
 
 
-  // --- EDITAR EVENTO ---
-  const handleStartEditEvent = (ev: Event) => {
-    if (hasMatchReport(ev)) {
-      toast.error('Este jogo já tem ficha de jogo lançada — o evento já não pode ser editado.')
-      return
-    }
-    setEventoAEditar(ev)
-  }
-
-  const handleDeleteSpecificEvent = (eventId: string) => {
-    setConfirmModalConfig({
-      isOpen: true,
-      title: 'Eliminar evento',
-      description: 'Tens a certeza que queres eliminar este evento? Todas as convocatórias e respostas associadas são eliminadas.',
-      confirmText: 'Sim, eliminar evento',
-      cancelText: 'Cancelar',
-      variant: 'danger',
-      onConfirm: async () => {
-        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
-        try {
-          const { error } = await supabase.from('events').delete().eq('id', eventId)
-          if (error) throw error
-          handleCloseEventModal()
-          setEventoAEditar(null)
-          fetchEventsAndData()
-          toast.success('Evento eliminado com sucesso!')
-        } catch (err: any) {
-          toast.error('Erro ao eliminar evento: ' + mensagemDeErro(err))
-        }
-      }
-    })
-  }
-
   const handleCallupResponse = async (eventId: string, status: 'confirmed' | 'declined') => {
     if (!profile) return
     const targetEvent = events.find(e => e.id === eventId)
@@ -649,62 +550,6 @@ const CalendarPage: React.FC = () => {
     } catch (err: any) {
       console.error('Erro ao atualizar resposta:', err)
       toast.error('Erro ao atualizar resposta: ' + mensagemDeErro(err))
-    }
-  }
-
-  const handleUpdateCallupStatus = async (callupId: string, eventId: string, newStatus: 'confirmed' | 'declined' | 'called') => {
-    try {
-      const { error } = await supabase
-        .from('callups')
-        .update({ status: newStatus })
-        .eq('id', callupId)
-
-      if (error) throw error
-
-      setEventCallups(prev => ({
-        ...prev,
-        [eventId]: (prev[eventId] || []).map(c => c.id === callupId ? { ...c, status: newStatus } : c)
-      }))
-      toast.success(`Resposta marcada: ${ROTULO_RESPOSTA[newStatus]}`)
-    } catch (err: any) {
-      toast.error('Erro ao marcar a resposta: ' + mensagemDeErro(err))
-    }
-  }
-
-  // Treinador remove jogador de uma convocatória existente
-  const handleRemovePlayerFromCallup = async (callupId: string, eventId: string) => {
-    /* Faz-se logo e desfaz-se no toast (decisão da auditoria de design):
-       tirar um atleta é um gesto frequente, e uma pergunta a cada um cansava. */
-    const removida = (eventCallups[eventId] || []).find(c => c.id === callupId)
-    try {
-      const { error } = await supabase.from('callups').delete().eq('id', callupId)
-      if (error) throw error
-
-      setEventCallups(prev => ({
-        ...prev,
-        [eventId]: (prev[eventId] || []).filter(c => c.id !== callupId)
-      }))
-      if (!removida) {
-        toast.success('Atleta tirado da convocatória.')
-        return
-      }
-      toast.comAnular('Atleta tirado da convocatória.', async () => {
-        const { data, error: erroRepor } = await supabase
-          .from('callups')
-          .insert({ event_id: eventId, player_id: removida.player_id, status: removida.status })
-          .select('id')
-          .single()
-        if (erroRepor || !data) {
-          toast.error('Não foi possível repor o atleta: ' + mensagemDeErro(erroRepor))
-          return
-        }
-        setEventCallups(prev => ({
-          ...prev,
-          [eventId]: [...(prev[eventId] || []), { ...removida, id: data.id }]
-        }))
-      })
-    } catch (err: any) {
-      toast.error('Erro ao tirar da convocatória: ' + mensagemDeErro(err))
     }
   }
 
@@ -2175,338 +2020,52 @@ const CalendarPage: React.FC = () => {
                 })()}
               </div>
 
-              {/* COLUNA DIREITA (7 Colunas): Convocatória Completa, Filtros Interativos e Gestão */}
-              {(() => {
-                /*
-                  A convocatória é o que está em `callups`, e mais nada.
-
-                  Havia aqui um filtro por elegibilidade que escondia da lista
-                  — e das contagens — quem tivesse ficado lesionado ou inativo
-                  **depois** de ser convocado. Consequências, todas medidas em
-                  produção no jogo de 12/09: a Agenda dizia "22 convocados" e
-                  esta persiana dizia 19; os 3 lesionados não apareciam, e por
-                  isso não havia como os tirar da convocatória; e a recusa de um
-                  deles desaparecia das contas — uma resposta a menos numa base
-                  que tem nove ao todo.
-
-                  Ficam à vista, marcados com o seu estado. Tirá-los é decisão
-                  da equipa técnica, não do filtro: um lesionado pode continuar
-                  convocado para um convívio, ou o treinador pode querer
-                  esperar pela alta.
-                */
-                const callups = eventCallups[selectedEvent.id] || []
-
-                /** `null` se está disponível; senão o estado que o impede. */
-                const estadoQueImpede = (c: CallupWithPlayer): string | null => {
+              {/*
+                A convocatória vê-se aqui e edita-se nos Eventos — é o mesmo
+                bloco (`BlocoConvocatoria`), sem as ações. Havia dois sítios a
+                escrever a mesma tabela, com ferramentas diferentes em cada um.
+              */}
+              <BlocoConvocatoria
+                key={selectedEvent.id}
+                convocatorias={eventCallups[selectedEvent.id] || []}
+                maxJogadores={selectedEvent.max_players}
+                gere={Boolean(isCoachOrAdmin)}
+                estadoQueImpede={c => {
                   const p = allPlayers.find(pl => pl.id === c.player_id) || c.player
                   if (!p || isPlayerEligible(p, selectedEvent.type)) return null
                   if (p.status === 'inactive') return 'Inativo'
                   if (p.status === 'injured') return 'Lesionado'
                   // Apto, mas sem o papel de atleta: só entra em convívios.
                   return 'Não é atleta'
-                }
-                const indisponiveis = callups.filter(c => estadoQueImpede(c) !== null)
-
-                const confirmedList = callups.filter(c => c.status === 'confirmed')
-                const declinedList = callups.filter(c => c.status === 'declined')
-                const pendingList = callups.filter(c => c.status === 'called')
-
-                // Lista de atletas filtrada por status e termo de pesquisa
-                const filteredCallups = callups.filter(c => {
-                  if (modalCallupStatusFilter !== 'all' && c.status !== modalCallupStatusFilter) return false
-                  if (!playerSearchTerm) return true
-                  const q = playerSearchTerm.toLowerCase()
-                  const nameMatch = c.player?.name?.toLowerCase().includes(q) ||
-                    c.player?.shirt_name?.toLowerCase().includes(q) ||
-                    c.player?.nickname?.toLowerCase().includes(q) ||
-                    (c.player?.jersey_number && c.player.jersey_number.toString().includes(q))
-                  return nameMatch
-                })
-
-                return (
-                  <div className="bg-white/[0.07] p-4 rounded-3xl space-y-3.5 transition-all border border-white/10 border-t-white/20 shadow-lg shadow-black/20">
-                    {/* Topo da Convocatória com Botão de Colapsar / Expandir */}
-                    <button
-                      type="button"
-                      onClick={() => setIsModalCallupsExpanded(prev => !prev)}
-                      aria-expanded={isModalCallupsExpanded}
-                      className="w-full min-h-11 flex items-center justify-between cursor-pointer select-none group text-left
-                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold rounded-xl"
-                    >
-                      <div className="flex-1 pr-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-base font-black text-white flex items-center gap-2 group-hover:text-csc-gold transition-colors">
-                            <Users size={18} className="text-csc-gold" />
-                            <span>Convocatória ({callups.length}{selectedEvent.max_players ? ` / ${selectedEvent.max_players} máx` : ''})</span>
-                          </h3>
-                        </div>
-
-                        {/*
-                          Resumo quando colapsado ou expandido.
-
-                          **A contagem por responder é de quem gere.** Ao
-                          atleta, "0 confirmados · 22 pendentes" por cima do
-                          seu próprio botão é a prova de que ninguém responde,
-                          no sítio onde lhe pedimos que responda. A ele vale a
-                          mesma regra já decidida para o cabeçalho do cartão na
-                          lista: mostram-se os "sim" enquanto houver algum, e
-                          quando não há nenhum não se diz nada — senão a app
-                          passa o tempo a anunciar zeros.
-
-                          As cores de estado mantêm-se: é informação, não
-                          decoração.
-                        */}
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          {(isCoachOrAdmin || confirmedList.length > 0) && (
-                            <span className="text-[10.5px] font-bold text-csc-verde-texto bg-csc-light/15 px-2 py-0.5 rounded-md">
-                              {confirmedList.length} {confirmedList.length === 1 ? 'confirmado' : 'confirmados'}
-                            </span>
-                          )}
-                          {/* Neutro, e não âmbar: o âmbar desta app é do
-                              dinheiro a vencer, e quem ainda não respondeu não
-                              está em falta com ninguém. */}
-                          {isCoachOrAdmin && (
-                            <span className="text-[10.5px] font-bold text-white/70 bg-white/8 px-2 py-0.5 rounded-md">
-                              {pendingList.length} sem resposta
-                            </span>
-                          )}
-                          {isCoachOrAdmin && declinedList.length > 0 && (
-                            <span className="text-[10.5px] font-bold text-csc-vermelho-texto bg-csc-red/15 px-2 py-0.5 rounded-md">
-                              {declinedList.length} {declinedList.length === 1 ? 'recusado' : 'recusados'}
-                            </span>
-                          )}
-                          {indisponiveis.length > 0 && (
-                            <span className="text-[10.5px] font-bold text-csc-vermelho-texto bg-csc-red/18 border border-csc-red/35 px-2 py-0.5 rounded-md">
-                              {indisponiveis.length} sem condições
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {/* O `hidden` que aqui estava nunca mostrava
-                            nada: os pontos de corte estão desligados no
-                            `@theme`, e o botão ficava só com a seta. */}
-                        <span className="text-xs font-bold text-white/70 group-hover:text-white">
-                          {isModalCallupsExpanded ? 'Recolher' : 'Expandir'}
-                        </span>
-                        <div className="p-2 rounded-xl bg-white/10 group-hover:bg-white/20 text-white transition-all">
-                          {isModalCallupsExpanded ? (
-                            <ChevronDown size={16} />
-                          ) : (
-                            <ChevronRight size={16} />
-                          )}
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Conteúdo Expandido da Convocatória */}
-                    {isModalCallupsExpanded && (
-                      <div className="space-y-4 pt-3 border-t border-white/10 animate-fade-in">
-                        {/*
-                          Resumo de quórum e procura: ferramentas de quem monta
-                          a convocatória, e por isso só de quem gere. Ao atleta
-                          davam o mesmo "SEM RESPOSTA 20" que se tirou das
-                          pastilhas acima, e mais uma caixa para procurar
-                          colegas numa lista que ele lê de uma vez.
-                        */}
-                        {isCoachOrAdmin && (
-                        <div className="space-y-2">
-                          <QuorumFilterCards
-                            totalCount={callups.length}
-                            confirmedCount={confirmedList.length}
-                            pendingCount={pendingList.length}
-                            declinedCount={declinedList.length}
-                            activeFilter={modalCallupStatusFilter}
-                            onSelect={setModalCallupStatusFilter}
-                          />
-
-                          {/* Campo de Pesquisa e Limpeza de Filtros */}
-                          <div className="flex flex-col items-center gap-2 pt-1">
-                            <div className="relative flex-1 w-full">
-                              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/65" />
-                              <input
-                                type="text"
-                                value={playerSearchTerm}
-                                onChange={(e) => setPlayerSearchTerm(e.target.value)}
-                                placeholder="Pesquisar convocado por nome..."
-                                className="w-full pl-8 pr-3 py-1.5 bg-white/10 text-white placeholder:text-white/65 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-gold"
-                              />
-                            </div>
-
-                            {modalCallupStatusFilter !== 'all' && (
-                              <button
-                                type="button"
-                                onClick={() => setModalCallupStatusFilter('all')}
-                                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                              >
-                                <X size={12} /> Limpar Filtro
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        )}
-
-                        {/*
-                          A convocatória envelhece: quem foi chamado apto pode
-                          ficar lesionado ou ser desativado antes do jogo. Não
-                          se corrige sozinha — apagar linhas por trás das costas
-                          da equipa técnica apagaria também as respostas já
-                          dadas —, mas tem de se poder atualizar num toque.
-                        */}
-                        {isCoachOrAdmin && indisponiveis.length > 0 && (
-                          <div className="rounded-2xl bg-csc-red/12 border border-csc-red/30 p-3.5 flex items-center gap-3">
-                            <span className="min-w-0 flex-1">
-                              <span className="block font-display font-extrabold text-[12px] text-csc-vermelho-texto">
-                                {indisponiveis.length === 1
-                                  ? '1 convocado sem condições'
-                                  : `${indisponiveis.length} convocados sem condições`}
-                              </span>
-                              <span className="block text-[10.5px] leading-snug text-white/62 mt-0.5">
-                                Ficaram lesionados ou inativos depois de serem convocados. Continuam na
-                                lista até decidires.
-                              </span>
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                triggerHaptic('medium')
-                                setConfirmModalConfig({
-                                  isOpen: true,
-                                  title: 'Atualizar a convocatória',
-                                  description:
-                                    indisponiveis.length === 1
-                                      ? 'Tirar da convocatória o convocado que já não tem condições para este evento?'
-                                      : `Tirar da convocatória os ${indisponiveis.length} convocados que já não têm condições para este evento?`,
-                                  confirmText: 'Sim, tirar',
-                                  cancelText: 'Cancelar',
-                                  variant: 'danger',
-                                  onConfirm: async () => {
-                                    setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
-                                    try {
-                                      const { error } = await supabase
-                                        .from('callups')
-                                        .delete()
-                                        .in('id', indisponiveis.map(c => c.id))
-                                      if (error) throw error
-                                      setEventCallups(prev => ({
-                                        ...prev,
-                                        [selectedEvent.id]: (prev[selectedEvent.id] || []).filter(
-                                          c => !indisponiveis.some(i => i.id === c.id),
-                                        ),
-                                      }))
-                                      toast.info(
-                                        indisponiveis.length === 1
-                                          ? 'Convocado retirado da convocatória.'
-                                          : `${indisponiveis.length} convocados retirados da convocatória.`,
-                                      )
-                                    } catch (err: any) {
-                                      toast.error('Erro ao atualizar a convocatória: ' + mensagemDeErro(err))
-                                    }
-                                  },
-                                })
-                              }}
-                              className="flex-none min-h-11 px-3.5 rounded-[18px] bg-csc-red/20 border border-csc-red/45
-                                text-csc-vermelho-texto font-display font-bold text-[12px] cursor-pointer
-                                transition-transform duration-150 active:scale-97
-                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                            >
-                              Tirar
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Lista de Convocados Filtrada */}
-                        {callups.length === 0 ? (
-                          <div className="text-center py-8 bg-white/5 rounded-2xl border border-dashed border-white/15">
-                            <Users size={32} className="mx-auto text-white/65 mb-1" />
-                            <p className="text-xs font-bold text-white/60">Nenhum jogador convocado ainda.</p>
-                          </div>
-                        ) : filteredCallups.length === 0 ? (
-                          <div className="text-center py-8 bg-white/5 rounded-2xl text-white/60 space-y-2">
-                            <p className="text-xs font-bold">Nenhum atleta encontrado para os critérios selecionados.</p>
-                            <button
-                              onClick={() => {
-                                setModalCallupStatusFilter('all')
-                                setPlayerSearchTerm('')
-                              }}
-                              className="text-xs font-black text-csc-gold underline cursor-pointer"
-                            >
-                              Ver todos os {callups.length} convocados
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="max-h-[480px] overflow-y-auto pr-1">
-                            <div className="grid grid-cols-1 gap-2.5">
-                              {filteredCallups.map(c => (
-                                <CallupRow
-                                  key={c.id}
-                                  status={c.status}
-                                  player={c.player}
-                                  displayName={getPlayerDisplayName(c.player)}
-                                  isCoachOrAdmin={isCoachOrAdmin}
-                                  onConfirm={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'confirmed')}
-                                  onDecline={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'declined')}
-                                  onSetPending={() => handleUpdateCallupStatus(c.id, selectedEvent.id, 'called')}
-                                  onRemove={() => handleRemovePlayerFromCallup(c.id, selectedEvent.id)}
-                                  onOpen={isCoachOrAdmin ? () => setConvocadoAberto(c.id) : undefined}
-                                  impedimento={estadoQueImpede(c)}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
+                }}
+              />
 
             </div>
 
             {/*
-              Gestão do evento (ecrã 2c). Estava no topo, em botões de ícone
-              apertados ao lado da data; é o que menos vezes se faz nesta
-              persiana e passa para o fim, com os nomes por extenso.
+              Gestão do evento: um sítio só, os Eventos. A Agenda e a Home
+              mostram o evento; quem gere salta daqui para o mesmo evento lá,
+              já aberto, e o "‹" traz de volta a esta ficha.
             */}
             {isCoachOrAdmin && (
               <div className="rounded-[20px] bg-csc-gold/10 border border-csc-gold/26 p-3.5">
                 <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
                   Gestão do evento
                 </p>
-
-                <div className="flex flex-col gap-2.5 mt-3">
-                  {!hasMatchReport(selectedEvent) && (
-                    <Botao onClick={() => handleStartEditEvent(selectedEvent)}>
-                      <Pencil size={15} aria-hidden="true" />
-                      <span>Editar evento</span>
-                    </Botao>
-                  )}
-
-                  {selectedEvent.type === 'match' &&
-                    (new Date(selectedEvent.date_time).getTime() <= Date.now() ||
-                      selectedEvent.home_score !== null) && (
-                      <button
-                        type="button"
-                        onClick={() => setIsMatchReportOpen(true)}
-                        className="min-h-11 rounded-[22px] bg-white/8 border border-white/18 text-white font-display font-bold text-[11.5px]
-                          flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
-                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                      >
-                        <ClipboardList size={15} />
-                        <span>{hasMatchReport(selectedEvent) ? 'Ver ficha de jogo' : 'Lançar ficha de jogo'}</span>
-                      </button>
-                    )}
-
-                  <Botao aparencia="perigo" largo onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}>
-                    <Trash2 size={15} aria-hidden="true" />
-                    <span>Eliminar evento</span>
+                <div className="mt-3">
+                  <Botao
+                    largo
+                    onClick={() => {
+                      triggerHaptic('light')
+                      navigate(`/events?convocatoria=${selectedEvent.id}`, { state: { origem: nomeDoEcra(location.pathname, location.search) } })
+                    }}
+                  >
+                    <Pencil size={15} aria-hidden="true" />
+                    <span>Editar nos Eventos</span>
                   </Botao>
                 </div>
-
                 <p className="text-[10px] leading-snug text-white/62 mt-2.5">
-                  Com ficha de jogo lançada, o evento fecha: deixa de ser editável e a convocatória
-                  não aceita respostas.
+                  O evento, a convocatória e a ficha de jogo editam-se nos Eventos.
                 </p>
               </div>
             )}
@@ -2514,71 +2073,7 @@ const CalendarPage: React.FC = () => {
         </EcraDetalhe>
       )}
 
-      {/*
-        A ficha rápida do convocado (4a): uma persiana por cima do ecrã do
-        evento — é um olhar rápido, e fecha-se para voltar à convocatória.
-      */}
-      {selectedEvent && (() => {
-        const tira = (eventCallups[selectedEvent.id] || []) as CallupWithPlayer[]
-        const aberta = tira.find(c => c.id === convocadoAberto) ?? null
-        return (
-          <FichaConvocado
-            convocatoria={aberta}
-            tira={tira}
-            displayName={aberta ? getPlayerDisplayName(aberta.player) : ''}
-            aoEscolher={setConvocadoAberto}
-            aoFechar={() => setConvocadoAberto(null)}
-            aoConfirmar={() => aberta && handleUpdateCallupStatus(aberta.id, selectedEvent.id, 'confirmed')}
-            aoRecusar={() => aberta && handleUpdateCallupStatus(aberta.id, selectedEvent.id, 'declined')}
-            aoRemover={() => {
-              if (!aberta) return
-              handleRemovePlayerFromCallup(aberta.id, selectedEvent.id)
-              setConvocadoAberto(null)
-            }}
-          />
-        )
-      })()}
       </div>
-
-      {/* Editar um evento: o mesmo ecrã dos Eventos (`EditarEvento`). Abre
-          por cima do ecrã do evento, e o "‹ Evento" volta a ele. */}
-      <EditarEvento
-        evento={eventoAEditar}
-        voltarPara="Evento"
-        aoFechar={() => setEventoAEditar(null)}
-        aoGravado={async gravado => {
-          const campo = fields.find(f => f.id === gravado.field_id) ?? null
-          const prova = tournaments.find(t => t.id === gravado.tournament_id) ?? null
-          setSelectedEvent(prev => (prev && prev.id === gravado.id
-            ? { ...prev, ...gravado, field: campo, tournament: prova } as Event
-            : prev))
-          setEventoAEditar(null)
-          await fetchEventsAndData()
-        }}
-        aoMudarConvocatoria={() => fetchEventsAndData()}
-        convocatorias={eventoAEditar ? (eventCallups[eventoAEditar.id] || []) : []}
-        plantel={allPlayers}
-        campos={fields}
-        adversarios={opponents}
-        provas={tournaments}
-        aoCriarCampo={campo => setFields(prev => [...prev.filter(f => f.id !== campo.id), campo].sort((x, y) => x.name.localeCompare(y.name)))}
-        aoCriarAdversario={adv => setOpponents(prev => [...prev.filter(o => o.id !== adv.id), adv as Opponent].sort((x, y) => x.name.localeCompare(y.name)))}
-      />
-
-      {/* Modal de Ficha de Jogo (Esquema Tático, Marcadores, Cartões e Ocorrências) */}
-      {selectedEvent && selectedEvent.type === 'match' && (
-        <MatchReportModal
-          isOpen={isMatchReportOpen}
-          onClose={() => setIsMatchReportOpen(false)}
-          eventId={selectedEvent.id}
-          event={selectedEvent}
-          isCoachOrAdmin={!!isCoachOrAdmin}
-          voltarPara="Evento"
-          onSaved={() => {
-            fetchEventsAndData()
-          }}
-        />
-      )}
 
       {/* Modal Genérico de Confirmação (Estilo Unificado e Elegante) */}
       <ConfirmModal

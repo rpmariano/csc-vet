@@ -237,13 +237,16 @@ test.describe('Calendário', () => {
     away_score: null,
   }
 
-  /** Cartão do evento (abre o ecrã do evento) → botão Editar. */
+  /** Cartão do evento (abre o ecrã do evento) → "Editar nos Eventos" →
+      "Modificar evento". A Agenda só mostra; edita-se nos Eventos. */
   async function abreEdicaoDoEvento(page: Page) {
     /* Ao pé do topo do cartão, e não no centro: o centro é a linha do
        campo, que é um link para o Maps e pára o clique de subir. */
     await page.getByRole('button', { name: /^Ver / }).first()
       .click({ position: { x: 30, y: 12 } })
-    await page.getByRole('button', { name: 'Editar evento' }).click()
+    await page.getByRole('button', { name: 'Editar nos Eventos' }).click()
+    await expect(page).toHaveURL(/events\?convocatoria=e1/)
+    await page.getByRole('button', { name: 'Modificar evento' }).click()
   }
 
   // O detalhe do evento e a edição são ecrãs, e não contam como diálogos.
@@ -253,8 +256,8 @@ test.describe('Calendário', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Treino de teste' })).toBeFocused()
     await expect(dialogos(page)).toHaveCount(0)
 
-    // Sair da edição é sempre deliberado: o "‹ Evento" pede confirmação.
-    await page.getByRole('button', { name: 'Evento', exact: true }).click()
+    // Sair da edição é sempre deliberado: o "‹ Convocatória" pede confirmação.
+    await page.getByRole('button', { name: 'Convocatória', exact: true }).click()
     await expect(dialogos(page)).toHaveCount(1)
     await verificaContrato(dialogos(page).last())
 

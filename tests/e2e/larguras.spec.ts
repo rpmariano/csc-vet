@@ -166,11 +166,12 @@ test('todos os ecrãs iguais em janela estreita e larga', async ({ page }) => {
 const SOBREPOSTOS: [string, string, (p: Page) => Promise<void>][] = [
   ['Folha do [+]', '/csc-vet/calendar', async p => { await p.getByRole('button', { name: /Criar|Novo/ }).first().click({ timeout: 4000 }) }],
   ['Filtros da Agenda', '/csc-vet/calendar', async p => { await p.getByRole('button', { name: /filtros/i }).first().click({ timeout: 4000 }) }],
-  ['Ficha do convocado', '/csc-vet/calendar?event=e2', async p => {
-    await p.getByRole('button', { name: /Convocatória/ }).first().click({ timeout: 4000 })
+  // A convocatória edita-se nos Eventos, e é lá que a ficha do convocado e o
+  // eliminar existem; na Agenda o evento só se lê.
+  ['Ficha do convocado', '/csc-vet/events?convocatoria=e2', async p => {
     await p.getByRole('button', { name: /Ver .* na convocatória/ }).first().click({ timeout: 4000 })
   }],
-  ['Confirmar eliminar', '/csc-vet/calendar?event=e2', async p => { await p.getByRole('button', { name: /Eliminar evento/ }).click({ timeout: 4000 }) }],
+  ['Confirmar eliminar', '/csc-vet/events?convocatoria=e2', async p => { await p.getByRole('button', { name: /Eliminar evento/ }).click({ timeout: 4000 }) }],
   ['Partilhar as contas', '/csc-vet/clube?ver=relatorios&relatorio=contas', async p => { await p.getByRole('button', { name: 'Partilhar' }).click({ timeout: 4000 }) }],
   ['Filtros das contas', '/csc-vet/clube?ver=relatorios&relatorio=contas', async p => { await p.getByRole('button', { name: 'Filtros', exact: true }).click({ timeout: 4000 }) }],
 ]
