@@ -24,6 +24,7 @@ import {
   Pencil
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { sincronizarTreinosFuturos } from '../lib/treinosFuturos'
 import { useAuth, extractRolesFromProfile, cleanNotesFromRolesTag } from '../context/AuthContext'
 import type { Profile, UserRole, ProfileStatus } from '../context/AuthContext'
 import SoccerPitchSelector from '../components/SoccerPitchSelector'
@@ -513,48 +514,7 @@ const TeamManagementPage: React.FC = () => {
      Quem não joga sai dos treinos, como um lesionado. */
   const syncPlayerPracticeCallups = async (targetPlayerId: string, status: ProfileStatus, joga: boolean) => {
     try {
-      const nowIso = new Date().toISOString()
-      const { data: upcomingPractices, error: erroTreinos } = await supabase
-        .from('events')
-        .select('id')
-        .eq('type', 'practice')
-        .gte('date_time', nowIso)
-      if (erroTreinos) throw erroTreinos
-
-      if (!upcomingPractices || upcomingPractices.length === 0) return
-
-      const practiceIds = upcomingPractices.map(p => p.id)
-
-      if (status === 'active' && joga) {
-        // Jogador passou a apto: adicionar a todos os treinos futuros onde ainda não esteja convocado
-        const { data: existingCallups, error: erroExistentes } = await supabase
-          .from('callups')
-          .select('event_id')
-          .eq('player_id', targetPlayerId)
-          .in('event_id', practiceIds)
-        if (erroExistentes) throw erroExistentes
-
-        const alreadyCalledEventIds = new Set((existingCallups || []).map(c => c.event_id))
-        const toCallEventIds = practiceIds.filter(id => !alreadyCalledEventIds.has(id))
-
-        if (toCallEventIds.length > 0) {
-          const insertPayload = toCallEventIds.map(eventId => ({
-            event_id: eventId,
-            player_id: targetPlayerId,
-            status: 'called'
-          }))
-          const { error: erroInserir } = await supabase.from('callups').insert(insertPayload)
-          if (erroInserir) throw erroInserir
-        }
-      } else {
-        // Jogador passou a lesionado ('injured') ou inativo ('inactive'): retirar de todos os treinos futuros
-        const { error: erroApagar } = await supabase
-          .from('callups')
-          .delete()
-          .eq('player_id', targetPlayerId)
-          .in('event_id', practiceIds)
-        if (erroApagar) throw erroApagar
-      }
+      await sincronizarTreinosFuturos(targetPlayerId, status, joga)
     } catch (syncErr) {
       /* O estado da ficha já ficou gravado; o que falhou foi acertar os
          treinos futuros. Dizê-lo, senão o atleta fica convocado (ou de fora)

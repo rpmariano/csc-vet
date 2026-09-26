@@ -834,3 +834,47 @@ test.describe('Quem pode ser convocado', () => {
     })
   }
 })
+
+/**
+ * Quem passa a apto entra sozinho nos treinos futuros — mas só se jogar.
+ *
+ * O botão de estado clínico das Definições tinha a sua própria cópia da
+ * sincronização, sem olhar a quem joga: um treinador que se marcasse apto
+ * ficava convocado para todos os treinos da época (237 linhas na base,
+ * apagadas a 2026-09-26). Hoje as duas portas usam o
+ * `sincronizarTreinosFuturos`.
+ */
+test.describe('Passar a apto nas Definições', () => {
+  const treino = { ...base, id: 'tf', title: 'Treino', type: 'practice', date_time: DAQUI_A_DIAS(4) }
+
+  for (const [quem, roles, convoca] of [
+    ['o jogador', ['player'], true],
+    ['o treinador que não joga', ['coach'], false],
+  ] as const) {
+    test(`${quem} ${convoca ? 'entra' : 'não entra'} nos treinos futuros`, async ({ page }) => {
+      const eu = { ...EU, role: roles[0], roles: [...roles], status: 'injured' }
+      await montarSupabaseFalso(page, { profiles: [eu], v_players_public: [eu], events: [treino] })
+      const insercoes: unknown[] = []
+      page.on('request', r => {
+        if (r.method() === 'POST' && r.url().includes('/rest/v1/callups')) insercoes.push(JSON.parse(r.postData() || '[]'))
+      })
+      let estadoGravado = false
+      page.on('request', r => {
+        if (r.method() === 'PATCH' && r.url().includes('/rest/v1/profiles')) estadoGravado = true
+      })
+
+      await page.goto('/csc-vet/settings')
+      await page.getByRole('button', { name: /Estado físico/ }).click()
+      await expect.poll(() => estadoGravado).toBe(true)
+
+      if (convoca) {
+        await expect.poll(() => insercoes.length).toBe(1)
+        expect(insercoes[0]).toEqual([{ event_id: 'tf', player_id: UTILIZADOR_TESTE.id, status: 'called' }])
+      } else {
+        // Dá tempo à sincronização de correr, e confirma que não escreveu nada.
+        await page.waitForTimeout(1500)
+        expect(insercoes).toHaveLength(0)
+      }
+    })
+  }
+})

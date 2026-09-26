@@ -922,6 +922,15 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   joga, e a sincronização de treinos do Plantel **escrevia** convocatórias na
   base para o treinador que passasse a apto. Hoje os três usam a regra do
   `isPlayerEligible`. `listas-do-plantel.spec.ts` cobre as contagens.
+  **Quem passa a apto entra sozinho nos treinos futuros, e quem fica
+  lesionado ou inativo sai deles — mas só quem joga.** A regra vive no
+  `sincronizarTreinosFuturos()` (`src/lib/treinosFuturos.ts`), usado pelo
+  Plantel e pelo botão de estado clínico das Definições. Eram duas cópias, e
+  a das Definições não olhava a quem joga: chegaram a estar na base 237
+  convocatórias de treino de treinadores e direção, nenhuma respondida,
+  apagadas a 2026-09-26. O "acrescentar" do dossier dos Eventos também só
+  mostra quem o `isPlayerEligible` deixa entrar no tipo do evento.
+  `convocatoria.spec.ts` cobre as Definições nos dois casos.
 - **Criar tem um botão só, o `<BotaoCriar>`** (`src/components/ui`): dourado,
   "+" em tinta e a sombra do [+] da barra de baixo — círculo num cabeçalho ou
   numa linha de procura, barra com texto quando o ecrã não tem título (os
