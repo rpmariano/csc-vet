@@ -1,6 +1,7 @@
 import React, { useId } from 'react'
 import { RefreshCw, Send, Save } from 'lucide-react'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { Botao } from './ui'
 
 /**
  * Ao guardar a edição de um evento já convocado, pergunta se as respostas
@@ -63,46 +64,27 @@ export const ResendCallupsModal: React.FC<ResendCallupsModalProps> = ({
           <ul className="space-y-1.5 text-white/80 text-[11.5px]">
             <li className="flex items-start gap-1.5">
               <span className="text-csc-light font-bold shrink-0">✓</span>
-              <span><strong className="text-csc-verde-texto">Reenviar Pedidos:</strong> Repõe todas as respostas como <em>Sem resposta</em>, para os convocados responderem de novo.</span>
+              <span><strong className="text-csc-verde-texto">Reenviar:</strong> Repõe todas as respostas como <em>Sem resposta</em>, para os convocados responderem de novo.</span>
             </li>
             <li className="flex items-start gap-1.5">
               <span className="text-white/62 font-bold shrink-0">✓</span>
-              <span><strong className="text-white">Manter Respostas:</strong> Guarda as alterações do evento mantendo as confirmações já registadas.</span>
+              <span><strong className="text-white">Só guardar:</strong> Guarda as alterações do evento mantendo as confirmações já registadas.</span>
             </li>
           </ul>
         </div>
 
         <div className="space-y-2.5 pt-1">
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={onResend}
-            className="w-full min-h-12 px-4 bg-csc-light text-white font-display font-black text-[12.5px] rounded-2xl
-              transition-transform duration-150 flex items-center justify-center gap-2 cursor-pointer active:scale-97
-              disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <Send size={16} />
-            <span>{isSaving ? 'A processar…' : 'Sim, reenviar os pedidos'}</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={onKeepAnswers}
-            className="w-full min-h-12 px-4 bg-white/10 hover:bg-white/15 active:bg-white/20 text-white font-bold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 border border-white/12 disabled:opacity-50"
-          >
-            <Save size={16} />
-            <span>Não, Apenas Gravar (Manter Respostas)</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={onBack}
-            className="w-full py-2 text-white/62 hover:text-white font-semibold text-xs transition-colors cursor-pointer text-center"
-          >
-            Voltar ao formulário de edição
-          </button>
+          <Botao largo aparencia="verde" disabled={isSaving} onClick={onResend}>
+            <Send size={16} aria-hidden="true" />
+            {isSaving ? 'A processar…' : 'Sim, reenviar os pedidos'}
+          </Botao>
+          <Botao largo aparencia="vidro" disabled={isSaving} onClick={onKeepAnswers}>
+            <Save size={16} aria-hidden="true" />
+            Não, só guardar
+          </Botao>
+          <Botao largo aparencia="vidro" disabled={isSaving} onClick={onBack}>
+            Voltar ao formulário
+          </Botao>
         </div>
       </div>
     </div>

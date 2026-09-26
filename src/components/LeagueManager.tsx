@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Botao } from './ui'
+import { Botao, BotaoIcone } from './ui'
 import { supabase } from '../lib/supabaseClient'
 import { Trash2, Shield, Plus } from 'lucide-react'
 import { toast } from '../context/ToastContext'
@@ -12,6 +12,7 @@ import { equipaDoTorneio } from '../lib/classificacao'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
 import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO } from './ui/formulario'
 
 interface LeagueManagerProps {
   tournamentId: string
@@ -189,7 +190,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                     <select
                       value={selectedGroupForTeam}
                       onChange={e => setSelectedGroupForTeam(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/6 border border-white/12 rounded-lg text-sm"
+                      className={CLASSE_CAMPO}
                     >
                       <option value="">Escolhe o grupo</option>
                       {groups.map(g => (
@@ -202,7 +203,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                     <select
                       value={selectedOpponentToAdd}
                       onChange={e => setSelectedOpponentToAdd(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/6 border border-white/12 rounded-lg text-sm"
+                      className={CLASSE_CAMPO}
                     >
                       <option value="">Escolhe a equipa</option>
                       <option value="csc">{CLUBE_SIGLA} (nós)</option>
@@ -250,9 +251,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                                 </span>
                               )
                             })()}
-                            <button onClick={() => handleRemoveTeam(t.id)} className="text-red-500 hover:bg-csc-red/10 p-1 rounded cursor-pointer">
-                              <Trash2 size={14} />
-                            </button>
+                            <BotaoIcone rotulo="Tirar a equipa do grupo" icone={Trash2} perigo discreto onClick={() => handleRemoveTeam(t.id)} />
                           </div>
                         ))}
                         {teams.filter(t => t.group_id === g.id).length === 0 && (
@@ -294,7 +293,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
               value={newGroupName}
               onChange={e => setNewGroupName(e.target.value)}
               placeholder="Ex: Grupo A, Apuramento Campeão"
-              className="w-full h-[46px] px-3.5 bg-white text-csc-tinta border-0 rounded-[14px] font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+              className={CLASSE_CAMPO}
               autoFocus
             />
           </div>
@@ -304,7 +303,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
               id="novo-grupo-fase"
               value={newGroupPhase}
               onChange={e => setNewGroupPhase(e.target.value)}
-              className="w-full h-[46px] px-3.5 bg-white text-csc-tinta border-0 rounded-[14px] font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+              className={CLASSE_CAMPO}
             >
               <option value="1">Fase 1 (Fase Inicial)</option>
               <option value="2">Fase 2 (Fase Final)</option>

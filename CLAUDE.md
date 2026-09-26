@@ -146,6 +146,17 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   principal de um ecrã (translúcido, deixa passar a faixa do topo) e `<CartaoSimples>`
   para listas e blocos. Idem `<Botao>`, `<Pastilha>`, `<TituloEcra>`,
   `<EtiquetaSeccao>` e `<FilaSeparadores>` (`src/components/ui`).
+- **E o resto também tem primitivo** (vaga 4 da auditoria de design,
+  2026-09-26): `<BotaoIcone>` para editar/eliminar/tirar só com ícone (44px,
+  lápis e caixote a 15px, `rotulo` como nome acessível — havia quatro glifos
+  de "editar"); `<Interruptor>` para um sim/não (`role="switch"`, a linha
+  inteira é o alvo); `<ACarregar>` e `<EstadoVazio>` para a lista que ainda
+  não é lista; e `CLASSE_CAMPO` / `CLASSE_ETIQUETA_CAMPO`
+  (`components/ui/formulario.ts`) para os campos de formulário, que estavam
+  copiados em treze ficheiros e já tinham divergido. **Um formulário num
+  diálogo passa pelo `<Modal>`**; as três confirmações partilhadas
+  (`ConfirmModal`, `UnsavedChangesModal`, `ResendCallupsModal`) têm moldura
+  própria mas os botões são `<Botao>`.
 - **Todos os alvos de toque têm no mínimo 44px de altura**, sem exceções — inclui
   pastilhas, separadores e botões de linha.
 - O fim da coluna acaba acima da barra inferior com `margin-bottom`, nunca

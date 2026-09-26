@@ -17,6 +17,7 @@ import { ConfirmModal } from '../ConfirmModal'
 import { Botao } from '../ui'
 import type { TournamentRules } from '../clube/torneios'
 import { mensagemDeErro } from '../../lib/erros'
+import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../ui/formulario'
 
 /**
  * Editar um evento — o mesmo ecrã na Agenda e nos Eventos.
@@ -95,13 +96,6 @@ export interface EditarEventoProps {
   aoCriarCampo: (campo: CampoDoEvento) => void
   aoCriarAdversario: (adversario: AdversarioDoEvento) => void
 }
-
-const CAMPO =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
-
-const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 const ROTULO_TIPO = { match: 'Jogo', practice: 'Treino', gathering: 'Convívio' } as const
 

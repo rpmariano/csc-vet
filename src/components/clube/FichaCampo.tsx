@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { MapPin, Pencil, Trash2, ExternalLink, Copy, Star, Info } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { EcraDetalhe } from '../EcraDetalhe'
-import { EtiquetaSeccao } from '../ui'
+import { EtiquetaSeccao, Botao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 import { toast } from '../../context/ToastContext'
 
@@ -228,26 +228,17 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
 
           {/* Editar e eliminar */}
           <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => { triggerHaptic('light'); aoEditar() }}
-              className="flex-1 h-12 rounded-3xl bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px]
-                flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
-              <Pencil size={15} /> Editar campo
-            </button>
-            <button
-              type="button"
+            <Botao className="flex-1" onClick={() => { triggerHaptic('light'); aoEditar() }}>
+              <Pencil size={15} aria-hidden="true" /> Editar campo
+            </Botao>
+            <Botao
+              aparencia="perigo"
+              className="flex-1"
               onClick={() => { triggerHaptic('warning'); aoEliminar() }}
               disabled={eCampoDoClube}
-              className="flex-1 h-12 rounded-3xl bg-csc-red/15 border border-csc-red/35 text-csc-vermelho-texto
-                font-display font-extrabold text-[12.5px] flex items-center justify-center gap-2 cursor-pointer
-                transition-transform duration-150 active:scale-97 disabled:opacity-45 disabled:cursor-not-allowed
-                disabled:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
             >
-              <Trash2 size={15} /> Eliminar
-            </button>
+              <Trash2 size={15} aria-hidden="true" /> Eliminar
+            </Botao>
           </div>
 
           {eCampoDoClube && (

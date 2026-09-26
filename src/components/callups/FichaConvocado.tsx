@@ -4,7 +4,7 @@ import { nomeDoEcra } from '../../lib/rotas'
 import { CheckCircle2, XCircle, Trash2, Phone, MessageCircle, ShieldAlert } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { BottomSheet } from '../BottomSheet'
-import { EtiquetaSeccao } from '../ui'
+import { EtiquetaSeccao, Botao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 
 /**
@@ -412,16 +412,9 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => { triggerHaptic('warning'); aoRemover() }}
-            className="w-full h-12 rounded-3xl bg-csc-red/15 border border-csc-red/35 text-csc-vermelho-texto
-              font-display font-extrabold text-[12.5px] cursor-pointer flex items-center justify-center gap-2
-              transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <Trash2 size={15} /> Tirar da convocatória
-          </button>
+          <Botao aparencia="perigo" largo onClick={() => { triggerHaptic('warning'); aoRemover() }}>
+            <Trash2 size={15} aria-hidden="true" /> Tirar da convocatória
+          </Botao>
 
           {/* A ficha a sério — posições, contactos, documentos — é a do
               Plantel, que já existe e já tem endereço próprio. */}

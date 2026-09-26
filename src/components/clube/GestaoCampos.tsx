@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { MapPin, Plus, Search, X, Edit2, Trash2, ExternalLink, Save } from 'lucide-react'
+import { MapPin, Plus, Search, X, Trash2, ExternalLink, Save, Pencil } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useClub } from '../../context/ClubContext'
 import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
-import { useModalA11y } from '../../hooks/useModalA11y'
+import Modal from '../Modal'
 import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
 import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
 import { UnsavedChangesModal } from '../UnsavedChangesModal'
@@ -14,6 +14,7 @@ import { FichaCampo } from './FichaCampo'
 import { formatClubSigla } from '../../lib/siglas'
 import { CAMPO, ETIQUETA, urlDoGoogleMaps, type Campo } from './comum'
 import { mensagemDeErro } from '../../lib/erros'
+import { BotaoIcone, EstadoVazio, Botao } from '../ui'
 
 /*
   Campos (ecrã 9f), com a ficha de cada um (9i) no endereço.
@@ -99,7 +100,6 @@ export const GestaoCampos: React.FC = () => {
     aoSair: () => setModalAberto(false),
     descricao: 'As alterações a este campo ainda não foram gravadas. Se saíres agora, perdem-se.',
   })
-  const painelRef = useModalA11y({ isOpen: modalAberto, onClose: guarda.tentarFechar })
 
   const eliminar = (id: string, nomeDoCampo: string) => {
     setConfirmacao({
@@ -181,11 +181,7 @@ export const GestaoCampos: React.FC = () => {
         </div>
 
         {filtrados.length === 0 ? (
-          <div className="text-center py-12 text-white/60">
-            <MapPin size={40} className="mx-auto mb-2 opacity-60" />
-            <p className="font-bold text-sm text-white/70">Nenhum campo encontrado</p>
-            <p className="text-xs text-white/65 mt-0.5">Tenta outro termo na pesquisa ou cria um campo novo.</p>
-          </div>
+          <EstadoVazio icone={MapPin} titulo="Nenhum campo encontrado." texto="Tenta mudar a procura ou cria um campo novo." />
         ) : (
           <div className="grid grid-cols-1 gap-2.5">
             {filtrados.map(c => {
@@ -230,24 +226,8 @@ export const GestaoCampos: React.FC = () => {
                     </a>
 
                     <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => abrirEdicao(c)}
-                        className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-csc-gold text-white/70 hover:text-csc-gold rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
-                        title="Editar campo"
-                        aria-label={`Editar o campo ${c.name}`}
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => eliminar(c.id, c.name)}
-                        className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-red-400 text-red-400 hover:bg-red-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
-                        title="Eliminar campo"
-                        aria-label={`Eliminar o campo ${c.name}`}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <BotaoIcone rotulo={`Editar o campo ${c.name}`} icone={Pencil} onClick={() => abrirEdicao(c)} />
+                      <BotaoIcone rotulo={`Eliminar o campo ${c.name}`} icone={Trash2} perigo onClick={() => eliminar(c.id, c.name)} />
                     </div>
                   </div>
                 </div>
@@ -258,83 +238,51 @@ export const GestaoCampos: React.FC = () => {
       </div>
 
       {/* Criar ou editar campo (ecrã 9g) */}
-      {modalAberto && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div
-            ref={painelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="clube-campo-titulo"
-            tabIndex={-1}
-            className="bg-csc-superficie text-white w-full max-w-lg rounded-3xl shadow-2xl border border-white/12 overflow-hidden animate-scale-in outline-none"
-          >
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <MapPin size={22} className="text-csc-gold" />
-                <h3 id="clube-campo-titulo" className="font-black text-lg">
-                  {emEdicao ? 'Editar campo' : 'Criar novo campo'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={guarda.tentarFechar}
-                aria-label="Fechar"
-                className="w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-              >
-                <X size={18} className="stroke-[2.5]" />
-              </button>
-            </div>
-
-            <form onSubmit={e => { e.preventDefault(); gravar() }} className="p-6 space-y-4">
-              <div>
-                <label className={ETIQUETA} htmlFor="clube-campo-nome">Nome do campo *</label>
-                <input
-                  id="clube-campo-nome"
-                  type="text"
-                  required
-                  value={nome}
-                  onChange={e => setNome(e.target.value)}
-                  placeholder="Ex: Estádio Municipal Dramático de Cascais"
-                  className={CAMPO}
-                />
-              </div>
-
-              <div>
-                <label className={ETIQUETA} htmlFor="clube-campo-morada">Morada / localização</label>
-                <input
-                  id="clube-campo-morada"
-                  type="text"
-                  value={morada}
-                  onChange={e => setMorada(e.target.value)}
-                  placeholder="Ex: R. da Torre, 2750-760 Cascais"
-                  className={CAMPO}
-                />
-                <p className="text-[11px] text-white/70 mt-1 font-medium">
-                  Usada para navegação direta no Google Maps.
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-white/10 flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={guarda.tentarFechar}
-                  className="min-h-11 px-5 py-2.5 border border-white/15 rounded-xl font-bold text-sm text-white hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={aGravar}
-                  className="min-h-11 px-6 py-2.5 bg-csc-gold text-csc-tinta rounded-xl font-black text-sm hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98 disabled:opacity-60 disabled:cursor-wait"
-                >
-                  <Save size={16} className="text-csc-tinta" />
-                  <span>{aGravar ? 'A guardar…' : emEdicao ? 'Guardar alterações' : 'Criar campo'}</span>
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={modalAberto}
+        onClose={guarda.tentarFechar}
+        title={emEdicao ? 'Editar campo' : 'Criar novo campo'}
+        icon={<MapPin size={20} className="text-csc-gold" aria-hidden="true" />}
+        closeOnOverlayClick={false}
+      >
+        <form onSubmit={e => { e.preventDefault(); gravar() }} className="space-y-4">
+          <div>
+            <label className={ETIQUETA} htmlFor="clube-campo-nome">Nome do campo *</label>
+            <input
+              id="clube-campo-nome"
+              type="text"
+              required
+              value={nome}
+              onChange={e => setNome(e.target.value)}
+              placeholder="Ex: Estádio Municipal Dramático de Cascais"
+              className={CAMPO}
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className={ETIQUETA} htmlFor="clube-campo-morada">Morada / localização</label>
+            <input
+              id="clube-campo-morada"
+              type="text"
+              value={morada}
+              onChange={e => setMorada(e.target.value)}
+              placeholder="Ex: R. da Torre, 2750-760 Cascais"
+              className={CAMPO}
+            />
+            <p className="text-[11px] text-white/70 mt-1 font-medium">
+              Usada para navegação direta no Google Maps.
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-white/10 flex gap-2 justify-end">
+            <Botao aparencia="vidro" onClick={guarda.tentarFechar}>Cancelar</Botao>
+            <Botao type="submit" disabled={aGravar}>
+              <Save size={16} aria-hidden="true" />
+              <span>{aGravar ? 'A guardar…' : emEdicao ? 'Guardar alterações' : 'Criar campo'}</span>
+            </Botao>
+          </div>
+        </form>
+      </Modal>
 
       <UnsavedChangesModal {...guarda.props} />
 

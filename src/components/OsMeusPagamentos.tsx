@@ -5,6 +5,7 @@ import { COMO_PAGAR } from './SinalPagamentos'
 import { useEstadoPagamentos, DIAS_DE_AVISO, type ItemPagamento } from '../hooks/useEstadoPagamentos'
 import type { QuotaEligiblePlayer } from '../lib/finance'
 import { triggerHaptic } from '../utils/haptics'
+import { ACarregar } from './ui'
 
 /**
  * Os meus pagamentos (ecrã 12c) — o que o jogador deve, o que já pagou, e como
@@ -118,10 +119,7 @@ export const OsMeusPagamentos: React.FC<{
       }
     >
       {estado.loading ? (
-        <div className="flex justify-center py-10" role="status" aria-live="polite">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-csc-gold border-t-transparent" />
-          <span className="sr-only">A carregar…</span>
-        </div>
+        <ACarregar className="py-10" />
       ) : (
         <div className="space-y-4">
           {/* O estado, em grande: a mesma cor do sinal do cabeçalho. */}

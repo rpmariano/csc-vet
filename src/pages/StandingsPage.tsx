@@ -8,19 +8,14 @@ import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, Che
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
 import { useClub } from '../context/ClubContext'
-import { Botao, Pastilha } from '../components/ui'
+import { Botao, Pastilha, BotaoIcone, ACarregar, EstadoVazio } from '../components/ui'
 import { calcularClassificacao, equipaDoTorneio, jogoTerminado } from '../lib/classificacao'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 
 /** Campo e etiqueta dos formulários, o mesmo desenho da Agenda e dos Eventos. */
-const CAMPO =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
-
-const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /**
  * Emblema pequeno de uma equipa de torneio, o mesmo da tabela. Sem emblema
@@ -332,23 +327,20 @@ export const StandingsPage = () => {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-white/62 font-bold">A carregar classificações...</div>
+        <ACarregar texto="A carregar classificações…" />
       ) : !visibleTournaments.some(t => t.id === selectedTourId) ? (
-        <div className="text-center py-12 text-white/62 font-bold text-sm">
-          {tourViewFilter === 'history' ? 'Ainda não há torneios terminados.' : 'Não há torneios agendados ou ativos de momento.'}
-        </div>
+        <EstadoVazio
+          icone={Trophy}
+          titulo={tourViewFilter === 'history' ? 'Ainda não há torneios terminados.' : 'Não há torneios a decorrer.'}
+        />
       ) : groups.length === 0 ? (
-        <div className="cartao-simples text-white p-8 text-center">
-          <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Info size={30} className="text-white/65" />
-          </div>
-          <h3 className="text-lg font-black text-white">Ainda não há grupos</h3>
-          <p className="text-white/70 text-sm mt-2 max-w-sm mx-auto">
-            {canManage
-              ? 'Cria primeiro os grupos e as equipas em Backoffice → Torneios → Gerir Grupos e Equipas.'
-              : 'As tabelas classificativas ficarão disponíveis assim que a administração configurar os grupos desta prova.'}
-          </p>
-        </div>
+        <EstadoVazio
+          icone={Info}
+          titulo="Ainda não há grupos."
+          texto={canManage
+            ? 'Cria primeiro os grupos e as equipas em Clube → Torneios → grupos e equipas.'
+            : 'A classificação aparece assim que a direção configurar os grupos desta prova.'}
+        />
       ) : (
         <div className="space-y-6">
 
@@ -659,15 +651,7 @@ export const StandingsPage = () => {
                                     >
                                       <X size={15} />
                                     </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setMatchToDelete(m.id)}
-                                      className="w-11 h-11 rounded-xl bg-csc-red/15 border border-csc-red/35 text-csc-vermelho-texto flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                                      title="Eliminar jogo"
-                                      aria-label={`Eliminar o jogo de ${casa.sigla} com ${fora.sigla}`}
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
+                                    <BotaoIcone rotulo={`Eliminar o jogo de ${casa.sigla} com ${fora.sigla}`} icone={Trash2} perigo onClick={() => setMatchToDelete(m.id)} />
                                   </div>
                                 </div>
                               )
@@ -849,14 +833,7 @@ export const StandingsPage = () => {
                   ))}
                 </select>
                 {jornadaFixtures.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => removeFixtureRow(idx)}
-                    aria-label={`Tirar o jogo ${idx + 1} da jornada`}
-                    className="w-11 h-11 flex items-center justify-center text-csc-vermelho-texto rounded-xl cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <BotaoIcone rotulo={`Tirar o jogo ${idx + 1} da jornada`} icone={Trash2} perigo discreto onClick={() => removeFixtureRow(idx)} />
                 ) : (
                   <span className="w-7" aria-hidden="true" />
                 )}

@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from 'react'
-import { 
-  Users, 
-  Search, 
-  Plus, 
-  Edit2, 
-  Trash2, 
+import {
+  Users,
+  Search,
+  Plus,
+  Trash2,
   Phone,
-  FileText, 
-  Shield, 
-  HeartPulse, 
-  CheckCircle2, 
-  XCircle, 
+  FileText,
+  Shield,
+  HeartPulse,
+  CheckCircle2,
+  XCircle,
   ExternalLink,
   Save,
   Link2,
@@ -23,6 +22,7 @@ import {
   ClipboardList,
   Landmark,
   User as UserIcon,
+  Pencil
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth, extractRolesFromProfile, cleanNotesFromRolesTag } from '../context/AuthContext'
@@ -39,7 +39,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
 import { CLUBE_NOME } from '../lib/clube'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, Botao, LinhaAtleta } from '../components/ui'
+import { CabecalhoEcra, Pastilha, Botao, LinhaAtleta, ACarregar, EstadoVazio } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import {
   getSeasonLabel,
@@ -50,6 +50,7 @@ import {
   type FinancialSettings,
 } from '../lib/finance'
 import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -58,12 +59,6 @@ const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
-const CAMPO =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
-
-const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /** Como se lê cada filtro escondido, na linha de resumo. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -1256,15 +1251,9 @@ const TeamManagementPage: React.FC = () => {
 
       {/* Profiles View */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold"></div>
-        </div>
+        <ACarregar />
       ) : filteredProfiles.length === 0 ? (
-        <div className="bg-csc-dark text-white rounded-2xl border border-dashed border-white/15 p-12 text-center">
-          <Users size={48} className="mx-auto text-white/20 mb-3" />
-          <p className="font-bold text-white/70 text-lg">Nenhum atleta encontrado</p>
-          <p className="text-xs text-white/65 mt-1">Tenta mudar os filtros ou a procura, ou cria uma ficha nova.</p>
-        </div>
+        <EstadoVazio icone={Users} titulo="Nenhum atleta encontrado." texto="Tenta mudar os filtros ou a procura, ou cria uma ficha nova." />
       ) : viewMode === 'list' ? (
         /*
           Lista do plantel (ecrã 3a): número, alcunha, nome, posições e a
@@ -2190,7 +2179,6 @@ const TeamManagementPage: React.FC = () => {
                 </span>
               )}
 
-
               <button
                 type="button"
                 onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
@@ -2615,16 +2603,10 @@ const TeamManagementPage: React.FC = () => {
                   Gestão do atleta
                 </h4>
 
-                <button
-                  type="button"
-                  onClick={() => openEditModal(selectedProfile)}
-                  className="w-full min-h-12 px-4 rounded-2xl bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px]
-                    flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
-                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                >
-                  <Edit2 size={15} />
+                <Botao largo onClick={() => openEditModal(selectedProfile)}>
+                  <Pencil size={15} aria-hidden="true" />
                   Editar atleta
-                </button>
+                </Botao>
 
                 <p className="text-[10.5px] leading-relaxed text-white/60">
                   Marcar como lesionado retira-o dos treinos futuros; ao voltar a apto entra outra vez.
@@ -2664,19 +2646,17 @@ const TeamManagementPage: React.FC = () => {
                 )}
 
                 {isAdmin && (
-                  <button
-                    type="button"
+                  <Botao
+                    aparencia="perigo"
+                    largo
                     onClick={() => {
                       const alvo = selectedProfile
                       handleDeleteMember(alvo.id, alvo.name)
                     }}
-                    className="w-full min-h-12 px-4 rounded-2xl text-csc-vermelho-texto font-display font-extrabold text-[12px]
-                      flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
-                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={15} aria-hidden="true" />
                     Eliminar atleta
-                  </button>
+                  </Botao>
                 )}
               </div>
             )}

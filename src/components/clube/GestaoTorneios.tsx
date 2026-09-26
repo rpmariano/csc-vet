@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
-import { Trophy, Shield, Plus, Search, X, Edit2, Trash2, Save, ChevronDown } from 'lucide-react'
+import { Trophy, Shield, Plus, Search, X, Trash2, Save, ChevronDown, Pencil } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { extractRolesFromProfile } from '../../context/AuthContext'
 import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
 import { EcraDetalhe } from '../EcraDetalhe'
-import { Botao } from '../ui'
+import { Botao, BotaoIcone, EstadoVazio } from '../ui'
 import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../UnsavedChangesModal'
 import { ConfirmModal } from '../ConfirmModal'
@@ -338,11 +338,7 @@ export const GestaoTorneios: React.FC = () => {
           </div>
 
           {filtrados.length === 0 ? (
-            <div className="text-center py-12 text-white/60">
-              <Trophy size={40} className="mx-auto mb-2 opacity-60" />
-              <p className="font-bold text-sm text-white/70">Nenhum torneio encontrado</p>
-              <p className="text-xs text-white/65 mt-0.5">Tenta mudar a procura ou cria uma competição nova.</p>
-            </div>
+            <EstadoVazio icone={Trophy} titulo="Nenhum torneio encontrado." texto="Tenta mudar a procura ou cria uma competição nova." />
           ) : (
             <div className="grid grid-cols-1 gap-2.5">
               {filtrados.map(t => (
@@ -380,22 +376,8 @@ export const GestaoTorneios: React.FC = () => {
                     >
                       <Shield size={14} />
                     </button>
-                    <button
-                      onClick={() => abrirEdicao(t)}
-                      className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-csc-gold text-white/70 hover:text-csc-gold rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
-                      title="Editar Regras e Detalhes"
-                      aria-label={`Editar Regras e Detalhes: ${t.name}`}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      onClick={() => eliminar(t.id, t.name)}
-                      className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-red-400 text-red-400 hover:bg-red-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
-                      title="Eliminar Torneio"
-                      aria-label={`Eliminar Torneio: ${t.name}`}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <BotaoIcone rotulo={`Editar o torneio ${t.name}`} icone={Pencil} onClick={() => abrirEdicao(t)} />
+                    <BotaoIcone rotulo={`Eliminar o torneio ${t.name}`} icone={Trash2} perigo onClick={() => eliminar(t.id, t.name)} />
                   </div>
                 </div>
               ))}
@@ -513,52 +495,52 @@ export const GestaoTorneios: React.FC = () => {
                   <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
                   <div>
                     <label className={ETIQUETA}>Idade Mínima</label>
-                    <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
+                    <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className={CAMPO} />
                   </div>
                   <div>
                     <label className={ETIQUETA}>Permitir Exceções</label>
-                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({...tourRules, exceptions_allowed: e.target.value === 'true'})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white">
+                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({...tourRules, exceptions_allowed: e.target.value === 'true'})} className={CAMPO}>
                       <option value="true">Sim</option>
                       <option value="false">Não</option>
                     </select>
                   </div>
                   <div>
                     <label className={ETIQUETA}>Máx. Exceções de Idade</label>
-                    <input type="number" min="0" value={tourRules.exceptions_count} onChange={e => setTourRules({...tourRules, exceptions_count: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" disabled={!tourRules.exceptions_allowed} />
+                    <input type="number" min="0" value={tourRules.exceptions_count} onChange={e => setTourRules({...tourRules, exceptions_count: Number(e.target.value)})} className={CAMPO} disabled={!tourRules.exceptions_allowed} />
                   </div>
                   <div>
                     <label className={ETIQUETA}>Idade Mín. da Exceção</label>
-                    <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" disabled={!tourRules.exceptions_allowed} />
+                    <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className={CAMPO} disabled={!tourRules.exceptions_allowed} />
                   </div>
 
                   <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
                   <div>
                     <label className={ETIQUETA}>Máx. Inscritos (Plantel)</label>
-                    <input type="number" min="0" value={tourRules.max_squad_size} onChange={e => setTourRules({...tourRules, max_squad_size: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
+                    <input type="number" min="0" value={tourRules.max_squad_size} onChange={e => setTourRules({...tourRules, max_squad_size: Number(e.target.value)})} className={CAMPO} />
                   </div>
                   <div>
                     <label className={ETIQUETA}>Máx. Convocados / Jogo</label>
-                    <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({...tourRules, max_match_players: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
+                    <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({...tourRules, max_match_players: Number(e.target.value)})} className={CAMPO} />
                   </div>
 
                   <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo & Subs</h4>
                   <div>
                     <label className={ETIQUETA}>Duração Total (mins)</label>
-                    <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({...tourRules, match_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
+                    <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({...tourRules, match_duration_mins: Number(e.target.value)})} className={CAMPO} />
                   </div>
                   <div>
                     <label className={ETIQUETA}>Duração 1ª Parte (mins)</label>
-                    <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({...tourRules, half_duration_mins: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
+                    <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({...tourRules, half_duration_mins: Number(e.target.value)})} className={CAMPO} />
                   </div>
                 
                   <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
                   <div>
                     <label className={ETIQUETA}>Amarelos para Suspensão</label>
-                    <input type="number" min="0" value={tourRules.yellow_cards_to_suspension} onChange={e => setTourRules({...tourRules, yellow_cards_to_suspension: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" />
+                    <input type="number" min="0" value={tourRules.yellow_cards_to_suspension} onChange={e => setTourRules({...tourRules, yellow_cards_to_suspension: Number(e.target.value)})} className={CAMPO} />
                   </div>
                   <div>
                     <label className={ETIQUETA}>Resultado p/ Falta Comp.</label>
-                    <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({...tourRules, walkover_score: e.target.value})} className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white" placeholder="Ex: 5-0" />
+                    <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({...tourRules, walkover_score: e.target.value})} className={CAMPO} placeholder="Ex: 5-0" />
                   </div>
                 </div>
               </details>
@@ -612,7 +594,7 @@ export const GestaoTorneios: React.FC = () => {
                                 return { ...prev, registration_fee: { ...rf, total: val, installments } }
                               })
                             }}
-                            className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white"
+                            className={CAMPO}
                           />
                         </div>
                         <div>
@@ -629,7 +611,7 @@ export const GestaoTorneios: React.FC = () => {
                               const installments = redistributeInstallments(rf.installments, rf.total, n)
                               return { ...prev, registration_fee: { ...rf, installments } }
                             })}
-                            className="w-full px-3 py-1.5 border border-white/12 rounded-lg text-sm text-white"
+                            className={CAMPO}
                           />
                         </div>
                       </div>

@@ -1,21 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { 
-  MapPin, 
-  X, 
-  Users, 
+import {
+  MapPin,
+  X,
+  Users,
   CheckCircle2,
   XCircle,
   Trash2,
   ClipboardList,
-  Search, 
+  Search,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Edit,
   CalendarRange,
   PartyPopper,
   Trophy,
+  Pencil
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -36,11 +36,12 @@ import { FichaConvocado } from '../components/callups/FichaConvocado'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao } from '../components/ui'
+import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao, ACarregar, EstadoVazio } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { getPlayerDisplayName, hasMatchReport, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, ROTULO_RESPOSTA } from '../lib/eventos'
 import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO as CAMPO_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -112,9 +113,6 @@ const CORES_TIPO = {
  * É o mesmo desenho dos campos do Perfil, dois pixels mais alto porque aqui
  * há menos campos por ecrã e mais dedo a preencher.
  */
-const CAMPO_FORM =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 const ROTULOS_TIPO: Record<string, string> = {
   match: 'Jogos',
@@ -138,7 +136,6 @@ const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
     return getPlayerDisplayName(a).localeCompare(getPlayerDisplayName(b))
   })
 }
-
 
 // A tabela `callups` cresce sem parar (uma linha por atleta por evento, anos de jogos e
 // treinos). Um único `.select(...).limit(5000)` corta em silêncio a partir desse número de
@@ -290,7 +287,6 @@ const CalendarPage: React.FC = () => {
   const [isModalCallupsExpanded, setIsModalCallupsExpanded] = useState(false)
   const [isMatchReportOpen, setIsMatchReportOpen] = useState(false)
 
-
   // Generic Confirmation Modal State
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
     isOpen: boolean
@@ -371,11 +367,6 @@ const CalendarPage: React.FC = () => {
 
   /* O evento em edição — o formulário é o `EditarEvento`, o mesmo dos Eventos. */
   const [eventoAEditar, setEventoAEditar] = useState<Event | null>(null)
-
-
-
-
-
 
   /**
    * O mesmo que `getEventLocation`, mas com o nome e a morada separados —
@@ -526,7 +517,6 @@ const CalendarPage: React.FC = () => {
     }
   }
 
-
   useEffect(() => {
     fetchEventsAndData()
   }, [profile?.id])
@@ -604,12 +594,6 @@ const CalendarPage: React.FC = () => {
     if (!extractRolesFromProfile(player).includes('player')) return false
     return player.status === 'active'
   }
-
-
-
-
-
-
 
   // --- EDITAR EVENTO ---
   const handleStartEditEvent = (ev: Event) => {
@@ -1570,10 +1554,7 @@ const CalendarPage: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-12" role="status" aria-live="polite">
-          <div className="animate-spin rounded-full h-9 w-9 border-2 border-csc-gold border-t-transparent" />
-          <span className="sr-only">A carregar…</span>
-        </div>
+        <ACarregar />
       ) : (
         <>
         <div className="space-y-4">
@@ -1782,11 +1763,7 @@ const CalendarPage: React.FC = () => {
               branco.
             */
             temFiltros ? (
-              <div className="cartao-simples border-dashed text-center px-5 py-10">
-                <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
-                <p className="font-display font-extrabold text-sm text-white">Nenhum evento encontrado.</p>
-                <p className="text-[11px] text-white/62 mt-1.5">Limpa os filtros para ver o resto da agenda.</p>
-              </div>
+              <EstadoVazio icone={CalendarRange} titulo="Nenhum evento encontrado." texto="Limpa os filtros para ver o resto da agenda." />
             ) : haRealizados ? (
               /*
                 Nada por realizar, mas a época tem jogos feitos — o vazio de
@@ -1863,7 +1840,7 @@ const CalendarPage: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+            <p className={ETIQUETA_FILTRO}>
               Tipo de evento
             </p>
             <div className="flex flex-wrap gap-2">
@@ -1885,7 +1862,7 @@ const CalendarPage: React.FC = () => {
           </div>
 
           <div>
-            <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+            <p className={ETIQUETA_FILTRO}>
               Estado
             </p>
             <div className="flex flex-wrap gap-2">
@@ -2534,16 +2511,10 @@ const CalendarPage: React.FC = () => {
 
                 <div className="flex flex-col gap-2.5 mt-3">
                   {!hasMatchReport(selectedEvent) && (
-                    <button
-                      type="button"
-                      onClick={() => handleStartEditEvent(selectedEvent)}
-                      className="min-h-11 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px]
-                        flex items-center justify-center gap-2 cursor-pointer transition-transform duration-150 active:scale-97
-                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                    >
-                      <Edit size={15} />
+                    <Botao onClick={() => handleStartEditEvent(selectedEvent)}>
+                      <Pencil size={15} aria-hidden="true" />
                       <span>Editar evento</span>
-                    </button>
+                    </Botao>
                   )}
 
                   {selectedEvent.type === 'match' &&
@@ -2561,17 +2532,10 @@ const CalendarPage: React.FC = () => {
                       </button>
                     )}
 
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}
-                    className="min-h-11 rounded-[22px] bg-csc-red/10 border border-csc-red/35 text-csc-vermelho-texto
-                      font-display font-bold text-xs flex items-center justify-center gap-2 cursor-pointer
-                      transition-transform duration-150 active:scale-97
-                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                  >
-                    <Trash2 size={15} />
+                  <Botao aparencia="perigo" largo onClick={() => handleDeleteSpecificEvent(selectedEvent.id)}>
+                    <Trash2 size={15} aria-hidden="true" />
                     <span>Eliminar evento</span>
-                  </button>
+                  </Botao>
                 </div>
 
                 <p className="text-[10px] leading-snug text-white/62 mt-2.5">

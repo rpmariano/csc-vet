@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react'
 import { BellRing, BellOff, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
-import { triggerHaptic } from '../utils/haptics'
 import { EcraDetalhe } from './EcraDetalhe'
-import { Botao } from './ui'
+import { Botao, ACarregar } from './ui'
 import { estadoDoPush, ligarAvisos, desligarAvisos, type EstadoPush } from '../lib/push'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
 import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO } from './ui/formulario'
+import { Interruptor as InterruptorBase } from './ui/Interruptor'
 
 /**
  * Preferências de avisos (ecrã 12b) — o que cada um escolhe receber.
@@ -85,38 +86,14 @@ const DE_QUEM_GERE: readonly { chave: keyof Preferencias; titulo: string; nota: 
   { chave: 'fichas_por_preencher', titulo: 'Ficha de jogo por preencher', nota: 'No dia seguinte ao jogo' },
 ]
 
+/* A linha de cada aviso: o `<Interruptor>` da app, com o fio entre linhas. */
 const Interruptor: React.FC<{
   ligado: boolean
   aoMudar: (v: boolean) => void
   titulo: string
   nota: string
-}> = ({ ligado, aoMudar, titulo, nota }) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={ligado}
-    onClick={() => { triggerHaptic('selection'); aoMudar(!ligado) }}
-    className="w-full min-h-14 flex items-center gap-3 px-3.5 py-2.5 text-left cursor-pointer
-      border-t border-white/7 first:border-t-0
-      focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold"
-  >
-    <span className="min-w-0 flex-1">
-      <span className="block font-display font-bold text-[12.5px] text-white">{titulo}</span>
-      <span className="block text-[10.5px] leading-snug text-white/62 mt-0.5">{nota}</span>
-    </span>
-    <span
-      className={`relative w-11 h-6 rounded-full shrink-0 transition-colors duration-200 ${
-        ligado ? 'bg-csc-light' : 'bg-white/15'
-      }`}
-      aria-hidden="true"
-    >
-      <span
-        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-200 ${
-          ligado ? 'translate-x-5' : ''
-        }`}
-      />
-    </span>
-  </button>
+}> = props => (
+  <InterruptorBase {...props} className="border-t border-white/7 first:border-t-0" />
 )
 
 export const PreferenciasAvisos: React.FC<{
@@ -255,10 +232,7 @@ export const PreferenciasAvisos: React.FC<{
       legenda="O que a app te envia para o telemóvel"
     >
       {aCarregar ? (
-        <div className="flex justify-center py-10" role="status" aria-live="polite">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-csc-gold border-t-transparent" />
-          <span className="sr-only">A carregar…</span>
-        </div>
+        <ACarregar className="py-10" />
       ) : (
         <div className="space-y-4">
           {/*
@@ -377,7 +351,7 @@ export const PreferenciasAvisos: React.FC<{
                     type="time"
                     value={prefs.silencio_inicio.slice(0, 5)}
                     onChange={e => setPrefs(p => ({ ...p, silencio_inicio: e.target.value }))}
-                    className="w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+                    className={CLASSE_CAMPO}
                   />
                 </label>
                 <label className="flex-1">
@@ -388,7 +362,7 @@ export const PreferenciasAvisos: React.FC<{
                     type="time"
                     value={prefs.silencio_fim.slice(0, 5)}
                     onChange={e => setPrefs(p => ({ ...p, silencio_fim: e.target.value }))}
-                    className="w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+                    className={CLASSE_CAMPO}
                   />
                 </label>
               </div>

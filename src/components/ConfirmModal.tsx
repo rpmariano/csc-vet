@@ -2,6 +2,7 @@ import React, { useId } from 'react'
 import { AlertCircle, Trash2, CheckCircle, AlertTriangle } from 'lucide-react'
 import { triggerHaptic } from '../utils/haptics'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { Botao } from './ui'
 
 export interface ConfirmModalProps {
   isOpen: boolean
@@ -15,6 +16,16 @@ export interface ConfirmModalProps {
   onCancel: () => void
   isLoading?: boolean
 }
+
+/* O "sim" de cada variante. As três confirmações partilhadas (esta, o aviso
+   de alterações por gravar e o reenvio de pedidos) usam o `<Botao>`: tinham
+   três conjuntos de botões à mão, de 40 a 48px e três raios de canto. */
+const APARENCIA_DO_SIM = {
+  danger: 'vermelho',
+  warning: 'dourado',
+  success: 'verde',
+  info: 'dourado',
+} as const
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
@@ -66,28 +77,24 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         return {
           iconBg: 'bg-csc-red/16 text-csc-vermelho-texto border border-csc-red/32',
           defaultIcon: <Trash2 size={24} />,
-          confirmBtn: 'bg-csc-red text-white',
           boxBg: 'bg-csc-red/10 border-csc-red/28 text-white/85',
         }
       case 'warning':
         return {
           iconBg: 'bg-csc-gold/16 text-csc-gold border border-csc-gold/32',
           defaultIcon: <AlertCircle size={24} />,
-          confirmBtn: 'bg-csc-gold text-csc-tinta',
           boxBg: 'bg-csc-gold/10 border-csc-gold/28 text-white/85',
         }
       case 'success':
         return {
           iconBg: 'bg-csc-light/16 text-csc-verde-texto border border-csc-light/32',
           defaultIcon: <CheckCircle size={24} />,
-          confirmBtn: 'bg-csc-light text-white',
           boxBg: 'bg-csc-light/10 border-csc-light/28 text-white/85',
         }
       default:
         return {
           iconBg: 'bg-csc-blue/20 text-csc-azul-texto border border-csc-blue/35',
           defaultIcon: <AlertTriangle size={24} />,
-          confirmBtn: 'bg-csc-blue text-white',
           boxBg: 'bg-white/6 border-white/12 text-white/85',
         }
     }
@@ -129,30 +136,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         )}
 
         <div className="space-y-2.5 pt-1">
-          {/* Botão de Confirmação Principal */}
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={handleConfirm}
-            className={`w-full min-h-12 px-4 font-display font-black text-[12.5px] rounded-2xl transition-transform duration-150
-              flex items-center justify-center gap-2 cursor-pointer active:scale-97 disabled:opacity-45
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${vStyles.confirmBtn}`}
-          >
-            <span>{isLoading ? 'A processar…' : confirmText}</span>
-          </button>
-
-          {/* Botão Cancelar */}
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={handleCancel}
-            className="w-full min-h-11 px-4 bg-white/9 border border-white/20 text-white font-display font-bold text-[12.5px]
-              rounded-2xl transition-transform duration-150 active:scale-97 cursor-pointer text-center
-              flex items-center justify-center gap-1.5 disabled:opacity-45
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <span>{cancelText}</span>
-          </button>
+          <Botao largo aparencia={APARENCIA_DO_SIM[variant]} disabled={isLoading} onClick={handleConfirm}>
+            {isLoading ? 'A processar…' : confirmText}
+          </Botao>
+          <Botao largo aparencia="vidro" disabled={isLoading} onClick={handleCancel}>
+            {cancelText}
+          </Botao>
         </div>
       </div>
     </div>

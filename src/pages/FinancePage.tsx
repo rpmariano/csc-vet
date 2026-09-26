@@ -1,7 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Landmark, Plus, Settings, Wallet,
-  ShieldCheck, Receipt, ListChecks, X, Paperclip, ExternalLink, Trash2, ChevronDown, Pencil, Check, AlertTriangle
+  Landmark,
+  Plus,
+  Settings,
+  Wallet,
+  ShieldCheck,
+  Receipt,
+  ListChecks,
+  X,
+  Paperclip,
+  ExternalLink,
+  Trash2,
+  ChevronDown,
+  Pencil,
+  Check,
+  AlertTriangle
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -18,7 +31,7 @@ import {
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { VoltarAOrigem } from '../components/VoltarAOrigem'
-import { Botao, CabecalhoEcra, FilaSeparadores, LinhaAtleta } from '../components/ui'
+import { Botao, CabecalhoEcra, FilaSeparadores, LinhaAtleta, BotaoIcone, ACarregar } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
 import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -38,22 +51,17 @@ import type {
   PlayerRow, QuotaStatusRow, MovementRow, ScheduledPayment, EncargoPorReceber,
 } from '../components/financeiro/tipos'
 import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_ETIQUETA_CAMPO as ETIQUETA, CLASSE_CAMPO as CAMPO } from '../components/ui/formulario'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** Campo e etiqueta dos formulários, o mesmo desenho do resto da app. */
-const ETIQUETA =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /** Botão redondo de ação numa linha — 44px, como todos os alvos de toque. */
 const BOTAO_LINHA =
   'w-11 h-11 flex items-center justify-center rounded-xl shrink-0 cursor-pointer transition-colors ' +
   'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold'
-
-const CAMPO =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -419,7 +427,6 @@ const FinancePage: React.FC = () => {
   // -------------------------------------------------------------------------
   const incomeCategories = categories.filter(c => c.allow_income)
   const activePlayers = players.filter(p => p.status !== 'inactive')
-
 
   const chargesWithStats = useMemo(() => charges.map(c => {
     const participantIds = chargePlayers.filter(cp => cp.charge_id === c.id).map(cp => cp.player_id)
@@ -1363,9 +1370,7 @@ const FinancePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold"></div>
-      </div>
+      <ACarregar />
     )
   }
 
@@ -1680,24 +1685,8 @@ const FinancePage: React.FC = () => {
 
                     {isAdmin && (
                       <div className="flex items-center gap-0.5 pr-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => openEditChargeModal(c)}
-                          aria-label={`Editar o encargo ${c.title}`}
-                          title="Editar encargo"
-                          className={`${BOTAO_LINHA} text-csc-azul-texto hover:bg-csc-blue/20`}
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setChargeToDelete(c.id)}
-                          aria-label={`Eliminar o encargo ${c.title}`}
-                          title="Eliminar encargo"
-                          className={`${BOTAO_LINHA} text-csc-vermelho-texto hover:bg-csc-red/15`}
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <BotaoIcone rotulo={`Editar o encargo ${c.title}`} icone={Pencil} discreto onClick={() => openEditChargeModal(c)} />
+                        <BotaoIcone rotulo={`Eliminar o encargo ${c.title}`} icone={Trash2} perigo discreto onClick={() => setChargeToDelete(c.id)} />
                       </div>
                     )}
                   </div>
@@ -1851,8 +1840,8 @@ const FinancePage: React.FC = () => {
                                                 {pay.notes && <span className="italic truncate">({pay.notes})</span>}
                                                 {isAdmin && (
                                                   <span className="ml-auto flex items-center shrink-0">
-                                                    <button type="button" onClick={() => startEditPayment(pay)} aria-label="Corrigir este pagamento" title="Corrigir valor" className={`${BOTAO_LINHA} text-csc-azul-texto hover:bg-csc-blue/20`}><Pencil size={13} /></button>
-                                                    <button type="button" onClick={() => setPaymentToDelete(pay.id)} aria-label="Eliminar este pagamento" title="Eliminar" className={`${BOTAO_LINHA} text-csc-vermelho-texto hover:bg-csc-red/15`}><Trash2 size={13} /></button>
+                                                    <BotaoIcone rotulo="Corrigir este pagamento" icone={Pencil} discreto onClick={() => startEditPayment(pay)} />
+                                                    <BotaoIcone rotulo="Eliminar este pagamento" icone={Trash2} perigo discreto onClick={() => setPaymentToDelete(pay.id)} />
                                                   </span>
                                                 )}
                                               </>
@@ -2272,15 +2261,7 @@ const FinancePage: React.FC = () => {
                             <Paperclip size={14} />
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => setTransactionToDelete(t.id)}
-                          title="Eliminar"
-                          aria-label={`Eliminar ${t.description}`}
-                          className={`${BOTAO_LINHA} text-white/50 hover:text-csc-vermelho-texto hover:bg-csc-red/15`}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <BotaoIcone rotulo={`Eliminar ${t.description}`} icone={Trash2} perigo discreto onClick={() => setTransactionToDelete(t.id)} />
                       </div>
                     )
                   })}

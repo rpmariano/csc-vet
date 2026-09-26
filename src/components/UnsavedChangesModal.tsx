@@ -1,6 +1,7 @@
 import React, { useId } from 'react'
-import { AlertCircle, Save, LogOut, ArrowLeft } from 'lucide-react'
+import { AlertCircle, Save, LogOut } from 'lucide-react'
 import { useModalA11y } from '../hooks/useModalA11y'
+import { Botao } from './ui'
 
 export interface UnsavedChangesModalProps {
   isOpen: boolean
@@ -58,40 +59,17 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
         </div>
 
         <div className="space-y-2.5 pt-1">
-          {/* Opção 1: guardar e sair */}
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={onSaveAndExit}
-            className="w-full min-h-12 px-4 bg-csc-light text-white font-display font-black text-[12.5px] rounded-2xl
-              transition-transform duration-150 flex items-center justify-center gap-2 cursor-pointer active:scale-97
-              disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <Save size={16} />
-            <span>{isSaving ? 'A guardar…' : 'Guardar e sair'}</span>
-          </button>
-
-          {/* Opção 2: sair sem guardar */}
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={onExitWithoutSaving}
-            className="w-full min-h-12 px-4 bg-csc-red/10 hover:bg-csc-red/15 text-csc-vermelho-texto font-bold text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 border border-csc-red/25 disabled:opacity-50"
-          >
-            <LogOut size={16} />
-            <span>Sair sem guardar</span>
-          </button>
-
-          {/* Opção 3: continuar a editar */}
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={onCancel}
-            className="w-full min-h-11 px-4 bg-white/10 hover:bg-white/15 text-white/80 font-bold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5 disabled:opacity-50"
-          >
-            <ArrowLeft size={14} />
-            <span>Continuar a editar</span>
-          </button>
+          <Botao largo aparencia="verde" disabled={isSaving} onClick={onSaveAndExit}>
+            <Save size={16} aria-hidden="true" />
+            {isSaving ? 'A guardar…' : 'Guardar e sair'}
+          </Botao>
+          <Botao largo aparencia="perigo" disabled={isSaving} onClick={onExitWithoutSaving}>
+            <LogOut size={16} aria-hidden="true" />
+            Sair sem guardar
+          </Botao>
+          <Botao largo aparencia="vidro" disabled={isSaving} onClick={onCancel}>
+            Continuar a editar
+          </Botao>
         </div>
       </div>
     </div>

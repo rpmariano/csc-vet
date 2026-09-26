@@ -8,7 +8,7 @@ import { SaidaGuardadaProvider } from './context/SaidaGuardadaContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import { SubirAoTopo } from './components/SubirAoTopo'
-import { Botao } from './components/ui'
+import { Botao, ACarregar } from './components/ui'
 import { ePedacoEmFalta, recarregarUmaVez } from './lib/atualizacaoDaApp'
 
 // Páginas carregadas a pedido.
@@ -93,10 +93,7 @@ const Financeiro: React.FC = () => {
 
 /** Mostrado enquanto o pedaço de código da rota é descarregado. */
 const EcraACarregar: React.FC = () => (
-  <div className="min-h-[60vh] flex items-center justify-center" role="status" aria-live="polite">
-    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-dark" />
-    <span className="sr-only">A carregar…</span>
-  </div>
+  <ACarregar className="min-h-[60vh]" />
 )
 
 /**

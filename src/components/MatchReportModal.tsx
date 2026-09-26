@@ -5,11 +5,12 @@ import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { toast } from '../context/ToastContext'
 import { EcraDetalhe } from './EcraDetalhe'
-import { Botao } from './ui'
+import { Botao, ACarregar } from './ui'
 import { CLUBE_SIGLA } from '../lib/clube'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
 import { ConfirmModal } from './ConfirmModal'
+import { CLASSE_CAMPO } from './ui/formulario'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -507,17 +508,10 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           cabeçalho do ecrã quando a ficha deixou de ser persiana.
         */}
         {isCoachOrAdmin && !jogoPorRealizar && !loading && (
-          <button
-            type="button"
-            onClick={() => setIsEditModalOpen(true)}
-            className="w-full min-h-12 px-5 rounded-3xl bg-csc-gold text-csc-tinta border border-csc-gold
-              font-display font-extrabold text-[12.5px] flex items-center justify-center gap-2 cursor-pointer
-              transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <Pencil size={14} />
+          <Botao largo onClick={() => setIsEditModalOpen(true)}>
+            <Pencil size={15} aria-hidden="true" />
             <span>Editar ficha de jogo</span>
-          </button>
+          </Botao>
         )}
 
         {saveSuccess && (
@@ -528,10 +522,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         )}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-9 w-9 border-t-2 border-b-2 border-csc-gold mb-2"></div>
-            <p className="text-xs font-bold text-white/70">A carregar dados do jogo...</p>
-          </div>
+          <ACarregar texto="A carregar o jogo…" className="py-16" />
         ) : jogoPorRealizar ? (
           <div className="p-6 sm:p-8 bg-white/5 border border-white/10 rounded-3xl text-center space-y-2">
             <div className="w-12 h-12 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center mx-auto">
@@ -881,7 +872,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           <select
             value={tacticalFormation}
             onChange={e => setTacticalFormation(e.target.value)}
-            className="w-full h-[46px] px-3.5 bg-white text-csc-tinta rounded-[14px] font-display font-bold text-[12.5px] outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+            className={CLASSE_CAMPO}
           >
             {TACTICAL_FORMATIONS.map(f => (
               <option key={f} value={f}>{f}</option>

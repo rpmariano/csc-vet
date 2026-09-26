@@ -35,18 +35,14 @@ import { PreferenciasAvisos } from '../components/PreferenciasAvisos'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
 import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** Campo branco de 44px do handoff (ecrã 5b). */
-const CAMPO =
-  'w-full h-11 px-3 rounded-[13px] bg-white text-csc-tinta font-display font-bold text-xs ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold'
 
 /** Etiqueta pequena, em maiúsculas, por cima do campo. */
-const ETIQUETA =
-  'block font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-1'
 
 /** Cabeçalho numerado de secção ("1 · IDENTIFICAÇÃO…"). */
 const SECCAO =

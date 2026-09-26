@@ -1,27 +1,27 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { 
-  Plus, 
-  Trash2, 
-  MapPin, 
-  Clock, 
-  Check, 
-  Users, 
-  CheckCircle2, 
-  XCircle, 
-  HelpCircle, 
-  UserPlus, 
-  Search, 
-  ExternalLink, 
-  Repeat, 
-  CalendarRange, 
+import {
+  Plus,
+  Trash2,
+  MapPin,
+  Clock,
+  Check,
+  Users,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
+  UserPlus,
+  Search,
+  ExternalLink,
+  Repeat,
+  CalendarRange,
   Calendar,
   PartyPopper,
   Trophy,
-  Edit,
   Send,
   AlertTriangle,
   ClipboardList,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Pencil
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -48,20 +48,15 @@ import { useLocation, useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
 import { VoltarAOrigem } from '../components/VoltarAOrigem'
 import { BottomSheet } from '../components/BottomSheet'
-import { Pastilha, Botao } from '../components/ui'
+import { Pastilha, Botao, Interruptor, BotaoIcone, ACarregar, EstadoVazio } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import { mensagemDeErro } from '../lib/erros'
+import { CLASSE_CAMPO as CAMPO_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
 
 /** Campo branco dos formulários de evento (ecrã 2e), o mesmo da Agenda. */
-const CAMPO_FORM =
-  'w-full h-[46px] px-3.5 rounded-[14px] bg-white text-csc-tinta font-display font-bold text-[12.5px] ' +
-  'outline-none focus-visible:ring-2 focus-visible:ring-csc-gold placeholder:font-normal placeholder:text-black/40'
-
-const ETIQUETA_FORM =
-  'block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 mb-1.5'
 
 /**
  * Como se lê cada filtro escondido, na linha de resumo por baixo das pastilhas.
@@ -484,7 +479,6 @@ const EventsPage: React.FC = () => {
   const faltaAJornada = (tipo: string, amigavel: boolean, prova: string, jornada: string) =>
     tipo === 'match' && !amigavel && Boolean(prova) && !Number(jornada)
 
-
   // Ativar evento inativo e disparar convocatória
   const handleActivateEvent = async (ev: Event) => {
     const callups = eventCallups[ev.id] || []
@@ -747,7 +741,6 @@ const EventsPage: React.FC = () => {
       }
     }
   }, [type, homeAway, opponentId, opponents, fields, clubSettings])
-
 
   const getActiveLocationString = () => {
     if (fieldId) {
@@ -1579,32 +1572,21 @@ const EventsPage: React.FC = () => {
               guardar leva à convocatória, e é lá que se escolhe.
             */}
 
-
             {/* 8. Opção de Ativação / Envio de Convocatória */}
-            <div className="p-4 bg-csc-gold/8 rounded-2xl border border-csc-gold/22 space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <label className="text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer">
-                    <Send size={15} className={isActiveOnCreate ? 'text-csc-light' : 'text-csc-gold'} />
-                    <span>Publicar já na agenda</span>
-                  </label>
-                  <p className="text-[11px] text-white/60 mt-0.5">
-                    {isActiveOnCreate 
-                      ? 'Ao guardar, escolhes quem convocas. O evento fica visível na agenda.' 
-                      : 'O evento fica em rascunho: ninguém é avisado e não entra no alerta de convocatórias. A convocatória fica guardada.'}
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={isActiveOnCreate}
-                    onChange={(e) => setIsActiveOnCreate(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-white/20 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-csc-light"></div>
-                </label>
-              </div>
-            </div>
+            <Interruptor
+              ligado={isActiveOnCreate}
+              aoMudar={setIsActiveOnCreate}
+              titulo={
+                <span className="flex items-center gap-1.5">
+                  <Send size={15} className={isActiveOnCreate ? 'text-csc-light' : 'text-csc-gold'} aria-hidden="true" />
+                  Publicar já na agenda
+                </span>
+              }
+              nota={isActiveOnCreate
+                ? 'Ao guardar, escolhes quem convocas. O evento fica visível na agenda.'
+                : 'O evento fica em rascunho: ninguém é avisado e não entra no alerta de convocatórias. A convocatória fica guardada.'}
+              className="bg-csc-gold/8 rounded-2xl border border-csc-gold/22"
+            />
 
             <button
               type="submit"
@@ -1797,7 +1779,7 @@ const EventsPage: React.FC = () => {
             >
               <div className="space-y-4">
                 <div>
-                  <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+                  <p className={ETIQUETA_FILTRO}>
                     Tipo de evento
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -1819,7 +1801,7 @@ const EventsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+                  <p className={ETIQUETA_FILTRO}>
                     Quando
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -1842,7 +1824,7 @@ const EventsPage: React.FC = () => {
                 {/* Rascunhos são coisa de quem gere: um atleta nunca os vê. */}
                 {isCoachOrAdmin && (
                   <div>
-                    <p className="font-display font-bold text-[9px] tracking-[0.1em] uppercase text-white/60 mb-2">
+                    <p className={ETIQUETA_FILTRO}>
                       Publicação
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1879,15 +1861,9 @@ const EventsPage: React.FC = () => {
               </div>
 
               {loading ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-csc-gold"></div>
-                </div>
+                <ACarregar />
               ) : filteredScheduledEvents.length === 0 ? (
-                <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/15 p-6">
-                  <Calendar size={40} className="mx-auto text-white/20 mb-2" />
-                  <p className="font-bold text-white/70">Nenhum evento encontrado com os filtros atuais.</p>
-                  <p className="text-xs text-white/65 mt-1">Tenta mudar os filtros ou a procura.</p>
-                </div>
+                <EstadoVazio icone={Calendar} titulo="Nenhum evento encontrado." texto="Tenta mudar os filtros ou a procura." />
               ) : (
                 <div className="space-y-3.5">
                   {filteredScheduledEvents.map((event) => {
@@ -2095,28 +2071,17 @@ const EventsPage: React.FC = () => {
                 {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
                 {isCoachOrAdmin && (
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(activeCallupModalEvent)}
-                      className="w-11 h-11 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs"
-                      title="Modificar evento"
-                      aria-label="Modificar evento"
-                    >
-                      <Edit size={14} />
-                    </button>
-                    <button
-                      type="button"
+                    <BotaoIcone rotulo="Modificar evento" icone={Pencil} onClick={() => openEditModal(activeCallupModalEvent)} />
+                    <BotaoIcone
+                      rotulo="Eliminar evento"
+                      icone={Trash2}
+                      perigo
                       onClick={() => {
                         const evId = activeCallupModalEvent.id
                         fecharDossier()
                         handleDeleteEvent(evId)
                       }}
-                      className="w-11 h-11 bg-red-600/40 hover:bg-red-600/60 text-red-100 border border-red-500/40 rounded-xl transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs"
-                      title="Eliminar evento"
-                      aria-label="Eliminar evento"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    />
                   </div>
                 )}
               </div>
