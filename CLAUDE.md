@@ -450,6 +450,32 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   equipamento, o pé preferido, a janela de quota e os meses dispensados. **A
   ficha rápida do convocado (4a) e o plantel do jogador continuam pelo
   `v_players_public`** — essas não têm PII e não mudam.
+- **Os documentos dos atletas vivem num bucket privado** (`documentos_atletas`,
+  `supabase_documentos_atletas_migration.sql`, aplicada a 2026-09-26), numa
+  pasta por ficha: `<profile_id>/<tipo>-<data>.<ext>`. Leem e escrevem o
+  próprio e a equipa técnica — a repartição de `profiles`, que já dá ao
+  treinador o número do cartão de cidadão, e é ele quem carrega documentos pela
+  ficha. **A ficha guarda o caminho, não um endereço**; para abrir pede-se um
+  link temporário de uma hora (`<LinkDocumento>`, que o pede ao desenhar e não
+  ao tocar — o Safari do iPhone bloqueia uma janela aberta depois de uma
+  espera). Tudo em `src/lib/documentos.ts`. Uma ficha nova escolhe o `id` ao
+  abrir o formulário, e não ao gravar, para os documentos carregados antes de
+  gravar já irem para a pasta dela.
+  **Até aqui iam para o `club_assets`, que é público**, e a app guardava o
+  endereço público: um cartão de cidadão abria-se sem sessão, a chave anónima
+  listava o bucket inteiro, qualquer conta substituía o ficheiro de outra, e
+  uma política de INSERT com `WITH CHECK (true)` deixava qualquer conta
+  escrever em qualquer bucket, `finance_documents` incluído. A mesma migração
+  fechou isso: listar o `club_assets` exige sessão (as fotografias e os
+  emblemas continuam a abrir pelo endereço público, que num bucket público não
+  passa pela RLS) e o INSERT aberto saiu.
+  **Os documentos antigos passam sozinhos:** um valor que ainda comece por
+  `http` é um documento no bucket público, e o `migrarDocumentosPublicos()`
+  copia-o, aponta a ficha para a cópia e só então apaga o original — da
+  primeira vez que alguém da equipa técnica abre o Plantel. Uma migração em
+  SQL não mexe em ficheiros, e sem credenciais de serviço só a app, com a
+  sessão de quem gere, lê e escreve nos dois buckets. `documentos.spec.ts`
+  cobre o link temporário, o carregamento para a pasta do próprio e a cópia.
 - **Tudo se responde, treinos incluídos — mas o treino tem janela.**
   `convocatoriaFechada()` é o único sítio onde a regra vive. Um evento aceita
   resposta assim que deixa de ser rascunho e tem gente convocada; fecha com a
@@ -1243,6 +1269,11 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
    a ficha por criar e a porta aberta. Hoje o WITH CHECK exige que uma ficha criada
    pelo próprio nasça `role = 'player'` e `roles = {player}`. Verificado: inserir
    como admin dá 42501, inserir como jogador — o que a app faz — passa.
+8. **~~P1 — Documentos de identificação num bucket público.~~ Corrigido em
+   2026-09-26** — ver "Os documentos dos atletas vivem num bucket privado".
+   **Lição para o Storage:** um bucket público serve os ficheiros a quem tiver
+   o endereço, e a política de `SELECT` para `public` deixa ainda listá-los; o
+   que é pessoal vai para um bucket privado, com links temporários.
 7. **~~Funções SECURITY DEFINER chamáveis sem sessão.~~ Corrigido em 2026-09-06**
    (mesma migração). Sete funções estavam expostas em `/rest/v1/rpc/…` à chave
    anónima. Tinham guarda interna, mas a guarda é a segunda linha de defesa.

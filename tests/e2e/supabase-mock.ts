@@ -225,7 +225,23 @@ export async function montarSupabaseFalso(page: Page, fixtures: Fixtures = {}) {
       return responder(route, linhas)
     }
 
-    // Storage, realtime e o resto: resposta vazia em vez de erro de rede.
+    /*
+      O Storage, no que a app usa: pedir um link temporário e carregar um
+      ficheiro. O link devolvido é inventado mas tem a forma do verdadeiro —
+      aponta para o caminho pedido, com um `token` —, e é isso que os testes
+      dos documentos verificam (ver `documentos.spec.ts`).
+    */
+    const storage = url.split('/storage/v1/')[1]?.split('?')[0]
+    if (storage?.startsWith('object/sign/')) {
+      const caminho = storage.slice('object/sign/'.length)
+      return responder(route, { signedURL: `/object/sign/${caminho}?token=teste` })
+    }
+    if (storage?.startsWith('object/') && (metodo === 'POST' || metodo === 'PUT')) {
+      const caminho = storage.slice('object/'.length)
+      return responder(route, { Key: caminho, Id: 'ficheiro-teste' })
+    }
+
+    // Realtime e o resto: resposta vazia em vez de erro de rede.
     return responder(route, {})
   })
 }
