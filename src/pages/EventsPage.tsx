@@ -32,8 +32,7 @@ import { QuickFieldModal } from '../components/QuickFieldModal'
 import { QuickOpponentModal } from '../components/QuickOpponentModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal } from '../components/MatchReportModal'
-import { QuorumFilterCards } from '../components/callups/QuorumFilterCards'
-import { CallupRow } from '../components/callups/CallupRow'
+import { BlocoConvocatoria } from '../components/callups/BlocoConvocatoria'
 import { FichaConvocado } from '../components/callups/FichaConvocado'
 import { ConvocatoriaAoCriar } from '../components/callups/ConvocatoriaAoCriar'
 import type { EventoCriado } from '../components/callups/ConvocatoriaAoCriar'
@@ -237,7 +236,6 @@ const EventsPage: React.FC = () => {
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
   /* A ficha rápida do convocado (4a), por cima do dossier de convocatória. */
   const [convocadoAberto, setConvocadoAberto] = useState<string | null>(null)
-  const [rsvpTabFilter, setRsvpTabFilter] = useState<'all' | 'confirmed' | 'called' | 'declined'>('all')
   const [isMatchReportOpen, setIsMatchReportOpen] = useState(false)
 
   // Generic Confirmation Modal State
@@ -1135,6 +1133,26 @@ const EventsPage: React.FC = () => {
     }
   }
 
+  /** Tirar de uma vez quem ficou sem condições depois de convocado. */
+  const handleTirarVarios = async (callupIds: string[], eventId: string) => {
+    if (callupIds.length === 0) return
+    try {
+      const { error } = await supabase.from('callups').delete().in('id', callupIds)
+      if (error) throw error
+      setEventCallups(prev => ({
+        ...prev,
+        [eventId]: (prev[eventId] || []).filter(c => !callupIds.includes(c.id)),
+      }))
+      toast.info(
+        callupIds.length === 1
+          ? 'Convocado tirado da convocatória.'
+          : `${callupIds.length} convocados tirados da convocatória.`,
+      )
+    } catch (err: any) {
+      toast.error('Erro ao atualizar a convocatória: ' + mensagemDeErro(err))
+    }
+  }
+
   const getFieldName = (id?: string | null) => {
     if (!id) return ''
     const f = fields.find(f => f.id === id)
@@ -1885,12 +1903,11 @@ const EventsPage: React.FC = () => {
                       role="button"
                       tabIndex={0}
                       aria-label={`Ver os detalhes de ${getEventHeading(event)}`}
-                      onClick={() => { abrirDossier(event); setRsvpTabFilter('all') }}
+                      onClick={() => { abrirDossier(event) }}
                       onKeyDown={e => {
                         if (e.key !== 'Enter' && e.key !== ' ') return
                         e.preventDefault()
                         abrirDossier(event)
-                        setRsvpTabFilter('all')
                       }}
                       className={`p-4 rounded-2xl border-2 transition-all shadow-2xs space-y-3 cursor-pointer
                         active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
@@ -2116,32 +2133,27 @@ const EventsPage: React.FC = () => {
                 return 'Não é atleta'
               }
 
-              const confirmedList = callups.filter(c => c.status === 'confirmed')
-              const declinedList = callups.filter(c => c.status === 'declined')
-              const pendingList = callups.filter(c => c.status === 'called')
               const calledPlayerIds = callups.map(c => c.player_id)
               const uncalledPlayers = allPlayers.filter(p => !calledPlayerIds.includes(p.id))
+              const evId = activeCallupModalEvent.id
 
-              const displayList = 
-                rsvpTabFilter === 'confirmed' ? confirmedList :
-                rsvpTabFilter === 'declined' ? declinedList :
-                rsvpTabFilter === 'called' ? pendingList :
-                callups
-
+              /* O bloco é o da Agenda (`BlocoConvocatoria`); aqui leva as
+                 ações, porque é o único sítio onde a convocatória se edita. */
               return (
-                <div className="space-y-4">
-                  {/* Cartões de Quórum, também usados como filtro (incluindo "Todos") */}
-                  <QuorumFilterCards
-                    totalCount={callups.length}
-                    confirmedCount={confirmedList.length}
-                    pendingCount={pendingList.length}
-                    declinedCount={declinedList.length}
-                    activeFilter={rsvpTabFilter}
-                    onSelect={setRsvpTabFilter}
-                  />
-
-                  {/* Convidar mais elementos à convocatória */}
-                  {isCoachOrAdmin && uncalledPlayers.length > 0 && (
+                <BlocoConvocatoria
+                  key={evId}
+                  convocatorias={callups}
+                  maxJogadores={activeCallupModalEvent.max_players}
+                  gere={Boolean(isCoachOrAdmin)}
+                  estadoQueImpede={estadoQueImpede}
+                  abertoInicial
+                  acoes={isCoachOrAdmin ? {
+                    mudarEstado: (id, estado) => handleUpdateCallupStatus(id, evId, estado),
+                    tirar: id => handleRemovePlayerFromCallup(id, evId),
+                    tirarVarios: ids => handleTirarVarios(ids, evId),
+                    abrir: setConvocadoAberto,
+                  } : undefined}
+                  acrescentar={isCoachOrAdmin && uncalledPlayers.length > 0 && (
                     <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
                       <p className="text-xs font-black text-white/80 flex items-center gap-1.5">
                         <UserPlus size={14} className="text-csc-gold" />
@@ -2152,42 +2164,17 @@ const EventsPage: React.FC = () => {
                           <button
                             key={p.id}
                             type="button"
-                            onClick={() => handleAddPlayerToCallup(activeCallupModalEvent.id, p.id)}
+                            onClick={() => handleAddPlayerToCallup(evId, p.id)}
                             className="bg-white/8 border border-white/16 text-xs px-2.5 py-1 rounded-xl font-bold text-white flex items-center gap-1 shadow-2xs hover:bg-white/15 cursor-pointer active:scale-97"
                           >
                             <span>+ {p.name}</span>
-                            {p.jersey_number && <span className="text-csc-tinta font-black">#{p.jersey_number}</span>}
+                            {p.jersey_number && <span className="text-csc-gold font-black">#{p.jersey_number}</span>}
                           </button>
                         ))}
                       </div>
                     </div>
                   )}
-
-                  {/* Lista de Membros e Gestão de Estado RSVP */}
-                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                    {displayList.length === 0 ? (
-                      <p className="text-center text-xs text-white/65 py-6">
-                        Nenhum membro encontrado neste filtro.
-                      </p>
-                    ) : (
-                      displayList.map(c => (
-                        <CallupRow
-                          key={c.id}
-                          status={c.status}
-                          player={c.player}
-                          displayName={getPlayerDisplayName(c.player)}
-                          isCoachOrAdmin={isCoachOrAdmin}
-                          onConfirm={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'confirmed')}
-                          onDecline={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'declined')}
-                          onSetPending={() => handleUpdateCallupStatus(c.id, activeCallupModalEvent.id, 'called')}
-                          onRemove={() => handleRemovePlayerFromCallup(c.id, activeCallupModalEvent.id)}
-                          onOpen={isCoachOrAdmin ? () => setConvocadoAberto(c.id) : undefined}
-                          impedimento={estadoQueImpede(c)}
-                        />
-                      ))
-                    )}
-                  </div>
-                </div>
+                />
               )
             })()}
 

@@ -286,14 +286,13 @@ test.describe('O cartão por convocar abre o evento', () => {
   })
 })
 
-/** Editar a partir da Agenda tem de poder pôr e tirar o rascunho. */
-test('a edição na Agenda tem o rascunho', async ({ page }) => {
+/** A edição — nos Eventos, o único sítio onde se edita — tem o rascunho. */
+test('a edição do evento tem o rascunho', async ({ page }) => {
   const jogo = { ...base, id: 'ed', title: 'Jogo', type: 'match', date_time: DAQUI_A_DIAS(9) }
   await montarSupabaseFalso(page, { events: [jogo], callups: [convocatoriaMinha('ed')] })
-  await page.goto('/csc-vet/calendar?event=ed')
-  await page.waitForLoadState('networkidle')
+  await page.goto('/csc-vet/events?convocatoria=ed')
 
-  await page.getByRole('button', { name: 'Editar evento' }).click()
+  await page.getByRole('button', { name: 'Modificar evento' }).click()
   const caixa = page.getByLabel(/Guardar como rascunho/)
   await expect(caixa).toBeVisible()
   await expect(caixa).not.toBeChecked()
@@ -470,13 +469,31 @@ test.describe('Convocados que ficaram sem condições', () => {
     await expect(persiana.getByText('Lesionado', { exact: true })).toBeVisible()
   })
 
-  test('e há como atualizar a convocatória', async ({ page }) => {
+  /* A convocatória edita-se nos Eventos, e só lá. A Agenda mostra o mesmo
+     bloco sem as ações, e leva quem gere aos Eventos. */
+  test('na Agenda a convocatória só se lê', async ({ page }) => {
     await montarSupabaseFalso(page, fixtures)
     await page.goto('/csc-vet/calendar?event=lz')
-    await page.waitForLoadState('networkidle')
 
     const persiana = fichaDoEvento(page)
     await persiana.getByRole('button', { name: /Expandir|Recolher/ }).first().click()
+    await expect(persiana.getByText('Lesionado', { exact: true })).toBeVisible()
+    await expect(persiana.getByRole('button', { name: 'Tirar', exact: true })).toHaveCount(0)
+    await expect(persiana.getByRole('button', { name: 'Tirar da convocatória' })).toHaveCount(0)
+    await expect(persiana.getByRole('button', { name: 'Marcar como confirmado' })).toHaveCount(0)
+
+    await persiana.getByRole('button', { name: 'Editar nos Eventos' }).click()
+    await expect(page).toHaveURL(/\/events\?convocatoria=lz$/)
+    // O "‹" dos Eventos volta ao evento na Agenda, de onde se veio.
+    await fichaDoEvento(page).getByRole('button', { name: 'Evento', exact: true }).click()
+    await expect(page).toHaveURL(/\/calendar\?event=lz$/)
+  })
+
+  test('e nos Eventos há como atualizar a convocatória', async ({ page }) => {
+    await montarSupabaseFalso(page, fixtures)
+    await page.goto('/csc-vet/events?convocatoria=lz')
+
+    const persiana = fichaDoEvento(page)
     await expect(persiana.getByText('1 convocado sem condições')).toBeVisible()
     await persiana.getByRole('button', { name: 'Tirar', exact: true }).click()
     await expect(page.getByText(/Tirar da convocatória o convocado/)).toBeVisible()
@@ -492,11 +509,9 @@ test.describe('Convocados que ficaram sem condições', () => {
         escritas.push(r.method())
       }
     })
-    await page.goto('/csc-vet/calendar?event=lz')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/csc-vet/events?convocatoria=lz')
 
     const persiana = fichaDoEvento(page)
-    await persiana.getByRole('button', { name: /Expandir|Recolher/ }).first().click()
     await persiana.getByRole('button', { name: 'Tirar da convocatória' }).first().click()
 
     await expect(page.getByRole('dialog')).toHaveCount(0)

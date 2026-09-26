@@ -978,8 +978,8 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   da ficha porque são todos `fixed` e a classe lhes devolve a visibilidade —
   um diálogo novo que não seja `fixed`, ou um `display: none`/`aria-hidden` na
   página por baixo, levava-os com ela.
-  **As fichas empilham-se:** a ficha de jogo abre-se a partir do evento e do
-  dossier como o ecrã seguinte, e só a de cima se vê.
+  **As fichas empilham-se:** a ficha de jogo abre-se a partir do dossier do
+  evento como o ecrã seguinte, e só a de cima se vê.
   **Um formulário longo também é ecrã; o modal é para uma pergunta** (revisão
   de 2026-09-25). Criar e editar atleta, evento, torneio e encargo, editar a ficha de jogo e os grupos de uma prova
   abrem num `<EcraDetalhe>`: o "‹" passa pelo `tentarFechar()` do guarda, e o
@@ -1020,21 +1020,34 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
 - **Uma linha que se toca não leva `›`.** O cartão ou a linha já diz que se
   toca; a seta aparecia em metade das listas e faltava na outra metade. O
   `ChevronDown` de expandir no sítio fica — esse diz outra coisa.
+- **Um evento e a sua convocatória editam-se num sítio só: os Eventos**
+  (decisão de 2026-09-26). A Agenda e a Home mostram o evento; a única
+  escrita que lá fica é a resposta do próprio. Quem gere tem, no fim do
+  evento na Agenda, o "Editar nos Eventos", que abre o mesmo evento no
+  dossier (`/events?convocatoria=`) com `state.origem`, e o "‹" volta ao
+  evento na Agenda. Saíram da Agenda o editar, o eliminar, o lançar a ficha
+  de jogo, as ações por convocado e o "Tirar" de quem ficou sem condições —
+  eram duas portas a escrever a mesma tabela, com ferramentas diferentes em
+  cada uma.
+  **A convocatória desenha-se com o `<BlocoConvocatoria>`**
+  (`src/components/callups/`), o que era da Agenda: cabeçalho com as
+  contagens, quórum, procura, o aviso dos sem condições e a lista. Nos
+  Eventos leva `acoes` (e o acrescentar); na Agenda vai sem elas, e cada
+  linha diz a resposta numa pastilha.
 - **Editar um evento é um componente só, o `EditarEvento`**
-  (`src/components/eventos/`), usado pela Agenda e pelos Eventos. Eram duas
-  cópias e tinham divergido — a mesma edição gravava coisas diferentes
-  conforme a porta: a Agenda escrevia o `location` com campo escolhido e
-  intitulava o jogo sem o adversário, os Eventos apagavam o `max_players` e
-  perguntavam sempre se reenviavam os pedidos. O componente tem o seu estado e
-  a sua gravação, e fica com o mais completo de cada uma: data e hora
-  separadas (como o criar), "Jogo vs Adversário", a formação e as ocorrências
-  da ficha preservadas na descrição, as regras da prova (inscritos, suspensos,
-  limite de convocados, exceções de idade) aplicadas nas duas páginas, e a
-  pergunta de reenvio só com convocados num evento publicado. A convocatória
-  lá dentro segue a regra de cima: é o que está em `callups`, e um convocado
-  que ficou impedido aparece marcado, com o impedimento escrito.
-  `editar-evento.spec.ts` faz a mesma edição pelas duas portas e compara o
-  corpo do PATCH, campo a campo.
+  (`src/components/eventos/`). Havia duas cópias, uma por página, e gravavam
+  coisas diferentes para a mesma edição: a Agenda escrevia o `location` com
+  campo escolhido e intitulava o jogo sem o adversário, os Eventos apagavam o
+  `max_players` e perguntavam sempre se reenviavam os pedidos. O componente
+  tem o seu estado e a sua gravação: data e hora separadas (como o criar),
+  "Jogo vs Adversário", a formação e as ocorrências da ficha preservadas na
+  descrição, as regras da prova (inscritos, suspensos, limite de convocados,
+  exceções de idade), e a pergunta de reenvio só com convocados num evento
+  publicado. A convocatória lá dentro segue a regra de cima: é o que está em
+  `callups`, e um convocado que ficou impedido aparece marcado.
+  `editar-evento.spec.ts` entra pela Agenda, salta para os Eventos e verifica
+  o corpo do PATCH campo a campo; `convocatoria.spec.ts` verifica que a
+  convocatória na Agenda só se lê.
   `tests/e2e/ecra-detalhe.spec.ts` cobre o contrato — título com foco,
   nenhum diálogo, voltar pelo "‹" e pelo browser, o foco de volta ao cartão.
 - **Um deploy com a app aberta não pode acabar num ecrã em inglês.** Cada

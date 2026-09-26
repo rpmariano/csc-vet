@@ -2,14 +2,14 @@ import { test, expect, type Page } from '@playwright/test'
 import { montarSupabaseFalso } from './supabase-mock'
 
 /**
- * Editar um evento é o mesmo ecrã na Agenda e nos Eventos.
+ * Um evento edita-se num sítio só: os Eventos.
  *
  * Eram duas cópias do formulário, e gravavam coisas diferentes para a mesma
  * edição: a Agenda escrevia o `location` mesmo com campo escolhido e intitulava
  * o jogo "Jogo" em vez de "Jogo vs Adversário"; os Eventos apagavam o
- * `max_players` a cada gravação. Hoje são um componente só (`EditarEvento`),
- * e este teste faz a mesma edição pelas duas portas e compara o que chega à
- * base, campo a campo.
+ * `max_players` a cada gravação. Passaram a um componente só (`EditarEvento`),
+ * e depois a uma porta só: a Agenda mostra o evento, e quem gere salta dali
+ * para o mesmo evento nos Eventos.
  */
 
 const DAQUI_A_UMA_SEMANA = new Date(Date.now() + 7 * 864e5)
@@ -66,22 +66,18 @@ async function editarEGravar(page: Page, abrir: (p: Page) => Promise<void>) {
   return gravados[0]
 }
 
-test('a Agenda e os Eventos gravam a mesma edição da mesma maneira', async ({ browser }) => {
-  const agenda = await browser.newPage()
-  const pelaAgenda = await editarEGravar(agenda, async p => {
+test('a Agenda não edita: leva ao mesmo evento nos Eventos, e é lá que se grava', async ({ page }) => {
+  const pelaAgenda = await editarEGravar(page, async p => {
     await p.goto('/csc-vet/calendar?event=e1')
-    await p.getByRole('button', { name: 'Editar evento' }).click()
-  })
-  await agenda.close()
-
-  const eventos = await browser.newPage()
-  const pelosEventos = await editarEGravar(eventos, async p => {
-    await p.goto('/csc-vet/events?convocatoria=e1')
+    const ficha = p.getByRole('region', { name: 'Jogo vs Sesimbra Veteranos' })
+    await expect(ficha).toBeVisible()
+    await expect(ficha.getByRole('button', { name: 'Editar evento' })).toHaveCount(0)
+    await expect(ficha.getByRole('button', { name: 'Eliminar evento' })).toHaveCount(0)
+    await ficha.getByRole('button', { name: 'Editar nos Eventos' }).click()
+    await expect(p).toHaveURL(/events\?convocatoria=e1$/)
     await p.getByRole('button', { name: 'Modificar evento' }).click()
   })
-  await eventos.close()
 
-  expect(pelosEventos).toEqual(pelaAgenda)
 
   // E o que se grava é o certo, não só igual.
   const hora = new Date(pelaAgenda.date_time as string)
@@ -127,8 +123,8 @@ test('um jogo de prova sem jornada não grava', async ({ page }) => {
     events: [{ ...JOGO, is_friendly: false }],
     tournaments: [{ id: 't1', name: 'Liga Masters +35', season: '2026/2027', status: 'ativo' }],
   })
-  await page.goto('/csc-vet/calendar?event=e1')
-  await page.getByRole('button', { name: 'Editar evento' }).click()
+  await page.goto('/csc-vet/events?convocatoria=e1')
+  await page.getByRole('button', { name: 'Modificar evento' }).click()
   await page.getByLabel('Torneio / competição').selectOption('t1')
   await page.getByRole('button', { name: 'Guardar alterações' }).click()
   await expect(page.getByText('Escolhe a jornada em que este jogo conta para a prova.')).toBeVisible()
