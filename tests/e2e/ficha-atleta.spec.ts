@@ -27,7 +27,6 @@ const PERFIL = {
   gdpr_consent: false, quota_start_date: '2026-09-01', quota_end_date: null,
   emergency_contact_name: 'Maria Silva', emergency_contact_phone: '939999999',
   emergency_contact_relation: null as string | null,
-  id_document_url: null, insurance_doc_url: null, medical_exam_doc_url: null,
 }
 
 /** A ficha é um ecrã (`EcraDetalhe`): uma região com o nome do atleta. */

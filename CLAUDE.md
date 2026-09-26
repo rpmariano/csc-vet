@@ -74,7 +74,7 @@ Três papéis: `player` · `coach` · `admin`.
 
 ### Tabelas Supabase
 
-`profiles`, `fields`, `opponents`, `tournaments`, `tournament_players`,
+`profiles`, `documentos_atleta`, `fields`, `opponents`, `tournaments`, `tournament_players`,
 `tournament_suspensions`, `tournament_groups`, `tournament_teams`, `tournament_matches`,
 `events`, `callups`, `attendances`, `stats`, `announcements`, `announcement_reads`,
 `dues`, `transactions`, `club_settings`.
@@ -452,30 +452,59 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   `v_players_public`** — essas não têm PII e não mudam.
 - **Os documentos dos atletas vivem num bucket privado** (`documentos_atletas`,
   `supabase_documentos_atletas_migration.sql`, aplicada a 2026-09-26), numa
-  pasta por ficha: `<profile_id>/<tipo>-<data>.<ext>`. Leem e escrevem o
-  próprio e a equipa técnica — a repartição de `profiles`, que já dá ao
-  treinador o número do cartão de cidadão, e é ele quem carrega documentos pela
-  ficha. **A ficha guarda o caminho, não um endereço**; para abrir pede-se um
-  link temporário de uma hora (`<LinkDocumento>`, que o pede ao desenhar e não
-  ao tocar — o Safari do iPhone bloqueia uma janela aberta depois de uma
-  espera). Tudo em `src/lib/documentos.ts`. Uma ficha nova escolhe o `id` ao
-  abrir o formulário, e não ao gravar, para os documentos carregados antes de
-  gravar já irem para a pasta dela.
-  **Até aqui iam para o `club_assets`, que é público**, e a app guardava o
-  endereço público: um cartão de cidadão abria-se sem sessão, a chave anónima
-  listava o bucket inteiro, qualquer conta substituía o ficheiro de outra, e
-  uma política de INSERT com `WITH CHECK (true)` deixava qualquer conta
-  escrever em qualquer bucket, `finance_documents` incluído. A mesma migração
-  fechou isso: listar o `club_assets` exige sessão (as fotografias e os
-  emblemas continuam a abrir pelo endereço público, que num bucket público não
-  passa pela RLS) e o INSERT aberto saiu.
-  **Os documentos antigos passam sozinhos:** um valor que ainda comece por
-  `http` é um documento no bucket público, e o `migrarDocumentosPublicos()`
-  copia-o, aponta a ficha para a cópia e só então apaga o original — da
-  primeira vez que alguém da equipa técnica abre o Plantel. Uma migração em
-  SQL não mexe em ficheiros, e sem credenciais de serviço só a app, com a
-  sessão de quem gere, lê e escreve nos dois buckets. `documentos.spec.ts`
-  cobre o link temporário, o carregamento para a pasta do próprio e a cópia.
+  pasta por ficha. Leem e escrevem o próprio e a equipa técnica — a repartição
+  de `profiles`, que já dá ao treinador o número do cartão de cidadão. Para
+  abrir um ficheiro pede-se um link temporário de uma hora (`<LinkDocumento>`,
+  que o pede ao desenhar e não ao tocar — o Safari do iPhone bloqueia uma
+  janela aberta depois de uma espera). Tudo em `src/lib/documentos.ts`.
+  **Até 2026-09-26 iam para o `club_assets`, que é público**: um cartão de
+  cidadão abria-se sem sessão, a chave anónima listava o bucket inteiro,
+  qualquer conta substituía o ficheiro de outra, e uma política de INSERT com
+  `WITH CHECK (true)` deixava qualquer conta escrever em qualquer bucket. A
+  mesma migração fechou isso (as fotografias e os emblemas continuam a abrir
+  pelo endereço público, que num bucket público não passa pela RLS).
+- **Cada documento é uma linha de `documentos_atleta`, com até 4 ficheiros**
+  (`supabase_documentos_por_epoca_migration.sql`, aplicada a 2026-09-26;
+  decisões da direção nesse dia). Eram três colunas da ficha, um ficheiro de
+  cada para sempre. Quatro tipos: **cartão de cidadão e proposta de sócio, um
+  só por pessoa; apólice do seguro e atestado médico, um por época** — a do
+  Financeiro. **Só se carrega para a época em curso**, e as anteriores ficam
+  guardadas. Até 4 ficheiros por documento: a frente e o verso do cartão, as
+  páginas da proposta (`caminhos text[]`, 1 a 4, `MAX_FICHEIROS`).
+  **Quem decide a época, a hora e o autor é o servidor** — o gatilho
+  `documentos_atleta_carimbar`, pela hora de Lisboa (`epoca_em_curso()`: a
+  base corre em UTC, e na primeira hora de 1 de setembro contava ainda a época
+  anterior). **As épocas passadas só a equipa técnica lhes mexe** — a linha e o
+  ficheiro: pelo Storage, quem não é da equipa técnica só apaga ou sobrepõe
+  ficheiros que já não estejam em documento nenhum (`documento_usa_ficheiro`),
+  senão o congelamento guardava a linha e deixava apagar o que ela aponta. E
+  **eliminar fichas passou a ser só da equipa técnica**: a regra deixava também
+  eliminar a ficha "do meu email", nenhum ecrã o fazia, e a eliminação
+  arrastava as convocatórias, as quotas pagas e os documentos.
+  **O atleta só junta ficheiros da sua pasta, e a regra está no gatilho, não
+  na RLS.** A leitura do bucket aceita também quem é dono da linha — depois de
+  uma fusão de fichas o ficheiro fica na pasta da ficha antiga, e sem isso o
+  atleta não abria o cartão de cidadão que a direção lhe carregou antes de ele
+  ligar a conta. Por isso apontar uma linha para o ficheiro de outro não pode
+  passar; e o gatilho, que vê o que a linha já tinha, deixa juntar o verso a
+  esse cartão, que a RLS recusaria.
+  **Na ficha e no Perfil é o `<BlocoDocumentos>`**: uma linha por documento,
+  com o estado (quantos ficheiros e quando, ou "Em falta"), "Carregar" e
+  depois "Acrescentar" até 4, cada ficheiro com o seu eliminar, e as épocas
+  anteriores recolhidas, só para abrir. **Grava logo, e não com o "Gravar" do
+  formulário** — eram campos da ficha, e quem saísse sem gravar deixava um
+  ficheiro órfão e nenhum documento. Por isso saíram do formulário de editar
+  atleta: carregam-se na ficha.
+  **A fusão de fichas leva os documentos** (e, de caminho, os meses
+  dispensados de quota, que se perdiam na cascata) — o `associate_my_profile()`
+  não copiava as colunas, e um cartão de cidadão carregado pela direção
+  perdia-se quando o atleta ligava a conta.
+  **As três colunas antigas saem na segunda parte**
+  (`supabase_documentos_por_epoca_colunas_migration.sql`), **a aplicar só
+  depois de a app nova estar no ar**: traz o que a app antiga ainda tenha
+  escrito, tira as colunas do `admin_merge_profiles()` e larga-as.
+  `documentos.spec.ts` cobre os links, a época em curso e as anteriores, os 4
+  ficheiros, o carregar e o eliminar, e o relatório.
 - **Tudo se responde, treinos incluídos — mas o treino tem janela.**
   `convocatoriaFechada()` é o único sítio onde a regra vive. Um evento aceita
   resposta assim que deixa de ser rascunho e tem gente convocada; fecha com a
@@ -529,22 +558,28 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   `&conta=`, se vier). O relatório carrega as mesmas tabelas e usa a mesma
   `contasDosAtletas()`, por isso diz o mesmo que as Quotas e os Encargos.
   **O segundo são os Documentos dos atletas** (`RelatorioDocumentos.tsx`):
-  escolhe-se o documento (cartão de cidadão, apólice, atestado) e quem entra,
-  e sai um `.zip` com um ficheiro por atleta (`RUI-CC.pdf`). **Dois passos —
+  escolhe-se o documento — cartão de cidadão, proposta de sócio, apólice,
+  atestado, ou a fotografia de perfil — e quem entra, e sai um `.zip` com os
+  ficheiros de cada atleta (`RUI-CC.pdf`; com a frente e o verso,
+  `RUI-CC-1.jpg` e `RUI-CC-2.jpg`). **A apólice e o atestado escolhem-se por
+  época**, em pastilhas — a em curso e as anteriores que tenham documentos —,
+  e a época vai no nome (`CSC-Atestado-2026-2027-….zip`). **E o relatório diz
+  a quem falta**: os atletas no ativo sem o documento, numa lista à parte e
+  fora do `.zip`, para a direção saber a quem o pedir. **Dois passos —
   preparar, e só depois descarregar ou partilhar** —, porque no iPhone a
   partilha nativa (`navigator.share` com ficheiros: email, WhatsApp) só abre
   logo a seguir a um toque, e o tempo de descarregar os documentos pelo meio
   fazia o Safari recusá-la. **Partilhar pergunta antes**: o ficheiro sai do
-  controlo do clube com documentos de identificação dentro. **Cada entrega fica
+  controlo do clube com documentos pessoais dentro. **Cada entrega fica
   registada** em `exportacoes_documentos`
   (`supabase_exportacoes_documentos_migration.sql`, aplicada a 2026-09-26) —
-  quem, quando, que documento, de quem e se descarregou ou partilhou —, e só
-  pela função `registar_exportacao_documentos()`, que põe o `auth.uid()` e a
-  hora ela própria: a tabela não tem política de INSERT, e um registo escrito
-  pelo cliente podia dizer outra pessoa. Só a direção a lê e só a direção
-  regista; o ecrã mostra as cinco últimas. A fotografia não entra no `.zip`.
-  `documentos.spec.ts` cobre a escolha, o conteúdo do `.zip`, a partilha com o
-  aviso e o registo de cada entrega.
+  quem, quando, que documento e de que época, de quem e se descarregou ou
+  partilhou —, e só pela função `registar_exportacao_documentos()`, que põe o
+  `auth.uid()` e a hora ela própria: a tabela não tem política de INSERT, e um
+  registo escrito pelo cliente podia dizer outra pessoa. Só a direção a lê e
+  só a direção regista; o ecrã mostra as cinco últimas.
+  `documentos.spec.ts` cobre a escolha, a época, a lista de quem falta, o
+  conteúdo do `.zip`, a fotografia, a partilha com o aviso e o registo.
 - **Um ecrã abre sempre no topo.** O `<SubirAoTopo>` (na moldura do router)
   põe a janela a zero a cada mudança de caminho e de `?ver=`. Numa app de
   página única o browser não repõe o scroll: quem estava no fim da Agenda e

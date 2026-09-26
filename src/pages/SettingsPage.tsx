@@ -7,7 +7,6 @@ import {
   Shield, 
   HeartPulse, 
   FileText, 
-  ExternalLink,
   Check,
   AlertCircle,
   Lock,
@@ -21,8 +20,7 @@ import { useAuth, cleanNotesFromRolesTag } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { CLUBE_NOME, CLUBE_SIGLA } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
-import { carregarDocumento } from '../lib/documentos'
-import { LinkDocumento } from '../components/LinkDocumento'
+import { BlocoDocumentos } from '../components/BlocoDocumentos'
 import { RELACOES_EMERGENCIA } from './TeamManagementPage'
 import { useEstadoPagamentos } from '../hooks/useEstadoPagamentos'
 
@@ -95,9 +93,6 @@ const SettingsPage: React.FC = () => {
 
   // 8. Documentos & RGPD
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
-  const [idDocUrl, setIdDocUrl] = useState<string | null>(null)
-  const [insuranceDocUrl, setInsuranceDocUrl] = useState<string | null>(null)
-  const [medicalExamDocUrl, setMedicalExamDocUrl] = useState<string | null>(null)
   const [formGdprConsent, setFormGdprConsent] = useState(false)
 
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
@@ -131,7 +126,7 @@ const SettingsPage: React.FC = () => {
       formIdCardExpiry, formAddress, formPostalCode, formCity, formEmail, formPhone,
       formPositions, formJerseyNumber, formKitSize, formPreferredFoot, formIban,
       formMemberNumber, formEmergencyName, formEmergencyPhone, formEmergencyRelation,
-      formMedicalNotes, formGdprConsent, photoUrl, idDocUrl, insuranceDocUrl, medicalExamDocUrl,
+      formMedicalNotes, formGdprConsent, photoUrl,
     ],
     aoGravar: () => handleSave(EVENTO_FALSO),
     // Não há para onde "sair": a navegação é que segue. O formulário fica como
@@ -177,9 +172,6 @@ const SettingsPage: React.FC = () => {
       setFormMedicalNotes(cleanNotesFromRolesTag(profile.medical_notes) || '')
 
       setPhotoUrl(profile.photo_url || null)
-      setIdDocUrl(profile.id_document_url || null)
-      setInsuranceDocUrl(profile.insurance_doc_url || null)
-      setMedicalExamDocUrl(profile.medical_exam_doc_url || null)
       setFormGdprConsent(Boolean(profile.gdpr_consent))
       /*
         Só a partir daqui é que o formulário representa a ficha. O guarda de
@@ -192,9 +184,11 @@ const SettingsPage: React.FC = () => {
     }
   }, [profile])
 
+  /* Só a fotografia: os documentos são do `<BlocoDocumentos>`, que os grava
+     logo, sem esperar pelo "Guardar" do formulário. */
   const handleUploadFile = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    field: 'photo' | 'idDoc' | 'insurance' | 'medical'
+    field: 'photo'
   ) => {
     if (!e.target.files || e.target.files.length === 0) return
     const file = e.target.files[0]
@@ -203,19 +197,6 @@ const SettingsPage: React.FC = () => {
 
     try {
       setUploadingDoc(field)
-      /* Os documentos vão para o bucket privado, na pasta do próprio, e guarda-se
-         o caminho; só a fotografia continua no público (ver lib/documentos). */
-      if (field !== 'photo') {
-        if (!profile?.id) return
-        const tipo = field === 'idDoc' ? 'cc' : field === 'insurance' ? 'seguro' : 'atestado'
-        const caminho = await carregarDocumento(profile.id, tipo, file)
-        if (field === 'idDoc') setIdDocUrl(caminho)
-        if (field === 'insurance') setInsuranceDocUrl(caminho)
-        if (field === 'medical') setMedicalExamDocUrl(caminho)
-        toast.success('Documento carregado.')
-        return
-      }
-
       const { error: uploadErr } = await supabase.storage
         .from('club_assets')
         .upload(fileName, file, { upsert: true })
@@ -226,7 +207,7 @@ const SettingsPage: React.FC = () => {
         .from('club_assets')
         .getPublicUrl(fileName)
 
-      if (field === 'photo') setPhotoUrl(publicUrl)
+      setPhotoUrl(publicUrl)
 
       toast.success('Ficheiro carregado com sucesso!')
     } catch (err: any) {
@@ -276,9 +257,6 @@ const SettingsPage: React.FC = () => {
       emergency_contact_relation: formEmergencyRelation ? sanitizeText(formEmergencyRelation) : null,
       medical_notes: medicalNotesEncoded,
       photo_url: photoUrl || null,
-      id_document_url: idDocUrl || null,
-      insurance_doc_url: insuranceDocUrl || null,
-      medical_exam_doc_url: medicalExamDocUrl || null,
       gdpr_consent: Boolean(formGdprConsent),
       /* O equipamento e o pé são do próprio: quem sabe que tamanho veste e de
          que pé joga é ele. A RLS deixa — a política de UPDATE da própria ficha
@@ -930,80 +908,31 @@ const SettingsPage: React.FC = () => {
             <span>8. Documentos & Proteção de Dados (RGPD)</span>
           </h3>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            {/* Foto de Perfil */}
-            <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
-              <label htmlFor="perfil-foto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
-              <input
-                id="perfil-foto"
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleUploadFile(e, 'photo')}
-                disabled={uploadingDoc === 'photo'}
-                className="text-xs w-full"
-              />
-              {photoUrl && (
-                <div className="flex items-center gap-2 pt-1">
-                  <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover border border-csc-gold" />
-                  <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
-                </div>
-              )}
-            </div>
-
-            {/* Documento de Identificação */}
-            <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
-              <label htmlFor="perfil-doc-cc" className="block text-xs font-bold text-white/80">Doc. Identificação (CC / Passaporte)</label>
-              <input
-                id="perfil-doc-cc"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(e) => handleUploadFile(e, 'idDoc')}
-                disabled={uploadingDoc === 'idDoc'}
-                className="text-xs w-full"
-              />
-              {idDocUrl && (
-                <LinkDocumento valor={idDocUrl} className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
-                  <ExternalLink size={11} /> Ver Documento CC anexado
-                </LinkDocumento>
-              )}
-            </div>
-
-            {/* Seguro Desportivo */}
-            <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
-              <label htmlFor="perfil-doc-seguro" className="block text-xs font-bold text-white/80">Apólice de Seguro Desportivo</label>
-              <input
-                id="perfil-doc-seguro"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(e) => handleUploadFile(e, 'insurance')}
-                disabled={uploadingDoc === 'insurance'}
-                className="text-xs w-full"
-              />
-              {insuranceDocUrl && (
-                <LinkDocumento valor={insuranceDocUrl} className="text-[11px] text-csc-azul-texto font-bold hover:underline flex items-center gap-1">
-                  <ExternalLink size={11} /> Ver Seguro anexado
-                </LinkDocumento>
-              )}
-            </div>
-
-            {/* Atestado Médico */}
-            <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
-              <label htmlFor="perfil-doc-atestado" className="block text-xs font-bold text-white/80">Atestado / Exame Médico Desportivo</label>
-              <input
-                id="perfil-doc-atestado"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(e) => handleUploadFile(e, 'medical')}
-                disabled={uploadingDoc === 'medical'}
-                className="text-xs w-full"
-              />
-              {medicalExamDocUrl && (
-                <LinkDocumento valor={medicalExamDocUrl} className="text-[11px] text-csc-verde-texto font-bold hover:underline flex items-center gap-1">
-                  <ExternalLink size={11} /> Ver Atestado anexado
-                </LinkDocumento>
-              )}
-            </div>
+          {/* Fotografia de perfil */}
+          <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
+            <label htmlFor="perfil-foto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
+            <input
+              id="perfil-foto"
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleUploadFile(e, 'photo')}
+              disabled={uploadingDoc === 'photo'}
+              className="text-xs w-full"
+            />
+            {photoUrl && (
+              <div className="flex items-center gap-2 pt-1">
+                <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover border border-csc-gold" />
+                <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
+              </div>
+            )}
           </div>
+
+          {/* Os documentos gravam-se logo, sem o "Guardar" do fim da página. */}
+          {profile?.id && (
+            <div className="cartao-simples px-4 py-1">
+              <BlocoDocumentos perfilId={profile.id} podeEditar idBase="perfil" />
+            </div>
+          )}
 
           {/* Consentimento RGPD */}
           <div className="p-3.5 bg-csc-light/10 rounded-2xl">

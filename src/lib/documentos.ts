@@ -1,75 +1,143 @@
 import { supabase } from './supabaseClient'
 
 /**
- * Os documentos dos atletas: cartão de cidadão, apólice do seguro e atestado
- * médico.
+ * Os documentos dos atletas: cartão de cidadão, proposta de sócio, apólice do
+ * seguro e atestado médico.
  *
- * **Vivem num bucket privado** (`documentos_atletas`, ver
- * `supabase_documentos_atletas_migration.sql`), numa pasta por ficha:
- * `<profile_id>/<tipo>-<data>.<ext>`. Leem-nos o próprio e a equipa técnica;
- * mais ninguém, nem com o endereço na mão. Até 2026-09-26 iam para o
- * `club_assets`, que é público, e a app guardava o endereço público — o
- * cartão de cidadão de um atleta abria-se sem sessão nenhuma.
+ * **Cada documento é uma linha de `documentos_atleta`** (ver
+ * `supabase_documentos_por_epoca_migration.sql`), com **até 4 ficheiros** — a
+ * frente e o verso do cartão, as páginas da proposta. Os ficheiros vivem no
+ * bucket privado `documentos_atletas`, na pasta da ficha:
+ * `<profile_id>/<tipo>-<ms>-<n>.<ext>`.
+ * Leem-nos o próprio e a equipa técnica; para abrir pede-se um link temporário
+ * (`linkTemporario`). Eram três colunas da ficha, uma por documento e para
+ * sempre, e a apólice e o atestado renovam-se todas as épocas.
  *
- * **Na ficha guarda-se o caminho, e não um endereço.** As colunas
- * (`id_document_url`…) mantêm o nome, mas passam a ter `<profile_id>/cc-….pdf`;
- * para abrir, pede-se um link temporário (`linkTemporario`). Um valor que
- * ainda comece por `http` é um documento antigo, no bucket público, à espera
- * de ser copiado (`migrarDocumentosPublicos`).
+ * **Dois são da pessoa e dois são da época.** O cartão de cidadão e a proposta
+ * de sócio são um só por pessoa. A apólice e o atestado são um por época, a do
+ * Financeiro (`financial_season()`, `getSeasonLabel()`); os das épocas
+ * anteriores ficam guardados, e só a equipa técnica lhes mexe. **Carrega-se só para a época em
+ * curso, e quem a decide é o servidor**: o gatilho `documentos_atleta_carimbar`
+ * põe a época, a hora e quem carregou, e o cliente não os manda.
  */
 
 export const BUCKET_DOCUMENTOS = 'documentos_atletas'
 
-export type TipoDocumento = 'cc' | 'seguro' | 'atestado'
+export type TipoDocumento = 'cc' | 'proposta' | 'seguro' | 'atestado'
 
-export type ColunaDocumento = 'id_document_url' | 'insurance_doc_url' | 'medical_exam_doc_url'
-
-export const COLUNA_DO_TIPO: Record<TipoDocumento, ColunaDocumento> = {
-  cc: 'id_document_url',
-  seguro: 'insurance_doc_url',
-  atestado: 'medical_exam_doc_url',
-}
-
-export const TIPOS_DOCUMENTO: readonly TipoDocumento[] = ['cc', 'seguro', 'atestado']
+export const TIPOS_DOCUMENTO: readonly TipoDocumento[] = ['cc', 'proposta', 'seguro', 'atestado']
 
 export const ROTULO_DOCUMENTO: Record<TipoDocumento, string> = {
   cc: 'Cartão de cidadão',
+  proposta: 'Proposta de sócio',
   seguro: 'Apólice do seguro',
   atestado: 'Atestado médico',
 }
 
-/** Um documento antigo, ainda no bucket público. */
-export const eEnderecoPublico = (valor: string) => /^https?:\/\//i.test(valor)
+/** A apólice e o atestado renovam-se todas as épocas; os outros dois não. */
+export const POR_EPOCA: Record<TipoDocumento, boolean> = {
+  cc: false,
+  proposta: false,
+  seguro: true,
+  atestado: true,
+}
+
+/** Um documento leva até 4 ficheiros. A mesma regra está na tabela. */
+export const MAX_FICHEIROS = 4
+
+/** Fotografias, e PDF para quem digitaliza. */
+export const TIPOS_DE_FICHEIRO_ACEITES = 'image/*,application/pdf'
+
+export interface DocumentoAtleta {
+  id: string
+  profile_id: string
+  tipo: TipoDocumento
+  /** A época ("2026/2027"), só na apólice e no atestado. */
+  epoca: string | null
+  /** Os ficheiros, 1 a 4, pela ordem em que entraram — caminhos no bucket privado, não endereços. */
+  caminhos: string[]
+  carregado_em: string
+}
+
+export const COLUNAS_DOCUMENTO = 'id, profile_id, tipo, epoca, caminhos, carregado_em'
+
+/** Os documentos de uma pessoa, ou de toda a gente que se pode ler. */
+export async function lerDocumentos(perfilId?: string): Promise<DocumentoAtleta[]> {
+  let pedido = supabase.from('documentos_atleta').select(COLUNAS_DOCUMENTO)
+  if (perfilId) pedido = pedido.eq('profile_id', perfilId)
+  const { data, error } = await pedido
+  if (error) throw error
+  return (data ?? []) as DocumentoAtleta[]
+}
+
+/** O documento que vale agora: o único, ou o da época em curso. */
+export const documentoEmVigor = (
+  documentos: DocumentoAtleta[],
+  tipo: TipoDocumento,
+  epocaAtual: string,
+): DocumentoAtleta | undefined =>
+  documentos.find(d => d.tipo === tipo && (!POR_EPOCA[tipo] || d.epoca === epocaAtual))
 
 const extensao = (nome: string) => {
   const ext = nome.includes('.') ? nome.split('.').pop()!.toLowerCase() : ''
   return /^[a-z0-9]{1,5}$/.test(ext) ? ext : 'bin'
 }
 
-/** Carrega um documento para a pasta da ficha e devolve o caminho a guardar. */
-export async function carregarDocumento(perfilId: string, tipo: TipoDocumento, ficheiro: File): Promise<string> {
-  const caminho = `${perfilId}/${tipo}-${Date.now()}.${extensao(ficheiro.name)}`
-  const { error } = await supabase.storage
-    .from(BUCKET_DOCUMENTOS)
-    .upload(caminho, ficheiro, { contentType: ficheiro.type || undefined })
-  if (error) throw error
-  return caminho
+/**
+ * Junta ficheiros a um documento — ao único, ou ao desta época —, criando-o se
+ * ainda não existe. Quem os limita a 4 é quem chama; a tabela recusa o quinto.
+ *
+ * Por esta ordem: os ficheiros, e depois a linha. Se a linha falhar, os
+ * ficheiros que acabaram de subir saem outra vez — não servem a ninguém.
+ */
+export async function acrescentarFicheiros(perfilId: string, tipo: TipoDocumento, ficheiros: File[]): Promise<void> {
+  const carimbo = Date.now()
+  const subidos: string[] = []
+  try {
+    for (const [i, ficheiro] of ficheiros.entries()) {
+      const caminho = `${perfilId}/${tipo}-${carimbo}-${i + 1}.${extensao(ficheiro.name)}`
+      const { error } = await supabase.storage
+        .from(BUCKET_DOCUMENTOS)
+        .upload(caminho, ficheiro, { contentType: ficheiro.type || undefined })
+      if (error) throw error
+      subidos.push(caminho)
+    }
+    const { error } = await supabase.rpc('acrescentar_ficheiros', {
+      p_perfil: perfilId,
+      p_tipo: tipo,
+      p_caminhos: subidos,
+    })
+    if (error) throw error
+  } catch (err) {
+    if (subidos.length > 0) await supabase.storage.from(BUCKET_DOCUMENTOS).remove(subidos)
+    throw err
+  }
 }
 
 /**
- * Um link para abrir o documento, válido por uma hora. Um documento antigo
- * devolve o próprio endereço público.
+ * Tira um ficheiro do documento e apaga-o do bucket. O último leva o
+ * documento com ele.
  */
-export async function linkTemporario(valor: string, segundos = 3600): Promise<string | null> {
-  if (eEnderecoPublico(valor)) return valor
-  const { data, error } = await supabase.storage.from(BUCKET_DOCUMENTOS).createSignedUrl(valor, segundos)
+export async function tirarFicheiro(documento: DocumentoAtleta, caminho: string): Promise<void> {
+  const { error } = await supabase.rpc('tirar_ficheiro', { p_documento: documento.id, p_caminho: caminho })
+  if (error) throw error
+  const { error: erroAoApagar } = await supabase.storage.from(BUCKET_DOCUMENTOS).remove([caminho])
+  if (erroAoApagar) console.warn(`O ficheiro tirado ficou no bucket (${caminho}):`, erroAoApagar)
+}
+
+/** Um link para abrir o documento, válido por uma hora. */
+export async function linkTemporario(caminho: string, segundos = 3600): Promise<string | null> {
+  const { data, error } = await supabase.storage.from(BUCKET_DOCUMENTOS).createSignedUrl(caminho, segundos)
   if (error || !data) return null
   return data.signedUrl
 }
 
-/** O ficheiro em si, para o juntar a um `.zip`. */
-export async function descarregarDocumento(valor: string): Promise<Blob> {
-  if (eEnderecoPublico(valor)) {
+/**
+ * O ficheiro em si, para o juntar a um `.zip`: um documento, pelo caminho no
+ * bucket privado, ou uma fotografia, pelo endereço público.
+ */
+export async function descarregarFicheiro(valor: string): Promise<Blob> {
+  if (/^https?:\/\//i.test(valor)) {
     const resposta = await fetch(valor)
     if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`)
     return resposta.blob()
@@ -79,54 +147,8 @@ export async function descarregarDocumento(valor: string): Promise<Blob> {
   return data
 }
 
-/** A extensão de um documento guardado, para lhe dar nome dentro do `.zip`. */
-export const extensaoDoDocumento = (valor: string) => extensao(valor.split('?')[0].split('/').pop() ?? '')
+/** A extensão de um ficheiro guardado, para lhe dar nome dentro do `.zip`. */
+export const extensaoDoFicheiro = (valor: string) => extensao(valor.split('?')[0].split('/').pop() ?? '')
 
-type PerfilComDocumentos = { id: string } & Partial<Record<ColunaDocumento, string | null>>
-
-let migracaoFeita = false
-
-/**
- * Copia para o bucket privado os documentos que ainda estão no público, e
- * apaga-os de lá.
- *
- * Corre da primeira vez que alguém da equipa técnica abre o Plantel (uma vez
- * por sessão), porque só a app, com a sessão de quem gere, pode ler e escrever
- * nos dois buckets — uma migração em SQL não mexe nos ficheiros. Documento a
- * documento, e por esta ordem: copiar, apontar a ficha para a cópia, e só
- * então apagar o original. Uma falha a meio deixa o documento onde estava, e a
- * próxima abertura tenta outra vez.
- *
- * Devolve quantos documentos passaram.
- */
-export async function migrarDocumentosPublicos(perfis: PerfilComDocumentos[]): Promise<number> {
-  if (migracaoFeita) return 0
-  migracaoFeita = true
-  let passaram = 0
-
-  for (const perfil of perfis) {
-    for (const tipo of TIPOS_DOCUMENTO) {
-      const coluna = COLUNA_DO_TIPO[tipo]
-      const valor = perfil[coluna]
-      if (!valor || !eEnderecoPublico(valor) || !valor.includes('/club_assets/')) continue
-      try {
-        const blob = await descarregarDocumento(valor)
-        const caminho = `${perfil.id}/${tipo}-${Date.now()}.${extensaoDoDocumento(valor)}`
-        const envio = await supabase.storage
-          .from(BUCKET_DOCUMENTOS)
-          .upload(caminho, blob, { contentType: blob.type || undefined })
-        if (envio.error) throw envio.error
-
-        const ficha = await supabase.from('profiles').update({ [coluna]: caminho }).eq('id', perfil.id)
-        if (ficha.error) throw ficha.error
-
-        const original = decodeURIComponent(valor.split('/club_assets/')[1].split('?')[0])
-        await supabase.storage.from('club_assets').remove([original])
-        passaram++
-      } catch (erro) {
-        console.error(`Não foi possível passar o documento (${tipo}) da ficha ${perfil.id}:`, erro)
-      }
-    }
-  }
-  return passaram
-}
+/** "Imagem" ou "PDF" — como se chama um ficheiro de um documento no ecrã. */
+export const especieDoFicheiro = (caminho: string) => (extensaoDoFicheiro(caminho) === 'pdf' ? 'PDF' : 'Imagem')

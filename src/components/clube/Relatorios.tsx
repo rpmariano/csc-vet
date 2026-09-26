@@ -46,7 +46,7 @@ const RELATORIOS: readonly Relatorio[] = [
   {
     chave: 'documentos',
     titulo: 'Documentos dos atletas',
-    descricao: 'Cartões de cidadão, seguros ou atestados, num .zip',
+    descricao: 'Cartões de cidadão, propostas, seguros, atestados ou fotografias, num .zip',
     Icone: FileText,
   },
 ]
