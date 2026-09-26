@@ -34,10 +34,10 @@ import type { RoleSource } from '../context/AuthContext'
   a mesma convenção da Competição e do Financeiro.
 */
 const SECCOES = {
-  dados: { titulo: 'Dados do clube', Componente: DadosDoClube },
-  campos: { titulo: 'Campos', Componente: GestaoCampos },
-  adversarios: { titulo: 'Adversários', Componente: GestaoAdversarios },
-  torneios: { titulo: 'Torneios', Componente: GestaoTorneios },
+  dados: { titulo: 'Dados do clube', sobrancelha: 'Configuração', Componente: DadosDoClube },
+  campos: { titulo: 'Campos', sobrancelha: 'Configuração', Componente: GestaoCampos },
+  adversarios: { titulo: 'Adversários', sobrancelha: 'Configuração', Componente: GestaoAdversarios },
+  torneios: { titulo: 'Torneios', sobrancelha: 'Época', Componente: GestaoTorneios },
   /* Só da direção: as dívidas de cada um, e (a seguir) os documentos. */
   relatorios: { titulo: 'Relatórios', sobrancelha: 'Direção', Componente: Relatorios, soDirecao: true },
 } as const
@@ -289,15 +289,19 @@ const ClubePage: React.FC = () => {
   if (seccao) {
     return (
       <div className="relative">
-        <BotaoVoltar para="Clube" aoVoltar={voltarAoIndice} />
-        {/* A sobrancelha só onde diz alguma coisa: "Clube" repetia o "‹ Clube"
-            logo por cima; "Direção" diz de quem é a secção. */}
-        <CabecalhoEcra
-          titulo={seccao.titulo}
-          sobrancelha={'sobrancelha' in seccao ? seccao.sobrancelha : undefined}
-          className="mb-4"
+        {/* A sobrancelha é o bloco do índice a que a secção pertence — "Clube"
+            repetia o "‹ Clube" logo por cima. O cabeçalho é dado à secção,
+            que lhe junta o seu [+]. */}
+        <seccao.Componente
+          cabecalho={acoes => (
+            <CabecalhoEcra
+              voltar={<BotaoVoltar para="Clube" aoVoltar={voltarAoIndice} />}
+              titulo={seccao.titulo}
+              sobrancelha={seccao.sobrancelha}
+              acoes={acoes}
+            />
+          )}
         />
-        <seccao.Componente />
       </div>
     )
   }
@@ -306,8 +310,7 @@ const ClubePage: React.FC = () => {
     <div className="relative">
       <CabecalhoEcra
         titulo="Clube"
-        legenda={clubSettings?.name ?? CLUBE_NOME}
-        className="mb-4"
+        sobrancelha={clubSettings?.name ?? CLUBE_NOME}
       />
 
       {/* Os três números da época (ecrã 6a). */}

@@ -114,6 +114,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
       aberto={aberto}
       voltarPara={voltarPara}
       aoVoltar={aoFechar}
+      sobrancelha="Campo"
       titulo={campo?.name ?? 'Campo'}
     >
       {!campo ? (

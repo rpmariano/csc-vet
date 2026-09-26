@@ -16,6 +16,7 @@ import { CAMPO, ETIQUETA, urlDoGoogleMaps, type Adversario, type Campo } from '.
 import { mensagemDeErro } from '../../lib/erros'
 import { BotaoIcone, EstadoVazio, Botao, BotaoCriar } from '../ui'
 import { ProcuraEFiltros } from '../ProcuraEFiltros'
+import type { PropsDaSeccao } from './seccao'
 
 /*
   Adversários (ecrã 9d), com a ficha de cada um (9h) no endereço.
@@ -24,7 +25,7 @@ import { ProcuraEFiltros } from '../ProcuraEFiltros'
   Clube. Precisa dos campos além dos adversários, para o "campo habitual".
 */
 
-export const GestaoAdversarios: React.FC = () => {
+export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   const { clubSettings } = useClub()
   const [params, setParams] = useSearchParams()
 
@@ -193,6 +194,7 @@ export const GestaoAdversarios: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {cabecalho(<BotaoCriar rotulo="Criar adversário" onClick={abrirCriacao} />)}
       <ProcuraEFiltros
         procura={procura}
         aoProcurar={setProcura}
@@ -200,9 +202,6 @@ export const GestaoAdversarios: React.FC = () => {
         rotulo="Procurar adversários"
         contagem={`${filtrados.length} de ${adversarios.length}`}
         aoLimpar={() => setProcura('')}
-        acao={
-          <BotaoCriar rotulo="Criar adversário" onClick={abrirCriacao} />
-        }
       />
 
       <div className="cartao-simples text-white p-4 space-y-3">

@@ -55,7 +55,7 @@ const CompeticaoPage: React.FC = () => {
 
   return (
     <div className="relative">
-      <CabecalhoEcra titulo="Competição" sobrancelha="Época em curso" className="mb-4" />
+      <CabecalhoEcra titulo="Competição" sobrancelha="Época em curso" />
 
       <FilaSeparadores
         itens={SEPARADORES}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import type { PropsDaSeccao } from './seccao'
 import { Link } from 'react-router-dom'
 import { Building2, Shield, Save, Upload, Plus } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
@@ -21,7 +22,7 @@ import { mensagemDeErro } from '../../lib/erros'
 const AVISO_POR_GRAVAR =
   'Os dados do clube ainda não foram gravados. Se saíres agora, perdem-se.'
 
-export const DadosDoClube: React.FC = () => {
+export const DadosDoClube: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   const { clubSettings, refreshSettings } = useClub()
   const [campos, setCampos] = useState<Campo[]>([])
   const [nome, setNome] = useState('')
@@ -118,6 +119,7 @@ export const DadosDoClube: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {cabecalho()}
       <div className="cartao-simples text-white p-4">
         <form onSubmit={e => { e.preventDefault(); gravar() }} className="space-y-5">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">

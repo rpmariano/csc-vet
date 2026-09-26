@@ -187,6 +187,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
       aberto={aberto}
       voltarPara={voltarPara}
       aoVoltar={aoFechar}
+      sobrancelha="Adversário"
       titulo={adversario?.name ?? 'Adversário'}
     >
       {!adversario ? (

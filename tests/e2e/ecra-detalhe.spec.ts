@@ -147,11 +147,9 @@ test.describe('Dossier de convocatória', () => {
 
     await verificaDetalhe(page, 'Jogo de teste', 'Confirmados', /\?convocatoria=e2$/)
 
-    // Os Eventos não têm título de ecrã; a prova da lista é o "Novo Evento".
+    // Os Eventos voltaram a ter título (o cabeçalho de todos, 2026-09-26).
     await page.goBack()
-    await expect(page).toHaveURL(/events$/)
-    await expect(page.getByRole('button', { name: 'Novo Evento' })).toBeVisible({ timeout: 10_000 })
-    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(0)
+    await verificaLista(page, /events$/, 'Eventos')
   })
 })
 

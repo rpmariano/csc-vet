@@ -514,10 +514,10 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   **8px entre as peças do canto:** com 12, a 390px e com o € no canto, o nome
   do clube cortava-se ("CSC Vetera…"). **A fotografia não leva lápis**: é
   sempre a mesma porta.
-  O `<CabecalhoEcra>` de cada ecrã ficou com a sobrancelha (e as `acoes`, como
-  o "+" do Plantel) numa linha e o título por baixo, com a largura toda — foi
-  para isso que o canto saiu de ao lado do título, e continua a não haver nada
-  ao lado dele. `cabecalho.spec.ts` cobre o cabeçalho (o mesmo nos ecrãs, preso
+  O `<CabecalhoEcra>` de cada ecrã ficou com a sobrancelha (e o [+] de criar)
+  numa linha e o título por baixo, com a largura toda — foi para isso que o
+  canto saiu de ao lado do título, e continua a não haver nada ao lado dele
+  (ver "O cabeçalho de um ecrã é um só"). `cabecalho.spec.ts` cobre o cabeçalho (o mesmo nos ecrãs, preso
   ao rolar, o nome inteiro a 390px com o €) e `larguras.spec.ts` que nenhum
   título passa da coluna, a 390 e a 360px.
 - **A prova escolhida na Classificação vai no endereço** (`?torneio=`), como o
@@ -947,12 +947,37 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   apagadas a 2026-09-26. O "acrescentar" do dossier dos Eventos também só
   mostra quem o `isPlayerEligible` deixa entrar no tipo do evento.
   `convocatoria.spec.ts` cobre as Definições nos dois casos.
-- **Criar tem um botão só, o `<BotaoCriar>`** (`src/components/ui`): dourado,
-  "+" em tinta e a sombra do [+] da barra de baixo — círculo num cabeçalho ou
-  numa linha de procura, barra com texto quando o ecrã não tem título (os
-  Eventos). Havia três: um círculo de vidro cinzento no Plantel, que se lia
-  como secundário, um dourado com o "+" dourado nos Eventos, e um terceiro
-  sem sombra nas Gestões do Clube.
+- **O cabeçalho de um ecrã é um só, pela mesma ordem** (`<CabecalhoEcra>`,
+  decisão de 2026-09-26): o "‹ Origem" (`voltar`, quando se veio de outro
+  sítio), a linha da sobrancelha com o [+] no canto (`acoes`), o título, e
+  por baixo, por esta ordem, separadores, mosaicos e a procura com o funil.
+  Havia onze formas. **A linha da sobrancelha existe sempre, com 48px** — só
+  aparecia com sobrancelha ou [+], e o círculo esticava-a: o título caía
+  colado ao "‹ Clube" nos Torneios e 120px abaixo no Plantel. **Todos os
+  ecrãs têm sobrancelha**, com o contexto: o mês na Agenda, as contagens no
+  Plantel e nos Eventos, a época no Financeiro, o bloco do índice nas secções
+  do Clube (Configuração, Época, Direção), o tipo nas fichas. O "‹" vai
+  dentro do cabeçalho (`voltar`) e não solto por cima, senão cada página
+  punha o seu espaço entre os dois. **E a margem por baixo também é do
+  cabeçalho** (20px): cada ecrã passava a sua — 4, 12, 16 ou 24px —, e no
+  Tailwind 4 o `space-y` do contentor é uma margem por baixo com
+  especificidade zero, por isso o `mb-1` do Plantel colava-lhe os mosaicos ao
+  título. Não se passa `mb-*` ao `<CabecalhoEcra>`. A Home é a exceção: lá o
+  título é o próximo jogo.
+  **Criar tem um botão só, o `<BotaoCriar>` em círculo, no canto da
+  sobrancelha** — em todos os ecrãs, haja ou não filtro. Estava em cinco
+  sítios: ao lado da sobrancelha (Plantel), ao lado da procura (Campos,
+  Adversários, Torneios), numa barra dourada por cima da procura (Eventos,
+  que tinham perdido o título), numa barra feita à mão no meio do conteúdo
+  (Comunicados, Encargos), e em lado nenhum. As secções do Clube recebem o
+  cabeçalho já montado (`PropsDaSeccao`, em `components/clube/seccao.ts`) e
+  juntam-lhe o seu [+].
+  **Um cartão não repete o cabeçalho:** o "Eventos & quórum · A mostrar 45 de
+  49" dentro da lista dos Eventos saiu. O Perfil deixou de ser o único ecrã
+  sem título principal — o nome curto é o título, e a fotografia fica com o
+  nome completo por baixo.
+  `cabecalho-ecra.spec.ts` mede a altura do título em doze ecrãs e a posição
+  do [+] em sete — verificado que falha no código de antes.
 - **O plantel lê-se de `v_players_public`, não de `profiles`.** Tudo o que mostre
   colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a
   vista, que só tem colunas de equipa. `profiles` fica para a própria ficha e para o

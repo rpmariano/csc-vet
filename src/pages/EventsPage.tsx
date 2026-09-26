@@ -11,7 +11,6 @@ import {
   UserPlus,
   ExternalLink,
   Repeat,
-  CalendarRange,
   Calendar,
   PartyPopper,
   Trophy,
@@ -46,7 +45,7 @@ import { useLocation, useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
 import { VoltarAOrigem } from '../components/VoltarAOrigem'
 import { BottomSheet } from '../components/BottomSheet'
-import { Pastilha, Botao, Interruptor, BotaoIcone, ACarregar, EstadoVazio, BotaoCriar } from '../components/ui'
+import { Pastilha, Botao, Interruptor, BotaoIcone, ACarregar, EstadoVazio, BotaoCriar, CabecalhoEcra } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
@@ -1247,9 +1246,18 @@ const EventsPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <div className="space-y-6">
-      {/* Page Header removido a pedido do utilizador; fica só o "‹ Clube"
-          quando se entra pelo Clube. */}
-      <VoltarAOrigem />
+      {/* O cabeçalho de todos os ecrãs (decisão de 2026-09-26). Tinha sido
+          tirado, e os Eventos eram o único ecrã de lista sem dizer onde se
+          estava, com o criar numa barra dourada de largura inteira por cima
+          da procura. */}
+      <CabecalhoEcra
+        voltar={<VoltarAOrigem />}
+        titulo="Eventos"
+        sobrancelha={`${events.length} ${events.length === 1 ? 'evento' : 'eventos'}`}
+        acoes={isCoachOrAdmin ? (
+          <BotaoCriar rotulo="Novo evento" onClick={() => { triggerHaptic('light'); setViewModeTab('create') }} />
+        ) : undefined}
+      />
 
       {successMessage && (
         <div className="bg-csc-light/12 text-csc-verde-texto p-4 rounded-2xl border border-csc-light/30 text-sm font-bold flex items-center gap-2.5 shadow-sm">
@@ -1258,10 +1266,6 @@ const EventsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Botão para abrir modal de criação (só coaches/admins) */}
-      {isCoachOrAdmin && (
-        <BotaoCriar rotulo="Novo evento" texto="Novo evento" onClick={() => { triggerHaptic('light'); setViewModeTab('create') }} />
-      )}
 
       {/* Criar um evento é um ecrã: o passo 1 de um fluxo cujo passo 2, a
           convocatória, já era ecrã. Era um modal de 14 campos, e o fluxo
@@ -1827,18 +1831,10 @@ const EventsPage: React.FC = () => {
               </div>
             </BottomSheet>
 
+            {/* O cartão não repete o título do ecrã: "Eventos & quórum" e o
+                "A mostrar N de M" diziam o que o cabeçalho e a linha de resumo
+                do filtro já dizem. */}
             <div className="cartao-simples text-white p-5">
-              <div className="flex items-center gap-2.5 pb-3 mb-5 border-b border-white/10">
-                <CalendarRange size={18} className="text-csc-gold shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display font-black text-[13.5px] text-white leading-tight">
-                    Eventos &amp; quórum
-                  </h3>
-                  <p className="text-[10px] text-white/62 mt-0.5">
-                    A mostrar {filteredScheduledEvents.length} de {events.length} registados
-                  </p>
-                </div>
-              </div>
 
               {loading ? (
                 <ACarregar />

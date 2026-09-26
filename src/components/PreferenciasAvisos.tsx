@@ -228,6 +228,7 @@ export const PreferenciasAvisos: React.FC<{
       aberto={aberto}
       voltarPara="Perfil"
       aoVoltar={guarda.tentarFechar}
+      sobrancelha="Perfil"
       titulo="Avisos"
       legenda="O que a app te envia para o telemóvel"
     >
