@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { MapPin, ExternalLink, Search, Sparkles, Users, Save } from 'lucide-react'
+import { CaixaProcura } from '../ui/CaixaProcura'
+import { MapPin, ExternalLink, Sparkles, Users, Save } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { toast } from '../../context/ToastContext'
 import { useClub } from '../../context/ClubContext'
@@ -777,17 +778,12 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
               )}
             </div>
 
-            <div className="relative">
-              <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/40" aria-hidden="true" />
-              <input
-                type="search"
-                value={procura}
-                onChange={e => setProcura(e.target.value)}
-                placeholder="Procurar por nome ou número…"
-                aria-label="Procurar no plantel"
-                className={`${CAMPO} pl-9`}
-              />
-            </div>
+            <CaixaProcura
+              valor={procura}
+              aoMudar={setProcura}
+              placeholder="Nome ou número"
+              rotulo="Procurar no plantel"
+            />
 
             <ul className="max-h-[380px] overflow-y-auto rounded-2xl border border-white/12 divide-y divide-white/7">
               {lista.map(p => {

@@ -4,7 +4,6 @@ import {
   Users,
   CheckCircle2,
   XCircle,
-  Search,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
@@ -25,6 +24,7 @@ import { EcraDetalhe } from '../components/EcraDetalhe'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { parseMatchReportMetadata } from '../components/MatchReportModal'
 import { BlocoConvocatoria } from '../components/callups/BlocoConvocatoria'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import { AniversariosDoMes } from '../components/AniversariosDoMes'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
@@ -34,7 +34,7 @@ import { SlidersHorizontal, Shield } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { getPlayerDisplayName, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, CORES_TIPO } from '../lib/eventos'
 import { mensagemDeErro } from '../lib/erros'
-import { CLASSE_CAMPO as CAMPO_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
+import { CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -1284,13 +1284,6 @@ const CalendarPage: React.FC = () => {
    */
   const temFiltros =
     searchQuery.trim() !== '' || statusFilter !== ESTADO_POR_OMISSAO || typeFilter !== 'all'
-  const resumoFiltros = [
-    searchQuery.trim() ? `"${searchQuery.trim()}"` : null,
-    statusFilter !== ESTADO_POR_OMISSAO ? ROTULOS_ESTADO[statusFilter] : null,
-    typeFilter !== 'all' ? ROTULOS_TIPO[typeFilter] : null,
-  ]
-    .filter(Boolean)
-    .join(' · ')
 
   return (
     <div className="space-y-6">
@@ -1320,49 +1313,20 @@ const CalendarPage: React.FC = () => {
         tratado de duas maneiras conforme o ecrã. Uma pastilha à vista é
         navegação; o que filtra fica atrás do funil.
       */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 min-w-0">
-          <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Título, adversário ou local"
-            aria-label="Procurar na agenda"
-            className={`${CAMPO_FORM} pl-9.5`}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
-          aria-label={temFiltros ? 'Pesquisa e filtros (ativos)' : 'Pesquisa e filtros'}
-          className={`flex-none w-11 h-11 rounded-full border flex items-center justify-center cursor-pointer
-            transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-              temFiltros
-                ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                : 'bg-white/10 border-white/15 text-white/75'
-            }`}
-        >
-          <SlidersHorizontal size={17} />
-        </button>
-      </div>
-
-      {/* O que a persiana esconde tem de continuar visível como estado. */}
-      {temFiltros && (
-        <button
-          type="button"
-          onClick={() => { setSearchQuery(''); setStatusFilter(ESTADO_POR_OMISSAO); setTypeFilter('all') }}
-          className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
-            bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
-        >
-          <SlidersHorizontal size={14} className="text-csc-gold shrink-0" />
-          <span className="flex-1 font-display font-bold text-[11px] text-white/80">
-            {resumoFiltros} · {filteredEvents.length} {filteredEvents.length === 1 ? 'evento' : 'eventos'}
-          </span>
-          <span className="font-display font-bold text-[11px] text-csc-gold">Limpar</span>
-        </button>
-      )}
+      <ProcuraEFiltros
+        procura={searchQuery}
+        aoProcurar={setSearchQuery}
+        placeholder="Título, adversário ou local"
+        rotulo="Procurar na agenda"
+        aoAbrirFiltros={() => setFiltrosAbertos(true)}
+        filtrosAtivos={statusFilter !== ESTADO_POR_OMISSAO || typeFilter !== 'all'}
+        resumo={[
+          statusFilter !== ESTADO_POR_OMISSAO ? ROTULOS_ESTADO[statusFilter] : null,
+          typeFilter !== 'all' ? ROTULOS_TIPO[typeFilter] : null,
+        ].filter((x): x is string => Boolean(x))}
+        contagem={`${filteredEvents.length} ${filteredEvents.length === 1 ? 'evento' : 'eventos'}`}
+        aoLimpar={() => { setSearchQuery(''); setStatusFilter(ESTADO_POR_OMISSAO); setTypeFilter('all') }}
+      />
 
       {loading ? (
         <ACarregar />

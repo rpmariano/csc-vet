@@ -858,12 +858,28 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   imita o WhatsApp de propósito. Os toasts deixaram os quatro gradientes
   (verde-azulado, rosa, âmbar, cinzento) e são a superfície da app com a cor
   do tipo na moldura.
-- **O padrão procura + funil tem componente, o `<ProcuraEFiltros>`**
-  (`src/components/`): a procura, o funil que acende, a linha de resumo com o
-  "Limpar", e um lugar para o [+]. Nasceu na vaga 5 para os Comunicados, as
-  três Gestões do Clube e os Movimentos do Financeiro; a Agenda, os Eventos,
-  as Fichas, o Plantel e as Contas por atleta ainda têm a sua cópia à mão, e
-  passam a ele quando forem tocados.
+- **Filtrar uma lista tem uma forma só, o `<ProcuraEFiltros>`**
+  (`src/components/`; decisão de 2026-09-26): a procura (`<CaixaProcura>`),
+  o funil `Filtros` que acende, a linha de resumo com o "Limpar", e um lugar
+  para o [+]. Sem texto para procurar — Estatísticas, Classificações — o
+  lugar da caixa fica com uma `legenda` ("A contar: Oficiais"). Havia três
+  formas ao mesmo tempo: cinco cópias à mão do padrão (Agenda, Eventos,
+  Fichas, Plantel, Contas por atleta, cada uma com o seu nome no funil —
+  "Pesquisa e filtros", "Filtros e apresentação"), os mosaicos da
+  convocatória com um "Limpar Filtro" à parte, e nas Classificações um botão
+  com ar de etiqueta ("AGENDADOS E ATIVOS ⌃") com o organizador da prova
+  colado ao lado, a ler-se como parte do filtro. O estado das provas passou
+  para o funil e o organizador para baixo das pastilhas.
+  **Três formas, e só três:** filtrar é o funil; escolher o que o ecrã mostra
+  (prova, fase, jornada) são pastilhas à vista; e os **contadores que
+  filtram** são o `<Mosaicos>` (`src/components/ui`) — a exceção à regra do
+  funil, porque o número é o resumo do ecrã. **Tocar no mosaico aceso volta
+  a todos**, na convocatória e no Plantel, e não há botão de limpar à parte.
+  Uma caixa de procura dentro de um bloco (a convocatória, o editar evento,
+  fundir fichas) é a `<CaixaProcura>`, sem funil — a de fundir fichas tinha a
+  lupa branca sobre o campo branco.
+  `procura-e-filtros.spec.ts` cobre o funil em todos os ecrãs de lista, as
+  Classificações e os mosaicos.
 - **Uma data sem hora escreve-se com o `fmtData()`** (`src/lib/datas.ts`),
   nunca com `new Date(x).toLocaleDateString()`: a data `AAAA-MM-DD` é a
   meia-noite UTC, e a oeste de Greenwich sai o dia anterior. Prazos,

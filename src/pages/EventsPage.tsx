@@ -9,7 +9,6 @@ import {
   XCircle,
   HelpCircle,
   UserPlus,
-  Search,
   ExternalLink,
   Repeat,
   CalendarRange,
@@ -33,6 +32,7 @@ import { QuickOpponentModal } from '../components/QuickOpponentModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { MatchReportModal } from '../components/MatchReportModal'
 import { BlocoConvocatoria } from '../components/callups/BlocoConvocatoria'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import { FichaConvocado } from '../components/callups/FichaConvocado'
 import { ConvocatoriaAoCriar } from '../components/callups/ConvocatoriaAoCriar'
 import type { EventoCriado } from '../components/callups/ConvocatoriaAoCriar'
@@ -1686,13 +1686,12 @@ const EventsPage: React.FC = () => {
           eventListStatusFilter !== 'all' ||
           eventListTypeFilter !== 'all'
 
+        const ROTULOS_TIPO_LISTA: Record<string, string> = { match: 'Jogos', practice: 'Treinos', gathering: 'Convívios' }
         const resumoFiltrosLista = [
-          eventListSearch.trim() ? `"${eventListSearch.trim()}"` : null,
           eventListTimeFilter !== 'upcoming' ? (ROTULOS_TEMPO[eventListTimeFilter] ?? 'Todas as datas') : null,
+          eventListTypeFilter !== 'all' ? ROTULOS_TIPO_LISTA[eventListTypeFilter] : null,
           eventListStatusFilter !== 'all' ? ROTULOS_PUBLICACAO[eventListStatusFilter] : null,
-        ]
-          .filter(Boolean)
-          .join(' · ') || 'Filtrado'
+        ].filter((x): x is string => Boolean(x))
 
         return (
           <div className="w-full space-y-4">
@@ -1709,54 +1708,22 @@ const EventsPage: React.FC = () => {
               um filtro que não se vê é um filtro que se esquece, e depois a
               lista parece vazia sem razão.
             */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 min-w-0">
-                <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
-                <input
-                  type="search"
-                  value={eventListSearch}
-                  onChange={e => setEventListSearch(e.target.value)}
-                  placeholder="Título, adversário ou local"
-                  aria-label="Procurar nos eventos"
-                  className={`${CAMPO_FORM} pl-9.5`}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => { triggerHaptic('light'); setFiltrosListaAbertos(true) }}
-                aria-label={temFiltrosLista ? 'Filtros (ativos)' : 'Filtros'}
-                className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
-                  transition-transform duration-150 active:scale-97
-                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                    temFiltrosLista
-                      ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                      : 'bg-white/10 border-white/15 text-white/75'
-                  }`}
-              >
-                <SlidersHorizontal size={16} />
-              </button>
-            </div>
-
-            {temFiltrosLista && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEventListSearch('')
-                  setEventListTimeFilter('upcoming')
-                  setEventListStatusFilter('all')
-                  setEventListTypeFilter('all')
-                }}
-                className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
-                  bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
-              >
-                <SlidersHorizontal size={14} className="text-csc-gold shrink-0" />
-                <span className="flex-1 font-display font-bold text-[11px] text-white/80">
-                  {resumoFiltrosLista} · {filteredScheduledEvents.length}{' '}
-                  {filteredScheduledEvents.length === 1 ? 'evento' : 'eventos'}
-                </span>
-                <span className="font-display font-bold text-[11px] text-csc-gold">Limpar</span>
-              </button>
-            )}
+            <ProcuraEFiltros
+              procura={eventListSearch}
+              aoProcurar={setEventListSearch}
+              placeholder="Título, adversário ou local"
+              rotulo="Procurar nos eventos"
+              aoAbrirFiltros={() => setFiltrosListaAbertos(true)}
+              filtrosAtivos={resumoFiltrosLista.length > 0}
+              resumo={resumoFiltrosLista}
+              contagem={`${filteredScheduledEvents.length} ${filteredScheduledEvents.length === 1 ? 'evento' : 'eventos'}`}
+              aoLimpar={() => {
+                setEventListSearch('')
+                setEventListTimeFilter('upcoming')
+                setEventListStatusFilter('all')
+                setEventListTypeFilter('all')
+              }}
+            />
 
             <BottomSheet
               isOpen={filtrosListaAbertos}

@@ -370,7 +370,7 @@ test.describe('A Agenda abre no que está por realizar', () => {
   test('e o funil não acende: é o ponto de partida, não um filtro posto', async ({ page }) => {
     await agenda(page, [passado, futuro])
 
-    await expect(page.getByRole('button', { name: 'Pesquisa e filtros', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Filtros', exact: true })).toBeVisible()
   })
 
   test('"Ver realizados" leva ao passado sem abrir a persiana', async ({ page }) => {
@@ -380,7 +380,7 @@ test.describe('A Agenda abre no que está por realizar', () => {
     await expect(page.getByText('Convívio Antigo')).toBeVisible()
     await expect(page.getByText('Convívio Novo')).toHaveCount(0)
     // Agora sim, é um filtro escolhido — e o cabeçalho tem de o dizer.
-    await expect(page.getByRole('button', { name: /Pesquisa e filtros \(ativos\)/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Filtros (ativos)' })).toBeVisible()
   })
 
   test('só com passado, o vazio oferece o histórico em vez de mentir', async ({ page }) => {

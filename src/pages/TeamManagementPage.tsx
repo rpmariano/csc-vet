@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import {
   Users,
-  Search,
   Trash2,
   Phone,
   FileText,
@@ -39,7 +39,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { toast } from '../context/ToastContext'
 import { CLUBE_NOME } from '../lib/clube'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, Botao, LinhaAtleta, ACarregar, EstadoVazio, BotaoCriar } from '../components/ui'
+import { CabecalhoEcra, Pastilha, Botao, LinhaAtleta, ACarregar, EstadoVazio, BotaoCriar, Mosaicos, CaixaProcura } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import {
   getSeasonLabel,
@@ -958,14 +958,14 @@ const TeamManagementPage: React.FC = () => {
     positionFilter !== 'all' ||
     ordem !== 'nome'
 
+  /* O estado escolhe-se nos mosaicos, à vista: não acende o funil (não está
+     lá dentro), mas entra no resumo quando a linha aparece. */
+  const filtrosDoFunil = positionFilter !== 'all' || ordem !== 'nome'
   const resumoFiltros = [
-    searchTerm.trim() ? `"${searchTerm.trim()}"` : null,
     statusFilter !== 'all' ? ROTULOS_ESTADO[statusFilter] : null,
     positionFilter !== 'all' ? positionFilter : null,
     ordem !== 'nome' ? ROTULOS_ORDEM[ordem] : null,
-  ]
-    .filter(Boolean)
-    .join(' · ') || 'Filtrado'
+  ].filter((x): x is string => Boolean(x))
 
   const limparFiltros = () => {
     setSearchTerm('')
@@ -1051,79 +1051,28 @@ const TeamManagementPage: React.FC = () => {
         quatro numa coluna de 480px cada um ficava com 100px. Toca-se outra vez
         no mosaico aceso para voltar a ver todos.
       */}
-      <div className="grid grid-cols-3 gap-2">
-        {([
-          ['active', 'Aptos', activeCount, 'text-csc-verde-texto', 'bg-csc-light/18 border-csc-light/45'],
-          ['injured', 'Lesionados', injuredCount, 'text-csc-vermelho-texto', 'bg-csc-red/16 border-csc-red/40'],
-          ['inactive', 'Inativos', inactiveCount, 'text-white/60', 'bg-white/12 border-white/25'],
-        ] as const).map(([valor, etiqueta, contagem, cor, fundoAtivo]) => {
-          const ativo = statusFilter === valor
-          return (
-            <button
-              key={valor}
-              type="button"
-              onClick={() => { triggerHaptic('selection'); setStatusFilter(ativo ? 'all' : valor) }}
-              aria-pressed={ativo}
-              className={`min-h-14 px-2.5 py-2.5 rounded-2xl border text-left cursor-pointer
-                transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                  ativo ? fundoAtivo : 'bg-white/5 border-white/10'
-                }`}
-            >
-              <span className={`block font-display font-extrabold text-[8px] tracking-[0.1em] uppercase leading-tight ${cor}`}>
-                {etiqueta}
-              </span>
-              <span className="block font-display font-extrabold text-[19px] text-white mt-1 tabular-nums">
-                {contagem}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      <Mosaicos<'active' | 'injured' | 'inactive'>
+        ativo={statusFilter === 'all' ? null : statusFilter}
+        aoEscolher={chave => setStatusFilter(chave ?? 'all')}
+        mosaicos={[
+          { chave: 'active', etiqueta: 'Aptos', valor: activeCount, cor: 'text-csc-verde-texto', fundoAtivo: 'bg-csc-light/18 border-csc-light/45' },
+          { chave: 'injured', etiqueta: 'Lesionados', valor: injuredCount, cor: 'text-csc-vermelho-texto', fundoAtivo: 'bg-csc-red/16 border-csc-red/40' },
+          { chave: 'inactive', etiqueta: 'Inativos', valor: inactiveCount, cor: 'text-white/60', fundoAtivo: 'bg-white/12 border-white/25' },
+        ]}
+      />
 
       {/* Procurar, e a ordem por que a lista sai. */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 min-w-0">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Procurar no plantel"
-            aria-label="Procurar no plantel"
-            className={`${CAMPO} pl-9.5`}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
-          aria-label={temFiltros ? 'Filtros e apresentação (ativos)' : 'Filtros e apresentação'}
-          className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
-            transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-              temFiltros
-                ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                : 'bg-white/10 border-white/15 text-white/75'
-            }`}
-        >
-          <SlidersHorizontal size={16} />
-        </button>
-      </div>
-
-      {temFiltros && (
-        <button
-          type="button"
-          onClick={limparFiltros}
-          className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
-            bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
-        >
-          <SlidersHorizontal size={14} className="text-csc-gold shrink-0" />
-          <span className="flex-1 font-display font-bold text-[11px] text-white/80">
-            {resumoFiltros} · {filteredProfiles.length} {filteredProfiles.length === 1 ? 'membro' : 'membros'}
-          </span>
-          <span className="font-display font-bold text-[11px] text-csc-gold">Limpar</span>
-        </button>
-      )}
+      <ProcuraEFiltros
+        procura={searchTerm}
+        aoProcurar={setSearchTerm}
+        placeholder="Procurar no plantel"
+        rotulo="Procurar no plantel"
+        aoAbrirFiltros={() => setFiltrosAbertos(true)}
+        filtrosAtivos={filtrosDoFunil}
+        resumo={resumoFiltros}
+        contagem={`${filteredProfiles.length} ${filteredProfiles.length === 1 ? 'membro' : 'membros'}`}
+        aoLimpar={limparFiltros}
+      />
 
       <BottomSheet
         isOpen={filtrosAbertos}
@@ -2781,16 +2730,12 @@ const TeamManagementPage: React.FC = () => {
                   </h4>
                 </div>
 
-                <div className="relative">
-                  <Search size={15} className="absolute left-3 top-2.5 text-white/62" />
-                  <input
-                    type="text"
-                    value={associateSearchTerm}
-                    onChange={(e) => setAssociateSearchTerm(e.target.value)}
-                    placeholder="Pesquisar utilizador por nome, email ou telefone..."
-                    className={`${CAMPO} pl-9.5`}
-                  />
-                </div>
+                <CaixaProcura
+                  valor={associateSearchTerm}
+                  aoMudar={setAssociateSearchTerm}
+                  placeholder="Nome, email ou telefone"
+                  rotulo="Procurar utilizador registado"
+                />
 
                 <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 border border-white/10 rounded-xl p-2 bg-white/5">
                   {otherUsers.length === 0 ? (
