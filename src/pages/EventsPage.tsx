@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  Plus,
   Trash2,
   MapPin,
   Clock,
@@ -48,7 +47,7 @@ import { useLocation, useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
 import { VoltarAOrigem } from '../components/VoltarAOrigem'
 import { BottomSheet } from '../components/BottomSheet'
-import { Pastilha, Botao, Interruptor, BotaoIcone, ACarregar, EstadoVazio } from '../components/ui'
+import { Pastilha, Botao, Interruptor, BotaoIcone, ACarregar, EstadoVazio, BotaoCriar } from '../components/ui'
 import { triggerHaptic } from '../utils/haptics'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
@@ -640,8 +639,10 @@ const EventsPage: React.FC = () => {
           } as CallupWithPlayer)
         })
 
-        // Para treinos: garantir que todos os atletas aptos ('active') estão convocados
-        const activePlayers = merged.filter(p => p.status === 'active' || (!p.status && p.role === 'player'))
+        // Para treinos: garantir que todos os atletas aptos estão convocados.
+        // Atletas, pela regra do `isPlayerEligible`: o treinador e a direção
+        // que não jogam apareciam aqui como convocados de todos os treinos.
+        const activePlayers = merged.filter(p => isPlayerEligible(p, 'practice'))
         practiceEventIds.forEach(pId => {
           if (!map[pId]) map[pId] = []
           const calledIds = new Set(map[pId].map(c => c.player_id))
@@ -1241,14 +1242,7 @@ const EventsPage: React.FC = () => {
 
       {/* Botão para abrir modal de criação (só coaches/admins) */}
       {isCoachOrAdmin && (
-        <button
-          type="button"
-          onClick={() => setViewModeTab('create')}
-          className="w-full min-h-12 flex items-center justify-center gap-2 px-5 bg-csc-gold text-csc-tinta rounded-3xl font-display font-extrabold text-[12.5px] shadow-md transition-all cursor-pointer active:scale-98 border-2 border-csc-gold/30"
-        >
-          <Plus size={18} className="text-csc-gold" />
-          <span>Novo Evento</span>
-        </button>
+        <BotaoCriar rotulo="Novo evento" texto="Novo evento" onClick={() => { triggerHaptic('light'); setViewModeTab('create') }} />
       )}
 
       {/* Criar um evento é um ecrã: o passo 1 de um fluxo cujo passo 2, a

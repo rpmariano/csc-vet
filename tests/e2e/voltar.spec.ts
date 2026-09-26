@@ -19,6 +19,15 @@ async function abre(page: Page, caminho: string, fixtures: Fixtures = {}) {
 
 const titulo = (page: Page, nome: string | RegExp) => page.getByRole('heading', { level: 1, name: nome })
 const voltar = (page: Page, para: string) => page.getByRole('button', { name: para, exact: true })
+/* O "‹" de uma ficha procura-se dentro dela, e só depois de ela abrir. A
+   Agenda tem um botão "Hoje" (o do mês), e um `voltar(page, 'Hoje')` feito
+   antes de a ficha aparecer agarrava-se a ele — que a seguir fica escondido
+   por baixo da ficha, e o clique esperava 60 s por um botão invisível. */
+const voltarDaFicha = async (page: Page, ficha: string | RegExp, para: string) => {
+  const regiao = page.getByRole('region', { name: ficha })
+  await expect(regiao).toBeVisible()
+  await regiao.getByRole('button', { name: para, exact: true }).click()
+}
 
 const amanha = () => new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
@@ -40,14 +49,14 @@ test('o jogo aberto na Home volta à Home, e diz "‹ Hoje"', async ({ page }) =
   await page.getByRole('button', { name: /^Ver o jogo / }).click({ position: { x: 30, y: 12 } })
   await expect(page).toHaveURL(/calendar\?event=j1$/)
 
-  await voltar(page, 'Hoje').click()
+  await voltarDaFicha(page, 'Jogo', 'Hoje')
   await expect(page).toHaveURL(/csc-vet\/$/)
   await expect(page.getByRole('button', { name: /^Ver o jogo / })).toBeVisible()
 })
 
 test('aberta por link, a ficha cai na lista a que pertence', async ({ page }) => {
   await abre(page, 'calendar?event=j1', { events: [jogo] })
-  await voltar(page, 'Agenda').click()
+  await voltarDaFicha(page, 'Jogo', 'Agenda')
   await expect(page).toHaveURL(/calendar$/)
   await expect(titulo(page, 'Agenda')).toBeVisible()
 })
@@ -60,7 +69,7 @@ test('no Clube, fechar a ficha não a deixa no histórico para o retroceder a re
   await page.getByRole('button', { name: /^Ver a ficha do adversário / }).first().click()
   await expect(titulo(page, /Sesimbra Veteranos/)).toBeVisible()
 
-  await voltar(page, 'Adversários').click()
+  await voltarDaFicha(page, /Sesimbra Veteranos/, 'Adversários')
   await expect(page).toHaveURL(/ver=adversarios$/)
 
   // O retroceder a seguir leva ao índice — antes reabria a ficha.

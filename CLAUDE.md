@@ -906,6 +906,22 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   não corre seguida, e procurar um nome numa lista por número é lê-la toda. O
   número continua a ser uma das ordens, na persiana dos filtros.
   `tests/e2e/listas-do-plantel.spec.ts` cobre as duas coisas.
+- **Um número de atletas conta quem joga, não as fichas** (`eJogador()`, em
+  `src/lib/papeis.ts` — a mesma regra do agrupamento: tem o papel de
+  jogador). Os mosaicos do Plantel diziam "Aptos 29" num clube de 34 membros
+  somando o treinador e a direção, e o Clube dizia "N atletas" pela mesma
+  conta. Tocar num mosaico mostra os **jogadores** nesse estado. A mesma falha
+  estava em dois sítios que faziam mais do que contar: os convocados
+  automáticos dos treinos na Agenda e nos Eventos listavam também quem não
+  joga, e a sincronização de treinos do Plantel **escrevia** convocatórias na
+  base para o treinador que passasse a apto. Hoje os três usam a regra do
+  `isPlayerEligible`. `listas-do-plantel.spec.ts` cobre as contagens.
+- **Criar tem um botão só, o `<BotaoCriar>`** (`src/components/ui`): dourado,
+  "+" em tinta e a sombra do [+] da barra de baixo — círculo num cabeçalho ou
+  numa linha de procura, barra com texto quando o ecrã não tem título (os
+  Eventos). Havia três: um círculo de vidro cinzento no Plantel, que se lia
+  como secundário, um dourado com o "+" dourado nos Eventos, e um terceiro
+  sem sombra nas Gestões do Clube.
 - **O plantel lê-se de `v_players_public`, não de `profiles`.** Tudo o que mostre
   colegas de equipa — listas, convocatórias, fichas de jogo, estatísticas — usa a
   vista, que só tem colunas de equipa. `profiles` fica para a própria ficha e para o

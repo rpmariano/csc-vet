@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
-import { Trophy, Shield, Plus, Trash2, Save, ChevronDown, Pencil } from 'lucide-react'
+import { Trophy, Shield, Trash2, Save, ChevronDown, Pencil } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { extractRolesFromProfile } from '../../context/AuthContext'
 import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
 import { EcraDetalhe } from '../EcraDetalhe'
-import { Botao, BotaoIcone, EstadoVazio, Pastilha } from '../ui'
+import { Botao, BotaoIcone, EstadoVazio, Pastilha, BotaoCriar } from '../ui'
 import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../UnsavedChangesModal'
 import { ConfirmModal } from '../ConfirmModal'
@@ -295,14 +295,7 @@ export const GestaoTorneios: React.FC = () => {
           contagem={`${filtrados.length} de ${tournaments.length}`}
           aoLimpar={() => { setTourSearch(''); setTourStatusFilter('all') }}
           acao={
-            <button
-              type="button"
-              onClick={abrirCriacao}
-              aria-label="Criar torneio"
-              className="w-11 h-11 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
-              <Plus size={19} aria-hidden="true" />
-            </button>
+            <BotaoCriar rotulo="Criar torneio" onClick={abrirCriacao} />
           }
         />
 

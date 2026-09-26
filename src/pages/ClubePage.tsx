@@ -25,6 +25,8 @@ import { GestaoCampos } from '../components/clube/GestaoCampos'
 import { GestaoAdversarios } from '../components/clube/GestaoAdversarios'
 import { GestaoTorneios } from '../components/clube/GestaoTorneios'
 import { Relatorios } from '../components/clube/Relatorios'
+import { eJogador } from '../lib/papeis'
+import type { RoleSource } from '../context/AuthContext'
 
 /*
   As secções de gestão, cada uma um ecrã por direito. O `?ver=` no endereço é
@@ -242,13 +244,16 @@ const ClubePage: React.FC = () => {
 
     const carregar = async () => {
       const [atletas, jogos, torneios] = await Promise.all([
-        supabase.from('v_players_public').select('id', { count: 'exact', head: true }).neq('status', 'inactive'),
+        /* Atletas são os que jogam, e não as fichas todas: a contagem somava
+           o treinador e a direção. Conta-se aqui, pela mesma regra do Plantel,
+           e não com um filtro da base sobre \`roles\`. */
+        supabase.from('v_players_public').select('id, role, roles, position, status').neq('status', 'inactive'),
         supabase.from('events').select('id', { count: 'exact', head: true }).eq('type', 'match').lt('date_time', new Date().toISOString()),
         supabase.from('tournaments').select('id', { count: 'exact', head: true }).neq('status', 'terminado'),
       ])
       if (cancelado) return
       setNumeros({
-        atletas: atletas.count ?? 0,
+        atletas: ((atletas.data ?? []) as RoleSource[]).filter(eJogador).length,
         jogos: jogos.count ?? 0,
         torneios: torneios.count ?? 0,
       })

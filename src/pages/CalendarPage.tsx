@@ -189,6 +189,20 @@ interface Opponent {
   home_field_id?: string | null
 }
 
+/*
+  Quem pode ser convocado para um evento. Fora do componente porque não
+  depende de estado nenhum — e porque é usado a carregar a Agenda, antes de
+  onde estava declarado.
+*/
+const isPlayerEligible = (player: Profile, eventType: string) => {
+  if (player.status === 'inactive') return false
+  if (eventType === 'gathering') return true
+  // Jogos e treinos são só para quem tem o papel de Jogador — membros só
+  // Treinador ou só Direção ficam disponíveis apenas nos convívios.
+  if (!extractRolesFromProfile(player).includes('player')) return false
+  return player.status === 'active'
+}
+
 const CalendarPage: React.FC = () => {
   const { profile } = useAuth()
   const { clubSettings } = useClub()
@@ -448,8 +462,10 @@ const CalendarPage: React.FC = () => {
           } as CallupWithPlayer)
         })
 
-        // Para treinos: garantir que todos os atletas aptos ('active') estão convocados
-        const activePlayers = mergedPlayers.filter(p => p.status === 'active' || (!p.status && p.role === 'player'))
+        // Para treinos: garantir que todos os atletas aptos estão convocados.
+        // Atletas, pela regra do `isPlayerEligible`: o treinador e a direção
+        // que não jogam apareciam aqui como convocados de todos os treinos.
+        const activePlayers = mergedPlayers.filter(p => isPlayerEligible(p, 'practice'))
         practiceEventIds.forEach(pId => {
           if (!map[pId]) map[pId] = []
           const calledIds = new Set(map[pId].map(c => c.player_id))
@@ -544,14 +560,6 @@ const CalendarPage: React.FC = () => {
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
 
-  const isPlayerEligible = (player: Profile, eventType: string) => {
-    if (player.status === 'inactive') return false
-    if (eventType === 'gathering') return true
-    // Jogos e treinos são só para quem tem o papel de Jogador — membros só
-    // Treinador ou só Direção ficam disponíveis apenas nos convívios.
-    if (!extractRolesFromProfile(player).includes('player')) return false
-    return player.status === 'active'
-  }
 
   // --- EDITAR EVENTO ---
   const handleStartEditEvent = (ev: Event) => {
