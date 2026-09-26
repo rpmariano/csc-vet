@@ -101,6 +101,8 @@ export interface BotaoIconeProps extends Omit<React.ButtonHTMLAttributes<HTMLBut
   perigo?: boolean
   /** Sem fundo nem moldura, para as ações dentro de uma linha de lista. */
   discreto?: boolean
+  /** A ação principal de um ecrã ou diálogo — dourado, como o `<Botao>` dourado. */
+  destaque?: boolean
 }
 
 /**
@@ -112,12 +114,17 @@ export interface BotaoIconeProps extends Omit<React.ButtonHTMLAttributes<HTMLBut
  * dossier dos Eventos, quatro glifos diferentes para "editar" (`Pencil`,
  * `Edit`, `Edit2`, `Edit3`) em quatro tamanhos. Aqui editar é o lápis e
  * eliminar é o caixote, os dois a 15px. (Auditoria de design, vaga 4.)
+ *
+ * `destaque` é para quando editar é a ação principal do ecrã, e não uma
+ * ação neutra ao lado de eliminar — o "Modificar evento" do dossier de
+ * convocatória, por exemplo, que era do mesmo cinzento que o resto.
  */
 export const BotaoIcone: React.FC<BotaoIconeProps> = ({
   rotulo,
   icone: Icone,
   perigo = false,
   discreto = false,
+  destaque = false,
   className = '',
   type = 'button',
   ...resto
@@ -128,7 +135,9 @@ export const BotaoIcone: React.FC<BotaoIconeProps> = ({
       : 'bg-transparent border-transparent text-white/62 hover:text-white hover:bg-white/10'
     : perigo
       ? APARENCIAS.perigo
-      : 'bg-white/9 text-white/80 border-white/15 hover:text-white'
+      : destaque
+        ? APARENCIAS.dourado
+        : 'bg-white/9 text-white/80 border-white/15 hover:text-white'
   return (
     <button
       type={type}

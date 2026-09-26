@@ -2036,7 +2036,12 @@ const EventsPage: React.FC = () => {
                 {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
                 {isCoachOrAdmin && (
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <BotaoIcone rotulo="Modificar evento" icone={Pencil} onClick={() => openEditModal(activeCallupModalEvent)} />
+                    <BotaoIcone
+                      rotulo="Modificar evento"
+                      icone={Pencil}
+                      destaque
+                      onClick={() => openEditModal(activeCallupModalEvent)}
+                    />
                     <BotaoIcone
                       rotulo="Eliminar evento"
                       icone={Trash2}

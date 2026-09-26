@@ -130,3 +130,14 @@ test('um jogo de prova sem jornada não grava', async ({ page }) => {
   await expect(page.getByText('Escolhe a jornada em que este jogo conta para a prova.')).toBeVisible()
   expect(gravados).toHaveLength(0)
 })
+
+// O "Modificar evento" é a ação principal do dossier, e tinha o mesmo
+// cinzento do "Eliminar" ao lado — as duas ações liam-se com o mesmo peso.
+// Fica dourado, como o resto das ações principais da app.
+test('o botão de modificar o evento é dourado, e o de eliminar continua vermelho', async ({ page }) => {
+  await montarSupabaseFalso(page, FIXTURES)
+  await page.goto('/csc-vet/events?convocatoria=e1')
+
+  await expect(page.getByRole('button', { name: 'Modificar evento' })).toHaveClass(/bg-csc-gold/)
+  await expect(page.getByRole('button', { name: 'Eliminar evento' })).not.toHaveClass(/bg-csc-gold/)
+})
