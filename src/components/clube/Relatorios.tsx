@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import type { PropsDaSeccao } from './seccao'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
-import { Wallet, type LucideIcon } from 'lucide-react'
+import { FileText, Wallet, type LucideIcon } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useClub } from '../../context/ClubContext'
 import { CLUBE_SIGLA } from '../../lib/clube'
@@ -11,6 +11,7 @@ import { CartaoSimples } from '../ui'
 import { EcraDetalhe } from '../EcraDetalhe'
 import { ContasPorAtleta } from '../financeiro/ContasPorAtleta'
 import { contasDosAtletas, type DadosDasContas } from '../financeiro/contasDosAtletas'
+import { RelatorioDocumentos } from './RelatorioDocumentos'
 
 /**
  * Relatórios — o que se tira da app para fora, para a direção.
@@ -25,7 +26,7 @@ import { contasDosAtletas, type DadosDasContas } from '../financeiro/contasDosAt
  * destino, uma porta. O endereço antigo (`/finance?ver=atletas`) redireciona
  * para aqui.
  *
- * O relatório dos documentos dos atletas vem a seguir, e entra nesta lista.
+ * O segundo são os documentos dos atletas, num `.zip` (`RelatorioDocumentos`).
  */
 
 interface Relatorio {
@@ -41,6 +42,12 @@ const RELATORIOS: readonly Relatorio[] = [
     titulo: 'Contas por atleta',
     descricao: 'Quem deve o quê, e a mensagem para o WhatsApp',
     Icone: Wallet,
+  },
+  {
+    chave: 'documentos',
+    titulo: 'Documentos dos atletas',
+    descricao: 'Cartões de cidadão, seguros ou atestados, num .zip',
+    Icone: FileText,
   },
 ]
 
@@ -77,6 +84,15 @@ export const Relatorios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
       </CartaoSimples>
 
       <RelatorioContas aberto={aberto === 'contas'} voltarPara={voltarPara} aoVoltar={fechar} />
+      <EcraDetalhe
+        aberto={aberto === 'documentos'}
+        voltarPara={voltarPara}
+        aoVoltar={fechar}
+        sobrancelha="Relatório"
+        titulo="Documentos dos atletas"
+      >
+        {aberto === 'documentos' && <RelatorioDocumentos />}
+      </EcraDetalhe>
     </>
   )
 }

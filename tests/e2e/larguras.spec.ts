@@ -93,6 +93,7 @@ const ECRAS = [
   ['Financeiro', '/csc-vet/finance'],
   ['Relatórios', '/csc-vet/clube?ver=relatorios'],
   ['Relatórios · contas por atleta', '/csc-vet/clube?ver=relatorios&relatorio=contas'],
+  ['Relatórios · documentos', '/csc-vet/clube?ver=relatorios&relatorio=documentos'],
   ['Conta de um atleta', `/csc-vet/clube?ver=relatorios&relatorio=contas&conta=${COLEGA.id}`],
   ['Comunicados', '/csc-vet/announcements'],
   ['Definições', '/csc-vet/settings'],
