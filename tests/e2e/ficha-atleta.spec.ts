@@ -55,7 +55,7 @@ test('a fotografia fica no centro do cartão', async ({ page }) => {
   await abreFicha(page)
 
   const medida = await page.evaluate(() => {
-    const cartao = document.querySelector('section[aria-labelledby] .cartao-vidro') as HTMLElement | null
+    const cartao = document.querySelector('section[aria-labelledby] .cartao-simples') as HTMLElement | null
     const titulo = cartao?.firstElementChild as HTMLElement | null
     if (!cartao || !titulo) return null
     const c = cartao.getBoundingClientRect()

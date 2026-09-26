@@ -1018,7 +1018,7 @@ const TeamManagementPage: React.FC = () => {
 
           <div className="space-y-2">
             {associationSuggestions.map(({ user: u, player: pl }, idx) => (
-              <div key={idx} className="bg-white/5 border border-white/10 p-3 rounded-2xl flex items-center justify-between gap-2.5">
+              <div key={idx} className="bg-white/5 p-3 rounded-2xl flex items-center justify-between gap-2.5">
                 <div className="min-w-0">
                   <p className="font-display font-bold text-[12px] text-white truncate">
                     {u.name} <span className="text-white/62 font-normal">{u.email}</span>
@@ -1339,7 +1339,7 @@ const TeamManagementPage: React.FC = () => {
                               className="w-16 h-16 rounded-2xl object-cover border border-csc-gold/45"
                             />
                           ) : (
-                            <span className="w-16 h-16 rounded-2xl bg-white/10 border border-csc-gold/45 text-white/70 flex items-center justify-center font-display font-black text-[22px]">
+                            <span className="w-16 h-16 rounded-2xl bg-white/10 text-white/70 flex items-center justify-center font-display font-black text-[22px]">
                               {(person.name || '?').charAt(0).toUpperCase()}
                             </span>
                           )}
@@ -1387,7 +1387,7 @@ const TeamManagementPage: React.FC = () => {
                   que mais vezes se vem cá mudar. */}
               <div className="cartao-simples p-4 space-y-2.5">
                 <h3 className={ETIQUETA}>Estado</h3>
-                <div className="grid grid-cols-3 gap-1 bg-white/6 p-1 rounded-2xl border border-white/10">
+                <div className="grid grid-cols-3 gap-1 bg-white/6 p-1 rounded-2xl">
                   {([
                     ['active', 'Apto'],
                     ['injured', 'Lesionado'],
@@ -1613,10 +1613,10 @@ const TeamManagementPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => toggleRole('player')}
-                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                      className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('player')
-                          ? 'bg-csc-light/15 border-csc-light/50'
-                          : 'bg-white/5 border-white/10 hover:bg-white/10'
+                          ? 'bg-csc-light/15 '
+                          : 'bg-white/5 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center justify-between w-full mb-1">
@@ -1635,10 +1635,10 @@ const TeamManagementPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => toggleRole('coach')}
-                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                      className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('coach')
-                          ? 'bg-csc-blue/18 border-csc-blue/50'
-                          : 'bg-white/5 border-white/10 hover:bg-white/10'
+                          ? 'bg-csc-blue/18 '
+                          : 'bg-white/5 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center justify-between w-full mb-1">
@@ -1657,16 +1657,16 @@ const TeamManagementPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => toggleRole('admin')}
-                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                      className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
                         formRoles.includes('admin')
-                          ? 'bg-csc-gold/15 border-csc-gold/50'
-                          : 'bg-white/5 border-white/10 hover:bg-white/10'
+                          ? 'bg-csc-gold/15 '
+                          : 'bg-white/5 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center justify-between w-full mb-1">
                         <Shield size={15} className="text-csc-gold" />
                         <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                          formRoles.includes('admin') ? 'bg-white/10 text-csc-gold' : 'border border-white/20'
+                          formRoles.includes('admin') ? 'bg-white/10 text-csc-gold' : ' '
                         }`}>
                           {formRoles.includes('admin') && <Check size={12} className="stroke-[3]" />}
                         </div>
@@ -1953,7 +1953,7 @@ const TeamManagementPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 gap-3">
                   {/* Foto de Perfil */}
-                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg space-y-2">
+                  <div className="p-3 bg-white/5 rounded-lg space-y-2">
                     <label className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
                     <input
                       type="file"
@@ -1971,7 +1971,7 @@ const TeamManagementPage: React.FC = () => {
                   </div>
 
                   {/* Documento de Identificação */}
-                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg space-y-2">
+                  <div className="p-3 bg-white/5 rounded-lg space-y-2">
                     <label className="block text-xs font-bold text-white/80">Doc. Identificação (CC / Passaporte)</label>
                     <input
                       type="file"
@@ -1988,7 +1988,7 @@ const TeamManagementPage: React.FC = () => {
                   </div>
 
                   {/* Seguro Desportivo */}
-                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg space-y-2">
+                  <div className="p-3 bg-white/5 rounded-lg space-y-2">
                     <label className="block text-xs font-bold text-white/80">Apólice de Seguro Desportivo</label>
                     <input
                       type="file"
@@ -2005,7 +2005,7 @@ const TeamManagementPage: React.FC = () => {
                   </div>
 
                   {/* Atestado Médico */}
-                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg space-y-2">
+                  <div className="p-3 bg-white/5 rounded-lg space-y-2">
                     <label className="block text-xs font-bold text-white/80">Atestado / Exame Médico Desportivo</label>
                     <input
                       type="file"
@@ -2023,7 +2023,7 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* Consentimento RGPD */}
-                <div className="p-3 bg-white/5 border border-white/10 rounded-lg flex items-start gap-2.5">
+                <div className="p-3 bg-white/5 rounded-lg flex items-start gap-2.5">
                   <input
                     type="checkbox"
                     id="gdpr_consent"
@@ -2071,7 +2071,7 @@ const TeamManagementPage: React.FC = () => {
               o cartão fica com o que eles não dizem — a fotografia, o estado
               e as funções. (Um cartão não repete o título do ecrã em que está.)
             */}
-            <div className="cartao-vidro p-4 flex flex-col items-center text-center gap-2.5">
+            <div className="cartao-simples p-4 flex flex-col items-center text-center gap-2.5">
               {selectedProfile.photo_url ? (
                 <img
                   src={selectedProfile.photo_url}
@@ -2081,7 +2081,7 @@ const TeamManagementPage: React.FC = () => {
                 />
               ) : (
                 <span
-                  className="rounded-3xl bg-white/10 border-2 border-csc-gold text-white/70 flex items-center justify-center font-display font-black text-[30px]"
+                  className="rounded-3xl bg-white/10 text-white/70 flex items-center justify-center font-display font-black text-[30px]"
                   style={{ width: 88, height: 88 }}
                 >
                   {(selectedProfile.name || '?').charAt(0).toUpperCase()}
@@ -2093,15 +2093,15 @@ const TeamManagementPage: React.FC = () => {
                 onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
                 disabled={!isCoachOrAdmin}
                 aria-label={`Estado: ${selectedProfile.status === 'injured' ? 'lesionado' : selectedProfile.status === 'inactive' ? 'inativo' : 'apto'}${isCoachOrAdmin ? '. Alternar entre apto e lesionado' : ''}`}
-                className={`min-h-11 px-4 rounded-[22px] border font-display font-black text-[11px] flex items-center gap-2
+                className={`min-h-11 px-4 rounded-[22px] font-display font-black text-[11px] flex items-center gap-2
                   transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                     isCoachOrAdmin ? 'cursor-pointer active:scale-97' : 'cursor-default'
                   } ${
                     selectedProfile.status === 'injured'
-                      ? 'bg-csc-red/15 text-csc-vermelho-texto border-csc-red/35'
+                      ? 'bg-csc-red/15 text-csc-vermelho-texto '
                       : selectedProfile.status === 'inactive'
-                      ? 'bg-white/8 text-white/60 border-white/15'
-                      : 'bg-csc-light/15 text-csc-verde-texto border-csc-light/35'
+                      ? 'bg-white/8 text-white/60 '
+                      : 'bg-csc-light/15 text-csc-verde-texto '
                   }`}
               >
                 {selectedProfile.status === 'injured' ? <HeartPulse size={14} />
@@ -2114,12 +2114,12 @@ const TeamManagementPage: React.FC = () => {
                 {extractRolesFromProfile(selectedProfile).map(r => (
                   <span
                     key={r}
-                    className={`font-display font-black text-[9px] tracking-[0.1em] uppercase px-2 py-1 rounded-full border ${
+                    className={`font-display font-black text-[9px] tracking-[0.1em] uppercase px-2 py-1 rounded-full ${
                       r === 'admin'
-                        ? 'bg-csc-gold/15 text-csc-gold border-csc-gold/35'
+                        ? 'bg-csc-gold/15 text-csc-gold '
                         : r === 'coach'
-                        ? 'bg-csc-blue/20 text-csc-azul-texto border-csc-blue/30'
-                        : 'bg-csc-light/15 text-csc-verde-texto border-csc-light/25'
+                        ? 'bg-csc-blue/20 text-csc-azul-texto '
+                        : 'bg-csc-light/15 text-csc-verde-texto '
                     }`}
                   >
                     {r === 'admin' ? 'Direção' : r === 'coach' ? 'Treinador' : 'Jogador'}
@@ -2181,17 +2181,17 @@ const TeamManagementPage: React.FC = () => {
                   </h4>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nome Completo</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.name}</p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nome na Camisola</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.birth_date ? (
@@ -2200,34 +2200,34 @@ const TeamManagementPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
                       <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.nif || '-'}</p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
                       <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.id_number || '-'}</p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Validade do CC</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.id_card_expiry ? fmtData(selectedProfile.id_card_expiry) : '-'}
                       </p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nacionalidade</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Consentimento RGPD</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.gdpr_consent === false ? 'Não dado' : 'Dado'}
@@ -2254,7 +2254,7 @@ const TeamManagementPage: React.FC = () => {
                   <div className="grid grid-cols-1 gap-2 text-xs">
                     <a
                       href={selectedProfile.email ? `mailto:${selectedProfile.email}` : undefined}
-                      className={`${selectedProfile.email ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0 block min-h-11
+                      className={`${selectedProfile.email ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl min-w-0 block min-h-11
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
                     >
                       <p className="text-white/65 font-bold uppercase text-[9px]">Email de acesso</p>
@@ -2263,7 +2263,7 @@ const TeamManagementPage: React.FC = () => {
 
                     <a
                       href={selectedProfile.phone ? `tel:${selectedProfile.phone}` : undefined}
-                      className={`${selectedProfile.phone ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0 block min-h-11
+                      className={`${selectedProfile.phone ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl min-w-0 block min-h-11
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
                     >
                       <p className="text-white/65 font-bold uppercase text-[9px]">Telemóvel</p>
@@ -2280,24 +2280,24 @@ const TeamManagementPage: React.FC = () => {
                   </h4>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Nº da camisola</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.jersey_number ? `#${selectedProfile.jersey_number}` : 'Sem número'}
                       </p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Tamanho de equipamento</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.kit_size || '-'}</p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Pé preferido</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.preferred_foot || '-'}</p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Estado</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.status === 'injured' ? 'Lesionado'
@@ -2315,12 +2315,12 @@ const TeamManagementPage: React.FC = () => {
                   </h4>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
                       <p className="font-extrabold text-white mt-0.5">{selectedProfile.address || 'Não registada'}</p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.postal_code || '-'} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
@@ -2336,7 +2336,7 @@ const TeamManagementPage: React.FC = () => {
                     <span>3. Dados Bancários & Quotas</span>
                   </h4>
 
-                  <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10 flex items-center justify-between gap-3">
+                  <div className="bg-white/10 p-3 rounded-xl border-t-white/20 shadow-sm shadow-black/10 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-white/65 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
                       <p className="font-black text-white font-mono text-xs mt-0.5">
@@ -2344,7 +2344,7 @@ const TeamManagementPage: React.FC = () => {
                       </p>
                     </div>
                     {selectedProfile.iban && (
-                      <span className="text-[10px] font-bold bg-csc-light/16 border border-csc-light/30 text-csc-verde-texto px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-bold bg-csc-light/16 text-csc-verde-texto px-2 py-0.5 rounded">
                         Ativo
                       </span>
                     )}
@@ -2354,7 +2354,7 @@ const TeamManagementPage: React.FC = () => {
                       formulário de edição, e são o que explica a dívida de
                       alguém sem ser preciso abrir a edição para ver. */}
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Início de atividade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.quota_start_date
@@ -2363,7 +2363,7 @@ const TeamManagementPage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
+                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Fim de atividade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.quota_end_date
@@ -2373,7 +2373,7 @@ const TeamManagementPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="bg-white/6 p-2.5 rounded-xl border border-white/10">
+                  <div className="bg-white/6 p-2.5 rounded-xl">
                     <p className="text-white/65 font-bold uppercase text-[9px]">Meses dispensados de quota</p>
                     <p className="font-extrabold text-white mt-0.5 text-xs">
                       {dispensasDaFicha === null
@@ -2389,14 +2389,14 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 4. Saúde & Contacto de Emergência */}
-                <div className="bg-csc-red/10 p-4 rounded-2xl border border-csc-red/30 space-y-3">
+                <div className="bg-csc-red/10 p-4 rounded-2xl space-y-3">
                   <h4 className="text-xs font-black text-csc-vermelho-texto uppercase tracking-wider flex items-center gap-1.5">
                     <HeartPulse size={14} className="text-csc-vermelho-texto" />
                     <span>4. Saúde & Contacto de Emergência</span>
                   </h4>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/10 p-3 rounded-xl border border-csc-red/20">
+                    <div className="bg-white/10 p-3 rounded-xl">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Contacto de Emergência</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.emergency_contact_name || 'Não registado'}
@@ -2411,7 +2411,7 @@ const TeamManagementPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-csc-red/20">
+                    <div className="bg-white/10 p-3 rounded-xl">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Notas Médicas / Alergias</p>
                       <p className="font-medium text-white/80 mt-0.5">
                         {cleanNotesFromRolesTag(selectedProfile.medical_notes) || 'Nenhuma restrição médica registada'}
@@ -2429,10 +2429,10 @@ const TeamManagementPage: React.FC = () => {
                     </h4>
                     {/* Lia `gdpr_consent`? Não lia: dizia "RGPD Consentido" a toda
                         a gente, mesmo a quem não tinha dado consentimento. */}
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
                       selectedProfile.gdpr_consent === false
-                        ? 'bg-csc-red/15 border-csc-red/32 text-csc-vermelho-texto'
-                        : 'bg-csc-light/16 border-csc-light/30 text-csc-verde-texto'
+                        ? 'bg-csc-red/15 text-csc-vermelho-texto'
+                        : 'bg-csc-light/16 text-csc-verde-texto'
                     }`}>
                       {selectedProfile.gdpr_consent === false
                         ? <><XCircle size={11} /> RGPD por consentir</>
@@ -2446,7 +2446,7 @@ const TeamManagementPage: React.FC = () => {
                         href={selectedProfile.id_document_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="p-3 bg-csc-blue/12 border border-csc-blue/30 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-azul-texto font-bold hover:bg-csc-blue/20 transition-colors text-center"
+                        className="p-3 bg-csc-blue/12 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-azul-texto font-bold hover:bg-csc-blue/20 transition-colors text-center"
                       >
                         <FileText size={18} />
                         <span>Doc. Identificação</span>
@@ -2464,7 +2464,7 @@ const TeamManagementPage: React.FC = () => {
                         href={selectedProfile.insurance_doc_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="p-3 bg-csc-blue/12 border border-csc-blue/30 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-azul-texto font-bold hover:bg-csc-blue/20 transition-colors text-center"
+                        className="p-3 bg-csc-blue/12 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-azul-texto font-bold hover:bg-csc-blue/20 transition-colors text-center"
                       >
                         <Shield size={18} />
                         <span>Seguro Desportivo</span>
@@ -2482,7 +2482,7 @@ const TeamManagementPage: React.FC = () => {
                         href={selectedProfile.medical_exam_doc_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="p-3 bg-csc-light/10 border border-csc-light/25 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-verde-texto font-bold hover:bg-csc-light/15 transition-colors text-center"
+                        className="p-3 bg-csc-light/10 rounded-xl flex flex-col items-center justify-center gap-1.5 text-csc-verde-texto font-bold hover:bg-csc-light/15 transition-colors text-center"
                       >
                         <HeartPulse size={18} />
                         <span>Atestado Médico</span>
@@ -2524,7 +2524,7 @@ const TeamManagementPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
-                  className="w-full min-h-12 px-4 rounded-2xl bg-csc-red/12 border border-csc-red/30 text-csc-vermelho-texto
+                  className="w-full min-h-12 px-4 rounded-2xl bg-csc-red/12 text-csc-vermelho-texto
                     font-display font-extrabold text-[12px] flex items-center justify-center gap-2 cursor-pointer
                     transition-transform duration-150 active:scale-97
                     focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -2543,7 +2543,7 @@ const TeamManagementPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => openAssociateModal(selectedProfile)}
-                      className="w-full min-h-12 px-4 rounded-2xl bg-white/8 border border-white/15 text-white/80
+                      className="w-full min-h-12 px-4 rounded-2xl bg-white/8 text-white/80
                         font-display font-extrabold text-[12px] flex items-center justify-center gap-2 cursor-pointer
                         transition-transform duration-150 active:scale-97
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -2616,7 +2616,7 @@ const TeamManagementPage: React.FC = () => {
           >
             <div>
               {/* Informação do Jogador Atual */}
-              <div className="mt-4 p-3.5 bg-white/5 rounded-xl border border-white/10 text-xs flex items-center justify-between">
+              <div className="mt-4 p-3.5 bg-white/5 rounded-xl text-xs flex items-center justify-between">
                 <div>
                   <p className="font-bold text-white">{associatingPlayer.name} {associatingPlayer.nickname ? `("${associatingPlayer.nickname}")` : ''}</p>
                   <p className="text-white/70 mt-0.5 font-medium">Email na ficha: <strong className="text-white/80">{associatingPlayer.email}</strong></p>
@@ -2693,12 +2693,12 @@ const TeamManagementPage: React.FC = () => {
                         setSelectedUserToAssociate(conta as unknown as Profile)
                       }}
                       aria-pressed={selectedUserToAssociate?.id === conta.id}
-                      className={`w-full min-h-14 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl border text-left cursor-pointer
+                      className={`w-full min-h-14 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-left cursor-pointer
                         transition-transform duration-150 active:scale-97
                         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                           selectedUserToAssociate?.id === conta.id
-                            ? 'bg-csc-gold/15 border-csc-gold/45'
-                            : 'bg-white/5 border-white/10'
+                            ? 'bg-csc-gold/15 '
+                            : 'bg-white/5 '
                         }`}
                     >
                       <span className="w-9 h-9 rounded-xl bg-white/10 text-white/60 flex items-center justify-center font-display font-black text-[13px] shrink-0">
@@ -2737,7 +2737,7 @@ const TeamManagementPage: React.FC = () => {
                   rotulo="Procurar utilizador registado"
                 />
 
-                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 border border-white/10 rounded-xl p-2 bg-white/5">
+                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 rounded-xl p-2 bg-white/5">
                   {otherUsers.length === 0 ? (
                     <p className="text-center py-6 text-xs text-white/65 font-medium">
                       Nenhum outro utilizador encontrado.
@@ -2752,10 +2752,10 @@ const TeamManagementPage: React.FC = () => {
                           key={user.id}
                           onClick={() => setSelectedUserToAssociate(user)}
                           aria-pressed={isSelected}
-                          className={`w-full text-left p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between ${
-                            isSelected 
-                              ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50 shadow-xs' 
-                              : 'border-white/10 hover:border-white/20 hover:bg-white/10 bg-white/5'
+                          className={`w-full text-left p-3 rounded-lg text-xs cursor-pointer transition-all flex items-center justify-between ${
+                            isSelected
+                              ? ' bg-csc-gold/15 ring-2 ring-csc-gold/50 shadow-xs'
+                              : ' hover:bg-white/10 bg-white/5'
                           }`}
                         >
                           <div>
@@ -2787,7 +2787,7 @@ const TeamManagementPage: React.FC = () => {
                       Qual ficha deve prevalecer?
                     </h4>
                     {alvoTemConta ? (
-                      <p className="text-[11px] text-white/70 bg-white/5 border border-white/10 rounded-lg p-2.5">
+                      <p className="text-[11px] text-white/70 bg-white/5 rounded-lg p-2.5">
                         "{selectedUserToAssociate.name}" tem conta de login própria — vai ser sempre essa a ficha que fica; "{associatingPlayer.name}" fecha e os dados em falta em "{selectedUserToAssociate.name}" são preenchidos a partir dela.
                       </p>
                     ) : (
@@ -2795,10 +2795,10 @@ const TeamManagementPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSurvivorSide('ficha')}
-                          className={`p-2.5 rounded-lg border text-left text-xs transition-all cursor-pointer ${
+                          className={`p-2.5 rounded-lg text-left text-xs transition-all cursor-pointer ${
                             survivorSide === 'ficha'
-                              ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50'
-                              : 'border-white/10 bg-white/5 hover:border-white/30'
+                              ? ' bg-csc-gold/15 ring-2 ring-csc-gold/50'
+                              : ' bg-white/5 '
                           }`}
                         >
                           <p className="font-bold text-white truncate">{associatingPlayer.name}</p>
@@ -2807,10 +2807,10 @@ const TeamManagementPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSurvivorSide('selecionado')}
-                          className={`p-2.5 rounded-lg border text-left text-xs transition-all cursor-pointer ${
+                          className={`p-2.5 rounded-lg text-left text-xs transition-all cursor-pointer ${
                             survivorSide === 'selecionado'
-                              ? 'border-csc-gold bg-csc-gold/15 ring-2 ring-csc-gold/50'
-                              : 'border-white/10 bg-white/5 hover:border-white/30'
+                              ? ' bg-csc-gold/15 ring-2 ring-csc-gold/50'
+                              : ' bg-white/5 '
                           }`}
                         >
                           <p className="font-bold text-white truncate">{selectedUserToAssociate.name}</p>

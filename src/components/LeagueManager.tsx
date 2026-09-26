@@ -233,7 +233,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                       <h4 className="font-black text-white mb-3">{g.name} <span className="text-xs text-white/62 font-medium">(Fase {g.phase})</span></h4>
                       <div className="space-y-2">
                         {teams.filter(t => t.group_id === g.id).map(t => (
-                          <div key={t.id} className="text-sm font-medium text-white/80 bg-white/6 px-3 py-2 rounded-lg border border-white/10 flex justify-between items-center">
+                          <div key={t.id} className="text-sm font-medium text-white/80 bg-white/6 px-3 py-2 rounded-lg flex justify-between items-center">
                             {/* Sigla e emblema, como na classificacao: o nome por
                                 extenso nao cabe, e o emblema do proprio clube
                                 vinha de um ficheiro estatico em vez de

@@ -228,7 +228,7 @@ export const ContasPorAtleta: React.FC<ContasPorAtletaProps> = ({ contas, clube 
           <button
             type="button"
             onClick={() => { triggerHaptic('light'); setPartilhaAberta(true) }}
-            className="h-11 px-3.5 rounded-full border bg-white/10 border-white/15 text-white flex items-center gap-1.5 shrink-0
+            className="h-11 px-3.5 rounded-full bg-white/10 text-white flex items-center gap-1.5 shrink-0
               font-display font-extrabold text-[11.5px] cursor-pointer transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >

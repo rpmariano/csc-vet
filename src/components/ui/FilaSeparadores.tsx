@@ -153,13 +153,13 @@ export const FilaSeparadores: React.FC<FilaSeparadoresProps> = ({
                 refsBotoes.current[i] = el
                 refItem(i)(el)
               }}
-              className={`relative z-1 flex-none h-11 px-4 rounded-[22px] border whitespace-nowrap font-display font-bold text-xs cursor-pointer
+              className={`relative z-1 flex-none h-11 px-4 rounded-[22px] whitespace-nowrap font-display font-bold text-xs cursor-pointer
                 transition-[background-color,color,border-color] duration-200
                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold
                 ${
                   eAtivo
                     ? 'bg-transparent border-transparent text-white'
-                    : 'bg-white/5 border-white/12 text-white/70'
+                    : 'bg-white/5 text-white/70'
                 }`}
             >
               {item}
@@ -175,7 +175,7 @@ export const FilaSeparadores: React.FC<FilaSeparadoresProps> = ({
           tabIndex={-1}
           onClick={() => rolar(-1)}
           className="absolute left-0 top-0 w-11 h-11 rounded-full flex items-center justify-center cursor-pointer
-            bg-csc-superficie/90 border border-white/15 text-white shadow-[0_4px_12px_rgba(0,0,0,.35)]
+            bg-csc-superficie/90 text-white shadow-[0_4px_12px_rgba(0,0,0,.35)]
             transition-transform duration-150 active:scale-97"
         >
           <ChevronLeft size={18} />
@@ -188,7 +188,7 @@ export const FilaSeparadores: React.FC<FilaSeparadoresProps> = ({
           tabIndex={-1}
           onClick={() => rolar(1)}
           className="absolute right-0 top-0 w-11 h-11 rounded-full flex items-center justify-center cursor-pointer
-            bg-csc-superficie/90 border border-white/15 text-white shadow-[0_4px_12px_rgba(0,0,0,.35)]
+            bg-csc-superficie/90 text-white shadow-[0_4px_12px_rgba(0,0,0,.35)]
             transition-transform duration-150 active:scale-97"
         >
           <ChevronRight size={18} />

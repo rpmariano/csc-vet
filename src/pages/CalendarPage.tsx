@@ -879,7 +879,7 @@ const CalendarPage: React.FC = () => {
           }
         }}
         aria-label={`Ver ${event.type === 'match' ? 'jogo' : 'convívio'} por convocar: ${titulo}, ${formatDataCurta(event.date_time)}`}
-        className="cartao-vidro overflow-hidden border-csc-gold/35 cursor-pointer
+        className="cartao-simples overflow-hidden border-csc-gold/35 cursor-pointer
           transition-transform duration-150 active:scale-[0.99]
           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
       >
@@ -902,7 +902,7 @@ const CalendarPage: React.FC = () => {
           {eRascunho && (
             <span
               className="font-display font-extrabold text-[9px] tracking-[0.12em] uppercase px-2.5 py-1 rounded-full
-                bg-white/10 border border-white/20 text-white/70 shrink-0"
+                bg-white/10 text-white/70 shrink-0"
             >
               Rascunho
             </span>
@@ -1026,7 +1026,7 @@ const CalendarPage: React.FC = () => {
         aria-label={`Ver ${isMatch ? 'jogo' : isPractice ? 'treino' : 'convívio'}: ${
           isMatch && event.opponent ? `${cscSigla} contra ${oppSigla}` : event.title
         }, ${new Date(event.date_time).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })}`}
-        className="cartao-vidro text-white overflow-hidden cursor-pointer flex flex-col justify-between transition-transform duration-150 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+        className="cartao-simples text-white overflow-hidden cursor-pointer flex flex-col justify-between transition-transform duration-150 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
       >
         {/* Quando é. A data vinha só no `aria-label`, e o cartão dizia a hora
             sem dizer o dia — numa lista que percorre o mês, é o que mais falta. */}
@@ -1050,7 +1050,7 @@ const CalendarPage: React.FC = () => {
 
             {/* Só chega aqui a quem gere: os rascunhos são filtrados antes. */}
             {event.is_active === false && (
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white/12 border border-white/25 text-white/75 uppercase tracking-wider">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white/12 text-white/75 uppercase tracking-wider">
                 Rascunho
               </span>
             )}
@@ -1087,10 +1087,10 @@ const CalendarPage: React.FC = () => {
                 {callups.length} convocados
               </span>
               <span
-                className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
                   confirmedCount > 0
-                    ? 'bg-csc-light/16 border-csc-light/30 text-csc-verde-texto'
-                    : 'bg-csc-gold/16 border-csc-gold/30 text-csc-gold'
+                    ? 'bg-csc-light/16 text-csc-verde-texto'
+                    : 'bg-csc-gold/16 text-csc-gold'
                 }`}
               >
                 {confirmedCount > 0 ? `${confirmedCount} sim` : `${semRespostaCount} sem resp.`}
@@ -1237,12 +1237,12 @@ const CalendarPage: React.FC = () => {
                         type="button"
                         onClick={() => handleCallupResponse(event.id, 'confirmed')}
                         aria-pressed={myCallup.status === 'confirmed'}
-                        className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
+                        className={`flex-1 h-11 rounded-[22px] font-display font-bold text-[13px] cursor-pointer
                           flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
                           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                             myCallup.status === 'confirmed'
-                              ? 'bg-csc-light border-csc-light text-csc-tinta'
-                              : 'bg-white/9 border-white/20 text-white'
+                              ? 'bg-csc-light text-csc-tinta'
+                              : 'bg-white/9 text-white'
                           }`}
                       >
                         {myCallup.status === 'confirmed' && <CheckCircle2 size={14} />}
@@ -1252,12 +1252,12 @@ const CalendarPage: React.FC = () => {
                         type="button"
                         onClick={() => handleCallupResponse(event.id, 'declined')}
                         aria-pressed={myCallup.status === 'declined'}
-                        className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
+                        className={`flex-1 h-11 rounded-[22px] font-display font-bold text-[13px] cursor-pointer
                           flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
                           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                             myCallup.status === 'declined'
-                              ? 'bg-white/90 border-white/90 text-csc-tinta'
-                              : 'bg-white/9 border-white/20 text-white'
+                              ? 'bg-white/90 text-csc-tinta'
+                              : 'bg-white/9 text-white'
                           }`}
                       >
                         {myCallup.status === 'declined' && <XCircle size={14} />}
@@ -1340,7 +1340,8 @@ const CalendarPage: React.FC = () => {
             três, que é o que cabe.
           */}
           <div
-            className="cartao-vidro px-3 pt-3.5 pb-3"
+            data-cartao="calendario"
+            className="cartao-simples px-3 pt-3.5 pb-3"
             onTouchStart={aoComecarArrasto}
             onTouchEnd={aoAcabarArrasto}
           >
@@ -1354,7 +1355,7 @@ const CalendarPage: React.FC = () => {
                 value={currentDate.getMonth()}
                 onChange={e => handleMonthChange(Number(e.target.value))}
                 aria-label="Mês"
-                className="h-11 min-w-0 flex-1 px-2.5 rounded-[18px] bg-white/8 border border-white/15 text-white font-display font-bold text-[11px]
+                className="h-11 min-w-0 flex-1 px-2.5 rounded-[18px] bg-white/8 text-white font-display font-bold text-[11px]
                   outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-csc-gold"
               >
                 {monthNames.map((nome, idx) => (
@@ -1366,7 +1367,7 @@ const CalendarPage: React.FC = () => {
                 value={currentDate.getFullYear()}
                 onChange={e => handleYearChange(Number(e.target.value))}
                 aria-label="Ano"
-                className="h-11 min-w-0 flex-none px-2.5 rounded-[18px] bg-white/8 border border-white/15 text-white font-display font-bold text-[11px]
+                className="h-11 min-w-0 flex-none px-2.5 rounded-[18px] bg-white/8 text-white font-display font-bold text-[11px]
                   outline-none cursor-pointer focus-visible:ring-2 focus-visible:ring-csc-gold"
               >
                 {anosDisponiveis.map(ano => (
@@ -1379,7 +1380,7 @@ const CalendarPage: React.FC = () => {
                   type="button"
                   onClick={handlePrevMonth}
                   aria-label="Mês anterior"
-                  className="w-11 h-11 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
+                  className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white/75 cursor-pointer
                     transition-transform duration-150 active:scale-97
                     focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                 >
@@ -1398,7 +1399,7 @@ const CalendarPage: React.FC = () => {
                   type="button"
                   onClick={handleNextMonth}
                   aria-label="Mês seguinte"
-                  className="w-11 h-11 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/75 cursor-pointer
+                  className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white/75 cursor-pointer
                     transition-transform duration-150 active:scale-97
                     focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                 >
@@ -1562,7 +1563,7 @@ const CalendarPage: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="cartao-vidro text-center px-5 py-10">
+                <div className="cartao-simples text-center px-5 py-10">
                   <CalendarRange size={32} className="mx-auto text-white/25 mb-2.5" />
                   <p className="font-display font-extrabold text-sm text-white">Nada marcado ainda</p>
                   <p className="text-[11px] leading-relaxed text-white/62 mt-1.5">
@@ -1685,8 +1686,9 @@ const CalendarPage: React.FC = () => {
             onTouchMove={handleCarouselTouchMove}
             onTouchEnd={handleCarouselTouchEnd}
           >
-            {/* Topo Premium Unificado da Persiana (Layout Verde Oficial CSC com Carrossel Integrado) */}
-            <div className="cartao-vidro text-white p-4 relative overflow-hidden space-y-2.5">
+            {/* O tipo, o amigável e a casa/fora: pastilhas soltas por baixo do
+                título, sem cartão à volta — era um cartão só para elas. */}
+            <div className="text-white relative space-y-2.5">
               
               {/* Barra Integrada de Convocatórias Pendentes (Apenas se existirem múltiplos eventos pendentes) */}
               {myPendingEvents.length > 1 && myPendingEvents.some(pe => pe.id === selectedEvent.id) && (() => {
@@ -1708,7 +1710,7 @@ const CalendarPage: React.FC = () => {
                 }
 
                 return (
-                  <div className="bg-black/25 border border-csc-gold/30 rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2">
+                  <div className="bg-black/25 rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2">
                     <button
                       type="button"
                       onClick={prevEvent}
@@ -1771,13 +1773,13 @@ const CalendarPage: React.FC = () => {
                 })()}
 
                 {selectedEvent.type === 'match' && selectedEvent.is_friendly && (
-                  <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white">
+                  <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 font-display font-bold text-[9.5px] text-white">
                     Amigável
                   </span>
                 )}
 
                 {selectedEvent.tournament?.name && !selectedEvent.is_friendly && (
-                  <span className="inline-flex items-center gap-1.5 h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white max-w-[170px]">
+                  <span className="inline-flex items-center gap-1.5 h-[22px] px-2.5 rounded-[11px] bg-white/10 font-display font-bold text-[9.5px] text-white max-w-[170px]">
                     {selectedEvent.tournament.image_url && (
                       <img src={selectedEvent.tournament.image_url} alt="" className="w-3.5 h-3.5 object-contain rounded-full shrink-0" />
                     )}
@@ -1786,7 +1788,7 @@ const CalendarPage: React.FC = () => {
                 )}
 
                 {selectedEvent.type === 'match' && (
-                  <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 border border-white/16 font-display font-bold text-[9.5px] text-white">
+                  <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 font-display font-bold text-[9.5px] text-white">
                     {selectedEvent.home_away === 'away' ? 'Fora' : selectedEvent.home_away === 'neutral' ? 'Campo neutro' : 'Em casa'}
                   </span>
                 )}
@@ -1812,7 +1814,7 @@ const CalendarPage: React.FC = () => {
                   uma pastilha de concentração, uma caixa de data e uma linha de
                   local — a dizer coisas da mesma natureza.
                 */}
-                <div className="cartao-vidro overflow-hidden">
+                <div className="cartao-simples overflow-hidden">
                   <div className="flex items-stretch">
                     {selectedEvent.meeting_time && (
                       <>
@@ -1905,7 +1907,7 @@ const CalendarPage: React.FC = () => {
                   */
                   if (!myCallup) {
                     return (
-                      <div className="p-4 bg-white/[0.07] rounded-2xl border border-white/10">
+                      <div className="p-4 bg-white/[0.07] rounded-2xl">
                         <p className="text-xs text-white/70 font-medium">
                           {fechada
                             ? `${textoConvocatoriaFechada(fechada, selectedEvent)}.`
@@ -1916,12 +1918,12 @@ const CalendarPage: React.FC = () => {
                   }
 
                   return (
-                    <div className={!fechada ? 'rounded-2xl overflow-hidden shadow-lg shadow-black/20' : 'p-4 bg-white/[0.07] rounded-2xl space-y-3 border border-white/10 border-t-white/20 shadow-md shadow-black/20'}>
+                    <div className={!fechada ? 'rounded-2xl overflow-hidden shadow-lg shadow-black/20' : 'p-4 bg-white/[0.07] rounded-2xl space-y-3 border-t-white/20 shadow-md shadow-black/20'}>
                       {!fechada ? (
                         // Barra de ação dourada, de bordo a bordo — a mesma linguagem do cartão da Home.
                         // Mostra-se sempre que ainda dá para responder, mesmo que já tenha respondido antes —
                         // até à hora de concentração o jogador pode sempre mudar de ideias.
-                        <div className="bg-csc-gold/13 border border-csc-gold/24 px-4 py-3.5 flex flex-col items-center justify-center gap-2.5">
+                        <div className="bg-csc-gold/13 px-4 py-3.5 flex flex-col items-center justify-center gap-2.5">
                           <span className="font-display font-extrabold text-[14px] text-white">
                             {myCallup.status === 'called' ? 'Contamos contigo?' :
                               myCallup.status === 'confirmed' ? 'Contamos contigo.' : 'Ficas de fora.'}
@@ -1930,12 +1932,12 @@ const CalendarPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
-                              className={`flex-1 min-h-11 px-5 rounded-[22px] border font-display font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer
+                              className={`flex-1 min-h-11 px-5 rounded-[22px] font-display font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer
                                 transition-transform duration-150 active:scale-97
                                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                                 myCallup.status === 'confirmed'
-                                  ? 'bg-csc-light border-csc-light text-csc-tinta'
-                                  : 'bg-white/9 border-white/20 text-white'
+                                  ? 'bg-csc-light text-csc-tinta'
+                                  : 'bg-white/9 text-white'
                               }`}
                             >
                               {myCallup.status === 'confirmed' && <CheckCircle2 size={15} />}
@@ -1944,12 +1946,12 @@ const CalendarPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
-                              className={`flex-1 min-h-11 px-5 rounded-[22px] border font-display font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer
+                              className={`flex-1 min-h-11 px-5 rounded-[22px] font-display font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer
                                 transition-transform duration-150 active:scale-97
                                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                                 myCallup.status === 'declined'
-                                  ? 'bg-white/90 border-white/90 text-csc-tinta'
-                                  : 'bg-white/9 border-white/20 text-white'
+                                  ? 'bg-white/90 text-csc-tinta'
+                                  : 'bg-white/9 text-white'
                               }`}
                             >
                               {myCallup.status === 'declined' && <XCircle size={15} />}
@@ -2012,7 +2014,7 @@ const CalendarPage: React.FC = () => {
               já aberto, e o "‹" traz de volta a esta ficha.
             */}
             {isCoachOrAdmin && (
-              <div className="rounded-[20px] bg-csc-gold/10 border border-csc-gold/26 p-3.5">
+              <div className="rounded-[20px] bg-csc-gold/10 p-3.5">
                 <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
                   Gestão do evento
                 </p>

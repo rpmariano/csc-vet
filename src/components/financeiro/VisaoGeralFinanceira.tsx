@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { TrendingUp, Receipt, AlertTriangle, ListChecks, Activity } from 'lucide-react'
 import { getSeasonMonths, prazoPassou } from '../../lib/finance'
 import type { FinancialSettings, SeasonMonth } from '../../lib/finance'
-import { CartaoVidro } from '../ui'
+import { CartaoSimples } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 import {
   ETIQUETA_SECCAO, ETIQUETA_GRUPO, CHIP_ATRASO, CHIP_NEUTRO,
@@ -471,7 +471,7 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
         aqui não decidiam nada. Ficam os dois saldos, com a variação entre
         eles, que é a leitura desta página numa linha.
       */}
-      <CartaoVidro className="p-4">
+      <CartaoSimples className="p-4">
         <div className="flex items-stretch">
           <div className="flex-1 min-w-0">
             <p className="font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/62">
@@ -495,7 +495,7 @@ export const VisaoGeralFinanceira: React.FC<VisaoGeralFinanceiraProps> = ({
             </p>
           </div>
         </div>
-      </CartaoVidro>
+      </CartaoSimples>
 
       {/*
         Previsão da Época — subiu para cima dos Pagamentos Programados: é o

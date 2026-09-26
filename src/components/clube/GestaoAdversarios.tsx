@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Shield, MapPin, Trash2, ExternalLink, Save, User, Phone, Pencil } from 'lucide-react'
+import { Shield, Trash2, Save, Pencil } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useClub } from '../../context/ClubContext'
 import { toast } from '../../context/ToastContext'
@@ -12,7 +12,7 @@ import { UnsavedChangesModal } from '../UnsavedChangesModal'
 import { ConfirmModal } from '../ConfirmModal'
 import { FichaAdversario } from './FichaAdversario'
 import { formatClubSigla } from '../../lib/siglas'
-import { CAMPO, ETIQUETA, urlDoGoogleMaps, type Adversario, type Campo } from './comum'
+import { CAMPO, ETIQUETA, type Adversario, type Campo } from './comum'
 import { mensagemDeErro } from '../../lib/erros'
 import { BotaoIcone, EstadoVazio, Botao, BotaoCriar } from '../ui'
 import { ProcuraEFiltros } from '../ProcuraEFiltros'
@@ -204,96 +204,45 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
         aoLimpar={() => setProcura('')}
       />
 
-      <div className="cartao-simples text-white p-4 space-y-3">
+      {/* Um cartão, e os adversários como linhas lá dentro (a app mais leve,
+          2026-09-26). Cada um era um cartão dentro do cartão, com o contacto,
+          um "Ver campo" em caixa e os dois botões em caixa por baixo de um
+          fio — o campo e o contacto vivem na ficha, que a linha abre. */}
+      <div className="cartao-simples text-white overflow-hidden">
 
         {filtrados.length === 0 ? (
           <EstadoVazio icone={Shield} titulo="Nenhum adversário encontrado." texto="Tenta mudar a procura ou cria um adversário novo." />
         ) : (
-          <div className="grid grid-cols-1 gap-3">
+          <div>
             {filtrados.map(a => {
               const campo = campos.find(c => c.id === a.home_field_id)
-              const procuraNoMapa = campo
-                ? (campo.address ? `${campo.name}, ${campo.address}` : campo.name)
-                : a.name
-
               return (
-                <div
-                  key={a.id}
-                  className="flex flex-col justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all gap-3"
-                >
+                <div key={a.id} className="linha-leve flex items-center gap-2 pl-4 pr-2 py-2.5">
                   <button
                     type="button"
                     onClick={() => abrirFicha(a.id)}
                     aria-label={`Ver a ficha do adversário ${a.name}`}
-                    className="flex items-start gap-3.5 text-left w-full min-h-11 cursor-pointer rounded-xl transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                    className="flex-1 min-w-0 flex items-center gap-3 text-left min-h-11 cursor-pointer rounded-xl transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                   >
+                    {/* Sem emblema desenha-se um escudo, nunca as iniciais: a
+                        sigla já vai na letra pequena. */}
                     {a.logo_url ? (
-                      <img
-                        src={a.logo_url}
-                        alt={a.name}
-                        className="w-13 h-13 object-contain bg-white rounded-xl border border-white/12 p-1.5 shadow-2xs shrink-0"
-                      />
+                      <img src={a.logo_url} alt="" className="w-10 h-10 object-contain bg-white rounded-full p-1 shrink-0" />
                     ) : (
-                      <div className="w-13 h-13 bg-white/10 border border-white/15 rounded-xl flex items-center justify-center font-black text-white/70 text-sm shrink-0">
-                        {a.initials || a.name.substring(0, 3).toUpperCase()}
-                      </div>
+                      <span className="w-10 h-10 rounded-full bg-white/8 flex items-center justify-center shrink-0" aria-hidden="true">
+                        <Shield size={17} className="text-white/45" />
+                      </span>
                     )}
-
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-sm text-white truncate">
-                        {a.name}
-                        {a.initials && <span className="text-white/70 font-semibold text-xs ml-1">({a.initials})</span>}
-                      </h4>
-
-                      {campo && (
-                        <p className="text-xs text-white/60 font-medium flex items-center gap-1 mt-1 truncate">
-                          <span className="text-white/62">Campo:</span>
-                          <span className="truncate">{campo.name}</span>
-                        </p>
-                      )}
-
-                      {/* O telefone era um `<a href="tel:">` dentro do que passou a
-                          ser o botão que abre a ficha — um interativo dentro de
-                          outro. Fica como texto; ligar faz-se na ficha (9h). */}
-                      {(a.contact_name || a.contact_phone) && (
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-white/60 font-medium">
-                          {a.contact_name && (
-                            <span className="flex items-center gap-1">
-                              <User size={12} className="text-white/65" />
-                              <span>{a.contact_name}</span>
-                            </span>
-                          )}
-                          {a.contact_phone && (
-                            <span className="flex items-center gap-1 text-csc-gold font-bold">
-                              <Phone size={12} className="text-csc-gold" />
-                              <span>{a.contact_phone}</span>
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    <span className="min-w-0">
+                      <span className="block font-display font-extrabold text-[13.5px] text-white truncate">{a.name}</span>
+                      <span className="block text-[11px] text-white/55 mt-0.5 truncate">
+                        {[a.initials, campo?.name ?? 'Sem campo associado'].filter(Boolean).join(' · ')}
+                      </span>
+                    </span>
                   </button>
-
-                  <div className="flex items-center justify-between pt-2.5 border-t border-white/10 mt-1">
-                    {campo ? (
-                      <a
-                        href={urlDoGoogleMaps(procuraNoMapa)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 bg-white/10 border border-white/10 hover:border-csc-red/60 hover:text-csc-vermelho-texto text-white/70 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
-                      >
-                        <MapPin size={13} className="text-csc-vermelho-texto shrink-0" />
-                        <span>Ver campo</span>
-                        <ExternalLink size={10} className="opacity-50" />
-                      </a>
-                    ) : (
-                      <span className="text-[11px] text-white/65 italic">Sem campo associado</span>
-                    )}
-
-                    <div className="flex items-center gap-1.5">
-                      <BotaoIcone rotulo={`Editar o adversário ${a.name}`} icone={Pencil} onClick={() => abrirEdicao(a)} />
-                      <BotaoIcone rotulo={`Eliminar o adversário ${a.name}`} icone={Trash2} perigo onClick={() => eliminar(a.id, a.name)} />
-                    </div>
+                  <div className="flex items-center shrink-0">
+                    <BotaoIcone discreto rotulo={`Editar o adversário ${a.name}`} icone={Pencil} onClick={() => abrirEdicao(a)} />
+                    <BotaoIcone discreto rotulo={`Eliminar o adversário ${a.name}`} icone={Trash2} perigo onClick={() => eliminar(a.id, a.name)} />
                   </div>
                 </div>
               )
@@ -342,7 +291,7 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
           <div>
             <label className={ETIQUETA} htmlFor="clube-adversario-emblema">Símbolo</label>
             {emblemaAtual && !emblemaNovo && (
-              <div className="flex items-center gap-3 mb-2 p-2 bg-white/5 border border-white/10 rounded-xl">
+              <div className="flex items-center gap-3 mb-2 p-2 bg-white/5 rounded-xl">
                 <img
                   src={emblemaAtual}
                   alt="Símbolo atual"
@@ -356,7 +305,7 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
               type="file"
               accept="image/*"
               onChange={e => setEmblemaNovo(e.target.files ? e.target.files[0] : null)}
-              className="w-full px-4 py-2 border border-white/15 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-tinta"
+              className="w-full px-4 py-2 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-tinta"
             />
           </div>
 

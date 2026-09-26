@@ -47,10 +47,10 @@ export function Mosaicos<K extends string>({ mosaicos, ativo, aoEscolher, todos 
               aoEscolher(aceso && m.chave !== todos ? (todos ?? null) : m.chave)
             }}
             aria-pressed={aceso}
-            className={`min-h-14 px-2.5 py-2.5 rounded-2xl border text-left cursor-pointer
+            className={`min-h-14 px-2.5 py-2.5 rounded-2xl text-left cursor-pointer
               transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                aceso ? m.fundoAtivo : 'bg-white/5 border-white/10'
+                aceso ? m.fundoAtivo : 'bg-white/5 '
               }`}
           >
             <span className={`block font-display font-extrabold text-[8px] tracking-[0.1em] uppercase leading-tight ${m.cor}`}>

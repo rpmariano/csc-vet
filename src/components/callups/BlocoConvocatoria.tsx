@@ -93,7 +93,7 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
   })
 
   return (
-    <div className="bg-white/[0.07] p-4 rounded-3xl space-y-3.5 transition-all border border-white/10 border-t-white/20 shadow-lg shadow-black/20">
+    <div className="bg-white/[0.07] p-4 rounded-3xl space-y-3.5 transition-all border-t-white/20 shadow-lg shadow-black/20">
       <button
         type="button"
         onClick={() => setAberto(prev => !prev)}
@@ -132,7 +132,7 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
               </span>
             )}
             {indisponiveis.length > 0 && (
-              <span className="text-[10.5px] font-bold text-csc-vermelho-texto bg-csc-red/18 border border-csc-red/35 px-2 py-0.5 rounded-md">
+              <span className="text-[10.5px] font-bold text-csc-vermelho-texto bg-csc-red/18 px-2 py-0.5 rounded-md">
                 {indisponiveis.length} sem condições
               </span>
             )}
@@ -181,7 +181,7 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
             mas tem de se poder atualizar num toque.
           */}
           {acoes && indisponiveis.length > 0 && (
-            <div className="rounded-2xl bg-csc-red/12 border border-csc-red/30 p-3.5 flex items-center gap-3">
+            <div className="rounded-2xl bg-csc-red/12 p-3.5 flex items-center gap-3">
               <span className="min-w-0 flex-1">
                 <span className="block font-display font-extrabold text-[12px] text-csc-vermelho-texto">
                   {indisponiveis.length === 1
@@ -196,7 +196,7 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
               <button
                 type="button"
                 onClick={() => { triggerHaptic('medium'); setAConfirmarTirar(true) }}
-                className="flex-none min-h-11 px-3.5 rounded-[18px] bg-csc-red/20 border border-csc-red/45
+                className="flex-none min-h-11 px-3.5 rounded-[18px] bg-csc-red/20
                   text-csc-vermelho-texto font-display font-bold text-[12px] cursor-pointer
                   transition-transform duration-150 active:scale-97
                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"

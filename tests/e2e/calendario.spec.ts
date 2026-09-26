@@ -19,14 +19,14 @@ async function abreAgenda(page: import('@playwright/test').Page) {
 
 /** Um arrasto lateral sobre o cartão do calendário. */
 async function arrasta(page: import('@playwright/test').Page, direcao: 'esquerda' | 'direita') {
-  const caixa = await page.locator('.cartao-vidro').first().boundingBox()
+  const caixa = await page.locator('[data-cartao="calendario"]').first().boundingBox()
   if (!caixa) throw new Error('o cartão do calendário não tem caixa')
   const y = caixa.y + caixa.height * 0.7
   const de = direcao === 'esquerda' ? caixa.x + caixa.width - 30 : caixa.x + 30
   const para = direcao === 'esquerda' ? caixa.x + 30 : caixa.x + caixa.width - 30
 
   await page.evaluate(([x1, x2, yy]) => {
-    const el = document.querySelector('.cartao-vidro') as HTMLElement
+    const el = document.querySelector('[data-cartao="calendario"]') as HTMLElement
     const toque = (tipo: string, x: number) => {
       const t = new Touch({ identifier: 1, target: el, clientX: x, clientY: yy })
       el.dispatchEvent(new TouchEvent(tipo, {
@@ -44,12 +44,12 @@ async function arrasta(page: import('@playwright/test').Page, direcao: 'esquerda
 
 /** Um arrasto vertical, que é o gesto de rolar a página. */
 async function rola(page: import('@playwright/test').Page) {
-  const caixa = await page.locator('.cartao-vidro').first().boundingBox()
+  const caixa = await page.locator('[data-cartao="calendario"]').first().boundingBox()
   if (!caixa) throw new Error('o cartão do calendário não tem caixa')
   const x = caixa.x + caixa.width / 2
 
   await page.evaluate(([xx, y1, y2]) => {
-    const el = document.querySelector('.cartao-vidro') as HTMLElement
+    const el = document.querySelector('[data-cartao="calendario"]') as HTMLElement
     const toque = (tipo: string, y: number) => {
       const t = new Touch({ identifier: 1, target: el, clientX: xx, clientY: y })
       el.dispatchEvent(new TouchEvent(tipo, {
@@ -74,7 +74,7 @@ test('as setas do mês estão no calendário, e não no cabeçalho', async ({ pa
   await expect(seguinte).toBeVisible()
 
   // Dentro do cartão do calendário — o mesmo que tem o seletor de mês.
-  const cartao = page.locator('.cartao-vidro').first()
+  const cartao = page.locator('[data-cartao="calendario"]').first()
   await expect(cartao.getByRole('button', { name: 'Mês anterior' })).toBeVisible()
   await expect(cartao.getByRole('button', { name: 'Mês seguinte' })).toBeVisible()
   await expect(cartao.getByRole('button', { name: 'Hoje' })).toBeVisible()

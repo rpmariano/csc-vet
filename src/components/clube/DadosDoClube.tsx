@@ -228,10 +228,10 @@ export const DadosDoClube: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
           />
           <label
             htmlFor="clube-emblema"
-            className={`w-full min-h-11 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer transition-all border ${
+            className={`w-full min-h-11 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-2 cursor-pointer transition-all ${
               aEnviarEmblema
-                ? 'bg-white/5 text-white/60 border-white/10 cursor-not-allowed'
-                : 'bg-white/10 border-white/15 text-white hover:bg-white/20 active:scale-98'
+                ? 'bg-white/5 text-white/60 cursor-not-allowed'
+                : 'bg-white/10 text-white hover:bg-white/20 active:scale-98'
             }`}
           >
             {aEnviarEmblema ? (

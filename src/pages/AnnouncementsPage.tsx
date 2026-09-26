@@ -365,7 +365,7 @@ const AnnouncementsPage: React.FC = () => {
             simulado muda o que se pode fazer sem mudar de rota. */}
 
         {isCoachOrAdmin && aEscrever && (
-          <div className="cartao-vidro p-5 space-y-4">
+          <div className="cartao-simples p-5 space-y-4">
             <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
               <div className="w-8 h-8 rounded-xl bg-csc-gold text-csc-dark flex items-center justify-center text-sm font-bold">
                 <Megaphone size={16} />
@@ -444,8 +444,10 @@ const AnnouncementsPage: React.FC = () => {
             aoLimpar={() => { setSearchTerm(''); setStatusFilter('all') }}
           />
 
-          <div className="cartao-simples p-5 space-y-4">
-            
+          {/* Um cartão, e os comunicados como linhas lá dentro (a app mais
+              leve, 2026-09-26): eram um cartão por comunicado dentro do
+              cartão, com o texto noutra caixa lá dentro. */}
+          <div className="cartao-simples overflow-hidden">
 
             <BottomSheet
               isOpen={filtrosAbertos}
@@ -487,29 +489,25 @@ const AnnouncementsPage: React.FC = () => {
                 texto={searchTerm
                   ? 'Tenta mudar a procura.'
                   : isCoachOrAdmin
-                    ? 'Escreve o primeiro em "Escrever comunicado", lá em cima.'
+                    ? 'Escreve o primeiro no [+], lá em cima.'
                     : 'Quando a direção ou a equipa técnica publicar um, aparece aqui.'}
               />
             ) : (
-              <div className="space-y-3.5">
+              <div>
                 {filteredAnnouncements.map((ann) => {
                   const isActive = ann.is_active !== false
 
                   return (
                     <div 
                       key={ann.id} 
-                      className={`p-4 rounded-2xl border transition-all space-y-3 ${
-                        isActive 
-                          ? 'bg-white/5 border-csc-light/30 shadow-xs hover:border-csc-light/50' 
-                          : 'bg-white/5 border-white/10 opacity-60'
-                      }`}
+                      className={`linha-leve px-4 py-4 space-y-2.5 ${isActive ? '' : 'opacity-60'}`}
                     >
                       {/* Topo do Card: Título + Badge de Estado */}
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="space-y-1 flex-1 min-w-[200px]">
                           <div className="flex items-center gap-2">
                             {novos?.has(ann.id) && (
-                              <span className="shrink-0 inline-flex items-center gap-1 h-5 px-2 rounded-full bg-csc-gold/16 border border-csc-gold/35
+                              <span className="shrink-0 inline-flex items-center gap-1 h-5 px-2 rounded-full bg-csc-gold/16
                                 font-display font-extrabold text-[9px] tracking-[0.1em] uppercase text-csc-gold">
                                 <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-csc-gold" />
                                 Novo
@@ -537,12 +535,12 @@ const AnnouncementsPage: React.FC = () => {
                         {isCoachOrAdmin && (
                           <div>
                             {isActive ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-csc-light/15 text-csc-verde-texto border border-csc-light/35">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-csc-light/15 text-csc-verde-texto">
                                 <span className="w-1.5 h-1.5 rounded-full bg-csc-light animate-pulse"></span>
                                 <span>Ativo na Home</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-white/10 text-white/60 border border-white/15">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-white/10 text-white/60">
                                 <span className="w-1.5 h-1.5 rounded-full bg-white/40"></span>
                                 <span>Desativado</span>
                               </span>
@@ -552,20 +550,20 @@ const AnnouncementsPage: React.FC = () => {
                       </div>
 
                       {/* Conteúdo */}
-                      <div className="text-xs text-white/70 leading-relaxed whitespace-pre-wrap bg-white/5 p-3 rounded-xl border border-white/10">
+                      <div className="text-[12.5px] text-white/75 leading-relaxed whitespace-pre-wrap">
                         {ann.content}
                       </div>
 
                       {/* Barra de Ações: Ativar/Desativar, Editar, Apagar — gestão, não leitura */}
                       {isCoachOrAdmin && (
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/10">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <button
                             type="button"
                             onClick={() => handleToggleActive(ann)}
                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                               isActive
-                                ? 'bg-csc-gold/10 text-csc-gold hover:bg-csc-gold/15 border border-csc-gold/25'
-                                : 'bg-csc-light/10 text-csc-verde-texto hover:bg-csc-light/15 border border-csc-light/25 font-black'
+                                ? 'bg-csc-gold/10 text-csc-gold hover:bg-csc-gold/15 '
+                                : 'bg-csc-light/10 text-csc-verde-texto hover:bg-csc-light/15 font-black'
                             }`}
                             title={isActive ? 'Ocultar da Homepage' : 'Mostrar na Homepage'}
                           >

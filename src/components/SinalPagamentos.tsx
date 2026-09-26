@@ -108,10 +108,10 @@ export const SinalPagamentos: React.FC = () => {
             return (
               <div
                 key={item.chave}
-                className={`flex items-center gap-3 pl-2.5 pr-4 py-3 rounded-2xl border ${
+                className={`flex items-center gap-3 pl-2.5 pr-4 py-3 rounded-2xl ${
                   atrasado
-                    ? 'bg-csc-red/12 border-csc-red/25'
-                    : 'bg-csc-gold/10 border-csc-gold/25'
+                    ? 'bg-csc-red/12 '
+                    : 'bg-csc-gold/10 '
                 }`}
               >
                 {/* A mesma barra de estado de "Os meus pagamentos": a cor diz

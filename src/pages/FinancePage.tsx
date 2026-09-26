@@ -1560,15 +1560,15 @@ const FinancePage: React.FC = () => {
                                 disabled={isSaving}
                                 onClick={() => handleToggleQuotaMonth(q.player.id, m)}
                                 aria-label={`${nomeMes(m.month)} de ${m.year} — ${isPaid ? 'pago, tocar para corrigir' : 'por pagar, tocar para marcar como pago'}`}
-                                className={`min-h-11 px-2 rounded-[14px] font-display font-extrabold text-[11px] border cursor-pointer
+                                className={`min-h-11 px-2 rounded-[14px] font-display font-extrabold text-[11px] cursor-pointer
                                   flex items-center justify-center gap-1 tabular-nums transition-colors
                                   disabled:opacity-50 disabled:cursor-wait
                                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                                     isPaid
-                                      ? 'bg-csc-light/15 border-csc-light/30 text-csc-verde-texto hover:bg-csc-red/12 hover:border-csc-red/35 hover:text-csc-vermelho-texto'
+                                      ? 'bg-csc-light/15 text-csc-verde-texto hover:bg-csc-red/12 hover:text-csc-vermelho-texto'
                                       : m.statusCalc === 'late'
-                                        ? 'bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
-                                        : 'bg-white/6 border-white/12 text-white/70 hover:bg-csc-gold hover:border-csc-gold hover:text-csc-tinta'
+                                        ? 'bg-csc-red/15 text-csc-vermelho-texto hover:bg-csc-gold hover:text-csc-tinta'
+                                        : 'bg-white/6 text-white/70 hover:bg-csc-gold hover:text-csc-tinta'
                                   }`}
                               >
                                 {nomeMes(m.month).slice(0, 3)}/{String(m.year).slice(2)}
@@ -1934,7 +1934,7 @@ const FinancePage: React.FC = () => {
             const contaDoTotal =
               `${newChargePlayerIds.size}\u00a0×\u00a0${fmtEuro(parseFloat(newChargeAmount) || 0)}`
             return (
-              <div className="p-3 bg-white/6 border border-white/12 rounded-xl space-y-2.5">
+              <div className="p-3 bg-white/6 rounded-xl space-y-2.5">
                 <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
                   <input
                     type="checkbox"
@@ -1996,7 +1996,7 @@ const FinancePage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => setPayableSegueTotal(true)}
-                              className="min-h-11 px-3 shrink-0 rounded-xl bg-white/9 border border-white/20 text-white
+                              className="min-h-11 px-3 shrink-0 rounded-xl bg-white/9 text-white
                                 font-display font-extrabold text-[11px] tabular-nums cursor-pointer transition-transform duration-150 active:scale-97
                                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                             >
@@ -2043,7 +2043,7 @@ const FinancePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="sticky bottom-[108px] z-20 p-2 rounded-[28px] bg-csc-superficie/95 border border-white/10 backdrop-blur-sm">
+          <div className="sticky bottom-[108px] z-20 p-2 rounded-[28px] bg-csc-superficie/95 backdrop-blur-sm">
             <Botao largo onClick={handleSaveCharge} disabled={savingCharge}>
               {savingCharge ? 'A guardar…' : editingChargeId ? 'Guardar alterações' : 'Criar encargo'}
             </Botao>
@@ -2148,7 +2148,7 @@ const FinancePage: React.FC = () => {
                     type="file"
                     accept="image/*,.pdf"
                     onChange={e => setTxFile(e.target.files ? e.target.files[0] : null)}
-                    className="w-full px-3 py-2 border border-white/15 rounded-xl text-[11px] bg-white/5 text-white/70 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-csc-gold file:text-csc-tinta"
+                    className="w-full px-3 py-2 rounded-xl text-[11px] bg-white/5 text-white/70 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-csc-gold file:text-csc-tinta"
                   />
                 </div>
                 <button type="submit" disabled={txSaving} className="w-full flex items-center justify-center gap-2 bg-csc-gold text-csc-tinta py-2.5 rounded-xl text-xs font-black hover:brightness-95 transition-colors cursor-pointer disabled:opacity-60">
@@ -2458,8 +2458,8 @@ const FinancePage: React.FC = () => {
                       ...s,
                       quota_excluded_months: excluded ? s.quota_excluded_months.filter(x => x !== m) : [...s.quota_excluded_months, m],
                     }))}
-                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
-                      excluded ? 'bg-csc-red/20 border-csc-red/40 text-csc-vermelho-texto' : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/10'
+                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                      excluded ? 'bg-csc-red/20 text-csc-vermelho-texto' : 'bg-white/5 text-white/70 hover:bg-white/10'
                     }`}
                   >
                     {nomeMes(m).slice(0, 3)}

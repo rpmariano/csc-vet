@@ -73,12 +73,12 @@ export const ProcuraEFiltros: React.FC<ProcuraEFiltrosProps> = ({
             type="button"
             onClick={() => { triggerHaptic('light'); aoAbrirFiltros() }}
             aria-label={filtrosAtivos ? 'Filtros (ativos)' : 'Filtros'}
-            className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
+            className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 cursor-pointer
               transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                 filtrosAtivos
-                  ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                  : 'bg-white/10 border-white/15 text-white/75'
+                  ? 'bg-csc-gold text-csc-tinta'
+                  : 'bg-white/10 text-white/75'
               }`}
           >
             <SlidersHorizontal size={16} aria-hidden="true" />

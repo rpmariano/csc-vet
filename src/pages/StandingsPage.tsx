@@ -556,7 +556,7 @@ export const StandingsPage = () => {
                             onClick={() => { triggerHaptic('light'); openJornadaModal(g.id) }}
                             disabled={groupTeamCount < 2}
                             title={groupTeamCount < 2 ? 'Adiciona pelo menos duas equipas ao grupo primeiro' : undefined}
-                            className="min-h-11 px-3 rounded-[18px] bg-csc-gold/15 border border-csc-gold/35 text-csc-gold
+                            className="min-h-11 px-3 rounded-[18px] bg-csc-gold/15 text-csc-gold
                               font-display font-extrabold text-[10.5px] flex items-center gap-1.5 cursor-pointer
                               transition-transform duration-150 active:scale-97 disabled:opacity-40 disabled:cursor-not-allowed
                               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -569,7 +569,7 @@ export const StandingsPage = () => {
                     </div>
 
                     {canManage && teams.filter(t => t.group_id === g.id).length < 2 && (
-                      <p className="text-[10.5px] leading-relaxed text-white/70 bg-csc-gold/10 border border-csc-gold/25 rounded-xl px-3 py-2">
+                      <p className="text-[10.5px] leading-relaxed text-white/70 bg-csc-gold/10 rounded-xl px-3 py-2">
                         Este grupo tem {teams.filter(t => t.group_id === g.id).length === 0 ? 'nenhuma equipa' : 'só uma equipa'} — para criar jornadas, adiciona pelo menos mais uma no Clube → Torneios → Gerir grupos e equipas.
                       </p>
                     )}
@@ -649,7 +649,7 @@ export const StandingsPage = () => {
                             */
                             if (editingMatchId === m.id && !daFicha) {
                               return (
-                                <div key={m.id} className="rounded-[14px] border border-csc-gold/35 bg-csc-gold/10 p-2.5 space-y-2">
+                                <div key={m.id} className="rounded-[14px] bg-csc-gold/10 p-2.5 space-y-2">
                                   <div className="flex items-center gap-2">
                                     <span className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
                                       <span className="truncate font-display font-bold text-[11.5px] text-white">{casa.sigla}</span>
@@ -703,7 +703,7 @@ export const StandingsPage = () => {
                                     <button
                                       type="button"
                                       onClick={guardaResultado.tentarFechar}
-                                      className="w-11 h-11 rounded-xl bg-white/10 border border-white/20 text-white/70 flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                                      className="w-11 h-11 rounded-xl bg-white/10 text-white/70 flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                                       title="Cancelar"
                                       aria-label="Cancelar edição do resultado"
                                     >

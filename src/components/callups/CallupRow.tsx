@@ -92,7 +92,7 @@ export function CallupRow({
       className={`w-11 h-11 rounded-xl flex items-center justify-center cursor-pointer shrink-0
         transition-transform duration-150 active:scale-97
         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-          aceso ? classeAceso : 'bg-white/6 text-white/62'
+          aceso ? classeAceso : 'bg-transparent text-white/55 hover:bg-white/8'
         }`}
     >
       <Icone size={15} />
@@ -119,7 +119,7 @@ export function CallupRow({
           {impedimento && (
             <span
               className="flex-none font-display font-bold text-[8.5px] uppercase tracking-wider px-1.5 py-0.5 rounded-md
-                bg-csc-red/20 border border-csc-red/40 text-csc-vermelho-texto"
+                bg-csc-red/20 text-csc-vermelho-texto"
             >
               {impedimento}
             </span>

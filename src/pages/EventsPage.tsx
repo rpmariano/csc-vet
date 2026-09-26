@@ -4,7 +4,6 @@ import {
   MapPin,
   Clock,
   Check,
-  Users,
   CheckCircle2,
   XCircle,
   HelpCircle,
@@ -1260,7 +1259,7 @@ const EventsPage: React.FC = () => {
       />
 
       {successMessage && (
-        <div className="bg-csc-light/12 text-csc-verde-texto p-4 rounded-2xl border border-csc-light/30 text-sm font-bold flex items-center gap-2.5 shadow-sm">
+        <div className="bg-csc-light/12 text-csc-verde-texto p-4 rounded-2xl text-sm font-bold flex items-center gap-2.5 shadow-sm">
           <CheckCircle2 size={20} className="text-csc-light shrink-0" />
           <span>{successMessage}</span>
         </div>
@@ -1330,7 +1329,7 @@ const EventsPage: React.FC = () => {
 
             {/* Específico de Jogo */}
             {type === 'match' && (
-              <div className="p-3.5 bg-csc-gold/8 border border-csc-gold/22 rounded-2xl space-y-3">
+              <div className="p-3.5 bg-csc-gold/8 rounded-2xl space-y-3">
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -1440,7 +1439,7 @@ const EventsPage: React.FC = () => {
 
             {/* 4. Localização / Campo */}
             {type === 'match' && homeAway === 'home' ? (
-              <div className="p-3.5 bg-csc-light/10 border border-csc-light/30 rounded-2xl flex items-center justify-between">
+              <div className="p-3.5 bg-csc-light/10 rounded-2xl flex items-center justify-between">
                 <div className="space-y-1 min-w-0 flex-1 pr-2">
                   <span className="text-[10px] font-black uppercase tracking-wider text-csc-verde-texto flex items-center gap-1.5">
                     <MapPin size={13} className="text-csc-light shrink-0" />
@@ -1458,7 +1457,7 @@ const EventsPage: React.FC = () => {
                     href={getGoogleMapsUrl(currentLocationStr)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
+                    className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
                     title="Ver no Google Maps"
                   >
                     <MapPin size={12} className="text-csc-vermelho-texto" />
@@ -1468,7 +1467,7 @@ const EventsPage: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="p-3.5 bg-white/6 border border-white/12 rounded-2xl space-y-2.5">
+              <div className="p-3.5 bg-white/6 rounded-2xl space-y-2.5">
                 <label className="block text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5"><MapPin size={14} className="text-csc-vermelho-texto" /> Campo / Instalação</span>
                   {currentLocationStr && <span className="text-[10px] text-csc-verde-texto font-bold bg-csc-light/15 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {currentLocationStr}</span>}
@@ -1511,7 +1510,7 @@ const EventsPage: React.FC = () => {
 
             {/* 6. Recorrência (Treinos) */}
             {type === 'practice' && (
-              <div className="p-3.5 bg-csc-gold/8 border border-csc-gold/22 rounded-2xl space-y-2.5">
+              <div className="p-3.5 bg-csc-gold/8 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
@@ -1554,10 +1553,10 @@ const EventsPage: React.FC = () => {
                                   setRecurrenceWeekdays(prev => [...prev, d.val])
                                 }
                               }}
-                              className={`min-w-11 min-h-11 px-2 rounded-lg text-[11px] font-bold transition-colors cursor-pointer border ${
+                              className={`min-w-11 min-h-11 px-2 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
                                 isChecked
-                                  ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                                  : 'bg-white/10 border-white/15 text-white/80 hover:bg-white/15'
+                                  ? 'bg-csc-gold text-csc-tinta'
+                                  : 'bg-white/10 text-white/80 hover:bg-white/15'
                               }`}
                             >
                               {d.label}
@@ -1602,7 +1601,7 @@ const EventsPage: React.FC = () => {
               nota={isActiveOnCreate
                 ? 'Ao guardar, escolhes quem convocas. O evento fica visível na agenda.'
                 : 'O evento fica em rascunho: ninguém é avisado e não entra no alerta de convocatórias. A convocatória fica guardada.'}
-              className="bg-csc-gold/8 rounded-2xl border border-csc-gold/22"
+              className="bg-csc-gold/8 rounded-2xl"
             />
 
             <button
@@ -1614,7 +1613,7 @@ const EventsPage: React.FC = () => {
                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                   isActiveOnCreate
                     ? 'bg-csc-gold text-csc-tinta'
-                    : 'bg-white/9 border border-white/20 text-white'
+                    : 'bg-white/9 text-white'
                 }`}
             >
               {isCreatingEvent ? (
@@ -1834,14 +1833,19 @@ const EventsPage: React.FC = () => {
             {/* O cartão não repete o título do ecrã: "Eventos & quórum" e o
                 "A mostrar N de M" diziam o que o cabeçalho e a linha de resumo
                 do filtro já dizem. */}
-            <div className="cartao-simples text-white p-5">
+            {/* Um cartão, e os eventos lá dentro como linhas separadas por um
+                fio — dois níveis, e mais nenhum. Eram cinco caixas encaixadas
+                (a lista, o evento com borda de 2px, a data e o local, o "Maps",
+                as pastilhas), e o branco translúcido de cada uma somava-se até
+                um cinzento opaco. */}
+            <div className="cartao-simples text-white overflow-hidden">
 
               {loading ? (
                 <ACarregar />
               ) : filteredScheduledEvents.length === 0 ? (
                 <EstadoVazio icone={Calendar} titulo="Nenhum evento encontrado." texto="Tenta mudar os filtros ou a procura." />
               ) : (
-                <div className="space-y-3.5">
+                <div>
                   {filteredScheduledEvents.map((event) => {
                   const callups = eventCallups[event.id] || []
                   const confirmedList = callups.filter(c => c.status === 'confirmed')
@@ -1872,11 +1876,11 @@ const EventsPage: React.FC = () => {
                         e.preventDefault()
                         abrirDossier(event)
                       }}
-                      className={`p-4 rounded-2xl border-2 transition-all shadow-2xs space-y-3 cursor-pointer
-                        active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                        event.is_active === false
-                          ? 'bg-csc-gold/10 border-csc-gold/40 hover:border-csc-gold/60'
-                          : 'bg-white/5 hover:bg-csc-gold/10 border-white/10 hover:border-csc-gold/40'
+                      /* Um rascunho diz-se com a barra dourada à esquerda, e não
+                         com uma moldura de outra cor. */
+                      className={`linha-leve px-4 py-4 space-y-2 cursor-pointer transition-colors hover:bg-white/[0.03]
+                        focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-csc-gold ${
+                        event.is_active === false ? 'shadow-[inset_3px_0_0_var(--color-csc-gold)]' : ''
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -1886,88 +1890,78 @@ const EventsPage: React.FC = () => {
                               {getEventHeading(event)}
                             </h4>
                             {event.is_active === false && (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-csc-gold/18 text-csc-gold border border-csc-gold/35 flex items-center gap-1">
-                                <span>Rascunho / Inativo</span>
+                              <span className="font-display font-extrabold text-[10px] tracking-[0.12em] uppercase text-csc-gold">
+                                Rascunho
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      {/* Event Meta Details */}
-                      <div className="grid grid-cols-1 gap-2 text-xs text-white/70 bg-white/5 p-2.5 rounded-xl border border-white/10">
-                        <div className="flex items-center gap-1.5">
-                          <Clock size={13} className="text-csc-gold shrink-0" />
-                          <span className="font-bold">
+                      {/* A data e o local são texto com ícone, não uma caixa. A
+                          concentração vai na mesma linha, e o "Maps" é uma
+                          ligação dourada — sem moldura, com 44px de alvo. */}
+                      <div className="space-y-0.5 text-[12px] text-white/70">
+                        <p className="flex items-center gap-1.5">
+                          <Clock size={13} className="text-white/45 shrink-0" aria-hidden="true" />
+                          <span className="font-bold text-white/85">
                             {new Date(event.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' })}, {new Date(event.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           {event.meeting_time && (
-                            <span className="bg-csc-gold/18 text-csc-gold text-[10.5px] font-extrabold px-1.5 py-0.5 rounded-md border border-csc-gold/35">
-                              Conc: {event.meeting_time.substring(0, 5)}
-                            </span>
+                            <span className="text-white/62">· concentração {event.meeting_time.substring(0, 5)}</span>
                           )}
-                        </div>
+                        </p>
 
-                        <div className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-1.5 truncate">
-                            <MapPin size={13} className="text-csc-vermelho-texto shrink-0" />
+                        <div className="flex items-center justify-between gap-2 -my-2">
+                          <p className="flex items-center gap-1.5 min-w-0">
+                            <MapPin size={13} className="text-white/45 shrink-0" aria-hidden="true" />
                             <span className="truncate">{locationName}</span>
-                          </div>
-
+                          </p>
                           {mapsQuery && (
                             <a
                               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={e => e.stopPropagation()}
-                              className="min-h-11 px-3 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                              className="min-h-11 pl-3 text-csc-gold font-display font-bold text-[11px] flex items-center gap-1 shrink-0 cursor-pointer"
                               title="Abrir no Google Maps"
                             >
                               <span>Maps</span>
-                              <ExternalLink size={10} />
+                              <ExternalLink size={11} aria-hidden="true" />
                             </a>
                           )}
                         </div>
                       </div>
 
-                      {/* RSVP Summary Bar & Action Button */}
-                      <div className="flex flex-col justify-between gap-2.5 pt-2 border-t border-white/10">
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="flex items-center gap-1 font-black text-csc-verde-texto bg-csc-light/15 border border-csc-light/35 px-2 py-0.5 rounded-lg">
-                            <CheckCircle2 size={12} className="text-csc-verde-texto" />
-                            <span>{confirmedList.length}</span>
+                      {/* As respostas dizem-se pela cor do texto, sem pastilha:
+                          é o estado, e a cor chega para o ler. */}
+                      <div className="flex items-center gap-x-3 gap-y-2 flex-wrap font-display font-bold text-[11px]">
+                        <span className="flex items-center gap-1 text-csc-verde-texto">
+                          <CheckCircle2 size={12} aria-hidden="true" />
+                          {confirmedList.length} sim
+                        </span>
+                        <span className="flex items-center gap-1 text-csc-gold">
+                          <HelpCircle size={12} aria-hidden="true" />
+                          {pendingList.length} sem resposta
+                        </span>
+                        {declinedList.length > 0 && (
+                          <span className="flex items-center gap-1 text-csc-vermelho-texto">
+                            <XCircle size={12} aria-hidden="true" />
+                            {declinedList.length} não
                           </span>
-
-                          <span className="flex items-center gap-1 font-bold text-csc-gold bg-csc-gold/15 border border-csc-gold/35 px-2 py-0.5 rounded-lg">
-                            <HelpCircle size={12} className="text-csc-gold" />
-                            <span>{pendingList.length}</span>
-                          </span>
-
-                          {declinedList.length > 0 && (
-                            <span className="flex items-center gap-1 font-bold text-csc-vermelho-texto bg-csc-red/15 border border-csc-red/35 px-2 py-0.5 rounded-lg">
-                              <XCircle size={12} className="text-csc-vermelho-texto" />
-                              <span>{declinedList.length} Indisponíveis</span>
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {isCoachOrAdmin && event.is_active === false && (
-                            <button
-                              type="button"
-                              onClick={e => { e.stopPropagation(); handleActivateEvent(event) }}
-                              className="px-3.5 py-2 bg-csc-light hover:bg-csc-light text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
-                              title="Ativar evento e enviar convocatória aos membros"
-                            >
-                              <Send size={13} className="text-csc-verde-texto" />
-                              <span>Ativar e Convocar</span>
-                            </button>
-                          )}
-                          <span className="flex items-center gap-1.5 font-display font-bold text-[11px] text-white/62">
-                            <Users size={13} className="text-white/45" aria-hidden="true" />
-                            <span>{callups.length} {callups.length === 1 ? 'convocado' : 'convocados'}</span>
-                          </span>
-                        </div>
+                        )}
+                        <span className="text-white/45">· {callups.length} {callups.length === 1 ? 'convocado' : 'convocados'}</span>
+                        {isCoachOrAdmin && event.is_active === false && (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); handleActivateEvent(event) }}
+                            className="ml-auto min-h-11 px-3.5 bg-csc-light text-white rounded-[18px] text-[11px] font-display font-extrabold flex items-center gap-1.5 cursor-pointer active:scale-97"
+                            title="Ativar evento e enviar convocatória aos membros"
+                          >
+                            <Send size={13} aria-hidden="true" />
+                            <span>Ativar e convocar</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
@@ -1995,8 +1989,10 @@ const EventsPage: React.FC = () => {
           titulo={activeCallupModalEvent.title || 'Convocatória'}
         >
           <div className="relative">
-            {/* Topo Premium da Persiana/Modal de Dossier & RSVP */}
-            <div className="bg-gradient-to-r from-csc-dark via-csc-dark to-csc-dark text-white p-3.5 rounded-2xl shadow-xl border-2 border-csc-gold mb-5 relative overflow-hidden">
+            {/* O emblema, o tipo, a data e os botões numa linha solta. Era um
+                cartão verde com moldura dourada de 2px e sombra — a peça mais
+                pesada do dossier, logo por baixo do título. */}
+            <div className="text-white mb-5 relative">
               <div className="flex items-center justify-between gap-3">
                 {/* 1. Símbolo + 2. Pílula de Tipo + 3. Data e Hora */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -2062,7 +2058,7 @@ const EventsPage: React.FC = () => {
 
             {/* Se o evento estiver inativo, alerta proeminente */}
             {activeCallupModalEvent.is_active === false && (
-              <div className="mb-4 p-3.5 bg-csc-gold/10 border-2 border-csc-gold/40 rounded-2xl flex flex-col items-start justify-between gap-3 shadow-xs">
+              <div className="mb-4 p-3.5 bg-csc-gold/10 rounded-2xl flex flex-col items-start justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-2 text-xs font-bold text-csc-gold">
                   <AlertTriangle size={18} className="text-csc-gold shrink-0" />
                   <span>Este evento está em modo <strong>Rascunho (Inativo)</strong>. A convocatória não foi enviada e não está visível para os atletas.</span>
@@ -2123,7 +2119,7 @@ const EventsPage: React.FC = () => {
                     abrir: setConvocadoAberto,
                   } : undefined}
                   acrescentar={isCoachOrAdmin && uncalledPlayers.length > 0 && (
-                    <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+                    <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
                       <p className="text-xs font-black text-white/80 flex items-center gap-1.5">
                         <UserPlus size={14} className="text-csc-gold" />
                         <span>Adicionar mais membros ao evento:</span>
@@ -2134,7 +2130,7 @@ const EventsPage: React.FC = () => {
                             key={p.id}
                             type="button"
                             onClick={() => handleAddPlayerToCallup(evId, p.id)}
-                            className="bg-white/8 border border-white/16 text-xs px-2.5 py-1 rounded-xl font-bold text-white flex items-center gap-1 shadow-2xs hover:bg-white/15 cursor-pointer active:scale-97"
+                            className="bg-white/8 text-xs px-2.5 py-1 rounded-xl font-bold text-white flex items-center gap-1 shadow-2xs hover:bg-white/15 cursor-pointer active:scale-97"
                           >
                             <span>+ {p.name}</span>
                             {p.jersey_number && <span className="text-csc-gold font-black">#{p.jersey_number}</span>}

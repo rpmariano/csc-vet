@@ -52,7 +52,7 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
           </div>
         </div>
 
-        <div className="bg-csc-gold/10 border border-csc-gold/25 rounded-2xl p-4 text-xs text-csc-gold">
+        <div className="bg-csc-gold/10 rounded-2xl p-4 text-xs text-csc-gold">
           <p className="font-semibold leading-relaxed text-white">
             {description}
           </p>
