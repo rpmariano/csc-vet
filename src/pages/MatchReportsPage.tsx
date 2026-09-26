@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import {
   Trophy,
-  Search,
   SlidersHorizontal,
   Home,
   Plane,
@@ -248,13 +248,10 @@ export const MatchReportsPage: React.FC = () => {
     selectedMonth !== 'all'
 
   const resumoFiltros = [
-    searchTerm.trim() ? `"${searchTerm.trim()}"` : null,
     filterType !== 'all' ? ROTULOS_TIPO[filterType] : null,
     selectedYear !== 'all' ? selectedYear : null,
     selectedMonth !== 'all' ? MONTHS.find(m => m.value === selectedMonth)?.label : null,
-  ]
-    .filter(Boolean)
-    .join(' · ') || 'Filtrado'
+  ].filter((x): x is string => Boolean(x))
 
   const limparFiltros = () => {
     setSearchTerm('')
@@ -277,48 +274,17 @@ export const MatchReportsPage: React.FC = () => {
         estão lá mas fazem falta a quem procura um jogo de há duas épocas —
         vão para a persiana atrás do funil, como na Agenda e nos Eventos.
       */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 min-w-0">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Adversário, torneio ou local"
-            aria-label="Procurar nas fichas de jogo"
-            className={`${CAMPO} pl-9.5`}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
-          aria-label={temFiltros ? 'Filtros (ativos)' : 'Filtros'}
-          className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
-            transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-              temFiltros
-                ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                : 'bg-white/10 border-white/15 text-white/75'
-            }`}
-        >
-          <SlidersHorizontal size={16} />
-        </button>
-      </div>
-
-      {temFiltros && (
-        <button
-          type="button"
-          onClick={limparFiltros}
-          className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
-            bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
-        >
-          <SlidersHorizontal size={14} className="text-csc-gold shrink-0" />
-          <span className="flex-1 font-display font-bold text-[11px] text-white/80">
-            {resumoFiltros} · {filteredMatches.length} {filteredMatches.length === 1 ? 'jogo' : 'jogos'}
-          </span>
-          <span className="font-display font-bold text-[11px] text-csc-gold">Limpar</span>
-        </button>
-      )}
+      <ProcuraEFiltros
+        procura={searchTerm}
+        aoProcurar={setSearchTerm}
+        placeholder="Adversário, torneio ou local"
+        rotulo="Procurar nas fichas de jogo"
+        aoAbrirFiltros={() => setFiltrosAbertos(true)}
+        filtrosAtivos={resumoFiltros.length > 0}
+        resumo={resumoFiltros}
+        contagem={`${filteredMatches.length} ${filteredMatches.length === 1 ? 'jogo' : 'jogos'}`}
+        aoLimpar={limparFiltros}
+      />
 
       <BottomSheet
         isOpen={filtrosAbertos}

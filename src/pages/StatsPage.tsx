@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import { Award, Footprints, Flame, Users, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { Pastilha, Botao, ACarregar } from '../components/ui'
@@ -329,28 +330,19 @@ const StatsPage: React.FC = () => {
         que não se vê é um filtro que se esquece, e depois os números parecem
         errados sem razão.
       */}
-      <div className="flex items-center gap-2.5">
-        <div className="min-w-0 flex-1">
-          <p className={ETIQUETA_MOSAICO}>A contar</p>
-          <p className="font-display font-black text-[13px] text-white truncate mt-0.5">
-            {activeFilterLabel}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
-          aria-label={temFiltros ? 'Filtros (ativos)' : 'Filtros'}
-          className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
-            transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-              temFiltros
-                ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                : 'bg-white/10 border-white/15 text-white/75'
-            }`}
-        >
-          <SlidersHorizontal size={16} />
-        </button>
-      </div>
+      <ProcuraEFiltros
+        legenda={
+          <>
+            <p className={ETIQUETA_MOSAICO}>A contar</p>
+            <p className="font-display font-black text-[13px] text-white truncate mt-0.5">{activeFilterLabel}</p>
+          </>
+        }
+        aoAbrirFiltros={() => setFiltrosAbertos(true)}
+        filtrosAtivos={temFiltros}
+        resumo={[activeFilterLabel]}
+        contagem={`${distinctMatches} ${distinctMatches === 1 ? 'jogo' : 'jogos'}`}
+        aoLimpar={() => setFilterType(FILTRO_POR_OMISSAO)}
+      />
 
       <BottomSheet
         isOpen={filtrosAbertos}

@@ -1,6 +1,6 @@
 import React from 'react'
-import { Search, SlidersHorizontal, X } from 'lucide-react'
-import { CLASSE_CAMPO } from './ui/formulario'
+import { SlidersHorizontal } from 'lucide-react'
+import { CaixaProcura } from './ui/CaixaProcura'
 import { triggerHaptic } from '../utils/haptics'
 
 /**
@@ -15,16 +15,21 @@ import { triggerHaptic } from '../utils/haptics'
  * filtro que se esquece. A procura conta como filtro — escreve-se na linha
  * de resumo como os outros.
  *
- * Os ecrãs que já tinham o padrão (Agenda, Eventos, Fichas, Plantel, Contas)
- * mantêm por agora a sua cópia; este nasceu na vaga 5 da auditoria de design
- * para os que não o tinham.
+ * É a única forma de filtrar uma lista na app (decisão de 2026-09-26): a
+ * Agenda, os Eventos, as Fichas, o Plantel, as Contas por atleta, as
+ * Estatísticas e as Classificações tinham cada um a sua cópia à mão, ou uma
+ * forma própria.
  */
 export interface ProcuraEFiltrosProps {
-  procura: string
-  aoProcurar: (texto: string) => void
-  placeholder: string
+  /** Sem procura — ecrãs sem texto para procurar (Estatísticas,
+      Classificações) — o lugar da caixa fica com a `legenda`. */
+  procura?: string
+  aoProcurar?: (texto: string) => void
+  placeholder?: string
   /** Nome acessível do campo ("Procurar nos comunicados"). */
-  rotulo: string
+  rotulo?: string
+  /** O que se está a ver, quando não há procura ("A contar: Oficiais"). */
+  legenda?: React.ReactNode
   /** Sem ele não há funil — há ecrãs cuja lista só se procura. */
   aoAbrirFiltros?: () => void
   /** Há algum filtro na persiana diferente do ponto de partida. */
@@ -41,8 +46,9 @@ export interface ProcuraEFiltrosProps {
 export const ProcuraEFiltros: React.FC<ProcuraEFiltrosProps> = ({
   procura,
   aoProcurar,
-  placeholder,
-  rotulo,
+  placeholder = '',
+  rotulo = '',
+  legenda,
   aoAbrirFiltros,
   filtrosAtivos = false,
   resumo = [],
@@ -50,34 +56,18 @@ export const ProcuraEFiltros: React.FC<ProcuraEFiltrosProps> = ({
   aoLimpar,
   acao,
 }) => {
-  const texto = procura.trim()
+  const texto = (procura ?? '').trim()
   const algo = filtrosAtivos || texto !== ''
   const linha = [texto ? `"${texto}"` : null, ...resumo].filter(Boolean).join(' · ')
 
   return (
     <div className="space-y-2.5">
       <div className="flex items-center gap-2">
-        <div className="relative flex-1 min-w-0">
-          <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" aria-hidden="true" />
-          <input
-            type="search"
-            value={procura}
-            onChange={e => aoProcurar(e.target.value)}
-            placeholder={placeholder}
-            aria-label={rotulo}
-            className={`${CLASSE_CAMPO} pl-9.5 ${texto ? 'pr-11' : ''}`}
-          />
-          {texto && (
-            <button
-              type="button"
-              onClick={() => aoProcurar('')}
-              aria-label="Limpar a procura"
-              className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-[14px] text-black/40 hover:text-black/70 cursor-pointer"
-            >
-              <X size={15} aria-hidden="true" />
-            </button>
-          )}
-        </div>
+        {aoProcurar ? (
+          <CaixaProcura valor={procura ?? ''} aoMudar={aoProcurar} placeholder={placeholder} rotulo={rotulo} />
+        ) : (
+          <div className="flex-1 min-w-0">{legenda}</div>
+        )}
         {aoAbrirFiltros && (
           <button
             type="button"

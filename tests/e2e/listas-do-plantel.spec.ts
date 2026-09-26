@@ -119,7 +119,13 @@ test('os mosaicos e o Clube contam só quem joga', async ({ page }) => {
   await aptos.click()
   await expect(page.getByRole('region', { name: 'Jogadores' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Equipa técnica' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /Jogadores aptos/ })).toBeVisible()
+  // O mosaico aceso é o que diz o filtro — está à vista, não acende o funil.
+  await expect(aptos).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Filtros', exact: true })).toBeVisible()
+  // E tocar-lhe outra vez volta a todos.
+  await aptos.click()
+  await expect(aptos).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByRole('region', { name: 'Equipa técnica' })).toBeVisible()
 
   await page.goto('/csc-vet/clube')
   await expect(page.getByText('4 atletas')).toBeVisible({ timeout: 15000 })

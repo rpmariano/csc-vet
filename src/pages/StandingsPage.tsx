@@ -4,9 +4,11 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
-import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, ChevronsUpDown, ScrollText } from 'lucide-react'
+import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, ScrollText, SlidersHorizontal } from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
+import { BottomSheet } from '../components/BottomSheet'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import { useClub } from '../context/ClubContext'
 import { Botao, Pastilha, BotaoIcone, ACarregar, EstadoVazio } from '../components/ui'
 import { calcularClassificacao, equipaDoTorneio, jogoTerminado } from '../lib/classificacao'
@@ -14,6 +16,8 @@ import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
+
+const ROTULO_PROVAS = { current: 'Em curso e agendadas', history: 'Terminadas' } as const
 
 /** Campo e etiqueta dos formulários, o mesmo desenho da Agenda e dos Eventos. */
 
@@ -99,6 +103,11 @@ export const StandingsPage = () => {
 
   const [matchToDelete, setMatchToDelete] = useState<string | null>(null)
 
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
+  /* O ponto de partida: em curso, ou o histórico quando não há nada em
+     curso. Não é um filtro posto por ninguém, e o funil não acende. */
+  const [vistaInicial, setVistaInicial] = useState<'current' | 'history'>('current')
+
   const visibleTournaments = tournaments.filter(t => tourViewFilter === 'history' ? t.status === 'terminado' : t.status !== 'terminado')
 
   useEffect(() => {
@@ -143,7 +152,7 @@ export const StandingsPage = () => {
       else {
         const firstCurrent = data.find(t => t.status !== 'terminado')
         if (firstCurrent) setSelectedTourId(firstCurrent.id)
-        else if (data.length > 0) { setTourViewFilter('history'); setSelectedTourId(data[0].id) }
+        else if (data.length > 0) { setTourViewFilter('history'); setVistaInicial('history'); setSelectedTourId(data[0].id) }
       }
     }
   }
@@ -277,28 +286,30 @@ export const StandingsPage = () => {
         palavra "Classificações".
 
         O handoff escolhe o torneio em pastilhas, não num menu: são dois ou
-        três por época, e uma pastilha diz quantos há sem se abrir. O
-        "Agendados e ativos" contra "Histórico" fica na sobrancelha, que é
-        onde se lê o que a lista de pastilhas está a mostrar.
+        três por época, e uma pastilha diz quantos há sem se abrir. As
+        pastilhas escolhem (navegação); o "em curso / terminadas" filtra quais
+        aparecem, e por isso vive atrás do funil, como nas Fichas de Jogo e
+        nas Estatísticas (decisão de 2026-09-26). Era um botão com ar de
+        etiqueta, com o organizador da prova colado ao lado como se fosse parte
+        do filtro.
       */}
       {tournaments.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => { triggerHaptic('selection'); setTourViewFilter(tourViewFilter === 'current' ? 'history' : 'current') }}
-              className="min-h-11 flex items-center gap-1.5 font-display font-extrabold text-[9px] tracking-[0.14em] uppercase
-                text-csc-gold cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-            >
-              {tourViewFilter === 'current' ? 'Agendados e ativos' : 'Histórico'}
-              <ChevronsUpDown size={12} className="opacity-70" />
-            </button>
-            {selectedTournament?.organizer_name && (
-              <span className="text-[10px] text-white/62 truncate">
-                · {selectedTournament.organizer_name}
-              </span>
-            )}
-          </div>
+          <ProcuraEFiltros
+            legenda={
+              <>
+                <p className="font-display font-bold text-[8.5px] tracking-[0.12em] uppercase text-white/62">A mostrar</p>
+                <p className="font-display font-black text-[13px] text-white truncate mt-0.5">
+                  {ROTULO_PROVAS[tourViewFilter]}
+                </p>
+              </>
+            }
+            aoAbrirFiltros={() => setFiltrosAbertos(true)}
+            filtrosAtivos={tourViewFilter !== vistaInicial}
+            resumo={[ROTULO_PROVAS[tourViewFilter]]}
+            contagem={`${visibleTournaments.length} ${visibleTournaments.length === 1 ? 'prova' : 'provas'}`}
+            aoLimpar={() => setTourViewFilter(vistaInicial)}
+          />
 
           {visibleTournaments.length > 0 ? (
             <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
@@ -323,8 +334,55 @@ export const StandingsPage = () => {
               {tourViewFilter === 'history' ? 'Sem torneios terminados.' : 'Sem torneios agendados ou ativos.'}
             </p>
           )}
+
+          {/* Quem organiza a prova escolhida — por baixo das pastilhas, e não
+              ao lado do filtro, onde se lia como parte dele. */}
+          {selectedTournament?.organizer_name && visibleTournaments.some(t => t.id === selectedTourId) && (
+            <p className="text-[11px] text-white/62 truncate">
+              Organização: <span className="text-white/80 font-semibold">{selectedTournament.organizer_name}</span>
+            </p>
+          )}
         </div>
       )}
+
+      <BottomSheet
+        isOpen={filtrosAbertos}
+        onClose={() => setFiltrosAbertos(false)}
+        title="Filtrar provas"
+        description="Que provas aparecem nas pastilhas"
+        tone="dark"
+        icon={
+          <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
+            <SlidersHorizontal size={17} />
+          </div>
+        }
+        footer={
+          <>
+            <Botao aparencia="vidro" onClick={() => setTourViewFilter(vistaInicial)} disabled={tourViewFilter === vistaInicial}>
+              Limpar
+            </Botao>
+            <Botao onClick={() => setFiltrosAbertos(false)}>
+              Ver {visibleTournaments.length} {visibleTournaments.length === 1 ? 'prova' : 'provas'}
+            </Botao>
+          </>
+        }
+      >
+        <div>
+          <span className={ETIQUETA}>Estado da prova</span>
+          <div className="flex flex-wrap gap-2">
+            {(['current', 'history'] as const).map(v => (
+              <Pastilha
+                key={v}
+                ativa={tourViewFilter === v}
+                onClick={() => { triggerHaptic('selection'); setTourViewFilter(v) }}
+                className="flex-none"
+              >
+                {ROTULO_PROVAS[v]}
+              </Pastilha>
+            ))}
+          </div>
+        </div>
+      </BottomSheet>
 
       {loading ? (
         <ACarregar texto="A carregar classificações…" />

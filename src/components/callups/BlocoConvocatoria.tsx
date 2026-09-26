@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { ChevronDown, ChevronRight, Search, Users, X } from 'lucide-react'
+import { ChevronDown, Users } from 'lucide-react'
 import { CallupRow } from './CallupRow'
 import { QuorumFilterCards, type CallupFilter } from './QuorumFilterCards'
 import { ConfirmModal } from '../ConfirmModal'
+import { CaixaProcura } from '../ui/CaixaProcura'
 import { getPlayerDisplayName } from '../../lib/eventos'
 import { triggerHaptic } from '../../utils/haptics'
 
@@ -142,8 +143,10 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
           <span className="text-xs font-bold text-white/70 group-hover:text-white">
             {aberto ? 'Recolher' : 'Expandir'}
           </span>
+          {/* Expandir no sítio é o `ChevronDown`, que roda — a seta para a
+              direita é de quem vai para outro ecrã. */}
           <div className="p-2 rounded-xl bg-white/10 group-hover:bg-white/20 text-white transition-all">
-            {aberto ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            <ChevronDown size={16} className={`transition-transform duration-200 ${aberto ? 'rotate-180' : ''}`} aria-hidden="true" />
           </div>
         </div>
       </button>
@@ -162,29 +165,12 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
                 onSelect={setFiltro}
               />
 
-              <div className="flex flex-col items-center gap-2 pt-1">
-                <div className="relative flex-1 w-full">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/65" />
-                  <input
-                    type="text"
-                    value={procura}
-                    onChange={e => setProcura(e.target.value)}
-                    placeholder="Pesquisar convocado por nome..."
-                    aria-label="Pesquisar convocado por nome"
-                    className="w-full pl-8 pr-3 py-1.5 bg-white/10 text-white placeholder:text-white/65 rounded-xl text-xs outline-none focus:ring-2 focus:ring-csc-gold"
-                  />
-                </div>
-
-                {filtro !== 'all' && (
-                  <button
-                    type="button"
-                    onClick={() => setFiltro('all')}
-                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                  >
-                    <X size={12} /> Limpar Filtro
-                  </button>
-                )}
-              </div>
+              <CaixaProcura
+                valor={procura}
+                aoMudar={setProcura}
+                placeholder="Procurar convocado"
+                rotulo="Procurar convocado"
+              />
             </div>
           )}
 

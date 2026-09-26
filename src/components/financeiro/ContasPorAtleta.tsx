@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronDown, Copy, Search, Share2, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, Copy, Share2, SlidersHorizontal } from 'lucide-react'
 import { BottomSheet } from '../BottomSheet'
+import { ProcuraEFiltros } from '../ProcuraEFiltros'
 import { Botao, LinhaAtleta, NumeroCamisola, Pastilha } from '../ui'
 import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
@@ -171,7 +172,8 @@ export const ContasPorAtleta: React.FC<ContasPorAtletaProps> = ({ contas, clube 
     setCategoria('')
     setMes('')
   }
-  const resumoFiltros = [categoria || null, mes ? nomeDoMes(mes) : null].filter(Boolean).join(' · ')
+  const resumoLista = [categoria || null, mes ? nomeDoMes(mes) : null].filter((x): x is string => Boolean(x))
+  const resumoFiltros = resumoLista.join(' · ')
 
   /* ------------------------------------------------ a conta de um atleta */
   /*
@@ -212,57 +214,29 @@ export const ContasPorAtleta: React.FC<ContasPorAtletaProps> = ({ contas, clube 
       </p>
 
       {/* Procurar, o funil e partilhar. */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 min-w-0">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
-          <input
-            type="search"
-            value={procura}
-            onChange={e => setProcura(e.target.value)}
-            placeholder="Procurar atleta"
-            aria-label="Procurar atleta"
-            className={`${CAMPO} pl-9.5`}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => { triggerHaptic('light'); setFiltrosAbertos(true) }}
-          aria-label={temFiltros ? 'Filtros (ativos)' : 'Filtros'}
-          className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 cursor-pointer
-            transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-              temFiltros
-                ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                : 'bg-white/10 border-white/15 text-white/75'
-            }`}
-        >
-          <SlidersHorizontal size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => { triggerHaptic('light'); setPartilhaAberta(true) }}
-          className="h-11 px-3.5 rounded-full border bg-white/10 border-white/15 text-white flex items-center gap-1.5 shrink-0
-            font-display font-extrabold text-[11.5px] cursor-pointer transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-        >
-          <Share2 size={15} />
-          Partilhar
-        </button>
-      </div>
-
-      {/* O que o funil esconde, escrito — um filtro que não se vê é um filtro que se esquece. */}
-      {temFiltros && (
-        <button
-          type="button"
-          onClick={limparFiltros}
-          className="cartao-simples w-full min-h-11 flex items-center gap-2.5 px-4 py-2.5 text-left cursor-pointer
-            bg-csc-gold/10 border-csc-gold/30 transition-transform duration-150 active:scale-97"
-        >
-          <SlidersHorizontal size={14} className="text-csc-gold shrink-0" />
-          <span className="flex-1 font-display font-bold text-[11px] text-white/80">{resumoFiltros}</span>
-          <span className="font-display font-bold text-[11px] text-csc-gold">Limpar</span>
-        </button>
-      )}
+      <ProcuraEFiltros
+        procura={procura}
+        aoProcurar={setProcura}
+        placeholder="Procurar atleta"
+        rotulo="Procurar atleta"
+        aoAbrirFiltros={() => setFiltrosAbertos(true)}
+        filtrosAtivos={temFiltros}
+        resumo={resumoLista}
+        contagem={`${visiveis.length} ${visiveis.length === 1 ? 'atleta' : 'atletas'}`}
+        aoLimpar={() => { setProcura(''); limparFiltros() }}
+        acao={
+          <button
+            type="button"
+            onClick={() => { triggerHaptic('light'); setPartilhaAberta(true) }}
+            className="h-11 px-3.5 rounded-full border bg-white/10 border-white/15 text-white flex items-center gap-1.5 shrink-0
+              font-display font-extrabold text-[11.5px] cursor-pointer transition-transform duration-150 active:scale-97
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+          >
+            <Share2 size={15} />
+            Partilhar
+          </button>
+        }
+      />
 
       {contas.length === 0 ? (
         <p className="cartao-simples p-4 text-[11.5px] text-white/62">
