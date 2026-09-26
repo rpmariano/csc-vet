@@ -18,6 +18,20 @@ export const getPlayerDisplayName = (player?: { name?: string; shirt_name?: stri
 }
 
 /**
+ * A ordem de qualquer lista de atletas: alfabética, pelo nome que se mostra —
+ * o da camisola, e na falta dele a alcunha ou o nome (`getPlayerDisplayName`)
+ * (decisão de 2026-09-26). Havia seis ordens: por número de camisola, pelo
+ * nome completo, pelo nome da camisola sem a alcunha, pela ordem da base…
+ * e a mesma pessoa aparecia em sítios diferentes conforme o ecrã.
+ * Os rankings (estatísticas, golos) ordenam-se pelo número e usam esta como
+ * desempate.
+ */
+export const compararPorCamisola = (
+  a: Parameters<typeof getPlayerDisplayName>[0],
+  b: Parameters<typeof getPlayerDisplayName>[0],
+): number => getPlayerDisplayName(a).localeCompare(getPlayerDisplayName(b), 'pt', { sensitivity: 'base' })
+
+/**
  * O nome de cada resposta à convocatória, para quem a marca à mão. Nesta app
  * não há "presenças" nem "RSVP" — há quem disse que sim, quem disse que não e
  * quem ainda não respondeu (ver CLAUDE.md).

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { compararPorCamisola } from '../lib/eventos'
 import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import {
   Users,
@@ -215,7 +216,7 @@ const TeamManagementPage: React.FC = () => {
 
   const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
     // A base de dados é a única fonte do plantel — ver nota em CalendarPage.
-    return [...remoteProfiles].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    return [...remoteProfiles].sort(compararPorCamisola)
   }
 
   const fetchProfiles = async () => {
@@ -900,7 +901,7 @@ const TeamManagementPage: React.FC = () => {
   */
   const jga = (id: string) => estatisticas[id] ?? { j: 0, g: 0, a: 0 }
   filteredProfiles.sort((a, b) => {
-    if (ordem === 'nome') return (a.name || '').localeCompare(b.name || '')
+    if (ordem === 'nome') return compararPorCamisola(a, b)
     if (ordem === 'jga') {
       const ea = jga(a.id)
       const eb = jga(b.id)
@@ -911,7 +912,7 @@ const TeamManagementPage: React.FC = () => {
     const na = a.jersey_number ?? 999
     const nb = b.jersey_number ?? 999
     if (na !== nb) return na - nb
-    return (a.name || '').localeCompare(b.name || '')
+    return compararPorCamisola(a, b)
   })
 
   /*

@@ -4,7 +4,7 @@ import { CallupRow } from './CallupRow'
 import { QuorumFilterCards, type CallupFilter } from './QuorumFilterCards'
 import { ConfirmModal } from '../ConfirmModal'
 import { CaixaProcura } from '../ui/CaixaProcura'
-import { getPlayerDisplayName } from '../../lib/eventos'
+import { getPlayerDisplayName, compararPorCamisola } from '../../lib/eventos'
 import { triggerHaptic } from '../../utils/haptics'
 
 interface ConvocadoDoBloco {
@@ -80,7 +80,8 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
   const recusados = convocatorias.filter(c => c.status === 'declined')
   const semResposta = convocatorias.filter(c => c.status === 'called')
 
-  const visiveis = convocatorias.filter(c => {
+  // Por ordem alfabética do nome da camisola, como todas as listas de atletas.
+  const visiveis = [...convocatorias].sort((a, b) => compararPorCamisola(a.player, b.player)).filter(c => {
     if (filtro !== 'all' && c.status !== filtro) return false
     if (!procura) return true
     const q = procura.toLowerCase()

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
+import { compararPorCamisola } from '../lib/eventos'
 import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import { Award, Footprints, Flame, Users, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -260,7 +261,7 @@ const StatsPage: React.FC = () => {
       if (b.goals !== a.goals) return b.goals - a.goals
       if (b.assists !== a.assists) return b.assists - a.assists
       if (b.games_played !== a.games_played) return b.games_played - a.games_played
-      return (a.jersey_number || 99) - (b.jersey_number || 99)
+      return compararPorCamisola({ name: a.name, shirt_name: a.shirt_name }, { name: b.name, shirt_name: b.shirt_name })
     })
   }, [filteredRawStats])
 

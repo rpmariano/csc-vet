@@ -158,7 +158,7 @@ export function CallupRow({
         </span>
       ) : (
         <span
-          className={`font-display font-bold text-[9.5px] px-2 py-1 rounded-[9px] border flex-none ${pastilha.classe}`}
+          className={`font-display font-bold text-[9.5px] px-2 py-1 rounded-[9px] flex-none ${pastilha.classe}`}
         >
           {pastilha.texto}
         </span>

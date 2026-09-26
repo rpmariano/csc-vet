@@ -53,29 +53,28 @@ export const Relatorios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   return (
     <>
       {cabecalho()}
-      <div className="space-y-2">
+      <CartaoSimples className="overflow-hidden">
         {RELATORIOS.map(r => {
           const seguintes = new URLSearchParams(params)
           seguintes.set('relatorio', r.chave)
           return (
-            <CartaoSimples
+            <Link
               key={r.chave}
-              como={Link}
               to={`?${seguintes.toString()}`}
               onClick={() => triggerHaptic('light')}
-              className="min-h-14 flex items-center gap-3.5 px-4 py-3 cursor-pointer
-                transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+              className="linha-leve min-h-14 flex items-center gap-3.5 px-4 py-3 cursor-pointer
+                transition-colors duration-150 active:bg-white/[0.04]
+                focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-csc-gold"
             >
               <r.Icone size={20} strokeWidth={2} className="shrink-0 text-csc-gold" />
               <span className="min-w-0 flex-1">
                 <span className="block font-display font-extrabold text-sm text-white">{r.titulo}</span>
                 <span className="block text-[11px] leading-snug text-white/62 mt-0.5">{r.descricao}</span>
               </span>
-            </CartaoSimples>
+            </Link>
           )
         })}
-      </div>
+      </CartaoSimples>
 
       <RelatorioContas aberto={aberto === 'contas'} voltarPara={voltarPara} aoVoltar={fechar} />
     </>

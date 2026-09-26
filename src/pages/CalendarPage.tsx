@@ -32,7 +32,7 @@ import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao, ACarregar, EstadoVazio } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
-import { getPlayerDisplayName, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, CORES_TIPO } from '../lib/eventos'
+import { compararPorCamisola, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, CORES_TIPO } from '../lib/eventos'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
 
@@ -80,12 +80,8 @@ const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
   // fundia os perfis do Supabase com uma lista de sementes em src/data/initialPlayers.ts,
   // ficheiro que continha dados pessoais reais (NIF, IBAN, morada) e que por isso ia
   // parar ao JavaScript servido publicamente. Foi removido.
-  return [...remoteProfiles].sort((a, b) => {
-    if (a.jersey_number && b.jersey_number) return a.jersey_number - b.jersey_number
-    if (a.jersey_number) return -1
-    if (b.jersey_number) return 1
-    return getPlayerDisplayName(a).localeCompare(getPlayerDisplayName(b))
-  })
+  // Por ordem alfabética do nome da camisola, como todas as listas de atletas.
+  return [...remoteProfiles].sort(compararPorCamisola)
 }
 
 // A tabela `callups` cresce sem parar (uma linha por atleta por evento, anos de jogos e
@@ -1042,7 +1038,7 @@ const CalendarPage: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <span
               className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5
-                px-2.5 py-1 rounded-full border ${cores.texto} ${cores.pastilha}`}
+                px-2.5 py-1 rounded-full ${cores.texto} ${cores.pastilha}`}
             >
               <TipoIcon size={13} />
               <span>{isMatch ? 'Jogo' : isPractice ? 'Treino' : 'Convívio'}</span>

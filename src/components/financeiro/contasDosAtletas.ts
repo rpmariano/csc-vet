@@ -1,4 +1,5 @@
 import { dataLocalISO, formatMonthYear, nomeMes, prazoPassou } from '../../lib/finance'
+import { getPlayerDisplayName } from '../../lib/eventos'
 import { MESES_CURTOS, fmtData, fmtEuro } from './estilos'
 
 /**
@@ -198,7 +199,7 @@ export function contasDosAtletas(dados: DadosDasContas): ContaDoAtleta[] {
     for (const { chave } of ESTADOS) l[chave].sort(porCategoriaEMes)
     contas.push(comTotais({
       id: atleta.id,
-      nome: (atleta.shirt_name || atleta.name || 'Atleta').trim(),
+      nome: getPlayerDisplayName(atleta),
       numero: atleta.jersey_number ?? null,
       linhas: l,
     }))

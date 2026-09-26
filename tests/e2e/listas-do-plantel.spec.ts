@@ -130,3 +130,49 @@ test('os mosaicos e o Clube contam só quem joga', async ({ page }) => {
   await page.goto('/csc-vet/clube')
   await expect(page.getByText('4 atletas')).toBeVisible({ timeout: 15000 })
 })
+
+/**
+ * Qualquer lista de atletas lê-se por ordem alfabética do nome da camisola
+ * (`compararPorCamisola`, decisão de 2026-09-26). Havia seis ordens — número de
+ * camisola, nome completo, a ordem da base… — e a mesma pessoa mudava de sítio
+ * conforme o ecrã. Aqui o nome completo e o da camisola dão ordens diferentes
+ * de propósito: o "Abel Zacarias" é o primeiro pelo nome, e o último pela
+ * camisola.
+ */
+test.describe('As listas de atletas vão pelo nome da camisola', () => {
+  const ATLETAS = [
+    { id: 'o1', name: 'Abel Zacarias', shirt_name: 'Zacarias', jersey_number: 1 },
+    { id: 'o2', name: 'Xavier Bento', shirt_name: 'Bento', jersey_number: 30 },
+    { id: 'o3', name: 'Carlos Matos', shirt_name: 'Matos', jersey_number: 5 },
+  ].map(p => ({ ...p, position: 'MC', roles: ['player'], role: 'player', status: 'active', photo_url: null }))
+  const ORDEM = ['Bento', 'Matos', 'Zacarias']
+
+  const posicoes = (texto: string) => ORDEM.map(n => texto.indexOf(n))
+  const crescente = (v: number[]) => v.every((x, i) => x >= 0 && (i === 0 || x > v[i - 1]))
+
+  test('no Plantel', async ({ page }) => {
+    // A ficha de quem tem sessão (da direção, sem jogar) tem de estar lá.
+    const eu = { ...(FIXTURES_BASE.profiles[0] as Record<string, unknown>), roles: ['admin'] }
+    await montarSupabaseFalso(page, { profiles: [...ATLETAS, eu], v_players_public: [...ATLETAS, eu] })
+    await page.goto('/csc-vet/team-management')
+    const grupo = page.getByRole('region', { name: 'Jogadores' })
+    await expect(grupo).toContainText('Zacarias', { timeout: 15000 })
+    expect(crescente(posicoes(await grupo.innerText()))).toBe(true)
+  })
+
+  test('na convocatória', async ({ page }) => {
+    const amanha = new Date(Date.now() + 864e5).toISOString()
+    await montarSupabaseFalso(page, {
+      v_players_public: ATLETAS,
+      events: [{ id: 'e1', title: 'Jogo', type: 'match', date_time: amanha, is_active: true, home_away: 'home', is_friendly: true }],
+      // Na base vêm pela ordem de inserção, que não é nenhuma das outras.
+      callups: ['o3', 'o1', 'o2'].map(id => ({
+        id: 'c-' + id, event_id: 'e1', player_id: id, status: 'called', player: ATLETAS.find(a => a.id === id),
+      })),
+    })
+    await page.goto('/csc-vet/events?convocatoria=e1')
+    const ficha = page.getByRole('region').first()
+    await expect(ficha).toContainText('Zacarias', { timeout: 15000 })
+    expect(crescente(posicoes(await ficha.innerText()))).toBe(true)
+  })
+})

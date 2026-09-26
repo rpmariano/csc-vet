@@ -27,7 +27,7 @@ export const PastilhaEstado: React.FC<{ className?: string }> = ({ className = '
 
   return (
     <span
-      className={`flex-none font-display font-bold text-[11.5px] px-2.5 h-7 flex items-center rounded-[14px] border ${estado.classe} ${className}`}
+      className={`flex-none font-display font-bold text-[11.5px] px-2.5 h-7 flex items-center rounded-[14px] ${estado.classe} ${className}`}
     >
       {estado.texto}
     </span>

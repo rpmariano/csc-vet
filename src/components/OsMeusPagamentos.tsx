@@ -207,7 +207,7 @@ export const OsMeusPagamentos: React.FC<{
 
                   {(g.temAtraso || g.temAVencer) && (
                     <span
-                      className={`shrink-0 font-display font-black text-[8.5px] tracking-[0.1em] uppercase px-2 py-1 rounded-full border ${
+                      className={`shrink-0 font-display font-black text-[8.5px] tracking-[0.1em] uppercase px-2 py-1 rounded-full ${
                         g.temAtraso ? ESTADO.atraso.classe : ESTADO['a-vencer'].classe
                       }`}
                     >
@@ -253,7 +253,7 @@ export const OsMeusPagamentos: React.FC<{
                             {fmtEuro(item.valor)}
                           </span>
                           <span
-                            className={`font-display font-black text-[8.5px] tracking-[0.1em] uppercase px-2 py-0.5 rounded-full border ${ESTADO[item.estado].classe}`}
+                            className={`font-display font-black text-[8.5px] tracking-[0.1em] uppercase px-2 py-0.5 rounded-full ${ESTADO[item.estado].classe}`}
                           >
                             {ESTADO[item.estado].texto}
                           </span>
