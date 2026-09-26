@@ -241,7 +241,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
               )}
             </span>
             <span
-              className={`font-display font-bold text-[9.5px] px-2.5 py-1 rounded-[9px] border flex-none ${estado.classe}`}
+              className={`font-display font-bold text-[9.5px] px-2.5 py-1 rounded-[9px] flex-none ${estado.classe}`}
             >
               {estado.texto}
             </span>

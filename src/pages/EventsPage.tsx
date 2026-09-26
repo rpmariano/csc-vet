@@ -36,7 +36,7 @@ import { ConvocatoriaAoCriar } from '../components/callups/ConvocatoriaAoCriar'
 import type { EventoCriado } from '../components/callups/ConvocatoriaAoCriar'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
-import { hasMatchReport, ROTULO_RESPOSTA, CORES_TIPO } from '../lib/eventos'
+import { hasMatchReport, ROTULO_RESPOSTA, CORES_TIPO, compararPorCamisola } from '../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 import { EcraDetalhe } from '../components/EcraDetalhe'
 import { EditarEvento } from '../components/eventos/EditarEvento'
@@ -84,12 +84,8 @@ const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
   // fundia os perfis do Supabase com uma lista de sementes em src/data/initialPlayers.ts,
   // ficheiro que continha dados pessoais reais (NIF, IBAN, morada) e que por isso ia
   // parar ao JavaScript servido publicamente. Foi removido.
-  return [...remoteProfiles].sort((a, b) => {
-    if (a.jersey_number && b.jersey_number) return a.jersey_number - b.jersey_number
-    if (a.jersey_number) return -1
-    if (b.jersey_number) return 1
-    return getPlayerDisplayName(a).localeCompare(getPlayerDisplayName(b))
-  })
+  // Por ordem alfabética do nome da camisola, como todas as listas de atletas.
+  return [...remoteProfiles].sort(compararPorCamisola)
 }
 
 const ensurePlayerIdsForSupabase = async (pIds: string[], _playerList: Profile[]): Promise<string[]> => {
@@ -2009,7 +2005,7 @@ const EventsPage: React.FC = () => {
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {/* A cor de cada tipo é a da Agenda (`CORES_TIPO`): aqui o jogo
                           era azul e o convívio roxo, e lá o jogo é vermelho. */}
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider border ${
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider ${
                         CORES_TIPO[activeCallupModalEvent.type as keyof typeof CORES_TIPO]?.pastilha ?? ''
                       } ${CORES_TIPO[activeCallupModalEvent.type as keyof typeof CORES_TIPO]?.texto ?? 'text-white'}`}>
                         {activeCallupModalEvent.type === 'match' ? 'Jogo' : activeCallupModalEvent.type === 'practice' ? 'Treino' : 'Convívio'}

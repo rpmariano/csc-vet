@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { compararPorCamisola, getPlayerDisplayName } from '../lib/eventos'
 import {
   Landmark,
   Plus,
@@ -346,10 +347,8 @@ const FinancePage: React.FC = () => {
     camisola, e procurar um nome numa lista ordenada por número é ler os vinte.
   */
   const quotasAgrupadas = useMemo(() => {
-    const nomeDe = (q: PlayerQuotaOverview) =>
-      (q.player.shirt_name || q.player.name || '').trim()
     const porNome = (a: PlayerQuotaOverview, b: PlayerQuotaOverview) =>
-      nomeDe(a).localeCompare(nomeDe(b), 'pt', { sensitivity: 'base' })
+      compararPorCamisola(a.player, b.player)
     return {
       devedores: quotaOverview.filter(q => q.lateCount > 0).sort(porNome),
       emDia: quotaOverview.filter(q => q.lateCount === 0).sort(porNome),
@@ -1717,7 +1716,7 @@ const FinancePage: React.FC = () => {
                         const paidTotal = payments.reduce((s, pay) => s + pay.amount, 0)
                         return {
                           playerId,
-                          nome: p?.shirt_name || p?.name || 'Jogador',
+                          nome: p ? getPlayerDisplayName(p) : 'Jogador',
                           payments,
                           paidTotal,
                           remaining: Math.max(0, c.amount - paidTotal),

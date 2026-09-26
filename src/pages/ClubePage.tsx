@@ -171,25 +171,26 @@ const Bloco: React.FC<{
         {cadeado && <Lock size={11} className="text-csc-gold" aria-hidden="true" />}
         <EtiquetaSeccao como="h2">{titulo}</EtiquetaSeccao>
       </div>
-      <div className="space-y-2">
+      {/* Um cartão por bloco, com as entradas como linhas — eram cartões
+          irmãos, um por entrada (a app mais leve, 2026-09-26). */}
+      <CartaoSimples className="overflow-hidden">
         {entradas.map(entrada => (
           <LinhaEntrada key={entrada.titulo} entrada={entrada} contagem={contagens[entrada.titulo]} />
         ))}
-      </div>
+      </CartaoSimples>
     </section>
   )
 
 const LinhaEntrada: React.FC<{ entrada: Entrada; contagem?: string }> = ({ entrada, contagem }) => (
-  <CartaoSimples
-    como={Link}
+  <Link
     to={entrada.para}
     /* Os destinos com rota própria (Plantel, Eventos, Financeiro) mostram
        "‹ Clube" por causa disto — ver `VoltarAOrigem`. */
     state={{ origem: 'Clube' }}
     onClick={() => triggerHaptic('light')}
-    className="min-h-14 flex items-center gap-3.5 px-4 py-3 cursor-pointer
-      transition-transform duration-150 active:scale-97
-      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+    className="linha-leve min-h-14 flex items-center gap-3.5 px-4 py-3 cursor-pointer
+      transition-colors duration-150 active:bg-white/[0.04]
+      focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-csc-gold"
   >
     <entrada.Icone size={20} strokeWidth={2} className="shrink-0 text-csc-gold" />
     <span className="min-w-0 flex-1">
@@ -198,7 +199,7 @@ const LinhaEntrada: React.FC<{ entrada: Entrada; contagem?: string }> = ({ entra
         {contagem ?? entrada.descricao}
       </span>
     </span>
-  </CartaoSimples>
+  </Link>
 )
 
 const ClubePage: React.FC = () => {

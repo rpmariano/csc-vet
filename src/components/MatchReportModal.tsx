@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { compararPorCamisola } from '../lib/eventos'
 import { Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock, AlertTriangle } from 'lucide-react'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJogo'
 import { supabase } from '../lib/supabaseClient'
@@ -160,7 +161,9 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           return false
         })
 
-        const candidateProfiles = relevantProfiles.length > 0 ? relevantProfiles : allProfiles.filter(p => p.role === 'player')
+        // Por ordem alfabética do nome da camisola, como todas as listas de atletas.
+        const candidateProfiles = (relevantProfiles.length > 0 ? relevantProfiles : allProfiles.filter(p => p.role === 'player'))
+          .sort(compararPorCamisola)
 
         const merged: PlayerMatchStat[] = candidateProfiles.map(p => {
           const stat = statMap.get(p.id)

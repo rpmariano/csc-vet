@@ -172,8 +172,11 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   são `discreto` — sem caixa, com os 44px de alvo. **O vidro com desfoque só
   fica no cartão do próximo jogo da Home**; estava em doze sítios, e era o
   cartão mais pesado de cada ecrã. Os Eventos, os Torneios, os Adversários,
-  os Campos e os Comunicados são o exemplo de lista; as capturas de antes e
-  depois estão em `docs/prototipo-leve/`.
+  os Campos, os Comunicados, o índice do Clube e os Relatórios são o exemplo
+  de lista — **uma lista são linhas num cartão, nunca cartões irmãos** —; as
+  pastilhas de estado e de tipo são só cor, sem moldura; e a bola verde com o
+  número mantém o aro dourado, porque é a marca do atleta e não uma caixa. As
+  capturas de antes e depois estão em `docs/prototipo-leve/`.
 - **Todos os alvos de toque têm no mínimo 44px de altura**, sem exceções — inclui
   pastilhas, separadores e botões de linha.
 - O fim da coluna acaba acima da barra inferior com `margin-bottom`, nunca
@@ -930,6 +933,18 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   (`src/components/ui`) é a linha das três — **a bola verde com o número é de
   todas, a fotografia e a posição são só do Plantel**, que é o ecrã onde a
   pergunta é quem é a pessoa; nos outros dois é quanto deve.
+- **Uma lista de atletas lê-se por ordem alfabética do nome da camisola**
+  (`compararPorCamisola`, em `src/lib/eventos.ts` — o nome que se mostra, o
+  do `getPlayerDisplayName`: camisola, senão alcunha, senão nome; decisão de
+  2026-09-26). Em todo o lado: o Plantel, a convocatória, o editar evento, a
+  ficha de jogo, as Quotas, os participantes de um encargo, as Contas por
+  atleta. Havia seis ordens — número de camisola, nome completo, a camisola
+  sem a alcunha, a ordem da base —, e a mesma pessoa mudava de sítio conforme
+  o ecrã. **Os rankings ordenam-se pelo número** (as estatísticas, os
+  melhores marcadores) e usam esta ordem só como desempate; o número de
+  camisola continua a ser uma das ordens do Plantel, escolhida no funil.
+  `listas-do-plantel.spec.ts` cobre-o, com um atleta primeiro pelo nome e
+  último pela camisola.
 - **Na linha do Plantel, a letra pequena são as posições, em sigla.** "PL",
   "DCE · MC", "GR" — as mesmas siglas do campo (`siglaDaPosicao`, em
   `src/lib/posicoes.ts`), e os dois pontas de lança dão "PL" os dois, como lá.

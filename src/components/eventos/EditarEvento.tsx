@@ -6,7 +6,7 @@ import { toast } from '../../context/ToastContext'
 import { useClub } from '../../context/ClubContext'
 import { extractRolesFromProfile, type Profile } from '../../context/AuthContext'
 import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
-import { getGoogleMapsUrl, getPlayerDisplayName } from '../../lib/eventos'
+import { getGoogleMapsUrl, getPlayerDisplayName, compararPorCamisola } from '../../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../../lib/jornadaDoJogo'
 import { parseMatchReportMetadata, buildDescriptionWithMatchReport } from '../MatchReportModal'
 import { EcraDetalhe } from '../EcraDetalhe'
@@ -525,7 +525,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   /* ------------------------------------------------------------------ ecrã */
 
   const q = procura.trim().toLowerCase()
-  const lista = plantel.filter(p =>
+  const lista = [...plantel].sort(compararPorCamisola).filter(p =>
     !q ||
     p.name.toLowerCase().includes(q) ||
     p.shirt_name?.toLowerCase().includes(q) ||
