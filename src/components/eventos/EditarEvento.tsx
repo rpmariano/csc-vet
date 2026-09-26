@@ -545,7 +545,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
         <form onSubmit={aoSubmeter} className="space-y-4">
           <div>
             <p className={ETIQUETA}>Tipo de evento</p>
-            <div className="w-full min-h-11 px-3.5 border border-white/10 bg-white/5 text-white rounded-[14px] text-xs font-black flex items-center justify-between">
+            <div className="w-full min-h-11 px-3.5 bg-white/5 text-white rounded-[14px] text-xs font-black flex items-center justify-between">
               <span>{ROTULO_TIPO[tipo]}</span>
               <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-md">Tipo bloqueado</span>
             </div>
@@ -583,7 +583,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
           </div>
 
           {tipo === 'match' && (
-            <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-3">
+            <div className="p-3.5 bg-white/5 rounded-2xl space-y-3">
               <label htmlFor="editar-evento-amigavel" className="flex items-center gap-2.5 min-h-11 cursor-pointer">
                 <input
                   id="editar-evento-amigavel"
@@ -662,7 +662,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
           )}
 
           {tipo === 'match' && casaFora === 'home' ? (
-            <div className="p-3.5 bg-csc-light/10 border border-csc-light/35 rounded-2xl flex items-center justify-between gap-2">
+            <div className="p-3.5 bg-csc-light/10 rounded-2xl flex items-center justify-between gap-2">
               <div className="space-y-1 min-w-0 flex-1">
                 <span className="text-[10px] font-black uppercase tracking-wider text-csc-verde-texto flex items-center gap-1.5">
                   <MapPin size={13} className="shrink-0" />
@@ -677,7 +677,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
                   href={getGoogleMapsUrl(local)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10.5px] shrink-0"
+                  className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 text-csc-gold font-display font-bold text-[10.5px] shrink-0"
                 >
                   Maps <ExternalLink size={11} />
                 </a>
@@ -721,7 +721,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
           </div>
 
           {/* A convocatória — o que está em `callups`, e mais nada. */}
-          <section aria-labelledby="editar-evento-convocatoria" className="p-4 bg-white/5 border border-white/10 rounded-2xl space-y-3">
+          <section aria-labelledby="editar-evento-convocatoria" className="p-4 bg-white/5 rounded-2xl space-y-3">
             <div className="flex items-center justify-between gap-2">
               <h2 id="editar-evento-convocatoria" className="text-xs font-black text-white flex items-center gap-1.5">
                 <Users size={15} className="text-csc-gold" />
@@ -733,7 +733,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
             </div>
 
             {tipo === 'practice' && (
-              <p className="text-[11px] leading-snug text-white/70 bg-csc-light/10 border border-csc-light/25 rounded-xl px-3 py-2">
+              <p className="text-[11px] leading-snug text-white/70 bg-csc-light/10 rounded-xl px-3 py-2">
                 Nos treinos a convocatória é automática: entram todos os aptos. Aqui só se acerta a lista.
               </p>
             )}
@@ -830,7 +830,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
 
           <label
             htmlFor="editar-evento-rascunho"
-            className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 cursor-pointer min-h-14"
+            className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/5 cursor-pointer min-h-14"
           >
             <input
               id="editar-evento-rascunho"

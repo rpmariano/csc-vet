@@ -75,25 +75,25 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     switch (variant) {
       case 'danger':
         return {
-          iconBg: 'bg-csc-red/16 text-csc-vermelho-texto border border-csc-red/32',
+          iconBg: 'bg-csc-red/16 text-csc-vermelho-texto',
           defaultIcon: <Trash2 size={24} />,
           boxBg: 'bg-csc-red/10 border-csc-red/28 text-white/85',
         }
       case 'warning':
         return {
-          iconBg: 'bg-csc-gold/16 text-csc-gold border border-csc-gold/32',
+          iconBg: 'bg-csc-gold/16 text-csc-gold',
           defaultIcon: <AlertCircle size={24} />,
           boxBg: 'bg-csc-gold/10 border-csc-gold/28 text-white/85',
         }
       case 'success':
         return {
-          iconBg: 'bg-csc-light/16 text-csc-verde-texto border border-csc-light/32',
+          iconBg: 'bg-csc-light/16 text-csc-verde-texto',
           defaultIcon: <CheckCircle size={24} />,
           boxBg: 'bg-csc-light/10 border-csc-light/28 text-white/85',
         }
       default:
         return {
-          iconBg: 'bg-csc-blue/20 text-csc-azul-texto border border-csc-blue/35',
+          iconBg: 'bg-csc-blue/20 text-csc-azul-texto',
           defaultIcon: <AlertTriangle size={24} />,
           boxBg: 'bg-white/6 border-white/12 text-white/85',
         }

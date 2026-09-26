@@ -200,7 +200,7 @@ export const ConvocatoriaAoCriar: React.FC<{
             </span>
           </span>
           {!evento.ativo && (
-            <span className="font-display font-black text-[8.5px] tracking-[0.1em] uppercase text-csc-gold bg-csc-gold/15 border border-csc-gold/30 px-2 py-1 rounded-full shrink-0">
+            <span className="font-display font-black text-[8.5px] tracking-[0.1em] uppercase text-csc-gold bg-csc-gold/15 px-2 py-1 rounded-full shrink-0">
               Rascunho
             </span>
           )}
@@ -211,7 +211,7 @@ export const ConvocatoriaAoCriar: React.FC<{
             <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62">
               {escolhidos.size} {escolhidos.size === 1 ? 'apto convocado' : 'aptos convocados'}
             </p>
-            <p className="text-[10.5px] leading-relaxed text-white/62 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
+            <p className="text-[10.5px] leading-relaxed text-white/62 bg-white/5 rounded-2xl px-3.5 py-2.5">
               Nos treinos a convocatória é automática: entram todos os atletas aptos, ficam de fora
               lesionados e inativos.
             </p>
@@ -231,7 +231,7 @@ export const ConvocatoriaAoCriar: React.FC<{
               <button
                 type="button"
                 onClick={() => { triggerHaptic('light'); setEscolhidos(new Set(aptos.map(p => p.id))) }}
-                className="min-h-11 px-3.5 rounded-[22px] bg-csc-light/15 border border-csc-light/35 text-csc-verde-texto
+                className="min-h-11 px-3.5 rounded-[22px] bg-csc-light/15 text-csc-verde-texto
                   font-display font-extrabold text-[11px] flex items-center gap-1.5 cursor-pointer
                   transition-transform duration-150 active:scale-97
                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -242,7 +242,7 @@ export const ConvocatoriaAoCriar: React.FC<{
               <button
                 type="button"
                 onClick={repetirUltima}
-                className="min-h-11 px-3.5 rounded-[22px] bg-white/8 border border-white/15 text-white/75
+                className="min-h-11 px-3.5 rounded-[22px] bg-white/8 text-white/75
                   font-display font-extrabold text-[11px] flex items-center gap-1.5 cursor-pointer
                   transition-transform duration-150 active:scale-97
                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -253,7 +253,7 @@ export const ConvocatoriaAoCriar: React.FC<{
               <button
                 type="button"
                 onClick={() => { triggerHaptic('light'); setEscolhidos(new Set()) }}
-                className="min-h-11 px-3.5 rounded-[22px] bg-white/8 border border-white/15 text-white/75
+                className="min-h-11 px-3.5 rounded-[22px] bg-white/8 text-white/75
                   font-display font-extrabold text-[11px] flex items-center gap-1.5 cursor-pointer
                   transition-transform duration-150 active:scale-97
                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -317,7 +317,7 @@ export const ConvocatoriaAoCriar: React.FC<{
         </p>
 
         {/* As ações presas ao fundo, por cima da barra de baixo. */}
-        <div className="sticky bottom-[108px] z-20 flex gap-2 p-2 rounded-[28px] bg-csc-superficie/95 border border-white/10 backdrop-blur-sm">
+        <div className="sticky bottom-[108px] z-20 flex gap-2 p-2 rounded-[28px] bg-csc-superficie/95 backdrop-blur-sm">
           {acoes}
         </div>
       </div>

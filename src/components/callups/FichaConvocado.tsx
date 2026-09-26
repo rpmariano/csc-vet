@@ -210,11 +210,11 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
                     aria-current={ativo ? 'true' : undefined}
                     aria-label={c.player?.name ?? 'Convocado'}
                     className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 cursor-pointer
-                      font-display font-extrabold text-[12px] border transition-transform duration-150 active:scale-97
+                      font-display font-extrabold text-[12px] transition-transform duration-150 active:scale-97
                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                         ativo
-                          ? 'bg-csc-gold text-csc-tinta border-csc-gold'
-                          : 'bg-white/6 text-white/60 border-white/12'
+                          ? 'bg-csc-gold text-csc-tinta '
+                          : 'bg-white/6 text-white/60 '
                       }`}
                   >
                     {c.player?.jersey_number ?? '–'}
@@ -362,7 +362,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
               <a
                 href={'tel:' + telefoneLimpo}
                 onClick={() => triggerHaptic('light')}
-                className="h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/15 text-white
+                className="h-11 px-3.5 rounded-[18px] bg-white/8 text-white
                   font-display font-extrabold text-[11px] flex items-center gap-1.5 shrink-0
                   transition-transform duration-150 active:scale-97
                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -374,7 +374,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => triggerHaptic('light')}
-                className="h-11 px-3.5 rounded-[18px] bg-csc-light/16 border border-csc-light/30 text-csc-verde-texto
+                className="h-11 px-3.5 rounded-[18px] bg-csc-light/16 text-csc-verde-texto
                   font-display font-extrabold text-[11px] flex items-center gap-1.5 shrink-0
                   transition-transform duration-150 active:scale-97
                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -390,10 +390,10 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
               type="button"
               onClick={() => { triggerHaptic('light'); aoConfirmar() }}
               aria-pressed={confirmado}
-              className={`flex-1 h-12 rounded-3xl border font-display font-extrabold text-[12.5px] cursor-pointer
+              className={`flex-1 h-12 rounded-3xl font-display font-extrabold text-[12.5px] cursor-pointer
                 flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                  confirmado ? 'bg-csc-light border-csc-light text-white' : 'bg-white/9 border-white/20 text-white'
+                  confirmado ? 'bg-csc-light text-white' : 'bg-white/9 text-white'
                 }`}
             >
               <CheckCircle2 size={15} /> Confirmado
@@ -402,10 +402,10 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
               type="button"
               onClick={() => { triggerHaptic('warning'); aoRecusar() }}
               aria-pressed={recusou}
-              className={`flex-1 h-12 rounded-3xl border font-display font-extrabold text-[12.5px] cursor-pointer
+              className={`flex-1 h-12 rounded-3xl font-display font-extrabold text-[12.5px] cursor-pointer
                 flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                  recusou ? 'bg-csc-red border-csc-red text-white' : 'bg-white/9 border-white/20 text-white'
+                  recusou ? 'bg-csc-red text-white' : 'bg-white/9 text-white'
                 }`}
             >
               <XCircle size={15} /> Recusou

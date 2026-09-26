@@ -460,16 +460,16 @@ export const MatchReportsPage: React.FC = () => {
 
                   <span className="flex items-center gap-1.5 shrink-0">
                     {m.is_active === false && (
-                      <span className="font-display font-black text-[8.5px] tracking-[0.1em] uppercase text-csc-gold bg-csc-gold/15 border border-csc-gold/30 px-2 py-0.5 rounded-full">
+                      <span className="font-display font-black text-[8.5px] tracking-[0.1em] uppercase text-csc-gold bg-csc-gold/15 px-2 py-0.5 rounded-full">
                         Rascunho
                       </span>
                     )}
                     {m.tournament ? (
-                      <span className="font-display font-bold text-[9.5px] text-csc-verde-texto bg-csc-light/15 border border-csc-light/30 px-2.5 py-1 rounded-full truncate max-w-[130px]">
+                      <span className="font-display font-bold text-[9.5px] text-csc-verde-texto bg-csc-light/15 px-2.5 py-1 rounded-full truncate max-w-[130px]">
                         {m.tournament.name}
                       </span>
                     ) : m.is_friendly ? (
-                      <span className="font-display font-bold text-[9.5px] text-csc-gold bg-csc-gold/12 border border-csc-gold/30 px-2.5 py-1 rounded-full">
+                      <span className="font-display font-bold text-[9.5px] text-csc-gold bg-csc-gold/12 px-2.5 py-1 rounded-full">
                         Amigável
                       </span>
                     ) : null}
@@ -494,11 +494,11 @@ export const MatchReportsPage: React.FC = () => {
                   <span className="flex items-center gap-1.5 shrink-0">
                     {hasScore ? (
                       <>
-                        <span className="min-w-9 text-center font-display font-black text-[22px] text-white bg-white/8 border border-white/12 px-2 py-0.5 rounded-xl tabular-nums">
+                        <span className="min-w-9 text-center font-display font-black text-[22px] text-white bg-white/8 px-2 py-0.5 rounded-xl tabular-nums">
                           {m.home_score}
                         </span>
                         <span className="font-display font-black text-csc-gold">:</span>
-                        <span className="min-w-9 text-center font-display font-black text-[22px] text-white bg-white/8 border border-white/12 px-2 py-0.5 rounded-xl tabular-nums">
+                        <span className="min-w-9 text-center font-display font-black text-[22px] text-white bg-white/8 px-2 py-0.5 rounded-xl tabular-nums">
                           {m.away_score}
                         </span>
                       </>

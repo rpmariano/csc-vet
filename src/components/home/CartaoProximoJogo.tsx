@@ -151,7 +151,7 @@ export const CartaoProximoJogo: React.FC<{
         </h2>
 
         <div className="flex items-center gap-2.5 mt-4">
-          <span className="flex-none inline-flex items-center h-[26px] px-[11px] rounded-[13px] bg-black/35 border border-white/15 font-display font-bold text-[11px] text-white">
+          <span className="flex-none inline-flex items-center h-[26px] px-[11px] rounded-[13px] bg-black/35 font-display font-bold text-[11px] text-white">
             {quantoFalta(jogo.date_time)}
           </span>
           <span className="min-w-0 truncate text-[12.5px] text-white/72">
@@ -244,12 +244,12 @@ export const CartaoProximoJogo: React.FC<{
                     type="button"
                     onClick={e => { e.stopPropagation(); aoResponder(jogo.id, 'confirmed') }}
                     aria-pressed={jogo.minhaResposta === 'confirmed'}
-                    className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
+                    className={`flex-1 h-11 rounded-[22px] font-display font-bold text-[13px] cursor-pointer
                       flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                         jogo.minhaResposta === 'confirmed'
-                          ? 'bg-csc-light border-csc-light text-white'
-                          : 'bg-white/9 border-white/20 text-white'
+                          ? 'bg-csc-light text-white'
+                          : 'bg-white/9 text-white'
                       }`}
                   >
                     {jogo.minhaResposta === 'confirmed' && <CheckCircle2 size={14} />}
@@ -259,12 +259,12 @@ export const CartaoProximoJogo: React.FC<{
                     type="button"
                     onClick={e => { e.stopPropagation(); aoResponder(jogo.id, 'declined') }}
                     aria-pressed={jogo.minhaResposta === 'declined'}
-                    className={`flex-1 h-11 rounded-[22px] border font-display font-bold text-[13px] cursor-pointer
+                    className={`flex-1 h-11 rounded-[22px] font-display font-bold text-[13px] cursor-pointer
                       flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                         jogo.minhaResposta === 'declined'
-                          ? 'bg-white/90 border-white/90 text-csc-tinta'
-                          : 'bg-white/9 border-white/20 text-white'
+                          ? 'bg-white/90 text-csc-tinta'
+                          : 'bg-white/9 text-white'
                       }`}
                   >
                     {jogo.minhaResposta === 'declined' && <XCircle size={14} />}

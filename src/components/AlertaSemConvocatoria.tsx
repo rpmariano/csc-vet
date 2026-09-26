@@ -244,7 +244,7 @@ export const PersianaSemConvocatoria: React.FC<{
         )
       })}
 
-      <p className="text-[10.5px] leading-relaxed text-white/62 bg-white/5 border border-white/10 rounded-2xl px-3.5 py-2.5">
+      <p className="text-[10.5px] leading-relaxed text-white/62 bg-white/5 rounded-2xl px-3.5 py-2.5">
         Os treinos não entram aqui — convocam automaticamente todos os aptos, e os rascunhos
         também não. O aviso fica enquanto houver eventos por convocar.
       </p>

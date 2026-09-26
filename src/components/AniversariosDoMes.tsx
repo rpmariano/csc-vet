@@ -75,7 +75,7 @@ export const AniversariosDoMes: React.FC<{ mes: number }> = ({ mes }) => {
   return (
     <CartaoSimples className="flex items-center gap-3 px-4 py-3.5 bg-csc-blue/15 border-csc-blue/30">
       <span
-        className="w-8 h-8 rounded-[10px] bg-csc-blue/25 border border-csc-blue/35
+        className="w-8 h-8 rounded-[10px] bg-csc-blue/25
           flex items-center justify-center text-csc-azul-texto flex-none"
       >
         <Cake size={15} />

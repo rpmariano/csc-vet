@@ -326,7 +326,7 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
         {/* Um cartão, e os torneios como linhas lá dentro. Era um cartão cujo
             único conteúdo eram outros cartões, com três botões em caixa e
             sombra em cada um. */}
-        <div className="cartao-leve text-white overflow-hidden">
+        <div className="cartao-simples text-white overflow-hidden">
           {filtrados.length === 0 ? (
             <EstadoVazio icone={Trophy} titulo="Nenhum torneio encontrado." texto="Tenta mudar a procura ou cria uma competição nova." />
           ) : (
@@ -437,7 +437,7 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                   Imagem do Torneio
                 </label>
                 {existingTourImageUrl && !tourImage && (
-                  <div className="flex items-center gap-3 mb-2 p-2 bg-white/5 border border-white/10 rounded-xl">
+                  <div className="flex items-center gap-3 mb-2 p-2 bg-white/5 rounded-xl">
                     <img src={existingTourImageUrl} alt="Imagem Atual" className="w-10 h-10 object-contain p-1 bg-white rounded-lg border border-white/20" />
                     <span className="text-xs text-white/60 font-medium truncate flex-1">Imagem atualmente guardada</span>
                   </div>
@@ -446,12 +446,12 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                   type="file"
                   accept="image/*"
                   onChange={e => setTourImage(e.target.files ? e.target.files[0] : null)}
-                  className="w-full px-4 py-2 border border-white/15 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-tinta"
+                  className="w-full px-4 py-2 rounded-xl text-xs bg-white/5 text-white/70 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-csc-gold file:text-csc-tinta"
                 />
                 <p className="text-[11px] text-white/62 font-medium mt-1">Acompanha os ecrãs desta competição (Gestão da Liga, Classificações, badges de jogo).</p>
               </div>
 
-              <details className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden group">
+              <details className="mt-4 rounded-xl bg-white/5 overflow-hidden group">
                 <summary className="px-4 py-3 text-sm font-bold text-white/80 cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors">
                   <span>Regras da prova (opcional)</span>
                   <ChevronDown size={15} className="text-white/62 group-open:rotate-180 transition-transform" />
@@ -524,7 +524,7 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                 </div>
               </details>
 
-              <details className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden group">
+              <details className="mt-4 rounded-xl bg-white/5 overflow-hidden group">
                 <summary className="px-4 py-3 text-sm font-bold text-white/80 cursor-pointer flex justify-between items-center hover:bg-white/10 transition-colors">
                   <span>Inscrição na prova (opcional)</span>
                   <ChevronDown size={15} className="text-white/62 group-open:rotate-180 transition-transform" />
@@ -600,7 +600,7 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
 
                       <div className="space-y-2">
                         {tourRules.registration_fee.installments.map((inst, idx) => (
-                          <div key={idx} className="grid grid-cols-3 gap-2 items-end p-2.5 bg-white/6 rounded-lg border border-white/10">
+                          <div key={idx} className="grid grid-cols-3 gap-2 items-end p-2.5 bg-white/6 rounded-lg">
                             <div>
                               <label className={ETIQUETA}>Tranche {idx + 1} — Valor (€)</label>
                               <input
@@ -641,9 +641,9 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                             </div>
                             <div className="text-xs font-bold">
                               {inst.paid ? (
-                                <span className="text-csc-verde-texto bg-csc-light/10 px-2 py-1 rounded-lg border border-csc-light/25">✓ Paga</span>
+                                <span className="text-csc-verde-texto bg-csc-light/10 px-2 py-1 rounded-lg">✓ Paga</span>
                               ) : (
-                                <span className="text-csc-gold bg-csc-gold/10 px-2 py-1 rounded-lg border border-csc-gold/25">Por pagar</span>
+                                <span className="text-csc-gold bg-csc-gold/10 px-2 py-1 rounded-lg">Por pagar</span>
                               )}
                             </div>
                           </div>
@@ -658,7 +658,7 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
               </details>
 
               {editingTourId ? (
-                <div className="mt-4 border border-white/10 rounded-xl bg-white/5 overflow-hidden flex flex-col max-h-[350px]">
+                <div className="mt-4 rounded-xl bg-white/5 overflow-hidden flex flex-col max-h-[350px]">
                   <div className="px-4 py-3 bg-white/10 border-b border-white/10 flex justify-between items-center">
                     <div>
                       <h4 className="text-sm font-bold text-white">Plantel Inscrito</h4>
@@ -694,7 +694,7 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                         const playerPositions = p.position ? p.position.split(',').map((pos: string) => pos.trim()).filter(Boolean) : []
 
                         return (
-                          <label key={p.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-csc-light/45 bg-csc-light/15' : 'border-white/12 bg-white/5'} ${isInvalid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/10'} transition-colors`}>
+                          <label key={p.id} className={`flex items-center justify-between p-2.5 rounded-xl ${isSelected ? ' bg-csc-light/15' : ' bg-white/5'} ${isInvalid ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/10'} transition-colors`}>
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 overflow-hidden shrink-0 flex items-center justify-center">
                                 <span className="font-display text-sm font-black text-csc-gold">{p.jersey_number || '-'}</span>
@@ -745,7 +745,7 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                   </div>
                 </div>
               ) : (
-                <div className="mt-4 p-4 border border-csc-azul-texto/30 bg-csc-blue/10 rounded-xl text-center">
+                <div className="mt-4 p-4 bg-csc-blue/10 rounded-xl text-center">
                   <p className="text-xs font-bold text-csc-azul-texto">Guarda o torneio primeiro para poderes inscrever o plantel da tua equipa.</p>
                 </div>
               )}

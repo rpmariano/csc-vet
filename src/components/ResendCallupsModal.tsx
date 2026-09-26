@@ -57,7 +57,7 @@ export const ResendCallupsModal: React.FC<ResendCallupsModalProps> = ({
           </div>
         </div>
 
-        <div className="bg-csc-gold/10 border border-csc-gold/25 rounded-2xl p-4 text-xs text-csc-gold space-y-2">
+        <div className="bg-csc-gold/10 rounded-2xl p-4 text-xs text-csc-gold space-y-2">
           <p className="font-bold text-white">
             Foram alterados os detalhes deste evento. Queres reenviar o pedido de confirmação a todos os atletas convocados?
           </p>

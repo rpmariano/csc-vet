@@ -204,7 +204,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
             O que fica é o que o título não diz: o emblema e a sigla — a que
             aparece nos placares e nas tabelas — e o histórico contra nós.
           */}
-          <div className="cartao-vidro px-4 py-4">
+          <div className="cartao-simples px-4 py-4">
             <div className="flex items-center gap-3.5">
               {adversario.logo_url ? (
                 <img
@@ -216,7 +216,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
                 /* Sem emblema desenha-se um escudo, nunca as iniciais: a sigla
                    está aqui mesmo ao lado, e repeti-la era lê-la duas vezes. */
                 <span
-                  className="w-14 h-14 bg-white/10 border border-white/15 rounded-2xl flex items-center justify-center
+                  className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center
                     text-white/35 shrink-0"
                   aria-hidden="true"
                 >
@@ -265,7 +265,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
                 <a
                   href={'tel:' + adversario.contact_phone.replace(/[^\d+]/g, '')}
                   onClick={() => triggerHaptic('light')}
-                  className="h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/15 text-csc-gold
+                  className="h-11 px-3.5 rounded-[18px] bg-white/8 text-csc-gold
                     font-display font-extrabold text-[11px] flex items-center gap-1.5 shrink-0
                     transition-transform duration-150 active:scale-97
                     focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
@@ -306,7 +306,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
               <button
                 type="button"
                 onClick={() => { triggerHaptic('light'); aoEditar() }}
-                className="h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/15 text-white
+                className="h-11 px-3.5 rounded-[18px] bg-white/8 text-white
                   font-display font-extrabold text-[11px] flex items-center shrink-0 cursor-pointer
                   transition-transform duration-150 active:scale-97
                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"

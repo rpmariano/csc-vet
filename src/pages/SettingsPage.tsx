@@ -362,12 +362,12 @@ const SettingsPage: React.FC = () => {
           type="button"
           onClick={() => toggleClinicalStatus()}
           aria-pressed={isInjured}
-          className={`flex-1 flex flex-col items-start gap-1.5 px-3.5 py-3 rounded-[18px] border text-left cursor-pointer
+          className={`flex-1 flex flex-col items-start gap-1.5 px-3.5 py-3 rounded-[18px] text-left cursor-pointer
             transition-transform duration-150 active:scale-97
             focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
               isInjured
-                ? 'bg-csc-red/14 border-csc-red/35'
-                : 'bg-csc-light/14 border-csc-light/35'
+                ? 'bg-csc-red/14 '
+                : 'bg-csc-light/14 '
             }`}
         >
           <span
@@ -500,11 +500,11 @@ const SettingsPage: React.FC = () => {
                       setSimulatedRole(papel === actualRole ? null : papel)
                     }}
                     aria-pressed={escolhido}
-                    className={`min-h-11 px-4 rounded-[22px] border font-display font-bold text-xs cursor-pointer
+                    className={`min-h-11 px-4 rounded-[22px] font-display font-bold text-xs cursor-pointer
                       transition-transform duration-150 active:scale-97 ${
                         escolhido
-                          ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                          : 'bg-white/5 border-white/12 text-white/70'
+                          ? 'bg-csc-gold text-csc-tinta'
+                          : 'bg-white/5 text-white/70'
                       }`}
                   >
                     {papel === 'admin' ? 'Direção' : papel === 'coach' ? 'Treinador' : 'Jogador'}
@@ -670,7 +670,7 @@ const SettingsPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-2.5">
             <div>
               <label className={ETIQUETA}>Email de Acesso (Apenas Leitura)</label>
-              <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white/70 font-medium font-mono">
+              <div className="flex items-center bg-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white/70 font-medium font-mono">
                 <Mail size={15} className="mr-2 text-white/60" />
                 <span>{formEmail}</span>
               </div>
@@ -702,7 +702,7 @@ const SettingsPage: React.FC = () => {
           </div>
 
           {/* Banner explicativo obrigatório */}
-          <div className="p-3.5 bg-csc-gold/10 border border-csc-gold/30 rounded-2xl flex items-start gap-2.5 text-xs text-csc-gold font-medium">
+          <div className="p-3.5 bg-csc-gold/10 rounded-2xl flex items-start gap-2.5 text-xs text-csc-gold font-medium">
             <AlertCircle size={17} className="text-csc-gold shrink-0 mt-0.5" />
             <div>
               <p className="font-extrabold text-csc-gold">Nota da Equipa Técnica:</p>
@@ -734,12 +734,12 @@ const SettingsPage: React.FC = () => {
               {(assignedRoles || ['player']).map(r => (
                 <span
                   key={r}
-                  className={`px-3 py-1.5 rounded-xl font-black text-xs border flex items-center gap-1.5 shadow-2xs ${
+                  className={`px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-2xs ${
                     r === 'admin'
-                      ? 'bg-csc-gold/15 text-csc-gold border-csc-gold/35'
+                      ? 'bg-csc-gold/15 text-csc-gold '
                       : r === 'coach'
-                      ? 'bg-csc-blue/20 text-csc-azul-texto border-csc-blue/40'
-                      : 'bg-csc-light/15 text-csc-verde-texto border-csc-light/35'
+                      ? 'bg-csc-blue/20 text-csc-azul-texto '
+                      : 'bg-csc-light/15 text-csc-verde-texto '
                   }`}
                 >
                   <span>{r === 'admin' ? 'Administrador / Direção' : r === 'coach' ? 'Treinador' : 'Jogador'}</span>
@@ -751,7 +751,7 @@ const SettingsPage: React.FC = () => {
           {/* O número da camisola é atribuído: fica de leitura, com o resto. */}
           <div className="pt-3 border-t border-csc-gold/20">
             <label className={ETIQUETA}>Nº da Camisola (Dorsal)</label>
-            <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs font-extrabold text-white">
+            <div className="px-3.5 py-2.5 bg-white/10 rounded-xl text-xs font-extrabold text-white">
               {formJerseyNumber ? `#${formJerseyNumber}` : 'Não atribuído'}
             </div>
           </div>
@@ -835,7 +835,7 @@ const SettingsPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-2.5">
             <div>
               <label className={ETIQUETA}>Início de atividade</label>
-              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs font-extrabold text-white">
+              <div className="px-3.5 py-2.5 bg-white/10 rounded-xl text-xs font-extrabold text-white">
                 {profile?.quota_start_date
                   ? fmtData(profile.quota_start_date)
                   : 'Desde o registo'}
@@ -843,7 +843,7 @@ const SettingsPage: React.FC = () => {
             </div>
             <div>
               <label className={ETIQUETA}>Fim de atividade</label>
-              <div className="px-3.5 py-2.5 bg-white/10 border border-white/15 rounded-xl text-xs font-extrabold text-white">
+              <div className="px-3.5 py-2.5 bg-white/10 rounded-xl text-xs font-extrabold text-white">
                 {profile?.quota_end_date
                   ? fmtData(profile.quota_end_date)
                   : 'Sem fim marcado'}
@@ -920,7 +920,7 @@ const SettingsPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-2.5">
             {/* Foto de Perfil */}
-            <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+            <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
               <label className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
               <input
                 type="file"
@@ -938,7 +938,7 @@ const SettingsPage: React.FC = () => {
             </div>
 
             {/* Documento de Identificação */}
-            <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+            <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
               <label className="block text-xs font-bold text-white/80">Doc. Identificação (CC / Passaporte)</label>
               <input
                 type="file"
@@ -955,7 +955,7 @@ const SettingsPage: React.FC = () => {
             </div>
 
             {/* Seguro Desportivo */}
-            <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+            <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
               <label className="block text-xs font-bold text-white/80">Apólice de Seguro Desportivo</label>
               <input
                 type="file"
@@ -972,7 +972,7 @@ const SettingsPage: React.FC = () => {
             </div>
 
             {/* Atestado Médico */}
-            <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+            <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
               <label className="block text-xs font-bold text-white/80">Atestado / Exame Médico Desportivo</label>
               <input
                 type="file"
@@ -990,7 +990,7 @@ const SettingsPage: React.FC = () => {
           </div>
 
           {/* Consentimento RGPD */}
-          <div className="p-3.5 bg-csc-light/10 border border-csc-light/30 rounded-2xl">
+          <div className="p-3.5 bg-csc-light/10 rounded-2xl">
             <label className="flex items-start gap-2.5 cursor-pointer">
               <input
                 type="checkbox"
@@ -1029,7 +1029,7 @@ const SettingsPage: React.FC = () => {
           type="button"
           onClick={() => signOut()}
           className="w-full min-h-11 flex items-center justify-center gap-2 px-4 rounded-2xl
-            bg-csc-red/15 border border-csc-red/35 text-csc-vermelho-texto
+            bg-csc-red/15 text-csc-vermelho-texto
             font-display font-extrabold text-xs cursor-pointer transition-transform duration-150 active:scale-97"
         >
           <LogOut size={16} />

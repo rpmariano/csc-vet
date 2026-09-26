@@ -84,7 +84,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
                 className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs transition-all shadow-md ${
                   selected
                     ? 'bg-csc-gold text-csc-tinta ring-2 ring-csc-gold/50 scale-110'
-                    : 'bg-white/85 text-csc-tinta hover:bg-white border border-white/60'
+                    : 'bg-white/85 text-csc-tinta hover:bg-white '
                 }`}
               >
                 {selected ? (
@@ -111,7 +111,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
       </div>
 
       {/* Resumo de Posições Selecionadas com Botões de Remoção */}
-      <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-1.5">
+      <div className="bg-white/5 p-3 rounded-xl space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-white/80">Posições Atribuídas ({selectedPositions.length}):</span>
           {/* Só quando dá mesmo para clicar: na ficha do atleta o campo é só
@@ -124,7 +124,7 @@ export const SoccerPitchSelector: React.FC<SoccerPitchSelectorProps> = ({
           {selectedPositions.map((pos, idx) => (
             <span
               key={idx}
-              className="bg-csc-gold/15 border border-csc-gold/30 text-csc-gold text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5"
+              className="bg-csc-gold/15 text-csc-gold text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5"
             >
               <span>{pos}</span>
               {!readOnly && (

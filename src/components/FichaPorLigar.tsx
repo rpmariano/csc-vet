@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Unlink } from 'lucide-react'
 import type { Profile } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { CartaoVidro, CartaoSimples, EtiquetaSeccao } from './ui'
+import { CartaoSimples, EtiquetaSeccao } from './ui'
 
 /**
  * Conta criada, ficha por ligar (ecrã 11a).
@@ -115,10 +115,10 @@ const ENTRETANTO = [
 
 export const FichaPorLigar: React.FC<{ perfil: Profile }> = ({ perfil }) => (
   <div className="space-y-4">
-    <CartaoVidro className="p-[17px]">
+    <CartaoSimples className="p-[17px]">
       <div className="flex items-center gap-3">
         <span
-          className="w-[34px] h-[34px] rounded-xl bg-csc-gold/20 border border-csc-gold/40
+          className="w-[34px] h-[34px] rounded-xl bg-csc-gold/20
             flex items-center justify-center text-csc-gold flex-none"
         >
           <Unlink size={16} />
@@ -137,7 +137,7 @@ export const FichaPorLigar: React.FC<{ perfil: Profile }> = ({ perfil }) => (
         O email do registo, em texto e não numa imagem: é a única coisa que
         esta pessoa pode fazer — dizê-lo a quem liga as contas no 3d.
       */}
-      <div className="flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-black/28 border border-csc-gold/25 mt-3.5">
+      <div className="flex items-center gap-2.5 px-3.5 py-3 rounded-2xl bg-black/28 mt-3.5">
         <EtiquetaSeccao como="p" className="text-csc-gold/85 text-[8.5px] flex-none">
           Registaste-te com
         </EtiquetaSeccao>
@@ -150,7 +150,7 @@ export const FichaPorLigar: React.FC<{ perfil: Profile }> = ({ perfil }) => (
         Diz este email a alguém da direção: ou o põe na tua ficha, ou liga as duas à mão. A
         app fica normal logo a seguir.
       </p>
-    </CartaoVidro>
+    </CartaoSimples>
 
     <CartaoSimples className="p-[17px]">
       <EtiquetaSeccao como="p">Entretanto podes</EtiquetaSeccao>

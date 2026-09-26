@@ -126,7 +126,7 @@ export const Modal: React.FC<ModalProps> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="shrink-0 w-11 h-11 rounded-full bg-white/10 border border-white/20 text-white/80 flex items-center justify-center transition-transform duration-150 cursor-pointer active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                className="shrink-0 w-11 h-11 rounded-full bg-white/10 text-white/80 flex items-center justify-center transition-transform duration-150 cursor-pointer active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
               >
                 <X size={16} className="stroke-[2.5]" />
               </button>

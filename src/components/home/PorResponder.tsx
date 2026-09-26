@@ -87,7 +87,7 @@ export const PorResponder: React.FC<{
           <button
             type="button"
             onClick={e => { e.stopPropagation(); aoResponder(p.id, 'confirmed') }}
-            className="flex-1 h-11 rounded-[22px] bg-white/9 border border-white/20 text-white
+            className="flex-1 h-11 rounded-[22px] bg-white/9 text-white
               font-display font-bold text-[13px] cursor-pointer transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
@@ -96,7 +96,7 @@ export const PorResponder: React.FC<{
           <button
             type="button"
             onClick={e => { e.stopPropagation(); aoResponder(p.id, 'declined') }}
-            className="flex-1 h-11 rounded-[22px] bg-white/9 border border-white/20 text-white
+            className="flex-1 h-11 rounded-[22px] bg-white/9 text-white
               font-display font-bold text-[13px] cursor-pointer transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >

@@ -475,7 +475,7 @@ const Home: React.FC = () => {
       {/* O cabeçalho (clube, época, canto) é o da moldura — `CabecalhoApp`. */}
 
       {estadoDaFicha === 'a-verificar' ? (
-        <CartaoVidro className="h-40 animate-pulse" />
+        <CartaoSimples className="h-40 animate-pulse" />
       ) : semFicha ? (
         <FichaPorLigar perfil={profile} />
       ) : (
@@ -553,7 +553,7 @@ const Home: React.FC = () => {
 
           {aniversariantes.length > 0 && (
             <CartaoSimples className="flex items-center gap-3 px-4 py-3.5 bg-csc-blue/15 border-csc-blue/30">
-              <span className="w-8 h-8 rounded-[10px] bg-csc-blue/25 border border-csc-blue/35 flex items-center justify-center text-csc-azul-texto flex-none">
+              <span className="w-8 h-8 rounded-[10px] bg-csc-blue/25 flex items-center justify-center text-csc-azul-texto flex-none">
                 <Cake size={15} />
               </span>
               <span className="flex-1 min-w-0">

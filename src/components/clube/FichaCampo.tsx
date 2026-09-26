@@ -123,7 +123,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
         <div className="space-y-3">
           {eCampoDoClube && (
             <span
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-2xl bg-csc-gold/16 border border-csc-gold/32
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-2xl bg-csc-gold/16
                 font-display font-extrabold text-[9px] tracking-[0.12em] uppercase text-csc-gold"
             >
               <Star size={11} /> Campo do clube
@@ -131,7 +131,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
           )}
 
           {/* Morada */}
-          <div className="cartao-vidro px-4 py-4">
+          <div className="cartao-simples px-4 py-4">
             <EtiquetaSeccao como="p">Morada</EtiquetaSeccao>
             {temMorada ? (
               <p className="font-display font-bold text-[15px] leading-snug text-white mt-2 text-pretty">
@@ -155,7 +155,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
                 if (!temMorada) e.preventDefault()
                 else triggerHaptic('light')
               }}
-              className={`flex-1 h-12 rounded-3xl bg-white/8 border border-white/16 text-white
+              className={`flex-1 h-12 rounded-3xl bg-white/8 text-white
                 font-display font-extrabold text-[11.5px] flex items-center justify-center gap-2
                 transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-offset-2
                 focus-visible:outline-csc-gold ${
@@ -168,7 +168,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
               type="button"
               onClick={copiarMorada}
               disabled={!temMorada}
-              className="flex-1 h-12 rounded-3xl bg-csc-light/14 border border-csc-light/32 text-csc-verde-texto
+              className="flex-1 h-12 rounded-3xl bg-csc-light/14 text-csc-verde-texto
                 font-display font-extrabold text-[11.5px] flex items-center justify-center gap-2 cursor-pointer
                 transition-transform duration-150 active:scale-97 disabled:opacity-45 disabled:cursor-not-allowed
                 disabled:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"

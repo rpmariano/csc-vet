@@ -240,9 +240,10 @@ h1[tabindex='-1']:focus {
  * ========================================================================== */
 
 /*
- * Cartão de vidro — o cartão principal de cada ecrã. É translúcido de
- * propósito: deixa passar a faixa verde do topo e o gradiente do fundo, que é
- * o que dá profundidade ao ecrã escuro.
+ * Cartão de vidro — **só o do próximo jogo, na Home** (decisão de 2026-09-26).
+ * É translúcido de propósito: deixa passar a faixa verde do topo. Estava em
+ * doze sítios, e com o desfoque, a borda e a sombra cada um era o cartão mais
+ * pesado do ecrã; passaram a `.cartao-simples`.
  */
 .cartao-vidro {
   background: rgba(255, 255, 255, 0.11);
@@ -253,25 +254,22 @@ h1[tabindex='-1']:focus {
   box-shadow: 0 20px 46px -24px rgba(0, 0, 0, 0.95);
 }
 
-/* Cartão leve — o protótipo da app mais leve (2026-09-26, Eventos e
- * Torneios). Um sinal só: fundo, sem borda nem sombra. As linhas vivem lá
- * dentro separadas por um fio (`.linha-leve`), sem caixa própria. Havia até
- * cinco caixas encaixadas umas nas outras, cada uma com fundo e borda, e os
- * brancos translúcidos somavam-se até um cinzento opaco. */
-.cartao-leve {
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 22px;
-}
+/* As linhas dentro de um cartão: um fio entre duas, e mais nada. */
 .linha-leve + .linha-leve {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-/* Cartão simples — listas e blocos secundários. Sem blur: são muitos por
- * ecrã, e o `backdrop-filter` repetido dezenas de vezes custa caro a pintar
- * num telemóvel antigo. */
+/* Cartão simples — o cartão da app. **Um sinal só: fundo, sem borda nem
+ * sombra** (decisão de 2026-09-26, "app mais leve"). Tinha fundo e borda, e
+ * dentro dele outras caixas com fundo e borda — até cinco encaixadas nos
+ * Eventos —, e o branco translúcido de cada uma somava-se até um cinzento
+ * opaco. **Dois níveis e mais nenhum:** o cartão, e as linhas lá dentro
+ * separadas por um fio (`.linha-leve`), sem caixa própria. Um cartão de cor
+ * (um aviso) leva o fundo tingido e também dispensa a borda.
+ * Sem blur: são muitos por ecrã, e o `backdrop-filter` repetido dezenas de
+ * vezes custa caro a pintar num telemóvel antigo. */
 .cartao-simples {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 22px;
 }
 

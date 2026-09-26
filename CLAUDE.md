@@ -142,9 +142,9 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   o que flutua — persianas, modais, a barra de baixo. `csc-tinta #121415` é o
   texto sobre dourado. Tipo de letra de display: **Archivo**.
 - Tipografia densa e pesada: `font-black`, tamanhos `text-[9px]`–`text-sm`.
-- **Cartões: usar os primitivos**, não classes à mão — `<CartaoVidro>` para o cartão
-  principal de um ecrã (translúcido, deixa passar a faixa do topo) e `<CartaoSimples>`
-  para listas e blocos. Idem `<Botao>`, `<Pastilha>`, `<TituloEcra>`,
+- **Cartões: usar os primitivos**, não classes à mão — `<CartaoSimples>` para
+  tudo, e `<CartaoVidro>` só no cartão do próximo jogo da Home (ver "A app é
+  leve"). Idem `<Botao>`, `<Pastilha>`, `<TituloEcra>`,
   `<EtiquetaSeccao>` e `<FilaSeparadores>` (`src/components/ui`).
 - **E o resto também tem primitivo** (vaga 4 da auditoria de design,
   2026-09-26): `<BotaoIcone>` para editar/eliminar/tirar só com ícone (44px,
@@ -157,6 +157,23 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   diálogo passa pelo `<Modal>`**; as três confirmações partilhadas
   (`ConfirmModal`, `UnsavedChangesModal`, `ResendCallupsModal`) têm moldura
   própria mas os botões são `<Botao>`.
+- **A app é leve: dois níveis de caixa, e cada caixa com um sinal só**
+  (decisão de 2026-09-26). O cartão (`.cartao-simples`: fundo branco a 6%,
+  **sem borda nem sombra**) e, lá dentro, as linhas separadas por um fio
+  (`.linha-leve`), sem fundo nem moldura própria. Nada abaixo disso: o que
+  estava numa terceira caixa passa a texto com ícone (a data e o local de um
+  evento), a ligação (o "Maps") ou cor de letra (o estado de um torneio, as
+  respostas de uma convocatória). Havia até cinco caixas encaixadas nos
+  Eventos, cada uma com fundo **e** borda, e os brancos translúcidos
+  somavam-se até um cinzento opaco — a app parecia cheia sem ter mais nada.
+  **Um sinal por caixa:** fundo, ou borda, nunca os dois; sombra só no que
+  flutua (a barra de baixo, o [+], persianas). Os botões (`BASE` em
+  `ui/Botoes.tsx`) também perderam a borda, e numa linha os botões de ícone
+  são `discreto` — sem caixa, com os 44px de alvo. **O vidro com desfoque só
+  fica no cartão do próximo jogo da Home**; estava em doze sítios, e era o
+  cartão mais pesado de cada ecrã. Os Eventos, os Torneios, os Adversários,
+  os Campos e os Comunicados são o exemplo de lista; as capturas de antes e
+  depois estão em `docs/prototipo-leve/`.
 - **Todos os alvos de toque têm no mínimo 44px de altura**, sem exceções — inclui
   pastilhas, separadores e botões de linha.
 - O fim da coluna acaba acima da barra inferior com `margin-bottom`, nunca

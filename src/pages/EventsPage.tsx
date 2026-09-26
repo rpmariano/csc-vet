@@ -1259,7 +1259,7 @@ const EventsPage: React.FC = () => {
       />
 
       {successMessage && (
-        <div className="bg-csc-light/12 text-csc-verde-texto p-4 rounded-2xl border border-csc-light/30 text-sm font-bold flex items-center gap-2.5 shadow-sm">
+        <div className="bg-csc-light/12 text-csc-verde-texto p-4 rounded-2xl text-sm font-bold flex items-center gap-2.5 shadow-sm">
           <CheckCircle2 size={20} className="text-csc-light shrink-0" />
           <span>{successMessage}</span>
         </div>
@@ -1329,7 +1329,7 @@ const EventsPage: React.FC = () => {
 
             {/* Específico de Jogo */}
             {type === 'match' && (
-              <div className="p-3.5 bg-csc-gold/8 border border-csc-gold/22 rounded-2xl space-y-3">
+              <div className="p-3.5 bg-csc-gold/8 rounded-2xl space-y-3">
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -1439,7 +1439,7 @@ const EventsPage: React.FC = () => {
 
             {/* 4. Localização / Campo */}
             {type === 'match' && homeAway === 'home' ? (
-              <div className="p-3.5 bg-csc-light/10 border border-csc-light/30 rounded-2xl flex items-center justify-between">
+              <div className="p-3.5 bg-csc-light/10 rounded-2xl flex items-center justify-between">
                 <div className="space-y-1 min-w-0 flex-1 pr-2">
                   <span className="text-[10px] font-black uppercase tracking-wider text-csc-verde-texto flex items-center gap-1.5">
                     <MapPin size={13} className="text-csc-light shrink-0" />
@@ -1457,7 +1457,7 @@ const EventsPage: React.FC = () => {
                     href={getGoogleMapsUrl(currentLocationStr)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
+                    className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
                     title="Ver no Google Maps"
                   >
                     <MapPin size={12} className="text-csc-vermelho-texto" />
@@ -1467,7 +1467,7 @@ const EventsPage: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="p-3.5 bg-white/6 border border-white/12 rounded-2xl space-y-2.5">
+              <div className="p-3.5 bg-white/6 rounded-2xl space-y-2.5">
                 <label className="block text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-1.5"><MapPin size={14} className="text-csc-vermelho-texto" /> Campo / Instalação</span>
                   {currentLocationStr && <span className="text-[10px] text-csc-verde-texto font-bold bg-csc-light/15 px-2 py-0.5 rounded-full truncate max-w-[150px]">✓ {currentLocationStr}</span>}
@@ -1510,7 +1510,7 @@ const EventsPage: React.FC = () => {
 
             {/* 6. Recorrência (Treinos) */}
             {type === 'practice' && (
-              <div className="p-3.5 bg-csc-gold/8 border border-csc-gold/22 rounded-2xl space-y-2.5">
+              <div className="p-3.5 bg-csc-gold/8 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
@@ -1553,10 +1553,10 @@ const EventsPage: React.FC = () => {
                                   setRecurrenceWeekdays(prev => [...prev, d.val])
                                 }
                               }}
-                              className={`min-w-11 min-h-11 px-2 rounded-lg text-[11px] font-bold transition-colors cursor-pointer border ${
+                              className={`min-w-11 min-h-11 px-2 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
                                 isChecked
-                                  ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                                  : 'bg-white/10 border-white/15 text-white/80 hover:bg-white/15'
+                                  ? 'bg-csc-gold text-csc-tinta'
+                                  : 'bg-white/10 text-white/80 hover:bg-white/15'
                               }`}
                             >
                               {d.label}
@@ -1601,7 +1601,7 @@ const EventsPage: React.FC = () => {
               nota={isActiveOnCreate
                 ? 'Ao guardar, escolhes quem convocas. O evento fica visível na agenda.'
                 : 'O evento fica em rascunho: ninguém é avisado e não entra no alerta de convocatórias. A convocatória fica guardada.'}
-              className="bg-csc-gold/8 rounded-2xl border border-csc-gold/22"
+              className="bg-csc-gold/8 rounded-2xl"
             />
 
             <button
@@ -1613,7 +1613,7 @@ const EventsPage: React.FC = () => {
                 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                   isActiveOnCreate
                     ? 'bg-csc-gold text-csc-tinta'
-                    : 'bg-white/9 border border-white/20 text-white'
+                    : 'bg-white/9 text-white'
                 }`}
             >
               {isCreatingEvent ? (
@@ -1838,7 +1838,7 @@ const EventsPage: React.FC = () => {
                 (a lista, o evento com borda de 2px, a data e o local, o "Maps",
                 as pastilhas), e o branco translúcido de cada uma somava-se até
                 um cinzento opaco. */}
-            <div className="cartao-leve text-white overflow-hidden">
+            <div className="cartao-simples text-white overflow-hidden">
 
               {loading ? (
                 <ACarregar />
@@ -1989,8 +1989,10 @@ const EventsPage: React.FC = () => {
           titulo={activeCallupModalEvent.title || 'Convocatória'}
         >
           <div className="relative">
-            {/* Topo Premium da Persiana/Modal de Dossier & RSVP */}
-            <div className="bg-gradient-to-r from-csc-dark via-csc-dark to-csc-dark text-white p-3.5 rounded-2xl shadow-xl border-2 border-csc-gold mb-5 relative overflow-hidden">
+            {/* O emblema, o tipo, a data e os botões numa linha solta. Era um
+                cartão verde com moldura dourada de 2px e sombra — a peça mais
+                pesada do dossier, logo por baixo do título. */}
+            <div className="text-white mb-5 relative">
               <div className="flex items-center justify-between gap-3">
                 {/* 1. Símbolo + 2. Pílula de Tipo + 3. Data e Hora */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -2056,7 +2058,7 @@ const EventsPage: React.FC = () => {
 
             {/* Se o evento estiver inativo, alerta proeminente */}
             {activeCallupModalEvent.is_active === false && (
-              <div className="mb-4 p-3.5 bg-csc-gold/10 border-2 border-csc-gold/40 rounded-2xl flex flex-col items-start justify-between gap-3 shadow-xs">
+              <div className="mb-4 p-3.5 bg-csc-gold/10 rounded-2xl flex flex-col items-start justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-2 text-xs font-bold text-csc-gold">
                   <AlertTriangle size={18} className="text-csc-gold shrink-0" />
                   <span>Este evento está em modo <strong>Rascunho (Inativo)</strong>. A convocatória não foi enviada e não está visível para os atletas.</span>
@@ -2117,7 +2119,7 @@ const EventsPage: React.FC = () => {
                     abrir: setConvocadoAberto,
                   } : undefined}
                   acrescentar={isCoachOrAdmin && uncalledPlayers.length > 0 && (
-                    <div className="p-3.5 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+                    <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
                       <p className="text-xs font-black text-white/80 flex items-center gap-1.5">
                         <UserPlus size={14} className="text-csc-gold" />
                         <span>Adicionar mais membros ao evento:</span>
@@ -2128,7 +2130,7 @@ const EventsPage: React.FC = () => {
                             key={p.id}
                             type="button"
                             onClick={() => handleAddPlayerToCallup(evId, p.id)}
-                            className="bg-white/8 border border-white/16 text-xs px-2.5 py-1 rounded-xl font-bold text-white flex items-center gap-1 shadow-2xs hover:bg-white/15 cursor-pointer active:scale-97"
+                            className="bg-white/8 text-xs px-2.5 py-1 rounded-xl font-bold text-white flex items-center gap-1 shadow-2xs hover:bg-white/15 cursor-pointer active:scale-97"
                           >
                             <span>+ {p.name}</span>
                             {p.jersey_number && <span className="text-csc-gold font-black">#{p.jersey_number}</span>}

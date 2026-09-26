@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { MapPin, Trash2, ExternalLink, Save, Pencil } from 'lucide-react'
+import { MapPin, Trash2, Save, Pencil } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useClub } from '../../context/ClubContext'
 import { toast } from '../../context/ToastContext'
@@ -12,7 +12,7 @@ import { UnsavedChangesModal } from '../UnsavedChangesModal'
 import { ConfirmModal } from '../ConfirmModal'
 import { FichaCampo } from './FichaCampo'
 import { formatClubSigla } from '../../lib/siglas'
-import { CAMPO, ETIQUETA, urlDoGoogleMaps, type Campo } from './comum'
+import { CAMPO, ETIQUETA, type Campo } from './comum'
 import { mensagemDeErro } from '../../lib/erros'
 import { BotaoIcone, EstadoVazio, Botao, BotaoCriar } from '../ui'
 import { ProcuraEFiltros } from '../ProcuraEFiltros'
@@ -154,57 +154,36 @@ export const GestaoCampos: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
         aoLimpar={() => setProcura('')}
       />
 
-      <div className="cartao-simples text-white p-4 space-y-3">
+      {/* Um cartão, e os campos como linhas lá dentro (a app mais leve,
+          2026-09-26). O "Google Maps" em caixa saiu: está na ficha do campo,
+          que a linha abre. */}
+      <div className="cartao-simples text-white overflow-hidden">
 
         {filtrados.length === 0 ? (
           <EstadoVazio icone={MapPin} titulo="Nenhum campo encontrado." texto="Tenta mudar a procura ou cria um campo novo." />
         ) : (
-          <div className="grid grid-cols-1 gap-2.5">
+          <div>
             {filtrados.map(c => {
               const eCasaDoClube = clubSettings?.home_field_id === c.id
               return (
-                <div
-                  key={c.id}
-                  className="flex flex-col justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all gap-3"
-                >
+                <div key={c.id} className="linha-leve flex items-center gap-2 pl-4 pr-2 py-2.5">
                   <button
                     type="button"
                     onClick={() => abrirFicha(c.id)}
                     aria-label={`Ver a ficha do campo ${c.name}`}
-                    className="space-y-1 text-left min-h-11 cursor-pointer rounded-xl transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                    className="flex-1 min-w-0 text-left min-h-11 cursor-pointer rounded-xl transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
                   >
-                    <div className="flex items-center gap-2">
-                      <MapPin size={14} className="text-csc-gold shrink-0" />
-                      <h4 className="font-black text-sm text-white">{c.name}</h4>
+                    <span className="block font-display font-extrabold text-[13.5px] text-white truncate">{c.name}</span>
+                    <span className="block text-[11px] mt-0.5 truncate">
                       {eCasaDoClube && (
-                        <span className="bg-csc-dark text-csc-gold text-[10px] font-black px-2 py-0.5 rounded-full border border-csc-gold/30">
-                          Casa do {formatClubSigla(clubSettings?.initials)}
-                        </span>
+                        <span className="font-bold text-csc-gold">Casa do {formatClubSigla(clubSettings?.initials)} · </span>
                       )}
-                    </div>
-                    {c.address ? (
-                      <p className="text-xs text-white/60 font-medium pl-6 leading-relaxed">{c.address}</p>
-                    ) : (
-                      <p className="text-xs text-white/65 italic pl-6">Sem morada definida</p>
-                    )}
+                      <span className="text-white/55">{c.address || 'Sem morada definida'}</span>
+                    </span>
                   </button>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-white/10 mt-1">
-                    <a
-                      href={urlDoGoogleMaps(c.address ? `${c.name}, ${c.address}` : c.name)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-1.5 bg-white/10 border border-white/10 hover:border-csc-red/60 hover:text-csc-vermelho-texto text-white/70 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
-                    >
-                      <MapPin size={13} className="text-csc-vermelho-texto shrink-0" />
-                      <span>Google Maps</span>
-                      <ExternalLink size={10} className="opacity-50" />
-                    </a>
-
-                    <div className="flex items-center gap-1.5">
-                      <BotaoIcone rotulo={`Editar o campo ${c.name}`} icone={Pencil} onClick={() => abrirEdicao(c)} />
-                      <BotaoIcone rotulo={`Eliminar o campo ${c.name}`} icone={Trash2} perigo onClick={() => eliminar(c.id, c.name)} />
-                    </div>
+                  <div className="flex items-center shrink-0">
+                    <BotaoIcone discreto rotulo={`Editar o campo ${c.name}`} icone={Pencil} onClick={() => abrirEdicao(c)} />
+                    <BotaoIcone discreto rotulo={`Eliminar o campo ${c.name}`} icone={Trash2} perigo onClick={() => eliminar(c.id, c.name)} />
                   </div>
                 </div>
               )

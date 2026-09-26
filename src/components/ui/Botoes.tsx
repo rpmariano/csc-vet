@@ -30,7 +30,7 @@ const APARENCIAS: Record<Aparencia, string> = {
 }
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 border cursor-pointer select-none ' +
+  'inline-flex items-center justify-center gap-2 cursor-pointer select-none ' +
   'font-display font-extrabold transition-[background-color,color,border-color,transform] duration-150 ' +
   'active:scale-97 disabled:opacity-45 disabled:cursor-not-allowed disabled:active:scale-100 ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold'
