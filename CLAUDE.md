@@ -528,11 +528,23 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   ficaram nos dois sítios, e `/finance?ver=atletas` redireciona (com a
   `&conta=`, se vier). O relatório carrega as mesmas tabelas e usa a mesma
   `contasDosAtletas()`, por isso diz o mesmo que as Quotas e os Encargos.
-  **Decidido para o relatório de documentos** (por fazer): só a direção; um
-  `.zip` com tudo, para descarregar ou partilhar por email/WhatsApp pela
-  partilha nativa do telemóvel; e cada exportação fica registada (quem, quando,
-  que documentos), numa tabela escrita pelo servidor — é uma exportação em
-  bloco de documentos de identificação, e o RGPD pede rasto.
+  **O segundo são os Documentos dos atletas** (`RelatorioDocumentos.tsx`):
+  escolhe-se o documento (cartão de cidadão, apólice, atestado) e quem entra,
+  e sai um `.zip` com um ficheiro por atleta (`RUI-CC.pdf`). **Dois passos —
+  preparar, e só depois descarregar ou partilhar** —, porque no iPhone a
+  partilha nativa (`navigator.share` com ficheiros: email, WhatsApp) só abre
+  logo a seguir a um toque, e o tempo de descarregar os documentos pelo meio
+  fazia o Safari recusá-la. **Partilhar pergunta antes**: o ficheiro sai do
+  controlo do clube com documentos de identificação dentro. **Cada entrega fica
+  registada** em `exportacoes_documentos`
+  (`supabase_exportacoes_documentos_migration.sql`, aplicada a 2026-09-26) —
+  quem, quando, que documento, de quem e se descarregou ou partilhou —, e só
+  pela função `registar_exportacao_documentos()`, que põe o `auth.uid()` e a
+  hora ela própria: a tabela não tem política de INSERT, e um registo escrito
+  pelo cliente podia dizer outra pessoa. Só a direção a lê e só a direção
+  regista; o ecrã mostra as cinco últimas. A fotografia não entra no `.zip`.
+  `documentos.spec.ts` cobre a escolha, o conteúdo do `.zip`, a partilha com o
+  aviso e o registo de cada entrega.
 - **Um ecrã abre sempre no topo.** O `<SubirAoTopo>` (na moldura do router)
   põe a janela a zero a cada mudança de caminho e de `?ver=`. Numa app de
   página única o browser não repõe o scroll: quem estava no fim da Agenda e
