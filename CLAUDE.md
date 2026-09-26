@@ -767,9 +767,14 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   inicial do nome, sem fotografia). **Continua a ser um cartão só** — a fila
   corre por dentro dele, e não uma miniatura por pessoa como cartão irmão, que
   violaria a mesma regra que já vale nos Eventos e nos Torneios.
-  **Quem faz anos hoje tem o aro dourado e o rótulo "Hoje"**, em vez do dia da
-  semana — é o sinal de destaque da app (o mesmo do "Modificar evento", abaixo)
-  a dizer quem se quer ver primeiro. O dia do mês e a semana saem do texto
+  **A pastilha sobre a fotografia é a idade que a pessoa faz, não o dia do
+  mês** — a primeira versão punha ali o dia, e lia-se como o número da
+  camisola (a mesma bola redonda a marcar o atleta, em todo o resto da app).
+  A idade (`anoDeHoje - ano de nascimento`) é a conta que interessa num
+  aniversário; o dia e o mês (`DD/MM`) continuam por baixo do nome, como data.
+  **Quem faz anos hoje tem o aro dourado e o rótulo "Hoje"**, em vez da data
+  — é o sinal de destaque da app (o mesmo do "Modificar evento", abaixo) a
+  dizer quem se quer ver primeiro. O dia, o mês e o ano saem do texto
   `AAAA-MM-DD` sem passar por `new Date()`, como o `fmtData` — a versão
   anterior fazia `new Date(birth_date).getMonth()`, que funciona em Lisboa mas
   seria a mesma armadilha do fuso horário se algum dia se corresse a oeste de

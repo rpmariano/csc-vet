@@ -10,6 +10,11 @@ import { montarSupabaseFalso, FIXTURES_BASE } from './supabase-mock'
  * blocos da Home (`<EtiquetaSeccao>` + `<CartaoSimples>`), com uma fotografia
  * por pessoa — o aro dourado marca quem faz anos hoje, como o "faz anos hoje"
  * do texto antigo, mas agora é o primeiro sinal que se vê.
+ *
+ * **A pastilha sobre a fotografia é a idade que a pessoa faz**, não o dia do
+ * mês — lida-se como o número da camisola (a mesma bola redonda que marca o
+ * atleta em todo o resto da app), e a idade é a conta que interessa num
+ * aniversário. O dia continua por baixo do nome, como data.
  */
 
 const ANIVERSARIANTES = [
@@ -37,13 +42,17 @@ test('mostra uma fotografia por pessoa, com o aro dourado em quem faz anos hoje'
   await expect(seccao.getByText('Zé')).toHaveCount(0)
   await expect(seccao.getByText('Rui')).toHaveCount(0)
 
-  // Quem faz anos hoje (Nuno, dia 20): "Hoje" em vez do dia da semana.
+  // Quem faz anos hoje (Nuno, 1988, hoje é 2026-09-20): "Hoje" em vez da data,
+  // e a pastilha com a idade que faz — 38, não o dia 20 nem a camisola #7.
   const cartaoNuno = seccao.locator('div', { hasText: 'Nuno' }).last()
   await expect(cartaoNuno.getByText('Hoje')).toBeVisible()
+  await expect(cartaoNuno.getByText('38', { exact: true })).toBeVisible()
 
-  // Os outros dias da semana, não "Hoje".
+  // Os outros levam a data (dia/mês), não "Hoje" — e a idade de Paulo (1990) é 36.
   const cartaoPaulo = seccao.locator('div', { hasText: 'Paulo' }).last()
   await expect(cartaoPaulo.getByText('Hoje')).toHaveCount(0)
+  await expect(cartaoPaulo.getByText('25/09')).toBeVisible()
+  await expect(cartaoPaulo.getByText('36', { exact: true })).toBeVisible()
 
   // Com fotografia é uma imagem; sem ela, a inicial do nome.
   await expect(cartaoPaulo.locator('img')).toHaveCount(1)

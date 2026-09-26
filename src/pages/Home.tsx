@@ -410,16 +410,17 @@ const Home: React.FC = () => {
           }[])
             .filter(p => p.birth_date && p.status !== 'inactive')
             .map(p => {
-              const [, mesTexto, diaTexto] = (p.birth_date as string).split('-')
-              return { p, mes: Number(mesTexto), dia: Number(diaTexto) }
+              const [anoTexto, mesTexto, diaTexto] = (p.birth_date as string).split('-')
+              return { p, ano: Number(anoTexto), mes: Number(mesTexto), dia: Number(diaTexto) }
             })
             .filter(({ mes }) => mes === mesDeHoje)
             .sort((a, b) => a.dia - b.dia)
-            .map(({ p, mes, dia }) => ({
+            .map(({ p, ano, mes, dia }) => ({
               id: p.id,
               nome: primeiroNome(p),
               dia,
               mes,
+              ano,
               foto: p.photo_url,
             })),
         )

@@ -20,7 +20,13 @@ import { CartaoSimples, EtiquetaSeccao } from '../ui'
  *
  * **Quem faz anos hoje tem o aro dourado**, o sinal de destaque da app, em
  * vez da data por baixo — é a pessoa que se quer ver primeiro, e "Hoje" diz
- * isso melhor do que "a 26".
+ * isso melhor do que "20/09".
+ *
+ * **A pastilha é a idade que a pessoa faz, não o dia do mês** — a versão
+ * anterior punha ali o dia, e lia-se como o número da camisola (a mesma bola
+ * redonda com um número a marcar o atleta, em todo o resto da app). A idade
+ * é a conta certa para um aniversário; o dia e o mês continuam por baixo do
+ * nome, como data.
  */
 
 export interface AniversarianteDaHome {
@@ -30,20 +36,21 @@ export interface AniversarianteDaHome {
   dia: number
   /** Mês, 1–12 — todas as pessoas do array são do mesmo mês. */
   mes: number
+  /** Ano de nascimento — a idade que faz é `anoDeHoje - ano`. */
+  ano: number
   foto: string | null
 }
 
-const DIA_DA_SEMANA = new Intl.DateTimeFormat('pt-PT', { weekday: 'short' })
-
-function diaDaSemana(dia: number, mes: number): string {
-  const texto = DIA_DA_SEMANA.format(new Date(new Date().getFullYear(), mes - 1, dia)).replace('.', '')
-  return texto.charAt(0).toUpperCase() + texto.slice(1)
+function dataCurta(dia: number, mes: number): string {
+  return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`
 }
 
 export const Aniversariantes: React.FC<{ pessoas: AniversarianteDaHome[] }> = ({ pessoas }) => {
   if (pessoas.length === 0) return null
 
-  const hoje = new Date().getDate()
+  const hoje = new Date()
+  const diaDeHoje = hoje.getDate()
+  const anoDeHoje = hoje.getFullYear()
 
   return (
     <section>
@@ -51,7 +58,8 @@ export const Aniversariantes: React.FC<{ pessoas: AniversarianteDaHome[] }> = ({
       <CartaoSimples className="p-4">
         <div className="flex gap-3.5 overflow-x-auto -mx-1 px-1 pb-0.5" style={{ scrollbarWidth: 'none' }}>
           {pessoas.map(p => {
-            const eHoje = p.dia === hoje
+            const eHoje = p.dia === diaDeHoje
+            const idade = anoDeHoje - p.ano
             return (
               <div key={p.id} className="flex flex-col items-center gap-1.5 w-[58px] shrink-0 text-center">
                 <div className="relative">
@@ -72,14 +80,14 @@ export const Aniversariantes: React.FC<{ pessoas: AniversarianteDaHome[] }> = ({
                       flex items-center justify-center font-display font-black text-[9px] tabular-nums
                       ${eHoje ? 'bg-csc-gold text-csc-tinta' : 'bg-csc-blue text-white'}`}
                   >
-                    {p.dia}
+                    {idade}
                   </span>
                 </div>
                 <span className="block font-display font-bold text-[10px] text-white truncate w-full">
                   {p.nome}
                 </span>
-                <span className={`block text-[9px] ${eHoje ? 'text-csc-gold font-bold' : 'text-white/55'}`}>
-                  {eHoje ? 'Hoje' : diaDaSemana(p.dia, p.mes)}
+                <span className={`block text-[9px] tabular-nums ${eHoje ? 'text-csc-gold font-bold' : 'text-white/55'}`}>
+                  {eHoje ? 'Hoje' : dataCurta(p.dia, p.mes)}
                 </span>
               </div>
             )
