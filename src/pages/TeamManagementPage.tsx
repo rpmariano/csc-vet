@@ -51,6 +51,7 @@ import {
 } from '../lib/finance'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
+import { fmtData } from '../lib/datas'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -1370,7 +1371,7 @@ const TeamManagementPage: React.FC = () => {
           que a app já dava e foi decidido mantê-la, agora escolhida na
           persiana de filtros em vez de num alternador sempre à vista.
 
-          Duas colunas, e não `sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4`:
+          Duas colunas, e não ``:
           os pontos de corte do Tailwind estão desligados nesta app, e olhavam
           para a janela e não para a coluna de 480px.
         */
@@ -1982,7 +1983,7 @@ const TeamManagementPage: React.FC = () => {
               {/* 6. SAÚDE & EMERGÊNCIA */}
               <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                  <HeartPulse size={14} className="text-red-400" />
+                  <HeartPulse size={14} className="text-csc-vermelho-texto" />
                   <span>7. Saúde & Contacto de Emergência</span>
                 </h3>
 
@@ -2286,7 +2287,7 @@ const TeamManagementPage: React.FC = () => {
                       <p className="text-white/65 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.birth_date ? (
-                          `${new Date(selectedProfile.birth_date).toLocaleDateString('pt-PT')} (${calculateAge(selectedProfile.birth_date)} anos)`
+                          `${fmtData(selectedProfile.birth_date)} (${calculateAge(selectedProfile.birth_date)} anos)`
                         ) : '-'}
                       </p>
                     </div>
@@ -2304,7 +2305,7 @@ const TeamManagementPage: React.FC = () => {
                     <div className="bg-white/6 p-2.5 rounded-xl border border-white/10 min-w-0">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Validade do CC</p>
                       <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.id_card_expiry ? new Date(selectedProfile.id_card_expiry).toLocaleDateString('pt-PT') : '-'}
+                        {selectedProfile.id_card_expiry ? fmtData(selectedProfile.id_card_expiry) : '-'}
                       </p>
                     </div>
 
@@ -2430,7 +2431,7 @@ const TeamManagementPage: React.FC = () => {
                   <div className="bg-white/10 p-3 rounded-xl border border-white/10 border-t-white/20 shadow-sm shadow-black/10 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-white/65 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
-                      <p className="font-black text-white font-mono text-xs sm:text-sm mt-0.5">
+                      <p className="font-black text-white font-mono text-xs mt-0.5">
                         {selectedProfile.iban || 'Nenhum IBAN registado'}
                       </p>
                     </div>
@@ -2449,7 +2450,7 @@ const TeamManagementPage: React.FC = () => {
                       <p className="text-white/65 font-bold uppercase text-[9px]">Início de atividade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.quota_start_date
-                          ? new Date(selectedProfile.quota_start_date).toLocaleDateString('pt-PT')
+                          ? fmtData(selectedProfile.quota_start_date)
                           : 'Do estado do perfil'}
                       </p>
                     </div>
@@ -2458,7 +2459,7 @@ const TeamManagementPage: React.FC = () => {
                       <p className="text-white/65 font-bold uppercase text-[9px]">Fim de atividade</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.quota_end_date
-                          ? new Date(selectedProfile.quota_end_date).toLocaleDateString('pt-PT')
+                          ? fmtData(selectedProfile.quota_end_date)
                           : 'Sem fim marcado'}
                       </p>
                     </div>
@@ -2480,14 +2481,14 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* 4. Saúde & Contacto de Emergência */}
-                <div className="bg-red-500/10 p-4 rounded-2xl border border-red-400/30 space-y-3">
-                  <h4 className="text-xs font-black text-red-200 uppercase tracking-wider flex items-center gap-1.5">
-                    <HeartPulse size={14} className="text-red-400" />
+                <div className="bg-csc-red/10 p-4 rounded-2xl border border-csc-red/30 space-y-3">
+                  <h4 className="text-xs font-black text-csc-vermelho-texto uppercase tracking-wider flex items-center gap-1.5">
+                    <HeartPulse size={14} className="text-csc-vermelho-texto" />
                     <span>4. Saúde & Contacto de Emergência</span>
                   </h4>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/10 p-3 rounded-xl border border-red-400/20">
+                    <div className="bg-white/10 p-3 rounded-xl border border-csc-red/20">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Contacto de Emergência</p>
                       <p className="font-extrabold text-white mt-0.5">
                         {selectedProfile.emergency_contact_name || 'Não registado'}
@@ -2502,7 +2503,7 @@ const TeamManagementPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="bg-white/10 p-3 rounded-xl border border-red-400/20">
+                    <div className="bg-white/10 p-3 rounded-xl border border-csc-red/20">
                       <p className="text-white/65 font-bold uppercase text-[9px]">Notas Médicas / Alergias</p>
                       <p className="font-medium text-white/80 mt-0.5">
                         {cleanNotesFromRolesTag(selectedProfile.medical_notes) || 'Nenhuma restrição médica registada'}

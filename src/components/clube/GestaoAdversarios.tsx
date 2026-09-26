@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Shield, MapPin, Plus, Search, X, Trash2, ExternalLink, Save, User, Phone, Pencil } from 'lucide-react'
+import { Shield, MapPin, Plus, Trash2, ExternalLink, Save, User, Phone, Pencil } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useClub } from '../../context/ClubContext'
 import { toast } from '../../context/ToastContext'
@@ -15,6 +15,7 @@ import { formatClubSigla } from '../../lib/siglas'
 import { CAMPO, ETIQUETA, urlDoGoogleMaps, type Adversario, type Campo } from './comum'
 import { mensagemDeErro } from '../../lib/erros'
 import { BotaoIcone, EstadoVazio, Botao } from '../ui'
+import { ProcuraEFiltros } from '../ProcuraEFiltros'
 
 /*
   Adversários (ecrã 9d), com a ficha de cada um (9h) no endereço.
@@ -192,43 +193,26 @@ export const GestaoAdversarios: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 min-w-0">
-          <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
-          <input
-            type="text"
-            value={procura}
-            onChange={e => setProcura(e.target.value)}
-            placeholder="Pesquisar por equipa, sigla, contacto ou campo..."
-            aria-label="Pesquisar adversários"
-            className={`${CAMPO} pl-9.5 pr-11`}
-          />
-          {procura && (
-            <button
-              type="button"
-              onClick={() => setProcura('')}
-              aria-label="Limpar pesquisa"
-              className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-[14px] text-black/40 hover:text-black/70 cursor-pointer"
-            >
-              <X size={15} />
-            </button>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={abrirCriacao}
-          className="w-11 h-11 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-        >
-          <Plus size={19} />
-          <span className="sr-only">Criar adversário</span>
-        </button>
-      </div>
+      <ProcuraEFiltros
+        procura={procura}
+        aoProcurar={setProcura}
+        placeholder="Equipa, sigla, contacto ou campo"
+        rotulo="Procurar adversários"
+        contagem={`${filtrados.length} de ${adversarios.length}`}
+        aoLimpar={() => setProcura('')}
+        acao={
+          <button
+            type="button"
+            onClick={abrirCriacao}
+            aria-label="Criar adversário"
+            className="w-11 h-11 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+          >
+            <Plus size={19} aria-hidden="true" />
+          </button>
+        }
+      />
 
       <div className="cartao-simples text-white p-4 space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/70">
-          <span>A apresentar {filtrados.length} de {adversarios.length} equipas registadas</span>
-        </div>
 
         {filtrados.length === 0 ? (
           <EstadoVazio icone={Shield} titulo="Nenhum adversário encontrado." texto="Tenta mudar a procura ou cria um adversário novo." />
@@ -304,9 +288,9 @@ export const GestaoAdversarios: React.FC = () => {
                         href={urlDoGoogleMaps(procuraNoMapa)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 bg-white/10 border border-white/10 hover:border-red-400 hover:text-red-300 text-white/70 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
+                        className="px-2.5 py-1.5 bg-white/10 border border-white/10 hover:border-csc-red/60 hover:text-csc-vermelho-texto text-white/70 rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
                       >
-                        <MapPin size={13} className="text-red-400 shrink-0" />
+                        <MapPin size={13} className="text-csc-vermelho-texto shrink-0" />
                         <span>Ver campo</span>
                         <ExternalLink size={10} className="opacity-50" />
                       </a>

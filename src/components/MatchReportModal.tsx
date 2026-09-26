@@ -524,7 +524,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         {loading ? (
           <ACarregar texto="A carregar o jogo…" className="py-16" />
         ) : jogoPorRealizar ? (
-          <div className="p-6 sm:p-8 bg-white/5 border border-white/10 rounded-3xl text-center space-y-2">
+          <div className="p-6 bg-white/5 border border-white/10 rounded-3xl text-center space-y-2">
             <div className="w-12 h-12 rounded-2xl bg-white/10 text-csc-gold flex items-center justify-center mx-auto">
               <Clock size={22} />
             </div>
@@ -538,7 +538,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           <div className="space-y-6">
 
             {/* 1. SCOREBOARD & RESULTADO */}
-            <div className="bg-gradient-to-br from-csc-dark via-emerald-950 to-csc-dark text-white rounded-3xl p-5 sm:p-6 shadow-md border-2 border-csc-gold/80 relative overflow-hidden">
+            <div className="bg-gradient-to-br from-csc-dark via-csc-dark to-csc-dark text-white rounded-3xl p-5 shadow-md border-2 border-csc-gold/80 relative overflow-hidden">
               <div className="grid grid-cols-11 items-center gap-3 text-center">
                 
                 {/* Equipa 1 */}
@@ -554,22 +554,22 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                       <img src="/csc-vet/cascais-emblem.png" alt="CSC" className="w-full h-full object-contain" />
                     )}
                   </div>
-                  <span className="text-base sm:text-lg font-black uppercase text-white tracking-wide">{leftSigla}</span>
-                  <span className="text-[11px] text-white/30 truncate max-w-[120px] sm:max-w-[150px]">{leftName}</span>
+                  <span className="text-base font-black uppercase text-white tracking-wide">{leftSigla}</span>
+                  <span className="text-[11px] text-white/30 truncate max-w-[120px]">{leftName}</span>
                 </div>
 
                 {/* Placar Central */}
                 <div className="col-span-3 flex flex-col items-center justify-center gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-3xl sm:text-4xl font-black text-white px-3 py-1 bg-black/40 rounded-2xl border border-white/20">
+                    <span className="text-3xl font-black text-white px-3 py-1 bg-black/40 rounded-2xl border border-white/20">
                       {homeScore !== null && homeScore !== undefined ? homeScore : '-'}
                     </span>
                     <span className="text-2xl font-black text-csc-gold">:</span>
-                    <span className="text-3xl sm:text-4xl font-black text-white px-3 py-1 bg-black/40 rounded-2xl border border-white/20">
+                    <span className="text-3xl font-black text-white px-3 py-1 bg-black/40 rounded-2xl border border-white/20">
                       {awayScore !== null && awayScore !== undefined ? awayScore : '-'}
                     </span>
                   </div>
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-200">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-csc-verde-texto">
                     {homeScore !== null ? 'Resultado Final' : 'Sem Resultado'}
                   </span>
                 </div>
@@ -587,8 +587,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                       <img src="/csc-vet/cascais-emblem.png" alt="CSC" className="w-full h-full object-contain" />
                     )}
                   </div>
-                  <span className="text-base sm:text-lg font-black uppercase text-white tracking-wide">{rightSigla}</span>
-                  <span className="text-[11px] text-white/30 truncate max-w-[120px] sm:max-w-[150px]">{rightName}</span>
+                  <span className="text-base font-black uppercase text-white tracking-wide">{rightSigla}</span>
+                  <span className="text-[11px] text-white/30 truncate max-w-[120px]">{rightName}</span>
                 </div>
 
               </div>
@@ -596,7 +596,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
             {/*
               Tático, golos e disciplina (ecrã 2a): três mosaicos numa fila,
-              não três cartões empilhados. Estavam com `sm:grid-cols-3`, e os
+              não três cartões empilhados. Estavam com ``, e os
               pontos de corte do Tailwind estão desligados nesta app — o que
               quer dizer que eram sempre uma coluna só.
             */}
@@ -650,9 +650,9 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               <div className="space-y-4">
                   {/* Titulares */}
                   <div className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 overflow-hidden shadow-lg shadow-black/20">
-                    <div className="bg-emerald-800 text-white px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center justify-between">
+                    <div className="bg-csc-light text-white px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center justify-between">
                       <span>Titulares ({starters.length})</span>
-                      <span className="text-[10px] bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-700">{(tacticalFormation || '4-3-3').replace(/^1-/, '')}</span>
+                      <span className="text-[10px] bg-csc-dark px-2 py-0.5 rounded-full border border-csc-light/60">{(tacticalFormation || '4-3-3').replace(/^1-/, '')}</span>
                     </div>
                     {starters.length === 0 ? (
                       <p className="p-4 text-xs text-white/70 font-semibold italic text-center">Nenhum titular registado.</p>
@@ -667,7 +667,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                 {p.jersey_number || '—'}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-xs sm:text-sm font-black text-white truncate flex items-center gap-1.5">
+                                <p className="text-xs font-black text-white truncate flex items-center gap-1.5">
                                   <span>{displayName}</span>
                                   {p.is_mvp && (
                                     <span className="text-[10px] font-black bg-csc-gold/15 text-csc-gold px-1.5 py-0.5 rounded border border-csc-gold/35 flex items-center gap-0.5">
@@ -717,7 +717,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                   {/* Suplentes Utilizados */}
                   {subs.length > 0 && (
                     <div className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 overflow-hidden shadow-lg shadow-black/20">
-                      <div className="bg-blue-900 text-white px-4 py-2 text-xs font-black uppercase tracking-wider">
+                      <div className="bg-csc-blue text-white px-4 py-2 text-xs font-black uppercase tracking-wider">
                         <span>Suplentes utilizados ({subs.length})</span>
                       </div>
                       <div className="p-2.5 space-y-2">
@@ -730,7 +730,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                 {p.jersey_number || '—'}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-xs sm:text-sm font-black text-white truncate">
+                                <p className="text-xs font-black text-white truncate">
                                   {displayName}
                                 </p>
                                 {p.position && (
@@ -776,7 +776,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
             {/* 4. OCORRÊNCIAS & NOTAS TÉCNICAS (ÁREA PRIVADA: APENAS COACH / ADMIN) */}
             {isCoachOrAdmin && (
-              <div className="p-4 sm:p-5 bg-csc-gold/10 border border-csc-gold/35 rounded-3xl space-y-2.5 shadow-lg shadow-black/20">
+              <div className="p-4 bg-csc-gold/10 border border-csc-gold/35 rounded-3xl space-y-2.5 shadow-lg shadow-black/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-csc-gold font-black text-xs uppercase tracking-wider">
                     <Lock size={15} className="text-csc-gold" />
@@ -854,7 +854,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           <p
             role="status"
             className={`flex items-center gap-1.5 text-[11px] leading-snug font-bold ${
-              golosAMais > 0 || semResultado ? 'text-csc-vermelho-texto' : 'text-amber-300'
+              golosAMais > 0 || semResultado ? 'text-csc-vermelho-texto' : 'text-csc-gold'
             }`}
           >
             <AlertTriangle size={13} className="shrink-0" aria-hidden="true" />

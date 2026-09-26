@@ -26,13 +26,13 @@ const CHIP =
   'shrink-0 font-display font-black text-[8.5px] tracking-[0.1em] uppercase ' +
   'px-2 py-1 rounded-full border whitespace-nowrap'
 export const CHIP_ATRASO = `${CHIP} bg-csc-red/15 border-csc-red/35 text-csc-vermelho-texto`
-export const CHIP_AVISO = `${CHIP} bg-amber-500/15 border-amber-400/35 text-amber-300`
+export const CHIP_AVISO = `${CHIP} bg-csc-gold/15 border-csc-gold/35 text-csc-gold`
 export const CHIP_PAGO = `${CHIP} bg-csc-light/15 border-csc-light/30 text-csc-verde-texto`
 export const CHIP_NEUTRO = `${CHIP} bg-white/6 border-white/12 text-white/62`
 
 /** A barra de cor à esquerda de uma linha — diz o estado sem se ler nada. */
 export const BARRA_ATRASO = 'bg-csc-red'
-export const BARRA_AVISO = 'bg-amber-400'
+export const BARRA_AVISO = 'bg-csc-gold'
 export const BARRA_PAGO = 'bg-csc-light/60'
 export const BARRA_NEUTRA = 'bg-white/15'
 
@@ -58,8 +58,5 @@ export const MESES_CURTOS = [
   'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
 ]
 
-/** 'DD/MM/AAAA' a partir de uma data ISO, sem passar por `new Date()`. */
-export const fmtData = (iso: string) => {
-  const [y, m, d] = iso.slice(0, 10).split('-')
-  return `${d}/${m}/${y}`
-}
+/** 'DD/MM/AAAA' — vive em `lib/datas`, que não é só do Financeiro. */
+export { fmtData } from '../../lib/datas'

@@ -14,7 +14,8 @@ import {
   ChevronDown,
   Pencil,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  ArrowLeftRight
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -31,7 +32,7 @@ import {
 import type { FinancialSettings, QuotaMonthStatus } from '../lib/finance'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { VoltarAOrigem } from '../components/VoltarAOrigem'
-import { Botao, CabecalhoEcra, FilaSeparadores, LinhaAtleta, BotaoIcone, ACarregar } from '../components/ui'
+import { Botao, CabecalhoEcra, FilaSeparadores, LinhaAtleta, BotaoIcone, ACarregar, EstadoVazio } from '../components/ui'
 import { VisaoGeralFinanceira } from '../components/financeiro/VisaoGeralFinanceira'
 import { PagamentosProgramados } from '../components/financeiro/PagamentosProgramados'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -45,13 +46,16 @@ import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 */
 import {
   ETIQUETA_SECCAO,
-  BARRA_ATRASO, BARRA_AVISO, BARRA_PAGO, BARRA_NEUTRA, fmtEuro,
+  BARRA_ATRASO, BARRA_AVISO, BARRA_PAGO, BARRA_NEUTRA, fmtEuro, ETIQUETA_GRUPO,
 } from '../components/financeiro/estilos'
 import type {
   PlayerRow, QuotaStatusRow, MovementRow, ScheduledPayment, EncargoPorReceber,
 } from '../components/financeiro/tipos'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_ETIQUETA_CAMPO as ETIQUETA, CLASSE_CAMPO as CAMPO } from '../components/ui/formulario'
+import BottomSheet from '../components/BottomSheet'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
+import { fmtData } from '../lib/datas'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -856,6 +860,8 @@ const FinancePage: React.FC = () => {
   // -------------------------------------------------------------------------
   const [movFilterMonth, setMovFilterMonth] = useState<string>('all')
   const [movFilterYear, setMovFilterYear] = useState<string>('all')
+  const [movProcura, setMovProcura] = useState('')
+  const [movFiltrosAbertos, setMovFiltrosAbertos] = useState(false)
   const [collapsedMovCategories, setCollapsedMovCategories] = useState<Set<string>>(new Set())
   const toggleMovCategory = (key: string) => setCollapsedMovCategories(prev => {
     const next = new Set(prev)
@@ -891,8 +897,9 @@ const FinancePage: React.FC = () => {
     const d = new Date(m.date)
     if (movFilterYear !== 'all' && d.getFullYear() !== parseInt(movFilterYear)) return false
     if (movFilterMonth !== 'all' && (d.getMonth() + 1) !== parseInt(movFilterMonth)) return false
+    if (movProcura.trim() && !m.description.toLowerCase().includes(movProcura.trim().toLowerCase())) return false
     return true
-  }), [allMovements, movFilterMonth, movFilterYear])
+  }), [allMovements, movFilterMonth, movFilterYear, movProcura])
 
   // Ordem fixa: Quotas e Outras Receitas primeiro, depois cada categoria (de despesa
   // e/ou encargo) pela ordem em que foram criadas, e por fim os movimentos sem categoria.
@@ -1657,7 +1664,7 @@ const FinancePage: React.FC = () => {
                           {c.categoryName && <>{c.categoryName} · </>}
                           {fmtEuro(c.amount)}/jogador · {c.participantIds.length}{' '}
                           {c.participantIds.length === 1 ? 'participante' : 'participantes'}
-                          {c.due_date && <> · prazo {new Date(c.due_date).toLocaleDateString('pt-PT')}</>}
+                          {c.due_date && <> · prazo {fmtData(c.due_date)}</>}
                           {/* O "N por pagar" saiu: a banda dos Devedores, aqui
                               por baixo, já diz quantos são e quanto falta. */}
                         </span>
@@ -1739,7 +1746,7 @@ const FinancePage: React.FC = () => {
                       {
                         chave: 'falta-pagar',
                         titulo: 'Falta pagar',
-                        cor: 'text-amber-300',
+                        cor: 'text-csc-gold',
                         lista: participantes.filter(faltaPagar),
                       },
                       {
@@ -1836,7 +1843,7 @@ const FinancePage: React.FC = () => {
                                             ) : (
                                               <>
                                                 <span className="font-display font-black text-white/85 tabular-nums">{fmtEuro(pay.amount)}</span>
-                                                <span className="tabular-nums">{new Date(pay.paid_at).toLocaleDateString('pt-PT')}</span>
+                                                <span className="tabular-nums">{fmtData(pay.paid_at)}</span>
                                                 {pay.notes && <span className="italic truncate">({pay.notes})</span>}
                                                 {isAdmin && (
                                                   <span className="ml-auto flex items-center shrink-0">
@@ -2274,45 +2281,93 @@ const FinancePage: React.FC = () => {
 
       {/* ================= MOVIMENTOS (relatório) ================= */}
       {activeTab === 'movements' && (
-        <div className="cartao-simples text-white p-4 space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <h3 className={ETIQUETA_SECCAO}>Relatório de Movimentos</h3>
-            <div className="flex items-center gap-2">
-              <select value={movFilterMonth} onChange={e => setMovFilterMonth(e.target.value)} className={`${CAMPO} w-auto px-2.5`}>
-                <option value="all">Todos os meses</option>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                  <option key={m} value={m}>{nomeMes(m)}</option>
-                ))}
-              </select>
-              <select value={movFilterYear} onChange={e => setMovFilterYear(e.target.value)} className={`${CAMPO} w-auto px-2.5`}>
-                <option value="all">Todos os anos</option>
-                {movementYears.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+        <div className="space-y-4">
+          {/* O período era um par de seletores à vista, sem resumo nem
+              "Limpar": vai para o funil, como em todas as listas, e a lista
+              ganha procura pela descrição. */}
+          <ProcuraEFiltros
+            procura={movProcura}
+            aoProcurar={setMovProcura}
+            placeholder="Descrição"
+            rotulo="Procurar nos movimentos"
+            aoAbrirFiltros={() => setMovFiltrosAbertos(true)}
+            filtrosAtivos={movFilterMonth !== 'all' || movFilterYear !== 'all'}
+            resumo={[
+              movFilterMonth !== 'all' ? nomeMes(parseInt(movFilterMonth)) : null,
+              movFilterYear !== 'all' ? movFilterYear : null,
+            ].filter((x): x is string => Boolean(x))}
+            contagem={`${filteredMovements.length} ${filteredMovements.length === 1 ? 'movimento' : 'movimentos'}`}
+            aoLimpar={() => { setMovProcura(''); setMovFilterMonth('all'); setMovFilterYear('all') }}
+          />
+
+          <BottomSheet
+            isOpen={movFiltrosAbertos}
+            onClose={() => setMovFiltrosAbertos(false)}
+            title="Filtrar movimentos"
+            tone="dark"
+            footer={
+              <>
+                <Botao
+                  aparencia="vidro"
+                  onClick={() => { setMovFilterMonth('all'); setMovFilterYear('all') }}
+                  disabled={movFilterMonth === 'all' && movFilterYear === 'all'}
+                >
+                  Limpar
+                </Botao>
+                <Botao onClick={() => setMovFiltrosAbertos(false)}>Ver {filteredMovements.length}</Botao>
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <div>
+                <label className={ETIQUETA} htmlFor="mov-mes">Mês</label>
+                <select id="mov-mes" value={movFilterMonth} onChange={e => setMovFilterMonth(e.target.value)} className={CAMPO}>
+                  <option value="all">Todos os meses</option>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                    <option key={m} value={m}>{nomeMes(m)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={ETIQUETA} htmlFor="mov-ano">Ano</label>
+                <select id="mov-ano" value={movFilterYear} onChange={e => setMovFilterYear(e.target.value)} className={CAMPO}>
+                  <option value="all">Todos os anos</option>
+                  {movementYears.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          </BottomSheet>
 
           {groupedMovements.length === 0 ? (
-            <p className="text-xs text-white/60 py-6 text-center">Sem movimentos registados{movFilterMonth !== 'all' || movFilterYear !== 'all' ? ' neste período' : ''}.</p>
+            <EstadoVazio
+              icone={ArrowLeftRight}
+              titulo={movFilterMonth !== 'all' || movFilterYear !== 'all' || movProcura.trim() ? 'Nenhum movimento encontrado.' : 'Ainda não há movimentos.'}
+              texto={movFilterMonth !== 'all' || movFilterYear !== 'all' || movProcura.trim() ? 'Limpa os filtros para ver os movimentos todos.' : undefined}
+            />
           ) : (
             <div className="space-y-4">
               {groupedMovements.map(group => {
                 const groupTotal = group.rows.reduce((s, m) => s + (m.type === 'income' ? m.amount : -m.amount), 0)
                 const isCollapsed = collapsedMovCategories.has(group.key)
                 return (
-                  <div key={group.key} className="bg-white/[0.07] rounded-2xl border border-white/10 border-t-white/20 shadow-md shadow-black/20 overflow-hidden">
+                  /* Um grupo é uma caixa só, com a banda em cima — a forma das
+                     Quotas e das Despesas. Era um cartão com sombra e um título
+                     `text-xs tracking-wider`, o estilo antigo. */
+                  <section key={group.key} aria-label={group.label} className="rounded-2xl border border-white/12 overflow-hidden">
                     <button
                       type="button"
                       onClick={() => toggleMovCategory(group.key)}
-                      className="w-full px-4 py-2.5 bg-white/5 hover:bg-white/10 flex items-center justify-between gap-3 cursor-pointer transition-colors"
+                      aria-expanded={!isCollapsed}
+                      className="w-full min-h-11 px-3 py-2 bg-white/[0.07] border-b border-white/10 flex items-center justify-between gap-3 cursor-pointer"
                     >
                       <span className="flex items-center gap-1.5">
-                        <ChevronDown size={14} className={`text-white/60 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
-                        <h4 className="text-xs font-black text-white uppercase tracking-wider">{group.label}</h4>
-                        <span className="text-[10px] font-bold text-white/62">({group.rows.length})</span>
+                        <ChevronDown size={14} className={`text-white/60 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} aria-hidden="true" />
+                        <span className={ETIQUETA_GRUPO}>{group.label}</span>
+                        <span className="text-[10px] font-bold text-white/62">{group.rows.length}</span>
                       </span>
-                      <span className={`text-xs font-black ${groupTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      <span className={`text-xs font-black ${groupTotal >= 0 ? 'text-csc-verde-texto' : 'text-csc-vermelho-texto'}`}>
                         {groupTotal >= 0 ? '+' : ''}{fmtEuro(groupTotal)}
                       </span>
                     </button>
@@ -2322,9 +2377,9 @@ const FinancePage: React.FC = () => {
                           <tbody className="divide-y divide-white/10">
                             {group.rows.map(m => (
                               <tr key={m.id}>
-                                <td className="px-4 py-2 text-white/60 whitespace-nowrap">{new Date(m.date).toLocaleDateString('pt-PT')}</td>
+                                <td className="px-4 py-2 text-white/60 whitespace-nowrap">{fmtData(m.date)}</td>
                                 <td className="px-4 py-2 font-bold text-white">{m.description}</td>
-                                <td className={`px-4 py-2 text-right font-black whitespace-nowrap ${m.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                <td className={`px-4 py-2 text-right font-black whitespace-nowrap ${m.type === 'income' ? 'text-csc-verde-texto' : 'text-csc-vermelho-texto'}`}>
                                   {m.type === 'income' ? '+' : '-'}{fmtEuro(m.amount)}
                                 </td>
                                 <td className="px-4 py-2 text-right w-8">
@@ -2340,20 +2395,20 @@ const FinancePage: React.FC = () => {
                         </table>
                       </div>
                     )}
-                  </div>
+                  </section>
                 )
               })}
             </div>
           )}
 
-          <div className="pt-4 border-t border-white/10 grid grid-cols-3 gap-3 text-center">
+          <div className="cartao-simples p-4 grid grid-cols-3 gap-3 text-center">
             <div>
               <p className="text-[10px] font-bold uppercase text-white/60">Total Receitas</p>
-              <p className="text-base font-black text-emerald-400">+{fmtEuro(filteredIncomeTotal)}</p>
+              <p className="text-base font-black text-csc-verde-texto">+{fmtEuro(filteredIncomeTotal)}</p>
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase text-white/60">Total Despesas</p>
-              <p className="text-base font-black text-red-400">-{fmtEuro(filteredExpenseTotal)}</p>
+              <p className="text-base font-black text-csc-vermelho-texto">-{fmtEuro(filteredExpenseTotal)}</p>
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase text-white/60">Saldo</p>
@@ -2410,7 +2465,7 @@ const FinancePage: React.FC = () => {
                       quota_excluded_months: excluded ? s.quota_excluded_months.filter(x => x !== m) : [...s.quota_excluded_months, m],
                     }))}
                     className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
-                      excluded ? 'bg-red-500/20 border-red-400/40 text-red-300' : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/10'
+                      excluded ? 'bg-csc-red/20 border-csc-red/40 text-csc-vermelho-texto' : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/10'
                     }`}
                   >
                     {nomeMes(m).slice(0, 3)}
@@ -2441,7 +2496,7 @@ const FinancePage: React.FC = () => {
           </label>
           <div className="flex flex-wrap gap-1.5">
             {categories.map(c => (
-              <span key={c.id} className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${c.allow_income ? 'bg-sky-400/20 text-sky-200' : 'bg-white/10 text-white/80'}`}>
+              <span key={c.id} className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${c.allow_income ? 'bg-csc-blue/20 text-csc-azul-texto' : 'bg-white/10 text-white/80'}`}>
                 <button
                   type="button"
                   onClick={() => handleToggleCategoryIncome(c)}
@@ -2449,7 +2504,7 @@ const FinancePage: React.FC = () => {
                   title={c.allow_income ? 'Clica para deixar de poder ser usada para receitas' : 'Clica para também poder ser usada para receitas (ex.: Encargos)'}
                 >
                   <span>{c.name}</span>
-                  {c.allow_income && <span className="text-[9px] font-black uppercase text-sky-300">receita</span>}
+                  {c.allow_income && <span className="text-[9px] font-black uppercase text-csc-azul-texto">receita</span>}
                 </button>
                 <button
                   type="button"

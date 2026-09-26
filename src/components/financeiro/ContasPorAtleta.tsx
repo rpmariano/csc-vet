@@ -35,7 +35,7 @@ import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../ui/
 /** A cor de cada estado — a mesma das Quotas e dos Encargos. */
 const COR: Record<EstadoDaLinha, { titulo: string; barra: string; valor: string }> = {
   divida: { titulo: 'text-csc-vermelho-texto', barra: BARRA_ATRASO, valor: 'text-csc-vermelho-texto' },
-  'a-pagamento': { titulo: 'text-amber-300', barra: BARRA_AVISO, valor: 'text-amber-300' },
+  'a-pagamento': { titulo: 'text-csc-gold', barra: BARRA_AVISO, valor: 'text-csc-gold' },
   pago: { titulo: 'text-csc-verde-texto', barra: BARRA_PAGO, valor: 'text-white/62' },
 }
 

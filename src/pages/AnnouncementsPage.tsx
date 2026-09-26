@@ -4,7 +4,6 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  Search,
   Clock,
   Calendar,
   Megaphone,
@@ -19,9 +18,11 @@ import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { ConfirmModal } from '../components/ConfirmModal'
-import { CabecalhoEcra, Interruptor, BotaoIcone, ACarregar, EstadoVazio, Botao } from '../components/ui'
+import { CabecalhoEcra, Interruptor, BotaoIcone, ACarregar, EstadoVazio, Botao, Pastilha } from '../components/ui'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
+import BottomSheet from '../components/BottomSheet'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -50,6 +51,7 @@ const AnnouncementsPage: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
   // Estados para Modal de Edição
   const [editingAnn, setEditingAnn] = useState<Announcement | null>(null)
@@ -435,65 +437,51 @@ const AnnouncementsPage: React.FC = () => {
         <div className="space-y-4">
           <div className="cartao-simples p-5 space-y-4">
             
-            {/* Barra de Filtros e Pesquisa */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
-              {/* Separadores de Filtro — ver ativos/inativos é gestão, não faz sentido para quem só lê */}
-              {isCoachOrAdmin && (
-                <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-2xl w-fit">
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter('all')}
-                    className={`min-h-11 px-3.5 rounded-[18px] font-display text-xs font-bold transition-colors cursor-pointer ${
-                      statusFilter === 'all'
-                        ? 'bg-csc-gold text-csc-tinta'
-                        : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    Todos ({announcements.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter('active')}
-                    className={`min-h-11 px-3.5 rounded-[18px] font-display text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      statusFilter === 'active'
-                        ? 'bg-csc-light text-white'
-                        : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    <span>Ativos</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      statusFilter === 'active' ? 'bg-csc-dark text-white' : 'bg-white/10 text-white/60'
-                    }`}>{activeCount}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter('inactive')}
-                    className={`min-h-11 px-3.5 rounded-[18px] font-display text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      statusFilter === 'inactive'
-                        ? 'bg-white/20 text-white shadow-2xs'
-                        : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    <span>Inativos</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      statusFilter === 'inactive' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
-                    }`}>{inactiveCount}</span>
-                  </button>
-                </div>
-              )}
+            {/* Procura à vista; o estado (ativos/inativos) é filtro e vai
+                para trás do funil, como em todas as listas. Era um controlo
+                segmentado à vista, com uma cor diferente por opção. Ver
+                ativos e inativos é gestão, por isso quem só lê não tem funil. */}
+            <ProcuraEFiltros
+              procura={searchTerm}
+              aoProcurar={setSearchTerm}
+              placeholder="Título ou texto"
+              rotulo="Procurar nos comunicados"
+              aoAbrirFiltros={isCoachOrAdmin ? () => setFiltrosAbertos(true) : undefined}
+              filtrosAtivos={statusFilter !== 'all'}
+              resumo={statusFilter === 'all' ? [] : [statusFilter === 'active' ? 'Ativos' : 'Inativos']}
+              contagem={`${filteredAnnouncements.length} ${filteredAnnouncements.length === 1 ? 'comunicado' : 'comunicados'}`}
+              aoLimpar={() => { setSearchTerm(''); setStatusFilter('all') }}
+            />
 
-              {/* Input de Pesquisa */}
-              <div className="relative flex-1 sm:max-w-[220px]">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40 z-1" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Pesquisar..."
-                  className={`${CAMPO} pl-9`}
-                />
+            <BottomSheet
+              isOpen={filtrosAbertos}
+              onClose={() => setFiltrosAbertos(false)}
+              title="Filtrar comunicados"
+              tone="dark"
+              footer={
+                <>
+                  <Botao aparencia="vidro" onClick={() => setStatusFilter('all')} disabled={statusFilter === 'all'}>
+                    Limpar
+                  </Botao>
+                  <Botao onClick={() => setFiltrosAbertos(false)}>
+                    Ver {filteredAnnouncements.length}
+                  </Botao>
+                </>
+              }
+            >
+              <p className={ETIQUETA}>Estado</p>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ['all', `Todos · ${announcements.length}`],
+                  ['active', `Ativos · ${activeCount}`],
+                  ['inactive', `Inativos · ${inactiveCount}`],
+                ] as const).map(([valor, rotulo]) => (
+                  <Pastilha key={valor} ativa={statusFilter === valor} onClick={() => setStatusFilter(valor)}>
+                    {rotulo}
+                  </Pastilha>
+                ))}
               </div>
-            </div>
+            </BottomSheet>
 
             {/* Listagem */}
             {loading ? (
@@ -516,9 +504,9 @@ const AnnouncementsPage: React.FC = () => {
                   return (
                     <div 
                       key={ann.id} 
-                      className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-3 ${
+                      className={`p-4 rounded-2xl border transition-all space-y-3 ${
                         isActive 
-                          ? 'bg-white/5 border-emerald-400/30 shadow-xs hover:border-emerald-400/50' 
+                          ? 'bg-white/5 border-csc-light/30 shadow-xs hover:border-csc-light/50' 
                           : 'bg-white/5 border-white/10 opacity-60'
                       }`}
                     >
@@ -556,7 +544,7 @@ const AnnouncementsPage: React.FC = () => {
                           <div>
                             {isActive ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-csc-light/15 text-csc-verde-texto border border-csc-light/35">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-csc-light animate-pulse"></span>
                                 <span>Ativo na Home</span>
                               </span>
                             ) : (

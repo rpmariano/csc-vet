@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
-import { Trophy, Shield, Plus, Search, X, Trash2, Save, ChevronDown, Pencil } from 'lucide-react'
+import { Trophy, Shield, Plus, Trash2, Save, ChevronDown, Pencil } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { extractRolesFromProfile } from '../../context/AuthContext'
 import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
 import { EcraDetalhe } from '../EcraDetalhe'
-import { Botao, BotaoIcone, EstadoVazio } from '../ui'
+import { Botao, BotaoIcone, EstadoVazio, Pastilha } from '../ui'
 import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../UnsavedChangesModal'
 import { ConfirmModal } from '../ConfirmModal'
@@ -18,6 +18,8 @@ import {
   type Torneio, type TournamentRules,
 } from './torneios'
 import { mensagemDeErro } from '../../lib/erros'
+import { ProcuraEFiltros } from '../ProcuraEFiltros'
+import BottomSheet from '../BottomSheet'
 
 /*
   Torneios e jornadas (ecrã 9a, e o gestor de liga).
@@ -29,6 +31,8 @@ import { mensagemDeErro } from '../../lib/erros'
   O `?criar=jornada` da folha do [+] chega aqui: abre o gestor de liga do
   torneio a decorrer, que é onde uma jornada se cria.
 */
+
+const ROTULO_ESTADO = { ativo: 'A decorrer', agendado: 'Agendados', terminado: 'Terminados' } as const
 
 export const GestaoTorneios: React.FC = () => {
   const [params, setParams] = useSearchParams()
@@ -43,6 +47,7 @@ export const GestaoTorneios: React.FC = () => {
      (`?liga=`) como as fichas: era estado local, e o retroceder do browser
      saía da página em vez de voltar aos Torneios. */
   const gestorDeLiga = params.get('liga')
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const abrirGestorDeLiga = (id: string) => {
     const seguintes = new URLSearchParams(params)
     seguintes.set('liga', id)
@@ -276,67 +281,57 @@ export const GestaoTorneios: React.FC = () => {
   return (
     <>
       <div className="space-y-4">
-        {/*
-          O [+] fica ao lado da caixa de procura, e os estados numa fila
-          própria por baixo: estavam os três na mesma linha, numa coluna com o
-          botão à direita, e a pastilha "Terminado" corria por baixo dele.
-        */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 min-w-0">
-            <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/35 pointer-events-none" />
-            <input
-              type="text"
-              value={tourSearch}
-              onChange={e => setTourSearch(e.target.value)}
-              placeholder="Pesquisar por nome ou época da competição..."
-              aria-label="Pesquisar torneios"
-              className={`${CAMPO} pl-9.5 pr-11`}
-            />
-            {tourSearch && (
-              <button
-                type="button"
-                onClick={() => setTourSearch('')}
-                aria-label="Limpar pesquisa"
-                className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-[14px] text-black/40 hover:text-black/70 cursor-pointer"
-              >
-                <X size={15} />
-              </button>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={abrirCriacao}
-            className="w-11 h-11 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            <Plus size={19} />
-            <span className="sr-only">Criar torneio</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
-          {(['all', 'ativo', 'agendado', 'terminado'] as const).map(st => (
+        {/* Procura, funil e [+]. O estado era uma fila segmentada à vista,
+            com os valores da base em `capitalize` ("ativo"); é filtro, e vai
+            para a persiana como em todas as listas. */}
+        <ProcuraEFiltros
+          procura={tourSearch}
+          aoProcurar={setTourSearch}
+          placeholder="Nome ou época"
+          rotulo="Procurar torneios"
+          aoAbrirFiltros={() => setFiltrosAbertos(true)}
+          filtrosAtivos={tourStatusFilter !== 'all'}
+          resumo={tourStatusFilter === 'all' ? [] : [ROTULO_ESTADO[tourStatusFilter]]}
+          contagem={`${filtrados.length} de ${tournaments.length}`}
+          aoLimpar={() => { setTourSearch(''); setTourStatusFilter('all') }}
+          acao={
             <button
-              key={st}
               type="button"
-              onClick={() => setTourStatusFilter(st)}
-              className={`flex-1 min-h-11 px-2 rounded-lg text-xs font-black capitalize transition-all cursor-pointer ${
-                tourStatusFilter === st
-                  ? 'bg-white text-csc-tinta shadow-xs'
-                  : 'text-white/60 hover:text-white'
-              }`}
+              onClick={abrirCriacao}
+              aria-label="Criar torneio"
+              className="w-11 h-11 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
             >
-              {st === 'all' ? 'Todos' : st}
+              <Plus size={19} aria-hidden="true" />
             </button>
-          ))}
-        </div>
+          }
+        />
+
+        <BottomSheet
+          isOpen={filtrosAbertos}
+          onClose={() => setFiltrosAbertos(false)}
+          title="Filtrar torneios"
+          tone="dark"
+          footer={
+            <>
+              <Botao aparencia="vidro" onClick={() => setTourStatusFilter('all')} disabled={tourStatusFilter === 'all'}>
+                Limpar
+              </Botao>
+              <Botao onClick={() => setFiltrosAbertos(false)}>Ver {filtrados.length}</Botao>
+            </>
+          }
+        >
+          <p className={ETIQUETA}>Estado</p>
+          <div className="flex flex-wrap gap-2">
+            {(['all', 'ativo', 'agendado', 'terminado'] as const).map(st => (
+              <Pastilha key={st} ativa={tourStatusFilter === st} onClick={() => setTourStatusFilter(st)}>
+                {st === 'all' ? 'Todos' : ROTULO_ESTADO[st]}
+              </Pastilha>
+            ))}
+          </div>
+        </BottomSheet>
 
         {/* Lista de Torneios */}
         <div className="cartao-simples text-white p-4 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-white/10 text-xs font-bold text-white/70">
-            <span>A apresentar {filtrados.length} de {tournaments.length} torneios registados</span>
-          </div>
-
           {filtrados.length === 0 ? (
             <EstadoVazio icone={Trophy} titulo="Nenhum torneio encontrado." texto="Tenta mudar a procura ou cria uma competição nova." />
           ) : (
@@ -362,7 +357,7 @@ export const GestaoTorneios: React.FC = () => {
                         t.status === 'terminado' ? 'bg-white/10 text-white/70' :
                         'bg-csc-gold/15 text-csc-gold border border-csc-gold/35'
                       }`}>
-                        {t.status}
+                        {({ ativo: 'A decorrer', agendado: 'Agendado', terminado: 'Terminado' } as Record<string, string>)[t.status] ?? t.status}
                       </span>
                     </div>
                   </div>
@@ -370,7 +365,7 @@ export const GestaoTorneios: React.FC = () => {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => abrirGestorDeLiga(t.id)}
-                      className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-blue-400 text-blue-300 hover:bg-blue-500/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+                      className="w-11 h-11 flex items-center justify-center bg-white/10 border border-white/10 hover:border-csc-azul-texto/60 text-csc-azul-texto hover:bg-csc-blue/10 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
                       title="Gerir Grupos e Equipas"
                       aria-label={`Gerir Grupos e Equipas: ${t.name}`}
                     >
@@ -411,7 +406,7 @@ export const GestaoTorneios: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className={ETIQUETA}>
                     Época Desportiva
@@ -479,8 +474,8 @@ export const GestaoTorneios: React.FC = () => {
                 </summary>
                 <div className="p-4 border-t border-white/10 grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto">
                 
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px]">Formato da Competição</h4>
-                  <div className="col-span-1 sm:col-span-2">
+                  <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px]">Formato da Competição</h4>
+                  <div className="col-span-1">
                     <label className={ETIQUETA}>Modelo de Liga</label>
                     <select 
                       value={tourRules.format || 'single_league'} 
@@ -492,7 +487,7 @@ export const GestaoTorneios: React.FC = () => {
                     </select>
                   </div>
 
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
+                  <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
                   <div>
                     <label className={ETIQUETA}>Idade Mínima</label>
                     <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className={CAMPO} />
@@ -513,7 +508,7 @@ export const GestaoTorneios: React.FC = () => {
                     <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className={CAMPO} disabled={!tourRules.exceptions_allowed} />
                   </div>
 
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
+                  <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
                   <div>
                     <label className={ETIQUETA}>Máx. Inscritos (Plantel)</label>
                     <input type="number" min="0" value={tourRules.max_squad_size} onChange={e => setTourRules({...tourRules, max_squad_size: Number(e.target.value)})} className={CAMPO} />
@@ -523,7 +518,7 @@ export const GestaoTorneios: React.FC = () => {
                     <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({...tourRules, max_match_players: Number(e.target.value)})} className={CAMPO} />
                   </div>
 
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo & Subs</h4>
+                  <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo & Subs</h4>
                   <div>
                     <label className={ETIQUETA}>Duração Total (mins)</label>
                     <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({...tourRules, match_duration_mins: Number(e.target.value)})} className={CAMPO} />
@@ -533,7 +528,7 @@ export const GestaoTorneios: React.FC = () => {
                     <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({...tourRules, half_duration_mins: Number(e.target.value)})} className={CAMPO} />
                   </div>
                 
-                  <h4 className="col-span-1 sm:col-span-2 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
+                  <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
                   <div>
                     <label className={ETIQUETA}>Amarelos para Suspensão</label>
                     <input type="number" min="0" value={tourRules.yellow_cards_to_suspension} onChange={e => setTourRules({...tourRules, yellow_cards_to_suspension: Number(e.target.value)})} className={CAMPO} />
@@ -766,8 +761,8 @@ export const GestaoTorneios: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="mt-4 p-4 border border-blue-400/30 bg-blue-500/10 rounded-xl text-center">
-                  <p className="text-xs font-bold text-blue-300">Guarda o torneio primeiro para poderes inscrever o plantel da tua equipa.</p>
+                <div className="mt-4 p-4 border border-csc-azul-texto/30 bg-csc-blue/10 rounded-xl text-center">
+                  <p className="text-xs font-bold text-csc-azul-texto">Guarda o torneio primeiro para poderes inscrever o plantel da tua equipa.</p>
                 </div>
               )}
 

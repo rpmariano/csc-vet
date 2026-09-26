@@ -40,7 +40,7 @@ import { ConvocatoriaAoCriar } from '../components/callups/ConvocatoriaAoCriar'
 import type { EventoCriado } from '../components/callups/ConvocatoriaAoCriar'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
-import { hasMatchReport, ROTULO_RESPOSTA } from '../lib/eventos'
+import { hasMatchReport, ROTULO_RESPOSTA, CORES_TIPO } from '../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 import { EcraDetalhe } from '../components/EcraDetalhe'
 import { EditarEvento } from '../components/eventos/EditarEvento'
@@ -52,6 +52,7 @@ import { Pastilha, Botao, Interruptor, BotaoIcone, ACarregar, EstadoVazio } from
 import { triggerHaptic } from '../utils/haptics'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
+import { fmtData } from '../lib/datas'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -876,8 +877,8 @@ const EventsPage: React.FC = () => {
         }
 
         const successText = isActiveOnCreate
-          ? `${createdEventsList.length} eventos criados com sucesso até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
-          : `${createdEventsList.length} eventos guardados como Rascunho (Inativos) até ${new Date(recurrenceEndDate).toLocaleDateString('pt-PT')}!`
+          ? `${createdEventsList.length} eventos criados com sucesso até ${fmtData(recurrenceEndDate)}!`
+          : `${createdEventsList.length} eventos guardados como Rascunho (Inativos) até ${fmtData(recurrenceEndDate)}!`
         setSuccessMessage(successText)
         toast.success(successText)
       } else {
@@ -1367,7 +1368,7 @@ const EventsPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 gap-2.5">
                   <div>
                     <label className={ETIQUETA_FORM}>Adversário</label>
                     <select
@@ -1406,7 +1407,7 @@ const EventsPage: React.FC = () => {
             )}
 
             {/* 3. Data/Hora */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 gap-2.5">
               <div>
                 <label className={ETIQUETA_FORM}>Data *</label>
                 <input type="date" required value={eventDate} onChange={(e) => setEventDate(e.target.value)} className={CAMPO_FORM} />
@@ -1444,7 +1445,7 @@ const EventsPage: React.FC = () => {
                     className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[18px] bg-white/8 border border-white/16 text-csc-gold font-display font-bold text-[10.5px] cursor-pointer shrink-0 transition-transform duration-150 active:scale-97"
                     title="Ver no Google Maps"
                   >
-                    <MapPin size={12} className="text-red-500" />
+                    <MapPin size={12} className="text-csc-vermelho-texto" />
                     <span>Maps</span>
                     <ExternalLink size={11} />
                   </a>
@@ -1900,8 +1901,8 @@ const EventsPage: React.FC = () => {
                       className={`p-4 rounded-2xl border-2 transition-all shadow-2xs space-y-3 cursor-pointer
                         active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
                         event.is_active === false
-                          ? 'bg-amber-500/10 border-amber-400/40 hover:border-amber-400/60'
-                          : 'bg-white/5 hover:bg-amber-500/10 border-white/10 hover:border-amber-400/40'
+                          ? 'bg-csc-gold/10 border-csc-gold/40 hover:border-csc-gold/60'
+                          : 'bg-white/5 hover:bg-csc-gold/10 border-white/10 hover:border-csc-gold/40'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -1920,7 +1921,7 @@ const EventsPage: React.FC = () => {
                       </div>
 
                       {/* Event Meta Details */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-white/70 bg-white/5 p-2.5 rounded-xl border border-white/10">
+                      <div className="grid grid-cols-1 gap-2 text-xs text-white/70 bg-white/5 p-2.5 rounded-xl border border-white/10">
                         <div className="flex items-center gap-1.5">
                           <Clock size={13} className="text-csc-gold shrink-0" />
                           <span className="font-bold">
@@ -1935,7 +1936,7 @@ const EventsPage: React.FC = () => {
 
                         <div className="flex items-center justify-between gap-1">
                           <div className="flex items-center gap-1.5 truncate">
-                            <MapPin size={13} className="text-red-500 shrink-0" />
+                            <MapPin size={13} className="text-csc-vermelho-texto shrink-0" />
                             <span className="truncate">{locationName}</span>
                           </div>
 
@@ -1956,7 +1957,7 @@ const EventsPage: React.FC = () => {
                       </div>
 
                       {/* RSVP Summary Bar & Action Button */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-white/10">
+                      <div className="flex flex-col justify-between gap-2.5 pt-2 border-t border-white/10">
                         <div className="flex items-center gap-2 text-xs">
                           <span className="flex items-center gap-1 font-black text-csc-verde-texto bg-csc-light/15 border border-csc-light/35 px-2 py-0.5 rounded-lg">
                             <CheckCircle2 size={12} className="text-csc-verde-texto" />
@@ -1976,15 +1977,15 @@ const EventsPage: React.FC = () => {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {isCoachOrAdmin && event.is_active === false && (
                             <button
                               type="button"
                               onClick={e => { e.stopPropagation(); handleActivateEvent(event) }}
-                              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                              className="px-3.5 py-2 bg-csc-light hover:bg-csc-light text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                               title="Ativar evento e enviar convocatória aos membros"
                             >
-                              <Send size={13} className="text-emerald-100" />
+                              <Send size={13} className="text-csc-verde-texto" />
                               <span>Ativar e Convocar</span>
                             </button>
                           )}
@@ -2021,12 +2022,12 @@ const EventsPage: React.FC = () => {
         >
           <div className="relative">
             {/* Topo Premium da Persiana/Modal de Dossier & RSVP */}
-            <div className="bg-gradient-to-r from-csc-dark via-emerald-950 to-csc-dark text-white p-3.5 sm:p-4 rounded-2xl shadow-xl border-2 border-csc-gold mb-5 relative overflow-hidden">
+            <div className="bg-gradient-to-r from-csc-dark via-csc-dark to-csc-dark text-white p-3.5 rounded-2xl shadow-xl border-2 border-csc-gold mb-5 relative overflow-hidden">
               <div className="flex items-center justify-between gap-3">
                 {/* 1. Símbolo + 2. Pílula de Tipo + 3. Data e Hora */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   {/* Símbolo Oficial do CSC */}
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white p-1 shadow-md shrink-0 border border-csc-gold flex items-center justify-center">
+                  <div className="w-11 h-11 rounded-2xl bg-white p-1 shadow-md shrink-0 border border-csc-gold flex items-center justify-center">
                     <img 
                       src="/csc-vet/cascais-emblem.png" 
                       alt="CSC" 
@@ -2036,18 +2037,16 @@ const EventsPage: React.FC = () => {
 
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider shadow-2xs ${
-                        activeCallupModalEvent.type === 'match' 
-                          ? 'bg-blue-600 text-white' 
-                          : activeCallupModalEvent.type === 'practice' 
-                          ? 'bg-emerald-700 text-white' 
-                          : 'bg-purple-700 text-white'
-                      }`}>
+                      {/* A cor de cada tipo é a da Agenda (`CORES_TIPO`): aqui o jogo
+                          era azul e o convívio roxo, e lá o jogo é vermelho. */}
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider border ${
+                        CORES_TIPO[activeCallupModalEvent.type as keyof typeof CORES_TIPO]?.pastilha ?? ''
+                      } ${CORES_TIPO[activeCallupModalEvent.type as keyof typeof CORES_TIPO]?.texto ?? 'text-white'}`}>
                         {activeCallupModalEvent.type === 'match' ? 'Jogo' : activeCallupModalEvent.type === 'practice' ? 'Treino' : 'Convívio'}
                       </span>
                     </div>
 
-                    <p className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 truncate">
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
                       <Clock size={13} className="text-csc-gold shrink-0" />
                       <span>
                         {new Date(activeCallupModalEvent.date_time).toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: 'short' })}, {new Date(activeCallupModalEvent.date_time).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
@@ -2061,7 +2060,7 @@ const EventsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsMatchReportOpen(true)}
-                    className="px-3 py-1.5 bg-csc-gold hover:bg-amber-400 text-csc-tinta font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
+                    className="px-3 py-1.5 bg-csc-gold hover:bg-csc-gold text-csc-tinta font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm shrink-0"
                   >
                     <ClipboardList size={13} />
                     <span>Ficha de Jogo</span>
@@ -2089,18 +2088,18 @@ const EventsPage: React.FC = () => {
 
             {/* Se o evento estiver inativo, alerta proeminente */}
             {activeCallupModalEvent.is_active === false && (
-              <div className="mb-4 p-3.5 bg-amber-500/10 border-2 border-amber-400/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
-                  <AlertTriangle size={18} className="text-amber-400 shrink-0" />
+              <div className="mb-4 p-3.5 bg-csc-gold/10 border-2 border-csc-gold/40 rounded-2xl flex flex-col items-start justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2 text-xs font-bold text-csc-gold">
+                  <AlertTriangle size={18} className="text-csc-gold shrink-0" />
                   <span>Este evento está em modo <strong>Rascunho (Inativo)</strong>. A convocatória não foi enviada e não está visível para os atletas.</span>
                 </div>
                 {isCoachOrAdmin && (
                   <button
                     type="button"
                     onClick={() => handleActivateEvent(activeCallupModalEvent)}
-                    className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 shrink-0"
+                    className="w-full px-4 py-2 bg-csc-light hover:bg-csc-light text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 shrink-0"
                   >
-                    <Send size={13} className="text-emerald-100" />
+                    <Send size={13} className="text-csc-verde-texto" />
                     <span>Ativar e Enviar Convocatória</span>
                   </button>
                 )}

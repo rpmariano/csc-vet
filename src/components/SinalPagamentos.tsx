@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { BottomSheet } from './BottomSheet'
 import { triggerHaptic } from '../utils/haptics'
 import { useEstadoPagamentos, DIAS_DE_AVISO, type ItemPagamento } from '../hooks/useEstadoPagamentos'
+import { fmtEuro } from './financeiro/estilos'
 
 /**
  * O sinal de € do cabeçalho — à esquerda da pastilha do estado clínico.
@@ -21,8 +22,6 @@ import { useEstadoPagamentos, DIAS_DE_AVISO, type ItemPagamento } from '../hooks
  * ensina a não olhar para ele.
  */
 
-const EUROS = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })
-const fmt = (n: number) => EUROS.format(n)
 
 /**
  * Como se paga. Está aqui e no "Os meus pagamentos" do Perfil — os dois sítios
@@ -56,10 +55,10 @@ export const SinalPagamentos: React.FC = () => {
   const vermelho = estado.cor === 'vermelho'
   const classes = vermelho
     ? 'bg-csc-red/20 border-csc-red/45 text-csc-vermelho-texto'
-    : 'bg-amber-500/20 border-amber-400/50 text-amber-300'
+    : 'bg-csc-gold/20 border-csc-gold/50 text-csc-gold'
   /* Tinta e não branco: branco sobre o vermelho do clube dá 4,08:1,
      abaixo do mínimo. O crachá âmbar ao lado já era tinta. */
-  const corDoCracha = vermelho ? 'bg-csc-red text-csc-tinta' : 'bg-amber-400 text-csc-tinta'
+  const corDoCracha = vermelho ? 'bg-csc-red text-csc-tinta' : 'bg-csc-gold text-csc-tinta'
 
   const lista = [...estado.emAtraso, ...estado.aVencer]
 
@@ -70,7 +69,7 @@ export const SinalPagamentos: React.FC = () => {
         onClick={() => { triggerHaptic('medium'); setAberto(true) }}
         aria-label={
           `${estado.contador} ${estado.contador === 1 ? 'pagamento' : 'pagamentos'} ` +
-          `${vermelho ? 'em atraso' : 'a vencer'} — ${fmt(estado.totalEmAviso)}`
+          `${vermelho ? 'em atraso' : 'a vencer'} — ${fmtEuro(estado.totalEmAviso)}`
         }
         className={`alvo-toque flex-none w-9 h-9 rounded-full border flex items-center justify-center cursor-pointer
           transition-transform duration-150 active:scale-97
@@ -92,12 +91,12 @@ export const SinalPagamentos: React.FC = () => {
         isOpen={aberto}
         onClose={() => setAberto(false)}
         title={vermelho ? 'Pagamentos em atraso' : 'Pagamentos a vencer'}
-        description={`${estado.contador} ${estado.contador === 1 ? 'pagamento' : 'pagamentos'} · ${fmt(estado.totalEmAviso)}`}
+        description={`${estado.contador} ${estado.contador === 1 ? 'pagamento' : 'pagamentos'} · ${fmtEuro(estado.totalEmAviso)}`}
         tone="dark"
         size="md"
         icon={
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-display font-black text-[16px] ${
-            vermelho ? 'bg-csc-red/20 text-csc-vermelho-texto' : 'bg-amber-500/20 text-amber-300'
+            vermelho ? 'bg-csc-red/20 text-csc-vermelho-texto' : 'bg-csc-gold/20 text-csc-gold'
           }`}>
             €
           </div>
@@ -112,14 +111,14 @@ export const SinalPagamentos: React.FC = () => {
                 className={`flex items-center gap-3 pl-2.5 pr-4 py-3 rounded-2xl border ${
                   atrasado
                     ? 'bg-csc-red/12 border-csc-red/25'
-                    : 'bg-amber-500/10 border-amber-400/25'
+                    : 'bg-csc-gold/10 border-csc-gold/25'
                 }`}
               >
                 {/* A mesma barra de estado de "Os meus pagamentos": a cor diz
                     o que é antes de se ler a linha. */}
                 <span
                   aria-hidden="true"
-                  className={`w-[3px] self-stretch rounded-full shrink-0 ${atrasado ? 'bg-csc-red' : 'bg-amber-400'}`}
+                  className={`w-[3px] self-stretch rounded-full shrink-0 ${atrasado ? 'bg-csc-red' : 'bg-csc-gold'}`}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block font-display font-extrabold text-[13px] text-white capitalize truncate">
@@ -133,9 +132,9 @@ export const SinalPagamentos: React.FC = () => {
                   </span>
                 </span>
                 <span className={`font-display text-[15px] font-black tabular-nums shrink-0 ${
-                  atrasado ? 'text-csc-vermelho-texto' : 'text-amber-300'
+                  atrasado ? 'text-csc-vermelho-texto' : 'text-csc-gold'
                 }`}>
-                  {fmt(item.valor)}
+                  {fmtEuro(item.valor)}
                 </span>
               </div>
             )

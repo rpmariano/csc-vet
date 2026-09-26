@@ -93,7 +93,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       {/* Contentor Visual dos Toasts (Top-Center no Mobile, Top-Right no Desktop) */}
       <div 
-        className="fixed top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 z-[9999] flex flex-col gap-2.5 w-[92%] max-w-sm sm:max-w-md pointer-events-none select-none"
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2.5 w-[92%] max-w-sm pointer-events-none select-none"
         aria-live="polite"
       >
         {toasts.map((t) => {
@@ -106,25 +106,29 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             <div
               key={t.id}
               onClick={() => removeToast(t.id)}
-              className={`pointer-events-auto p-4 rounded-2xl shadow-2xl border flex items-start gap-3 transition-all transform animate-scale-in cursor-pointer ${
+              /* Nas cores do clube, sobre a superfície da app, com a cor do tipo
+                 na moldura e no ícone. Eram quatro gradientes da paleta do
+                 Tailwind — verde-azulado, rosa, âmbar e cinzento — que não
+                 existiam em mais lado nenhum da app. */
+              className={`pointer-events-auto p-4 rounded-2xl shadow-2xl shadow-black/50 border bg-csc-superficie text-white flex items-start gap-3 transition-all transform animate-scale-in cursor-pointer ${
                 isSuccess
-                  ? 'bg-gradient-to-r from-emerald-900 to-teal-950 text-white border-emerald-600/80 shadow-emerald-950/40'
+                  ? 'border-csc-light/70'
                   : isError
-                  ? 'bg-gradient-to-r from-red-900 to-rose-950 text-white border-red-600/80 shadow-red-950/40'
+                  ? 'border-csc-red/70'
                   : isWarning
-                  ? 'bg-gradient-to-r from-amber-800 to-amber-950 text-white border-amber-500/80 shadow-amber-950/40'
-                  : 'bg-gradient-to-r from-csc-dark via-gray-900 to-black text-white border-csc-gold/60 shadow-black/50'
+                  ? 'border-csc-gold/70'
+                  : 'border-white/20'
               }`}
             >
               <div className="shrink-0 mt-0.5">
-                {isSuccess && <CheckCircle2 size={20} className="text-emerald-400" />}
-                {isError && <AlertCircle size={20} className="text-red-400" />}
-                {isWarning && <AlertTriangle size={20} className="text-amber-400" />}
+                {isSuccess && <CheckCircle2 size={20} className="text-csc-verde-texto" />}
+                {isError && <AlertCircle size={20} className="text-csc-vermelho-texto" />}
+                {isWarning && <AlertTriangle size={20} className="text-csc-gold" />}
                 {isInfo && <Info size={20} className="text-csc-gold" />}
               </div>
 
               <div className="flex-1 min-w-0 pr-1">
-                <p className="text-xs sm:text-sm font-black leading-snug tracking-tight whitespace-pre-line break-words">
+                <p className="text-xs font-black leading-snug tracking-tight whitespace-pre-line break-words">
                   {t.message}
                 </p>
               </div>

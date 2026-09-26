@@ -835,9 +835,35 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   "Oficiais", e o funil fica apagado.
   As Estatísticas não têm procura porque não há lá texto para procurar; ficam
   só com o funil.
-- **A cor de um tipo de evento vive em `CORES_TIPO`**, num sítio só. O ponto do
-  calendário e a pastilha do cartão diziam a mesma coisa em tons diferentes —
-  o convívio era `csc-azul-texto` no ponto e `blue-300` no rótulo.
+- **A cor de um tipo de evento vive em `CORES_TIPO`** (`src/lib/eventos.ts`,
+  desde a vaga 5), num sítio só. O ponto do calendário e a pastilha do cartão
+  diziam a mesma coisa em tons diferentes — o convívio era `csc-azul-texto` no
+  ponto e `blue-300` no rótulo —, e o dossier dos Eventos pintava o jogo de
+  azul e o convívio de roxo, com a Agenda a pintar o jogo de vermelho.
+- **Não há cores da paleta do Tailwind fora dos gráficos** (vaga 5,
+  2026-09-26). Eram 163 (`emerald-*`, `amber-*`, `red-*`, `blue-*`…) e
+  passaram aos tokens: verde → `csc-light`/`csc-verde-texto`, vermelho →
+  `csc-red`/`csc-vermelho-texto`, âmbar → `csc-gold`, azul →
+  `csc-blue`/`csc-azul-texto`. O "âmbar a vencer" do dinheiro é hoje o
+  dourado do clube. **A exceção são as paletas categóricas dos gráficos**
+  (`RECEITA_CORES`, `DESPESA_CORES` no Financeiro, os Encargos na Visão
+  Geral): cinco categorias precisam de cinco tons, e o clube tem três. E a
+  bolha verde da pré-visualização do WhatsApp nas Contas por atleta, que
+  imita o WhatsApp de propósito. Os toasts deixaram os quatro gradientes
+  (verde-azulado, rosa, âmbar, cinzento) e são a superfície da app com a cor
+  do tipo na moldura.
+- **O padrão procura + funil tem componente, o `<ProcuraEFiltros>`**
+  (`src/components/`): a procura, o funil que acende, a linha de resumo com o
+  "Limpar", e um lugar para o [+]. Nasceu na vaga 5 para os Comunicados, as
+  três Gestões do Clube e os Movimentos do Financeiro; a Agenda, os Eventos,
+  as Fichas, o Plantel e as Contas por atleta ainda têm a sua cópia à mão, e
+  passam a ele quando forem tocados.
+- **Uma data sem hora escreve-se com o `fmtData()`** (`src/lib/datas.ts`),
+  nunca com `new Date(x).toLocaleDateString()`: a data `AAAA-MM-DD` é a
+  meia-noite UTC, e a oeste de Greenwich sai o dia anterior. Prazos,
+  pagamentos, janela de quota, nascimento e validade do cartão passaram a
+  ele; um instante com hora (`published_at`, `date_time`) continua no
+  `toLocaleDateString`. O euro é o `fmtEuro()`, e mais nenhum `Intl` à mão.
 - **O toque vibra `light`; o resultado vibra pelo toast.** O `toast.*` já
   chama o `triggerHaptic` do seu tipo (`ToastContext`), por isso um
   `triggerHaptic('success')` antes de um `toast.success` vibrava duas vezes —

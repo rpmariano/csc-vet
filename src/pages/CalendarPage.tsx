@@ -39,7 +39,7 @@ import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao, ACarregar, EstadoVazio } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
-import { getPlayerDisplayName, hasMatchReport, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, ROTULO_RESPOSTA } from '../lib/eventos'
+import { getPlayerDisplayName, hasMatchReport, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, ROTULO_RESPOSTA, CORES_TIPO } from '../lib/eventos'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO_FORM, CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
 
@@ -65,48 +65,6 @@ const ROTULOS_ESTADO: Record<string, string> = {
  */
 const ESTADO_POR_OMISSAO = 'upcoming'
 
-/**
- * A cor de cada tipo de evento, num sítio só.
- *
- * O ponto do calendário e o rótulo do cartão diziam a mesma coisa em tons
- * diferentes — o convívio era `csc-azul-texto` no ponto e `blue-300` no
- * rótulo — e nenhum dos dois se via bem: pontos de 4px e uma palavra de 10px
- * sem fundo. O ponto passa a 6px e o rótulo a pastilha da mesma cor, para o
- * tipo de evento se ler de relance no calendário e no cartão.
- */
-const CORES_TIPO = {
-  /*
-    O jogo é vermelho, e chegou lá por eliminação. Dourado é a moldura — a
-    data no topo do próprio cartão, os títulos, os botões —, e branco é o
-    lettering de tudo o resto: os dois liam-se como mais do mesmo, e não como
-    o tipo do evento. Verde é o treino e azul o convívio. Sobra o vermelho do
-    clube, que é o que a paleta tem para o dizer.
-
-    O risco assumido: nesta app o vermelho costuma querer dizer que há um
-    problema (recusou, lesionado, sem condições). No cartão da Agenda não há
-    nenhum desses — as pastilhas de estado ali são verdes ou douradas — e o
-    vermelho fica livre para o que é, à conta do desenho não voltar a pôr um
-    estado vermelho ao lado deste.
-  */
-  match: {
-    ponto: 'bg-csc-vermelho-texto',
-    halo: 'shadow-csc-vermelho-texto/70',
-    texto: 'text-csc-vermelho-texto',
-    pastilha: 'bg-csc-red/12 border-csc-red/50',
-  },
-  practice: {
-    ponto: 'bg-csc-verde-texto',
-    halo: 'shadow-csc-verde-texto/70',
-    texto: 'text-csc-verde-texto',
-    pastilha: 'bg-csc-light/14 border-csc-verde-texto/45',
-  },
-  gathering: {
-    ponto: 'bg-csc-azul-texto',
-    halo: 'shadow-csc-azul-texto/70',
-    texto: 'text-csc-azul-texto',
-    pastilha: 'bg-csc-blue/16 border-csc-azul-texto/45',
-  },
-} as const
 
 /**
  * Campo branco dos formulários de evento (ecrã 2e) — 46px, como no handoff.
@@ -1699,7 +1657,7 @@ const CalendarPage: React.FC = () => {
           </div>
 
           {/* Coluna Direita: Eventos do Dia Selecionado Diretamente */}
-          <div className="lg:col-span-5 space-y-3 lg:sticky lg:top-6">
+          <div className="space-y-3">
             {/*
               Com a agenda toda vazia (ecrã 11b) este painel calava-se: dizia
               "Sem eventos neste dia" logo por cima de "Nada marcado ainda", e
@@ -2020,10 +1978,10 @@ const CalendarPage: React.FC = () => {
             </div>
 
             {/* Grelha Responsiva Versão Web (2 Colunas Amplas no Desktop) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+            <div className="grid grid-cols-1 gap-6 items-start">
               
               {/* COLUNA ESQUERDA (5 Colunas): Detalhes do Evento, Matchup VS e Presença Pessoal */}
-              <div className="lg:col-span-5 space-y-5">
+              <div className="space-y-5">
 
                 {/* O confronto era aqui um cartão com os dois emblemas e a
                     linha "Condição: Visitado". Passou a ser o título do ecrã
@@ -2191,8 +2149,8 @@ const CalendarPage: React.FC = () => {
                             <p className="text-[10px] font-black uppercase tracking-widest text-white/60">A tua convocatória para este evento</p>
                             <p className="text-sm font-black text-white mt-0.5">
                               Estado: <span className={
-                                myCallup.status === 'confirmed' ? 'text-emerald-300' :
-                                myCallup.status === 'declined' ? 'text-red-300' : 'text-csc-gold'
+                                myCallup.status === 'confirmed' ? 'text-csc-verde-texto' :
+                                myCallup.status === 'declined' ? 'text-csc-vermelho-texto' : 'text-csc-gold'
                               }>
                                 {myCallup.status === 'confirmed' ? 'Disseste que sim' :
                                  myCallup.status === 'declined' ? 'Disseste que não' : 'Aguarda a tua resposta'}
@@ -2258,7 +2216,7 @@ const CalendarPage: React.FC = () => {
                 })
 
                 return (
-                  <div className="lg:col-span-7 bg-white/[0.07] p-4 sm:p-5 rounded-3xl space-y-3.5 transition-all border border-white/10 border-t-white/20 shadow-lg shadow-black/20">
+                  <div className="bg-white/[0.07] p-4 rounded-3xl space-y-3.5 transition-all border border-white/10 border-t-white/20 shadow-lg shadow-black/20">
                     {/* Topo da Convocatória com Botão de Colapsar / Expandir */}
                     <button
                       type="button"
@@ -2318,7 +2276,7 @@ const CalendarPage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {/* O `hidden sm:inline` que aqui estava nunca mostrava
+                        {/* O `hidden` que aqui estava nunca mostrava
                             nada: os pontos de corte estão desligados no
                             `@theme`, e o botão ficava só com a seta. */}
                         <span className="text-xs font-bold text-white/70 group-hover:text-white">
@@ -2356,7 +2314,7 @@ const CalendarPage: React.FC = () => {
                           />
 
                           {/* Campo de Pesquisa e Limpeza de Filtros */}
-                          <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                          <div className="flex flex-col items-center gap-2 pt-1">
                             <div className="relative flex-1 w-full">
                               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/65" />
                               <input
@@ -2471,7 +2429,7 @@ const CalendarPage: React.FC = () => {
                           </div>
                         ) : (
                           <div className="max-h-[480px] overflow-y-auto pr-1">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div className="grid grid-cols-1 gap-2.5">
                               {filteredCallups.map(c => (
                                 <CallupRow
                                   key={c.id}

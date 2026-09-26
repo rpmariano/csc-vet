@@ -92,7 +92,7 @@ export const PagamentosProgramados: React.FC<PagamentosProgramadosProps> = ({
               const emAtraso = prazoPassou(p.due_date, hoje)
               const aVencer = dias !== null && !emAtraso && dias <= DIAS_DE_AVISO
               const barra = emAtraso ? BARRA_ATRASO : aVencer ? BARRA_AVISO : BARRA_NEUTRA
-              const corPrazo = emAtraso ? 'text-csc-vermelho-texto' : aVencer ? 'text-amber-300' : 'text-white/50'
+              const corPrazo = emAtraso ? 'text-csc-vermelho-texto' : aVencer ? 'text-csc-gold' : 'text-white/50'
               const nome = semRepetirGrupo(p.title, categoria)
               return (
                 <button

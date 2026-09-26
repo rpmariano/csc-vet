@@ -215,7 +215,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                   <button
                     onClick={handleAddTeamToGroup}
                     disabled={!selectedGroupForTeam || !selectedOpponentToAdd}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
+                    className="px-4 py-2 bg-csc-blue text-white rounded-lg text-sm font-bold hover:bg-csc-blue disabled:opacity-50 cursor-pointer"
                   >
                     Adicionar Equipa
                   </button>
@@ -227,7 +227,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                   Nenhum grupo configurado. Cria o "Grupo Único" ou "Grupo A", "Grupo B".
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {groups.map(g => (
                     <div key={g.id} className="cartao-simples p-4">
                       <h4 className="font-black text-white mb-3">{g.name} <span className="text-xs text-white/62 font-medium">(Fase {g.phase})</span></h4>

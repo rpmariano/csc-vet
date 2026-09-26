@@ -88,7 +88,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 gap-2.5">
             <div>
               <label className={ETIQUETA} htmlFor="quick-opp-sigla">Sigla (opcional)</label>
               <input
@@ -118,7 +118,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 gap-2.5">
             <div>
               <label className={ETIQUETA} htmlFor="quick-opp-contacto">Nome do Contacto</label>
               <input
