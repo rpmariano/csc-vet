@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
-import { supabase } from '../lib/supabaseClient'
+import { supabase } from '../lib/supabaseClient'
 import { CLUBE_NOME } from '../lib/clube'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
