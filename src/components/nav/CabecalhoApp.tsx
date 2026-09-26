@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useClub } from '../../context/ClubContext'
-import { supabase } from '../../lib/supabaseClient'
-import { comOmissoes, getSeasonLabel } from '../../lib/finance'
+import { useEpocaAtual } from '../../hooks/useEpocaAtual'
 import { formatClubSigla } from '../../lib/siglas'
 import { useFichaPorLigar } from '../FichaPorLigar'
 import { AvatarPerfil, PastilhaEstado } from '../ui'
@@ -38,16 +37,7 @@ export const CabecalhoApp: React.FC = () => {
   // Sem ficha ligada não há estado clínico nem contas para mostrar.
   const semFicha = estadoDaFicha === 'por-ligar'
 
-  /* A época: logo com a regra por omissão, para a linha não aparecer vazia, e
-     acertada quando chegam as definições financeiras (`season_start_month`). */
-  const [epoca, setEpoca] = useState(() => getSeasonLabel(comOmissoes(null)))
-  useEffect(() => {
-    let cancelado = false
-    supabase.from('financial_settings').select('*').maybeSingle().then(({ data }) => {
-      if (!cancelado && data) setEpoca(getSeasonLabel(comOmissoes(data)))
-    })
-    return () => { cancelado = true }
-  }, [])
+  const epoca = useEpocaAtual()
 
   const [rolado, setRolado] = useState(false)
   useEffect(() => {
