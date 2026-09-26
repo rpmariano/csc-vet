@@ -756,6 +756,30 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   as iniciais — quem identifica o clube é a linha de baixo, e repeti-las era
   ler a sigla duas vezes; tirar a linha de baixo desalinhava os dois blocos
   quando só um dos clubes tem emblema.
+- **"Aniversários deste mês" é uma fila de fotografias, não uma frase**
+  (decisão de 2026-09-26, `src/components/home/Aniversariantes.tsx`). Era um
+  `<CartaoSimples>` isolado com um ícone pequeno e uma linha de texto a
+  concatenar nomes ("Nuno a 12 · Paulo faz anos hoje"), do mesmo tamanho
+  apagado de uma nota de rodapé — ao lado do "Último jogo" e das "Provas em
+  curso", que têm o seu próprio `<EtiquetaSeccao>` em maiúsculas pequenas.
+  Passou à mesma forma: título de secção por cima, cartão por baixo, e dentro
+  dele uma fila com scroll horizontal de uma fotografia por pessoa (ou a
+  inicial do nome, sem fotografia). **Continua a ser um cartão só** — a fila
+  corre por dentro dele, e não uma miniatura por pessoa como cartão irmão, que
+  violaria a mesma regra que já vale nos Eventos e nos Torneios.
+  **Quem faz anos hoje tem o aro dourado e o rótulo "Hoje"**, em vez do dia da
+  semana — é o sinal de destaque da app (o mesmo do "Modificar evento", abaixo)
+  a dizer quem se quer ver primeiro. O dia do mês e a semana saem do texto
+  `AAAA-MM-DD` sem passar por `new Date()`, como o `fmtData` — a versão
+  anterior fazia `new Date(birth_date).getMonth()`, que funciona em Lisboa mas
+  seria a mesma armadilha do fuso horário se algum dia se corresse a oeste de
+  Greenwich.
+- **O "Modificar" é dourado quando é a ação principal; "Eliminar" fica sempre
+  vermelho.** O `<BotaoIcone>` ganhou a prop `destaque` (decisão de
+  2026-09-26): no dossier de convocatória dos Eventos, "Modificar evento" e
+  "Eliminar evento" tinham o mesmo cinzento neutro lado a lado, e as duas ações
+  liam-se com o mesmo peso — sem nada a dizer que editar é o que se faz mais e
+  eliminar é o passo sem volta. `editar-evento.spec.ts` cobre-o.
 - **A convocatória é o que está em `callups`, e mais nada — não se filtra por
   elegibilidade.** Quem foi convocado apto e ficou lesionado ou inativo antes do
   jogo continua na lista, marcado com o seu estado (`impedimento` no

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ShieldAlert, X, Cake } from 'lucide-react'
+import { ShieldAlert, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
@@ -24,6 +24,7 @@ import { CartaoProximoJogo, type JogoDaHome } from '../components/home/CartaoPro
 import { PorResponder, type PendenteDaHome } from '../components/home/PorResponder'
 import { UltimoJogo, type UltimoJogoDaHome } from '../components/home/UltimoJogo'
 import { ProvasEmCurso, type ProvaDaHome } from '../components/home/ProvasEmCurso'
+import { Aniversariantes, type AniversarianteDaHome } from '../components/home/Aniversariantes'
 import { calcularClassificacao, janelaDoClube } from '../lib/classificacao'
 import { mensagemDeErro } from '../lib/erros'
 
@@ -47,12 +48,6 @@ import { mensagemDeErro } from '../lib/erros'
  *
  * Cada uma fica registada em `docs/ecras-por-desenhar.md` com o que precisaria.
  */
-
-interface Aniversariante {
-  id: string
-  nome: string
-  dia: number
-}
 
 
 /**
@@ -124,7 +119,7 @@ const Home: React.FC = () => {
   const [pendentes, setPendentes] = useState<PendenteDaHome[]>([])
   const [ultimo, setUltimo] = useState<UltimoJogoDaHome | null>(null)
   const [provas, setProvas] = useState<ProvaDaHome[]>([])
-  const [aniversariantes, setAniversariantes] = useState<Aniversariante[]>([])
+  const [aniversariantes, setAniversariantes] = useState<AniversarianteDaHome[]>([])
   const [aCarregar, setACarregar] = useState(true)
 
   /*
@@ -204,7 +199,7 @@ const Home: React.FC = () => {
           /* Só as provas a decorrer: uma prova agendada não tem tabela para
              mostrar, e o cartão levava a um ecrã vazio. */
           supabase.from('tournaments').select('id, name, season, status').eq('status', 'ativo'),
-          supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date, status'),
+          supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date, status, photo_url'),
         ])
 
         if (cancelado) return
@@ -403,17 +398,30 @@ const Home: React.FC = () => {
         }))
 
         // Aniversários deste mês, e não só de hoje: é o que o 4a mostra.
-        const hoje = new Date()
+        // O mês e o dia saem do texto AAAA-MM-DD sem passar por `new Date()`,
+        // como o `fmtData` — uma data de nascimento não tem hora nenhuma a
+        // preservar, só o dia certo.
+        const mesDeHoje = new Date().getMonth() + 1
         setAniversariantes(
           ((plantel ?? []) as {
             id: string; name: string | null; nickname: string | null
             shirt_name: string | null; birth_date: string | null; status: string | null
+            photo_url: string | null
           }[])
             .filter(p => p.birth_date && p.status !== 'inactive')
-            .map(p => ({ p, d: new Date(p.birth_date as string) }))
-            .filter(({ d }) => d.getMonth() === hoje.getMonth())
-            .sort((a, b) => a.d.getDate() - b.d.getDate())
-            .map(({ p, d }) => ({ id: p.id, nome: primeiroNome(p), dia: d.getDate() })),
+            .map(p => {
+              const [, mesTexto, diaTexto] = (p.birth_date as string).split('-')
+              return { p, mes: Number(mesTexto), dia: Number(diaTexto) }
+            })
+            .filter(({ mes }) => mes === mesDeHoje)
+            .sort((a, b) => a.dia - b.dia)
+            .map(({ p, mes, dia }) => ({
+              id: p.id,
+              nome: primeiroNome(p),
+              dia,
+              mes,
+              foto: p.photo_url,
+            })),
         )
       } catch (erro) {
         console.error('Erro a carregar a Home:', erro)
@@ -468,8 +476,6 @@ const Home: React.FC = () => {
 
   const emblema = clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'
   const sigla = formatClubSigla(clubSettings?.initials)
-  const hojeDia = new Date().getDate()
-
   return (
     <div className="space-y-4 pb-2">
       {/* O cabeçalho (clube, época, canto) é o da moldura — `CabecalhoApp`. */}
@@ -551,23 +557,7 @@ const Home: React.FC = () => {
 
           <ProvasEmCurso provas={provas} />
 
-          {aniversariantes.length > 0 && (
-            <CartaoSimples className="flex items-center gap-3 px-4 py-3.5 bg-csc-blue/15 border-csc-blue/30">
-              <span className="w-8 h-8 rounded-[10px] bg-csc-blue/25 flex items-center justify-center text-csc-azul-texto flex-none">
-                <Cake size={15} />
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="block font-display font-extrabold text-[12.5px] text-white">
-                  Aniversários deste mês
-                </span>
-                <span className="block text-[10.5px] text-white/62 mt-0.5">
-                  {aniversariantes
-                    .map(p => (p.dia === hojeDia ? `${p.nome} faz anos hoje` : `${p.nome} a ${p.dia}`))
-                    .join(' · ')}
-                </span>
-              </span>
-            </CartaoSimples>
-          )}
+          <Aniversariantes pessoas={aniversariantes} />
 
           <PersianaConvidarAvisos
             aberto={conviteAberto}
