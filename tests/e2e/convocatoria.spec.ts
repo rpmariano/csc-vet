@@ -778,3 +778,44 @@ test.describe('Um jogo só pergunta a quem foi convocado', () => {
     await expect(page.getByText(/Contamos contigo\?/).first()).toBeVisible()
   })
 })
+
+/**
+ * Quem pode ser convocado depende do tipo (regra do `isPlayerEligible`,
+ * confirmada pela direção a 2026-09-26): **num convívio, toda a gente** —
+ * treinador, direção e lesionados; **num jogo ou num treino, só jogadores
+ * aptos**. Um treino convoca sozinho os jogadores aptos, e um convívio
+ * convoca sozinho toda a gente; a quem não entra, o painel diz porquê.
+ */
+test.describe('Quem pode ser convocado', () => {
+  const OUTRO = {
+    id: 'outro', name: 'Outro Jogador', shirt_name: 'Outro', jersey_number: 5,
+    role: 'player', roles: ['player'], status: 'active', photo_url: null, position: 'MC',
+  }
+  const treino = { ...base, id: 'tr', title: 'Treino', type: 'practice', date_time: DAQUI_A_DIAS(1) }
+  const convivio = { ...base, id: 'cv', title: 'Jantar', type: 'gathering', date_time: DAQUI_A_DIAS(3) }
+  const convocadoOutro = (eventId: string) => ({
+    id: 'c-outro-' + eventId, event_id: eventId, player_id: 'outro', status: 'called', responded_at: null, player: OUTRO,
+  })
+
+  for (const [quem, perfil] of [
+    ['o treinador que não joga', { role: 'coach', roles: ['coach'], status: 'active' }],
+    ['um jogador lesionado', { role: 'player', roles: ['player'], status: 'injured' }],
+  ] as const) {
+    test(`${quem}: é chamado para o convívio, não para o treino`, async ({ page }) => {
+      const eu = { ...EU, ...perfil }
+      const fixtures = {
+        profiles: [eu],
+        v_players_public: [eu, OUTRO],
+        events: [treino, convivio],
+        callups: [convocadoOutro('tr'), convocadoOutro('cv')],
+      }
+
+      await abre(page, fixtures, 'cv')
+      await expect(perguntaDaConvocatoria(page)).toBeVisible()
+
+      await abre(page, fixtures, 'tr')
+      await expect(perguntaDaConvocatoria(page)).toHaveCount(0)
+      await expect(fichaDoEvento(page).getByText(/Não estás nesta convocatória/)).toBeVisible()
+    })
+  }
+})

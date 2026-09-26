@@ -753,8 +753,14 @@ restrita a `coach`/`admin` via `public.get_user_role()` (`SECURITY DEFINER`). Es
   clube, que convoca automaticamente todos os aptos; num **jogo** dava a
   qualquer jogador a pergunta "Contamos contigo?" sem a equipa técnica o ter
   chamado, e responder inscrevia-o na convocatória. Hoje a regra é uma só, a do
-  `getMyCallupForEvent`: convocatória automática só em treino e convívio, e só
-  a quem está apto.
+  `getMyCallupForEvent`: convocatória automática só em treino e convívio, a
+  quem o `isPlayerEligible` deixar entrar.
+  **Quem pode ser convocado depende do tipo** (confirmado pela direção a
+  2026-09-26): **num convívio, toda a gente** — treinador, direção e
+  lesionados, só os inativos ficam de fora; **num jogo ou num treino, só
+  jogadores aptos**. É o `isPlayerEligible` (Agenda e Eventos) e o
+  `impedimento` do `EditarEvento`, que dizem o mesmo; `convocatoria.spec.ts`
+  cobre o treinador e o lesionado nos dois tipos.
   **E o painel não desaparece, diz porquê** — "Não estás nesta convocatória",
   ou a razão de a convocatória inteira estar fechada. Calado, quem abre um jogo
   não distingue "não fui chamado" de "a app não está a funcionar", e a
