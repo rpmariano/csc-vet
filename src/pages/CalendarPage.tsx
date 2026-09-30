@@ -30,7 +30,7 @@ import { AniversariosDoMes } from '../components/AniversariosDoMes'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao, ACarregar, EstadoVazio } from '../components/ui'
+import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao, ACarregar, EstadoVazio, BlocoData } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { compararPorCamisola, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, CORES_TIPO } from '../lib/eventos'
@@ -881,14 +881,7 @@ const CalendarPage: React.FC = () => {
           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
       >
         <div className="flex items-center gap-3.5 px-4 pt-4">
-          <span className="w-11 shrink-0 text-center">
-            <span className="block font-display font-black text-[19px] text-csc-gold leading-none tabular-nums">
-              {String(quando.getDate()).padStart(2, '0')}
-            </span>
-            <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/62 mt-0.5">
-              {quando.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, '')}
-            </span>
-          </span>
+          <BlocoData quando={quando} tamanho="grande" />
           <span className="min-w-0 flex-1">
             <span className="block font-display font-extrabold text-[15px] text-white truncate">{titulo}</span>
             <span className="block text-[11px] text-white/62 mt-0.5 truncate">

@@ -5,7 +5,7 @@ import { TriangleAlert } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from './BottomSheet'
-import { Botao } from './ui'
+import { Botao, BlocoData } from './ui'
 
 /**
  * Eventos por convocar (ecrãs 4c e 4d).
@@ -213,14 +213,7 @@ export const PersianaSemConvocatoria: React.FC<{
               transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
-            <span className="w-11 shrink-0 text-center">
-              <span className="block font-display font-black text-[17px] text-csc-gold leading-none tabular-nums">
-                {quando.getDate()}
-              </span>
-              <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/62 mt-0.5">
-                {quando.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, '')}
-              </span>
-            </span>
+            <BlocoData quando={quando} tamanho="medio" />
 
             <span className="min-w-0 flex-1">
               <span className="block font-display font-extrabold text-[12.5px] text-white truncate">
