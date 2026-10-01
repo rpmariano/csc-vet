@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { toast } from '../../context/ToastContext'
 import { triggerHaptic } from '../../utils/haptics'
 import { EcraDetalhe } from '../EcraDetalhe'
-import { Botao } from '../ui'
+import { Botao, BlocoData } from '../ui'
 import { mensagemDeErro } from '../../lib/erros'
 
 /**
@@ -182,14 +182,7 @@ export const ConvocatoriaAoCriar: React.FC<{
       <div className="space-y-4">
         {/* O evento que acabou de nascer. */}
         <div className="cartao-simples p-3.5 flex items-center gap-3">
-          <span className="w-11 shrink-0 text-center">
-            <span className="block font-display font-black text-[17px] text-csc-gold leading-none tabular-nums">
-              {quando.getDate()}
-            </span>
-            <span className="block font-display font-bold text-[8.5px] tracking-[0.1em] uppercase text-white/62 mt-0.5">
-              {quando.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, '')}
-            </span>
-          </span>
+          <BlocoData quando={quando} tamanho="medio" />
           <span className="min-w-0 flex-1">
             <span className="block font-display font-extrabold text-[13px] text-white truncate">
               {evento.titulo}

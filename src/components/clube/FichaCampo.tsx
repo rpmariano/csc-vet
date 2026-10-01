@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { MapPin, Pencil, Trash2, ExternalLink, Copy, Star, Info } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { EcraDetalhe } from '../EcraDetalhe'
-import { EtiquetaSeccao, Botao } from '../ui'
+import { EtiquetaSeccao, Botao, BlocoData } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 import { toast } from '../../context/ToastContext'
 
@@ -205,14 +205,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
                       key={evento.id}
                       className="flex items-center gap-3 px-4 py-3 border-t border-white/7 first:border-t-0"
                     >
-                      <span className="w-9 shrink-0 text-center">
-                        <span className="block font-display font-black text-[15px] text-csc-gold leading-none tabular-nums">
-                          {String(quando.getDate()).padStart(2, '0')}
-                        </span>
-                        <span className="block font-display font-bold text-[8px] tracking-[0.1em] uppercase text-white/62 mt-0.5">
-                          {quando.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, '')}
-                        </span>
-                      </span>
+                      <BlocoData quando={quando} tamanho="pequeno" />
                       <span className="flex-1 min-w-0">
                         <span className="block font-display font-bold text-xs text-white truncate">{titulo}</span>
                         <span className="block text-[9.5px] text-white/62 mt-0.5 truncate">
