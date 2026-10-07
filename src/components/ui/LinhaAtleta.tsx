@@ -19,21 +19,23 @@ import React from 'react'
  */
 
 /** A bola verde com o número de camisola. Sem número, um traço. */
-export const NumeroCamisola: React.FC<{ numero?: number | null; className?: string }> = ({
+export const NumeroCamisola: React.FC<{ numero?: number | null; className?: string; icone?: React.ReactNode }> = ({
   numero,
   className = '',
+  icone,
 }) => (
   <span
     aria-hidden="true"
     className={`w-8 h-8 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 text-csc-gold
       font-display font-extrabold text-[11px] flex items-center justify-center shrink-0 tabular-nums ${className}`}
   >
-    {numero ?? '–'}
+    {icone ?? numero ?? '–'}
   </span>
 )
 
 export interface LinhaAtletaProps {
   numero?: number | null
+  icone?: React.ReactNode
   nome: string
   /** Segunda linha — as posições, e por isso só no Plantel. */
   detalhe?: React.ReactNode
@@ -45,13 +47,14 @@ export interface LinhaAtletaProps {
 
 export const LinhaAtleta: React.FC<LinhaAtletaProps> = ({
   numero,
+  icone,
   nome,
   detalhe,
   foto,
   direita,
 }) => (
   <>
-    <NumeroCamisola numero={numero} />
+    <NumeroCamisola numero={numero} icone={icone} />
 
     {foto !== undefined && (
       foto ? (

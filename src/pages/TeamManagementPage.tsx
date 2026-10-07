@@ -582,60 +582,92 @@ const TeamManagementPage: React.FC = () => {
       return
     }
 
-    const primaryRole: UserRole = formRoles.includes('admin') 
+    const isSupporter = formRoles.includes('supporter')
+    const primaryRole: UserRole = isSupporter
+      ? 'supporter'
+      : formRoles.includes('admin') 
       ? 'admin' 
       : formRoles.includes('coach') 
       ? 'coach' 
-      : formRoles.includes('player') 
-      ? 'player' 
-      : 'supporter'
+      : 'player'
 
     // Sem o papel de Jogador não há posição de campo a gravar — mesmo que a
     // seleção tenha ficado por defeito de uma edição anterior, não se grava.
-    const positionStr = formRoles.includes('player')
+    const positionStr = (!isSupporter && formRoles.includes('player'))
       ? (formPositions.length > 0 ? formPositions.join(', ') : 'Médio Centro')
       : null
     // Os papéis passam a ir na coluna `roles`, protegida por RLS, em vez de uma
     // etiqueta <!--roles:--> escondida dentro do texto das notas médicas.
-    const medicalNotesEncoded = formMedicalNotes && formMedicalNotes.trim() ? formMedicalNotes.trim() : null
+    const medicalNotesEncoded = !isSupporter && formMedicalNotes && formMedicalNotes.trim() ? formMedicalNotes.trim() : null
 
     const sanitizeDate = (val?: string | null) => (val && val.trim() ? val.trim() : null)
     const sanitizeText = (val?: string | null) => (val && val.trim() ? val.trim() : null)
 
-    const payload = {
-      name: formName.trim(),
-      shirt_name: sanitizeText(formShirtName),
-      nickname: sanitizeText(formShirtName),
-      email: formEmail.trim().toLowerCase(),
-      phone: sanitizeText(formPhone),
-      role: primaryRole,
-      // Coluna `roles`: a lista completa de papéis atribuídos. Só administradores
-      // conseguem escrevê-la — a RLS rejeita a alteração feita pelo próprio.
-      roles: formRoles,
-      status: formStatus,
-      jersey_number: formJerseyNumber !== '' && !isNaN(Number(formJerseyNumber)) ? Number(formJerseyNumber) : null,
-      kit_size: sanitizeText(formKitSize),
-      preferred_foot: formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
-      birth_date: sanitizeDate(formBirthDate),
-      nationality: sanitizeText(formNationality) || 'Portuguesa',
-      position: positionStr,
-      address: sanitizeText(formAddress),
-      postal_code: sanitizeText(formPostalCode),
-      city: sanitizeText(formCity),
-      nif: sanitizeText(formNif),
-      id_number: sanitizeText(formIdNumber),
-      id_card_expiry: sanitizeDate(formIdCardExpiry),
-      iban: sanitizeText(formIban),
-      gdpr_consent: Boolean(formGdprConsent),
-      member_number: sanitizeText(formMemberNumber),
-      quota_start_date: sanitizeDate(formQuotaStart),
-      quota_end_date: sanitizeDate(formQuotaEnd),
-      emergency_contact_name: sanitizeText(formEmergencyName),
-      emergency_contact_phone: sanitizeText(formEmergencyPhone),
-      emergency_contact_relation: formEmergencyRelation ? sanitizeText(formEmergencyRelation) : null,
-      medical_notes: medicalNotesEncoded,
-      photo_url: photoUrl || null,
-    }
+    const payload = isSupporter
+      ? {
+          name: formName.trim(),
+          shirt_name: null,
+          nickname: null,
+          email: formEmail.trim().toLowerCase(),
+          phone: sanitizeText(formPhone),
+          role: 'supporter' as UserRole,
+          roles: ['supporter'] as UserRole[],
+          status: 'active' as ProfileStatus,
+          jersey_number: null,
+          kit_size: null,
+          preferred_foot: null,
+          birth_date: null,
+          nationality: 'Portuguesa',
+          position: null,
+          address: null,
+          postal_code: null,
+          city: null,
+          nif: null,
+          id_number: null,
+          id_card_expiry: null,
+          iban: null,
+          gdpr_consent: Boolean(formGdprConsent),
+          member_number: null,
+          quota_start_date: null,
+          quota_end_date: null,
+          emergency_contact_name: null,
+          emergency_contact_phone: null,
+          emergency_contact_relation: null,
+          medical_notes: null,
+          photo_url: photoUrl || null,
+        }
+      : {
+          name: formName.trim(),
+          shirt_name: sanitizeText(formShirtName),
+          nickname: sanitizeText(formShirtName),
+          email: formEmail.trim().toLowerCase(),
+          phone: sanitizeText(formPhone),
+          role: primaryRole,
+          roles: formRoles,
+          status: formStatus,
+          jersey_number: formJerseyNumber !== '' && !isNaN(Number(formJerseyNumber)) ? Number(formJerseyNumber) : null,
+          kit_size: sanitizeText(formKitSize),
+          preferred_foot: formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
+          birth_date: sanitizeDate(formBirthDate),
+          nationality: sanitizeText(formNationality) || 'Portuguesa',
+          position: positionStr,
+          address: sanitizeText(formAddress),
+          postal_code: sanitizeText(formPostalCode),
+          city: sanitizeText(formCity),
+          nif: sanitizeText(formNif),
+          id_number: sanitizeText(formIdNumber),
+          id_card_expiry: sanitizeDate(formIdCardExpiry),
+          iban: sanitizeText(formIban),
+          gdpr_consent: Boolean(formGdprConsent),
+          member_number: sanitizeText(formMemberNumber),
+          quota_start_date: sanitizeDate(formQuotaStart),
+          quota_end_date: sanitizeDate(formQuotaEnd),
+          emergency_contact_name: sanitizeText(formEmergencyName),
+          emergency_contact_phone: sanitizeText(formEmergencyPhone),
+          emergency_contact_relation: formEmergencyRelation ? sanitizeText(formEmergencyRelation) : null,
+          medical_notes: medicalNotesEncoded,
+          photo_url: photoUrl || null,
+        }
 
     try {
       const cleanEmail = formEmail.trim().toLowerCase()
@@ -667,8 +699,10 @@ const TeamManagementPage: React.FC = () => {
           console.warn('Update matched 0 rows')
         }
         savedPlayerId = formId
-        await guardarMesesDispensados(formId)
-        toast.success('Ficha de membro atualizada com sucesso!')
+        if (!isSupporter && formRoles.includes('player')) {
+          await guardarMesesDispensados(formId)
+        }
+        toast.success(isSupporter ? 'Ficha de adepto atualizada com sucesso!' : 'Ficha de membro atualizada com sucesso!')
       } else {
         // 2. Se for um membro de semente (seed-X) ou novo registo:
         // Verificar se já existe perfil na BD com este nome ou email
@@ -697,7 +731,10 @@ const TeamManagementPage: React.FC = () => {
             .select()
           if (error) throw error
           savedPlayerId = existingId
-          toast.success('Ficha de membro atualizada na base de dados!')
+          if (!isSupporter && formRoles.includes('player')) {
+            await guardarMesesDispensados(existingId)
+          }
+          toast.success(isSupporter ? 'Ficha de adepto atualizada na base de dados!' : 'Ficha de membro atualizada na base de dados!')
         } else {
           const newId = crypto.randomUUID()
           const { error } = await supabase
@@ -709,7 +746,10 @@ const TeamManagementPage: React.FC = () => {
             .select()
           if (error) throw error
           savedPlayerId = newId
-          toast.success('Novo membro gravado com sucesso!')
+          if (!isSupporter && formRoles.includes('player')) {
+            await guardarMesesDispensados(newId)
+          }
+          toast.success(isSupporter ? 'Adepto criado com sucesso!' : 'Novo membro gravado com sucesso!')
         }
       }
 
@@ -736,12 +776,14 @@ const TeamManagementPage: React.FC = () => {
     }
   }
 
-  const handleDeleteMember = (id: string, name: string) => {
+  const handleDeleteMember = (id: string, name: string, isSupporter = false) => {
     setConfirmModalConfig({
       isOpen: true,
-      title: 'Eliminar membro',
-      description: `Tens a certeza que queres eliminar "${name}"? A ficha e os dados associados são eliminados.`,
-      confirmText: 'Sim, eliminar membro',
+      title: isSupporter ? 'Eliminar adepto' : 'Eliminar membro',
+      description: isSupporter
+        ? `Tens a certeza que queres eliminar o adepto "${name}"? A ficha é eliminada.`
+        : `Tens a certeza que queres eliminar "${name}"? A ficha e os dados associados são eliminados.`,
+      confirmText: isSupporter ? 'Sim, eliminar adepto' : 'Sim, eliminar membro',
       cancelText: 'Cancelar',
       variant: 'danger',
       onConfirm: async () => {
@@ -755,9 +797,9 @@ const TeamManagementPage: React.FC = () => {
             setProfiles(prev => prev.filter(p => p.id !== id))
           }
           if (selectedProfile?.id === id) fecharFicha()
-          toast.success('Membro eliminado com sucesso!')
+          toast.success(isSupporter ? 'Adepto eliminado com sucesso!' : 'Membro eliminado com sucesso!')
         } catch (err: any) {
-          toast.error('Erro ao eliminar membro: ' + mensagemDeErro(err))
+          toast.error((isSupporter ? 'Erro ao eliminar adepto: ' : 'Erro ao eliminar membro: ') + mensagemDeErro(err))
         }
       }
     })
@@ -1196,9 +1238,11 @@ const TeamManagementPage: React.FC = () => {
 
                 {grupo.map((person, iLinha) => {
                   const roles = extractRolesFromProfile(person)
+                  const isPersonPlayer = roles.includes('player')
+                  const isPersonAdepto = eAdepto(person)
                   // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
                   // omissão de parsePositions(null) mostrava sempre "Médio Centro".
-                  const positions = roles.includes('player') ? parsePositions(person.position) : []
+                  const positions = isPersonPlayer ? parsePositions(person.position) : []
                   const e = jga(person.id)
                   const inativo = person.status === 'inactive'
                   const nomeCurto = person.shirt_name || person.nickname || person.name
@@ -1217,7 +1261,8 @@ const TeamManagementPage: React.FC = () => {
                           focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold"
                       >
                         <LinhaAtleta
-                          numero={person.jersey_number}
+                          numero={isPersonPlayer ? person.jersey_number : null}
+                          icone={isPersonAdepto ? <Heart size={14} className="text-rose-400" /> : undefined}
                           nome={nomeCurto}
                           foto={person.photo_url}
                           /* Só as posições, e em sigla como no campo: o nome
@@ -1225,43 +1270,54 @@ const TeamManagementPage: React.FC = () => {
                              logo por cima, e "Ponta de Lança (Esq)" enchia a
                              linha. Quem não joga não tem posições — e o grupo
                              já diz que é da equipa técnica ou da direção. */
-                          detalhe={siglasDasPosicoes(positions).join(' · ')}
+                          detalhe={
+                            isPersonPlayer
+                              ? siglasDasPosicoes(positions).join(' · ')
+                              : isPersonAdepto
+                              ? 'Adepto CSC'
+                              : roles.includes('coach')
+                              ? 'Treinador'
+                              : 'Direção'
+                          }
                           direita={
-                            /* J · G · A — os inativos não jogaram esta época. */
-                            inativo ? (
-                              <span className="text-[9.5px] text-white/35 italic shrink-0">sem jogos</span>
-                            ) : (
-                              <span className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
-                                <span className="font-display font-bold text-[11px] text-white/62">{e.j}<span className="text-white/30">J</span></span>
-                                <span className="font-display font-black text-[11px] text-csc-gold">{e.g}<span className="opacity-60">G</span></span>
-                                <span className="font-display font-black text-[11px] text-csc-azul-texto">{e.a}<span className="opacity-60">A</span></span>
-                              </span>
-                            )
+                            isPersonPlayer ? (
+                              inativo ? (
+                                <span className="text-[9.5px] text-white/35 italic shrink-0">sem jogos</span>
+                              ) : (
+                                <span className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
+                                  <span className="font-display font-bold text-[11px] text-white/62">{e.j}<span className="text-white/30">J</span></span>
+                                  <span className="font-display font-black text-[11px] text-csc-gold">{e.g}<span className="opacity-60">G</span></span>
+                                  <span className="font-display font-black text-[11px] text-csc-azul-texto">{e.a}<span className="opacity-60">A</span></span>
+                                </span>
+                              )
+                            ) : null
                           }
                         />
                       </button>
 
                       {/* O estado é o único botão que fica na linha: é o que o
-                          treinador carrega a toda a hora. */}
-                      <button
-                        type="button"
-                        onClick={e2 => handleTogglePlayerClinicalStatus(person, e2)}
-                        disabled={!isCoachOrAdmin}
-                        aria-label={`${person.name} está ${person.status === 'active' ? 'apto' : person.status === 'injured' ? 'lesionado' : 'inativo'}${isCoachOrAdmin ? '. Alternar entre apto e lesionado' : ''}`}
-                        title={isCoachOrAdmin ? 'Alternar entre apto e lesionado' : undefined}
-                        className={`w-11 flex items-center justify-center shrink-0 border-l border-white/8
-                          transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
-                            isCoachOrAdmin ? 'cursor-pointer active:scale-97' : 'cursor-default'
-                          } ${
-                            person.status === 'active' ? 'text-csc-verde-texto'
-                              : person.status === 'injured' ? 'text-csc-vermelho-texto'
-                              : 'text-white/35'
-                          }`}
-                      >
-                        {person.status === 'active' ? <CheckCircle2 size={16} />
-                          : person.status === 'injured' ? <HeartPulse size={16} />
-                          : <XCircle size={16} />}
-                      </button>
+                          treinador carrega a toda a hora. Só se aplica a jogadores. */}
+                      {isPersonPlayer && (
+                        <button
+                          type="button"
+                          onClick={e2 => handleTogglePlayerClinicalStatus(person, e2)}
+                          disabled={!isCoachOrAdmin}
+                          aria-label={`${person.name} está ${person.status === 'active' ? 'apto' : person.status === 'injured' ? 'lesionado' : 'inativo'}${isCoachOrAdmin ? '. Alternar entre apto e lesionado' : ''}`}
+                          title={isCoachOrAdmin ? 'Alternar entre apto e lesionado' : undefined}
+                          className={`w-11 flex items-center justify-center shrink-0 border-l border-white/8
+                            transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
+                              isCoachOrAdmin ? 'cursor-pointer active:scale-97' : 'cursor-default'
+                            } ${
+                              person.status === 'active' ? 'text-csc-verde-texto'
+                                : person.status === 'injured' ? 'text-csc-vermelho-texto'
+                                : 'text-white/35'
+                            }`}
+                        >
+                          {person.status === 'active' ? <CheckCircle2 size={16} />
+                            : person.status === 'injured' ? <HeartPulse size={16} />
+                            : <XCircle size={16} />}
+                        </button>
+                      )}
                     </div>
                   )
                 })}
@@ -1299,12 +1355,14 @@ const TeamManagementPage: React.FC = () => {
                     // omissão de parsePositions(null) mostrava sempre "Médio Centro".
                     const positions = roles.includes('player') ? parsePositions(person.position) : []
                     const e = jga(person.id)
+                    const isPersonAdepto = eAdepto(person)
+                    const isPersonPlayer = roles.includes('player')
 
                     return (
                       <div
                         key={person.id}
                         className={`cartao-simples overflow-hidden flex flex-col ${
-                          person.status === 'injured' ? 'border-csc-red/35' : ''
+                          person.status === 'injured' && isPersonPlayer ? 'border-csc-red/35' : ''
                         }`}
                       >
                         <button
@@ -1317,16 +1375,18 @@ const TeamManagementPage: React.FC = () => {
                         >
                           <span className="w-full flex items-center justify-between">
                             <span className="font-display font-black text-[15px] text-csc-gold tabular-nums">
-                              {person.jersey_number ? `#${person.jersey_number}` : '–'}
+                              {isPersonPlayer && person.jersey_number ? `#${person.jersey_number}` : isPersonAdepto ? <Heart size={14} className="text-rose-400" /> : '–'}
                             </span>
-                            <span
-                              className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                                person.status === 'active' ? 'bg-csc-light'
-                                  : person.status === 'injured' ? 'bg-csc-red'
-                                  : 'bg-white/25'
-                              }`}
-                              aria-hidden="true"
-                            />
+                            {isPersonPlayer && (
+                              <span
+                                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                  person.status === 'active' ? 'bg-csc-light'
+                                    : person.status === 'injured' ? 'bg-csc-red'
+                                    : 'bg-white/25'
+                                }`}
+                                aria-hidden="true"
+                              />
+                            )}
                           </span>
 
                           {person.photo_url ? (
@@ -1346,15 +1406,23 @@ const TeamManagementPage: React.FC = () => {
                               {person.shirt_name || person.nickname || person.name}
                             </span>
                             <span className="block text-[9.5px] text-white/62 truncate mt-0.5">
-                              {siglasDasPosicoes(positions).join(' · ')}
+                              {isPersonPlayer
+                                ? (siglasDasPosicoes(positions).join(' · ') || 'Sem posição')
+                                : isPersonAdepto
+                                ? 'Adepto CSC'
+                                : roles.includes('coach')
+                                ? 'Treinador'
+                                : 'Direção'}
                             </span>
                           </span>
 
-                          <span className="w-full flex items-baseline justify-center gap-2 tabular-nums border-t border-white/8">
-                            <span className="font-display font-bold text-[11px] text-white/62 pt-1.5">{e.j}<span className="text-white/30">J</span></span>
-                            <span className="font-display font-black text-[11px] text-csc-gold pt-1.5">{e.g}<span className="opacity-60">G</span></span>
-                            <span className="font-display font-black text-[11px] text-csc-azul-texto pt-1.5">{e.a}<span className="opacity-60">A</span></span>
-                          </span>
+                          {isPersonPlayer && (
+                            <span className="w-full flex items-baseline justify-center gap-2 tabular-nums border-t border-white/8">
+                              <span className="font-display font-bold text-[11px] text-white/62 pt-1.5">{e.j}<span className="text-white/30">J</span></span>
+                              <span className="font-display font-black text-[11px] text-csc-gold pt-1.5">{e.g}<span className="opacity-60">G</span></span>
+                              <span className="font-display font-black text-[11px] text-csc-azul-texto pt-1.5">{e.a}<span className="opacity-60">A</span></span>
+                            </span>
+                          )}
                         </button>
                       </div>
                     )
@@ -1372,660 +1440,726 @@ const TeamManagementPage: React.FC = () => {
           volta à ficha; a partir da lista, volta ao Plantel. */}
       <EcraDetalhe
         aberto={isFormModalOpen}
-        voltarPara={isEditing && isDetailModalOpen ? 'Ficha do atleta' : 'Plantel'}
+        voltarPara={isEditing && isDetailModalOpen ? (formRoles.includes('supporter') ? 'Ficha do adepto' : 'Ficha do atleta') : 'Plantel'}
         aoVoltar={handleAttemptCloseFormModal}
-        sobrancelha={isEditing ? 'Editar atleta' : 'Novo membro'}
-        titulo={isEditing ? (formName || 'Ficha do atleta') : 'Criar ficha'}
-        legenda={isEditing && formJerseyNumber !== '' ? `nº ${formJerseyNumber}` : undefined}
+        sobrancelha={isEditing ? (formRoles.includes('supporter') ? 'Editar adepto' : 'Editar atleta') : (formRoles.includes('supporter') ? 'Novo adepto' : 'Novo membro')}
+        titulo={isEditing ? (formName || (formRoles.includes('supporter') ? 'Ficha do adepto' : 'Ficha do atleta')) : (formRoles.includes('supporter') ? 'Criar ficha de adepto' : 'Criar ficha')}
+        legenda={!formRoles.includes('supporter') && isEditing && formJerseyNumber !== '' ? `nº ${formJerseyNumber}` : undefined}
       >
             <form onSubmit={handleSaveMember} className="space-y-4">
 
-              {/* Estado — a secção 2 do handoff, aqui em primeiro porque é o
-                  que mais vezes se vem cá mudar. */}
+              {/* Papel / Funções no Sistema — no topo para definir imediatamente os campos visíveis */}
               <div className="cartao-simples p-4 space-y-2.5">
-                <h3 className={ETIQUETA}>Estado</h3>
-                <div className="grid grid-cols-3 gap-1 bg-white/6 p-1 rounded-2xl">
-                  {([
-                    ['active', 'Apto'],
-                    ['injured', 'Lesionado'],
-                    ['inactive', 'Inativo'],
-                  ] as const).map(([valor, etiqueta]) => (
-                    <button
-                      key={valor}
-                      type="button"
-                      onClick={() => setFormStatus(valor)}
-                      aria-pressed={formStatus === valor}
-                      className={`min-h-11 rounded-[14px] font-display font-black text-[11px] cursor-pointer
-                        transition-transform duration-150 active:scale-97
-                        focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
-                          formStatus === valor
-                            ? valor === 'injured'
-                              ? 'bg-csc-red text-white'
-                              : valor === 'inactive'
-                              ? 'bg-white/25 text-white'
-                              : 'bg-csc-light text-white'
-                            : 'text-white/62'
-                        }`}
-                    >
-                      {etiqueta}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[10.5px] leading-relaxed text-white/62">
-                  Lesionado ou inativo sai dos treinos futuros; lesionado ainda pode ir a convívios.
-                </p>
-              </div>
-              
-              {/* 1. DADOS PESSOAIS & IDENTIFICAÇÃO FISCAL */}
-              <div className="cartao-simples p-4 space-y-3.5">
-                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                  <Users size={14} className="text-csc-gold" />
-                  <span>1. Identificação Pessoal & Fiscal</span>
-                </h3>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className={ETIQUETA}>Nome Completo *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      className={CAMPO}
-                      placeholder="Ex: André Gomes Marques do Couto"
-                    />
-                  </div>
-                  <div>
-                    <label className={ETIQUETA}>Nome na Camisola</label>
-                    <input
-                      type="text"
-                      value={formShirtName}
-                      onChange={(e) => setFormShirtName(e.target.value)}
-                      className={CAMPO}
-                      placeholder="Ex: A. COUTO"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className={ETIQUETA}>Data de Nascimento</label>
-                    <input
-                      type="date"
-                      value={formBirthDate}
-                      onChange={(e) => setFormBirthDate(e.target.value)}
-                      className={CAMPO}
-                    />
-                  </div>
-                  <div>
-                    <label className={ETIQUETA}>Nacionalidade</label>
-                    <input
-                      type="text"
-                      value={formNationality}
-                      onChange={(e) => setFormNationality(e.target.value)}
-                      className={CAMPO}
-                      placeholder="Portuguesa"
-                    />
-                  </div>
-                  <div>
-                    <label className={ETIQUETA}>Nº de Contribuinte (NIF)</label>
-                    <input
-                      type="text"
-                      value={formNif}
-                      onChange={(e) => setFormNif(e.target.value)}
-                      className={CAMPO}
-                      placeholder="000 000 000"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className={ETIQUETA}>Nº Cartão de Cidadão / Passaporte</label>
-                    <input
-                      type="text"
-                      value={formIdNumber}
-                      onChange={(e) => setFormIdNumber(e.target.value)}
-                      className={CAMPO}
-                      placeholder="00000000"
-                    />
-                  </div>
-                  <div>
-                    <label className={ETIQUETA}>Validade do Cartão de Cidadão</label>
-                    <input
-                      type="date"
-                      value={formIdCardExpiry}
-                      onChange={(e) => setFormIdCardExpiry(e.target.value)}
-                      className={CAMPO}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. MORADA & RESIDÊNCIA */}
-              <div className="cartao-simples p-4 space-y-3.5">
-                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileText size={14} className="text-csc-gold" />
-                  <span>2. Morada & Residência</span>
-                </h3>
-
-                <div>
-                  <label className={ETIQUETA}>Morada (Rua, Nº e Andar)</label>
-                  <input
-                    type="text"
-                    value={formAddress}
-                    onChange={(e) => setFormAddress(e.target.value)}
-                    className={CAMPO}
-                    placeholder="Rua e número da morada"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className={ETIQUETA}>Código Postal</label>
-                    <input
-                      type="text"
-                      value={formPostalCode}
-                      onChange={(e) => setFormPostalCode(e.target.value)}
-                      className={CAMPO}
-                      placeholder="0000-000"
-                    />
-                  </div>
-                  <div>
-                    <label className={ETIQUETA}>Localidade</label>
-                    <input
-                      type="text"
-                      value={formCity}
-                      onChange={(e) => setFormCity(e.target.value)}
-                      className={CAMPO}
-                      placeholder="Cascais / Alcabideche"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. CONTACTOS */}
-              <div className="cartao-simples p-4 space-y-3.5">
-                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                  <Phone size={14} className="text-csc-gold" />
-                  <span>3. Contactos</span>
-                </h3>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className={ETIQUETA}>Email *</label>
-                    <input
-                      type="email"
-                      required
-                      value={formEmail}
-                      onChange={(e) => setFormEmail(e.target.value)}
-                      className={CAMPO}
-                      placeholder="atleta@clube.pt"
-                    />
-                  </div>
-                  <div>
-                    <label className={ETIQUETA}>Telemóvel</label>
-                    <input
-                      type="tel"
-                      value={formPhone}
-                      onChange={(e) => setFormPhone(e.target.value)}
-                      className={CAMPO}
-                      placeholder="912 345 678"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 4. DADOS DESPORTIVOS, EQUIPAMENTO & PAPEL */}
-              <div className="cartao-simples p-4 space-y-3.5">
-                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Shield size={14} className="text-csc-gold" />
-                    <span>4. Dados Desportivos, Equipamento & Função</span>
-                  </span>
-                  <span className="text-[10px] text-white/65 font-bold">Múltiplas posições e papéis permitidos</span>
-                </h3>
-
-                {/* 4.1 Campo de Futebol Interativo — só faz sentido para quem tem o papel
-                    de Jogador; treinadores/direção sem esse papel não jogam, não têm posição. */}
-                {formRoles.includes('player') && (
-                  <div>
-                    <label className="block text-xs font-bold text-white/70 mb-2">
-                      Posições no Campo:
-                    </label>
-                    <SoccerPitchSelector
-                      selectedPositions={formPositions}
-                      onChange={setFormPositions}
-                    />
-                  </div>
-                )}
-
-                {/* 4.2 Papéis no Sistema */}
-                <div className="pt-2 border-t border-white/10">
-                  <label className="block text-xs font-bold text-white/70 mb-2">
-                    Papel / Funções no Sistema:
+                <div className="flex items-center justify-between">
+                  <label className={ETIQUETA}>
+                    Papel / Funções no Sistema
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Jogador */}
-                    <button
-                      type="button"
-                      onClick={() => toggleRole('player')}
-                      className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
-                        formRoles.includes('player')
-                          ? 'bg-csc-light/15 '
-                          : 'bg-white/5 hover:bg-white/10'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full mb-1">
-                        <UserIcon size={15} className="text-csc-verde-texto" />
-                        <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                          formRoles.includes('player') ? 'bg-csc-light text-white' : 'border border-white/20'
-                        }`}>
-                          {formRoles.includes('player') && <Check size={12} className="stroke-[3]" />}
-                        </div>
-                      </div>
-                      <span className="text-xs font-extrabold text-white">Jogador</span>
-                      <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Atleta nas convocatórias e estatísticas</span>
-                    </button>
-
-                    {/* Treinador */}
-                    <button
-                      type="button"
-                      onClick={() => toggleRole('coach')}
-                      className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
-                        formRoles.includes('coach')
-                          ? 'bg-csc-blue/18 '
-                          : 'bg-white/5 hover:bg-white/10'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full mb-1">
-                        <ClipboardList size={15} className="text-csc-azul-texto" />
-                        <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                          formRoles.includes('coach') ? 'bg-csc-blue text-white' : 'border border-white/20'
-                        }`}>
-                          {formRoles.includes('coach') && <Check size={12} className="stroke-[3]" />}
-                        </div>
-                      </div>
-                      <span className="text-xs font-extrabold text-white">Treinador</span>
-                      <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Equipa técnica, criação de treinos e jogos</span>
-                    </button>
-
-                    {/* Administrador / Direção */}
-                    <button
-                      type="button"
-                      onClick={() => toggleRole('admin')}
-                      className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
-                        formRoles.includes('admin')
-                          ? 'bg-csc-gold/15 '
-                          : 'bg-white/5 hover:bg-white/10'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full mb-1">
-                        <Shield size={15} className="text-csc-gold" />
-                        <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                          formRoles.includes('admin') ? 'bg-white/10 text-csc-gold' : ' '
-                        }`}>
-                          {formRoles.includes('admin') && <Check size={12} className="stroke-[3]" />}
-                        </div>
-                      </div>
-                      <span className="text-xs font-extrabold text-white">Administrador / Direção</span>
-                      <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Acesso total, finanças e administração</span>
-                    </button>
-
-                    {/* Adepto */}
-                    <button
-                      type="button"
-                      onClick={() => toggleRole('supporter')}
-                      className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
-                        formRoles.includes('supporter')
-                          ? 'bg-white/15 '
-                          : 'bg-white/5 hover:bg-white/10'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full mb-1">
-                        <Heart size={15} className="text-rose-400" />
-                        <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                          formRoles.includes('supporter') ? 'bg-rose-500 text-white' : 'border border-white/20'
-                        }`}>
-                          {formRoles.includes('supporter') && <Check size={12} className="stroke-[3]" />}
-                        </div>
-                      </div>
-                      <span className="text-xs font-extrabold text-white">Adepto</span>
-                      <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Acesso de consulta, agenda, classificação e convívios</span>
-                    </button>
-                  </div>
+                  <span className="text-[10px] text-white/65 font-bold">
+                    {formRoles.includes('supporter') ? 'Perfil de consulta' : 'Múltiplos papéis permitidos'}
+                  </span>
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Jogador */}
+                  <button
+                    type="button"
+                    onClick={() => toggleRole('player')}
+                    className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
+                      formRoles.includes('player')
+                        ? 'bg-csc-light/15 '
+                        : 'bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <UserIcon size={15} className="text-csc-verde-texto" />
+                      <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                        formRoles.includes('player') ? 'bg-csc-light text-white' : 'border border-white/20'
+                      }`}>
+                        {formRoles.includes('player') && <Check size={12} className="stroke-[3]" />}
+                      </div>
+                    </div>
+                    <span className="text-xs font-extrabold text-white">Jogador</span>
+                    <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Atleta nas convocatórias e estatísticas</span>
+                  </button>
 
-                {/* 4.3 Camisola & Tamanho de Equipamento */}
-                {formRoles.includes('player') && (
-                  <>
-                    <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-white/10">
+                  {/* Treinador */}
+                  <button
+                    type="button"
+                    onClick={() => toggleRole('coach')}
+                    className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
+                      formRoles.includes('coach')
+                        ? 'bg-csc-blue/18 '
+                        : 'bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <ClipboardList size={15} className="text-csc-azul-texto" />
+                      <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                        formRoles.includes('coach') ? 'bg-csc-blue text-white' : 'border border-white/20'
+                      }`}>
+                        {formRoles.includes('coach') && <Check size={12} className="stroke-[3]" />}
+                      </div>
+                    </div>
+                    <span className="text-xs font-extrabold text-white">Treinador</span>
+                    <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Equipa técnica, criação de treinos e jogos</span>
+                  </button>
+
+                  {/* Administrador / Direção */}
+                  <button
+                    type="button"
+                    onClick={() => toggleRole('admin')}
+                    className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
+                      formRoles.includes('admin')
+                        ? 'bg-csc-gold/15 '
+                        : 'bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <Shield size={15} className="text-csc-gold" />
+                      <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                        formRoles.includes('admin') ? 'bg-white/10 text-csc-gold' : ' '
+                      }`}>
+                        {formRoles.includes('admin') && <Check size={12} className="stroke-[3]" />}
+                      </div>
+                    </div>
+                    <span className="text-xs font-extrabold text-white">Administrador / Direção</span>
+                    <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Acesso total, finanças e administração</span>
+                  </button>
+
+                  {/* Adepto */}
+                  <button
+                    type="button"
+                    onClick={() => toggleRole('supporter')}
+                    className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
+                      formRoles.includes('supporter')
+                        ? 'bg-white/15 '
+                        : 'bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <Heart size={15} className="text-rose-400" />
+                      <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                        formRoles.includes('supporter') ? 'bg-rose-500 text-white' : 'border border-white/20'
+                      }`}>
+                        {formRoles.includes('supporter') && <Check size={12} className="stroke-[3]" />}
+                      </div>
+                    </div>
+                    <span className="text-xs font-extrabold text-white">Adepto</span>
+                    <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Acesso de consulta, agenda, classificação e convívios</span>
+                  </button>
+                </div>
+              </div>
+
+              {formRoles.includes('supporter') ? (
+                <>
+                  {/* DADOS PESSOAIS & CONTACTOS DO ADEPTO */}
+                  <div className="cartao-simples p-4 space-y-3.5">
+                    <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users size={14} className="text-csc-gold" />
+                      <span>Identificação & Contactos</span>
+                    </h3>
+
+                    <div className="grid grid-cols-1 gap-3">
                       <div>
-                        <label className={ETIQUETA}>Nº da Camisola</label>
+                        <label className={ETIQUETA}>Nome Completo *</label>
                         <input
-                          type="number"
-                          min="1"
-                          max="99"
-                          value={formJerseyNumber}
-                          onChange={(e) => setFormJerseyNumber(e.target.value === '' ? '' : Number(e.target.value))}
+                          type="text"
+                          required
+                          value={formName}
+                          onChange={(e) => setFormName(e.target.value)}
                           className={CAMPO}
-                          placeholder="Ex: 10"
+                          placeholder="Ex: João Silva"
+                        />
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Email de Acesso *</label>
+                        <input
+                          type="email"
+                          required
+                          value={formEmail}
+                          onChange={(e) => setFormEmail(e.target.value)}
+                          className={CAMPO}
+                          placeholder="adepto@email.pt"
+                        />
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Telemóvel</label>
+                        <input
+                          type="tel"
+                          value={formPhone}
+                          onChange={(e) => setFormPhone(e.target.value)}
+                          className={CAMPO}
+                          placeholder="912 345 678"
                         />
                       </div>
 
+                      {/* Foto de Perfil */}
+                      <div className="p-3 bg-white/5 rounded-lg space-y-2">
+                        <label htmlFor="ficha-foto-adepto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
+                        <input
+                          id="ficha-foto-adepto"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleUploadFile(e, 'photo')}
+                          disabled={uploadingDoc === 'photo'}
+                          className="text-xs w-full"
+                        />
+                        {photoUrl && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover" />
+                            <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Consentimento RGPD */}
+                  <div className="cartao-simples p-4 space-y-3.5">
+                    <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText size={14} className="text-csc-gold" />
+                      <span>Proteção de Dados (RGPD)</span>
+                    </h3>
+                    <div className="p-3 bg-white/5 rounded-lg flex items-start gap-2.5">
+                      <input
+                        type="checkbox"
+                        id="gdpr_consent_adepto"
+                        checked={formGdprConsent}
+                        onChange={(e) => setFormGdprConsent(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-csc-dark rounded border-white/15 focus:ring-csc-dark"
+                      />
+                      <label htmlFor="gdpr_consent_adepto" className="text-xs text-white/70 font-medium cursor-pointer">
+                        Aceita que os seus dados sejam processados pela política de proteção de dados (RGPD) do {CLUBE_NOME}.
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Sair sem gravar é o "‹" do topo; aqui fica só gravar. */}
+                  <div className="pt-2">
+                    <Botao type="submit" largo disabled={uploadingDoc !== null}>
+                      <Save size={16} />
+                      {isEditing ? 'Guardar alterações' : 'Criar adepto'}
+                    </Botao>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Estado — a secção 2 do handoff, aqui em primeiro porque é o
+                      que mais vezes se vem cá mudar. */}
+                  <div className="cartao-simples p-4 space-y-2.5">
+                    <h3 className={ETIQUETA}>Estado</h3>
+                    <div className="grid grid-cols-3 gap-1 bg-white/6 p-1 rounded-2xl">
+                      {([
+                        ['active', 'Apto'],
+                        ['injured', 'Lesionado'],
+                        ['inactive', 'Inativo'],
+                      ] as const).map(([valor, etiqueta]) => (
+                        <button
+                          key={valor}
+                          type="button"
+                          onClick={() => setFormStatus(valor)}
+                          aria-pressed={formStatus === valor}
+                          className={`min-h-11 rounded-[14px] font-display font-black text-[11px] cursor-pointer
+                            transition-transform duration-150 active:scale-97
+                            focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
+                              formStatus === valor
+                                ? valor === 'injured'
+                                  ? 'bg-csc-red text-white'
+                                  : valor === 'inactive'
+                                  ? 'bg-white/25 text-white'
+                                  : 'bg-csc-light text-white'
+                                : 'text-white/62'
+                            }`}
+                        >
+                          {etiqueta}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10.5px] leading-relaxed text-white/62">
+                      Lesionado ou inativo sai dos treinos futuros; lesionado ainda pode ir a convívios.
+                    </p>
+                  </div>
+                  
+                  {/* 1. DADOS PESSOAIS & IDENTIFICAÇÃO FISCAL */}
+                  <div className="cartao-simples p-4 space-y-3.5">
+                    <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users size={14} className="text-csc-gold" />
+                      <span>1. Identificação Pessoal & Fiscal</span>
+                    </h3>
+
+                    <div className="grid grid-cols-1 gap-3">
                       <div>
-                        <label className={ETIQUETA}>Tamanho Equipamento</label>
+                        <label className={ETIQUETA}>Nome Completo *</label>
+                        <input
+                          type="text"
+                          required
+                          value={formName}
+                          onChange={(e) => setFormName(e.target.value)}
+                          className={CAMPO}
+                          placeholder="Ex: André Gomes Marques do Couto"
+                        />
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Nome na Camisola</label>
+                        <input
+                          type="text"
+                          value={formShirtName}
+                          onChange={(e) => setFormShirtName(e.target.value)}
+                          className={CAMPO}
+                          placeholder="Ex: A. COUTO"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className={ETIQUETA}>Data de Nascimento</label>
+                        <input
+                          type="date"
+                          value={formBirthDate}
+                          onChange={(e) => setFormBirthDate(e.target.value)}
+                          className={CAMPO}
+                        />
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Nacionalidade</label>
+                        <input
+                          type="text"
+                          value={formNationality}
+                          onChange={(e) => setFormNationality(e.target.value)}
+                          className={CAMPO}
+                          placeholder="Portuguesa"
+                        />
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Nº de Contribuinte (NIF)</label>
+                        <input
+                          type="text"
+                          value={formNif}
+                          onChange={(e) => setFormNif(e.target.value)}
+                          className={CAMPO}
+                          placeholder="000 000 000"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className={ETIQUETA}>Nº Cartão de Cidadão / Passaporte</label>
+                        <input
+                          type="text"
+                          value={formIdNumber}
+                          onChange={(e) => setFormIdNumber(e.target.value)}
+                          className={CAMPO}
+                          placeholder="00000000"
+                        />
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Validade do Cartão de Cidadão</label>
+                        <input
+                          type="date"
+                          value={formIdCardExpiry}
+                          onChange={(e) => setFormIdCardExpiry(e.target.value)}
+                          className={CAMPO}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. MORADA & RESIDÊNCIA */}
+                  <div className="cartao-simples p-4 space-y-3.5">
+                    <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText size={14} className="text-csc-gold" />
+                      <span>2. Morada & Residência</span>
+                    </h3>
+
+                    <div>
+                      <label className={ETIQUETA}>Morada (Rua, Nº e Andar)</label>
+                      <input
+                        type="text"
+                        value={formAddress}
+                        onChange={(e) => setFormAddress(e.target.value)}
+                        className={CAMPO}
+                        placeholder="Rua e número da morada"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className={ETIQUETA}>Código Postal</label>
+                        <input
+                          type="text"
+                          value={formPostalCode}
+                          onChange={(e) => setFormPostalCode(e.target.value)}
+                          className={CAMPO}
+                          placeholder="0000-000"
+                        />
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Localidade</label>
+                        <input
+                          type="text"
+                          value={formCity}
+                          onChange={(e) => setFormCity(e.target.value)}
+                          className={CAMPO}
+                          placeholder="Cascais / Alcabideche"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. CONTACTOS */}
+                  <div className="cartao-simples p-4 space-y-3.5">
+                    <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <Phone size={14} className="text-csc-gold" />
+                      <span>3. Contactos</span>
+                    </h3>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className={ETIQUETA}>Email *</label>
+                        <input
+                          type="email"
+                          required
+                          value={formEmail}
+                          onChange={(e) => setFormEmail(e.target.value)}
+                          className={CAMPO}
+                          placeholder="atleta@clube.pt"
+                        />
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Telemóvel</label>
+                        <input
+                          type="tel"
+                          value={formPhone}
+                          onChange={(e) => setFormPhone(e.target.value)}
+                          className={CAMPO}
+                          placeholder="912 345 678"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. DADOS DESPORTIVOS & EQUIPAMENTO */}
+                  {formRoles.includes('player') && (
+                    <div className="cartao-simples p-4 space-y-3.5">
+                      <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                        <Shield size={14} className="text-csc-gold" />
+                        <span>4. Dados Desportivos & Equipamento</span>
+                      </h3>
+
+                      <div>
+                        <label className="block text-xs font-bold text-white/70 mb-2">
+                          Posições no Campo:
+                        </label>
+                        <SoccerPitchSelector
+                          selectedPositions={formPositions}
+                          onChange={setFormPositions}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-white/10">
+                        <div>
+                          <label className={ETIQUETA}>Nº da Camisola</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={formJerseyNumber}
+                            onChange={(e) => setFormJerseyNumber(e.target.value === '' ? '' : Number(e.target.value))}
+                            className={CAMPO}
+                            placeholder="Ex: 10"
+                          />
+                        </div>
+
+                        <div>
+                          <label className={ETIQUETA}>Tamanho Equipamento</label>
+                          <select
+                            value={formKitSize}
+                            onChange={(e) => setFormKitSize(e.target.value)}
+                            className={CAMPO}
+                          >
+                            <option value="S">S</option>
+                            <option value="M">M</option>
+                            <option value="L">L</option>
+                            <option value="XL">XL</option>
+                            <option value="XXL">XXL</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={ETIQUETA} htmlFor="pe-preferido">Pé preferido</label>
                         <select
-                          value={formKitSize}
-                          onChange={(e) => setFormKitSize(e.target.value)}
+                          id="pe-preferido"
+                          value={formPreferredFoot}
+                          onChange={(e) => setFormPreferredFoot(e.target.value)}
                           className={CAMPO}
                         >
-                          <option value="S">S</option>
-                          <option value="M">M</option>
-                          <option value="L">L</option>
-                          <option value="XL">XL</option>
-                          <option value="XXL">XXL</option>
+                          <option value="">Não indicado</option>
+                          <option value="Direito">Direito</option>
+                          <option value="Esquerdo">Esquerdo</option>
+                          <option value="Ambos">Ambos</option>
                         </select>
                       </div>
                     </div>
+                  )}
 
-                    {/* O pé preferido: a coluna `preferred_foot` nasceu na fase 1 e
-                        nunca teve onde ser preenchida, por isso as fichas mostravam
-                        um campo que estava sempre vazio. É desportivo, portanto vive
-                        aqui com a camisola e a posicao. */}
-                    <div>
-                      <label className={ETIQUETA} htmlFor="pe-preferido">Pé preferido</label>
-                      <select
-                        id="pe-preferido"
-                        value={formPreferredFoot}
-                        onChange={(e) => setFormPreferredFoot(e.target.value)}
-                        className={CAMPO}
-                      >
-                        <option value="">Não indicado</option>
-                        <option value="Direito">Direito</option>
-                        <option value="Esquerdo">Esquerdo</option>
-                        <option value="Ambos">Ambos</option>
-                      </select>
-                    </div>
-                  </>
-                )}
-              </div>
+                  {/* 5. DADOS BANCÁRIOS & QUOTAS */}
+                  <div className="cartao-simples p-4 space-y-3.5">
+                    <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <Shield size={14} className="text-csc-gold" />
+                      <span>5. Dados Bancários & Quotas</span>
+                    </h3>
 
-              {/* 5. DADOS BANCÁRIOS & QUOTAS */}
-              <div className="cartao-simples p-4 space-y-3.5">
-                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                  <Shield size={14} className="text-csc-gold" />
-                  <span>5. Dados Bancários & Quotas</span>
-                </h3>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className={ETIQUETA}>IBAN (Débito Direto / Quotas)</label>
-                    <input
-                      type="text"
-                      value={formIban}
-                      onChange={(e) => setFormIban(e.target.value)}
-                      className={`${CAMPO} font-mono`}
-                      placeholder="PT50 0000 0000 0000 0000 0"
-                    />
-                  </div>
-                  <div>
-                    <label className={ETIQUETA}>Nº de Sócio do Clube</label>
-                    <input
-                      type="text"
-                      value={formMemberNumber}
-                      onChange={(e) => setFormMemberNumber(e.target.value)}
-                      className={CAMPO}
-                      placeholder="Ex: 1420"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/*
-                Quotas deste atleta (ecrã 3c). A janela em que ele paga quota
-                e os meses em que está dispensado.
-
-                Não é uma definição do clube: as datas recortam a janela do
-                atleta dentro da época, e o `getPlayerQuotaMonths` já as
-                respeita — só não havia sítio nenhum na app para as preencher,
-                e ficavam a inferir-se do estado do perfil. Os meses
-                dispensados vivem em `quota_exemptions`, criada na fase 1 e
-                até agora sem uso.
-              */}
-              {formRoles.includes('player') && (
-                <div className="cartao-simples p-4 space-y-3.5">
-                  <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                    <Landmark size={14} className="text-csc-gold" />
-                    <span>6. Quotas deste atleta</span>
-                  </h3>
-
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className={ETIQUETA} htmlFor="quota-inicio">Início de atividade</label>
-                      <input
-                        id="quota-inicio"
-                        type="date"
-                        value={formQuotaStart}
-                        onChange={e => setFormQuotaStart(e.target.value)}
-                        className={CAMPO}
-                      />
-                    </div>
-                    <div>
-                      <label className={ETIQUETA} htmlFor="quota-fim">Fim de atividade</label>
-                      <input
-                        id="quota-fim"
-                        type="date"
-                        value={formQuotaEnd}
-                        onChange={e => setFormQuotaEnd(e.target.value)}
-                        className={CAMPO}
-                      />
-                    </div>
-                  </div>
-
-                  <p className="text-[10.5px] leading-relaxed text-white/62">
-                    Sem datas, a janela infere-se do estado: quem fica inativo deixa de gerar meses
-                    novos, mas mantém os que já venceram. Ao preencher o fim, as quotas seguintes
-                    deixam de ser devidas.
-                  </p>
-
-                  {/*
-                    As pastilhas seguem a ordem da época e não a do calendário:
-                    a época começa em Setembro, e uma fila que abria em Janeiro
-                    obrigava a procurar o início a meio. São sempre doze, para o
-                    ano fechar.
-
-                    Os meses que o clube inteiro não paga — o Agosto de
-                    `quota_excluded_months` — e os que caem fora da época ficam
-                    bloqueados: ninguém os paga, portanto dispensar alguém deles
-                    não quer dizer nada. Antes eram pastilhas normais, e clicar
-                    numa gravava uma dispensa que não mudava conta nenhuma.
-                  */}
-                  {(() => {
-                    const mesesDaEpoca = new Set(
-                      getSeasonMonths(defFinanceiras, epoca || getSeasonLabel(defFinanceiras)).map(m => m.month),
-                    )
-                    const excluidosDoClube = new Set(defFinanceiras.quota_excluded_months ?? [])
-                    const ordemDaEpoca = Array.from(
-                      { length: 12 },
-                      (_, i) => ((defFinanceiras.season_start_month - 1 + i) % 12) + 1,
-                    )
-
-                    return (
+                    <div className="grid grid-cols-1 gap-3">
                       <div>
-                        <p className={ETIQUETA}>Meses dispensados de quota</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {ordemDaEpoca.map(m => {
-                            const chave = String(m).padStart(2, '0')
-                            const dispensado = formMesesDispensados.includes(chave)
-                            const bloqueado = !isAdmin || excluidosDoClube.has(m) || !mesesDaEpoca.has(m)
-                            const porque = !isAdmin
-                              ? 'Só a direção dispensa alguém de quota'
-                              : excluidosDoClube.has(m)
-                                ? 'O clube inteiro não paga quota neste mês'
-                                : 'Fora da época'
+                        <label className={ETIQUETA}>IBAN (Débito Direto / Quotas)</label>
+                        <input
+                          type="text"
+                          value={formIban}
+                          onChange={(e) => setFormIban(e.target.value)}
+                          className={`${CAMPO} font-mono`}
+                          placeholder="PT50 0000 0000 0000 0000 0"
+                        />
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Nº de Sócio do Clube</label>
+                        <input
+                          type="text"
+                          value={formMemberNumber}
+                          onChange={(e) => setFormMemberNumber(e.target.value)}
+                          className={CAMPO}
+                          placeholder="Ex: 1420"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                            return (
-                              <button
-                                key={m}
-                                type="button"
-                                disabled={bloqueado}
-                                title={bloqueado ? porque : undefined}
-                                onClick={() => {
-                                  triggerHaptic('selection')
-                                  setFormMesesDispensados(atual =>
-                                    dispensado ? atual.filter(x => x !== chave) : [...atual, chave],
-                                  )
-                                }}
-                                aria-pressed={bloqueado ? undefined : dispensado}
-                                aria-label={bloqueado ? `${MESES_CURTOS[m - 1]} — ${porque}` : undefined}
-                                className={`min-h-11 px-3 rounded-[18px] border font-display font-black text-[11px]
-                                  transition-transform duration-150
-                                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                                    bloqueado
-                                      ? 'bg-transparent border-dashed border-white/20 text-white/30 cursor-not-allowed line-through'
-                                      : dispensado
-                                        ? 'bg-csc-gold text-csc-tinta border-csc-gold cursor-pointer active:scale-97'
-                                        : 'bg-white/5 border-white/12 text-white/62 cursor-pointer active:scale-97'
-                                  }`}
-                              >
-                                {MESES_CURTOS[m - 1]}
-                              </button>
-                            )
-                          })}
+                  {/* 6. QUOTAS DESTE ATLETA */}
+                  {formRoles.includes('player') && (
+                    <div className="cartao-simples p-4 space-y-3.5">
+                      <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                        <Landmark size={14} className="text-csc-gold" />
+                        <span>6. Quotas deste atleta</span>
+                      </h3>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className={ETIQUETA} htmlFor="quota-inicio">Início de atividade</label>
+                          <input
+                            id="quota-inicio"
+                            type="date"
+                            value={formQuotaStart}
+                            onChange={e => setFormQuotaStart(e.target.value)}
+                            className={CAMPO}
+                          />
                         </div>
-                        <p className="text-[10.5px] leading-relaxed text-white/62 mt-2">
-                          {!isAdmin && (
-                            <>
-                              <strong className="text-white/80">Só a direção altera dispensas de quota</strong> — a
-                              tabela só aceita escrita de admin, e sem isto o treinador carregava numa pastilha e
-                              levava com um erro ao gravar.{' '}
-                            </>
-                          )}
-                          Da esquerda para a direita, a época começa em {nomeMes(defFinanceiras.season_start_month)}.
-                          Dourado = dispensado, todos os anos. Riscado = ninguém paga esse mês, e define-se
-                          no Financeiro. Um mês dispensado sai da dívida do atleta e da previsão de receita
-                          do clube.
-                        </p>
+                        <div>
+                          <label className={ETIQUETA} htmlFor="quota-fim">Fim de atividade</label>
+                          <input
+                            id="quota-fim"
+                            type="date"
+                            value={formQuotaEnd}
+                            onChange={e => setFormQuotaEnd(e.target.value)}
+                            className={CAMPO}
+                          />
+                        </div>
                       </div>
-                    )
-                  })()}
-                </div>
+
+                      <p className="text-[10.5px] leading-relaxed text-white/62">
+                        Sem datas, a janela infere-se do estado: quem fica inativo deixa de gerar meses
+                        novos, mas mantém os que já venceram. Ao preencher o fim, as quotas seguintes
+                        deixam de ser devidas.
+                      </p>
+
+                      {(() => {
+                        const mesesDaEpoca = new Set(
+                          getSeasonMonths(defFinanceiras, epoca || getSeasonLabel(defFinanceiras)).map(m => m.month),
+                        )
+                        const excluidosDoClube = new Set(defFinanceiras.quota_excluded_months ?? [])
+                        const ordemDaEpoca = Array.from(
+                          { length: 12 },
+                          (_, i) => ((defFinanceiras.season_start_month - 1 + i) % 12) + 1,
+                        )
+
+                        return (
+                          <div>
+                            <p className={ETIQUETA}>Meses dispensados de quota</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {ordemDaEpoca.map(m => {
+                                const chave = String(m).padStart(2, '0')
+                                const dispensado = formMesesDispensados.includes(chave)
+                                const bloqueado = !isAdmin || excluidosDoClube.has(m) || !mesesDaEpoca.has(m)
+                                const porque = !isAdmin
+                                  ? 'Só a direção dispensa alguém de quota'
+                                  : excluidosDoClube.has(m)
+                                    ? 'O clube inteiro não paga quota neste mês'
+                                    : 'Fora da época'
+
+                                return (
+                                  <button
+                                    key={m}
+                                    type="button"
+                                    disabled={bloqueado}
+                                    title={bloqueado ? porque : undefined}
+                                    onClick={() => {
+                                      triggerHaptic('selection')
+                                      setFormMesesDispensados(atual =>
+                                        dispensado ? atual.filter(x => x !== chave) : [...atual, chave],
+                                      )
+                                    }}
+                                    aria-pressed={bloqueado ? undefined : dispensado}
+                                    aria-label={bloqueado ? `${MESES_CURTOS[m - 1]} — ${porque}` : undefined}
+                                    className={`min-h-11 px-3 rounded-[18px] border font-display font-black text-[11px]
+                                      transition-transform duration-150
+                                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                                        bloqueado
+                                          ? 'bg-transparent border-dashed border-white/20 text-white/30 cursor-not-allowed line-through'
+                                          : dispensado
+                                            ? 'bg-csc-gold text-csc-tinta border-csc-gold cursor-pointer active:scale-97'
+                                            : 'bg-white/5 border-white/12 text-white/62 cursor-pointer active:scale-97'
+                                      }`}
+                                  >
+                                    {MESES_CURTOS[m - 1]}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                            <p className="text-[10.5px] leading-relaxed text-white/62 mt-2">
+                              {!isAdmin && (
+                                <>
+                                  <strong className="text-white/80">Só a direção altera dispensas de quota</strong> — a
+                                  tabela só aceita escrita de admin, e sem isto o treinador carregava numa pastilha e
+                                  levava com um erro ao gravar.{' '}
+                                </>
+                              )}
+                              Da esquerda para a direita, a época começa em {nomeMes(defFinanceiras.season_start_month)}.
+                              Dourado = dispensado, todos os anos. Riscado = ninguém paga esse mês, e define-se
+                              no Financeiro. Um mês dispensado sai da dívida do atleta e da previsão de receita
+                              do clube.
+                            </p>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* 7. SAÚDE & EMERGÊNCIA */}
+                  <div className="cartao-simples p-4 space-y-3.5">
+                    <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <HeartPulse size={14} className="text-csc-vermelho-texto" />
+                      <span>7. Saúde & Contacto de Emergência</span>
+                    </h3>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className={ETIQUETA} htmlFor="emerg-nome">Contacto de Emergência (Nome)</label>
+                        <input
+                          id="emerg-nome"
+                          type="text"
+                          value={formEmergencyName}
+                          onChange={(e) => setFormEmergencyName(e.target.value)}
+                          className={CAMPO}
+                          placeholder="Ex: Maria Silva"
+                        />
+                      </div>
+                      <div>
+                        <label className={ETIQUETA} htmlFor="emerg-relacao">Relação</label>
+                        <select
+                          id="emerg-relacao"
+                          value={formEmergencyRelation}
+                          onChange={(e) => setFormEmergencyRelation(e.target.value)}
+                          className={CAMPO}
+                        >
+                          <option value="">Por indicar</option>
+                          {RELACOES_EMERGENCIA.map(r => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Telefone de Emergência</label>
+                        <input
+                          type="tel"
+                          value={formEmergencyPhone}
+                          onChange={(e) => setFormEmergencyPhone(e.target.value)}
+                          className={CAMPO}
+                          placeholder="960 000 000"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className={ETIQUETA}>Notas Médicas / Alergias / Tipo Sanguíneo</label>
+                      <textarea
+                        value={formMedicalNotes}
+                        onChange={(e) => setFormMedicalNotes(e.target.value)}
+                        rows={2}
+                        className={CAMPO}
+                        placeholder="Ex: Alergia a anti-inflamatórios, Tipo O+, histórico de lesão no joelho direito..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* 8. UPLOAD DE DOCUMENTOS & RGPD */}
+                  <div className="cartao-simples p-4 space-y-3.5">
+                    <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText size={14} className="text-csc-gold" />
+                      <span>8. Documentos & Proteção de Dados (RGPD)</span>
+                    </h3>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      {/* Foto de Perfil */}
+                      <div className="p-3 bg-white/5 rounded-lg space-y-2">
+                        <label htmlFor="ficha-foto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
+                        <input
+                          id="ficha-foto"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleUploadFile(e, 'photo')}
+                          disabled={uploadingDoc === 'photo'}
+                          className="text-xs w-full"
+                        />
+                        {photoUrl && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover" />
+                            <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Os documentos não são campos do formulário: carregam-se na
+                          ficha do atleta, e gravam-se logo. */}
+                      <p className="text-[11px] leading-relaxed text-white/62 px-1">
+                        O cartão de cidadão, a proposta de sócio, a apólice e o atestado carregam-se na ficha do atleta
+                        {isEditing ? '' : ', depois de gravar'}.
+                      </p>
+                    </div>
+
+                    {/* Consentimento RGPD */}
+                    <div className="p-3 bg-white/5 rounded-lg flex items-start gap-2.5">
+                      <input
+                        type="checkbox"
+                        id="gdpr_consent"
+                        checked={formGdprConsent}
+                        onChange={(e) => setFormGdprConsent(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 text-csc-dark rounded border-white/15 focus:ring-csc-dark"
+                      />
+                      <label htmlFor="gdpr_consent" className="text-xs text-white/70 font-medium cursor-pointer">
+                        Aceita que os seus dados sejam processados pela política de proteção de dados (RGPD) do {CLUBE_NOME}.
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Sair sem gravar é o "‹" do topo; aqui fica só gravar. */}
+                  <div className="pt-2">
+                    <Botao type="submit" largo disabled={uploadingDoc !== null}>
+                      <Save size={16} />
+                      {isEditing ? 'Guardar alterações' : 'Criar membro'}
+                    </Botao>
+                  </div>
+                </>
               )}
-              {/* 6. SAÚDE & EMERGÊNCIA */}
-              <div className="cartao-simples p-4 space-y-3.5">
-                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                  <HeartPulse size={14} className="text-csc-vermelho-texto" />
-                  <span>7. Saúde & Contacto de Emergência</span>
-                </h3>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className={ETIQUETA} htmlFor="emerg-nome">Contacto de Emergência (Nome)</label>
-                    <input
-                      id="emerg-nome"
-                      type="text"
-                      value={formEmergencyName}
-                      onChange={(e) => setFormEmergencyName(e.target.value)}
-                      className={CAMPO}
-                      placeholder="Ex: Maria Silva"
-                    />
-                  </div>
-                  <div>
-                    <label className={ETIQUETA} htmlFor="emerg-relacao">Relação</label>
-                    <select
-                      id="emerg-relacao"
-                      value={formEmergencyRelation}
-                      onChange={(e) => setFormEmergencyRelation(e.target.value)}
-                      className={CAMPO}
-                    >
-                      <option value="">Por indicar</option>
-                      {RELACOES_EMERGENCIA.map(r => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={ETIQUETA}>Telefone de Emergência</label>
-                    <input
-                      type="tel"
-                      value={formEmergencyPhone}
-                      onChange={(e) => setFormEmergencyPhone(e.target.value)}
-                      className={CAMPO}
-                      placeholder="960 000 000"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className={ETIQUETA}>Notas Médicas / Alergias / Tipo Sanguíneo</label>
-                  <textarea
-                    value={formMedicalNotes}
-                    onChange={(e) => setFormMedicalNotes(e.target.value)}
-                    rows={2}
-                    className={CAMPO}
-                    placeholder="Ex: Alergia a anti-inflamatórios, Tipo O+, histórico de lesão no joelho direito..."
-                  />
-                </div>
-              </div>
-
-              {/* 7. UPLOAD DE DOCUMENTOS & RGPD */}
-              <div className="cartao-simples p-4 space-y-3.5">
-                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                  <FileText size={14} className="text-csc-gold" />
-                  <span>8. Documentos & Proteção de Dados (RGPD)</span>
-                </h3>
-
-                <div className="grid grid-cols-1 gap-3">
-                  {/* Foto de Perfil */}
-                  <div className="p-3 bg-white/5 rounded-lg space-y-2">
-                    <label htmlFor="ficha-foto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
-                    <input
-                      id="ficha-foto"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleUploadFile(e, 'photo')}
-                      disabled={uploadingDoc === 'photo'}
-                      className="text-xs w-full"
-                    />
-                    {photoUrl && (
-                      <div className="flex items-center gap-2 pt-1">
-                        <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover" />
-                        <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Os documentos não são campos do formulário: carregam-se na
-                      ficha do atleta, e gravam-se logo. */}
-                  <p className="text-[11px] leading-relaxed text-white/62 px-1">
-                    O cartão de cidadão, a proposta de sócio, a apólice e o atestado carregam-se na ficha do atleta
-                    {isEditing ? '' : ', depois de gravar'}.
-                  </p>
-                </div>
-
-                {/* Consentimento RGPD */}
-                <div className="p-3 bg-white/5 rounded-lg flex items-start gap-2.5">
-                  <input
-                    type="checkbox"
-                    id="gdpr_consent"
-                    checked={formGdprConsent}
-                    onChange={(e) => setFormGdprConsent(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 text-csc-dark rounded border-white/15 focus:ring-csc-dark"
-                  />
-                  <label htmlFor="gdpr_consent" className="text-xs text-white/70 font-medium cursor-pointer">
-                    Aceita que os seus dados sejam processados pela política de proteção de dados (RGPD) do {CLUBE_NOME}.
-                  </label>
-                </div>
-              </div>
-
-              {/* Sair sem gravar é o "‹" do topo; aqui fica só gravar. */}
-              <div className="pt-2">
-                <Botao type="submit" largo disabled={uploadingDoc !== null}>
-                  <Save size={16} />
-                  {isEditing ? 'Guardar alterações' : 'Criar membro'}
-                </Botao>
-              </div>
             </form>
       </EcraDetalhe>
       </div>
@@ -2044,16 +2178,20 @@ const TeamManagementPage: React.FC = () => {
               ? "Ficha do atleta"
               : "Ficha de membro"
           }
-          titulo={selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name}
-          legenda={[
-            (selectedProfile.shirt_name || selectedProfile.nickname) ? selectedProfile.name : null,
-            extractRolesFromProfile(selectedProfile).includes('player')
-              ? (selectedProfile.jersey_number ? `nº ${selectedProfile.jersey_number}` : 'sem número')
-              : null,
-            parsePositions(selectedProfile.position).length > 0 && extractRolesFromProfile(selectedProfile).includes('player')
-              ? normalizePositionName(parsePositions(selectedProfile.position)[0])
-              : null,
-          ].filter(Boolean).join(' · ')}
+          titulo={eAdepto(selectedProfile) ? selectedProfile.name : (selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name)}
+          legenda={
+            eAdepto(selectedProfile)
+              ? 'Adepto CSC'
+              : [
+                  (selectedProfile.shirt_name || selectedProfile.nickname) ? selectedProfile.name : null,
+                  extractRolesFromProfile(selectedProfile).includes('player')
+                    ? (selectedProfile.jersey_number ? `nº ${selectedProfile.jersey_number}` : 'sem número')
+                    : null,
+                  parsePositions(selectedProfile.position).length > 0 && extractRolesFromProfile(selectedProfile).includes('player')
+                    ? normalizePositionName(parsePositions(selectedProfile.position)[0])
+                    : null,
+                ].filter(Boolean).join(' · ')
+          }
         >
           <div className="space-y-6">
             {/*
@@ -2165,281 +2303,336 @@ const TeamManagementPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="space-y-4">
-                
-                {/* 1. Identificação & Dados Fiscais */}
-                <div className="cartao-simples p-4 space-y-3">
-                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                    <Users size={14} className="text-csc-gold" />
-                    <span>1. Identificação & Dados Fiscais</span>
-                  </h4>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Nome Completo</p>
-                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.name}</p>
-                    </div>
-
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Nome na Camisola</p>
-                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
-                    </div>
-
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
-                      <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.birth_date ? (
-                          `${fmtData(selectedProfile.birth_date)} (${calculateAge(selectedProfile.birth_date)} anos)`
-                        ) : '-'}
-                      </p>
-                    </div>
-
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
-                      <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.nif || '-'}</p>
-                    </div>
-
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
-                      <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.id_number || '-'}</p>
-                    </div>
-
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Validade do CC</p>
-                      <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.id_card_expiry ? fmtData(selectedProfile.id_card_expiry) : '-'}
-                      </p>
-                    </div>
-
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Nacionalidade</p>
-                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
-                    </div>
-
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
-                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
-                    </div>
-
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Consentimento RGPD</p>
-                      <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.gdpr_consent === false ? 'Não dado' : 'Dado'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/*
-                  Contactos. A ficha não os mostrava de todo — nem o email nem o
-                  telemóvel —, e é o ecrã de quem precisa de ligar a alguém antes
-                  de um jogo. Estavam só dentro do formulário de edição, que é
-                  outra coisa: ver não é editar.
-
-                  O email é também a chave de identidade da conta (ver CLAUDE.md),
-                  por isso vale a pena estar à vista de quem gere.
-                */}
-                <div className="cartao-simples p-4 space-y-3">
-                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                    <Phone size={14} className="text-csc-gold" />
-                    <span>Contactos</span>
-                  </h4>
-
-                  <div className="grid grid-cols-1 gap-2 text-xs">
-                    <a
-                      href={selectedProfile.email ? `mailto:${selectedProfile.email}` : undefined}
-                      className={`${selectedProfile.email ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl min-w-0 block min-h-11
-                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
-                    >
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Email de acesso</p>
-                      <p className="font-extrabold text-white mt-0.5 truncate">{selectedProfile.email || '-'}</p>
-                    </a>
-
-                    <a
-                      href={selectedProfile.phone ? `tel:${selectedProfile.phone}` : undefined}
-                      className={`${selectedProfile.phone ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl min-w-0 block min-h-11
-                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
-                    >
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Telemóvel</p>
-                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.phone || '-'}</p>
-                    </a>
-                  </div>
-                </div>
-
-                {/* Dados desportivos: o que a equipa técnica atribui. */}
-                {extractRolesFromProfile(selectedProfile).includes('player') && (
+              {eAdepto(selectedProfile) ? (
+                <div className="space-y-4">
+                  {/* Identificação & Contactos do Adepto */}
                   <div className="cartao-simples p-4 space-y-3">
                     <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                      <Shield size={14} className="text-csc-gold" />
-                      <span>Equipamento & Jogo</span>
+                      <Users size={14} className="text-csc-gold" />
+                      <span>Identificação & Contactos</span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 gap-2 text-xs">
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Nome Completo</p>
+                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.name}</p>
+                      </div>
+
+                      <a
+                        href={selectedProfile.email ? `mailto:${selectedProfile.email}` : undefined}
+                        className={`${selectedProfile.email ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl min-w-0 block min-h-11
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
+                      >
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Email de acesso</p>
+                        <p className="font-extrabold text-white mt-0.5 truncate">{selectedProfile.email || '-'}</p>
+                      </a>
+
+                      <a
+                        href={selectedProfile.phone ? `tel:${selectedProfile.phone}` : undefined}
+                        className={`${selectedProfile.phone ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl min-w-0 block min-h-11
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
+                      >
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Telemóvel</p>
+                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.phone || '-'}</p>
+                      </a>
+
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0 flex items-center justify-between">
+                        <div>
+                          <p className="text-white/65 font-bold uppercase text-[9px]">Proteção de Dados (RGPD)</p>
+                          <p className="font-extrabold text-white mt-0.5">
+                            {selectedProfile.gdpr_consent === false ? 'Pendente' : 'Consentido'}
+                          </p>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
+                          selectedProfile.gdpr_consent === false
+                            ? 'bg-csc-red/15 text-csc-vermelho-texto'
+                            : 'bg-csc-light/16 text-csc-verde-texto'
+                        }`}>
+                          {selectedProfile.gdpr_consent === false
+                            ? <><XCircle size={11} /> RGPD por consentir</>
+                            : <><CheckCircle2 size={11} /> RGPD consentido</>}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  
+                  {/* 1. Identificação & Dados Fiscais */}
+                  <div className="cartao-simples p-4 space-y-3">
+                    <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users size={14} className="text-csc-gold" />
+                      <span>1. Identificação & Dados Fiscais</span>
                     </h4>
 
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                        <p className="text-white/65 font-bold uppercase text-[9px]">Nº da camisola</p>
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Nome Completo</p>
+                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.name}</p>
+                      </div>
+
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Nome na Camisola</p>
+                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
+                      </div>
+
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
                         <p className="font-extrabold text-white mt-0.5">
-                          {selectedProfile.jersey_number ? `#${selectedProfile.jersey_number}` : 'Sem número'}
+                          {selectedProfile.birth_date ? (
+                            `${fmtData(selectedProfile.birth_date)} (${calculateAge(selectedProfile.birth_date)} anos)`
+                          ) : '-'}
                         </p>
                       </div>
 
                       <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                        <p className="text-white/65 font-bold uppercase text-[9px]">Tamanho de equipamento</p>
-                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.kit_size || '-'}</p>
+                        <p className="text-white/65 font-bold uppercase text-[9px]">NIF / Contribuinte</p>
+                        <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.nif || '-'}</p>
                       </div>
 
                       <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                        <p className="text-white/65 font-bold uppercase text-[9px]">Pé preferido</p>
-                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.preferred_foot || '-'}</p>
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Nº CC / Passaporte</p>
+                        <p className="font-extrabold text-white mt-0.5 font-mono">{selectedProfile.id_number || '-'}</p>
                       </div>
 
                       <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                        <p className="text-white/65 font-bold uppercase text-[9px]">Estado</p>
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Validade do CC</p>
                         <p className="font-extrabold text-white mt-0.5">
-                          {selectedProfile.status === 'injured' ? 'Lesionado'
-                            : selectedProfile.status === 'inactive' ? 'Inativo' : 'Apto'}
+                          {selectedProfile.id_card_expiry ? fmtData(selectedProfile.id_card_expiry) : '-'}
+                        </p>
+                      </div>
+
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Nacionalidade</p>
+                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.nationality || 'Portuguesa'}</p>
+                      </div>
+
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Nº de Sócio CSC</p>
+                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.member_number ? `Sócio nº ${selectedProfile.member_number}` : '-'}</p>
+                      </div>
+
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Consentimento RGPD</p>
+                        <p className="font-extrabold text-white mt-0.5">
+                          {selectedProfile.gdpr_consent === false ? 'Não dado' : 'Dado'}
                         </p>
                       </div>
                     </div>
                   </div>
-                )}
 
-                {/* 2. Morada & Residência */}
-                <div className="cartao-simples p-4 space-y-3">
-                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                    <FileText size={14} className="text-csc-gold" />
-                    <span>2. Morada & Residência</span>
-                  </h4>
+                  {/*
+                    Contactos. A ficha não os mostrava de todo — nem o email nem o
+                    telemóvel —, e é o ecrã de quem precisa de ligar a alguém antes
+                    de um jogo. Estavam só dentro do formulário de edição, que é
+                    outra coisa: ver não é editar.
 
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
-                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.address || 'Não registada'}</p>
-                    </div>
+                    O email é também a chave de identidade da conta (ver CLAUDE.md),
+                    por isso vale a pena estar à vista de quem gere.
+                  */}
+                  <div className="cartao-simples p-4 space-y-3">
+                    <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <Phone size={14} className="text-csc-gold" />
+                      <span>Contactos</span>
+                    </h4>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
-                      <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.postal_code || '-'} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                    <div className="grid grid-cols-1 gap-2 text-xs">
+                      <a
+                        href={selectedProfile.email ? `mailto:${selectedProfile.email}` : undefined}
+                        className={`${selectedProfile.email ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl min-w-0 block min-h-11
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
+                      >
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Email de acesso</p>
+                        <p className="font-extrabold text-white mt-0.5 truncate">{selectedProfile.email || '-'}</p>
+                      </a>
 
-                {/* 3. Dados Bancários (Débito Direto) */}
-                <div className="cartao-simples p-4 space-y-3">
-                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                    <Shield size={14} className="text-csc-gold" />
-                    <span>3. Dados Bancários & Quotas</span>
-                  </h4>
-
-                  <div className="bg-white/10 p-3 rounded-xl border-t-white/20 shadow-sm shadow-black/10 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-white/65 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
-                      <p className="font-black text-white font-mono text-xs mt-0.5">
-                        {selectedProfile.iban || 'Nenhum IBAN registado'}
-                      </p>
-                    </div>
-                    {selectedProfile.iban && (
-                      <span className="text-[10px] font-bold bg-csc-light/16 text-csc-verde-texto px-2 py-0.5 rounded">
-                        Ativo
-                      </span>
-                    )}
-                  </div>
-
-                  {/* A janela de quota e os meses dispensados — estavam só no
-                      formulário de edição, e são o que explica a dívida de
-                      alguém sem ser preciso abrir a edição para ver. */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Início de atividade</p>
-                      <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.quota_start_date
-                          ? fmtData(selectedProfile.quota_start_date)
-                          : 'Do estado do perfil'}
-                      </p>
-                    </div>
-
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Fim de atividade</p>
-                      <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.quota_end_date
-                          ? fmtData(selectedProfile.quota_end_date)
-                          : 'Sem fim marcado'}
-                      </p>
+                      <a
+                        href={selectedProfile.phone ? `tel:${selectedProfile.phone}` : undefined}
+                        className={`${selectedProfile.phone ? '' : 'pointer-events-none'} bg-white/6 p-2.5 rounded-xl min-w-0 block min-h-11
+                          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
+                      >
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Telemóvel</p>
+                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.phone || '-'}</p>
+                      </a>
                     </div>
                   </div>
 
-                  <div className="bg-white/6 p-2.5 rounded-xl">
-                    <p className="text-white/65 font-bold uppercase text-[9px]">Meses dispensados de quota</p>
-                    <p className="font-extrabold text-white mt-0.5 text-xs">
-                      {dispensasDaFicha === null
-                        ? 'A ler…'
-                        : dispensasDaFicha.length === 0
-                          ? 'Nenhum'
-                          : dispensasDaFicha
-                              .map(m => MESES_CURTOS[Number(m) - 1])
-                              .filter(Boolean)
-                              .join(' · ')}
-                    </p>
-                  </div>
-                </div>
+                  {/* Dados desportivos: o que a equipa técnica atribui. */}
+                  {extractRolesFromProfile(selectedProfile).includes('player') && (
+                    <div className="cartao-simples p-4 space-y-3">
+                      <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                        <Shield size={14} className="text-csc-gold" />
+                        <span>Equipamento & Jogo</span>
+                      </h4>
 
-                {/* 4. Saúde & Contacto de Emergência */}
-                <div className="bg-csc-red/10 p-4 rounded-2xl space-y-3">
-                  <h4 className="text-xs font-black text-csc-vermelho-texto uppercase tracking-wider flex items-center gap-1.5">
-                    <HeartPulse size={14} className="text-csc-vermelho-texto" />
-                    <span>4. Saúde & Contacto de Emergência</span>
-                  </h4>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                          <p className="text-white/65 font-bold uppercase text-[9px]">Nº da camisola</p>
+                          <p className="font-extrabold text-white mt-0.5">
+                            {selectedProfile.jersey_number ? `#${selectedProfile.jersey_number}` : 'Sem número'}
+                          </p>
+                        </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/10 p-3 rounded-xl">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Contacto de Emergência</p>
-                      <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.emergency_contact_name || 'Não registado'}
-                      </p>
-                      {selectedProfile.emergency_contact_relation && (
-                        <p className="text-white/70 mt-0.5">{selectedProfile.emergency_contact_relation}</p>
-                      )}
-                      {selectedProfile.emergency_contact_phone && (
-                        <p className="text-white/60 font-semibold mt-0.5">
-                          Tel: {selectedProfile.emergency_contact_phone}
-                        </p>
-                      )}
+                        <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                          <p className="text-white/65 font-bold uppercase text-[9px]">Tamanho de equipamento</p>
+                          <p className="font-extrabold text-white mt-0.5">{selectedProfile.kit_size || '-'}</p>
+                        </div>
+
+                        <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                          <p className="text-white/65 font-bold uppercase text-[9px]">Pé preferido</p>
+                          <p className="font-extrabold text-white mt-0.5">{selectedProfile.preferred_foot || '-'}</p>
+                        </div>
+
+                        <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                          <p className="text-white/65 font-bold uppercase text-[9px]">Estado</p>
+                          <p className="font-extrabold text-white mt-0.5">
+                            {selectedProfile.status === 'injured' ? 'Lesionado'
+                              : selectedProfile.status === 'inactive' ? 'Inativo' : 'Apto'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
+                  )}
 
-                    <div className="bg-white/10 p-3 rounded-xl">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Notas Médicas / Alergias</p>
-                      <p className="font-medium text-white/80 mt-0.5">
-                        {cleanNotesFromRolesTag(selectedProfile.medical_notes) || 'Nenhuma restrição médica registada'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5. Documentos Anexados & RGPD */}
-                <div className="cartao-simples p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                  {/* 2. Morada & Residência */}
+                  <div className="cartao-simples p-4 space-y-3">
                     <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                       <FileText size={14} className="text-csc-gold" />
-                      <span>5. Documentação Oficial & RGPD</span>
+                      <span>2. Morada & Residência</span>
                     </h4>
-                    {/* Lia `gdpr_consent`? Não lia: dizia "RGPD Consentido" a toda
-                        a gente, mesmo a quem não tinha dado consentimento. */}
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
-                      selectedProfile.gdpr_consent === false
-                        ? 'bg-csc-red/15 text-csc-vermelho-texto'
-                        : 'bg-csc-light/16 text-csc-verde-texto'
-                    }`}>
-                      {selectedProfile.gdpr_consent === false
-                        ? <><XCircle size={11} /> RGPD por consentir</>
-                        : <><CheckCircle2 size={11} /> RGPD consentido</>}
-                    </span>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Morada (Rua / Edifício / Andar)</p>
+                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.address || 'Não registada'}</p>
+                      </div>
+
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Código Postal & Localidade</p>
+                        <p className="font-extrabold text-white mt-0.5">
+                          {selectedProfile.postal_code || '-'} {selectedProfile.city ? `• ${selectedProfile.city}` : ''}
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <BlocoDocumentos perfilId={selectedProfile.id} podeEditar={Boolean(isCoachOrAdmin)} idBase="ficha" />
-                </div>
+                  {/* 3. Dados Bancários (Débito Direto) */}
+                  <div className="cartao-simples p-4 space-y-3">
+                    <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <Shield size={14} className="text-csc-gold" />
+                      <span>3. Dados Bancários & Quotas</span>
+                    </h4>
 
-              </div>
+                    <div className="bg-white/10 p-3 rounded-xl border-t-white/20 shadow-sm shadow-black/10 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-white/65 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
+                        <p className="font-black text-white font-mono text-xs mt-0.5">
+                          {selectedProfile.iban || 'Nenhum IBAN registado'}
+                        </p>
+                      </div>
+                      {selectedProfile.iban && (
+                        <span className="text-[10px] font-bold bg-csc-light/16 text-csc-verde-texto px-2 py-0.5 rounded">
+                          Ativo
+                        </span>
+                      )}
+                    </div>
+
+                    {/* A janela de quota e os meses dispensados — estavam só no
+                        formulário de edição, e são o que explica a dívida de
+                        alguém sem ser preciso abrir a edição para ver. */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Início de atividade</p>
+                        <p className="font-extrabold text-white mt-0.5">
+                          {selectedProfile.quota_start_date
+                            ? fmtData(selectedProfile.quota_start_date)
+                            : 'Do estado do perfil'}
+                        </p>
+                      </div>
+
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Fim de atividade</p>
+                        <p className="font-extrabold text-white mt-0.5">
+                          {selectedProfile.quota_end_date
+                            ? fmtData(selectedProfile.quota_end_date)
+                            : 'Sem fim marcado'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/6 p-2.5 rounded-xl">
+                      <p className="text-white/65 font-bold uppercase text-[9px]">Meses dispensados de quota</p>
+                      <p className="font-extrabold text-white mt-0.5 text-xs">
+                        {dispensasDaFicha === null
+                          ? 'A ler…'
+                          : dispensasDaFicha.length === 0
+                            ? 'Nenhum'
+                            : dispensasDaFicha
+                                .map(m => MESES_CURTOS[Number(m) - 1])
+                                .filter(Boolean)
+                                .join(' · ')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 4. Saúde & Contacto de Emergência */}
+                  <div className="bg-csc-red/10 p-4 rounded-2xl space-y-3">
+                    <h4 className="text-xs font-black text-csc-vermelho-texto uppercase tracking-wider flex items-center gap-1.5">
+                      <HeartPulse size={14} className="text-csc-vermelho-texto" />
+                      <span>4. Saúde & Contacto de Emergência</span>
+                    </h4>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-white/10 p-3 rounded-xl">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Contacto de Emergência</p>
+                        <p className="font-extrabold text-white mt-0.5">
+                          {selectedProfile.emergency_contact_name || 'Não registado'}
+                        </p>
+                        {selectedProfile.emergency_contact_relation && (
+                          <p className="text-white/70 mt-0.5">{selectedProfile.emergency_contact_relation}</p>
+                        )}
+                        {selectedProfile.emergency_contact_phone && (
+                          <p className="text-white/60 font-semibold mt-0.5">
+                            Tel: {selectedProfile.emergency_contact_phone}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="bg-white/10 p-3 rounded-xl">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Notas Médicas / Alergias</p>
+                        <p className="font-medium text-white/80 mt-0.5">
+                          {cleanNotesFromRolesTag(selectedProfile.medical_notes) || 'Nenhuma restrição médica registada'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5. Documentos Anexados & RGPD */}
+                  <div className="cartao-simples p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                        <FileText size={14} className="text-csc-gold" />
+                        <span>5. Documentação Oficial & RGPD</span>
+                      </h4>
+                      {/* Lia `gdpr_consent`? Não lia: dizia "RGPD Consentido" a toda
+                          a gente, mesmo a quem não tinha dado consentimento. */}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
+                        selectedProfile.gdpr_consent === false
+                          ? 'bg-csc-red/15 text-csc-vermelho-texto'
+                          : 'bg-csc-light/16 text-csc-verde-texto'
+                      }`}>
+                        {selectedProfile.gdpr_consent === false
+                          ? <><XCircle size={11} /> RGPD por consentir</>
+                          : <><CheckCircle2 size={11} /> RGPD consentido</>}
+                      </span>
+                    </div>
+
+                    <BlocoDocumentos perfilId={selectedProfile.id} podeEditar={Boolean(isCoachOrAdmin)} idBase="ficha" />
+                  </div>
+
+                </div>
+              )}
             </div>
 
             {/*
@@ -2451,29 +2644,33 @@ const TeamManagementPage: React.FC = () => {
             {isCoachOrAdmin && (
               <div className="cartao-simples bg-csc-gold/8 border-csc-gold/25 p-4 space-y-2.5">
                 <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
-                  Gestão do atleta
+                  {eAdepto(selectedProfile) ? 'Gestão do adepto' : 'Gestão do atleta'}
                 </h4>
 
                 <Botao largo onClick={() => openEditModal(selectedProfile)}>
                   <Pencil size={15} aria-hidden="true" />
-                  Editar atleta
+                  {eAdepto(selectedProfile) ? 'Editar adepto' : 'Editar atleta'}
                 </Botao>
 
-                <p className="text-[10.5px] leading-relaxed text-white/60">
-                  Marcar como lesionado retira-o dos treinos futuros; ao voltar a apto entra outra vez.
-                </p>
+                {!eAdepto(selectedProfile) && (
+                  <>
+                    <p className="text-[10.5px] leading-relaxed text-white/60">
+                      Marcar como lesionado retira-o dos treinos futuros; ao voltar a apto entra outra vez.
+                    </p>
 
-                <button
-                  type="button"
-                  onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
-                  className="w-full min-h-12 px-4 rounded-2xl bg-csc-red/12 text-csc-vermelho-texto
-                    font-display font-extrabold text-[12px] flex items-center justify-center gap-2 cursor-pointer
-                    transition-transform duration-150 active:scale-97
-                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                >
-                  <HeartPulse size={15} />
-                  {selectedProfile.status === 'injured' ? 'Marcar como apto' : 'Marcar lesionado'}
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
+                      className="w-full min-h-12 px-4 rounded-2xl bg-csc-red/12 text-csc-vermelho-texto
+                        font-display font-extrabold text-[12px] flex items-center justify-center gap-2 cursor-pointer
+                        transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                    >
+                      <HeartPulse size={15} />
+                      {selectedProfile.status === 'injured' ? 'Marcar como apto' : 'Marcar lesionado'}
+                    </button>
+                  </>
+                )}
 
                 {isAdmin && selectedProfile?.id && (
                   linkedProfileIds.has(selectedProfile.id) ? (
@@ -2502,11 +2699,11 @@ const TeamManagementPage: React.FC = () => {
                     largo
                     onClick={() => {
                       const alvo = selectedProfile
-                      handleDeleteMember(alvo.id, alvo.name)
+                      handleDeleteMember(alvo.id, alvo.name, eAdepto(alvo))
                     }}
                   >
                     <Trash2 size={15} aria-hidden="true" />
-                    Eliminar atleta
+                    {eAdepto(selectedProfile) ? 'Eliminar adepto' : 'Eliminar atleta'}
                   </Botao>
                 )}
               </div>
