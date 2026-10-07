@@ -205,8 +205,9 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
         const { error: erroApagar } = await supabase.from('tournament_players').delete().eq('tournament_id', id)
         if (erroApagar) throw erroApagar
         if (tourPlayers.length > 0) {
+          const uniquePlayers = Array.from(new Set(tourPlayers))
           const { error: erroInscrever } = await supabase.from('tournament_players')
-            .insert(tourPlayers.map(pid => ({ tournament_id: id, player_id: pid })))
+            .insert(uniquePlayers.map(pid => ({ tournament_id: id, player_id: pid })))
           if (erroInscrever) throw erroInscrever
         }
         toast.success('Torneio atualizado com sucesso!')
@@ -217,8 +218,9 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
            vez tem de o atualizar, e não criar um segundo. */
         if (data) setEditingTourId(data.id)
         if (data && tourPlayers.length > 0) {
+          const uniquePlayers = Array.from(new Set(tourPlayers))
           const { error: erroInscrever } = await supabase.from('tournament_players')
-            .insert(tourPlayers.map(pid => ({ tournament_id: data.id, player_id: pid })))
+            .insert(uniquePlayers.map(pid => ({ tournament_id: data.id, player_id: pid })))
           if (erroInscrever) throw erroInscrever
         }
         toast.success('Torneio criado com sucesso!')

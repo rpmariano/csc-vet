@@ -26,6 +26,10 @@ export const mensagemDeErro = (err: unknown): string => {
   if (codigo === '23503') return 'há outros dados que dependem deste'
   if (codigo === '23502') return 'falta preencher um campo obrigatório'
   if (codigo === 'PGRST116') return 'o registo já não existe'
+  if (codigo === 'PGRST205' || codigo === '42P01' || /could not find the table|relation.*does not exist/i.test(mensagem)) {
+    console.error(err)
+    return 'tabela em falta na base de dados (migração SQL pendente)'
+  }
   if (/failed to fetch|networkerror|load failed|network request failed/i.test(mensagem)) {
     return 'sem ligação à internet'
   }
