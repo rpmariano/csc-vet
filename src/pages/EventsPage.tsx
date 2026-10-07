@@ -17,8 +17,12 @@ import {
   AlertTriangle,
   ClipboardList,
   SlidersHorizontal,
-  Pencil
+  Pencil,
+  MessageCircle,
+  Copy
 } from 'lucide-react'
+import { PartilharConvocatoria } from '../components/callups/PartilharConvocatoria'
+import { partilharConvocatoriaWhatsApp, copiarLinkConvocatoria } from '../lib/convocatoriaPartilha'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
@@ -2033,9 +2037,28 @@ const EventsPage: React.FC = () => {
                   </button>
                 )}
 
-                {/* 4. Botões Modificar e Apagar (Apenas Admin / Treinador) */}
+                {/* 4. Botões Modificar, Partilhar e Apagar (Apenas Admin / Treinador) */}
                 {isCoachOrAdmin && (
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <BotaoIcone
+                      rotulo="Partilhar no WhatsApp"
+                      icone={MessageCircle}
+                      onClick={() => {
+                        const opp = opponents.find(o => o.id === activeCallupModalEvent.opponent_id)
+                        partilharConvocatoriaWhatsApp(activeCallupModalEvent, {
+                          adversarioNome: opp?.name,
+                          adversarioSigla: opp?.initials,
+                          clubeNome: clubSettings?.name,
+                          clubeSigla: clubSettings?.initials,
+                          campos: fields,
+                        })
+                      }}
+                    />
+                    <BotaoIcone
+                      rotulo="Copiar link da convocatória"
+                      icone={Copy}
+                      onClick={() => copiarLinkConvocatoria(activeCallupModalEvent.id)}
+                    />
                     <BotaoIcone
                       rotulo="Modificar evento"
                       icone={Pencil}
@@ -2056,6 +2079,25 @@ const EventsPage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Bloco de Partilha de Convocatória */}
+            {(() => {
+              const opp = opponents.find(o => o.id === activeCallupModalEvent.opponent_id)
+              return (
+                <div className="mb-4">
+                  <PartilharConvocatoria
+                    evento={activeCallupModalEvent}
+                    opcoes={{
+                      adversarioNome: opp?.name,
+                      adversarioSigla: opp?.initials,
+                      clubeNome: clubSettings?.name,
+                      clubeSigla: clubSettings?.initials,
+                      campos: fields,
+                    }}
+                  />
+                </div>
+              )
+            })()}
 
             {/* Se o evento estiver inativo, alerta proeminente */}
             {activeCallupModalEvent.is_active === false && (

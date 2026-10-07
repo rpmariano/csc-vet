@@ -15,6 +15,14 @@ export const BASE = import.meta.env.BASE_URL || '/'
 /** Caminho absoluto (sem domínio) do ecrã de nova palavra-passe. */
 export const caminhoNovaPalavraPasse = (): string => `${BASE}nova-palavra-passe`
 
+/** Caminho absoluto (sem domínio) do detalhe de um evento na Agenda. */
+export const caminhoEvento = (idEvento: string): string =>
+  `${BASE}calendar?event=${encodeURIComponent(idEvento)}`
+
+/** Endereço completo (com domínio) do detalhe de um evento na Agenda. */
+export const enderecoEvento = (idEvento: string): string =>
+  `${window.location.origin}${caminhoEvento(idEvento)}`
+
 /**
  * O nome do ecrã em que se está, para o "‹" de quem se abrir a partir dele.
  *

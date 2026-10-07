@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, Navigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, Navigate, useSearchParams, useLocation } from 'react-router-dom'
 import { Info, Check } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -49,9 +49,15 @@ const Login: React.FC = () => {
   const [aviso, setAviso] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
 
+  const localizacao = useLocation()
+  const origemEstado = (localizacao.state as { from?: { pathname: string; search?: string } })?.from
+  const destino = origemEstado
+    ? `${origemEstado.pathname}${origemEstado.search || ''}`
+    : '/'
+
   useEffect(() => {
-    if (user && !aCarregarSessao) navegar('/', { replace: true })
-  }, [user, aCarregarSessao, navegar])
+    if (user && !aCarregarSessao) navegar(destino, { replace: true })
+  }, [user, aCarregarSessao, navegar, destino])
 
   const mudarModo = (seguinte: Modo) => {
     setModo(seguinte)
@@ -86,7 +92,7 @@ const Login: React.FC = () => {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password: palavraPasse })
         if (error) throw error
-        navegar('/', { replace: true })
+        navegar(destino, { replace: true })
       }
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Ocorreu um erro inesperado.')
@@ -110,7 +116,7 @@ const Login: React.FC = () => {
     }
   }
 
-  if (user && !aCarregarSessao) return <Navigate to="/" replace />
+  if (user && !aCarregarSessao) return <Navigate to={destino} replace />
 
   const configurado =
     !!import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('placeholder')

@@ -25,6 +25,7 @@ import { EcraDetalhe } from '../components/EcraDetalhe'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { parseMatchReportMetadata } from '../components/MatchReportModal'
 import { BlocoConvocatoria } from '../components/callups/BlocoConvocatoria'
+import { PartilharConvocatoria } from '../components/callups/PartilharConvocatoria'
 import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import { AniversariosDoMes } from '../components/AniversariosDoMes'
 import { toast } from '../context/ToastContext'
@@ -2009,25 +2010,38 @@ const CalendarPage: React.FC = () => {
               já aberto, e o "‹" traz de volta a esta ficha.
             */}
             {isCoachOrAdmin && (
-              <div className="rounded-[20px] bg-csc-gold/10 p-3.5">
-                <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
-                  Gestão do evento
-                </p>
-                <div className="mt-3">
-                  <Botao
-                    largo
-                    onClick={() => {
-                      triggerHaptic('light')
-                      navigate(`/events?convocatoria=${selectedEvent.id}`, { state: { origem: nomeDoEcra(location.pathname, location.search) } })
-                    }}
-                  >
-                    <Pencil size={15} aria-hidden="true" />
-                    <span>Editar nos Eventos</span>
-                  </Botao>
+              <div className="space-y-3">
+                <PartilharConvocatoria
+                  evento={selectedEvent}
+                  opcoes={{
+                    adversarioNome: selectedEvent.opponent?.name,
+                    adversarioSigla: selectedEvent.opponent?.initials,
+                    clubeNome: clubSettings?.name,
+                    clubeSigla: clubSettings?.initials,
+                    campos: fields,
+                  }}
+                />
+
+                <div className="rounded-[20px] bg-csc-gold/10 p-3.5">
+                  <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
+                    Gestão do evento
+                  </p>
+                  <div className="mt-3">
+                    <Botao
+                      largo
+                      onClick={() => {
+                        triggerHaptic('light')
+                        navigate(`/events?convocatoria=${selectedEvent.id}`, { state: { origem: nomeDoEcra(location.pathname, location.search) } })
+                      }}
+                    >
+                      <Pencil size={15} aria-hidden="true" />
+                      <span>Editar nos Eventos</span>
+                    </Botao>
+                  </div>
+                  <p className="text-[10px] leading-snug text-white/62 mt-2.5">
+                    O evento, a convocatória e a ficha de jogo editam-se nos Eventos.
+                  </p>
                 </div>
-                <p className="text-[10px] leading-snug text-white/62 mt-2.5">
-                  O evento, a convocatória e a ficha de jogo editam-se nos Eventos.
-                </p>
               </div>
             )}
           </div>
