@@ -6,6 +6,7 @@ import { triggerHaptic } from '../../utils/haptics'
 import { EcraDetalhe } from '../EcraDetalhe'
 import { Botao, BlocoData } from '../ui'
 import { mensagemDeErro } from '../../lib/erros'
+import { convocarAdeptosParaJogo } from '../../lib/convocatoriasAdeptos'
 
 /**
  * Convocar, logo a seguir a guardar o evento (ecrãs 4f e 4g).
@@ -131,6 +132,9 @@ export const ConvocatoriaAoCriar: React.FC<{
           ids.map(playerId => ({ event_id: evento.id, player_id: playerId, status: 'called' })),
         )
         if (error) throw error
+        if (evento.tipo === 'match') {
+          await convocarAdeptosParaJogo(evento.id)
+        }
       }
       toast.success(
         ids.length === 0

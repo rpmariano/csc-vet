@@ -74,8 +74,9 @@ export const CartaoProximoJogo: React.FC<{
   /** O nome por extenso, para debaixo do emblema — a sigla já está no título. */
   nomeClube: string
   emblemaClube: string
+  isAdepto?: boolean
   aoResponder: (id: string, status: 'confirmed' | 'declined') => void
-}> = ({ jogo, siglaClube, nomeClube, emblemaClube, aoResponder }) => {
+}> = ({ jogo, siglaClube, nomeClube, emblemaClube, isAdepto = false, aoResponder }) => {
   const navegar = useNavigate()
   const fora = jogo.home_away === 'away'
   const sigla = jogo.opponent?.initials || jogo.opponent?.name?.slice(0, 3).toUpperCase() || 'ADV'
@@ -234,11 +235,19 @@ export const CartaoProximoJogo: React.FC<{
               <>
                 <div className="flex items-baseline justify-between gap-2.5">
                   <span className="font-display font-extrabold text-[14px] text-white">
-                    {jogo.minhaResposta === 'confirmed'
-                      ? 'Contamos contigo.'
-                      : jogo.minhaResposta === 'declined'
-                        ? 'Ficas de fora.'
-                        : 'Contamos contigo?'}
+                    {isAdepto ? (
+                      jogo.minhaResposta === 'confirmed'
+                        ? 'Contamos com o teu apoio!'
+                        : jogo.minhaResposta === 'declined'
+                          ? 'Não podes ir apoiar.'
+                          : 'Vem apoiar-nos em mais um jogo!'
+                    ) : (
+                      jogo.minhaResposta === 'confirmed'
+                        ? 'Contamos contigo.'
+                        : jogo.minhaResposta === 'declined'
+                          ? 'Ficas de fora.'
+                          : 'Contamos contigo?'
+                    )}
                   </span>
                   <span className="text-[11px] text-white/60 flex-none">
                     {jogo.confirmados} {jogo.confirmados === 1 ? 'confirmado' : 'confirmados'}
@@ -258,7 +267,7 @@ export const CartaoProximoJogo: React.FC<{
                       }`}
                   >
                     {jogo.minhaResposta === 'confirmed' && <CheckCircle2 size={14} />}
-                    Sim, vou
+                    {isAdepto ? 'Vou apoiar' : 'Sim, vou'}
                   </button>
                   <button
                     type="button"

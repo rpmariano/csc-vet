@@ -65,8 +65,8 @@ const VALID_ROLES: UserRole[] = ['player', 'coach', 'admin', 'supporter']
  * inteiro) sem ter de simular um `Profile` completo só para o tipo bater certo.
  */
 export interface RoleSource {
-  role: UserRole
-  roles?: UserRole[] | null
+  role?: UserRole | string | null
+  roles?: (UserRole | string)[] | null
   medical_notes?: string | null
   position?: string | null
 }
@@ -74,13 +74,16 @@ export interface RoleSource {
 export const extractRolesFromProfile = (profile: RoleSource | null | undefined): UserRole[] => {
   if (!profile) return ['player']
 
+  const rawRole = profile.role as UserRole | undefined
+  const defaultRole: UserRole = rawRole && VALID_ROLES.includes(rawRole) ? rawRole : 'player'
+
   // 1. Coluna `roles` do Supabase — a fonte de verdade. É escrita apenas por
   //    administradores (a RLS impede que cada um altere os seus próprios papéis).
   if (Array.isArray(profile.roles) && profile.roles.length > 0) {
-    const fromColumn = profile.roles.filter(r => VALID_ROLES.includes(r))
+    const fromColumn = profile.roles.filter((r): r is UserRole => VALID_ROLES.includes(r as UserRole))
     if (fromColumn.length > 0) {
       // O papel real tem sempre de constar, mesmo que a coluna esteja incompleta.
-      return fromColumn.includes(profile.role) ? fromColumn : [...fromColumn, profile.role]
+      return fromColumn.includes(defaultRole) ? fromColumn : [...fromColumn, defaultRole]
     }
   }
 

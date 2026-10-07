@@ -22,7 +22,9 @@ import {
   Landmark,
   User as UserIcon,
   Pencil,
-  Heart
+  Heart,
+  Camera,
+  Loader2
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { BlocoDocumentos } from '../components/BlocoDocumentos'
@@ -74,6 +76,27 @@ const ROTULOS_ORDEM: Record<string, string> = {
   nome: 'por nome',
 }
 
+const ROTULOS_PAPEL: Record<string, string> = {
+  player: 'Jogadores',
+  coach: 'Equipa técnica',
+  admin: 'Direção',
+  supporter: 'Adeptos',
+}
+
+/**
+ * O plantel agrupa-se por perfil, e quem tem vários conta pelo primeiro
+ * desta ordem: jogador, treinador, direção, adepto. Metade da direção deste clube
+ * também joga, e a pergunta que se faz nesta lista é quem entra em campo —
+ * quem joga aparece entre os jogadores, mesmo que também dirija.
+ */
+const grupoDoPerfil = (p: Profile): 'player' | 'coach' | 'admin' | 'supporter' => {
+  const papeis = extractRolesFromProfile(p)
+  if (papeis.includes('player')) return 'player'
+  if (papeis.includes('coach')) return 'coach'
+  if (papeis.includes('admin')) return 'admin'
+  return 'supporter'
+}
+
 /**
  * A relação com o contacto de emergência, em lista fechada.
  *
@@ -106,6 +129,7 @@ const TeamManagementPage: React.FC = () => {
   // Filters, Search & View Mode
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | ProfileStatus>('all')
+  const [roleFilter, setRoleFilter] = useState<'all' | 'player' | 'coach' | 'admin' | 'supporter'>('all')
   const [positionFilter, setPositionFilter] = useState('all')
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   /* O handoff ordena o plantel por número; a ordenação por nome era a única
@@ -481,11 +505,80 @@ const TeamManagementPage: React.FC = () => {
 
       setPhotoUrl(publicUrl)
 
-      toast.success('Ficheiro carregado com sucesso!')
+      toast.success('Fotografia carregada com sucesso!')
     } catch (err: any) {
-      toast.error('Erro ao carregar ficheiro: ' + mensagemDeErro(err))
+      toast.error('Erro ao carregar fotografia: ' + mensagemDeErro(err))
     } finally {
       setUploadingDoc(null)
+    }
+  }
+
+  const [uploadingFichaPhoto, setUploadingFichaPhoto] = useState(false)
+
+  const handleUploadPhotoForProfile = async (
+    targetProfileId: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!e.target.files || e.target.files.length === 0) return
+    const file = e.target.files[0]
+    e.target.value = ''
+    const ext = file.name.split('.').pop()
+    const fileName = `member_photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`
+
+    try {
+      setUploadingFichaPhoto(true)
+      const { error: uploadErr } = await supabase.storage
+        .from('club_assets')
+        .upload(fileName, file, { upsert: true })
+
+      if (uploadErr) throw uploadErr
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('club_assets')
+        .getPublicUrl(fileName)
+
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({ photo_url: publicUrl })
+        .eq('id', targetProfileId)
+
+      if (updateErr) throw updateErr
+
+      setProfiles(prev => prev.map(p => p.id === targetProfileId ? { ...p, photo_url: publicUrl } : p))
+      setSelectedProfile(prev => prev && prev.id === targetProfileId ? { ...prev, photo_url: publicUrl } : prev)
+      if (currentUserProfile && currentUserProfile.id === targetProfileId) {
+        await refreshProfile()
+      }
+
+      toast.success('Fotografia atualizada com sucesso!')
+    } catch (err: any) {
+      toast.error('Erro ao carregar fotografia: ' + mensagemDeErro(err))
+    } finally {
+      setUploadingFichaPhoto(false)
+    }
+  }
+
+  const handleRemovePhotoFromProfile = async (targetProfileId: string) => {
+    try {
+      setUploadingFichaPhoto(true)
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({ photo_url: null })
+        .eq('id', targetProfileId)
+
+      if (updateErr) throw updateErr
+
+      setProfiles(prev => prev.map(p => p.id === targetProfileId ? { ...p, photo_url: null } : p))
+      setSelectedProfile(prev => prev && prev.id === targetProfileId ? { ...prev, photo_url: null } : prev)
+      if (currentUserProfile && currentUserProfile.id === targetProfileId) {
+        await refreshProfile()
+      }
+
+      toast.success('Fotografia removida com sucesso!')
+    } catch (err: any) {
+      toast.error('Erro ao remover fotografia: ' + mensagemDeErro(err))
+    } finally {
+      setUploadingFichaPhoto(false)
     }
   }
 
@@ -924,8 +1017,9 @@ const TeamManagementPage: React.FC = () => {
       const targetPos = normalizePositionName(positionFilter).toLowerCase()
       return playerPosList.includes(targetPos) || p.position.toLowerCase().includes(positionFilter.toLowerCase())
     })()
+    const matchesRole = roleFilter === 'all' || grupoDoPerfil(p) === roleFilter
 
-    return matchesSearch && matchesStatus && matchesPosition
+    return matchesSearch && matchesStatus && matchesPosition && matchesRole
   })
 
   /*
@@ -961,46 +1055,31 @@ const TeamManagementPage: React.FC = () => {
   const perfisAtivos = separarInativos ? filteredProfiles.filter(p => p.status !== 'inactive') : filteredProfiles
   const perfisInativos = separarInativos ? filteredProfiles.filter(p => p.status === 'inactive') : []
 
-  /*
-    **O plantel agrupa-se por perfil, e quem tem vários conta pelo primeiro
-    desta ordem: jogador, treinador, direção.** Metade da direção deste clube
-    também joga, e a pergunta que se faz nesta lista é quem entra em campo —
-    quem joga aparece entre os jogadores, mesmo que também dirija. Sem isto era
-    uma lista corrida de vinte e oito pessoas onde o treinador aparecia no meio
-    dos médios.
-
-    Os inativos ficam num grupo à parte no fim, como já estavam: um inativo não
-    entra na conta do plantel, seja qual for o perfil.
-  */
-  const grupoDoPerfil = (p: Profile): 'player' | 'coach' | 'admin' | 'supporter' => {
-    const papeis = extractRolesFromProfile(p)
-    if (papeis.includes('player')) return 'player'
-    if (papeis.includes('coach')) return 'coach'
-    if (papeis.includes('admin')) return 'admin'
-    return 'supporter'
-  }
-
   const gruposDoPlantel = ([
     ['player', 'Jogadores'],
     ['coach', 'Equipa técnica'],
     ['admin', 'Direção'],
     ['supporter', 'Adeptos'],
-  ] as const).map(([papel, titulo]) => [
-    titulo,
-    perfisAtivos.filter(pe => grupoDoPerfil(pe) === papel),
-  ] as [string, Profile[]])
+  ] as const)
+    .filter(([papel]) => roleFilter === 'all' || roleFilter === papel)
+    .map(([papel, titulo]) => [
+      titulo,
+      perfisAtivos.filter(pe => grupoDoPerfil(pe) === papel),
+    ] as [string, Profile[]])
 
   /** O que a persiana esconde, para o funil acender e o resumo dizê-lo. */
   const temFiltros =
     searchTerm.trim() !== '' ||
     statusFilter !== 'all' ||
     positionFilter !== 'all' ||
+    roleFilter !== 'all' ||
     ordem !== 'nome'
 
   /* O estado escolhe-se nos mosaicos, à vista: não acende o funil (não está
      lá dentro), mas entra no resumo quando a linha aparece. */
   const filtrosDoFunil = positionFilter !== 'all' || ordem !== 'nome'
   const resumoFiltros = [
+    roleFilter !== 'all' ? ROTULOS_PAPEL[roleFilter] : null,
     statusFilter !== 'all' ? ROTULOS_ESTADO[statusFilter] : null,
     positionFilter !== 'all' ? positionFilter : null,
     ordem !== 'nome' ? ROTULOS_ORDEM[ordem] : null,
@@ -1010,6 +1089,7 @@ const TeamManagementPage: React.FC = () => {
     setSearchTerm('')
     setStatusFilter('all')
     setPositionFilter('all')
+    setRoleFilter('all')
     setOrdem('nome')
   }
 
@@ -1022,6 +1102,19 @@ const TeamManagementPage: React.FC = () => {
   const activeCount = jogadores.filter(p => p.status === 'active').length
   const injuredCount = jogadores.filter(p => p.status === 'injured').length
   const inactiveCount = jogadores.filter(p => p.status === 'inactive').length
+
+  const totalJogadores = profiles.filter(p => grupoDoPerfil(p) === 'player').length
+  const totalTecnica = profiles.filter(p => grupoDoPerfil(p) === 'coach').length
+  const totalAdeptos = profiles.filter(p => grupoDoPerfil(p) === 'supporter').length
+  const totalDirecao = profiles.filter(p => grupoDoPerfil(p) === 'admin').length
+
+  const alternarPapel = (papel: 'player' | 'coach' | 'admin' | 'supporter') => {
+    triggerHaptic('selection')
+    if (statusFilter !== 'all' && papel !== 'player') {
+      setStatusFilter('all')
+    }
+    setRoleFilter(prev => (prev === papel ? 'all' : papel))
+  }
 
   // Escape, prisão de foco e anúncio a leitores de ecrã, mantendo o visual próprio de cada painel.
 
@@ -1091,7 +1184,12 @@ const TeamManagementPage: React.FC = () => {
       */}
       <Mosaicos<'active' | 'injured' | 'inactive'>
         ativo={statusFilter === 'all' ? null : statusFilter}
-        aoEscolher={chave => setStatusFilter(chave ?? 'all')}
+        aoEscolher={chave => {
+          if (chave && roleFilter !== 'all' && roleFilter !== 'player') {
+            setRoleFilter('all')
+          }
+          setStatusFilter(chave ?? 'all')
+        }}
         mosaicos={[
           { chave: 'active', etiqueta: 'Aptos', valor: activeCount, cor: 'text-csc-verde-texto', fundoAtivo: 'bg-csc-light/18 border-csc-light/45' },
           { chave: 'injured', etiqueta: 'Lesionados', valor: injuredCount, cor: 'text-csc-vermelho-texto', fundoAtivo: 'bg-csc-red/16 border-csc-red/40' },
@@ -1111,6 +1209,51 @@ const TeamManagementPage: React.FC = () => {
         contagem={`${filteredProfiles.length} ${filteredProfiles.length === 1 ? 'membro' : 'membros'}`}
         aoLimpar={limparFiltros}
       />
+
+      {/*
+        Pastilhas para os grupos do plantel: Jogadores, Equipa técnica, Adeptos.
+        Dizem o total de cada perfil e, tocadas, mostram só esse grupo. Tocar na
+        pastilha ativa desliga o filtro e volta a mostrar todos.
+      */}
+      <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">
+        <Pastilha
+          ativa={roleFilter === 'player'}
+          onClick={() => alternarPapel('player')}
+          className="flex-none gap-1.5"
+        >
+          <span>Jogadores</span>
+          <span className="opacity-60 tabular-nums">{totalJogadores}</span>
+        </Pastilha>
+
+        <Pastilha
+          ativa={roleFilter === 'coach'}
+          onClick={() => alternarPapel('coach')}
+          className="flex-none gap-1.5"
+        >
+          <span>Equipa técnica</span>
+          <span className="opacity-60 tabular-nums">{totalTecnica}</span>
+        </Pastilha>
+
+        <Pastilha
+          ativa={roleFilter === 'supporter'}
+          onClick={() => alternarPapel('supporter')}
+          className="flex-none gap-1.5"
+        >
+          <span>Adeptos</span>
+          <span className="opacity-60 tabular-nums">{totalAdeptos}</span>
+        </Pastilha>
+
+        {totalDirecao > 0 && (
+          <Pastilha
+            ativa={roleFilter === 'admin'}
+            onClick={() => alternarPapel('admin')}
+            className="flex-none gap-1.5"
+          >
+            <span>Direção</span>
+            <span className="opacity-60 tabular-nums">{totalDirecao}</span>
+          </Pastilha>
+        )}
+      </div>
 
       <BottomSheet
         isOpen={filtrosAbertos}
@@ -1592,23 +1735,57 @@ const TeamManagementPage: React.FC = () => {
                         />
                       </div>
 
-                      {/* Foto de Perfil */}
-                      <div className="p-3 bg-white/5 rounded-lg space-y-2">
-                        <label htmlFor="ficha-foto-adepto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
-                        <input
-                          id="ficha-foto-adepto"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleUploadFile(e, 'photo')}
-                          disabled={uploadingDoc === 'photo'}
-                          className="text-xs w-full"
-                        />
-                        {photoUrl && (
-                          <div className="flex items-center gap-2 pt-1">
-                            <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover" />
-                            <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
+                      {/* Fotografia de Perfil */}
+                      <div className="p-3.5 bg-white/5 rounded-2xl flex items-center gap-3.5 border border-white/10">
+                        <div className="relative shrink-0">
+                          {photoUrl ? (
+                            <img
+                              src={photoUrl}
+                              alt="Pré-visualização"
+                              className="w-16 h-16 rounded-2xl object-cover border border-csc-gold"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-2xl bg-white/10 text-white/40 flex items-center justify-center font-display font-black text-xl">
+                              {formName ? formName.charAt(0).toUpperCase() : <UserIcon size={24} />}
+                            </div>
+                          )}
+                          {uploadingDoc === 'photo' && (
+                            <div className="absolute inset-0 bg-black/60 rounded-2xl flex items-center justify-center">
+                              <Loader2 size={20} className="text-csc-gold animate-spin" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <label className="block text-xs font-bold text-white">Fotografia de Perfil</label>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <label
+                              htmlFor="ficha-foto-adepto"
+                              className={`min-h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-97 ${uploadingDoc === 'photo' ? 'opacity-50 pointer-events-none' : ''}`}
+                            >
+                              <Camera size={14} className="text-csc-gold" />
+                              <span>{photoUrl ? 'Alterar fotografia' : 'Colocar fotografia'}</span>
+                            </label>
+                            <input
+                              id="ficha-foto-adepto"
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleUploadFile(e, 'photo')}
+                              disabled={uploadingDoc === 'photo'}
+                              className="hidden"
+                            />
+                            {photoUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setPhotoUrl(null)}
+                                className="min-h-9 px-2.5 rounded-xl text-white/50 hover:text-csc-red text-xs font-bold cursor-pointer transition-colors"
+                              >
+                                Remover
+                              </button>
+                            )}
                           </div>
-                        )}
+                          <p className="text-[10px] text-white/50">Formatos aceites: JPG, PNG, WEBP</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2109,23 +2286,57 @@ const TeamManagementPage: React.FC = () => {
                     </h3>
 
                     <div className="grid grid-cols-1 gap-3">
-                      {/* Foto de Perfil */}
-                      <div className="p-3 bg-white/5 rounded-lg space-y-2">
-                        <label htmlFor="ficha-foto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
-                        <input
-                          id="ficha-foto"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleUploadFile(e, 'photo')}
-                          disabled={uploadingDoc === 'photo'}
-                          className="text-xs w-full"
-                        />
-                        {photoUrl && (
-                          <div className="flex items-center gap-2 pt-1">
-                            <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover" />
-                            <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
+                      {/* Fotografia de Perfil */}
+                      <div className="p-3.5 bg-white/5 rounded-2xl flex items-center gap-3.5 border border-white/10">
+                        <div className="relative shrink-0">
+                          {photoUrl ? (
+                            <img
+                              src={photoUrl}
+                              alt="Pré-visualização"
+                              className="w-16 h-16 rounded-2xl object-cover border border-csc-gold"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-2xl bg-white/10 text-white/40 flex items-center justify-center font-display font-black text-xl">
+                              {formName ? formName.charAt(0).toUpperCase() : <UserIcon size={24} />}
+                            </div>
+                          )}
+                          {uploadingDoc === 'photo' && (
+                            <div className="absolute inset-0 bg-black/60 rounded-2xl flex items-center justify-center">
+                              <Loader2 size={20} className="text-csc-gold animate-spin" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <label className="block text-xs font-bold text-white">Fotografia de Perfil</label>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <label
+                              htmlFor="ficha-foto"
+                              className={`min-h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-97 ${uploadingDoc === 'photo' ? 'opacity-50 pointer-events-none' : ''}`}
+                            >
+                              <Camera size={14} className="text-csc-gold" />
+                              <span>{photoUrl ? 'Alterar fotografia' : 'Colocar fotografia'}</span>
+                            </label>
+                            <input
+                              id="ficha-foto"
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleUploadFile(e, 'photo')}
+                              disabled={uploadingDoc === 'photo'}
+                              className="hidden"
+                            />
+                            {photoUrl && (
+                              <button
+                                type="button"
+                                onClick={() => setPhotoUrl(null)}
+                                className="min-h-9 px-2.5 rounded-xl text-white/50 hover:text-csc-red text-xs font-bold cursor-pointer transition-colors"
+                              >
+                                Remover
+                              </button>
+                            )}
                           </div>
-                        )}
+                          <p className="text-[10px] text-white/50">Formatos aceites: JPG, PNG, WEBP</p>
+                        </div>
                       </div>
 
                       {/* Os documentos não são campos do formulário: carregam-se na
@@ -2200,20 +2411,77 @@ const TeamManagementPage: React.FC = () => {
               e as funções. (Um cartão não repete o título do ecrã em que está.)
             */}
             <div className="cartao-simples p-4 flex flex-col items-center text-center gap-2.5">
-              {selectedProfile.photo_url ? (
-                <img
-                  src={selectedProfile.photo_url}
-                  alt=""
-                  className="w-22 h-22 rounded-3xl object-cover border-2 border-csc-gold"
-                  style={{ width: 88, height: 88 }}
-                />
-              ) : (
-                <span
-                  className="rounded-3xl bg-white/10 text-white/70 flex items-center justify-center font-display font-black text-[30px]"
-                  style={{ width: 88, height: 88 }}
-                >
-                  {(selectedProfile.name || '?').charAt(0).toUpperCase()}
-                </span>
+              <div className="relative">
+                {selectedProfile.photo_url ? (
+                  <img
+                    src={selectedProfile.photo_url}
+                    alt=""
+                    className="w-22 h-22 rounded-3xl object-cover border-2 border-csc-gold"
+                    style={{ width: 88, height: 88 }}
+                  />
+                ) : (
+                  <span
+                    className="rounded-3xl bg-white/10 text-white/70 flex items-center justify-center font-display font-black text-[30px]"
+                    style={{ width: 88, height: 88 }}
+                  >
+                    {(selectedProfile.name || '?').charAt(0).toUpperCase()}
+                  </span>
+                )}
+                {uploadingFichaPhoto && (
+                  <div className="absolute inset-0 bg-black/60 rounded-3xl flex items-center justify-center">
+                    <Loader2 size={24} className="text-csc-gold animate-spin" />
+                  </div>
+                )}
+                {(isCoachOrAdmin || currentUserProfile?.id === selectedProfile.id) && (
+                  <label
+                    htmlFor={`upload-detail-photo-${selectedProfile.id}`}
+                    aria-label="Alterar fotografia de perfil"
+                    className="absolute -bottom-1 -right-1 p-2 rounded-full bg-csc-gold text-csc-dark hover:bg-csc-gold/90 transition-all shadow-md cursor-pointer active:scale-95"
+                  >
+                    <Camera size={14} />
+                    <input
+                      id={`upload-detail-photo-${selectedProfile.id}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleUploadPhotoForProfile(selectedProfile.id, e)}
+                      disabled={uploadingFichaPhoto}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
+              {(isCoachOrAdmin || currentUserProfile?.id === selectedProfile.id) && (
+                <div className="flex items-center gap-2 -mt-0.5">
+                  <label
+                    htmlFor={`upload-detail-photo-btn-${selectedProfile.id}`}
+                    className={`text-[11px] font-bold text-csc-gold hover:underline cursor-pointer flex items-center gap-1 ${uploadingFichaPhoto ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <Camera size={12} />
+                    <span>{selectedProfile.photo_url ? 'Alterar foto' : 'Colocar foto'}</span>
+                    <input
+                      id={`upload-detail-photo-btn-${selectedProfile.id}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleUploadPhotoForProfile(selectedProfile.id, e)}
+                      disabled={uploadingFichaPhoto}
+                      className="hidden"
+                    />
+                  </label>
+                  {selectedProfile.photo_url && (
+                    <>
+                      <span className="text-white/30 text-xs">·</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePhotoFromProfile(selectedProfile.id)}
+                        disabled={uploadingFichaPhoto}
+                        className="text-[11px] font-bold text-white/40 hover:text-csc-red transition-colors cursor-pointer"
+                      >
+                        Remover
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
 
               {extractRolesFromProfile(selectedProfile).includes('player') && (

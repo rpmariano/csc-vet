@@ -34,8 +34,9 @@ const DIA_SEMANA = new Intl.DateTimeFormat('pt-PT', { weekday: 'long' })
 
 export const PorResponder: React.FC<{
   pendentes: PendenteDaHome[]
+  isAdepto?: boolean
   aoResponder: (id: string, status: 'confirmed' | 'declined') => void
-}> = ({ pendentes, aoResponder }) => {
+}> = ({ pendentes, isAdepto = false, aoResponder }) => {
   const navegar = useNavigate()
   if (pendentes.length === 0) return null
 
@@ -75,8 +76,11 @@ export const PorResponder: React.FC<{
           </span>
         </div>
 
-        <p className="font-display font-extrabold text-[15px] text-white mt-1.5 truncate">{p.titulo}</p>
+        <p className="font-display font-extrabold text-[15px] text-white mt-1.5 truncate">
+          {isAdepto && p.tipo === 'match' ? 'Vem apoiar-nos em mais um jogo!' : p.titulo}
+        </p>
         <p className="text-[10.5px] text-white/62 mt-0.5 truncate">
+          {isAdepto && p.tipo === 'match' ? `${p.titulo} · ` : ''}
           {diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)},{' '}
           {quando.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
           {p.local ? ` · ${p.local}` : ''}
@@ -91,7 +95,7 @@ export const PorResponder: React.FC<{
               font-display font-bold text-[13px] cursor-pointer transition-transform duration-150 active:scale-97
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
           >
-            Vou
+            {isAdepto && p.tipo === 'match' ? 'Vou apoiar' : 'Vou'}
           </button>
           <button
             type="button"

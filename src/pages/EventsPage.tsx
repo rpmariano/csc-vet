@@ -26,6 +26,8 @@ import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Profile } from '../context/AuthContext'
+import { eAdepto } from '../lib/papeis'
+import { convocarAdeptosParaJogo } from '../lib/convocatoriasAdeptos'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { QuickFieldModal } from '../components/QuickFieldModal'
@@ -525,6 +527,11 @@ const EventsPage: React.FC = () => {
             }
           }
 
+          // Se for jogo, garante que os adeptos ativos foram convocados
+          if (ev.type === 'match') {
+            await convocarAdeptosParaJogo(ev.id)
+          }
+
           setEvents(prev => prev.map(item => item.id === ev.id ? { ...item, is_active: true } : item))
           if (activeCallupModalEvent && activeCallupModalEvent.id === ev.id) {
             setActiveCallupModalEvent(prev => prev ? { ...prev, is_active: true } : null)
@@ -869,6 +876,11 @@ const EventsPage: React.FC = () => {
           })
           if (allCallups.length > 0) {
             await supabase.from('callups').insert(allCallups)
+          }
+          if (type === 'match') {
+            for (const ev of createdEventsList) {
+              await convocarAdeptosParaJogo(ev.id)
+            }
           }
         }
 
@@ -2055,7 +2067,11 @@ const EventsPage: React.FC = () => {
               */
               const estadoQueImpede = (c: { player_id: string; player?: Profile | null }): string | null => {
                 const p = allPlayers.find(pl => pl.id === c.player_id) || c.player
-                if (!p || isPlayerEligible(p, activeCallupModalEvent.type, activeCallupModalEvent.tournament_id)) return null
+                if (!p) return null
+                if (eAdepto(p)) {
+                  return p.status === 'inactive' ? 'Inativo' : null
+                }
+                if (isPlayerEligible(p, activeCallupModalEvent.type, activeCallupModalEvent.tournament_id)) return null
                 if (p.status === 'inactive') return 'Inativo'
                 if (p.status === 'injured') return 'Lesionado'
                 return 'Não é atleta'

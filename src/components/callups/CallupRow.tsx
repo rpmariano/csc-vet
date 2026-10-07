@@ -1,9 +1,12 @@
-import { CheckCircle2, Clock, Trash2, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock, Trash2, XCircle, Heart } from 'lucide-react'
+import { eAdepto } from '../../lib/papeis'
 
 interface CallupRowPlayer {
   name?: string | null
   jersey_number?: number | null
   position?: string | null
+  role?: string | null
+  roles?: string[] | null
 }
 
 interface CallupRowProps {
@@ -104,13 +107,19 @@ export function CallupRow({
     com `onClick` — para chegarem ao teclado e ao leitor de ecrã; as ações
     rápidas ficam de fora dele, senão era um botão dentro de outro.
   */
+  const isPersonAdepto = eAdepto(player)
+
   const identidade = (
     <>
       <span
         className="w-7 h-7 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 flex items-center justify-center
           font-display font-extrabold text-[10px] text-csc-gold flex-none"
       >
-        {player?.jersey_number ?? '–'}
+        {isPersonAdepto ? (
+          <Heart size={12} className="text-csc-gold fill-csc-gold/40" />
+        ) : (
+          player?.jersey_number ?? '–'
+        )}
       </span>
 
       <span className="flex-1 min-w-0 text-left">
@@ -125,9 +134,11 @@ export function CallupRow({
             </span>
           )}
         </span>
-        {posicoes.length > 0 && (
+        {isPersonAdepto ? (
+          <span className="block text-[9px] text-white/62 truncate mt-0.5">Adepto</span>
+        ) : posicoes.length > 0 ? (
           <span className="block text-[9px] text-white/62 truncate mt-0.5">{posicoes.join(' · ')}</span>
-        )}
+        ) : null}
       </span>
     </>
   )

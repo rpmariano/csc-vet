@@ -12,6 +12,8 @@ import {
   Lock,
   LogOut,
   Bell,
+  Camera,
+  Loader2,
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { haEntradaAnterior } from '../lib/rotas'
@@ -193,6 +195,7 @@ const SettingsPage: React.FC = () => {
   ) => {
     if (!e.target.files || e.target.files.length === 0) return
     const file = e.target.files[0]
+    e.target.value = ''
     const ext = file.name.split('.').pop()
     const fileName = `profile_${field}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`
 
@@ -210,9 +213,37 @@ const SettingsPage: React.FC = () => {
 
       setPhotoUrl(publicUrl)
 
-      toast.success('Ficheiro carregado com sucesso!')
+      // Atualiza logo o perfil se já existir na BD para refletir em toda a app
+      if (profile?.id) {
+        await supabase
+          .from('profiles')
+          .update({ photo_url: publicUrl })
+          .eq('id', profile.id)
+        await refreshProfile()
+      }
+
+      toast.success('Fotografia atualizada com sucesso!')
     } catch (err: any) {
-      toast.error('Erro ao carregar ficheiro: ' + mensagemDeErro(err))
+      toast.error('Erro ao carregar fotografia: ' + mensagemDeErro(err))
+    } finally {
+      setUploadingDoc(null)
+    }
+  }
+
+  const handleRemovePhoto = async () => {
+    try {
+      setUploadingDoc('photo')
+      setPhotoUrl(null)
+      if (profile?.id) {
+        await supabase
+          .from('profiles')
+          .update({ photo_url: null })
+          .eq('id', profile.id)
+        await refreshProfile()
+      }
+      toast.success('Fotografia removida com sucesso!')
+    } catch (err: any) {
+      toast.error('Erro ao remover fotografia: ' + mensagemDeErro(err))
     } finally {
       setUploadingDoc(null)
     }
@@ -320,17 +351,39 @@ const SettingsPage: React.FC = () => {
           (o cabeçalho de todos, desde 2026-09-26); era um texto de 26px feito
           à mão, e o Perfil era o único ecrã sem título principal. */}
       <div className="flex items-center gap-4">
-        <span
-          className="relative w-[74px] h-[74px] rounded-full border-[2.5px] border-csc-gold/55 flex items-center justify-center
-            font-display font-extrabold text-[22px] text-csc-gold flex-none"
-          style={{ background: photoUrl ? undefined : 'linear-gradient(140deg,#3a4143,#1b1f20)' }}
-        >
-          {photoUrl ? (
-            <img src={photoUrl} alt="" className="w-full h-full rounded-full object-cover" />
-          ) : (
-            <span>{formJerseyNumber || (formName ? formName.charAt(0).toUpperCase() : 'U')}</span>
-          )}
-        </span>
+        <div className="relative shrink-0">
+          <span
+            className="relative w-[74px] h-[74px] rounded-full border-[2.5px] border-csc-gold/55 flex items-center justify-center
+              font-display font-extrabold text-[22px] text-csc-gold flex-none overflow-hidden"
+            style={{ background: photoUrl ? undefined : 'linear-gradient(140deg,#3a4143,#1b1f20)' }}
+          >
+            {photoUrl ? (
+              <img src={photoUrl} alt="" className="w-full h-full rounded-full object-cover" />
+            ) : (
+              <span>{formJerseyNumber || (formName ? formName.charAt(0).toUpperCase() : 'U')}</span>
+            )}
+            {uploadingDoc === 'photo' && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <Loader2 size={20} className="text-csc-gold animate-spin" />
+              </div>
+            )}
+          </span>
+          <label
+            htmlFor="perfil-foto-cabecalho"
+            aria-label="Alterar fotografia de perfil"
+            className="absolute -bottom-1 -right-1 p-2 rounded-full bg-csc-gold text-csc-dark hover:bg-csc-gold/90 transition-all shadow-md cursor-pointer active:scale-95"
+          >
+            <Camera size={13} />
+            <input
+              id="perfil-foto-cabecalho"
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleUploadFile(e, 'photo')}
+              disabled={uploadingDoc === 'photo'}
+              className="hidden"
+            />
+          </label>
+        </div>
         <div className="flex-1 min-w-0">
           <p className="font-display font-extrabold text-[14px] text-white truncate">{formName}</p>
           <p className="text-[10px] leading-snug text-white/62 mt-1">
@@ -338,6 +391,36 @@ const SettingsPage: React.FC = () => {
               ? `Perfil de adepto · ${clubSettings?.initials ?? CLUBE_SIGLA}`
               : `Ficha cadastral de atleta · ${clubSettings?.initials ?? CLUBE_SIGLA}`}
           </p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <label
+              htmlFor="perfil-foto-cabecalho-btn"
+              className={`text-[11px] font-bold text-csc-gold hover:underline cursor-pointer flex items-center gap-1 ${uploadingDoc === 'photo' ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              <Camera size={12} />
+              <span>{photoUrl ? 'Alterar foto' : 'Colocar foto'}</span>
+              <input
+                id="perfil-foto-cabecalho-btn"
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleUploadFile(e, 'photo')}
+                disabled={uploadingDoc === 'photo'}
+                className="hidden"
+              />
+            </label>
+            {photoUrl && (
+              <>
+                <span className="text-white/30 text-xs">·</span>
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  disabled={uploadingDoc === 'photo'}
+                  className="text-[11px] font-bold text-white/40 hover:text-csc-red transition-colors cursor-pointer"
+                >
+                  Remover
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -570,22 +653,57 @@ const SettingsPage: React.FC = () => {
             </div>
 
             {/* Fotografia de perfil */}
-            <div className="p-3.5 bg-white/5 rounded-2xl space-y-2 mt-2">
-              <label htmlFor="perfil-foto-adepto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
-              <input
-                id="perfil-foto-adepto"
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleUploadFile(e, 'photo')}
-                disabled={uploadingDoc === 'photo'}
-                className="text-xs w-full"
-              />
-              {photoUrl && (
-                <div className="flex items-center gap-2 pt-1">
-                  <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover border border-csc-gold" />
-                  <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
+            <div className="p-3.5 bg-white/5 rounded-2xl flex items-center gap-3.5 border border-white/10 mt-2">
+              <div className="relative shrink-0">
+                {photoUrl ? (
+                  <img
+                    src={photoUrl}
+                    alt="Pré-visualização"
+                    className="w-16 h-16 rounded-2xl object-cover border border-csc-gold"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-2xl bg-white/10 text-white/40 flex items-center justify-center font-display font-black text-xl">
+                    {formName ? formName.charAt(0).toUpperCase() : <UserIcon size={24} />}
+                  </div>
+                )}
+                {uploadingDoc === 'photo' && (
+                  <div className="absolute inset-0 bg-black/60 rounded-2xl flex items-center justify-center">
+                    <Loader2 size={20} className="text-csc-gold animate-spin" />
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <label className="block text-xs font-bold text-white">Fotografia de Perfil</label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label
+                    htmlFor="perfil-foto-adepto"
+                    className={`min-h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-97 ${uploadingDoc === 'photo' ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <Camera size={14} className="text-csc-gold" />
+                    <span>{photoUrl ? 'Alterar fotografia' : 'Colocar fotografia'}</span>
+                  </label>
+                  <input
+                    id="perfil-foto-adepto"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleUploadFile(e, 'photo')}
+                    disabled={uploadingDoc === 'photo'}
+                    className="hidden"
+                  />
+                  {photoUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      disabled={uploadingDoc === 'photo'}
+                      className="min-h-9 px-2.5 rounded-xl text-white/50 hover:text-csc-red text-xs font-bold cursor-pointer transition-colors"
+                    >
+                      Remover
+                    </button>
+                  )}
                 </div>
-              )}
+                <p className="text-[10px] text-white/50">Formatos aceites: JPG, PNG, WEBP</p>
+              </div>
             </div>
           </div>
 
@@ -990,22 +1108,57 @@ const SettingsPage: React.FC = () => {
           </h3>
 
           {/* Fotografia de perfil */}
-          <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
-            <label htmlFor="perfil-foto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
-            <input
-              id="perfil-foto"
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleUploadFile(e, 'photo')}
-              disabled={uploadingDoc === 'photo'}
-              className="text-xs w-full"
-            />
-            {photoUrl && (
-              <div className="flex items-center gap-2 pt-1">
-                <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover border border-csc-gold" />
-                <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
+          <div className="p-3.5 bg-white/5 rounded-2xl flex items-center gap-3.5 border border-white/10">
+            <div className="relative shrink-0">
+              {photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt="Pré-visualização"
+                  className="w-16 h-16 rounded-2xl object-cover border border-csc-gold"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-white/10 text-white/40 flex items-center justify-center font-display font-black text-xl">
+                  {formName ? formName.charAt(0).toUpperCase() : <UserIcon size={24} />}
+                </div>
+              )}
+              {uploadingDoc === 'photo' && (
+                <div className="absolute inset-0 bg-black/60 rounded-2xl flex items-center justify-center">
+                  <Loader2 size={20} className="text-csc-gold animate-spin" />
+                </div>
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <label className="block text-xs font-bold text-white">Fotografia de Perfil</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <label
+                  htmlFor="perfil-foto"
+                  className={`min-h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-97 ${uploadingDoc === 'photo' ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  <Camera size={14} className="text-csc-gold" />
+                  <span>{photoUrl ? 'Alterar fotografia' : 'Colocar fotografia'}</span>
+                </label>
+                <input
+                  id="perfil-foto"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleUploadFile(e, 'photo')}
+                  disabled={uploadingDoc === 'photo'}
+                  className="hidden"
+                />
+                {photoUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    disabled={uploadingDoc === 'photo'}
+                    className="min-h-9 px-2.5 rounded-xl text-white/50 hover:text-csc-red text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    Remover
+                  </button>
+                )}
               </div>
-            )}
+              <p className="text-[10px] text-white/50">Formatos aceites: JPG, PNG, WEBP</p>
+            </div>
           </div>
 
           {/* Os documentos gravam-se logo, sem o "Guardar" do fim da página. */}

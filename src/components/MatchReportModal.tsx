@@ -4,6 +4,7 @@ import { Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock, Aler
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJogo'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
+import { eAdepto } from '../lib/papeis'
 import { toast } from '../context/ToastContext'
 import { EcraDetalhe } from './EcraDetalhe'
 import { Botao, ACarregar } from './ui'
@@ -161,8 +162,9 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           return false
         })
 
-        // Por ordem alfabética do nome da camisola, como todas as listas de atletas.
+        // Por ordem alfabética do nome da camisola, como todas as listas de atletas (adeptos não entram na ficha de jogo).
         const candidateProfiles = (relevantProfiles.length > 0 ? relevantProfiles : allProfiles.filter(p => p.role === 'player'))
+          .filter(p => !eAdepto(p))
           .sort(compararPorCamisola)
 
         const merged: PlayerMatchStat[] = candidateProfiles.map(p => {

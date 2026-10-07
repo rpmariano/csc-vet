@@ -248,7 +248,7 @@ const Home: React.FC = () => {
                 morada: e.field?.address ?? null,
                 prova: e.tournament?.name ?? null,
                 opponent: e.opponent,
-                minhaResposta: utilizadorAdepto ? null : ((minha.get(e.id) as JogoDaHome['minhaResposta']) ?? null),
+                minhaResposta: (minha.get(e.id) as JogoDaHome['minhaResposta']) ?? (utilizadorAdepto && (total.get(e.id) ?? 0) > 0 ? 'called' : null),
                 confirmados: confirmados.get(e.id) ?? 0,
                 fechada: fechada ? textoConvocatoriaFechada(fechada, e) : null,
               }
@@ -275,7 +275,7 @@ const Home: React.FC = () => {
             .filter(e => !idsEmCima.has(e.id))
             .filter(e => minha.get(e.id) === 'called')
             .filter(e => !convocatoriaFechada(e, true))
-            .filter(e => !(utilizadorAdepto && e.type !== 'gathering'))
+            .filter(e => !(utilizadorAdepto && e.type === 'practice'))
             .slice(0, 6)
             .map(e => ({
               id: e.id,
@@ -449,15 +449,20 @@ const Home: React.FC = () => {
 
     const { error } = await supabase
       .from('callups')
-      .update({ status })
-      .eq('event_id', eventId)
-      .eq('player_id', profile.id)
+      .upsert(
+        [{ event_id: eventId, player_id: profile.id, status }],
+        { onConflict: 'event_id, player_id' }
+      )
 
     if (error) {
       toast.error('Não foi possível guardar a resposta: ' + mensagemDeErro(error))
       return
     }
-    toast.success(status === 'confirmed' ? 'Contamos contigo.' : 'Resposta registada.')
+    toast.success(
+      status === 'confirmed'
+        ? (eAdepto(profile) ? 'Presença confirmada! Obrigado pelo apoio.' : 'Contamos contigo.')
+        : 'Resposta registada.'
+    )
 
     /*
       O momento em que a pergunta dos avisos se explica sozinha: a pessoa
@@ -536,6 +541,7 @@ const Home: React.FC = () => {
                   siglaClube={sigla}
                   nomeClube={clubSettings?.name || CLUBE_NOME}
                   emblemaClube={emblema}
+                  isAdepto={eAdepto(profile)}
                   aoResponder={responder}
                 />
               ))}
@@ -549,7 +555,7 @@ const Home: React.FC = () => {
             </CartaoVidro>
           )}
 
-          <PorResponder pendentes={pendentes} aoResponder={responder} />
+          <PorResponder pendentes={pendentes} isAdepto={eAdepto(profile)} aoResponder={responder} />
 
           {/*
             O convite vem logo a seguir ao que está por responder, e não acima

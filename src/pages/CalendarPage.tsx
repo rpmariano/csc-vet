@@ -498,8 +498,8 @@ const CalendarPage: React.FC = () => {
   const handleCallupResponse = async (eventId: string, status: 'confirmed' | 'declined') => {
     if (!profile) return
     const targetEvent = events.find(e => e.id === eventId)
-    if (isAdepto && targetEvent && targetEvent.type !== 'gathering') {
-      toast.warning('Apenas atletas podem responder a convocatórias de jogos e treinos.')
+    if (isAdepto && targetEvent && targetEvent.type === 'practice') {
+      toast.warning('Apenas atletas podem responder a convocatórias de treinos.')
       return
     }
     const fechada = convocatoriaFechada(targetEvent, (eventCallups[eventId] || []).length > 0)
@@ -550,7 +550,11 @@ const CalendarPage: React.FC = () => {
         diz: ninguém marca presença nenhuma, o que se sabe é quem disse que ia.
         É o mesmo texto da Home, que já o dizia bem.
       */
-      toast.success(status === 'confirmed' ? 'Contamos contigo.' : 'Resposta registada.')
+      toast.success(
+        status === 'confirmed'
+          ? (isAdepto && targetEvent?.type === 'match' ? 'Presença confirmada! Obrigado pelo apoio.' : 'Contamos contigo.')
+          : 'Resposta registada.'
+      )
     } catch (err: any) {
       console.error('Erro ao atualizar resposta:', err)
       toast.error('Erro ao atualizar resposta: ' + mensagemDeErro(err))
@@ -1909,12 +1913,48 @@ const CalendarPage: React.FC = () => {
                     a razão e é a que se dá — é também a que explica a ausência
                     a quem gere, que não é convocado para nada.
                   */
-                  // Adeptos não recebem convocações nem respondem a jogos e treinos (apenas convívios)
-                  if (isAdepto && selectedEvent.type !== 'gathering') {
+                  // Adeptos não participam em treinos
+                  if (isAdepto && selectedEvent.type === 'practice') {
                     return null
                   }
 
+                  const isMatchAdepto = isAdepto && selectedEvent.type === 'match'
+
                   if (!myCallup) {
+                    if (isMatchAdepto && !fechada) {
+                      return (
+                        <div className="rounded-2xl overflow-hidden shadow-lg shadow-black/20">
+                          <div className="bg-csc-gold/13 px-4 py-3.5 flex flex-col items-center justify-center gap-2.5">
+                            <span className="font-display font-extrabold text-[14px] text-white">
+                              Vem apoiar-nos em mais um jogo!
+                            </span>
+                            <div className="flex items-center gap-2.5 w-full">
+                              <button
+                                type="button"
+                                onClick={() => handleCallupResponse(selectedEvent.id, 'confirmed')}
+                                className="flex-1 min-h-11 px-5 rounded-[22px] font-display font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer
+                                  transition-transform duration-150 active:scale-97
+                                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold
+                                  bg-csc-light text-csc-tinta"
+                              >
+                                Vou apoiar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCallupResponse(selectedEvent.id, 'declined')}
+                                className="flex-1 min-h-11 px-5 rounded-[22px] font-display font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer
+                                  transition-transform duration-150 active:scale-97
+                                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold
+                                  bg-white/9 text-white"
+                              >
+                                Não posso
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    }
+
                     return (
                       <div className="p-4 bg-white/[0.07] rounded-2xl">
                         <p className="text-xs text-white/70 font-medium">
@@ -1934,8 +1974,13 @@ const CalendarPage: React.FC = () => {
                         // até à hora de concentração o jogador pode sempre mudar de ideias.
                         <div className="bg-csc-gold/13 px-4 py-3.5 flex flex-col items-center justify-center gap-2.5">
                           <span className="font-display font-extrabold text-[14px] text-white">
-                            {myCallup.status === 'called' ? 'Contamos contigo?' :
-                              myCallup.status === 'confirmed' ? 'Contamos contigo.' : 'Ficas de fora.'}
+                            {isMatchAdepto ? (
+                              myCallup.status === 'called' ? 'Vem apoiar-nos em mais um jogo!' :
+                              myCallup.status === 'confirmed' ? 'Contamos com o teu apoio!' : 'Não podes ir apoiar.'
+                            ) : (
+                              myCallup.status === 'called' ? 'Contamos contigo?' :
+                              myCallup.status === 'confirmed' ? 'Contamos contigo.' : 'Ficas de fora.'
+                            )}
                           </span>
                           <div className="flex items-center gap-2.5 w-full">
                             <button
@@ -1950,7 +1995,7 @@ const CalendarPage: React.FC = () => {
                               }`}
                             >
                               {myCallup.status === 'confirmed' && <CheckCircle2 size={15} />}
-                              Sim, vou
+                              {isMatchAdepto ? 'Vou apoiar' : 'Sim, vou'}
                             </button>
                             <button
                               type="button"
@@ -2007,7 +2052,11 @@ const CalendarPage: React.FC = () => {
                 gere={Boolean(isCoachOrAdmin)}
                 estadoQueImpede={c => {
                   const p = allPlayers.find(pl => pl.id === c.player_id) || c.player
-                  if (!p || isPlayerEligible(p, selectedEvent.type)) return null
+                  if (!p) return null
+                  if (eAdepto(p)) {
+                    return p.status === 'inactive' ? 'Inativo' : null
+                  }
+                  if (isPlayerEligible(p, selectedEvent.type)) return null
                   if (p.status === 'inactive') return 'Inativo'
                   if (p.status === 'injured') return 'Lesionado'
                   // Apto, mas sem o papel de atleta: só entra em convívios.

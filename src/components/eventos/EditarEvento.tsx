@@ -18,6 +18,8 @@ import { ConfirmModal } from '../ConfirmModal'
 import { Botao } from '../ui'
 import type { TournamentRules } from '../clube/torneios'
 import { mensagemDeErro } from '../../lib/erros'
+import { eAdepto } from '../../lib/papeis'
+import { convocarAdeptosParaJogo } from '../../lib/convocatoriasAdeptos'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../ui/formulario'
 
 /**
@@ -306,6 +308,9 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
           if (erroInsert) throw erroInsert
         }
       }
+      if (tipo === 'match') {
+        await convocarAdeptosParaJogo(evento.id)
+      }
       await aoMudarConvocatoria()
       toast.success(novos.length > 0 ? texto(novos.length) : 'Já estavam todos convocados.')
     } catch (err) {
@@ -337,7 +342,11 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   /** As regras da prova para mais um convocado: o limite e as exceções de idade. */
   const regraQueImpede = (p: Profile): string | null => {
     if (!regras) return null
-    if (regras.max_match_players && convocatorias.length >= regras.max_match_players) {
+    const atletasConvocados = convocatorias.filter(c => {
+      const pl = plantel.find(pl => pl.id === c.player_id)
+      return !eAdepto(pl || (c.player as any))
+    })
+    if (regras.max_match_players && atletasConvocados.length >= regras.max_match_players) {
       return `A convocatória atingiu o limite da prova (${regras.max_match_players} convocados).`
     }
     if (p.birth_date && regras.min_age && regras.exceptions_allowed && idade(p.birth_date) < regras.min_age) {
@@ -378,7 +387,12 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       { onConflict: 'event_id, player_id', ignoreDuplicates: true },
     )
     if (error) toast.error('Erro ao convocar: ' + mensagemDeErro(error))
-    else await aoMudarConvocatoria()
+    else {
+      if (tipo === 'match') {
+        await convocarAdeptosParaJogo(evento.id)
+      }
+      await aoMudarConvocatoria()
+    }
   }
 
   /* ------------------------------------------------------------------ gravar */

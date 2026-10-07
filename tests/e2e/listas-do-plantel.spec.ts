@@ -131,6 +131,50 @@ test('os mosaicos e o Clube contam só quem joga', async ({ page }) => {
   await expect(page.getByText('4 atletas')).toBeVisible({ timeout: 15000 })
 })
 
+test('as pastilhas dizem o total de cada perfil e filtram o grupo', async ({ page }) => {
+  const adeptos = [
+    { id: 'ad1', name: 'Maria Adepta', shirt_name: 'Maria', jersey_number: null, position: null, roles: ['supporter'], role: 'supporter', status: 'active', photo_url: null, quota_start_date: '2026-08-01', quota_end_date: null },
+  ]
+  await montarSupabaseFalso(page, {
+    ...FIXTURES,
+    profiles: [...PESSOAS, ...adeptos],
+    v_players_public: [...PESSOAS, ...adeptos],
+  })
+  await page.goto('/csc-vet/team-management')
+
+  const pastilhaJogadores = page.getByRole('button', { name: /^Jogadores/ })
+  const pastilhaTecnica = page.getByRole('button', { name: /^Equipa técnica/ })
+  const pastilhaAdeptos = page.getByRole('button', { name: /^Adeptos/ })
+  const pastilhaDirecao = page.getByRole('button', { name: /^Direção/ })
+
+  await expect(pastilhaJogadores).toBeVisible({ timeout: 15000 })
+  await expect(pastilhaJogadores).toContainText('4')
+  await expect(pastilhaTecnica).toContainText('1')
+  await expect(pastilhaAdeptos).toContainText('1')
+  await expect(pastilhaDirecao).toContainText('1')
+
+  // Ao tocar em Jogadores, mostra apenas jogadores
+  await pastilhaJogadores.click()
+  await expect(pastilhaJogadores).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('region', { name: 'Jogadores' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Equipa técnica' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Adeptos' })).toHaveCount(0)
+
+  // Ao tocar novamente em Jogadores, volta a mostrar todos
+  await pastilhaJogadores.click()
+  await expect(pastilhaJogadores).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByRole('region', { name: 'Jogadores' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Equipa técnica' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Adeptos' })).toBeVisible()
+
+  // Ao tocar em Adeptos, mostra apenas adeptos
+  await pastilhaAdeptos.click()
+  await expect(pastilhaAdeptos).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('region', { name: 'Jogadores' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Adeptos' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Adeptos' })).toContainText('Maria')
+})
+
 /**
  * Qualquer lista de atletas lê-se por ordem alfabética do nome da camisola
  * (`compararPorCamisola`, decisão de 2026-09-26). Havia seis ordens — número de
