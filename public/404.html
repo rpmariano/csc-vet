@@ -10,6 +10,10 @@
       var pathSegmentsToKeep = window.location.pathname.startsWith('/csc-vet') ? 1 : 0;
 
       var l = window.location;
+      var caminhoRelativo = '/' + l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/') + (l.search || '') + (l.hash || '');
+      if (caminhoRelativo && caminhoRelativo !== '/' && caminhoRelativo !== '/login') {
+        try { sessionStorage.setItem('csc_destino_autenticacao', caminhoRelativo); } catch (e) {}
+      }
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
         l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +

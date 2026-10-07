@@ -64,3 +64,75 @@ export const haEntradaAnterior = (): boolean => {
   const estado = window.history.state as { idx?: number } | null
   return (estado?.idx ?? 0) > 0
 }
+
+export const CHAVE_DESTINO_AUTENTICACAO = 'csc_destino_autenticacao'
+
+/** Normaliza um caminho relativo para o router (remove prefixo /csc-vet/ se presente). */
+export function normalizarDestino(caminho: string): string {
+  let limpo = caminho.trim()
+  if (limpo.startsWith('/csc-vet/')) {
+    limpo = limpo.slice('/csc-vet'.length)
+  } else if (limpo === '/csc-vet') {
+    limpo = '/'
+  }
+  return limpo.startsWith('/') ? limpo : `/${limpo}`
+}
+
+/** Guarda o caminho para onde o utilizador deve ser levado após login. */
+export function guardarDestinoAutenticacao(destino: string): void {
+  const normalizado = normalizarDestino(destino)
+  if (!normalizado || normalizado === '/' || normalizado === '/login') return
+  try {
+    sessionStorage.setItem(CHAVE_DESTINO_AUTENTICACAO, normalizado)
+  } catch {
+    // modo privado ou storage inacessível
+  }
+}
+
+/** Obtém o destino guardado (do URL, estado ou storage) para redirecionar após login. */
+export function obterDestinoAutenticacao(
+  redirectParam?: string | null,
+  estadoFrom?: { pathname?: string; search?: string; hash?: string } | null,
+): string {
+  // 1. Parâmetro na query string (?redirect=/...)
+  if (redirectParam) {
+    const normalizado = normalizarDestino(redirectParam)
+    if (normalizado !== '/' && normalizado !== '/login') {
+      return normalizado
+    }
+  }
+
+  // 2. Estado do router (location.state.from)
+  if (estadoFrom?.pathname) {
+    const caminho = `${estadoFrom.pathname}${estadoFrom.search || ''}${estadoFrom.hash || ''}`
+    const normalizado = normalizarDestino(caminho)
+    if (normalizado !== '/' && normalizado !== '/login') {
+      return normalizado
+    }
+  }
+
+  // 3. SessionStorage
+  try {
+    const doStorage = sessionStorage.getItem(CHAVE_DESTINO_AUTENTICACAO)
+    if (doStorage) {
+      const normalizado = normalizarDestino(doStorage)
+      if (normalizado !== '/' && normalizado !== '/login') {
+        return normalizado
+      }
+    }
+  } catch {
+    // ignorar
+  }
+
+  return '/'
+}
+
+/** Limpa o destino de autenticação guardado. */
+export function limparDestinoAutenticacao(): void {
+  try {
+    sessionStorage.removeItem(CHAVE_DESTINO_AUTENTICACAO)
+  } catch {
+    // ignorar
+  }
+}
+

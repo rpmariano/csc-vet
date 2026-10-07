@@ -19,6 +19,9 @@
           var decoded = l.search.slice(1).split('&').map(function(s) { 
             return s.replace(/~and~/g, '&')
           }).join('?');
+          if (decoded && decoded !== '/' && decoded !== '/login') {
+            try { sessionStorage.setItem('csc_destino_autenticacao', decoded); } catch (e) {}
+          }
           window.history.replaceState(null, null,
               l.pathname.slice(0, -1) + decoded + l.hash
           );

@@ -5,7 +5,13 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { MolduraEntrada, CampoEntrada, Botao, CartaoSimples } from '../components/ui'
-import { caminhoNovaPalavraPasse, BASE } from '../lib/rotas'
+import {
+  caminhoNovaPalavraPasse,
+  BASE,
+  obterDestinoAutenticacao,
+  guardarDestinoAutenticacao,
+  limparDestinoAutenticacao,
+} from '../lib/rotas'
 import { CLUBE_NOME } from '../lib/clube'
 
 /**
@@ -50,13 +56,20 @@ const Login: React.FC = () => {
   const [ocupado, setOcupado] = useState(false)
 
   const localizacao = useLocation()
-  const origemEstado = (localizacao.state as { from?: { pathname: string; search?: string } })?.from
-  const destino = origemEstado
-    ? `${origemEstado.pathname}${origemEstado.search || ''}`
-    : '/'
+  const origemEstado = (localizacao.state as { from?: { pathname: string; search?: string; hash?: string } })?.from
+  const destino = obterDestinoAutenticacao(params.get('redirect'), origemEstado)
 
   useEffect(() => {
-    if (user && !aCarregarSessao) navegar(destino, { replace: true })
+    if (destino && destino !== '/' && destino !== '/login') {
+      guardarDestinoAutenticacao(destino)
+    }
+  }, [destino])
+
+  useEffect(() => {
+    if (user && !aCarregarSessao) {
+      limparDestinoAutenticacao()
+      navegar(destino, { replace: true })
+    }
   }, [user, aCarregarSessao, navegar, destino])
 
   const mudarModo = (seguinte: Modo) => {
@@ -92,6 +105,7 @@ const Login: React.FC = () => {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password: palavraPasse })
         if (error) throw error
+        limparDestinoAutenticacao()
         navegar(destino, { replace: true })
       }
     } catch (err) {
@@ -105,9 +119,15 @@ const Login: React.FC = () => {
     setErro(null)
     setOcupado(true)
     try {
+      if (destino && destino !== '/' && destino !== '/login') {
+        guardarDestinoAutenticacao(destino)
+      }
+      const redirectQuery = destino && destino !== '/' && destino !== '/login'
+        ? `?redirect=${encodeURIComponent(destino)}`
+        : ''
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}${BASE}` },
+        options: { redirectTo: `${window.location.origin}${BASE}${redirectQuery}` },
       })
       if (error) throw error
     } catch (err) {
@@ -116,7 +136,10 @@ const Login: React.FC = () => {
     }
   }
 
-  if (user && !aCarregarSessao) return <Navigate to={destino} replace />
+  if (user && !aCarregarSessao) {
+    limparDestinoAutenticacao()
+    return <Navigate to={destino} replace />
+  }
 
   const configurado =
     !!import.meta.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
