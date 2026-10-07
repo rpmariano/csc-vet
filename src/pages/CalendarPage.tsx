@@ -10,7 +10,8 @@ import {
   CalendarRange,
   PartyPopper,
   Trophy,
-  Pencil
+  Pencil,
+  Heart
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { eAdepto } from '../lib/papeis'
@@ -940,6 +941,8 @@ const CalendarPage: React.FC = () => {
 
   const renderEventCard = (event: Event) => {
     const callups = eventCallups[event.id] || []
+    const athleteCallups = callups.filter(c => !eAdepto(c.player))
+    const adeptosCallups = callups.filter(c => eAdepto(c.player))
     /*
       A minha convocatória, pela regra única do `getMyCallupForEvent`.
 
@@ -951,8 +954,9 @@ const CalendarPage: React.FC = () => {
       inscrevia-o na convocatória. Quem escolhe quem joga é quem treina.
     */
     const myCallup = getMyCallupForEvent(event.id)
-    const confirmedCount = callups.filter(c => c.status === 'confirmed').length
-    const semRespostaCount = callups.filter(c => c.status === 'called').length
+    const confirmedCount = athleteCallups.filter(c => c.status === 'confirmed').length
+    const semRespostaCount = athleteCallups.filter(c => c.status === 'called').length
+    const adeptosConfirmadosCount = adeptosCallups.filter(c => c.status === 'confirmed').length
 
     const isMatch = event.type === 'match'
     const isPractice = event.type === 'practice'
@@ -1087,11 +1091,11 @@ const CalendarPage: React.FC = () => {
             respostas em toda a base, um "0 sim" em cada cartão seria a única
             coisa que a Agenda dizia.
           */}
-          {isCoachOrAdmin && callups.length > 0 && (
-            <span className="flex items-center gap-1.5 shrink-0">
+          {isCoachOrAdmin && athleteCallups.length > 0 && (
+            <span className="flex items-center gap-1.5 shrink-0 flex-wrap">
               <span className="text-[11px] font-bold flex items-center gap-1 bg-white/10 text-white/70 px-2.5 py-1 rounded-full">
                 <Users size={13} />
-                {callups.length} convocados
+                {athleteCallups.length} convocados
               </span>
               <span
                 className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
@@ -1102,6 +1106,12 @@ const CalendarPage: React.FC = () => {
               >
                 {confirmedCount > 0 ? `${confirmedCount} sim` : `${semRespostaCount} sem resp.`}
               </span>
+              {adeptosCallups.length > 0 && (
+                <span className="text-[11px] font-bold flex items-center gap-1 bg-csc-gold/15 text-csc-gold px-2.5 py-1 rounded-full">
+                  <Heart size={11} className="fill-csc-gold/40 text-csc-gold" />
+                  {adeptosConfirmadosCount > 0 ? `${adeptosConfirmadosCount} adeptos` : `${adeptosCallups.length} adeptos`}
+                </span>
+              )}
             </span>
           )}
         </div>

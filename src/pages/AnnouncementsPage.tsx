@@ -7,12 +7,16 @@ import {
   Clock,
   Calendar,
   Megaphone,
-  Pencil
+  Pencil,
+  Users,
+  ShieldAlert
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { useAnnouncements } from '../context/AnnouncementsContext'
+import { useAnnouncements, incluiAdeptos, limparEtiquetasConteudo } from '../context/AnnouncementsContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
+import { eAdepto } from '../lib/papeis'
+import { triggerHaptic } from '../utils/haptics'
 import Modal from '../components/Modal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../context/SaidaGuardadaContext'
@@ -33,6 +37,7 @@ interface Announcement {
   content: string
   published_at: string
   is_active?: boolean
+  target_audience?: 'all' | 'no_supporters' | null
   created_by?: string | null
 }
 
@@ -51,6 +56,8 @@ const AnnouncementsPage: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [targetAudience, setTargetAudience] = useState<'all' | 'no_supporters'>('all')
+  const [audienceFilter, setAudienceFilter] = useState<'all' | 'with_supporters' | 'no_supporters'>('all')
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
   // Estados para Modal de Edição
@@ -58,6 +65,7 @@ const AnnouncementsPage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('')
   const [editContent, setEditContent] = useState('')
   const [editIsActive, setEditIsActive] = useState(true)
+  const [editTargetAudience, setEditTargetAudience] = useState<'all' | 'no_supporters'>('all')
   const [isSavingEdit, setIsSavingEdit] = useState(false)
 
   // Estados para Confirmação de Eliminação
@@ -129,12 +137,17 @@ const AnnouncementsPage: React.FC = () => {
     if (!title.trim() || !content.trim()) return
     setIsPublishing(true)
 
-    const newAnn: Partial<Announcement> = {
+    const finalContent = targetAudience === 'no_supporters'
+      ? `${content.trim()}\n\n<!--target:no_supporters-->`
+      : content.trim()
+
+    const newAnn: Partial<Announcement> & { target_audience?: string } = {
       title: title.trim(),
-      content: content.trim(),
+      content: finalContent,
       published_at: new Date().toISOString(),
       created_by: profile?.id,
-      is_active: isActiveOnCreate
+      is_active: isActiveOnCreate,
+      target_audience: targetAudience,
     }
 
     try {
@@ -148,18 +161,24 @@ const AnnouncementsPage: React.FC = () => {
           .single()
 
         if (error) {
-          // Se falhar porque a coluna is_active ainda não existe na base de dados
+          // Se falhar porque a coluna target_audience ou is_active ainda não existe na base de dados
+          let fallbackPayload: any = { ...newAnn }
+          if (error.message?.includes('target_audience')) {
+            delete fallbackPayload.target_audience
+          }
           if (error.message?.includes('is_active')) {
-            const { is_active: _is_active, ...withoutActive } = newAnn
-            const { data: fallbackData, error: fallbackErr } = await supabase
-              .from('announcements')
-              .insert([withoutActive])
-              .select()
-              .single()
-            if (fallbackErr) throw fallbackErr
-            createdItem = { ...(fallbackData as Announcement), is_active: isActiveOnCreate }
-          } else {
-            throw error
+            delete fallbackPayload.is_active
+          }
+          const { data: fallbackData, error: fallbackErr } = await supabase
+            .from('announcements')
+            .insert([fallbackPayload])
+            .select()
+            .single()
+          if (fallbackErr) throw fallbackErr
+          createdItem = {
+            ...(fallbackData as Announcement),
+            is_active: isActiveOnCreate,
+            target_audience: targetAudience,
           }
         } else {
           createdItem = data as Announcement
@@ -169,9 +188,10 @@ const AnnouncementsPage: React.FC = () => {
         createdItem = {
           id: `local-${Date.now()}`,
           title: title.trim(),
-          content: content.trim(),
+          content: finalContent,
           published_at: new Date().toISOString(),
-          is_active: isActiveOnCreate
+          is_active: isActiveOnCreate,
+          target_audience: targetAudience,
         }
       }
 
@@ -182,6 +202,7 @@ const AnnouncementsPage: React.FC = () => {
       setTitle('')
       setContent('')
       setIsActiveOnCreate(true)
+      setTargetAudience('all')
       toast.success('Comunicado publicado com sucesso!')
       fetchAnnouncements()
     } catch (err: any) {
@@ -219,8 +240,9 @@ const AnnouncementsPage: React.FC = () => {
   const handleStartEdit = (ann: Announcement) => {
     setEditingAnn(ann)
     setEditTitle(ann.title)
-    setEditContent(ann.content)
+    setEditContent(limparEtiquetasConteudo(ann.content))
     setEditIsActive(ann.is_active !== false)
+    setEditTargetAudience(incluiAdeptos(ann) ? 'all' : 'no_supporters')
   }
 
   // Guardar Edição
@@ -229,11 +251,16 @@ const AnnouncementsPage: React.FC = () => {
     if (!editingAnn || !editTitle.trim() || !editContent.trim()) return
     setIsSavingEdit(true)
 
+    const finalContent = editTargetAudience === 'no_supporters'
+      ? `${editContent.trim()}\n\n<!--target:no_supporters-->`
+      : editContent.trim()
+
     try {
-      const updatePayload = {
+      const updatePayload: any = {
         title: editTitle.trim(),
-        content: editContent.trim(),
-        is_active: editIsActive
+        content: finalContent,
+        is_active: editIsActive,
+        target_audience: editTargetAudience,
       }
 
       const { error } = await supabase
@@ -241,18 +268,27 @@ const AnnouncementsPage: React.FC = () => {
         .update(updatePayload)
         .eq('id', editingAnn.id)
 
-      if (error && error.message?.includes('is_active')) {
-        const { is_active: _is_active, ...withoutActive } = updatePayload
-        await supabase.from('announcements').update(withoutActive).eq('id', editingAnn.id)
-      } else if (error) {
-        throw error
+      if (error) {
+        let fallbackPayload: any = { ...updatePayload }
+        if (error.message?.includes('target_audience')) {
+          delete fallbackPayload.target_audience
+        }
+        if (error.message?.includes('is_active')) {
+          delete fallbackPayload.is_active
+        }
+        const { error: fallbackErr } = await supabase
+          .from('announcements')
+          .update(fallbackPayload)
+          .eq('id', editingAnn.id)
+        if (fallbackErr) throw fallbackErr
       }
 
       setAnnouncements(prev => prev.map(a => a.id === editingAnn.id ? {
         ...a,
         title: editTitle.trim(),
-        content: editContent.trim(),
-        is_active: editIsActive
+        content: finalContent,
+        is_active: editIsActive,
+        target_audience: editTargetAudience,
       } : a))
 
       setEditingAnn(null)
@@ -290,19 +326,27 @@ const AnnouncementsPage: React.FC = () => {
 
   // Filtragem
   const filteredAnnouncements = announcements.filter(ann => {
-    // Um jogador só deve ver o que está ativo — o filtro de estado e o ver
+    // Adeptos só veem comunicados para todos (incluindo adeptos)
+    if (eAdepto(profile) && !incluiAdeptos(ann)) return false
+
+    // Um jogador ou adepto só deve ver o que está ativo — o filtro de estado e o ver
     // inativos são ferramentas de gestão, não fazem sentido para quem só lê.
     if (!isCoachOrAdmin && ann.is_active === false) return false
 
-    // Filtro por Estado
+    // Filtro por Estado (gestão)
     if (statusFilter === 'active' && ann.is_active === false) return false
     if (statusFilter === 'inactive' && ann.is_active !== false) return false
+
+    // Filtro por Público-alvo (gestão)
+    if (audienceFilter === 'with_supporters' && !incluiAdeptos(ann)) return false
+    if (audienceFilter === 'no_supporters' && incluiAdeptos(ann)) return false
 
     // Filtro por Pesquisa
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim()
       const matchTitle = ann.title?.toLowerCase().includes(term)
-      const matchContent = ann.content?.toLowerCase().includes(term)
+      const limpo = limparEtiquetasConteudo(ann.content).toLowerCase()
+      const matchContent = limpo.includes(term)
       return matchTitle || matchContent
     }
 
@@ -320,7 +364,7 @@ const AnnouncementsPage: React.FC = () => {
   */
   const guardaEdicao = useAlteracoesPorGravar({
     aberto: !!editingAnn,
-    valores: [editTitle, editContent, editIsActive],
+    valores: [editTitle, editContent, editIsActive, editTargetAudience],
     aoGravar: () => handleSaveEdit(EVENTO_FALSO),
     aoSair: () => setEditingAnn(null),
     descricao: 'As alterações a este comunicado ainda não foram gravadas. Se saíres agora, perdem-se.',
@@ -333,7 +377,7 @@ const AnnouncementsPage: React.FC = () => {
   */
   const guardaNovo = useAlteracoesPorGravar({
     aberto: true,
-    valores: [title, content, isActiveOnCreate],
+    valores: [title, content, isActiveOnCreate, targetAudience],
     aoGravar: () => handlePublish(EVENTO_FALSO),
     aoSair: () => {},
     descricao: 'O comunicado que escreveste ainda não foi publicado. Se saíres agora, perde-se.',
@@ -405,6 +449,43 @@ const AnnouncementsPage: React.FC = () => {
                 />
               </div>
 
+              {/* Opção de Destinatários: Todos (com adeptos) vs Sem adeptos */}
+              <div>
+                <label className={ETIQUETA}>Destinatários *</label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic('selection'); setTargetAudience('all') }}
+                    className={`min-h-11 px-3 py-2 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                      targetAudience === 'all'
+                        ? 'bg-csc-gold text-csc-dark border-csc-gold font-extrabold shadow-sm'
+                        : 'bg-white/5 hover:bg-white/10 text-white/80 border-white/10'
+                    }`}
+                  >
+                    <Users size={14} />
+                    <span>Todos (com adeptos)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic('selection'); setTargetAudience('no_supporters') }}
+                    className={`min-h-11 px-3 py-2 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                      targetAudience === 'no_supporters'
+                        ? 'bg-csc-gold text-csc-dark border-csc-gold font-extrabold shadow-sm'
+                        : 'bg-white/5 hover:bg-white/10 text-white/80 border-white/10'
+                    }`}
+                  >
+                    <ShieldAlert size={14} />
+                    <span>Sem adeptos (plantel)</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-white/55 mt-1.5">
+                  {targetAudience === 'all'
+                    ? 'Visível para atletas, equipa técnica, direção e adeptos.'
+                    : 'Visível apenas para atletas, equipa técnica e direção. Oculto para adeptos.'}
+                </p>
+              </div>
+
               {/* Opção de Ativar de Imediato */}
               <Interruptor
                 ligado={isActiveOnCreate}
@@ -438,10 +519,13 @@ const AnnouncementsPage: React.FC = () => {
             placeholder="Título ou texto"
             rotulo="Procurar nos comunicados"
             aoAbrirFiltros={isCoachOrAdmin ? () => setFiltrosAbertos(true) : undefined}
-            filtrosAtivos={statusFilter !== 'all'}
-            resumo={statusFilter === 'all' ? [] : [statusFilter === 'active' ? 'Ativos' : 'Inativos']}
+            filtrosAtivos={statusFilter !== 'all' || audienceFilter !== 'all'}
+            resumo={[
+              ...(statusFilter === 'all' ? [] : [statusFilter === 'active' ? 'Ativos' : 'Inativos']),
+              ...(audienceFilter === 'all' ? [] : [audienceFilter === 'with_supporters' ? 'Com adeptos' : 'Sem adeptos']),
+            ]}
             contagem={`${filteredAnnouncements.length} ${filteredAnnouncements.length === 1 ? 'comunicado' : 'comunicados'}`}
-            aoLimpar={() => { setSearchTerm(''); setStatusFilter('all') }}
+            aoLimpar={() => { setSearchTerm(''); setStatusFilter('all'); setAudienceFilter('all') }}
           />
 
           {/* Um cartão, e os comunicados como linhas lá dentro (a app mais
@@ -456,7 +540,11 @@ const AnnouncementsPage: React.FC = () => {
               tone="dark"
               footer={
                 <>
-                  <Botao aparencia="vidro" onClick={() => setStatusFilter('all')} disabled={statusFilter === 'all'}>
+                  <Botao
+                    aparencia="vidro"
+                    onClick={() => { setStatusFilter('all'); setAudienceFilter('all') }}
+                    disabled={statusFilter === 'all' && audienceFilter === 'all'}
+                  >
                     Limpar
                   </Botao>
                   <Botao onClick={() => setFiltrosAbertos(false)}>
@@ -473,6 +561,19 @@ const AnnouncementsPage: React.FC = () => {
                   ['inactive', `Inativos · ${inactiveCount}`],
                 ] as const).map(([valor, rotulo]) => (
                   <Pastilha key={valor} ativa={statusFilter === valor} onClick={() => setStatusFilter(valor)}>
+                    {rotulo}
+                  </Pastilha>
+                ))}
+              </div>
+
+              <p className={`${ETIQUETA} mt-4`}>Público-alvo</p>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ['all', 'Todos'],
+                  ['with_supporters', 'Com adeptos'],
+                  ['no_supporters', 'Sem adeptos'],
+                ] as const).map(([valor, rotulo]) => (
+                  <Pastilha key={valor} ativa={audienceFilter === valor} onClick={() => setAudienceFilter(valor)}>
                     {rotulo}
                   </Pastilha>
                 ))}
@@ -531,9 +632,20 @@ const AnnouncementsPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Badge de Estado — só interessa a quem gere comunicados */}
+                        {/* Badges de Estado e Público-alvo — só interessam a quem gere comunicados */}
                         {isCoachOrAdmin && (
-                          <div>
+                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            {incluiAdeptos(ann) ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-white/70">
+                                <Users size={10} />
+                                <span>Todos</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-csc-gold/15 text-csc-gold">
+                                <ShieldAlert size={10} />
+                                <span>Sem adeptos</span>
+                              </span>
+                            )}
                             {isActive ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-csc-light/15 text-csc-verde-texto">
                                 <span className="w-1.5 h-1.5 rounded-full bg-csc-light animate-pulse"></span>
@@ -551,7 +663,7 @@ const AnnouncementsPage: React.FC = () => {
 
                       {/* Conteúdo */}
                       <div className="text-[12.5px] text-white/75 leading-relaxed whitespace-pre-wrap">
-                        {ann.content}
+                        {limparEtiquetasConteudo(ann.content)}
                       </div>
 
                       {/* Barra de Ações: Ativar/Desativar, Editar, Apagar — gestão, não leitura */}
@@ -625,6 +737,43 @@ const AnnouncementsPage: React.FC = () => {
                   rows={5}
                   className={`${CAMPO} h-auto py-3 leading-relaxed resize-none`}
                 />
+              </div>
+
+              {/* Opção de Destinatários: Todos (com adeptos) vs Sem adeptos */}
+              <div>
+                <label className={ETIQUETA}>Destinatários *</label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic('selection'); setEditTargetAudience('all') }}
+                    className={`min-h-11 px-3 py-2 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                      editTargetAudience === 'all'
+                        ? 'bg-csc-gold text-csc-dark border-csc-gold font-extrabold shadow-sm'
+                        : 'bg-white/5 hover:bg-white/10 text-white/80 border-white/10'
+                    }`}
+                  >
+                    <Users size={14} />
+                    <span>Todos (com adeptos)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic('selection'); setEditTargetAudience('no_supporters') }}
+                    className={`min-h-11 px-3 py-2 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                      editTargetAudience === 'no_supporters'
+                        ? 'bg-csc-gold text-csc-dark border-csc-gold font-extrabold shadow-sm'
+                        : 'bg-white/5 hover:bg-white/10 text-white/80 border-white/10'
+                    }`}
+                  >
+                    <ShieldAlert size={14} />
+                    <span>Sem adeptos (plantel)</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-white/55 mt-1.5">
+                  {editTargetAudience === 'all'
+                    ? 'Visível para atletas, equipa técnica, direção e adeptos.'
+                    : 'Visível apenas para atletas, equipa técnica e direção. Oculto para adeptos.'}
+                </p>
               </div>
 
               {/* Switch de Ativo no Modal de Edição */}

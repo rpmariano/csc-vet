@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { ChevronDown, Users } from 'lucide-react'
+import { ChevronDown, Users, Heart } from 'lucide-react'
 import { CallupRow } from './CallupRow'
 import { QuorumFilterCards, type CallupFilter } from './QuorumFilterCards'
 import { ConfirmModal } from '../ConfirmModal'
 import { CaixaProcura } from '../ui/CaixaProcura'
 import { getPlayerDisplayName, compararPorCamisola } from '../../lib/eventos'
 import { triggerHaptic } from '../../utils/haptics'
+import { eAdepto } from '../../lib/papeis'
 
 interface ConvocadoDoBloco {
   id: string
@@ -17,6 +18,8 @@ interface ConvocadoDoBloco {
     nickname?: string | null
     jersey_number?: number | null
     position?: string | null
+    role?: string | null
+    roles?: string[] | null
   } | null
 }
 
@@ -70,17 +73,24 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
   abertoInicial = false,
 }: BlocoConvocatoriaProps<C>) {
   const [aberto, setAberto] = useState(abertoInicial)
+  const [adeptosAberto, setAdeptosAberto] = useState(false)
   const [filtro, setFiltro] = useState<CallupFilter>('all')
   const [procura, setProcura] = useState('')
   const [aConfirmarTirar, setAConfirmarTirar] = useState(false)
 
-  const indisponiveis = convocatorias.filter(c => estadoQueImpede(c) !== null)
-  const confirmados = convocatorias.filter(c => c.status === 'confirmed')
-  const recusados = convocatorias.filter(c => c.status === 'declined')
-  const semResposta = convocatorias.filter(c => c.status === 'called')
+  // Separar atletas de adeptos para não misturar listas nem contagens
+  const convocatoriasAtletas = convocatorias.filter(c => !eAdepto(c.player))
+  const convocatoriasAdeptos = convocatorias.filter(c => eAdepto(c.player))
 
-  // Por ordem alfabética do nome da camisola, como todas as listas de atletas.
-  const visiveis = [...convocatorias].sort((a, b) => compararPorCamisola(a.player, b.player)).filter(c => {
+  const indisponiveis = convocatoriasAtletas.filter(c => estadoQueImpede(c) !== null)
+  const confirmados = convocatoriasAtletas.filter(c => c.status === 'confirmed')
+  const recusados = convocatoriasAtletas.filter(c => c.status === 'declined')
+  const semResposta = convocatoriasAtletas.filter(c => c.status === 'called')
+
+  const adeptosConfirmados = convocatoriasAdeptos.filter(c => c.status === 'confirmed')
+
+  // Atletas visíveis (com filtro de quórum e procura)
+  const visiveis = [...convocatoriasAtletas].sort((a, b) => compararPorCamisola(a.player, b.player)).filter(c => {
     if (filtro !== 'all' && c.status !== filtro) return false
     if (!procura) return true
     const q = procura.toLowerCase()
@@ -89,6 +99,17 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
       c.player?.shirt_name?.toLowerCase().includes(q) ||
       c.player?.nickname?.toLowerCase().includes(q) ||
       (c.player?.jersey_number && c.player.jersey_number.toString().includes(q)),
+    )
+  })
+
+  // Adeptos visíveis (com procura)
+  const adeptosVisiveis = [...convocatoriasAdeptos].sort((a, b) => compararPorCamisola(a.player, b.player)).filter(c => {
+    if (!procura) return true
+    const q = procura.toLowerCase()
+    return Boolean(
+      c.player?.name?.toLowerCase().includes(q) ||
+      c.player?.shirt_name?.toLowerCase().includes(q) ||
+      c.player?.nickname?.toLowerCase().includes(q),
     )
   })
 
@@ -104,7 +125,7 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
         <div className="flex-1 pr-2">
           <h3 className="text-base font-black text-white flex items-center gap-2 group-hover:text-csc-gold transition-colors">
             <Users size={18} className="text-csc-gold" />
-            <span>Convocatória ({convocatorias.length}{maxJogadores ? ` / ${maxJogadores} máx` : ''})</span>
+            <span>Convocatória ({convocatoriasAtletas.length}{maxJogadores ? ` / ${maxJogadores} máx` : ''})</span>
           </h3>
 
           {/*
@@ -136,6 +157,14 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
                 {indisponiveis.length} sem condições
               </span>
             )}
+            {convocatoriasAdeptos.length > 0 && (
+              <span className="text-[10.5px] font-bold text-csc-gold bg-csc-gold/15 px-2 py-0.5 rounded-md flex items-center gap-1">
+                <Heart size={11} className="fill-csc-gold/40 text-csc-gold" />
+                {adeptosConfirmados.length > 0
+                  ? `${adeptosConfirmados.length} ${adeptosConfirmados.length === 1 ? 'adepto confirmado' : 'adeptos confirmados'}`
+                  : `${convocatoriasAdeptos.length} ${convocatoriasAdeptos.length === 1 ? 'adepto' : 'adeptos'}`}
+              </span>
+            )}
           </div>
         </div>
 
@@ -157,7 +186,7 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
           {gere && (
             <div className="space-y-2">
               <QuorumFilterCards
-                totalCount={convocatorias.length}
+                totalCount={convocatoriasAtletas.length}
                 confirmedCount={confirmados.length}
                 pendingCount={semResposta.length}
                 declinedCount={recusados.length}
@@ -207,7 +236,7 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
           )}
 
           {/* Botão de gestão de convocatória no ecrã de plantel completo */}
-          {acoes?.aoEditar && convocatorias.length > 0 && (
+          {acoes?.aoEditar && convocatoriasAtletas.length > 0 && (
             <button
               type="button"
               onClick={acoes.aoEditar}
@@ -220,7 +249,7 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
             </button>
           )}
 
-          {convocatorias.length === 0 ? (
+          {convocatoriasAtletas.length === 0 ? (
             <div className="text-center py-8 bg-white/5 rounded-2xl border border-dashed border-white/15 space-y-3">
               <Users size={32} className="mx-auto text-white/65 mb-1" />
               <p className="text-xs font-bold text-white/60">Nenhum jogador convocado ainda.</p>
@@ -243,7 +272,7 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
                 onClick={() => { setFiltro('all'); setProcura('') }}
                 className="min-h-11 text-xs font-black text-csc-gold underline cursor-pointer"
               >
-                Ver todos os {convocatorias.length} convocados
+                Ver todos os {convocatoriasAtletas.length} convocados
               </button>
             </div>
           ) : (
@@ -265,6 +294,64 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
                   />
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Lista de adeptos no fim e colapsada por defeito */}
+          {convocatoriasAdeptos.length > 0 && (
+            <div className="pt-2 border-t border-white/10 space-y-2">
+              <button
+                type="button"
+                onClick={() => { triggerHaptic('selection'); setAdeptosAberto(prev => !prev) }}
+                aria-expanded={adeptosAberto}
+                className="w-full min-h-11 px-3.5 py-2.5 rounded-2xl bg-white/5 hover:bg-white/8 text-white flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-98 border border-white/8"
+              >
+                <div className="flex items-center gap-2">
+                  <Heart size={15} className="text-csc-gold fill-csc-gold/40" />
+                  <span className="font-display font-bold text-xs">
+                    Adeptos a apoiar ({convocatoriasAdeptos.length})
+                  </span>
+                  {adeptosConfirmados.length > 0 && (
+                    <span className="text-[10px] font-bold text-csc-verde-texto bg-csc-light/15 px-1.5 py-0.5 rounded">
+                      {adeptosConfirmados.length} {adeptosConfirmados.length === 1 ? 'confirmado' : 'confirmados'}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-white/60">
+                    {adeptosAberto ? 'Recolher' : 'Ver lista'}
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    className={`text-white/60 transition-transform duration-200 ${adeptosAberto ? 'rotate-180' : ''}`}
+                  />
+                </div>
+              </button>
+
+              {adeptosAberto && (
+                <div className="rounded-2xl bg-black/20 p-2 space-y-1 border border-white/6 animate-fade-in max-h-[300px] overflow-y-auto">
+                  {adeptosVisiveis.length === 0 ? (
+                    <p className="text-center py-3 text-xs text-white/50">Nenhum adepto encontrado.</p>
+                  ) : (
+                    adeptosVisiveis.map(c => (
+                      <CallupRow
+                        key={c.id}
+                        status={c.status}
+                        player={c.player}
+                        displayName={getPlayerDisplayName(c.player)}
+                        isCoachOrAdmin={Boolean(acoes)}
+                        onConfirm={() => acoes?.mudarEstado(c.id, 'confirmed')}
+                        onDecline={() => acoes?.mudarEstado(c.id, 'declined')}
+                        onSetPending={() => acoes?.mudarEstado(c.id, 'called')}
+                        onRemove={() => acoes?.tirar(c.id)}
+                        onOpen={acoes?.abrir ? () => acoes.abrir?.(c.id) : undefined}
+                        impedimento={estadoQueImpede(c)}
+                      />
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -201,7 +201,7 @@ const Home: React.FC = () => {
           /* Só as provas a decorrer: uma prova agendada não tem tabela para
              mostrar, e o cartão levava a um ecrã vazio. */
           supabase.from('tournaments').select('id, name, season, status').eq('status', 'ativo'),
-          supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date, status, photo_url'),
+          supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date, status, photo_url, role, roles'),
         ])
 
         if (cancelado) return
@@ -220,11 +220,18 @@ const Home: React.FC = () => {
         if (cancelado) return
         const linhas = (convocatorias ?? []) as { event_id: string; player_id: string; status: string }[]
         const minha = new Map(linhas.filter(c => c.player_id === profile.id).map(c => [c.event_id, c.status]))
+        const mapaPapeisPlantel = new Map(
+          ((plantel ?? []) as unknown as { id: string; role?: string; roles?: string[] }[]).map(p => [p.id, p]),
+        )
         const confirmados = new Map<string, number>()
         const total = new Map<string, number>()
         for (const c of linhas) {
-          total.set(c.event_id, (total.get(c.event_id) ?? 0) + 1)
-          if (c.status === 'confirmed') confirmados.set(c.event_id, (confirmados.get(c.event_id) ?? 0) + 1)
+          const p = mapaPapeisPlantel.get(c.player_id)
+          // Adeptos não contam para o quórum de jogadores do jogo
+          if (!eAdepto(p)) {
+            total.set(c.event_id, (total.get(c.event_id) ?? 0) + 1)
+            if (c.status === 'confirmed') confirmados.set(c.event_id, (confirmados.get(c.event_id) ?? 0) + 1)
+          }
         }
 
         const ondeE = (e: EventoBruto) => e.location?.trim() || e.field?.name || ''

@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './AuthContext'
+import { eAdepto } from '../lib/papeis'
 
 export interface Announcement {
   id: string
@@ -8,6 +9,24 @@ export interface Announcement {
   content: string
   published_at: string
   is_active?: boolean
+  target_audience?: 'all' | 'no_supporters' | null
+}
+
+/**
+ * Determina se um comunicado é visível para adeptos.
+ * Suporta a coluna target_audience e o marcador <!--target:no_supporters--> como salvaguarda.
+ */
+export const incluiAdeptos = (ann: { target_audience?: string | null; content?: string | null }): boolean => {
+  if (ann.target_audience === 'no_supporters') return false
+  if (ann.content && ann.content.includes('<!--target:no_supporters-->')) return false
+  return true
+}
+
+/**
+ * Remove etiquetas invisíveis de configuração (como <!--target:...-->) antes de exibir o texto.
+ */
+export const limparEtiquetasConteudo = (content: string): string => {
+  return (content || '').replace(/\s*<!--target:[^>]+-->/g, '').trim()
 }
 
 interface AnnouncementsContextType {
@@ -101,7 +120,11 @@ export const AnnouncementsProvider: React.FC<{ children: React.ReactNode }> = ({
       ])
 
       if (error) throw error
-      const ativos = ((data as Announcement[]) || []).filter(a => a.is_active !== false)
+      const ativos = ((data as Announcement[]) || []).filter(a => {
+        if (a.is_active === false) return false
+        if (eAdepto(profile) && !incluiAdeptos(a)) return false
+        return true
+      })
       setAnnouncements(ativos)
 
       if (readsError) throw readsError
