@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { eAdepto } from '../lib/papeis'
+import { contemTexto } from '../lib/texto'
+import { convocarAdeptosParaJogo } from '../lib/convocatoriasAdeptos'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { CLUBE_NOME } from '../lib/clube'
@@ -242,6 +244,9 @@ const CalendarPage: React.FC = () => {
   const abrirEvento = (ev: Event) => {
     setSelectedEvent(ev)
     setSearchParams({ event: ev.id })
+    if (ev.type === 'match') {
+      convocarAdeptosParaJogo(ev.id).catch(() => {})
+    }
   }
 
   const voltaDoEvento = useVoltarDaFicha(['event'], 'Agenda')
@@ -414,6 +419,27 @@ const CalendarPage: React.FC = () => {
               })
             }
           })
+        })
+
+        // Para jogos que tenham convocatória: garantir que todos os adeptos ativos aparecem
+        const activeSupporters = mergedPlayers.filter(p => eAdepto(p) && p.status === 'active')
+        const matchEventIds = eventsList.filter(e => e.type === 'match').map(e => e.id)
+        matchEventIds.forEach(mId => {
+          if (map[mId] && map[mId].length > 0 && activeSupporters.length > 0) {
+            const calledIds = new Set(map[mId].map(c => c.player_id))
+            activeSupporters.forEach(as => {
+              if (!calledIds.has(as.id)) {
+                map[mId].push({
+                  id: `auto-supporter-${mId}-${as.id}`,
+                  event_id: mId,
+                  player_id: as.id,
+                  status: 'called',
+                  responded_at: null,
+                  player: as
+                } as CallupWithPlayer)
+              }
+            })
+          }
         })
 
         setEventCallups(map)
@@ -710,12 +736,12 @@ const CalendarPage: React.FC = () => {
 
     // 2. Search Query Filter
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim()
-      const titleMatch = e.title?.toLowerCase().includes(q)
-      const locMatch = e.location?.toLowerCase().includes(q)
-      const descMatch = e.description?.toLowerCase().includes(q)
-      const tourMatch = e.tournament?.name?.toLowerCase().includes(q)
-      const oppMatch = e.opponent?.name?.toLowerCase().includes(q) || e.opponent?.initials?.toLowerCase().includes(q)
+      const q = searchQuery.trim()
+      const titleMatch = contemTexto(e.title, q)
+      const locMatch = contemTexto(e.location, q)
+      const descMatch = contemTexto(e.description, q)
+      const tourMatch = contemTexto(e.tournament?.name, q)
+      const oppMatch = contemTexto(e.opponent?.name, q) || contemTexto(e.opponent?.initials, q)
       if (!titleMatch && !locMatch && !descMatch && !tourMatch && !oppMatch) {
         return false
       }
@@ -755,8 +781,8 @@ const CalendarPage: React.FC = () => {
 
   // Lista de todos os eventos com convocatória pendente de resposta para o atleta atual
   const isCallupPendingForUser = (ev: Event) => {
-    // Adeptos não respondem a convocatórias nem são convocados para jogos ou treinos
-    if (isAdepto && ev.type !== 'gathering') return false
+    // Adeptos não participam em treinos, mas confirmam presença em jogos e convívios
+    if (isAdepto && ev.type === 'practice') return false
     const myCallup = getMyCallupForEvent(ev.id)
     if (!myCallup || myCallup.status !== 'called') return false
 

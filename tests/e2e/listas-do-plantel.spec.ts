@@ -142,10 +142,10 @@ test('as pastilhas dizem o total de cada perfil e filtram o grupo', async ({ pag
   })
   await page.goto('/csc-vet/team-management')
 
-  const pastilhaJogadores = page.getByRole('button', { name: /^Jogadores/ })
-  const pastilhaTecnica = page.getByRole('button', { name: /^Equipa técnica/ })
-  const pastilhaAdeptos = page.getByRole('button', { name: /^Adeptos/ })
-  const pastilhaDirecao = page.getByRole('button', { name: /^Direção/ })
+  const pastilhaJogadores = page.getByRole('button', { name: /^Jogadores \d+$/ })
+  const pastilhaTecnica = page.getByRole('button', { name: /^Equipa técnica \d+$/ })
+  const pastilhaAdeptos = page.getByRole('button', { name: /^Adeptos \d+$/ })
+  const pastilhaDirecao = page.getByRole('button', { name: /^Direção \d+$/ })
 
   await expect(pastilhaJogadores).toBeVisible({ timeout: 15000 })
   await expect(pastilhaJogadores).toContainText('4')

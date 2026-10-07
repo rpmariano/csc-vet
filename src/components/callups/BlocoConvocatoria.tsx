@@ -7,6 +7,7 @@ import { CaixaProcura } from '../ui/CaixaProcura'
 import { getPlayerDisplayName, compararPorCamisola } from '../../lib/eventos'
 import { triggerHaptic } from '../../utils/haptics'
 import { eAdepto } from '../../lib/papeis'
+import { contemTexto } from '../../lib/texto'
 
 interface ConvocadoDoBloco {
   id: string
@@ -92,26 +93,26 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
   // Atletas visíveis (com filtro de quórum e procura)
   const visiveis = [...convocatoriasAtletas].sort((a, b) => compararPorCamisola(a.player, b.player)).filter(c => {
     if (filtro !== 'all' && c.status !== filtro) return false
-    if (!procura) return true
-    const q = procura.toLowerCase()
+    if (!procura.trim()) return true
     return Boolean(
-      c.player?.name?.toLowerCase().includes(q) ||
-      c.player?.shirt_name?.toLowerCase().includes(q) ||
-      c.player?.nickname?.toLowerCase().includes(q) ||
-      (c.player?.jersey_number && c.player.jersey_number.toString().includes(q)),
+      contemTexto(c.player?.name, procura) ||
+      contemTexto(c.player?.shirt_name, procura) ||
+      contemTexto(c.player?.nickname, procura) ||
+      (c.player?.jersey_number && c.player.jersey_number.toString().includes(procura.trim())),
     )
   })
 
   // Adeptos visíveis (com procura)
   const adeptosVisiveis = [...convocatoriasAdeptos].sort((a, b) => compararPorCamisola(a.player, b.player)).filter(c => {
-    if (!procura) return true
-    const q = procura.toLowerCase()
+    if (!procura.trim()) return true
     return Boolean(
-      c.player?.name?.toLowerCase().includes(q) ||
-      c.player?.shirt_name?.toLowerCase().includes(q) ||
-      c.player?.nickname?.toLowerCase().includes(q),
+      contemTexto(c.player?.name, procura) ||
+      contemTexto(c.player?.shirt_name, procura) ||
+      contemTexto(c.player?.nickname, procura),
     )
   })
+
+  const adeptosEstaAberto = adeptosAberto || Boolean(procura.trim() && adeptosVisiveis.length > 0)
 
   return (
     <div className="bg-white/[0.07] p-4 rounded-3xl space-y-3.5 transition-all border-t-white/20 shadow-lg shadow-black/20">
@@ -303,7 +304,7 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
               <button
                 type="button"
                 onClick={() => { triggerHaptic('selection'); setAdeptosAberto(prev => !prev) }}
-                aria-expanded={adeptosAberto}
+                aria-expanded={adeptosEstaAberto}
                 className="w-full min-h-11 px-3.5 py-2.5 rounded-2xl bg-white/5 hover:bg-white/8 text-white flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-98 border border-white/8"
               >
                 <div className="flex items-center gap-2">
@@ -320,16 +321,16 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
 
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] font-bold text-white/60">
-                    {adeptosAberto ? 'Recolher' : 'Ver lista'}
+                    {adeptosEstaAberto ? 'Recolher' : 'Ver lista'}
                   </span>
                   <ChevronDown
                     size={14}
-                    className={`text-white/60 transition-transform duration-200 ${adeptosAberto ? 'rotate-180' : ''}`}
+                    className={`text-white/60 transition-transform duration-200 ${adeptosEstaAberto ? 'rotate-180' : ''}`}
                   />
                 </div>
               </button>
 
-              {adeptosAberto && (
+              {adeptosEstaAberto && (
                 <div className="rounded-2xl bg-black/20 p-2 space-y-1 border border-white/6 animate-fade-in max-h-[300px] overflow-y-auto">
                   {adeptosVisiveis.length === 0 ? (
                     <p className="text-center py-3 text-xs text-white/50">Nenhum adepto encontrado.</p>

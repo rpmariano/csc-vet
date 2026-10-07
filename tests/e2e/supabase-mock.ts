@@ -109,8 +109,9 @@ export async function montarSupabaseFalso(
   utilizador?: { id?: string; email?: string }
 ) {
   const tabelas: Fixtures = { ...FIXTURES_BASE, ...fixtures }
-  const email = utilizador?.email ?? (fixtures.profiles?.[0]?.email as string) ?? UTILIZADOR_TESTE.email
-  const id = utilizador?.id ?? (fixtures.profiles?.[0]?.id as string) ?? UTILIZADOR_TESTE.id
+  const perfilPadrao = fixtures.profiles?.find(p => p.id === UTILIZADOR_TESTE.id) ?? fixtures.profiles?.[0]
+  const email = utilizador?.email ?? (perfilPadrao?.email as string) ?? UTILIZADOR_TESTE.email
+  const id = utilizador?.id ?? (perfilPadrao?.id as string) ?? UTILIZADOR_TESTE.id
   const sessao = sessaoFalsa(email, id)
 
   await page.addInitScript(

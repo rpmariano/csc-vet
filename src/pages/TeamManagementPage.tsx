@@ -24,7 +24,8 @@ import {
   Pencil,
   Heart,
   Camera,
-  Loader2
+  Loader2,
+  ChevronDown
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { BlocoDocumentos } from '../components/BlocoDocumentos'
@@ -57,6 +58,7 @@ import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 import { fmtData } from '../lib/datas'
 import { eJogador, eAdepto } from '../lib/papeis'
+import { contemTexto } from '../lib/texto'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -138,6 +140,7 @@ const TeamManagementPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'cards'>(() => {
     return (localStorage.getItem('csc_team_view_mode') as 'list' | 'cards') || 'list'
   })
+  const [adeptosPlantelAberto, setAdeptosPlantelAberto] = useState(false)
 
   // Modals
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
@@ -1002,20 +1005,24 @@ const TeamManagementPage: React.FC = () => {
 
   // Filtered list
   const filteredProfiles = profiles.filter(p => {
-    const matchesSearch = 
-      (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (p.shirt_name && p.shirt_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (p.position && p.position.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (p.jersey_number && p.jersey_number.toString().includes(searchTerm))
+    const matchesSearch = !searchTerm.trim() || Boolean(
+      contemTexto(p.name, searchTerm) ||
+      contemTexto(p.shirt_name, searchTerm) ||
+      contemTexto(p.nickname, searchTerm) ||
+      contemTexto(p.email, searchTerm) ||
+      (p.phone && p.phone.includes(searchTerm.trim())) ||
+      contemTexto(p.position, searchTerm) ||
+      (p.jersey_number && p.jersey_number.toString().includes(searchTerm.trim()))
+    )
 
-    /* O estado é o dos mosaicos, que contam só os jogadores (ver lá em
-       baixo): "Aptos" mostra os jogadores aptos, e não o treinador apto. */
-    const matchesStatus = statusFilter === 'all' || (p.status === statusFilter && eJogador(p))
+    /* O estado é o dos mosaicos, que contam só os jogadores: "Aptos" mostra os jogadores aptos.
+       Se estiver uma pesquisa textual ativa, não bloqueamos adeptos pelo filtro de estado físico dos mosaicos. */
+    const matchesStatus = statusFilter === 'all' || (p.status === statusFilter && eJogador(p)) || Boolean(searchTerm.trim())
     const matchesPosition = positionFilter === 'all' || (() => {
       if (!p.position) return false
       const playerPosList = parsePositions(p.position).map(pos => normalizePositionName(pos).toLowerCase())
       const targetPos = normalizePositionName(positionFilter).toLowerCase()
-      return playerPosList.includes(targetPos) || p.position.toLowerCase().includes(positionFilter.toLowerCase())
+      return playerPosList.includes(targetPos) || contemTexto(p.position, positionFilter)
     })()
     const matchesRole = roleFilter === 'all' || grupoDoPerfil(p) === roleFilter
 
@@ -1093,8 +1100,9 @@ const TeamManagementPage: React.FC = () => {
     setOrdem('nome')
   }
 
-  // Quick Metrics
-  const totalCount = profiles.length
+  // Quick Metrics — os adeptos não contam no total de membros do plantel
+  const membrosPlantel = profiles.filter(p => !eAdepto(p))
+  const totalCount = membrosPlantel.length
   /* Os mosaicos contam **jogadores**, não pessoas. Contavam as fichas todas —
      com 34 membros, "Aptos 29" somava o treinador e a direção aos jogadores
      aptos, e o grupo "Jogadores" logo abaixo dizia outro número. */
@@ -1107,6 +1115,9 @@ const TeamManagementPage: React.FC = () => {
   const totalTecnica = profiles.filter(p => grupoDoPerfil(p) === 'coach').length
   const totalAdeptos = profiles.filter(p => grupoDoPerfil(p) === 'supporter').length
   const totalDirecao = profiles.filter(p => grupoDoPerfil(p) === 'admin').length
+
+  // Adeptos no fim da lista: colapsados por defeito se a ver todos, expandidos se filtro ativo ou se pesquisa tiver texto
+  const adeptosEstaAbertoPlantel = roleFilter === 'supporter' || Boolean(searchTerm.trim()) || adeptosPlantelAberto
 
   const alternarPapel = (papel: 'player' | 'coach' | 'admin' | 'supporter') => {
     triggerHaptic('selection')
@@ -1360,8 +1371,13 @@ const TeamManagementPage: React.FC = () => {
           {([
             ...gruposDoPlantel,
             ['Inativos', perfisInativos] as [string, Profile[]],
-          ]).map(([titulo, grupo]) => (
-            grupo.length === 0 ? null : (
+          ]).map(([titulo, grupo]) => {
+            if (grupo.length === 0) return null
+            const isAdeptosSecao = titulo === 'Adeptos'
+            const isColapsada = isAdeptosSecao && roleFilter === 'all'
+            const aberto = isColapsada ? adeptosEstaAbertoPlantel : true
+
+            return (
               /* Caixa com banda e linhas por dentro, como nas Quotas e nos
                  Encargos: eram vinte e oito cartões soltos com moldura e vão
                  entre cada dois. */
@@ -1370,16 +1386,39 @@ const TeamManagementPage: React.FC = () => {
                 aria-label={titulo}
                 className="rounded-2xl border border-white/12 overflow-hidden"
               >
-                <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.07] border-b border-white/12">
-                  <span className={`font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase ${
-                    titulo === 'Inativos' ? 'text-white/45' : 'text-csc-gold'
-                  }`}>
-                    {titulo}
-                  </span>
-                  <span className="text-[10px] font-bold text-white/45 tabular-nums">{grupo.length}</span>
-                </div>
+                {isColapsada ? (
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic('selection'); setAdeptosPlantelAberto(prev => !prev) }}
+                    aria-expanded={aberto}
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-white/[0.07] hover:bg-white/10 transition-colors cursor-pointer select-none text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Heart size={13} className="text-rose-400" />
+                      <span className="font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase text-csc-gold">
+                        {titulo}
+                      </span>
+                      <span className="text-[10px] font-bold text-white/45 tabular-nums">{grupo.length}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-white/60">
+                      <span>{aberto ? 'Recolher' : 'Ver adeptos'}</span>
+                      <ChevronDown size={14} className={`transition-transform duration-200 ${aberto ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.07] border-b border-white/12">
+                    <span className={`font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase ${
+                      titulo === 'Inativos' ? 'text-white/45' : 'text-csc-gold'
+                    }`}>
+                      {titulo}
+                    </span>
+                    <span className="text-[10px] font-bold text-white/45 tabular-nums">{grupo.length}</span>
+                  </div>
+                )}
 
-                {grupo.map((person, iLinha) => {
+                {aberto && (
+                  <div className={isColapsada ? 'border-t border-white/12' : ''}>
+                    {grupo.map((person, iLinha) => {
                   const roles = extractRolesFromProfile(person)
                   const isPersonPlayer = roles.includes('player')
                   const isPersonAdepto = eAdepto(person)
@@ -1464,9 +1503,11 @@ const TeamManagementPage: React.FC = () => {
                     </div>
                   )
                 })}
+                  </div>
+                )}
               </section>
             )
-          ))}
+          })}
         </div>
       ) : (
         /*
@@ -1482,16 +1523,43 @@ const TeamManagementPage: React.FC = () => {
           {([
             ...gruposDoPlantel,
             ['Inativos', perfisInativos] as [string, Profile[]],
-          ]).map(([titulo, grupo]) => (
-            grupo.length === 0 ? null : (
+          ]).map(([titulo, grupo]) => {
+            if (grupo.length === 0) return null
+            const isAdeptosSecao = titulo === 'Adeptos'
+            const isColapsada = isAdeptosSecao && roleFilter === 'all'
+            const aberto = isColapsada ? adeptosEstaAbertoPlantel : true
+
+            return (
               <div key={titulo || 'plantel'} className="space-y-2">
-                {titulo && (
-                  <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 pt-1">
-                    {titulo}
-                  </p>
+                {isColapsada ? (
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic('selection'); setAdeptosPlantelAberto(prev => !prev) }}
+                    aria-expanded={aberto}
+                    className="w-full flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer text-left border border-white/8"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Heart size={13} className="text-rose-400" />
+                      <span className="font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase text-csc-gold">
+                        {titulo}
+                      </span>
+                      <span className="text-[10px] font-bold text-white/45 tabular-nums">{grupo.length}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-white/60">
+                      <span>{aberto ? 'Recolher' : 'Ver adeptos'}</span>
+                      <ChevronDown size={14} className={`transition-transform duration-200 ${aberto ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+                ) : (
+                  titulo && (
+                    <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 pt-1">
+                      {titulo}
+                    </p>
+                  )
                 )}
 
-                <div className="grid grid-cols-2 gap-2.5">
+                {aberto && (
+                  <div className="grid grid-cols-2 gap-2.5">
                   {grupo.map(person => {
                     const roles = extractRolesFromProfile(person)
                     // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
@@ -1570,10 +1638,11 @@ const TeamManagementPage: React.FC = () => {
                       </div>
                     )
                   })}
-                </div>
+                  </div>
+                )}
               </div>
             )
-          ))}
+          })}
         </div>
       )}
 
@@ -3000,10 +3069,10 @@ const TeamManagementPage: React.FC = () => {
         const otherUsers = profiles.filter(p => 
           p.id !== associatingPlayer.id && 
           !potentialMatches.some(m => m.id === p.id) && (
-            !associateSearchTerm || 
-            (p.name && p.name.toLowerCase().includes(associateSearchTerm.toLowerCase())) ||
-            (p.email && p.email.toLowerCase().includes(associateSearchTerm.toLowerCase())) ||
-            (p.phone && p.phone.includes(associateSearchTerm))
+            !associateSearchTerm.trim() || 
+            contemTexto(p.name, associateSearchTerm) ||
+            contemTexto(p.email, associateSearchTerm) ||
+            (p.phone && p.phone.includes(associateSearchTerm.trim()))
           )
         )
 
