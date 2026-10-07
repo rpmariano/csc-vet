@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
-  UserPlus,
   ExternalLink,
   Repeat,
   Calendar,
@@ -1019,79 +1018,6 @@ const EventsPage: React.FC = () => {
       toast.success(`Resposta marcada: ${ROTULO_RESPOSTA[newStatus]}`)
     } catch (err: any) {
       toast.error('Erro ao marcar a resposta: ' + mensagemDeErro(err))
-    }
-  }
-
-  const handleAddPlayerToCallup = async (eventId: string, playerId: string) => {
-    try {
-      const ev = events.find(e => e.id === eventId)
-      const p = allPlayers.find(pl => pl.id === playerId)
-      if (ev && p && !isPlayerEligible(p, ev.type, ev.tournament_id)) {
-        toast.warning('Este membro não está apto/elegível para este tipo de evento.')
-        return
-      }
-
-      // Validar regras do torneio
-      if (ev && ev.type === 'match' && ev.tournament_id) {
-        const tour = tournaments.find(t => t.id === ev.tournament_id)
-        if (tour?.rules) {
-          const { rules } = tour
-          const currentCallups = eventCallups[eventId] || []
-          
-          if (rules.max_match_players && currentCallups.length >= rules.max_match_players) {
-            toast.error(`A convocatória atingiu o limite do torneio (${rules.max_match_players} convocados).`)
-            return
-          }
-
-          if (p?.birth_date && rules.min_age && rules.exceptions_allowed) {
-            const age = Math.floor((new Date().getTime() - new Date(p.birth_date).getTime()) / 3.15576e+10)
-            if (age < rules.min_age) {
-              const currentExceptions = currentCallups.filter(c => {
-                if (c.player?.id) {
-                  const selP = allPlayers.find(pl => pl.id === c.player.id)
-                  if (selP?.birth_date) {
-                    const sAge = Math.floor((new Date().getTime() - new Date(selP.birth_date).getTime()) / 3.15576e+10)
-                    return sAge < rules.min_age
-                  }
-                }
-                return false
-              }).length
-
-              if (currentExceptions >= rules.exceptions_count) {
-                toast.error(`Não podes convocar mais jogadores abaixo dos ${rules.min_age} anos. O limite (${rules.exceptions_count}) já foi atingido.`)
-                return
-              }
-            }
-          }
-        }
-      }
-
-      const validIds = await ensurePlayerIdsForSupabase([playerId], allPlayers)
-      const targetId = validIds[0] || playerId
-
-      const { data, error } = await supabase.from('callups').upsert([{
-        event_id: eventId,
-        player_id: targetId,
-        status: 'called'
-      }], { onConflict: 'event_id, player_id' }).select('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, jersey_number, role, roles, position)').single()
-
-      if (error) throw error
-
-      const createdObj = (data as any) || {
-        id: `callup-${Date.now()}`,
-        event_id: eventId,
-        player_id: targetId,
-        status: 'called',
-        player: p
-      }
-
-      setEventCallups(prev => ({
-        ...prev,
-        [eventId]: [...(prev[eventId] || []).filter(c => c.player_id !== targetId), createdObj]
-      }))
-      toast.success('Atleta adicionado à convocatória!')
-    } catch (err: any) {
-      toast.error('Erro ao adicionar atleta: ' + mensagemDeErro(err))
     }
   }
 
@@ -2135,14 +2061,6 @@ const EventsPage: React.FC = () => {
                 return 'Não é atleta'
               }
 
-              const calledPlayerIds = callups.map(c => c.player_id)
-              /* Só quem pode ir: jogadores aptos num jogo ou treino, toda a
-                 gente menos os inativos num convívio. A lista mostrava o
-                 plantel inteiro, e tocar num treinador para um jogo dava um
-                 aviso em vez de o esconder à partida. */
-              const uncalledPlayers = allPlayers.filter(p =>
-                !calledPlayerIds.includes(p.id) &&
-                isPlayerEligible(p, activeCallupModalEvent.type, activeCallupModalEvent.tournament_id))
               const evId = activeCallupModalEvent.id
 
               /* O bloco é o da Agenda (`BlocoConvocatoria`); aqui leva as
@@ -2160,28 +2078,8 @@ const EventsPage: React.FC = () => {
                     tirar: id => handleRemovePlayerFromCallup(id, evId),
                     tirarVarios: ids => handleTirarVarios(ids, evId),
                     abrir: setConvocadoAberto,
+                    aoEditar: () => openEditModal(activeCallupModalEvent),
                   } : undefined}
-                  acrescentar={isCoachOrAdmin && uncalledPlayers.length > 0 && (
-                    <div className="p-3.5 bg-white/5 rounded-2xl space-y-2">
-                      <p className="text-xs font-black text-white/80 flex items-center gap-1.5">
-                        <UserPlus size={14} className="text-csc-gold" />
-                        <span>Adicionar mais membros ao evento:</span>
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1">
-                        {uncalledPlayers.map(p => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => handleAddPlayerToCallup(evId, p.id)}
-                            className="bg-white/8 text-xs px-2.5 py-1 rounded-xl font-bold text-white flex items-center gap-1 shadow-2xs hover:bg-white/15 cursor-pointer active:scale-97"
-                          >
-                            <span>+ {p.name}</span>
-                            {p.jersey_number && <span className="text-csc-gold font-black">#{p.jersey_number}</span>}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 />
               )
             })()}

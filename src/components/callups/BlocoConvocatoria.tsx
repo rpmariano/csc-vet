@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { ChevronDown, Users } from 'lucide-react'
 import { CallupRow } from './CallupRow'
 import { QuorumFilterCards, type CallupFilter } from './QuorumFilterCards'
@@ -28,6 +28,8 @@ export interface AcoesDaConvocatoria {
   tirarVarios: (callupIds: string[]) => Promise<void>
   /** Abrir a ficha rápida do convocado (4a). */
   abrir?: (callupId: string) => void
+  /** Abrir o ecrã completo de gestão e edição da convocatória no plantel. */
+  aoEditar?: () => void
 }
 
 interface BlocoConvocatoriaProps<C extends ConvocadoDoBloco> {
@@ -43,8 +45,6 @@ interface BlocoConvocatoriaProps<C extends ConvocadoDoBloco> {
    * pastilha, e não há "Tirar" nenhum.
    */
   acoes?: AcoesDaConvocatoria
-  /** Um bloco a meio, por cima da lista — o "acrescentar" dos Eventos. */
-  acrescentar?: React.ReactNode
   abertoInicial?: boolean
 }
 
@@ -67,7 +67,6 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
   estadoQueImpede,
   gere,
   acoes,
-  acrescentar,
   abertoInicial = false,
 }: BlocoConvocatoriaProps<C>) {
   const [aberto, setAberto] = useState(abertoInicial)
@@ -207,12 +206,34 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
             </div>
           )}
 
-          {acrescentar}
+          {/* Botão de gestão de convocatória no ecrã de plantel completo */}
+          {acoes?.aoEditar && convocatorias.length > 0 && (
+            <button
+              type="button"
+              onClick={acoes.aoEditar}
+              className="w-full min-h-11 px-4 py-2.5 rounded-2xl bg-white/8 hover:bg-white/12 text-white
+                font-display font-bold text-xs flex items-center justify-center gap-2 cursor-pointer
+                transition-all duration-150 active:scale-97 border border-white/10"
+            >
+              <Users size={15} className="text-csc-gold" />
+              <span>Gerir convocatória no plantel</span>
+            </button>
+          )}
 
           {convocatorias.length === 0 ? (
-            <div className="text-center py-8 bg-white/5 rounded-2xl border border-dashed border-white/15">
+            <div className="text-center py-8 bg-white/5 rounded-2xl border border-dashed border-white/15 space-y-3">
               <Users size={32} className="mx-auto text-white/65 mb-1" />
               <p className="text-xs font-bold text-white/60">Nenhum jogador convocado ainda.</p>
+              {acoes?.aoEditar && (
+                <button
+                  type="button"
+                  onClick={acoes.aoEditar}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-csc-gold text-csc-tinta font-display font-bold text-xs cursor-pointer transition-transform active:scale-97 shadow-sm"
+                >
+                  <Users size={14} />
+                  <span>Escolher convocados</span>
+                </button>
+              )}
             </div>
           ) : visiveis.length === 0 ? (
             <div className="text-center py-8 bg-white/5 rounded-2xl text-white/60 space-y-2">
