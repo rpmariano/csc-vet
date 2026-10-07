@@ -13,6 +13,7 @@ import {
   Pencil
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
+import { eAdepto } from '../lib/papeis'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { CLUBE_NOME } from '../lib/clube'
@@ -488,14 +489,19 @@ const CalendarPage: React.FC = () => {
       }
     }
     fetchTargetEvent()
-  }, [searchParams, events])
+  }, [searchParams, events, profile])
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
+  const isAdepto = eAdepto(profile)
 
 
   const handleCallupResponse = async (eventId: string, status: 'confirmed' | 'declined') => {
     if (!profile) return
     const targetEvent = events.find(e => e.id === eventId)
+    if (isAdepto && targetEvent && targetEvent.type !== 'gathering') {
+      toast.warning('Apenas atletas podem responder a convocatórias de jogos e treinos.')
+      return
+    }
     const fechada = convocatoriaFechada(targetEvent, (eventCallups[eventId] || []).length > 0)
     if (fechada) {
       toast.error(textoConvocatoriaFechada(fechada, targetEvent) + '.')
@@ -744,6 +750,8 @@ const CalendarPage: React.FC = () => {
 
   // Lista de todos os eventos com convocatória pendente de resposta para o atleta atual
   const isCallupPendingForUser = (ev: Event) => {
+    // Adeptos não respondem a convocatórias nem são convocados para jogos ou treinos
+    if (isAdepto && ev.type !== 'gathering') return false
     const myCallup = getMyCallupForEvent(ev.id)
     if (!myCallup || myCallup.status !== 'called') return false
 
@@ -1901,6 +1909,11 @@ const CalendarPage: React.FC = () => {
                     a razão e é a que se dá — é também a que explica a ausência
                     a quem gere, que não é convocado para nada.
                   */
+                  // Adeptos não recebem convocações nem respondem a jogos e treinos (apenas convívios)
+                  if (isAdepto && selectedEvent.type !== 'gathering') {
+                    return null
+                  }
+
                   if (!myCallup) {
                     return (
                       <div className="p-4 bg-white/[0.07] rounded-2xl">

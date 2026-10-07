@@ -6,6 +6,7 @@ import { CLUBE_NOME } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla } from '../lib/siglas'
+import { eAdepto } from '../lib/papeis'
 import { convocatoriaFechada, textoConvocatoriaFechada } from '../lib/eventos'
 import { triggerHaptic } from '../utils/haptics'
 import { CartaoVidro, CartaoSimples, EtiquetaSeccao } from '../components/ui'
@@ -227,6 +228,7 @@ const Home: React.FC = () => {
         }
 
         const ondeE = (e: EventoBruto) => e.location?.trim() || e.field?.name || ''
+        const utilizadorAdepto = eAdepto(profile)
 
         const jogosEmCima = marcados
           .filter(e => e.type === 'match')
@@ -246,7 +248,7 @@ const Home: React.FC = () => {
                 morada: e.field?.address ?? null,
                 prova: e.tournament?.name ?? null,
                 opponent: e.opponent,
-                minhaResposta: (minha.get(e.id) as JogoDaHome['minhaResposta']) ?? null,
+                minhaResposta: utilizadorAdepto ? null : ((minha.get(e.id) as JogoDaHome['minhaResposta']) ?? null),
                 confirmados: confirmados.get(e.id) ?? 0,
                 fechada: fechada ? textoConvocatoriaFechada(fechada, e) : null,
               }
@@ -273,6 +275,7 @@ const Home: React.FC = () => {
             .filter(e => !idsEmCima.has(e.id))
             .filter(e => minha.get(e.id) === 'called')
             .filter(e => !convocatoriaFechada(e, true))
+            .filter(e => !(utilizadorAdepto && e.type !== 'gathering'))
             .slice(0, 6)
             .map(e => ({
               id: e.id,

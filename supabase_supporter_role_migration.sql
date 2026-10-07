@@ -1,0 +1,23 @@
+--------------------------------------------------------------------------------
+-- MIGRAÇÃO: Suporte ao novo papel de "Adepto" (supporter)
+--------------------------------------------------------------------------------
+--
+-- O QUE ISTO FAZ:
+-- 1. Adiciona o valor 'supporter' ao tipo enumerado public.user_role.
+-- 2. Permite que perfis tenham 'supporter' tanto na coluna `role` (papel principal)
+--    como na coluna `roles` (lista de papéis).
+-- 
+-- O papel de Adepto destina-se a pessoas que não são atletas, equipa técnica
+-- nem direção do clube, mas que pretendem aceder à aplicação para:
+-- - Consultar a agenda e classificação;
+-- - Consultar estatísticas e relatórios;
+-- - Ser convocados para eventos sociais e convívios (e responder com RSVP);
+-- 
+-- E não têm:
+-- - Convocatórias para jogos nem treinos (nem visualização de treinos);
+-- - Alertas ou histórico de dívidas/quotas;
+-- - Ficha desportiva clínica/física (Apto/Lesionado);
+--------------------------------------------------------------------------------
+
+-- Adicionar 'supporter' ao enum user_role se ainda não existir
+ALTER TYPE public.user_role ADD VALUE IF NOT EXISTS 'supporter';

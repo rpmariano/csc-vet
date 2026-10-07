@@ -21,7 +21,8 @@ import {
   ClipboardList,
   Landmark,
   User as UserIcon,
-  Pencil
+  Pencil,
+  Heart
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { BlocoDocumentos } from '../components/BlocoDocumentos'
@@ -53,7 +54,7 @@ import {
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 import { fmtData } from '../lib/datas'
-import { eJogador } from '../lib/papeis'
+import { eJogador, eAdepto } from '../lib/papeis'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -489,12 +490,17 @@ const TeamManagementPage: React.FC = () => {
   }
 
   const toggleRole = (r: UserRole) => {
-    if (formRoles.includes(r)) {
-      if (formRoles.length > 1) {
-        setFormRoles(formRoles.filter(item => item !== r))
+    if (r === 'supporter') {
+      setFormRoles(['supporter'])
+      return
+    }
+    const semAdepto = formRoles.filter(item => item !== 'supporter')
+    if (semAdepto.includes(r)) {
+      if (semAdepto.length > 1) {
+        setFormRoles(semAdepto.filter(item => item !== r))
       }
     } else {
-      setFormRoles([...formRoles, r])
+      setFormRoles([...semAdepto, r])
     }
   }
 
@@ -580,7 +586,9 @@ const TeamManagementPage: React.FC = () => {
       ? 'admin' 
       : formRoles.includes('coach') 
       ? 'coach' 
-      : 'player'
+      : formRoles.includes('player') 
+      ? 'player' 
+      : 'supporter'
 
     // Sem o papel de Jogador não há posição de campo a gravar — mesmo que a
     // seleção tenha ficado por defeito de uma edição anterior, não se grava.
@@ -922,17 +930,19 @@ const TeamManagementPage: React.FC = () => {
     Os inativos ficam num grupo à parte no fim, como já estavam: um inativo não
     entra na conta do plantel, seja qual for o perfil.
   */
-  const grupoDoPerfil = (p: Profile): 'player' | 'coach' | 'admin' => {
+  const grupoDoPerfil = (p: Profile): 'player' | 'coach' | 'admin' | 'supporter' => {
     const papeis = extractRolesFromProfile(p)
     if (papeis.includes('player')) return 'player'
     if (papeis.includes('coach')) return 'coach'
-    return 'admin'
+    if (papeis.includes('admin')) return 'admin'
+    return 'supporter'
   }
 
   const gruposDoPlantel = ([
     ['player', 'Jogadores'],
     ['coach', 'Equipa técnica'],
     ['admin', 'Direção'],
+    ['supporter', 'Adeptos'],
   ] as const).map(([papel, titulo]) => [
     titulo,
     perfisAtivos.filter(pe => grupoDoPerfil(pe) === papel),
@@ -1590,12 +1600,12 @@ const TeamManagementPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* 4.2 Papéis no Sistema (1, 2 ou 3 funções) */}
+                {/* 4.2 Papéis no Sistema */}
                 <div className="pt-2 border-t border-white/10">
                   <label className="block text-xs font-bold text-white/70 mb-2">
-                    Papel / Funções no Sistema (escolhe 1, 2 ou 3):
+                    Papel / Funções no Sistema:
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {/* Jogador */}
                     <button
                       type="button"
@@ -1659,60 +1669,86 @@ const TeamManagementPage: React.FC = () => {
                         </div>
                       </div>
                       <span className="text-xs font-extrabold text-white">Administrador / Direção</span>
-                      <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Acesso total, finanças e administração app</span>
+                      <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Acesso total, finanças e administração</span>
+                    </button>
+
+                    {/* Adepto */}
+                    <button
+                      type="button"
+                      onClick={() => toggleRole('supporter')}
+                      className={`p-3 rounded-xl text-left transition-all flex flex-col justify-between cursor-pointer ${
+                        formRoles.includes('supporter')
+                          ? 'bg-white/15 '
+                          : 'bg-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <Heart size={15} className="text-rose-400" />
+                        <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                          formRoles.includes('supporter') ? 'bg-rose-500 text-white' : 'border border-white/20'
+                        }`}>
+                          {formRoles.includes('supporter') && <Check size={12} className="stroke-[3]" />}
+                        </div>
+                      </div>
+                      <span className="text-xs font-extrabold text-white">Adepto</span>
+                      <span className="text-[10px] text-white/70 mt-0.5 leading-tight">Acesso de consulta, agenda, classificação e convívios</span>
                     </button>
                   </div>
                 </div>
 
                 {/* 4.3 Camisola & Tamanho de Equipamento */}
-                <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-white/10">
-                  <div>
-                    <label className={ETIQUETA}>Nº da Camisola</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="99"
-                      value={formJerseyNumber}
-                      onChange={(e) => setFormJerseyNumber(e.target.value === '' ? '' : Number(e.target.value))}
-                      className={CAMPO}
-                      placeholder="Ex: 10"
-                    />
-                  </div>
+                {formRoles.includes('player') && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-white/10">
+                      <div>
+                        <label className={ETIQUETA}>Nº da Camisola</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="99"
+                          value={formJerseyNumber}
+                          onChange={(e) => setFormJerseyNumber(e.target.value === '' ? '' : Number(e.target.value))}
+                          className={CAMPO}
+                          placeholder="Ex: 10"
+                        />
+                      </div>
 
-                  <div>
-                    <label className={ETIQUETA}>Tamanho Equipamento</label>
-                    <select
-                      value={formKitSize}
-                      onChange={(e) => setFormKitSize(e.target.value)}
-                      className={CAMPO}
-                    >
-                      <option value="S">S</option>
-                      <option value="M">M</option>
-                      <option value="L">L</option>
-                      <option value="XL">XL</option>
-                      <option value="XXL">XXL</option>
-                    </select>
-                  </div>
-                </div>
+                      <div>
+                        <label className={ETIQUETA}>Tamanho Equipamento</label>
+                        <select
+                          value={formKitSize}
+                          onChange={(e) => setFormKitSize(e.target.value)}
+                          className={CAMPO}
+                        >
+                          <option value="S">S</option>
+                          <option value="M">M</option>
+                          <option value="L">L</option>
+                          <option value="XL">XL</option>
+                          <option value="XXL">XXL</option>
+                        </select>
+                      </div>
+                    </div>
 
-                {/* O pé preferido: a coluna `preferred_foot` nasceu na fase 1 e
-                    nunca teve onde ser preenchida, por isso as fichas mostravam
-                    um campo que estava sempre vazio. É desportivo, portanto vive
-                    aqui com a camisola e a posicao. */}
-                <div>
-                  <label className={ETIQUETA} htmlFor="pe-preferido">Pé preferido</label>
-                  <select
-                    id="pe-preferido"
-                    value={formPreferredFoot}
-                    onChange={(e) => setFormPreferredFoot(e.target.value)}
-                    className={CAMPO}
-                  >
-                    <option value="">Não indicado</option>
-                    <option value="Direito">Direito</option>
-                    <option value="Esquerdo">Esquerdo</option>
-                    <option value="Ambos">Ambos</option>
-                  </select>
-                </div>
+                    {/* O pé preferido: a coluna `preferred_foot` nasceu na fase 1 e
+                        nunca teve onde ser preenchida, por isso as fichas mostravam
+                        um campo que estava sempre vazio. É desportivo, portanto vive
+                        aqui com a camisola e a posicao. */}
+                    <div>
+                      <label className={ETIQUETA} htmlFor="pe-preferido">Pé preferido</label>
+                      <select
+                        id="pe-preferido"
+                        value={formPreferredFoot}
+                        onChange={(e) => setFormPreferredFoot(e.target.value)}
+                        className={CAMPO}
+                      >
+                        <option value="">Não indicado</option>
+                        <option value="Direito">Direito</option>
+                        <option value="Esquerdo">Esquerdo</option>
+                        <option value="Ambos">Ambos</option>
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* 5. DADOS BANCÁRIOS & QUOTAS */}
@@ -1757,123 +1793,125 @@ const TeamManagementPage: React.FC = () => {
                 dispensados vivem em `quota_exemptions`, criada na fase 1 e
                 até agora sem uso.
               */}
-              <div className="cartao-simples p-4 space-y-3.5">
-                <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                  <Landmark size={14} className="text-csc-gold" />
-                  <span>6. Quotas deste atleta</span>
-                </h3>
+              {formRoles.includes('player') && (
+                <div className="cartao-simples p-4 space-y-3.5">
+                  <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                    <Landmark size={14} className="text-csc-gold" />
+                    <span>6. Quotas deste atleta</span>
+                  </h3>
 
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className={ETIQUETA} htmlFor="quota-inicio">Início de atividade</label>
-                    <input
-                      id="quota-inicio"
-                      type="date"
-                      value={formQuotaStart}
-                      onChange={e => setFormQuotaStart(e.target.value)}
-                      className={CAMPO}
-                    />
-                  </div>
-                  <div>
-                    <label className={ETIQUETA} htmlFor="quota-fim">Fim de atividade</label>
-                    <input
-                      id="quota-fim"
-                      type="date"
-                      value={formQuotaEnd}
-                      onChange={e => setFormQuotaEnd(e.target.value)}
-                      className={CAMPO}
-                    />
-                  </div>
-                </div>
-
-                <p className="text-[10.5px] leading-relaxed text-white/62">
-                  Sem datas, a janela infere-se do estado: quem fica inativo deixa de gerar meses
-                  novos, mas mantém os que já venceram. Ao preencher o fim, as quotas seguintes
-                  deixam de ser devidas.
-                </p>
-
-                {/*
-                  As pastilhas seguem a ordem da época e não a do calendário:
-                  a época começa em Setembro, e uma fila que abria em Janeiro
-                  obrigava a procurar o início a meio. São sempre doze, para o
-                  ano fechar.
-
-                  Os meses que o clube inteiro não paga — o Agosto de
-                  `quota_excluded_months` — e os que caem fora da época ficam
-                  bloqueados: ninguém os paga, portanto dispensar alguém deles
-                  não quer dizer nada. Antes eram pastilhas normais, e clicar
-                  numa gravava uma dispensa que não mudava conta nenhuma.
-                */}
-                {(() => {
-                  const mesesDaEpoca = new Set(
-                    getSeasonMonths(defFinanceiras, epoca || getSeasonLabel(defFinanceiras)).map(m => m.month),
-                  )
-                  const excluidosDoClube = new Set(defFinanceiras.quota_excluded_months ?? [])
-                  const ordemDaEpoca = Array.from(
-                    { length: 12 },
-                    (_, i) => ((defFinanceiras.season_start_month - 1 + i) % 12) + 1,
-                  )
-
-                  return (
+                  <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <p className={ETIQUETA}>Meses dispensados de quota</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {ordemDaEpoca.map(m => {
-                          const chave = String(m).padStart(2, '0')
-                          const dispensado = formMesesDispensados.includes(chave)
-                          const bloqueado = !isAdmin || excluidosDoClube.has(m) || !mesesDaEpoca.has(m)
-                          const porque = !isAdmin
-                            ? 'Só a direção dispensa alguém de quota'
-                            : excluidosDoClube.has(m)
-                              ? 'O clube inteiro não paga quota neste mês'
-                              : 'Fora da época'
-
-                          return (
-                            <button
-                              key={m}
-                              type="button"
-                              disabled={bloqueado}
-                              title={bloqueado ? porque : undefined}
-                              onClick={() => {
-                                triggerHaptic('selection')
-                                setFormMesesDispensados(atual =>
-                                  dispensado ? atual.filter(x => x !== chave) : [...atual, chave],
-                                )
-                              }}
-                              aria-pressed={bloqueado ? undefined : dispensado}
-                              aria-label={bloqueado ? `${MESES_CURTOS[m - 1]} — ${porque}` : undefined}
-                              className={`min-h-11 px-3 rounded-[18px] border font-display font-black text-[11px]
-                                transition-transform duration-150
-                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                                  bloqueado
-                                    ? 'bg-transparent border-dashed border-white/20 text-white/30 cursor-not-allowed line-through'
-                                    : dispensado
-                                      ? 'bg-csc-gold text-csc-tinta border-csc-gold cursor-pointer active:scale-97'
-                                      : 'bg-white/5 border-white/12 text-white/62 cursor-pointer active:scale-97'
-                                }`}
-                            >
-                              {MESES_CURTOS[m - 1]}
-                            </button>
-                          )
-                        })}
-                      </div>
-                      <p className="text-[10.5px] leading-relaxed text-white/62 mt-2">
-                        {!isAdmin && (
-                          <>
-                            <strong className="text-white/80">Só a direção altera dispensas de quota</strong> — a
-                            tabela só aceita escrita de admin, e sem isto o treinador carregava numa pastilha e
-                            levava com um erro ao gravar.{' '}
-                          </>
-                        )}
-                        Da esquerda para a direita, a época começa em {nomeMes(defFinanceiras.season_start_month)}.
-                        Dourado = dispensado, todos os anos. Riscado = ninguém paga esse mês, e define-se
-                        no Financeiro. Um mês dispensado sai da dívida do atleta e da previsão de receita
-                        do clube.
-                      </p>
+                      <label className={ETIQUETA} htmlFor="quota-inicio">Início de atividade</label>
+                      <input
+                        id="quota-inicio"
+                        type="date"
+                        value={formQuotaStart}
+                        onChange={e => setFormQuotaStart(e.target.value)}
+                        className={CAMPO}
+                      />
                     </div>
-                  )
-                })()}
-              </div>
+                    <div>
+                      <label className={ETIQUETA} htmlFor="quota-fim">Fim de atividade</label>
+                      <input
+                        id="quota-fim"
+                        type="date"
+                        value={formQuotaEnd}
+                        onChange={e => setFormQuotaEnd(e.target.value)}
+                        className={CAMPO}
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-[10.5px] leading-relaxed text-white/62">
+                    Sem datas, a janela infere-se do estado: quem fica inativo deixa de gerar meses
+                    novos, mas mantém os que já venceram. Ao preencher o fim, as quotas seguintes
+                    deixam de ser devidas.
+                  </p>
+
+                  {/*
+                    As pastilhas seguem a ordem da época e não a do calendário:
+                    a época começa em Setembro, e uma fila que abria em Janeiro
+                    obrigava a procurar o início a meio. São sempre doze, para o
+                    ano fechar.
+
+                    Os meses que o clube inteiro não paga — o Agosto de
+                    `quota_excluded_months` — e os que caem fora da época ficam
+                    bloqueados: ninguém os paga, portanto dispensar alguém deles
+                    não quer dizer nada. Antes eram pastilhas normais, e clicar
+                    numa gravava uma dispensa que não mudava conta nenhuma.
+                  */}
+                  {(() => {
+                    const mesesDaEpoca = new Set(
+                      getSeasonMonths(defFinanceiras, epoca || getSeasonLabel(defFinanceiras)).map(m => m.month),
+                    )
+                    const excluidosDoClube = new Set(defFinanceiras.quota_excluded_months ?? [])
+                    const ordemDaEpoca = Array.from(
+                      { length: 12 },
+                      (_, i) => ((defFinanceiras.season_start_month - 1 + i) % 12) + 1,
+                    )
+
+                    return (
+                      <div>
+                        <p className={ETIQUETA}>Meses dispensados de quota</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ordemDaEpoca.map(m => {
+                            const chave = String(m).padStart(2, '0')
+                            const dispensado = formMesesDispensados.includes(chave)
+                            const bloqueado = !isAdmin || excluidosDoClube.has(m) || !mesesDaEpoca.has(m)
+                            const porque = !isAdmin
+                              ? 'Só a direção dispensa alguém de quota'
+                              : excluidosDoClube.has(m)
+                                ? 'O clube inteiro não paga quota neste mês'
+                                : 'Fora da época'
+
+                            return (
+                              <button
+                                key={m}
+                                type="button"
+                                disabled={bloqueado}
+                                title={bloqueado ? porque : undefined}
+                                onClick={() => {
+                                  triggerHaptic('selection')
+                                  setFormMesesDispensados(atual =>
+                                    dispensado ? atual.filter(x => x !== chave) : [...atual, chave],
+                                  )
+                                }}
+                                aria-pressed={bloqueado ? undefined : dispensado}
+                                aria-label={bloqueado ? `${MESES_CURTOS[m - 1]} — ${porque}` : undefined}
+                                className={`min-h-11 px-3 rounded-[18px] border font-display font-black text-[11px]
+                                  transition-transform duration-150
+                                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                                    bloqueado
+                                      ? 'bg-transparent border-dashed border-white/20 text-white/30 cursor-not-allowed line-through'
+                                      : dispensado
+                                        ? 'bg-csc-gold text-csc-tinta border-csc-gold cursor-pointer active:scale-97'
+                                        : 'bg-white/5 border-white/12 text-white/62 cursor-pointer active:scale-97'
+                                  }`}
+                              >
+                                {MESES_CURTOS[m - 1]}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <p className="text-[10.5px] leading-relaxed text-white/62 mt-2">
+                          {!isAdmin && (
+                            <>
+                              <strong className="text-white/80">Só a direção altera dispensas de quota</strong> — a
+                              tabela só aceita escrita de admin, e sem isto o treinador carregava numa pastilha e
+                              levava com um erro ao gravar.{' '}
+                            </>
+                          )}
+                          Da esquerda para a direita, a época começa em {nomeMes(defFinanceiras.season_start_month)}.
+                          Dourado = dispensado, todos os anos. Riscado = ninguém paga esse mês, e define-se
+                          no Financeiro. Um mês dispensado sai da dívida do atleta e da previsão de receita
+                          do clube.
+                        </p>
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
               {/* 6. SAÚDE & EMERGÊNCIA */}
               <div className="cartao-simples p-4 space-y-3.5">
                 <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
@@ -1999,11 +2037,19 @@ const TeamManagementPage: React.FC = () => {
           aberto={isDetailModalOpen}
           voltarPara={voltarDaFicha}
           aoVoltar={() => fecharFicha()}
-          sobrancelha="Ficha do atleta"
+          sobrancelha={
+            eAdepto(selectedProfile)
+              ? "Ficha de adepto"
+              : extractRolesFromProfile(selectedProfile).includes('player')
+              ? "Ficha do atleta"
+              : "Ficha de membro"
+          }
           titulo={selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name}
           legenda={[
             (selectedProfile.shirt_name || selectedProfile.nickname) ? selectedProfile.name : null,
-            selectedProfile.jersey_number ? `nº ${selectedProfile.jersey_number}` : 'sem número',
+            extractRolesFromProfile(selectedProfile).includes('player')
+              ? (selectedProfile.jersey_number ? `nº ${selectedProfile.jersey_number}` : 'sem número')
+              : null,
             parsePositions(selectedProfile.position).length > 0 && extractRolesFromProfile(selectedProfile).includes('player')
               ? normalizePositionName(parsePositions(selectedProfile.position)[0])
               : null,
@@ -2032,27 +2078,29 @@ const TeamManagementPage: React.FC = () => {
                 </span>
               )}
 
-              <button
-                type="button"
-                onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
-                disabled={!isCoachOrAdmin}
-                aria-label={`Estado: ${selectedProfile.status === 'injured' ? 'lesionado' : selectedProfile.status === 'inactive' ? 'inativo' : 'apto'}${isCoachOrAdmin ? '. Alternar entre apto e lesionado' : ''}`}
-                className={`min-h-11 px-4 rounded-[22px] font-display font-black text-[11px] flex items-center gap-2
-                  transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                    isCoachOrAdmin ? 'cursor-pointer active:scale-97' : 'cursor-default'
-                  } ${
-                    selectedProfile.status === 'injured'
-                      ? 'bg-csc-red/15 text-csc-vermelho-texto '
-                      : selectedProfile.status === 'inactive'
-                      ? 'bg-white/8 text-white/60 '
-                      : 'bg-csc-light/15 text-csc-verde-texto '
-                  }`}
-              >
-                {selectedProfile.status === 'injured' ? <HeartPulse size={14} />
-                  : selectedProfile.status === 'inactive' ? <XCircle size={14} />
-                  : <CheckCircle2 size={14} />}
-                {selectedProfile.status === 'injured' ? 'Lesionado' : selectedProfile.status === 'inactive' ? 'Inativo' : 'Apto'}
-              </button>
+              {extractRolesFromProfile(selectedProfile).includes('player') && (
+                <button
+                  type="button"
+                  onClick={() => handleTogglePlayerClinicalStatus(selectedProfile)}
+                  disabled={!isCoachOrAdmin}
+                  aria-label={`Estado: ${selectedProfile.status === 'injured' ? 'lesionado' : selectedProfile.status === 'inactive' ? 'inativo' : 'apto'}${isCoachOrAdmin ? '. Alternar entre apto e lesionado' : ''}`}
+                  className={`min-h-11 px-4 rounded-[22px] font-display font-black text-[11px] flex items-center gap-2
+                    transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      isCoachOrAdmin ? 'cursor-pointer active:scale-97' : 'cursor-default'
+                    } ${
+                      selectedProfile.status === 'injured'
+                        ? 'bg-csc-red/15 text-csc-vermelho-texto '
+                        : selectedProfile.status === 'inactive'
+                        ? 'bg-white/8 text-white/60 '
+                        : 'bg-csc-light/15 text-csc-verde-texto '
+                    }`}
+                >
+                  {selectedProfile.status === 'injured' ? <HeartPulse size={14} />
+                    : selectedProfile.status === 'inactive' ? <XCircle size={14} />
+                    : <CheckCircle2 size={14} />}
+                  {selectedProfile.status === 'injured' ? 'Lesionado' : selectedProfile.status === 'inactive' ? 'Inativo' : 'Apto'}
+                </button>
+              )}
 
               <div className="flex flex-wrap justify-center gap-1.5">
                 {extractRolesFromProfile(selectedProfile).map(r => (
@@ -2063,10 +2111,12 @@ const TeamManagementPage: React.FC = () => {
                         ? 'bg-csc-gold/15 text-csc-gold '
                         : r === 'coach'
                         ? 'bg-csc-blue/20 text-csc-azul-texto '
+                        : r === 'supporter'
+                        ? 'bg-rose-500/20 text-rose-300 '
                         : 'bg-csc-light/15 text-csc-verde-texto '
                     }`}
                   >
-                    {r === 'admin' ? 'Direção' : r === 'coach' ? 'Treinador' : 'Jogador'}
+                    {r === 'admin' ? 'Direção' : r === 'coach' ? 'Treinador' : r === 'supporter' ? 'Adepto' : 'Jogador'}
                   </span>
                 ))}
               </div>
@@ -2217,39 +2267,41 @@ const TeamManagementPage: React.FC = () => {
                 </div>
 
                 {/* Dados desportivos: o que a equipa técnica atribui. */}
-                <div className="cartao-simples p-4 space-y-3">
-                  <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
-                    <Shield size={14} className="text-csc-gold" />
-                    <span>Equipamento & Jogo</span>
-                  </h4>
+                {extractRolesFromProfile(selectedProfile).includes('player') && (
+                  <div className="cartao-simples p-4 space-y-3">
+                    <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
+                      <Shield size={14} className="text-csc-gold" />
+                      <span>Equipamento & Jogo</span>
+                    </h4>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Nº da camisola</p>
-                      <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.jersey_number ? `#${selectedProfile.jersey_number}` : 'Sem número'}
-                      </p>
-                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Nº da camisola</p>
+                        <p className="font-extrabold text-white mt-0.5">
+                          {selectedProfile.jersey_number ? `#${selectedProfile.jersey_number}` : 'Sem número'}
+                        </p>
+                      </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Tamanho de equipamento</p>
-                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.kit_size || '-'}</p>
-                    </div>
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Tamanho de equipamento</p>
+                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.kit_size || '-'}</p>
+                      </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Pé preferido</p>
-                      <p className="font-extrabold text-white mt-0.5">{selectedProfile.preferred_foot || '-'}</p>
-                    </div>
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Pé preferido</p>
+                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.preferred_foot || '-'}</p>
+                      </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Estado</p>
-                      <p className="font-extrabold text-white mt-0.5">
-                        {selectedProfile.status === 'injured' ? 'Lesionado'
-                          : selectedProfile.status === 'inactive' ? 'Inativo' : 'Apto'}
-                      </p>
+                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                        <p className="text-white/65 font-bold uppercase text-[9px]">Estado</p>
+                        <p className="font-extrabold text-white mt-0.5">
+                          {selectedProfile.status === 'injured' ? 'Lesionado'
+                            : selectedProfile.status === 'inactive' ? 'Inativo' : 'Apto'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* 2. Morada & Residência */}
                 <div className="cartao-simples p-4 space-y-3">

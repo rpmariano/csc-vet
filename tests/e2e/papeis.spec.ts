@@ -24,7 +24,7 @@ const COLUNAS_PLANTEL = [
 const soPlantel = (p: Record<string, unknown>) =>
   Object.fromEntries(COLUNAS_PLANTEL.filter(c => c in p).map(c => [c, p[c]]))
 
-function fixtures(papel: 'player' | 'coach' | 'admin') {
+function fixtures(papel: 'player' | 'coach' | 'admin' | 'supporter') {
   const eu = {
     id: UTILIZADOR_TESTE.id, name: 'Atleta de Teste', email: UTILIZADOR_TESTE.email,
     role: papel, roles: [papel], status: 'active', jersey_number: 7,
@@ -58,7 +58,7 @@ const DE_GESTAO: string[] = [
 const SO_DIRECAO: string[] = ['finance']
 
 interface Perfil {
-  papel: 'player' | 'coach' | 'admin'
+  papel: 'player' | 'coach' | 'admin' | 'supporter'
   barra: string[]
   abre: string[]
   /** Rotas que este papel não tem: têm de devolver à Home. */
@@ -66,6 +66,7 @@ interface Perfil {
 }
 
 const PERFIS: Perfil[] = [
+  { papel: 'supporter', barra: ['Hoje', 'Agenda', 'Competição'], abre: DE_TODOS, fecha: [...DE_GESTAO, ...SO_DIRECAO] },
   { papel: 'player', barra: ['Hoje', 'Agenda', 'Competição'], abre: DE_TODOS, fecha: [...DE_GESTAO, ...SO_DIRECAO] },
   { papel: 'coach', barra: ['Hoje', 'Agenda', 'Competição', 'Clube'], abre: [...DE_TODOS, ...DE_GESTAO], fecha: SO_DIRECAO },
   { papel: 'admin', barra: ['Hoje', 'Agenda', 'Competição', 'Clube'], abre: [...DE_TODOS, ...DE_GESTAO, ...SO_DIRECAO], fecha: [] },

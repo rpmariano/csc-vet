@@ -23,6 +23,7 @@ import { supabase } from '../lib/supabaseClient'
 import { BlocoDocumentos } from '../components/BlocoDocumentos'
 import { RELACOES_EMERGENCIA } from './TeamManagementPage'
 import { useEstadoPagamentos } from '../hooks/useEstadoPagamentos'
+import { eAdepto } from '../lib/papeis'
 
 /** Euros em português — a mesma notação do Financeiro. */
 import SoccerPitchSelector from '../components/SoccerPitchSelector'
@@ -237,34 +238,38 @@ const SettingsPage: React.FC = () => {
     // `roles`, que só um administrador pode escrever. Aqui guardamos apenas o texto.
     const medicalNotesEncoded = sanitizeText(formMedicalNotes)
 
-    const payload = {
-      name: formName.trim(),
-      shirt_name: sanitizeText(formShirtName),
-      nickname: sanitizeText(formShirtName),
-      phone: sanitizeText(formPhone),
-      birth_date: sanitizeDate(formBirthDate),
-      nationality: sanitizeText(formNationality) || 'Portuguesa',
-      address: sanitizeText(formAddress),
-      postal_code: sanitizeText(formPostalCode),
-      city: sanitizeText(formCity),
-      nif: sanitizeText(formNif),
-      id_number: sanitizeText(formIdNumber),
-      id_card_expiry: sanitizeDate(formIdCardExpiry),
-      iban: sanitizeText(formIban),
-      member_number: sanitizeText(formMemberNumber),
-      emergency_contact_name: sanitizeText(formEmergencyName),
-      emergency_contact_phone: sanitizeText(formEmergencyPhone),
-      emergency_contact_relation: formEmergencyRelation ? sanitizeText(formEmergencyRelation) : null,
-      medical_notes: medicalNotesEncoded,
-      photo_url: photoUrl || null,
-      gdpr_consent: Boolean(formGdprConsent),
-      /* O equipamento e o pé são do próprio: quem sabe que tamanho veste e de
-         que pé joga é ele. A RLS deixa — a política de UPDATE da própria ficha
-         só guarda `role` e `roles`. O que fica travado é o que a equipa técnica
-         atribui: posições, funções e número de camisola. */
-      kit_size: sanitizeText(formKitSize),
-      preferred_foot: formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
-    }
+    const isPerfilAdepto = eAdepto(profile)
+
+    const payload = isPerfilAdepto
+      ? {
+          name: formName.trim(),
+          phone: sanitizeText(formPhone),
+          photo_url: photoUrl || null,
+        }
+      : {
+          name: formName.trim(),
+          shirt_name: sanitizeText(formShirtName),
+          nickname: sanitizeText(formShirtName),
+          phone: sanitizeText(formPhone),
+          birth_date: sanitizeDate(formBirthDate),
+          nationality: sanitizeText(formNationality) || 'Portuguesa',
+          address: sanitizeText(formAddress),
+          postal_code: sanitizeText(formPostalCode),
+          city: sanitizeText(formCity),
+          nif: sanitizeText(formNif),
+          id_number: sanitizeText(formIdNumber),
+          id_card_expiry: sanitizeDate(formIdCardExpiry),
+          iban: sanitizeText(formIban),
+          member_number: sanitizeText(formMemberNumber),
+          emergency_contact_name: sanitizeText(formEmergencyName),
+          emergency_contact_phone: sanitizeText(formEmergencyPhone),
+          emergency_contact_relation: formEmergencyRelation ? sanitizeText(formEmergencyRelation) : null,
+          medical_notes: medicalNotesEncoded,
+          photo_url: photoUrl || null,
+          gdpr_consent: Boolean(formGdprConsent),
+          kit_size: sanitizeText(formKitSize),
+          preferred_foot: formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
+        }
 
     try {
       const { error } = await supabase
@@ -329,53 +334,59 @@ const SettingsPage: React.FC = () => {
         <div className="flex-1 min-w-0">
           <p className="font-display font-extrabold text-[14px] text-white truncate">{formName}</p>
           <p className="text-[10px] leading-snug text-white/62 mt-1">
-            Ficha cadastral de atleta · {clubSettings?.initials ?? CLUBE_SIGLA}
+            {eAdepto(profile)
+              ? `Perfil de adepto · ${clubSettings?.initials ?? CLUBE_SIGLA}`
+              : `Ficha cadastral de atleta · ${clubSettings?.initials ?? CLUBE_SIGLA}`}
           </p>
         </div>
       </div>
 
-      {/* Atividade e estado físico: um é da direção, o outro é do próprio. */}
-      <div className="flex gap-2.5">
-        <div className="cartao-simples flex-1 flex items-center gap-2.5 px-3.5 py-3">
-          <span className="flex-1 min-w-0">
-            <span className="block font-display font-bold text-[8.5px] tracking-[0.12em] uppercase text-white/62">
-              Atividade
-            </span>
-            <span className="block font-display font-extrabold text-[12.5px] text-white mt-1.5">
-              {isInactive ? 'Inativo' : 'Ativo'}
-            </span>
-          </span>
-          <Lock size={13} className="text-white/30 shrink-0" />
-        </div>
+      {/* Atividade e estado físico: só para atletas */}
+      {!eAdepto(profile) && (
+        <>
+          <div className="flex gap-2.5">
+            <div className="cartao-simples flex-1 flex items-center gap-2.5 px-3.5 py-3">
+              <span className="flex-1 min-w-0">
+                <span className="block font-display font-bold text-[8.5px] tracking-[0.12em] uppercase text-white/62">
+                  Atividade
+                </span>
+                <span className="block font-display font-extrabold text-[12.5px] text-white mt-1.5">
+                  {isInactive ? 'Inativo' : 'Ativo'}
+                </span>
+              </span>
+              <Lock size={13} className="text-white/30 shrink-0" />
+            </div>
 
-        <button
-          type="button"
-          onClick={() => toggleClinicalStatus()}
-          aria-pressed={isInjured}
-          className={`flex-1 flex flex-col items-start gap-1.5 px-3.5 py-3 rounded-[18px] text-left cursor-pointer
-            transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-              isInjured
-                ? 'bg-csc-red/14 '
-                : 'bg-csc-light/14 '
-            }`}
-        >
-          <span
-            className={`font-display font-bold text-[8.5px] tracking-[0.12em] uppercase ${
-              isInjured ? 'text-csc-vermelho-texto' : 'text-csc-verde-texto'
-            }`}
-          >
-            Estado físico
-          </span>
-          <span className="font-display font-extrabold text-[12.5px] text-white">
-            {isInjured ? 'Lesionado' : 'Apto'}
-          </span>
-        </button>
-      </div>
+            <button
+              type="button"
+              onClick={() => toggleClinicalStatus()}
+              aria-pressed={isInjured}
+              className={`flex-1 flex flex-col items-start gap-1.5 px-3.5 py-3 rounded-[18px] text-left cursor-pointer
+                transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                  isInjured
+                    ? 'bg-csc-red/14 '
+                    : 'bg-csc-light/14 '
+                }`}
+            >
+              <span
+                className={`font-display font-bold text-[8.5px] tracking-[0.12em] uppercase ${
+                  isInjured ? 'text-csc-vermelho-texto' : 'text-csc-verde-texto'
+                }`}
+              >
+                Estado físico
+              </span>
+              <span className="font-display font-extrabold text-[12.5px] text-white">
+                {isInjured ? 'Lesionado' : 'Apto'}
+              </span>
+            </button>
+          </div>
 
-      <p className="text-[10px] leading-snug text-white/62 px-1 -mt-1">
-        A atividade é gerida pela direção. O estado físico alternas tu, entre apto e lesionado.
-      </p>
+          <p className="text-[10px] leading-snug text-white/62 px-1 -mt-1">
+            A atividade é gerida pela direção. O estado físico alternas tu, entre apto e lesionado.
+          </p>
+        </>
+      )}
 
       {/*
         As duas coisas da conta que não são a ficha: o que devo, e o que quero
@@ -385,58 +396,56 @@ const SettingsPage: React.FC = () => {
         pessoais.
       */}
       <div className="flex gap-2.5">
-        {/* A mesma cor do sinal de € do cabeçalho: vermelho com alguma coisa
-            vencida, laranja a menos de oito dias, neutro em dia. Duas cores
-            diferentes para o mesmo estado, em dois sítios do mesmo ecrã, era
-            deixar o atleta a decidir em qual acreditar. */}
-        <button
-          type="button"
-          onClick={() => { triggerHaptic('light'); setPagamentosAbertos(true) }}
-          className={`cartao-simples flex-1 min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
-            transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+        {!eAdepto(profile) && (
+          <button
+            type="button"
+            onClick={() => { triggerHaptic('light'); setPagamentosAbertos(true) }}
+            className={`cartao-simples flex-1 min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
+              transition-transform duration-150 active:scale-97
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                pagamentos.cor === 'vermelho'
+                  ? 'bg-csc-red/12 border-csc-red/32'
+                  : pagamentos.cor === 'laranja'
+                    ? 'bg-csc-gold/12 border-csc-gold/32'
+                    : ''
+              }`}
+          >
+            <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-display font-black text-[14px] ${
               pagamentos.cor === 'vermelho'
-                ? 'bg-csc-red/12 border-csc-red/32'
+                ? 'bg-csc-red/22 text-csc-vermelho-texto'
                 : pagamentos.cor === 'laranja'
-                  ? 'bg-csc-gold/12 border-csc-gold/32'
-                  : ''
-            }`}
-        >
-          <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-display font-black text-[14px] ${
-            pagamentos.cor === 'vermelho'
-              ? 'bg-csc-red/22 text-csc-vermelho-texto'
-              : pagamentos.cor === 'laranja'
-                ? 'bg-csc-gold/22 text-csc-gold'
-                : 'bg-csc-gold/18 text-csc-gold'
-          }`}>
-            €
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-display font-extrabold text-[12.5px] text-white">
-              Os meus pagamentos
-            </span>
-            <span className={`block text-[10px] mt-0.5 ${
-              pagamentos.cor === 'vermelho'
-                ? 'text-csc-vermelho-texto'
-                : pagamentos.cor === 'laranja'
-                  ? 'text-csc-gold'
-                  : 'text-white/62'
+                  ? 'bg-csc-gold/22 text-csc-gold'
+                  : 'bg-csc-gold/18 text-csc-gold'
             }`}>
-              {pagamentos.cor === 'vermelho'
-                ? `${pagamentos.emAtraso.length} em atraso · ${fmtEuro(pagamentos.emAtraso.reduce((t, i) => t + i.valor, 0))}`
-                : pagamentos.cor === 'laranja'
-                  ? `${pagamentos.aVencer.length} a vencer · ${fmtEuro(pagamentos.totalEmAviso)}`
-                  : 'Quotas e encargos'}
+              €
             </span>
-          </span>
-        </button>
+            <span className="min-w-0 flex-1">
+              <span className="block font-display font-extrabold text-[12.5px] text-white">
+                Os meus pagamentos
+              </span>
+              <span className={`block text-[10px] mt-0.5 ${
+                pagamentos.cor === 'vermelho'
+                  ? 'text-csc-vermelho-texto'
+                  : pagamentos.cor === 'laranja'
+                    ? 'text-csc-gold'
+                    : 'text-white/62'
+              }`}>
+                {pagamentos.cor === 'vermelho'
+                  ? `${pagamentos.emAtraso.length} em atraso · ${fmtEuro(pagamentos.emAtraso.reduce((t, i) => t + i.valor, 0))}`
+                  : pagamentos.cor === 'laranja'
+                    ? `${pagamentos.aVencer.length} a vencer · ${fmtEuro(pagamentos.totalEmAviso)}`
+                    : 'Quotas e encargos'}
+              </span>
+            </span>
+          </button>
+        )}
 
         <button
           type="button"
           onClick={() => { triggerHaptic('light'); setAvisosAbertos(true) }}
-          className="cartao-simples flex-1 min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
+          className={`cartao-simples ${eAdepto(profile) ? 'w-full' : 'flex-1'} min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
             transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
         >
           <span className="w-8 h-8 rounded-xl bg-white/10 text-csc-gold flex items-center justify-center shrink-0">
             <Bell size={15} />
@@ -445,9 +454,9 @@ const SettingsPage: React.FC = () => {
             <span className="block font-display font-extrabold text-[12.5px] text-white">
               Avisos
             </span>
-            {/* Dizia "O que quero saber", que não diz o que a app faz com
-                isto. O nome dos três avisos é o que faz alguém entrar aqui. */}
-            <span className="block text-[10px] text-white/62 mt-0.5">Convocatórias e mais</span>
+            <span className="block text-[10px] text-white/62 mt-0.5">
+              {eAdepto(profile) ? 'Comunicados e eventos' : 'Convocatórias e mais'}
+            </span>
           </span>
         </button>
       </div>
@@ -471,14 +480,14 @@ const SettingsPage: React.FC = () => {
         uma definição da conta, não uma ação de todos os ecrãs. Só aparece a
         quem tem mais do que um perfil.
       */}
-      {(assignedRoles?.length ?? 1) > 1 && (
+      {((assignedRoles?.length ?? 1) > 1 || actualRole === 'admin') && (
         <div className="cartao-simples p-4">
           <p className="font-display font-extrabold uppercase text-[9.5px] tracking-[0.18em] text-white/62">
             Ver a app como
           </p>
           <div className="flex flex-wrap gap-2 mt-3">
-            {(['admin', 'coach', 'player'] as const)
-              .filter(papel => assignedRoles?.includes(papel))
+            {(['admin', 'coach', 'player', 'supporter'] as const)
+              .filter(papel => assignedRoles?.includes(papel) || actualRole === 'admin')
               .map(papel => {
                 const escolhido = profile?.role === papel
                 return (
@@ -497,7 +506,7 @@ const SettingsPage: React.FC = () => {
                           : 'bg-white/5 text-white/70'
                       }`}
                   >
-                    {papel === 'admin' ? 'Direção' : papel === 'coach' ? 'Treinador' : 'Jogador'}
+                    {papel === 'admin' ? 'Direção' : papel === 'coach' ? 'Treinador' : papel === 'player' ? 'Jogador' : 'Adepto'}
                     {papel === actualRole && ' (real)'}
                   </button>
                 )
@@ -520,7 +529,79 @@ const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-6">
+      {eAdepto(profile) ? (
+        <form onSubmit={handleSave} className="space-y-5">
+          <div className="cartao-simples p-4 space-y-3.5">
+            <h3 className={SECCAO}>
+              <UserIcon size={16} className="text-csc-gold" />
+              <span>Identificação & Contactos</span>
+            </h3>
+
+            <div>
+              <label className={ETIQUETA}>Nome Completo *</label>
+              <input
+                type="text"
+                required
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                className={CAMPO}
+                placeholder="Ex: João Silva"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className={ETIQUETA}>Email de Acesso (Apenas Leitura)</label>
+                <div className="flex items-center bg-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white/70 font-medium font-mono">
+                  <Mail size={15} className="mr-2 text-white/60 shrink-0" />
+                  <span className="truncate">{formEmail}</span>
+                </div>
+              </div>
+              <div>
+                <label className={ETIQUETA}>Telemóvel</label>
+                <input
+                  type="tel"
+                  value={formPhone}
+                  onChange={(e) => setFormPhone(e.target.value)}
+                  className={`${CAMPO} font-mono`}
+                  placeholder="912 345 678"
+                />
+              </div>
+            </div>
+
+            {/* Fotografia de perfil */}
+            <div className="p-3.5 bg-white/5 rounded-2xl space-y-2 mt-2">
+              <label htmlFor="perfil-foto-adepto" className="block text-xs font-bold text-white/80">Fotografia de Perfil</label>
+              <input
+                id="perfil-foto-adepto"
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleUploadFile(e, 'photo')}
+                disabled={uploadingDoc === 'photo'}
+                className="text-xs w-full"
+              />
+              {photoUrl && (
+                <div className="flex items-center gap-2 pt-1">
+                  <img src={photoUrl} alt="Preview" className="w-8 h-8 rounded-full object-cover border border-csc-gold" />
+                  <span className="text-[11px] text-csc-verde-texto font-bold">Foto anexada</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-1">
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="w-full min-h-12 flex items-center justify-center gap-2 px-6 rounded-3xl bg-csc-gold text-csc-tinta font-display font-extrabold text-[12.5px] cursor-pointer transition-transform duration-150 active:scale-97 disabled:opacity-45"
+            >
+              <Save size={16} />
+              <span>{isSaving ? 'A guardar…' : 'Guardar dados'}</span>
+            </button>
+          </div>
+        </form>
+      ) : (
+        <form onSubmit={handleSave} className="space-y-6">
         
         {/* 1. DADOS PESSOAIS & IDENTIFICAÇÃO FISCAL */}
         <div className="space-y-3.5">
@@ -962,6 +1043,7 @@ const SettingsPage: React.FC = () => {
           </button>
         </div>
       </form>
+      )}
 
       {/*
         Terminar sessão vivia na gaveta do menu, que o redesenho eliminou. O

@@ -1,5 +1,6 @@
 import React from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { eJogador } from '../../lib/papeis'
 
 /**
  * O estado clínico de quem está a usar a app — "Apto", "Lesionado", "Inativo" —,
@@ -21,7 +22,7 @@ const ESTADOS: Record<string, { texto: string; classe: string }> = {
 
 export const PastilhaEstado: React.FC<{ className?: string }> = ({ className = '' }) => {
   const { profile } = useAuth()
-  if (!profile) return null
+  if (!profile || !eJogador(profile)) return null
 
   const estado = ESTADOS[profile.status ?? 'active'] ?? ESTADOS.active
 

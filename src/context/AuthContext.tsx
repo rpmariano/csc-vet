@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { sincronizarTreinosFuturos } from '../lib/treinosFuturos'
 
-export type UserRole = 'player' | 'coach' | 'admin'
+export type UserRole = 'player' | 'coach' | 'admin' | 'supporter'
 export type ProfileStatus = 'active' | 'inactive' | 'injured'
 
 export interface Profile {
@@ -56,7 +56,7 @@ export const cleanNotesFromRolesTag = (notes: string | null | undefined): string
   return cleaned || null
 }
 
-const VALID_ROLES: UserRole[] = ['player', 'coach', 'admin']
+const VALID_ROLES: UserRole[] = ['player', 'coach', 'admin', 'supporter']
 
 /**
  * Forma mínima de que `extractRolesFromProfile` precisa — um `Profile` completo
@@ -100,6 +100,7 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
   // 3. Derivar da coluna `role`
   if (profile.role === 'admin') return ['admin', 'coach', 'player']
   if (profile.role === 'coach') return ['coach', 'player']
+  if (profile.role === 'supporter') return ['supporter']
   return ['player']
 }
 
@@ -249,7 +250,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const setSimulatedRole = (role: UserRole | null) => {
     if (!actualProfile) return
-    if (role && !assignedRoles.includes(role)) return
+    const podeSimular = role && (assignedRoles.includes(role) || actualProfile.role === 'admin')
+    if (role && !podeSimular) return
 
     if (role && role !== actualProfile.role) {
       localStorage.setItem('csc_simulated_role', role)
@@ -312,13 +314,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const actualRole = actualProfile?.role ?? null
-  const isSimulatingRole = Boolean(simulatedRole && simulatedRole !== actualRole && assignedRoles.includes(simulatedRole))
+  const isSimulatingRole = Boolean(
+    simulatedRole &&
+    simulatedRole !== actualRole &&
+    (assignedRoles.includes(simulatedRole) || actualRole === 'admin')
+  )
+
+  const effectiveRoles: UserRole[] = isSimulatingRole && simulatedRole
+    ? [simulatedRole]
+    : assignedRoles
 
   const effectiveProfile: Profile | null = actualProfile
     ? {
         ...actualProfile,
         role: isSimulatingRole && simulatedRole ? simulatedRole : actualProfile.role,
-        roles: assignedRoles
+        roles: effectiveRoles
       }
     : null
 

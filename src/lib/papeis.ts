@@ -8,3 +8,17 @@ import { extractRolesFromProfile, type RoleSource } from '../context/AuthContext
  */
 export const eJogador = (profile: RoleSource | null | undefined): boolean =>
   extractRolesFromProfile(profile).includes('player')
+
+export const eTreinador = (profile: RoleSource | null | undefined): boolean =>
+  extractRolesFromProfile(profile).includes('coach')
+
+export const eAdmin = (profile: RoleSource | null | undefined): boolean =>
+  extractRolesFromProfile(profile).includes('admin')
+
+/**
+ * Adepto — utilizador com perfil de consulta (agenda de jogos, classificação, estatísticas)
+ * que não joga, não treina e não pertence à direção. Pode ser convocado para eventos/convívios,
+ * mas não para treinos ou jogos.
+ */
+export const eAdepto = (profile: RoleSource | null | undefined): boolean =>
+  Boolean(profile?.role === 'supporter' || extractRolesFromProfile(profile).includes('supporter'))
