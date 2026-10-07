@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { MolduraEntrada, CampoEntrada, Botao, CartaoSimples } from '../components/ui'
-import { caminhoNovaPalavraPasse } from '../lib/rotas'
+import { caminhoNovaPalavraPasse, BASE } from '../lib/rotas'
 import { CLUBE_NOME } from '../lib/clube'
 
 /**
@@ -70,7 +70,10 @@ const Login: React.FC = () => {
         const { error } = await supabase.auth.signUp({
           email,
           password: palavraPasse,
-          options: { data: { name: nome } },
+          options: {
+            data: { name: nome },
+            emailRedirectTo: `${window.location.origin}${BASE}`,
+          },
         })
         if (error) throw error
         setAviso('Conta criada. Confirma o email antes de entrares.')
@@ -98,7 +101,7 @@ const Login: React.FC = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}${import.meta.env.BASE_URL || '/'}` },
+        options: { redirectTo: `${window.location.origin}${BASE}` },
       })
       if (error) throw error
     } catch (err) {
