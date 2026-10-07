@@ -22,6 +22,7 @@ export { LinhaAtleta, NumeroCamisola } from './LinhaAtleta'
 export { TituloEcra, EtiquetaSeccao, NumeroGrande } from './Tipografia'
 export { CaixaProcura } from './CaixaProcura'
 export { Mosaicos } from './Mosaicos'
+export { BlocoData } from './BlocoData'
 
 export type { AvatarPerfilProps } from './AvatarPerfil'
 export type { CabecalhoEcraProps } from './CabecalhoEcra'
