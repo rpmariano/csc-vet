@@ -188,3 +188,56 @@ test('programador (rpmariano@gmail.com) vê "Ver a app como" e pode alternar per
   const simulatedRoleNoStorage = await page.evaluate(() => window.localStorage.getItem('csc_simulated_role'))
   expect(simulatedRoleNoStorage).toBe('coach')
 })
+
+test('adepto não vê sinal de pagamentos, não tem "Os meus pagamentos" nem opção de quotas nos avisos', async ({ page }) => {
+  const perfilAdepto = {
+    id: '00000000-0000-4000-8000-000000000077',
+    name: 'Adepto Fiel',
+    email: 'adepto@clube.pt',
+    role: 'supporter',
+    roles: ['supporter'],
+    status: 'active',
+    jersey_number: null,
+    shirt_name: null,
+    nickname: null,
+    position: null,
+    photo_url: null,
+    phone: '912345678',
+    birth_date: null,
+  }
+
+  await montarSupabaseFalso(page, {
+    profiles: [perfilAdepto],
+    v_players_public: [soPlantel(perfilAdepto)],
+    club_settings: [{ id: 1, home_field_id: null, club_name: 'GDS Cascais', initials: 'CSC' }],
+    financial_settings: [{
+      id: 1, season_start_month: 9, season_end_month: 7,
+      quota_amount: 15, quota_excluded_months: [8], quota_due_day: 8,
+    }],
+    notification_preferences: [{
+      profile_id: perfilAdepto.id,
+      convocatorias: true,
+      comunicados: true,
+      quotas_em_atraso: false,
+    }],
+  })
+
+  // 1. Na Home, não deve aparecer o sinal de € de pagamentos nem a faixa de convite com quotas
+  await page.goto('/csc-vet/')
+  await page.waitForLoadState('networkidle')
+  await expect(page.locator('button[aria-label*="pagamento"]')).toHaveCount(0)
+  await expect(page.getByText('Não estás a receber avisos')).not.toBeVisible()
+
+  // 2. Nas Definições, não deve ter o cartão "Os meus pagamentos"
+  await page.goto('/csc-vet/settings')
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByText('Os meus pagamentos')).not.toBeVisible()
+
+  // 3. Ao abrir "Avisos", não deve listar a opção de Quotas
+  await page.getByRole('button', { name: /Avisos/i }).click()
+  await expect(page.getByRole('heading', { name: 'Avisos' })).toBeVisible()
+  await expect(page.getByText('Apoio à equipa')).toBeVisible()
+  await expect(page.getByText('Comunicados', { exact: true })).toBeVisible()
+  await expect(page.getByText('Quotas', { exact: true })).not.toBeVisible()
+})
+

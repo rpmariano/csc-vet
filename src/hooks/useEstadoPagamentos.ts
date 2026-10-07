@@ -83,9 +83,12 @@ export function useEstadoPagamentos(
   const estadoClinico = jogador?.status
   const inicio = jogador?.quota_start_date
   const fim = jogador?.quota_end_date
+  const perfilQualquer = jogador as { role?: string; roles?: string[] } | null | undefined
+  const ePerfilAdepto = perfilQualquer?.role === 'supporter' ||
+    (Array.isArray(perfilQualquer?.roles) && perfilQualquer.roles.includes('supporter'))
 
   useEffect(() => {
-    if (!ativo || !jogadorId) {
+    if (!ativo || !jogadorId || ePerfilAdepto) {
       setEstado({ ...VAZIO })
       return
     }

@@ -4,6 +4,7 @@ import { BottomSheet } from './BottomSheet'
 import { triggerHaptic } from '../utils/haptics'
 import { useEstadoPagamentos, DIAS_DE_AVISO, type ItemPagamento } from '../hooks/useEstadoPagamentos'
 import { fmtEuro } from './financeiro/estilos'
+import { eAdepto } from '../lib/papeis'
 
 /**
  * O sinal de € do cabeçalho — à esquerda da pastilha do estado clínico.
@@ -46,8 +47,8 @@ export const SinalPagamentos: React.FC = () => {
   const { profile, assignedRoles } = useAuth()
   const [aberto, setAberto] = useState(false)
 
-  /* As quotas e os encargos são de quem joga, seja qual for o outro chapéu. */
-  const temPapelDeJogador = assignedRoles.includes('player')
+  /* As quotas e os encargos são de quem joga, seja qual for o outro chapéu. Adeptos nunca pagam quotas. */
+  const temPapelDeJogador = !eAdepto(profile) && assignedRoles.includes('player')
   const estado = useEstadoPagamentos(profile, temPapelDeJogador)
 
   if (!temPapelDeJogador || estado.cor === null) return null

@@ -89,10 +89,18 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
   const rawRole = profile.role as UserRole | undefined
   const defaultRole: UserRole = rawRole && VALID_ROLES.includes(rawRole) ? rawRole : 'player'
 
+  // Adepto é um perfil exclusivo de consulta — nunca joga, não treina e não paga quotas.
+  if (defaultRole === 'supporter' || rawRole === 'supporter') {
+    return ['supporter']
+  }
+
   // 1. Coluna `roles` do Supabase — a fonte de verdade. É escrita apenas por
   //    administradores (a RLS impede que cada um altere os seus próprios papéis).
   if (Array.isArray(profile.roles) && profile.roles.length > 0) {
     const fromColumn = profile.roles.filter((r): r is UserRole => VALID_ROLES.includes(r as UserRole))
+    if (fromColumn.includes('supporter')) {
+      return ['supporter']
+    }
     if (fromColumn.length > 0) {
       // O papel real tem sempre de constar, mesmo que a coluna esteja incompleta.
       return fromColumn.includes(defaultRole) ? fromColumn : [...fromColumn, defaultRole]
@@ -109,6 +117,7 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
       .split(',')
       .map(r => r.trim() as UserRole)
       .filter(r => VALID_ROLES.includes(r))
+    if (parsed.includes('supporter')) return ['supporter']
     if (parsed.length > 0) return parsed
   }
 

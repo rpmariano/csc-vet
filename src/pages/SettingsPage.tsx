@@ -103,7 +103,7 @@ const SettingsPage: React.FC = () => {
   const [pagamentosAbertos, setPagamentosAbertos] = useState(false)
   /* O estado de pagamentos pinta o cartão; a persiana refaz as contas quando
      abre, e são as mesmas contas — o `useEstadoPagamentos` é um só. */
-  const pagamentos = useEstadoPagamentos(profile, Boolean(profile?.id))
+  const pagamentos = useEstadoPagamentos(profile, Boolean(profile?.id) && !eAdepto(profile))
   const [avisosAbertos, setAvisosAbertos] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -555,6 +555,7 @@ const SettingsPage: React.FC = () => {
         aoFechar={() => setAvisosAbertos(false)}
         perfilId={profile?.id}
         eEquipaTecnica={profile?.role === 'coach' || profile?.role === 'admin'}
+        eAdepto={eAdepto(profile)}
       />
 
       {/*

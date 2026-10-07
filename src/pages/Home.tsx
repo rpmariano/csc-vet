@@ -138,7 +138,7 @@ const Home: React.FC = () => {
     resposta. Aparece em faixa a quem nunca escolheu, e outra vez logo a seguir
     a uma resposta — que é quando a pergunta se explica sozinha.
   */
-  const convite = useConviteAvisos(profile?.id, assignedRoles.includes('player'))
+  const convite = useConviteAvisos(profile?.id, assignedRoles.includes('player') && !eAdepto(profile))
   const [conviteAberto, setConviteAberto] = useState(false)
   /* Retido, e não derivado do `aberto`: a persiana leva 240ms a sair, e um
      motivo que se apagasse ao fechar trocava a frase à vista de quem está a

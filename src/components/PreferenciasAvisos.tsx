@@ -81,6 +81,11 @@ const DO_ATLETA: readonly { chave: keyof Preferencias; titulo: string; nota: str
   { chave: 'quotas_em_atraso', titulo: 'Quotas', nota: 'Só quando ficas em atraso' },
 ]
 
+const DO_ADEPTO: readonly { chave: keyof Preferencias; titulo: string; nota: string }[] = [
+  { chave: 'convocatorias', titulo: 'Apoio à equipa', nota: 'Convites para vires apoiar o Cascais nos jogos e convívios' },
+  { chave: 'comunicados', titulo: 'Comunicados', nota: 'Novidades e avisos do clube' },
+]
+
 const DE_QUEM_GERE: readonly { chave: keyof Preferencias; titulo: string; nota: string }[] = [
   { chave: 'eventos_sem_convocatoria', titulo: 'Evento sem convocatória', nota: 'Enquanto ninguém estiver convocado' },
   { chave: 'fichas_por_preencher', titulo: 'Ficha de jogo por preencher', nota: 'No dia seguinte ao jogo' },
@@ -101,7 +106,8 @@ export const PreferenciasAvisos: React.FC<{
   aoFechar: () => void
   perfilId: string | undefined
   eEquipaTecnica: boolean
-}> = ({ aberto, aoFechar, perfilId, eEquipaTecnica }) => {
+  eAdepto?: boolean
+}> = ({ aberto, aoFechar, perfilId, eEquipaTecnica, eAdepto = false }) => {
   const [prefs, setPrefs] = useState<Preferencias>(OMISSOES)
   const [aCarregar, setACarregar] = useState(true)
   const [aGuardar, setAGuardar] = useState(false)
@@ -133,13 +139,16 @@ export const PreferenciasAvisos: React.FC<{
               (juntas as Record<string, unknown>)[chave] = valor
             }
           }
+          if (eAdepto) {
+            juntas.quotas_em_atraso = false
+          }
           setPrefs(juntas)
         }
         setACarregar(false)
       })
 
     return () => { cancelado = true }
-  }, [aberto, perfilId])
+  }, [aberto, perfilId, eAdepto])
 
   /*
     Guardar faz as duas coisas: escreve a escolha e põe este telemóvel a
@@ -163,7 +172,10 @@ export const PreferenciasAvisos: React.FC<{
     if (!perfilId) return
     setAGuardar(true)
     try {
-      const querReceber = algumLigado(prefs)
+      const prefsParaGravar = eAdepto
+        ? { ...prefs, quotas_em_atraso: false }
+        : prefs
+      const querReceber = algumLigado(prefsParaGravar)
       let estadoFinal = push
       let recado: string | null = null
 
@@ -184,7 +196,7 @@ export const PreferenciasAvisos: React.FC<{
 
       const { error } = await supabase
         .from('notification_preferences')
-        .upsert({ profile_id: perfilId, ...prefs, updated_at: new Date().toISOString() })
+        .upsert({ profile_id: perfilId, ...prefsParaGravar, updated_at: new Date().toISOString() })
       if (error) throw error
 
       setPush(estadoFinal)
@@ -296,7 +308,7 @@ export const PreferenciasAvisos: React.FC<{
               Avisos
             </p>
             <div className="cartao-simples overflow-hidden">
-              {DO_ATLETA.map(a => (
+              {(eAdepto ? DO_ADEPTO : DO_ATLETA).map(a => (
                 <Interruptor
                   key={a.chave}
                   ligado={Boolean(prefs[a.chave])}
@@ -308,7 +320,7 @@ export const PreferenciasAvisos: React.FC<{
             </div>
           </div>
 
-          {eEquipaTecnica && (
+          {!eAdepto && eEquipaTecnica && (
             <div>
               <p className="flex items-center gap-1.5 font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold mb-2">
                 <Lock size={11} />
