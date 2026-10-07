@@ -100,6 +100,10 @@ SELECT e.player_id,
 REVOKE ALL ON public.v_quota_status FROM PUBLIC, anon;
 GRANT SELECT ON public.v_quota_status TO authenticated;
 
+-- 1.1 Garantir existência da coluna target_audience em announcements
+ALTER TABLE public.announcements 
+ADD COLUMN IF NOT EXISTS target_audience TEXT DEFAULT 'all';
+
 -- 2. Atualizar avisos_pendentes() para excluir definitivamente quotas para adeptos
 CREATE OR REPLACE FUNCTION public.avisos_pendentes()
 RETURNS TABLE (
@@ -186,7 +190,6 @@ comunicados AS (
     CROSS JOIN announcements an
    WHERE a.comunicados
      AND an.published_at > now() - interval '14 days'
-     AND an.is_active IS DISTINCT FROM false
      AND (
        NOT a.adepto
        OR (
