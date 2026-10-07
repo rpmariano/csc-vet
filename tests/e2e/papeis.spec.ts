@@ -107,3 +107,84 @@ for (const { papel, barra, abre, fecha } of PERFIS) {
     expect(problemas, problemas.join('\n')).toEqual([])
   })
 }
+
+test('administrador não-programador (ex: João Matuto) não vê "Ver a app como" e limpa resíduos de simulação', async ({ page }) => {
+  const perfilNaoDev = {
+    id: '00000000-0000-4000-8000-000000000099',
+    name: 'João Matuto',
+    email: 'jocamatuto@gmail.com',
+    role: 'admin',
+    roles: ['admin'],
+    status: 'active',
+    jersey_number: 10,
+    shirt_name: 'MATUTO',
+    nickname: 'Matuto',
+    position: 'Médio',
+    photo_url: null,
+    phone: null,
+    birth_date: '1980-01-01',
+  }
+
+  await montarSupabaseFalso(page, {
+    profiles: [perfilNaoDev],
+    v_players_public: [soPlantel(perfilNaoDev)],
+    club_settings: [{ id: 1, home_field_id: null, club_name: 'GDS Cascais', initials: 'CSC' }],
+  })
+
+  // Simular resíduo de simulação em localStorage deixado antes da restrição
+  await page.addInitScript(() => {
+    window.localStorage.setItem('csc_simulated_role', 'coach')
+  })
+
+  await page.goto('/csc-vet/settings')
+  await page.waitForLoadState('networkidle')
+
+  // O bloco de simulação não deve ser visível para não-desenvolvedores
+  await expect(page.getByText('Ver a app como')).not.toBeVisible()
+
+  // O resíduo deve ter sido limpo automaticamente do localStorage
+  const simulatedRoleNoStorage = await page.evaluate(() => window.localStorage.getItem('csc_simulated_role'))
+  expect(simulatedRoleNoStorage).toBeNull()
+
+  // Deve manter o seu cargo real de Direção
+  await expect(page.getByText('Administrador / Direção')).toBeVisible()
+})
+
+test('programador (rpmariano@gmail.com) vê "Ver a app como" e pode alternar perfil', async ({ page }) => {
+  const perfilDev = {
+    id: '00000000-0000-4000-8000-000000000088',
+    name: 'Rui Mariano',
+    email: 'rpmariano@gmail.com',
+    role: 'admin',
+    roles: ['admin'],
+    status: 'active',
+    jersey_number: 17,
+    shirt_name: 'MARIANO',
+    nickname: 'Mariano',
+    position: 'Defesa',
+    photo_url: null,
+    phone: null,
+    birth_date: '1981-02-28',
+  }
+
+  await montarSupabaseFalso(page, {
+    profiles: [perfilDev],
+    v_players_public: [soPlantel(perfilDev)],
+    club_settings: [{ id: 1, home_field_id: null, club_name: 'GDS Cascais', initials: 'CSC' }],
+  })
+
+  await page.goto('/csc-vet/settings')
+  await page.waitForLoadState('networkidle')
+
+  // O bloco deve estar visível
+  await expect(page.getByText('Ver a app como')).toBeVisible()
+
+  // Deve ter botões para Direção, Treinador, Jogador, Adepto
+  const btnTreinador = page.getByRole('button', { name: 'Treinador' })
+  await expect(btnTreinador).toBeVisible()
+
+  // Clicar em Treinador deve ativar a simulação
+  await btnTreinador.click()
+  const simulatedRoleNoStorage = await page.evaluate(() => window.localStorage.getItem('csc_simulated_role'))
+  expect(simulatedRoleNoStorage).toBe('coach')
+})

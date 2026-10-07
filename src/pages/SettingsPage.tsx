@@ -54,7 +54,7 @@ const SECCAO =
   'flex items-center gap-2 mb-2.5'
 
 const SettingsPage: React.FC = () => {
-  const { profile, assignedRoles, actualRole, setSimulatedRole, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
+  const { profile, assignedRoles, actualRole, canSimulateRoles, setSimulatedRole, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
   const { clubSettings } = useClub()
   const navegar = useNavigate()
   const estadoDaEntrada = useLocation().state as { origem?: unknown } | null
@@ -558,19 +558,16 @@ const SettingsPage: React.FC = () => {
       />
 
       {/*
-        Alternar entre os perfis atribuídos. Vivia na pílula de cargo do
-        cabeçalho da app, que o redesenho eliminou — e o sítio certo é este: é
-        uma definição da conta, não uma ação de todos os ecrãs. Só aparece a
-        quem tem mais do que um perfil.
+        Simulação de perfis para teste e desenvolvimento.
+        Apenas visível para o desenvolvedor da aplicação (rpmariano@gmail.com).
       */}
-      {((assignedRoles?.length ?? 1) > 1 || actualRole === 'admin') && (
+      {canSimulateRoles && (
         <div className="cartao-simples p-4">
           <p className="font-display font-extrabold uppercase text-[9.5px] tracking-[0.18em] text-white/62">
             Ver a app como
           </p>
           <div className="flex flex-wrap gap-2 mt-3">
             {(['admin', 'coach', 'player', 'supporter'] as const)
-              .filter(papel => assignedRoles?.includes(papel) || actualRole === 'admin')
               .map(papel => {
                 const escolhido = profile?.role === papel
                 return (

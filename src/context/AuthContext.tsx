@@ -59,6 +59,18 @@ export const cleanNotesFromRolesTag = (notes: string | null | undefined): string
 const VALID_ROLES: UserRole[] = ['player', 'coach', 'admin', 'supporter']
 
 /**
+ * Emails autorizados a utilizar as ferramentas de desenvolvimento e simulação de papéis.
+ * Apenas o desenvolvedor principal tem acesso a alternar entre perfis para testes.
+ */
+const DEVELOPER_EMAILS = ['rpmariano@gmail.com']
+
+export const isDeveloperEmail = (email?: string | null): boolean => {
+  if (!email) return false
+  const clean = email.toLowerCase().trim()
+  return DEVELOPER_EMAILS.includes(clean) || clean.endsWith('@csc-vet.local')
+}
+
+/**
  * Forma mínima de que `extractRolesFromProfile` precisa — um `Profile` completo
  * cumpre isto sempre, mas também permite passar-lhe projeções mais estreitas
  * (ex.: a lista de jogadores da Página Financeira, que não busca o perfil
@@ -112,6 +124,7 @@ interface AuthContextType {
   profile: Profile | null
   assignedRoles: UserRole[]
   actualRole: UserRole | null
+  canSimulateRoles: boolean
   isSimulatingRole: boolean
   setSimulatedRole: (role: UserRole | null) => void
   toggleClinicalStatus: (overrideStatus?: 'active' | 'injured') => Promise<ProfileStatus | undefined>
@@ -251,10 +264,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const assignedRoles = extractRolesFromProfile(actualProfile)
 
+  // Apenas o desenvolvedor (rpmariano@gmail.com) tem permissão para ver as ferramentas
+  // de simulação e alternar perfis.
+  const canSimulateRoles = Boolean(
+    isDeveloperEmail(actualProfile?.email || user?.email)
+  )
+
+  // Limpeza de segurança: utilizadores normais (como outros membros da direção) não devem
+  // ter papéis simulados ativos. Se existirem resíduos em localStorage, são eliminados.
+  useEffect(() => {
+    if (!canSimulateRoles && localStorage.getItem('csc_simulated_role')) {
+      localStorage.removeItem('csc_simulated_role')
+      setSimulatedRoleState(null)
+    }
+  }, [canSimulateRoles])
+
   const setSimulatedRole = (role: UserRole | null) => {
-    if (!actualProfile) return
-    const podeSimular = role && (assignedRoles.includes(role) || actualProfile.role === 'admin')
-    if (role && !podeSimular) return
+    if (!actualProfile || !canSimulateRoles) return
 
     if (role && role !== actualProfile.role) {
       localStorage.setItem('csc_simulated_role', role)
@@ -318,9 +344,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const actualRole = actualProfile?.role ?? null
   const isSimulatingRole = Boolean(
+    canSimulateRoles &&
     simulatedRole &&
-    simulatedRole !== actualRole &&
-    (assignedRoles.includes(simulatedRole) || actualRole === 'admin')
+    simulatedRole !== actualRole
   )
 
   const effectiveRoles: UserRole[] = isSimulatingRole && simulatedRole
@@ -341,6 +367,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       profile: effectiveProfile, 
       assignedRoles,
       actualRole, 
+      canSimulateRoles,
       isSimulatingRole, 
       setSimulatedRole,
       toggleClinicalStatus,

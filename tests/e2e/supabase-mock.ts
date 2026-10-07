@@ -62,7 +62,7 @@ export const FIXTURES_BASE: Fixtures = {
 }
 
 /** Sessão com validade longa: o cliente aceita-a sem ir à rede renovar. */
-function sessaoFalsa() {
+function sessaoFalsa(email = UTILIZADOR_TESTE.email, id = UTILIZADOR_TESTE.id) {
   const expiraEm = Math.floor(Date.now() / 1000) + 60 * 60 * 24
   return {
     access_token: 'token-de-teste',
@@ -71,10 +71,10 @@ function sessaoFalsa() {
     expires_in: 60 * 60 * 24,
     expires_at: expiraEm,
     user: {
-      id: UTILIZADOR_TESTE.id,
+      id,
       aud: 'authenticated',
       role: 'authenticated',
-      email: UTILIZADOR_TESTE.email,
+      email,
       phone: '',
       app_metadata: { provider: 'email', providers: ['email'] },
       user_metadata: { full_name: 'Utilizador de Teste' },
@@ -103,16 +103,23 @@ function responder(route: Route, corpo: unknown, status = 200) {
 /**
  * Instala a sessão e as rotas falsas. Chamar ANTES do primeiro `page.goto`.
  */
-export async function montarSupabaseFalso(page: Page, fixtures: Fixtures = {}) {
+export async function montarSupabaseFalso(
+  page: Page,
+  fixtures: Fixtures = {},
+  utilizador?: { id?: string; email?: string }
+) {
   const tabelas: Fixtures = { ...FIXTURES_BASE, ...fixtures }
+  const email = utilizador?.email ?? (fixtures.profiles?.[0]?.email as string) ?? UTILIZADOR_TESTE.email
+  const id = utilizador?.id ?? (fixtures.profiles?.[0]?.id as string) ?? UTILIZADOR_TESTE.id
+  const sessao = sessaoFalsa(email, id)
 
   await page.addInitScript(
-    ([chave, sessao]) => {
-      window.localStorage.setItem(chave as string, JSON.stringify(sessao))
+    ([chave, s]) => {
+      window.localStorage.setItem(chave as string, JSON.stringify(s))
       // Sem isto, o papel simulado de uma execução anterior contaminava a seguinte.
       window.localStorage.removeItem('csc_simulated_role')
     },
-    [CHAVE_SESSAO, sessaoFalsa()] as const,
+    [CHAVE_SESSAO, sessao] as const,
   )
 
   // Rede de segurança: qualquer outro Supabase (o real, se alguma configuração
@@ -132,7 +139,7 @@ export async function montarSupabaseFalso(page: Page, fixtures: Fixtures = {}) {
 
     if (url.includes('/auth/v1/')) {
       if (url.includes('/logout')) return responder(route, {})
-      return responder(route, sessaoFalsa())
+      return responder(route, sessao)
     }
 
     if (url.includes('/rest/v1/')) {
