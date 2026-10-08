@@ -14,7 +14,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, isUnassigned } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -44,6 +44,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
       limparDestinoAutenticacao()
       return <Navigate to={pendente} replace />
     }
+  }
+
+  // Sem perfil atribuído pelo clube, o utilizador só tem acesso à Home e ao seu Perfil (/settings para logout).
+  if (isUnassigned && location.pathname !== '/' && location.pathname !== '/settings') {
+    return <Navigate to="/" replace />
   }
 
   // Sem perfil carregado não há como validar o cargo: negar em vez de deixar passar.

@@ -58,7 +58,7 @@ const ITENS_GESTAO: readonly ItemNavegacao[] = [
 ]
 
 const Layout: React.FC = () => {
-  const { profile } = useAuth()
+  const { profile, isUnassigned } = useAuth()
   const location = useLocation()
 
   const [criarAberto, setCriarAberto] = useState(false)
@@ -70,7 +70,8 @@ const Layout: React.FC = () => {
   // A barra flutua sobre o conteúdo, por isso o fim da coluna tem de acabar
   // acima dela — com `margin-bottom`, não `padding-bottom`: com padding, o
   // último cartão fica dentro da caixa de scroll mas por baixo da barra.
-  const margemFinal = gere ? 110 : 104
+  // Se não tiver perfil atribuído, não há barra de navegação.
+  const margemFinal = isUnassigned ? 24 : (gere ? 110 : 104)
 
   return (
     <div className="relative min-h-dvh flex flex-col">
@@ -95,24 +96,28 @@ const Layout: React.FC = () => {
         </AreaDoEcra>
       </main>
 
-      {/* O conteúdo passa por trás da barra translúcida; sem este esbatimento
-          a barra deixa de se ler quando lhe passa texto por baixo. */}
-      <div
-        aria-hidden="true"
-        className="fixed bottom-0 h-30 z-30 pointer-events-none esbate-fundo"
-        style={{
-          left: 'max(0px, calc(50vw - 240px))',
-          right: 'max(0px, calc(50vw - 240px))',
-        }}
-      />
+      {!isUnassigned && (
+        <>
+          {/* O conteúdo passa por trás da barra translúcida; sem este esbatimento
+              a barra deixa de se ler quando lhe passa texto por baixo. */}
+          <div
+            aria-hidden="true"
+            className="fixed bottom-0 h-30 z-30 pointer-events-none esbate-fundo"
+            style={{
+              left: 'max(0px, calc(50vw - 240px))',
+              right: 'max(0px, calc(50vw - 240px))',
+            }}
+          />
 
-      <BarraNavegacao
-        itens={gere ? ITENS_GESTAO : ITENS_JOGADOR}
-        caminho={location.pathname}
-        aoCriar={gere ? () => setCriarAberto(true) : undefined}
-      />
+          <BarraNavegacao
+            itens={gere ? ITENS_GESTAO : ITENS_JOGADOR}
+            caminho={location.pathname}
+            aoCriar={gere ? () => setCriarAberto(true) : undefined}
+          />
 
-      <FolhaCriar isOpen={criarAberto} onClose={() => setCriarAberto(false)} />
+          <FolhaCriar isOpen={criarAberto} onClose={() => setCriarAberto(false)} />
+        </>
+      )}
 
     </div>
   )

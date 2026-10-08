@@ -16,6 +16,7 @@ import {
   PersianaSemConvocatoria,
 } from '../components/AlertaSemConvocatoria'
 import { FichaPorLigar, useFichaPorLigar } from '../components/FichaPorLigar'
+import { SemPerfilAtribuido } from '../components/SemPerfilAtribuido'
 import {
   useConviteAvisos,
   FaixaConvidarAvisos,
@@ -114,7 +115,7 @@ interface JogoSerieBruto {
 }
 
 const Home: React.FC = () => {
-  const { profile, assignedRoles } = useAuth()
+  const { profile, assignedRoles, isUnassigned } = useAuth()
   const { clubSettings } = useClub()
 
   const [jogos, setJogos] = useState<JogoDaHome[]>([])
@@ -171,7 +172,7 @@ const Home: React.FC = () => {
   }, [eGestao])
 
   useEffect(() => {
-    if (!profile || estadoDaFicha !== 'ligada') return
+    if (!profile || isUnassigned || estadoDaFicha !== 'ligada') return
     let cancelado = false
 
     const carregar = async () => {
@@ -444,7 +445,7 @@ const Home: React.FC = () => {
 
     carregar()
     return () => { cancelado = true }
-  }, [profile, estadoDaFicha])
+  }, [profile, isUnassigned, estadoDaFicha])
 
   const responder = async (eventId: string, status: 'confirmed' | 'declined') => {
     if (!profile) return
@@ -490,6 +491,10 @@ const Home: React.FC = () => {
   }
 
   if (!profile) return null
+
+  if (isUnassigned) {
+    return <SemPerfilAtribuido />
+  }
 
   const emblema = clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'
   const sigla = formatClubSigla(clubSettings?.initials)

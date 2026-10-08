@@ -3,7 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { sincronizarTreinosFuturos } from '../lib/treinosFuturos'
 
-export type UserRole = 'player' | 'coach' | 'admin' | 'supporter'
+export type UserRole = 'player' | 'coach' | 'admin' | 'supporter' | 'unassigned'
 export type ProfileStatus = 'active' | 'inactive' | 'injured'
 
 export interface Profile {
@@ -79,15 +79,24 @@ export const isDeveloperEmail = (email?: string | null): boolean => {
 export interface RoleSource {
   role?: UserRole | string | null
   roles?: (UserRole | string)[] | null
+  status?: string | null
   medical_notes?: string | null
   position?: string | null
 }
 
 export const extractRolesFromProfile = (profile: RoleSource | null | undefined): UserRole[] => {
-  if (!profile) return ['player']
+  if (!profile) return []
+
+  if (profile.status === 'inactive') return []
 
   const rawRole = profile.role as UserRole | undefined
-  const defaultRole: UserRole = rawRole && VALID_ROLES.includes(rawRole) ? rawRole : 'player'
+  if (rawRole === 'unassigned') return []
+
+  if (Array.isArray(profile.roles) && profile.roles.length === 0) {
+    return []
+  }
+
+  const defaultRole: UserRole | undefined = rawRole && VALID_ROLES.includes(rawRole) ? rawRole : undefined
 
   // Adepto é um perfil exclusivo de consulta — nunca joga, não treina e não paga quotas.
   if (defaultRole === 'supporter' || rawRole === 'supporter') {
@@ -103,7 +112,7 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
     }
     if (fromColumn.length > 0) {
       // O papel real tem sempre de constar, mesmo que a coluna esteja incompleta.
-      return fromColumn.includes(defaultRole) ? fromColumn : [...fromColumn, defaultRole]
+      return defaultRole && !fromColumn.includes(defaultRole) ? [...fromColumn, defaultRole] : fromColumn
     }
   }
 
@@ -125,7 +134,8 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
   if (profile.role === 'admin') return ['admin', 'coach', 'player']
   if (profile.role === 'coach') return ['coach', 'player']
   if (profile.role === 'supporter') return ['supporter']
-  return ['player']
+  if (profile.role === 'player') return ['player']
+  return []
 }
 
 interface AuthContextType {
@@ -133,6 +143,7 @@ interface AuthContextType {
   profile: Profile | null
   assignedRoles: UserRole[]
   actualRole: UserRole | null
+  isUnassigned: boolean
   canSimulateRoles: boolean
   isSimulatingRole: boolean
   setSimulatedRole: (role: UserRole | null) => void
@@ -147,6 +158,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [actualProfile, setActualProfile] = useState<Profile | null>(null)
+  const [isUnassigned, setIsUnassigned] = useState(false)
   const [simulatedRole, setSimulatedRoleState] = useState<UserRole | null>(() => {
     return (localStorage.getItem('csc_simulated_role') as UserRole) || null
   })
@@ -185,6 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // `p_email_only` continua a ser passado porque a função ainda o aceita,
       // mas é ignorado: hoje a correspondência é sempre só por email.
       const jaTemFichaDoClube = Boolean(data?.jersey_number || data?.shirt_name)
+      let fichaLigadaAgora = false
       if (userEmail && !jaTemFichaDoClube) {
         const { data: matches } = await supabase.rpc('find_my_profile_match', { p_email_only: true })
         const alvo = Array.isArray(matches) ? matches[0] : matches
@@ -195,6 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Erro ao ligar a conta à ficha do clube:', assocErr.message)
           } else if (associado) {
             data = (Array.isArray(associado) ? associado[0] : associado) as Profile
+            fichaLigadaAgora = true
           }
         }
       }
@@ -205,11 +219,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const newProfile: Partial<Profile> = {
           id: userId,
-          name: googleName || (userEmail ? userEmail.split('@')[0] : 'Novo Atleta'),
+          name: googleName || (userEmail ? userEmail.split('@')[0] : 'Novo Membro'),
           email: userEmail ? userEmail.trim().toLowerCase() : '',
           phone: userPhone || null,
           photo_url: null,
           role: 'player',
+          roles: [],
           status: 'active'
         }
 
@@ -226,8 +241,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
+      let unassigned = false
       if (data) {
-        setActualProfile(data as Profile)
+        // Se o perfil está marcado como inativo, o comportamento é igual a não haver correspondência
+        if (data.status === 'inactive') {
+          unassigned = true
+        } else if (!fichaLigadaAgora) {
+          // Se a conta não acabou de ser ligada a uma ficha do clube:
+          const temPapelReconhecido =
+            ['admin', 'coach', 'supporter'].includes(data.role) ||
+            (Array.isArray(data.roles) && data.roles.some((r: string) => ['admin', 'coach', 'supporter'].includes(r)))
+
+          const temAtributosDeAtleta = Boolean(
+            data.jersey_number ||
+            data.shirt_name ||
+            (data.position && data.position.trim().length > 0)
+          )
+
+          if (!temPapelReconhecido && !temAtributosDeAtleta) {
+            const { count: callupsCount } = await supabase
+              .from('callups')
+              .select('id', { count: 'exact', head: true })
+              .eq('player_id', data.id)
+
+            if ((callupsCount ?? 0) === 0) {
+              unassigned = true
+            }
+          }
+        }
+      }
+
+      setIsUnassigned(unassigned)
+
+      if (data) {
+        if (unassigned) {
+          // Quando é criado um registo novo e não existe correspondência na BD,
+          // deixa de ser associado ao perfil Jogador.
+          setActualProfile({
+            ...data,
+            role: 'unassigned',
+            roles: []
+          } as Profile)
+        } else {
+          setActualProfile(data as Profile)
+        }
       }
     } catch (err) {
       console.error('Erro ao obter perfil:', err)
@@ -345,6 +402,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true)
     localStorage.removeItem('csc_simulated_role')
     setSimulatedRoleState(null)
+    setIsUnassigned(false)
     await supabase.auth.signOut()
     setUser(null)
     setActualProfile(null)
@@ -358,14 +416,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     simulatedRole !== actualRole
   )
 
-  const effectiveRoles: UserRole[] = isSimulatingRole && simulatedRole
+  const effectiveRoles: UserRole[] = isUnassigned
+    ? []
+    : isSimulatingRole && simulatedRole
     ? [simulatedRole]
     : assignedRoles
 
   const effectiveProfile: Profile | null = actualProfile
     ? {
         ...actualProfile,
-        role: isSimulatingRole && simulatedRole ? simulatedRole : actualProfile.role,
+        role: isUnassigned
+          ? 'unassigned'
+          : isSimulatingRole && simulatedRole
+          ? simulatedRole
+          : actualProfile.role,
         roles: effectiveRoles
       }
     : null
@@ -376,6 +440,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       profile: effectiveProfile, 
       assignedRoles,
       actualRole, 
+      isUnassigned,
       canSimulateRoles,
       isSimulatingRole, 
       setSimulatedRole,

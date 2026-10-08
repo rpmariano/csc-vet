@@ -31,11 +31,11 @@ import { SinalPagamentos } from '../SinalPagamentos'
  * rolar era mais uma coisa a mexer.
  */
 export const CabecalhoApp: React.FC = () => {
-  const { profile, assignedRoles } = useAuth()
+  const { profile, assignedRoles, isUnassigned } = useAuth()
   const { clubSettings } = useClub()
   const estadoDaFicha = useFichaPorLigar(profile, assignedRoles)
   // Sem ficha ligada não há estado clínico nem contas para mostrar.
-  const semFicha = estadoDaFicha === 'por-ligar'
+  const semFicha = isUnassigned || estadoDaFicha === 'por-ligar'
 
   const epoca = useEpocaAtual()
 
@@ -74,7 +74,7 @@ export const CabecalhoApp: React.FC = () => {
         </div>
         {!semFicha && <SinalPagamentos />}
         {!semFicha && <PastilhaEstado />}
-        <AnnouncementsInboxButton tone="dark" size="md" />
+        {!isUnassigned && <AnnouncementsInboxButton tone="dark" size="md" />}
         <AvatarPerfil tamanho={38} />
       </div>
     </header>
