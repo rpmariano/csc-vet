@@ -300,7 +300,17 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       // convocado alguém entretanto.
       const { data: existentes } = await supabase.from('callups').select('player_id').eq('event_id', evento.id)
       const ja = new Set(((existentes ?? []) as { player_id: string }[]).map(c => c.player_id))
-      const novos = Array.from(new Set(quem.map(p => p.id))).filter(id => !ja.has(id))
+      let novos = Array.from(new Set(quem.map(p => p.id))).filter(id => !ja.has(id))
+      
+      // Se há limite da prova para convocados por jogo, respeitar vagas restantes
+      if (regras?.max_match_players) {
+        const vagas = Math.max(0, regras.max_match_players - ja.size)
+        if (novos.length > vagas) {
+          toast.warning(`Limite de ${regras.max_match_players} convocados atingido. Só foram adicionados ${vagas} atleta(s).`)
+          novos = novos.slice(0, vagas)
+        }
+      }
+
       if (novos.length > 0) {
         const linhas = novos.map(id => ({ event_id: evento.id, player_id: id, status: 'called' as const }))
         const { error } = await supabase.from('callups').upsert(linhas, { onConflict: 'event_id, player_id', ignoreDuplicates: true })
@@ -743,9 +753,14 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
           {/* A convocatória — o que está em `callups`, e mais nada. */}
           <section aria-labelledby="editar-evento-convocatoria" className="p-4 bg-white/5 rounded-2xl space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <h2 id="editar-evento-convocatoria" className="text-xs font-black text-white flex items-center gap-1.5">
+              <h2 id="editar-evento-convocatoria" className="text-xs font-black text-white flex items-center gap-1.5 flex-wrap">
                 <Users size={15} className="text-csc-gold" />
-                Convocatória ({convocatorias.length})
+                <span>Convocatória ({convocatorias.length}{regras?.max_match_players ? ` / ${regras.max_match_players} máx` : ''})</span>
+                {regras?.max_match_players && convocatorias.length >= regras.max_match_players && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold border border-csc-gold/30">
+                    Limite atingido
+                  </span>
+                )}
               </h2>
               <span className="text-[10px] bg-white/10 text-csc-gold font-bold px-2.5 py-0.5 rounded-full">
                 {aptos.length} {aptos.length === 1 ? 'pode ir' : 'podem ir'}

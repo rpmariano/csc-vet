@@ -8,6 +8,10 @@
 
 export interface TournamentRules {
   format?: 'single_league' | 'two_phases'
+  /** Número de lugares que se apuram para a fase final ou playoff (ex: 2 ou 4 primeiros). */
+  promotion_spots?: number
+  /** Número de lugares de descida / taça consolação (opcional). */
+  relegation_spots?: number
   min_age?: number
   exceptions_allowed?: boolean
   exceptions_count?: number;

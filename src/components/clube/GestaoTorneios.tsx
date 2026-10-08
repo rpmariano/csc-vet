@@ -473,6 +473,33 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                     </select>
                   </div>
 
+                  <div className="grid grid-cols-2 gap-3 col-span-1">
+                    <div>
+                      <label className={ETIQUETA}>Apurados Fase Final (topo)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tourRules.promotion_spots ?? 0}
+                        onChange={e => setTourRules({ ...tourRules, promotion_spots: Number(e.target.value) })}
+                        className={CAMPO}
+                        placeholder="Ex: 2 (passam à fase seguinte)"
+                      />
+                      <p className="text-[10px] text-white/50 mt-0.5">Destaca as equipas apuradas na tabela.</p>
+                    </div>
+                    <div>
+                      <label className={ETIQUETA}>Lugares Fundo (opcional)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tourRules.relegation_spots ?? 0}
+                        onChange={e => setTourRules({ ...tourRules, relegation_spots: Number(e.target.value) })}
+                        className={CAMPO}
+                        placeholder="Ex: 0"
+                      />
+                      <p className="text-[10px] text-white/50 mt-0.5">Taça de consolação / descida.</p>
+                    </div>
+                  </div>
+
                   <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
                   <div>
                     <label className={ETIQUETA}>Idade Mínima</label>

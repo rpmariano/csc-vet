@@ -2109,13 +2109,16 @@ const EventsPage: React.FC = () => {
 
               const evId = activeCallupModalEvent.id
 
+              const tourRules = tournaments.find(t => t.id === activeCallupModalEvent.tournament_id)?.rules
+              const limiteConvocados = activeCallupModalEvent.max_players || tourRules?.max_match_players || null
+
               /* O bloco é o da Agenda (`BlocoConvocatoria`); aqui leva as
                  ações, porque é o único sítio onde a convocatória se edita. */
               return (
                 <BlocoConvocatoria
                   key={evId}
                   convocatorias={callups}
-                  maxJogadores={activeCallupModalEvent.max_players}
+                  maxJogadores={limiteConvocados}
                   gere={Boolean(isCoachOrAdmin)}
                   estadoQueImpede={estadoQueImpede}
                   abertoInicial

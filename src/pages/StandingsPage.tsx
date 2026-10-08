@@ -473,15 +473,39 @@ export const StandingsPage = () => {
                       <tbody>
                         {standings.map((s, index) => {
                           const { sigla: tName, logo, eOClube: isCSC } = equipaDoTorneio(s.team, clubSettings)
+                          const promotionSpots = selectedTournament?.rules?.promotion_spots ?? (selectedTournament?.rules?.format === 'two_phases' ? 2 : 0)
+                          const relegationSpots = selectedTournament?.rules?.relegation_spots ?? 0
+                          const isPromoted = promotionSpots > 0 && index < promotionSpots
+                          const isRelegated = relegationSpots > 0 && index >= standings.length - relegationSpots
 
                           return (
                             /* A linha do clube é a dourada — é a que se procura. */
                             <tr
                               key={s.team.id}
-                              className={`border-t border-white/7 ${isCSC ? 'bg-csc-gold/12' : ''}`}
+                              className={`border-t border-white/7 ${
+                                isCSC
+                                  ? 'bg-csc-gold/15'
+                                  : isPromoted
+                                  ? 'bg-csc-light/6'
+                                  : ''
+                              }`}
                             >
-                              <td className={`pl-3.5 pr-1 py-2.5 text-center font-display font-black text-[11px] ${isCSC ? 'text-csc-gold' : 'text-white/62'}`}>
-                                {index + 1}
+                              <td className={`pl-3.5 pr-1 py-2.5 text-center font-display font-black text-[11px] ${
+                                isCSC
+                                  ? 'text-csc-gold'
+                                  : isPromoted
+                                  ? 'text-csc-verde-texto'
+                                  : 'text-white/62'
+                              }`}>
+                                <div className="flex items-center justify-center gap-1">
+                                  {isPromoted && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-csc-verde-texto shrink-0" title="Apuramento para Fase Final" />
+                                  )}
+                                  {isRelegated && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-csc-red shrink-0" title="Zona de descida / consolação" />
+                                  )}
+                                  <span>{index + 1}</span>
+                                </div>
                               </td>
                               <td className="px-2 py-2.5">
                                 <span className="flex items-center gap-2 min-w-0">
@@ -522,6 +546,22 @@ export const StandingsPage = () => {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Legenda de Apuramento / Fase Final */}
+                  {((selectedTournament?.rules?.promotion_spots ?? 0) > 0 || selectedTournament?.rules?.format === 'two_phases') && (
+                    <div className="px-4 py-2 bg-white/[0.03] border-t border-white/6 flex items-center gap-3 text-[10px] text-white/60">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-csc-verde-texto shrink-0" />
+                        <span>Apuramento para Fase Final ({selectedTournament?.rules?.promotion_spots ?? 2} primeiros)</span>
+                      </div>
+                      {(selectedTournament?.rules?.relegation_spots ?? 0) > 0 && (
+                        <div className="flex items-center gap-1.5 ml-auto">
+                          <span className="w-2 h-2 rounded-full bg-csc-red shrink-0" />
+                          <span>Zona de descida / consolação</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/*
                     Jornadas do grupo (ecrã 2d), no rodapé do cartão da tabela:

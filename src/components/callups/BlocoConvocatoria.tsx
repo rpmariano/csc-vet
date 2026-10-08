@@ -127,6 +127,11 @@ export function BlocoConvocatoria<C extends ConvocadoDoBloco>({
           <h3 className="text-base font-black text-white flex items-center gap-2 group-hover:text-csc-gold transition-colors">
             <Users size={18} className="text-csc-gold" />
             <span>Convocatória ({convocatoriasAtletas.length}{maxJogadores ? ` / ${maxJogadores} máx` : ''})</span>
+            {maxJogadores && convocatoriasAtletas.length >= maxJogadores && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold border border-csc-gold/30">
+                Limite atingido
+              </span>
+            )}
           </h3>
 
           {/*
