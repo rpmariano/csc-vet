@@ -271,7 +271,7 @@ test.describe('O cartão por convocar abre o evento', () => {
     await page.goto('/csc-vet/calendar')
     await page.waitForLoadState('networkidle')
 
-    await page.getByRole('button', { name: /Ver jogo por convocar/ }).click()
+    await page.getByRole('button', { name: /^Ver jogo:/ }).click()
     await expect(page).toHaveURL(/\?event=pc/)
     await expect(fichaDoEvento(page)).toBeVisible()
   })
@@ -484,14 +484,12 @@ test.describe('Convocados que ficaram sem condições', () => {
 
     await persiana.getByRole('button', { name: 'Editar nos Eventos' }).click()
     await expect(page).toHaveURL(/\/events\?convocatoria=lz/)
-    // Abre logo na edição do evento; o "‹ Convocatória" volta ao dossier
-    await page.getByRole('button', { name: 'Convocatória', exact: true }).click()
+    // Abre logo na edição do evento; o "‹ Evento" volta diretamente à Agenda
+    await fichaDoEvento(page).getByRole('button', { name: 'Evento', exact: true }).click()
     const btnSair = page.getByRole('button', { name: 'Sair sem guardar' })
     if (await btnSair.isVisible()) {
       await btnSair.click()
     }
-    // O "‹" dos Eventos volta ao evento na Agenda, de onde se veio.
-    await fichaDoEvento(page).getByRole('button', { name: 'Evento', exact: true }).click()
     await expect(page).toHaveURL(/\/calendar\?event=lz$/)
   })
 

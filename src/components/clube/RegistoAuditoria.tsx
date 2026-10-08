@@ -10,6 +10,7 @@ import {
   Calendar,
   Layers,
   ArrowRight,
+  AlertTriangle,
 } from 'lucide-react'
 import {
   ACarregar,
@@ -39,10 +40,12 @@ export const RegistoAuditoria: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   const [procura, setProcura] = useState('')
   const [idExpandido, setIdExpandido] = useState<string | null>(null)
   const [atualizando, setAtualizando] = useState(false)
+  const [erroCarregamento, setErroCarregamento] = useState<string | null>(null)
 
   const carregarLogs = async (silencioso = false) => {
     if (!silencioso) setLoading(true)
     else setAtualizando(true)
+    setErroCarregamento(null)
 
     const { logs: dados, error } = await obterAuditLogs({
       modulo: moduloFiltro,
@@ -51,6 +54,7 @@ export const RegistoAuditoria: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
     })
 
     if (error) {
+      setErroCarregamento(error.message)
       toast.error('Erro ao carregar registos de auditoria')
     } else {
       setLogs(dados)
@@ -272,6 +276,30 @@ export const RegistoAuditoria: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
       {loading ? (
         <div className="py-12">
           <ACarregar texto="A carregar registos de auditoria..." />
+        </div>
+      ) : erroCarregamento ? (
+        <div className="bg-rose-500/10 border border-rose-500/25 rounded-2xl p-5 text-center space-y-3 my-2">
+          <div className="w-10 h-10 mx-auto rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center">
+            <AlertTriangle size={20} />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-display font-extrabold text-sm text-white">
+              Não foi possível carregar os registos
+            </h3>
+            <p className="text-xs text-white/60 leading-relaxed max-w-sm mx-auto">
+              {erroCarregamento.toLowerCase().includes('audit_logs') || erroCarregamento.toLowerCase().includes('relation')
+                ? 'A tabela de auditoria ainda não foi criada na base de dados Supabase. Execute o script "supabase_audit_logs_migration.sql" no SQL Editor do Supabase.'
+                : erroCarregamento}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => carregarLogs()}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-extrabold bg-white/10 hover:bg-white/15 active:bg-white/20 text-white cursor-pointer transition-all"
+          >
+            <RefreshCw size={13} />
+            <span>Tentar novamente</span>
+          </button>
         </div>
       ) : logsFiltrados.length === 0 ? (
         <EstadoVazio

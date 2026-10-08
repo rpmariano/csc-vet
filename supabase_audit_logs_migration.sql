@@ -54,10 +54,14 @@ CREATE POLICY "Direcao pode consultar auditoria"
     FOR SELECT
     TO authenticated
     USING (
-        EXISTS (
+        public.get_user_role() = 'admin'
+        OR EXISTS (
             SELECT 1 FROM public.profiles
              WHERE profiles.id = auth.uid()
-               AND (profiles.role = 'admin' OR 'admin' = ANY(profiles.roles))
+               AND (
+                 profiles.role = 'admin'
+                 OR ('admin'::public.user_role = ANY(COALESCE(profiles.roles, ARRAY[profiles.role])))
+               )
         )
     );
 
@@ -240,7 +244,7 @@ BEGIN
             v_record_title := NEW.title;
             v_description := 'Atualizou encargo: ' || COALESCE(NEW.title, '');
         ELSIF TG_TABLE_NAME = 'club_settings' THEN
-            v_record_title := COALESCE(NEW.club_name, 'Dados do Clube');
+            v_record_title := COALESCE(NEW.name, 'Dados do Clube');
             v_description := 'Atualizou configurações do clube';
         ELSE
             v_record_title := TG_TABLE_NAME || ' #' || v_record_id;

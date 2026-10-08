@@ -418,6 +418,25 @@ const CalendarPage: React.FC = () => {
           })
         })
 
+        // Para convívios: garantir que todos os membros elegíveis estão convocados.
+        const gatheringPlayers = mergedPlayers.filter(p => isPlayerEligible(p, 'gathering'))
+        const gatheringEventIds = eventsList.filter(e => e.type === 'gathering').map(e => e.id)
+        gatheringEventIds.forEach(gId => {
+          if (!map[gId]) map[gId] = []
+          const calledIds = new Set(map[gId].map(c => c.player_id))
+          gatheringPlayers.forEach(gp => {
+            if (!calledIds.has(gp.id)) {
+              map[gId].push({
+                id: `auto-${gId}-${gp.id}`,
+                event_id: gId,
+                player_id: gp.id,
+                status: 'called',
+                player: gp
+              })
+            }
+          })
+        })
+
         // Para jogos: adeptos só aparecem se houver pelo menos um atleta/jogador convocado
         const activeSupporters = mergedPlayers.filter(p => eAdepto(p) && p.status === 'active')
         const matchEventIds = eventsList.filter(e => e.type === 'match').map(e => e.id)
@@ -706,7 +725,7 @@ const CalendarPage: React.FC = () => {
     if (minha) return minha
 
     const ev = events.find(item => item.id === eventId)
-    if (ev && ev.type === 'practice' && isPlayerEligible(profile, ev.type)) {
+    if (ev && (ev.type === 'practice' || ev.type === 'gathering') && isPlayerEligible(profile, ev.type)) {
       return {
         id: `auto-${eventId}-${profile.id}`,
         event_id: eventId,

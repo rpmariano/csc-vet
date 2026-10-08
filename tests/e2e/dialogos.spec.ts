@@ -259,8 +259,8 @@ test.describe('Calendário', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Treino de teste' })).toBeFocused()
     await expect(dialogos(page)).toHaveCount(0)
 
-    // Sair da edição é sempre deliberado: o "‹ Convocatória" pede confirmação.
-    await page.getByRole('button', { name: 'Convocatória', exact: true }).click()
+    // Sair da edição é sempre deliberado: o "‹ Evento" pede confirmação.
+    await page.getByRole('button', { name: 'Evento', exact: true }).click()
     await expect(dialogos(page)).toHaveCount(1)
     await verificaContrato(dialogos(page).last())
 

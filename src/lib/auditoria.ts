@@ -204,11 +204,13 @@ export async function obterAuditLogs(filtros: FiltrosAuditoria = {}): Promise<{
     const { data, error } = await query
 
     if (error) {
+      console.error('[auditoria] Erro ao consultar audit_logs:', error)
       return { logs: [], error: new Error(error.message) }
     }
 
     return { logs: (data as AuditLog[]) || [], error: null }
   } catch (err) {
+    console.error('[auditoria] Exceção ao carregar auditoria:', err)
     return { logs: [], error: err instanceof Error ? err : new Error(String(err)) }
   }
 }
