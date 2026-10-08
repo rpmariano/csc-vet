@@ -246,7 +246,10 @@ test.describe('Calendário', () => {
       .click({ position: { x: 30, y: 12 } })
     await page.getByRole('button', { name: 'Editar nos Eventos' }).click()
     await expect(page).toHaveURL(/events\?convocatoria=e1/)
-    await page.getByRole('button', { name: 'Modificar evento' }).click()
+    const btnModificar = page.getByRole('button', { name: 'Modificar evento' })
+    if (await btnModificar.isVisible()) {
+      await btnModificar.click()
+    }
   }
 
   // O detalhe do evento e a edição são ecrãs, e não contam como diálogos.

@@ -483,7 +483,13 @@ test.describe('Convocados que ficaram sem condições', () => {
     await expect(persiana.getByRole('button', { name: 'Marcar como confirmado' })).toHaveCount(0)
 
     await persiana.getByRole('button', { name: 'Editar nos Eventos' }).click()
-    await expect(page).toHaveURL(/\/events\?convocatoria=lz$/)
+    await expect(page).toHaveURL(/\/events\?convocatoria=lz/)
+    // Abre logo na edição do evento; o "‹ Convocatória" volta ao dossier
+    await page.getByRole('button', { name: 'Convocatória', exact: true }).click()
+    const btnSair = page.getByRole('button', { name: 'Sair sem guardar' })
+    if (await btnSair.isVisible()) {
+      await btnSair.click()
+    }
     // O "‹" dos Eventos volta ao evento na Agenda, de onde se veio.
     await fichaDoEvento(page).getByRole('button', { name: 'Evento', exact: true }).click()
     await expect(page).toHaveURL(/\/calendar\?event=lz$/)

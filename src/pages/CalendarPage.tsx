@@ -2092,7 +2092,7 @@ const CalendarPage: React.FC = () => {
                       largo
                       onClick={() => {
                         triggerHaptic('light')
-                        navigate(`/events?convocatoria=${selectedEvent.id}`, { state: { origem: nomeDoEcra(location.pathname, location.search) } })
+                        navigate(`/events?convocatoria=${selectedEvent.id}&editar=1`, { state: { origem: nomeDoEcra(location.pathname, location.search) } })
                       }}
                     >
                       <Pencil size={15} aria-hidden="true" />

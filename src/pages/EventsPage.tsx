@@ -230,7 +230,8 @@ const EventsPage: React.FC = () => {
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
   const [searchParams, setSearchParams] = useSearchParams()
-  const estadoDaEntrada = useLocation().state
+  const location = useLocation()
+  const estadoDaEntrada = location.state as { origem?: string; abrirEdicao?: boolean } | null
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
   /* A ficha rápida do convocado (4a), por cima do dossier de convocatória. */
   const [convocadoAberto, setConvocadoAberto] = useState<string | null>(null)
@@ -299,6 +300,7 @@ const EventsPage: React.FC = () => {
 
   /* O evento em edição — o formulário é o `EditarEvento`, o mesmo da Agenda. */
   const [eventoAEditar, setEventoAEditar] = useState<Event | null>(null)
+  const jaAbriuEdicaoRef = useRef<string | null>(null)
   // Evita duplo-submit ao criar/publicar um evento (duplo clique/toque em ligação lenta
   // criava o evento e enviava a convocatória duas vezes). Guarda síncrona com ref
   // acima: o estado só serve para desativar o botão na UI, a guarda real é o ref síncrono.
@@ -1203,10 +1205,32 @@ const EventsPage: React.FC = () => {
   */
   useEffect(() => {
     const idEvento = searchParams.get('convocatoria')
-    if (!idEvento) return
+    if (!idEvento) {
+      jaAbriuEdicaoRef.current = null
+      return
+    }
     const alvo = events.find(e => e.id === idEvento)
-    if (alvo) setActiveCallupModalEvent(alvo)
-  }, [searchParams, events])
+    if (!alvo) return
+
+    setActiveCallupModalEvent(alvo)
+
+    const querEditar = searchParams.get('editar') === '1' || searchParams.get('editar') === 'true' || Boolean(estadoDaEntrada?.abrirEdicao)
+    if (querEditar && jaAbriuEdicaoRef.current !== alvo.id && !eventoAEditar) {
+      jaAbriuEdicaoRef.current = alvo.id
+      openEditModal(alvo)
+    }
+  }, [searchParams, events, estadoDaEntrada, eventoAEditar])
+
+  const fecharEdicao = () => {
+    setEventoAEditar(null)
+    if (searchParams.has('editar')) {
+      const restantes = new URLSearchParams(searchParams)
+      restantes.delete('editar')
+      const estadoAtual = location.state as Record<string, unknown> | null
+      const novoEstado = estadoAtual ? Object.fromEntries(Object.entries(estadoAtual).filter(([k]) => k !== 'abrirEdicao')) : undefined
+      setSearchParams(restantes, { replace: true, state: novoEstado && Object.keys(novoEstado).length > 0 ? novoEstado : undefined })
+    }
+  }
 
   const dossierAberto = Boolean(searchParams.get('convocatoria'))
 
@@ -1950,7 +1974,7 @@ const EventsPage: React.FC = () => {
       <div>
       {activeCallupModalEvent && (
         <EcraDetalhe
-          aberto={dossierAberto}
+          aberto={dossierAberto && !eventoAEditar}
           voltarPara={voltarDoDossier}
           aoVoltar={fecharDossier}
           sobrancelha="Convocatória"
@@ -2177,10 +2201,10 @@ const EventsPage: React.FC = () => {
       <EditarEvento
         evento={eventoAEditar}
         voltarPara={dossierAberto ? 'Convocatória' : 'Eventos'}
-        aoFechar={() => setEventoAEditar(null)}
+        aoFechar={fecharEdicao}
         aoGravado={async gravado => {
           setActiveCallupModalEvent(prev => (prev && prev.id === gravado.id ? { ...prev, ...gravado } as Event : prev))
-          setEventoAEditar(null)
+          fecharEdicao()
           await fetchData()
         }}
         aoMudarConvocatoria={() => fetchData()}

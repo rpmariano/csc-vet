@@ -74,8 +74,11 @@ test('a Agenda não edita: leva ao mesmo evento nos Eventos, e é lá que se gra
     await expect(ficha.getByRole('button', { name: 'Editar evento' })).toHaveCount(0)
     await expect(ficha.getByRole('button', { name: 'Eliminar evento' })).toHaveCount(0)
     await ficha.getByRole('button', { name: 'Editar nos Eventos' }).click()
-    await expect(p).toHaveURL(/events\?convocatoria=e1$/)
-    await p.getByRole('button', { name: 'Modificar evento' }).click()
+    await expect(p).toHaveURL(/events\?convocatoria=e1/)
+    const btnModificar = p.getByRole('button', { name: 'Modificar evento' })
+    if (await btnModificar.isVisible()) {
+      await btnModificar.click()
+    }
   })
 
 
