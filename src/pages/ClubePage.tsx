@@ -11,6 +11,7 @@ import {
   Users,
   Swords,
   ClipboardList,
+  History,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -25,6 +26,7 @@ import { GestaoCampos } from '../components/clube/GestaoCampos'
 import { GestaoAdversarios } from '../components/clube/GestaoAdversarios'
 import { GestaoTorneios } from '../components/clube/GestaoTorneios'
 import { Relatorios } from '../components/clube/Relatorios'
+import { RegistoAuditoria } from '../components/clube/RegistoAuditoria'
 import { eJogador } from '../lib/papeis'
 import type { RoleSource } from '../context/AuthContext'
 
@@ -40,6 +42,7 @@ const SECCOES = {
   torneios: { titulo: 'Torneios', sobrancelha: 'Época', Componente: GestaoTorneios },
   /* Só da direção: as dívidas de cada um, e (a seguir) os documentos. */
   relatorios: { titulo: 'Relatórios', sobrancelha: 'Direção', Componente: Relatorios, soDirecao: true },
+  auditoria: { titulo: 'Registo de auditoria', sobrancelha: 'Direção', Componente: RegistoAuditoria, soDirecao: true },
 } as const
 
 type ChaveDeSeccao = keyof typeof SECCOES
@@ -132,6 +135,13 @@ const DIRECAO: readonly Entrada[] = [
     titulo: 'Relatórios',
     descricao: 'Contas por atleta, para partilhar no WhatsApp',
     Icone: ClipboardList,
+    soDirecao: true,
+  },
+  {
+    para: '/clube?ver=auditoria',
+    titulo: 'Registo de auditoria',
+    descricao: 'Histórico de alterações e auditoria de ações',
+    Icone: History,
     soDirecao: true,
   },
 ]

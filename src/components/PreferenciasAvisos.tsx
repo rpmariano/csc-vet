@@ -107,7 +107,8 @@ export const PreferenciasAvisos: React.FC<{
   perfilId: string | undefined
   eEquipaTecnica: boolean
   eAdepto?: boolean
-}> = ({ aberto, aoFechar, perfilId, eEquipaTecnica, eAdepto = false }) => {
+  eJogador?: boolean
+}> = ({ aberto, aoFechar, perfilId, eEquipaTecnica, eAdepto = false, eJogador = true }) => {
   const [prefs, setPrefs] = useState<Preferencias>(OMISSOES)
   const [aCarregar, setACarregar] = useState(true)
   const [aGuardar, setAGuardar] = useState(false)
@@ -139,7 +140,7 @@ export const PreferenciasAvisos: React.FC<{
               (juntas as Record<string, unknown>)[chave] = valor
             }
           }
-          if (eAdepto) {
+          if (eAdepto || !eJogador) {
             juntas.quotas_em_atraso = false
           }
           setPrefs(juntas)
@@ -148,7 +149,7 @@ export const PreferenciasAvisos: React.FC<{
       })
 
     return () => { cancelado = true }
-  }, [aberto, perfilId, eAdepto])
+  }, [aberto, perfilId, eAdepto, eJogador])
 
   /*
     Guardar faz as duas coisas: escreve a escolha e põe este telemóvel a
@@ -172,7 +173,7 @@ export const PreferenciasAvisos: React.FC<{
     if (!perfilId) return
     setAGuardar(true)
     try {
-      const prefsParaGravar = eAdepto
+      const prefsParaGravar = (eAdepto || !eJogador)
         ? { ...prefs, quotas_em_atraso: false }
         : prefs
       const querReceber = algumLigado(prefsParaGravar)
@@ -308,7 +309,12 @@ export const PreferenciasAvisos: React.FC<{
               Avisos
             </p>
             <div className="cartao-simples overflow-hidden">
-              {(eAdepto ? DO_ADEPTO : DO_ATLETA).map(a => (
+              {(eAdepto
+                ? DO_ADEPTO
+                : eJogador
+                  ? DO_ATLETA
+                  : DO_ATLETA.filter(a => a.chave !== 'quotas_em_atraso')
+              ).map(a => (
                 <Interruptor
                   key={a.chave}
                   ligado={Boolean(prefs[a.chave])}

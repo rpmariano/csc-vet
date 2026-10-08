@@ -16,7 +16,6 @@ import {
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
 import { eAdepto } from '../lib/papeis'
 import { contemTexto } from '../lib/texto'
-import { convocarAdeptosParaJogo } from '../lib/convocatoriasAdeptos'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
 import { CLUBE_NOME } from '../lib/clube'
@@ -35,7 +34,7 @@ import { AniversariosDoMes } from '../components/AniversariosDoMes'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from '../components/BottomSheet'
-import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao, ACarregar, EstadoVazio, BlocoData } from '../components/ui'
+import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao, ACarregar, EstadoVazio } from '../components/ui'
 import { SlidersHorizontal, Shield } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { compararPorCamisola, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, CORES_TIPO } from '../lib/eventos'
@@ -244,9 +243,6 @@ const CalendarPage: React.FC = () => {
   const abrirEvento = (ev: Event) => {
     setSelectedEvent(ev)
     setSearchParams({ event: ev.id })
-    if (ev.type === 'match') {
-      convocarAdeptosParaJogo(ev.id).catch(() => {})
-    }
   }
 
   const voltaDoEvento = useVoltarDaFicha(['event'], 'Agenda')
@@ -421,12 +417,17 @@ const CalendarPage: React.FC = () => {
           })
         })
 
-        // Para jogos que tenham convocatória: garantir que todos os adeptos ativos aparecem
+        // Para jogos: adeptos só aparecem se houver pelo menos um atleta/jogador convocado
         const activeSupporters = mergedPlayers.filter(p => eAdepto(p) && p.status === 'active')
         const matchEventIds = eventsList.filter(e => e.type === 'match').map(e => e.id)
         matchEventIds.forEach(mId => {
-          if (map[mId] && map[mId].length > 0 && activeSupporters.length > 0) {
-            const calledIds = new Set(map[mId].map(c => c.player_id))
+          const list = map[mId] || []
+          const temJogadores = list.some(c => !eAdepto(c.player))
+          if (!temJogadores) {
+            // Se não há jogadores convocados, remover qualquer adepto que possa constar
+            map[mId] = list.filter(c => !eAdepto(c.player))
+          } else if (activeSupporters.length > 0) {
+            const calledIds = new Set(list.map(c => c.player_id))
             activeSupporters.forEach(as => {
               if (!calledIds.has(as.id)) {
                 map[mId].push({
@@ -704,7 +705,7 @@ const CalendarPage: React.FC = () => {
     if (minha) return minha
 
     const ev = events.find(item => item.id === eventId)
-    if (ev && (ev.type === 'practice' || ev.type === 'gathering') && isPlayerEligible(profile, ev.type)) {
+    if (ev && ev.type === 'practice' && isPlayerEligible(profile, ev.type)) {
       return {
         id: `auto-${eventId}-${profile.id}`,
         event_id: eventId,
@@ -863,107 +864,10 @@ const CalendarPage: React.FC = () => {
 
   const selectedDayEvents = selectedDate ? getEventsForDate(selectedDate) : []
 
-  /*
-    Ecrã 4e: os eventos por convocar sobem ao topo, fora da lista.
-
-    Quase a mesma regra do alerta da Home (4c) — jogos e convívios, que os
-    treinos convocam sozinhos todos os aptos; no futuro; sem uma única linha
-    em `callups` — com **uma diferença de propósito: aqui os rascunhos entram**.
-
-    A Agenda é onde se trabalha, e um rascunho por convocar é trabalho por
-    acabar: convém estar à vista de quem o criou. A Home é o aviso que insiste,
-    e não deve insistir com uma coisa que a equipa técnica pôs de lado de
-    propósito. Por isso o cartão marca o rascunho, para se perceber porque é
-    que este aparece aqui e não lá.
-
-    Nenhum dos dois tem janela de dias: um jogo daqui a três semanas sem
-    ninguém chamado é para tratar quando se repara nele, não só quando fica
-    urgente.
-  */
-  const eventosPorConvocar = !isCoachOrAdmin ? [] : filteredEvents.filter(e =>
-    (e.type === 'match' || e.type === 'gathering') &&
-    new Date(e.date_time).getTime() >= Date.now() &&
-    (eventCallups[e.id] || []).length === 0,
+  /** A lista de eventos por realizar ou realizados, sempre ordenada cronologicamente por data. */
+  const eventosDaLista = [...filteredEvents].sort(
+    (a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime(),
   )
-  const idsPorConvocar = new Set(eventosPorConvocar.map(e => e.id))
-  const eventosDaLista = filteredEvents.filter(e => !idsPorConvocar.has(e.id))
-
-  /** O cartão destacado de um evento sem ninguém convocado (4e). */
-  const renderCartaoPorConvocar = (event: Event) => {
-    const quando = new Date(event.date_time)
-    const titulo = event.type === 'match'
-      ? `${formatClubSigla(clubSettings?.initials)} vs ${event.opponent?.name ?? 'adversário por definir'}`
-      : (event.title || 'Convívio')
-    const prova = event.is_friendly ? 'Amigável' : event.tournament?.name
-    const eRascunho = event.is_active === false
-
-    return (
-      /*
-        Clicável, como qualquer outro cartão de evento: abria só o "Convocar" e
-        não havia como chegar ao evento para o ver ou editar. Leva o botão do
-        Maps e o "Convocar" lá dentro, portanto não pode ser um `<button>` —
-        fica o papel e o tratamento das teclas à mão, a convenção do CLAUDE.md.
-      */
-      <div
-        key={event.id}
-        role="button"
-        tabIndex={0}
-        onClick={() => abrirEvento(event)}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            abrirEvento(event)
-          }
-        }}
-        aria-label={`Ver ${event.type === 'match' ? 'jogo' : 'convívio'} por convocar: ${titulo}, ${formatDataCurta(event.date_time)}`}
-        className="cartao-simples overflow-hidden border-csc-gold/35 cursor-pointer
-          transition-transform duration-150 active:scale-[0.99]
-          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-      >
-        <div className="flex items-center gap-3.5 px-4 pt-4">
-          <BlocoData quando={quando} tamanho="grande" />
-          <span className="min-w-0 flex-1">
-            <span className="block font-display font-extrabold text-[15px] text-white truncate">{titulo}</span>
-            <span className="block text-[11px] text-white/62 mt-0.5 truncate">
-              {quando.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
-              {prova ? ` · ${prova}` : ''}
-            </span>
-          </span>
-          {eRascunho && (
-            <span
-              className="font-display font-extrabold text-[9px] tracking-[0.12em] uppercase px-2.5 py-1 rounded-full
-                bg-white/10 text-white/70 shrink-0"
-            >
-              Rascunho
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3 px-4 py-3.5 mt-3.5 bg-csc-gold/10 border-t border-csc-gold/25">
-          <span className="min-w-0 flex-1">
-            <span className="block font-display font-extrabold text-[12.5px] text-csc-gold">
-              Ninguém foi convocado
-            </span>
-            <span className="block text-[10.5px] leading-snug text-white/60 mt-0.5">
-              {eRascunho
-                ? 'Em rascunho: fica só aqui, não avisa ninguém nem entra no alerta da Home'
-                : 'Sem convocatória o plantel não recebe pedido de resposta'}
-            </span>
-          </span>
-          <Link
-            to={`/events?convocatoria=${event.id}`}
-            state={{ origem: nomeDoEcra(location.pathname, location.search) }}
-            onClick={e => { e.stopPropagation(); triggerHaptic('light') }}
-            className="h-11 px-4 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[11.5px]
-              flex items-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-          >
-            Convocar
-          </Link>
-        </div>
-      </div>
-    )
-  }
 
   const renderEventCard = (event: Event) => {
     const callups = eventCallups[event.id] || []
@@ -1313,6 +1217,38 @@ const CalendarPage: React.FC = () => {
               </div>
             )
           })()}
+
+          {/* Destaque para treinadores/direção quando o evento não tem convocatória */}
+          {isCoachOrAdmin &&
+            (event.type === 'match' || event.type === 'gathering') &&
+            new Date(event.date_time).getTime() >= Date.now() &&
+            callups.length === 0 && (
+              <div
+                onClick={e => e.stopPropagation()}
+                className="flex items-center gap-3 px-4 py-3.5 bg-csc-gold/10 border-t border-csc-gold/25"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display font-extrabold text-[12.5px] text-csc-gold">
+                    Ninguém foi convocado
+                  </span>
+                  <span className="block text-[10.5px] leading-snug text-white/60 mt-0.5">
+                    {event.is_active === false
+                      ? 'Em rascunho: fica só aqui, não avisa ninguém nem entra no alerta da Home'
+                      : 'Sem convocatória o plantel não recebe pedido de resposta'}
+                  </span>
+                </span>
+                <Link
+                  to={`/events?convocatoria=${event.id}`}
+                  state={{ origem: nomeDoEcra(location.pathname, location.search) }}
+                  onClick={e => { e.stopPropagation(); triggerHaptic('light') }}
+                  className="h-11 px-4 rounded-[22px] bg-csc-gold text-csc-tinta font-display font-extrabold text-[11.5px]
+                    flex items-center shrink-0 cursor-pointer transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                >
+                  Convocar
+                </Link>
+              </div>
+            )}
         </div>
       </div>
     )
@@ -1554,7 +1490,7 @@ const CalendarPage: React.FC = () => {
               "Por realizar" e o passado fica de fora: sem esta linha, quem
               procura o jogo do mês passado não tem como saber que ele existe
               — o filtro está atrás do funil e não se vê. */}
-          {(eventosDaLista.length > 0 || eventosPorConvocar.length > 0) && (
+          {eventosDaLista.length > 0 && (
             <div className="flex items-center gap-2">
               <EtiquetaSeccao className="flex-1">{ROTULOS_ESTADO[statusFilter]}</EtiquetaSeccao>
               {statusFilter === ESTADO_POR_OMISSAO && haRealizados && (
@@ -1571,9 +1507,7 @@ const CalendarPage: React.FC = () => {
             </div>
           )}
 
-          {eventosPorConvocar.map(event => renderCartaoPorConvocar(event))}
-
-          {eventosDaLista.length === 0 && eventosPorConvocar.length === 0 ? (
+          {eventosDaLista.length === 0 ? (
             /*
               Dois vazios diferentes, e a diferença importa: com filtro posto o
               que falta é tirá-lo; sem filtro nenhum não há mesmo nada marcado,

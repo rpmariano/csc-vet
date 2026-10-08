@@ -6,6 +6,7 @@ import {
   diasAtePrazo, prazoPassou,
 } from '../lib/finance'
 import type { FinancialSettings, QuotaEligiblePlayer } from '../lib/finance'
+import { eAdepto, eJogador } from '../lib/papeis'
 
 /**
  * Tudo o que uma pessoa deve ao clube, num sítio só — quotas e encargos.
@@ -84,8 +85,8 @@ export function useEstadoPagamentos(
   const inicio = jogador?.quota_start_date
   const fim = jogador?.quota_end_date
   const perfilQualquer = jogador as { role?: string; roles?: string[] } | null | undefined
-  const ePerfilAdepto = perfilQualquer?.role === 'supporter' ||
-    (Array.isArray(perfilQualquer?.roles) && perfilQualquer.roles.includes('supporter'))
+  const ePerfilAdepto = eAdepto(perfilQualquer as any)
+  const temPapelDeJogador = eJogador(perfilQualquer as any)
 
   useEffect(() => {
     if (!ativo || !jogadorId || ePerfilAdepto) {
@@ -106,8 +107,12 @@ export function useEstadoPagamentos(
           { data: pagamentos },
         ] = await Promise.all([
           supabase.from('financial_settings').select('*').eq('id', 1).maybeSingle(),
-          supabase.from('dues').select('month_year').eq('player_id', jogadorId),
-          supabase.from('quota_exemptions').select('month_year').eq('profile_id', jogadorId),
+          temPapelDeJogador
+            ? supabase.from('dues').select('month_year').eq('player_id', jogadorId)
+            : Promise.resolve({ data: [] }),
+          temPapelDeJogador
+            ? supabase.from('quota_exemptions').select('month_year').eq('profile_id', jogadorId)
+            : Promise.resolve({ data: [] }),
           supabase.from('charge_players').select('charge_id').eq('player_id', jogadorId),
           supabase.from('charge_payments').select('charge_id, amount, paid_at').eq('player_id', jogadorId),
         ])
@@ -119,41 +124,45 @@ export function useEstadoPagamentos(
         const pagas = new Set(((quotasPagas ?? []) as { month_year: string }[]).map(d => d.month_year))
 
         /* ------------------------------------------------------ as quotas */
-        const meses = getPlayerQuotaMonths(
-          {
-            id: jogadorId,
-            status: estadoClinico,
-            quota_start_date: inicio,
-            quota_end_date: fim,
-            meses_dispensados: ((dispensados ?? []) as { month_year: string }[]).map(l => l.month_year.slice(-2)),
-          },
-          definicoes,
-          epoca,
-          hoje,
-        )
+        // Membros exclusivamente treinador ou direção (sem papel de jogador)
+        // não entram nas contas de quotas e nunca devem quotas.
+        const itensQuota: ItemPagamento[] = temPapelDeJogador ? (() => {
+          const meses = getPlayerQuotaMonths(
+            {
+              id: jogadorId,
+              status: estadoClinico,
+              quota_start_date: inicio,
+              quota_end_date: fim,
+              meses_dispensados: ((dispensados ?? []) as { month_year: string }[]).map(l => l.month_year.slice(-2)),
+            },
+            definicoes,
+            epoca,
+            hoje,
+          )
 
-        const itensQuota: ItemPagamento[] = meses.map(m => {
-          const paga = pagas.has(m.monthYear)
-          const prazo = getQuotaDueDate(m, definicoes)
-          const dias = diasAte(prazo, hoje)
-          const situacao = computeQuotaMonthStatus(m, paga, definicoes, hoje)
-          return {
-            chave: `quota-${m.monthYear}`,
-            tipo: 'quota',
-            categoria: 'Quotas',
-            etiqueta: formatMonthYear(m.monthYear),
-            valor: definicoes.quota_amount,
-            limite: prazo.toISOString(),
-            diasAteLimite: dias,
-            estado: paga
-              ? 'pago'
-              : situacao === 'late'
-                ? 'atraso'
-                : dias <= DIAS_DE_AVISO
-                  ? 'a-vencer'
-                  : 'por-vencer',
-          }
-        })
+          return meses.map(m => {
+            const paga = pagas.has(m.monthYear)
+            const prazo = getQuotaDueDate(m, definicoes)
+            const dias = diasAte(prazo, hoje)
+            const situacao = computeQuotaMonthStatus(m, paga, definicoes, hoje)
+            return {
+              chave: `quota-${m.monthYear}`,
+              tipo: 'quota' as const,
+              categoria: 'Quotas',
+              etiqueta: formatMonthYear(m.monthYear),
+              valor: definicoes.quota_amount,
+              limite: prazo.toISOString(),
+              diasAteLimite: dias,
+              estado: paga
+                ? ('pago' as const)
+                : situacao === 'late'
+                  ? ('atraso' as const)
+                  : dias <= DIAS_DE_AVISO
+                    ? ('a-vencer' as const)
+                    : ('por-vencer' as const),
+            }
+          })
+        })() : []
 
         /* ---------------------------------------------------- os encargos */
         const meusIds = ((participacoes ?? []) as { charge_id: string }[]).map(p => p.charge_id)

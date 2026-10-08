@@ -25,7 +25,7 @@ import { supabase } from '../lib/supabaseClient'
 import { BlocoDocumentos } from '../components/BlocoDocumentos'
 import { RELACOES_EMERGENCIA } from './TeamManagementPage'
 import { useEstadoPagamentos } from '../hooks/useEstadoPagamentos'
-import { eAdepto } from '../lib/papeis'
+import { eAdepto, eJogador } from '../lib/papeis'
 
 /** Euros em português — a mesma notação do Financeiro. */
 import SoccerPitchSelector from '../components/SoccerPitchSelector'
@@ -279,8 +279,8 @@ const SettingsPage: React.FC = () => {
         }
       : {
           name: formName.trim(),
-          shirt_name: sanitizeText(formShirtName),
-          nickname: sanitizeText(formShirtName),
+          shirt_name: eJogador(profile) ? sanitizeText(formShirtName) : null,
+          nickname: eJogador(profile) ? sanitizeText(formShirtName) : null,
           phone: sanitizeText(formPhone),
           birth_date: sanitizeDate(formBirthDate),
           nationality: sanitizeText(formNationality) || 'Portuguesa',
@@ -298,8 +298,8 @@ const SettingsPage: React.FC = () => {
           medical_notes: medicalNotesEncoded,
           photo_url: photoUrl || null,
           gdpr_consent: Boolean(formGdprConsent),
-          kit_size: sanitizeText(formKitSize),
-          preferred_foot: formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
+          kit_size: eJogador(profile) ? sanitizeText(formKitSize) : null,
+          preferred_foot: eJogador(profile) && formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
         }
 
     try {
@@ -517,7 +517,9 @@ const SettingsPage: React.FC = () => {
                   ? `${pagamentos.emAtraso.length} em atraso · ${fmtEuro(pagamentos.emAtraso.reduce((t, i) => t + i.valor, 0))}`
                   : pagamentos.cor === 'laranja'
                     ? `${pagamentos.aVencer.length} a vencer · ${fmtEuro(pagamentos.totalEmAviso)}`
-                    : 'Quotas e encargos'}
+                    : eJogador(profile)
+                      ? 'Quotas e encargos'
+                      : 'Encargos'}
               </span>
             </span>
           </button>
@@ -556,6 +558,7 @@ const SettingsPage: React.FC = () => {
         perfilId={profile?.id}
         eEquipaTecnica={profile?.role === 'coach' || profile?.role === 'admin'}
         eAdepto={eAdepto(profile)}
+        eJogador={eJogador(profile)}
       />
 
       {/*
@@ -727,7 +730,7 @@ const SettingsPage: React.FC = () => {
           </h3>
 
           <div className="grid grid-cols-2 gap-2.5">
-            <div>
+            <div className={eJogador(profile) ? '' : 'col-span-2'}>
               <label className={ETIQUETA}>Nome Completo *</label>
               <input
                 type="text"
@@ -738,16 +741,18 @@ const SettingsPage: React.FC = () => {
                 placeholder="Ex: André Gomes Marques do Couto"
               />
             </div>
-            <div>
-              <label className={ETIQUETA}>Nome na Camisola / Alcunha</label>
-              <input
-                type="text"
-                value={formShirtName}
-                onChange={(e) => setFormShirtName(e.target.value)}
-                className={CAMPO}
-                placeholder="Ex: A. COUTO"
-              />
-            </div>
+            {eJogador(profile) && (
+              <div>
+                <label className={ETIQUETA}>Nome na Camisola / Alcunha</label>
+                <input
+                  type="text"
+                  value={formShirtName}
+                  onChange={(e) => setFormShirtName(e.target.value)}
+                  className={CAMPO}
+                  placeholder="Ex: A. COUTO"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2.5">
@@ -875,127 +880,162 @@ const SettingsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 4. O QUE A EQUIPA TÉCNICA ATRIBUI — SÓ DE LEITURA */}
-        <div className="bg-csc-dark p-5 rounded-3xl border-2 border-csc-gold/40 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-csc-gold/20 pb-3">
-            <h3 className="text-xs font-black text-csc-gold uppercase tracking-wider flex items-center gap-2">
-              <Shield size={16} className="text-csc-gold" />
-              <span>4. Posições, Funções & Camisola</span>
-            </h3>
-            <span className="text-[11px] font-bold text-csc-gold bg-csc-gold/20 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
-              <Lock size={12} />
-              <span>Atribuído pelo clube</span>
-            </span>
-          </div>
-
-          {/* Banner explicativo obrigatório */}
-          <div className="p-3.5 bg-csc-gold/10 rounded-2xl flex items-start gap-2.5 text-xs text-csc-gold font-medium">
-            <AlertCircle size={17} className="text-csc-gold shrink-0 mt-0.5" />
-            <div>
-              <p className="font-extrabold text-csc-gold">Nota da Equipa Técnica:</p>
-              <p className="mt-0.5">
-                As posições no campo, as funções no clube e o número de camisola são atribuídos pelo <strong>treinador / equipa técnica</strong>. O tamanho de equipamento e o pé preferido são teus — estão mais abaixo e podes mudá-los.
-              </p>
-            </div>
-          </div>
-
-          {/* Visualização de Posições no Campo */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-white/70">
-              Posições Táticas Atribuídas:
-            </label>
-            <div className="pointer-events-none opacity-95">
-              <SoccerPitchSelector
-                selectedPositions={formPositions}
-                onChange={() => {}}
-              />
-            </div>
-          </div>
-
-          {/* Funções e Atribuições */}
-          <div className="pt-3 border-t border-csc-gold/20 space-y-2">
-            <label className="block text-xs font-bold text-white/70">
-              Funções Atribuídas no Clube:
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {(assignedRoles || ['player']).map(r => (
-                <span
-                  key={r}
-                  className={`px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-2xs ${
-                    r === 'admin'
-                      ? 'bg-csc-gold/15 text-csc-gold '
-                      : r === 'coach'
-                      ? 'bg-csc-blue/20 text-csc-azul-texto '
-                      : 'bg-csc-light/15 text-csc-verde-texto '
-                  }`}
-                >
-                  <span>{r === 'admin' ? 'Administrador / Direção' : r === 'coach' ? 'Treinador' : 'Jogador'}</span>
+        {/* 4. POSIÇÕES / FUNÇÕES NO CLUBE */}
+        {eJogador(profile) ? (
+          <>
+            <div className="bg-csc-dark p-5 rounded-3xl border-2 border-csc-gold/40 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-csc-gold/20 pb-3">
+                <h3 className="text-xs font-black text-csc-gold uppercase tracking-wider flex items-center gap-2">
+                  <Shield size={16} className="text-csc-gold" />
+                  <span>4. Posições, Funções & Camisola</span>
+                </h3>
+                <span className="text-[11px] font-bold text-csc-gold bg-csc-gold/20 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+                  <Lock size={12} />
+                  <span>Atribuído pelo clube</span>
                 </span>
-              ))}
+              </div>
+
+              {/* Banner explicativo obrigatório */}
+              <div className="p-3.5 bg-csc-gold/10 rounded-2xl flex items-start gap-2.5 text-xs text-csc-gold font-medium">
+                <AlertCircle size={17} className="text-csc-gold shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-extrabold text-csc-gold">Nota da Equipa Técnica:</p>
+                  <p className="mt-0.5">
+                    As posições no campo, as funções no clube e o número de camisola são atribuídos pelo <strong>treinador / equipa técnica</strong>. O tamanho de equipamento e o pé preferido são teus — estão mais abaixo e podes mudá-los.
+                  </p>
+                </div>
+              </div>
+
+              {/* Visualização de Posições no Campo */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-white/70">
+                  Posições Táticas Atribuídas:
+                </label>
+                <div className="pointer-events-none opacity-95">
+                  <SoccerPitchSelector
+                    selectedPositions={formPositions}
+                    onChange={() => {}}
+                  />
+                </div>
+              </div>
+
+              {/* Funções e Atribuições */}
+              <div className="pt-3 border-t border-csc-gold/20 space-y-2">
+                <label className="block text-xs font-bold text-white/70">
+                  Funções Atribuídas no Clube:
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(assignedRoles || ['player']).map(r => (
+                    <span
+                      key={r}
+                      className={`px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-2xs ${
+                        r === 'admin'
+                          ? 'bg-csc-gold/15 text-csc-gold '
+                          : r === 'coach'
+                          ? 'bg-csc-blue/20 text-csc-azul-texto '
+                          : 'bg-csc-light/15 text-csc-verde-texto '
+                      }`}
+                    >
+                      <span>{r === 'admin' ? 'Administrador / Direção' : r === 'coach' ? 'Treinador' : 'Jogador'}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* O número da camisola é atribuído: fica de leitura, com o resto. */}
+              <div className="pt-3 border-t border-csc-gold/20">
+                <label className={ETIQUETA}>Nº da Camisola (Dorsal)</label>
+                <div className="px-3.5 py-2.5 bg-white/10 rounded-xl text-xs font-extrabold text-white">
+                  {formJerseyNumber ? `#${formJerseyNumber}` : 'Não atribuído'}
+                </div>
+              </div>
+            </div>
+
+            {/* 5. EQUIPAMENTO & JOGO */}
+            <div className="space-y-3.5">
+              <h3 className={SECCAO}>
+                <Shield size={16} className="text-csc-gold" />
+                <span>5. Equipamento & Jogo</span>
+              </h3>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className={ETIQUETA} htmlFor="perfil-tamanho">Tamanho de Equipamento</label>
+                  <select
+                    id="perfil-tamanho"
+                    value={formKitSize}
+                    onChange={(e) => setFormKitSize(e.target.value)}
+                    className={CAMPO}
+                  >
+                    {['S', 'M', 'L', 'XL', 'XXL'].map(t => (
+                      <option key={t} value={t} className="bg-csc-superficie text-white">{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={ETIQUETA} htmlFor="perfil-pe">Pé preferido</label>
+                  <select
+                    id="perfil-pe"
+                    value={formPreferredFoot}
+                    onChange={(e) => setFormPreferredFoot(e.target.value)}
+                    className={CAMPO}
+                  >
+                    <option value="" className="bg-csc-superficie text-white">Não indicado</option>
+                    {['Direito', 'Esquerdo', 'Ambos'].map(pe => (
+                      <option key={pe} value={pe} className="bg-csc-superficie text-white">{pe}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="bg-csc-dark p-5 rounded-3xl border-2 border-csc-gold/40 shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-csc-gold/20 pb-3">
+              <h3 className="text-xs font-black text-csc-gold uppercase tracking-wider flex items-center gap-2">
+                <Shield size={16} className="text-csc-gold" />
+                <span>4. Funções no Clube</span>
+              </h3>
+              <span className="text-[11px] font-bold text-csc-gold bg-csc-gold/20 px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+                <Lock size={12} />
+                <span>Atribuído pelo clube</span>
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-white/70">
+                Funções Atribuídas:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {(assignedRoles || []).map(r => (
+                  <span
+                    key={r}
+                    className={`px-3 py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-2xs ${
+                      r === 'admin'
+                        ? 'bg-csc-gold/15 text-csc-gold '
+                        : r === 'coach'
+                        ? 'bg-csc-blue/20 text-csc-azul-texto '
+                        : 'bg-csc-light/15 text-csc-verde-texto '
+                    }`}
+                  >
+                    <span>{r === 'admin' ? 'Administrador / Direção' : r === 'coach' ? 'Treinador' : 'Jogador'}</span>
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
+        )}
 
-          {/* O número da camisola é atribuído: fica de leitura, com o resto. */}
-          <div className="pt-3 border-t border-csc-gold/20">
-            <label className={ETIQUETA}>Nº da Camisola (Dorsal)</label>
-            <div className="px-3.5 py-2.5 bg-white/10 rounded-xl text-xs font-extrabold text-white">
-              {formJerseyNumber ? `#${formJerseyNumber}` : 'Não atribuído'}
-            </div>
-          </div>
-        </div>
-
-        {/*
-          O que o atleta sabe melhor do que o clube: que tamanho veste e de que
-          pé joga. Estavam no bloco travado, junto com as posições e o número —
-          e para mudar de tamanho era preciso pedir a alguém da direção.
-        */}
+        {/* DADOS BANCÁRIOS */}
         <div className="space-y-3.5">
           <h3 className={SECCAO}>
             <Shield size={16} className="text-csc-gold" />
-            <span>5. Equipamento & Jogo</span>
+            <span>{eJogador(profile) ? '6. Dados Bancários & Quotas' : '5. Dados Bancários'}</span>
           </h3>
 
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className={ETIQUETA} htmlFor="perfil-tamanho">Tamanho de Equipamento</label>
-              <select
-                id="perfil-tamanho"
-                value={formKitSize}
-                onChange={(e) => setFormKitSize(e.target.value)}
-                className={CAMPO}
-              >
-                {['S', 'M', 'L', 'XL', 'XXL'].map(t => (
-                  <option key={t} value={t} className="bg-csc-superficie text-white">{t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={ETIQUETA} htmlFor="perfil-pe">Pé preferido</label>
-              <select
-                id="perfil-pe"
-                value={formPreferredFoot}
-                onChange={(e) => setFormPreferredFoot(e.target.value)}
-                className={CAMPO}
-              >
-                <option value="" className="bg-csc-superficie text-white">Não indicado</option>
-                {['Direito', 'Esquerdo', 'Ambos'].map(pe => (
-                  <option key={pe} value={pe} className="bg-csc-superficie text-white">{pe}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* 6. DADOS BANCÁRIOS & QUOTAS */}
-        <div className="space-y-3.5">
-          <h3 className={SECCAO}>
-            <Shield size={16} className="text-csc-gold" />
-            <span>6. Dados Bancários & Quotas</span>
-          </h3>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <label className={ETIQUETA}>IBAN (Débito Direto / Quotas)</label>
+              <label className={ETIQUETA}>{eJogador(profile) ? 'IBAN (Débito Direto / Quotas)' : 'IBAN'}</label>
               <input
                 type="text"
                 value={formIban}
@@ -1016,34 +1056,34 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* A janela de quota, só de leitura: quem a define é a direção, na
-              ficha do atleta. Não aparecia em lado nenhum do lado do próprio,
-              e é o que explica desde quando é que se deve quota. */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <label className={ETIQUETA}>Início de atividade</label>
-              <div className="px-3.5 py-2.5 bg-white/10 rounded-xl text-xs font-extrabold text-white">
-                {profile?.quota_start_date
-                  ? fmtData(profile.quota_start_date)
-                  : 'Desde o registo'}
+          {/* A janela de quota só existe e faz sentido para atletas */}
+          {eJogador(profile) && (
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className={ETIQUETA}>Início de atividade</label>
+                <div className="px-3.5 py-2.5 bg-white/10 rounded-xl text-xs font-extrabold text-white">
+                  {profile?.quota_start_date
+                    ? fmtData(profile.quota_start_date)
+                    : 'Desde o registo'}
+                </div>
+              </div>
+              <div>
+                <label className={ETIQUETA}>Fim de atividade</label>
+                <div className="px-3.5 py-2.5 bg-white/10 rounded-xl text-xs font-extrabold text-white">
+                  {profile?.quota_end_date
+                    ? fmtData(profile.quota_end_date)
+                    : 'Sem fim marcado'}
+                </div>
               </div>
             </div>
-            <div>
-              <label className={ETIQUETA}>Fim de atividade</label>
-              <div className="px-3.5 py-2.5 bg-white/10 rounded-xl text-xs font-extrabold text-white">
-                {profile?.quota_end_date
-                  ? fmtData(profile.quota_end_date)
-                  : 'Sem fim marcado'}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* 7. SAÚDE & CONTACTO DE EMERGÊNCIA */}
+        {/* SAÚDE & CONTACTO DE EMERGÊNCIA */}
         <div className="space-y-3.5">
           <h3 className={SECCAO}>
             <HeartPulse size={16} className="text-csc-vermelho-texto" />
-            <span>7. Saúde & Contacto de Emergência</span>
+            <span>{eJogador(profile) ? '7. Saúde & Contacto de Emergência' : '6. Saúde & Contacto de Emergência'}</span>
           </h3>
 
           <div className="grid grid-cols-2 gap-2.5">
@@ -1098,11 +1138,11 @@ const SettingsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 7. UPLOAD DE DOCUMENTOS & RGPD */}
+        {/* UPLOAD DE DOCUMENTOS & RGPD */}
         <div className="space-y-3.5">
           <h3 className={SECCAO}>
             <FileText size={16} className="text-csc-gold" />
-            <span>8. Documentos & Proteção de Dados (RGPD)</span>
+            <span>{eJogador(profile) ? '8. Documentos & Proteção de Dados (RGPD)' : '7. Documentos & Proteção de Dados (RGPD)'}</span>
           </h3>
 
           {/* Fotografia de perfil */}

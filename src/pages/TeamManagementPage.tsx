@@ -59,6 +59,7 @@ import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../com
 import { fmtData } from '../lib/datas'
 import { eJogador, eAdepto } from '../lib/papeis'
 import { contemTexto } from '../lib/texto'
+import { sincronizarNovoAdeptoEmJogosFuturos } from '../lib/convocatoriasAdeptos'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -631,6 +632,9 @@ const TeamManagementPage: React.FC = () => {
 
       // 2. Sincronizar treinos
       await syncPlayerPracticeCallups(player.id, newStatus, eJogador(player))
+      if (eAdepto(player) && newStatus === 'active') {
+        await sincronizarNovoAdeptoEmJogosFuturos(player.id)
+      }
 
       // 3. Atualizar estados locais
       setProfiles(prev => prev.map(p => p.id === player.id ? { ...p, status: newStatus } : p))
@@ -734,19 +738,19 @@ const TeamManagementPage: React.FC = () => {
         }
       : {
           name: formName.trim(),
-          shirt_name: sanitizeText(formShirtName),
-          nickname: sanitizeText(formShirtName),
+          shirt_name: formRoles.includes('player') ? sanitizeText(formShirtName) : null,
+          nickname: formRoles.includes('player') ? sanitizeText(formShirtName) : null,
           email: formEmail.trim().toLowerCase(),
           phone: sanitizeText(formPhone),
           role: primaryRole,
           roles: formRoles,
           status: formStatus,
-          jersey_number: formJerseyNumber !== '' && !isNaN(Number(formJerseyNumber)) ? Number(formJerseyNumber) : null,
-          kit_size: sanitizeText(formKitSize),
-          preferred_foot: formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
+          jersey_number: formRoles.includes('player') && formJerseyNumber !== '' && !isNaN(Number(formJerseyNumber)) ? Number(formJerseyNumber) : null,
+          kit_size: formRoles.includes('player') ? sanitizeText(formKitSize) : null,
+          preferred_foot: formRoles.includes('player') && formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
           birth_date: sanitizeDate(formBirthDate),
           nationality: sanitizeText(formNationality) || 'Portuguesa',
-          position: positionStr,
+          position: formRoles.includes('player') ? positionStr : '',
           address: sanitizeText(formAddress),
           postal_code: sanitizeText(formPostalCode),
           city: sanitizeText(formCity),
@@ -756,8 +760,8 @@ const TeamManagementPage: React.FC = () => {
           iban: sanitizeText(formIban),
           gdpr_consent: Boolean(formGdprConsent),
           member_number: sanitizeText(formMemberNumber),
-          quota_start_date: sanitizeDate(formQuotaStart),
-          quota_end_date: sanitizeDate(formQuotaEnd),
+          quota_start_date: formRoles.includes('player') ? sanitizeDate(formQuotaStart) : null,
+          quota_end_date: formRoles.includes('player') ? sanitizeDate(formQuotaEnd) : null,
           emergency_contact_name: sanitizeText(formEmergencyName),
           emergency_contact_phone: sanitizeText(formEmergencyPhone),
           emergency_contact_relation: formEmergencyRelation ? sanitizeText(formEmergencyRelation) : null,
@@ -797,6 +801,8 @@ const TeamManagementPage: React.FC = () => {
         savedPlayerId = formId
         if (!isSupporter && formRoles.includes('player')) {
           await guardarMesesDispensados(formId)
+        } else if (isAdmin) {
+          await supabase.from('quota_exemptions').delete().eq('profile_id', formId)
         }
         toast.success(isSupporter ? 'Ficha de adepto atualizada com sucesso!' : 'Ficha de membro atualizada com sucesso!')
       } else {
@@ -829,6 +835,8 @@ const TeamManagementPage: React.FC = () => {
           savedPlayerId = existingId
           if (!isSupporter && formRoles.includes('player')) {
             await guardarMesesDispensados(existingId)
+          } else if (isAdmin) {
+            await supabase.from('quota_exemptions').delete().eq('profile_id', existingId)
           }
           toast.success(isSupporter ? 'Ficha de adepto atualizada na base de dados!' : 'Ficha de membro atualizada na base de dados!')
         } else {
@@ -862,6 +870,9 @@ const TeamManagementPage: React.FC = () => {
           return p
         }))
         await syncPlayerPracticeCallups(savedPlayerId, formStatus, formRoles.includes('player'))
+        if ((isSupporter || formRoles.includes('supporter')) && formStatus === 'active') {
+          await sincronizarNovoAdeptoEmJogosFuturos(savedPlayerId)
+        }
       }
 
       setIsFormModalOpen(false)
@@ -1944,16 +1955,18 @@ const TeamManagementPage: React.FC = () => {
                           placeholder="Ex: André Gomes Marques do Couto"
                         />
                       </div>
-                      <div>
-                        <label className={ETIQUETA}>Nome na Camisola</label>
-                        <input
-                          type="text"
-                          value={formShirtName}
-                          onChange={(e) => setFormShirtName(e.target.value)}
-                          className={CAMPO}
-                          placeholder="Ex: A. COUTO"
-                        />
-                      </div>
+                      {formRoles.includes('player') && (
+                        <div>
+                          <label className={ETIQUETA}>Nome na Camisola</label>
+                          <input
+                            type="text"
+                            value={formShirtName}
+                            onChange={(e) => setFormShirtName(e.target.value)}
+                            className={CAMPO}
+                            placeholder="Ex: A. COUTO"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 gap-3">
@@ -2150,11 +2163,11 @@ const TeamManagementPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* 5. DADOS BANCÁRIOS & QUOTAS */}
+                  {/* DADOS BANCÁRIOS */}
                   <div className="cartao-simples p-4 space-y-3.5">
                     <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                       <Shield size={14} className="text-csc-gold" />
-                      <span>5. Dados Bancários & Quotas</span>
+                      <span>{formRoles.includes('player') ? '5. Dados Bancários & Quotas' : '4. Dados Bancários'}</span>
                     </h3>
 
                     <div className="grid grid-cols-1 gap-3">
@@ -2290,11 +2303,11 @@ const TeamManagementPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* 7. SAÚDE & EMERGÊNCIA */}
+                  {/* SAÚDE & EMERGÊNCIA */}
                   <div className="cartao-simples p-4 space-y-3.5">
                     <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                       <HeartPulse size={14} className="text-csc-vermelho-texto" />
-                      <span>7. Saúde & Contacto de Emergência</span>
+                      <span>{formRoles.includes('player') ? '7. Saúde & Contacto de Emergência' : '5. Saúde & Contacto de Emergência'}</span>
                     </h3>
 
                     <div className="grid grid-cols-1 gap-3">
@@ -2347,11 +2360,11 @@ const TeamManagementPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 8. UPLOAD DE DOCUMENTOS & RGPD */}
+                  {/* UPLOAD DE DOCUMENTOS & RGPD */}
                   <div className="cartao-simples p-4 space-y-3.5">
                     <h3 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                       <FileText size={14} className="text-csc-gold" />
-                      <span>8. Documentos & Proteção de Dados (RGPD)</span>
+                      <span>{formRoles.includes('player') ? '8. Documentos & Proteção de Dados (RGPD)' : '6. Documentos & Proteção de Dados (RGPD)'}</span>
                     </h3>
 
                     <div className="grid grid-cols-1 gap-3">
@@ -2458,19 +2471,23 @@ const TeamManagementPage: React.FC = () => {
               ? "Ficha do atleta"
               : "Ficha de membro"
           }
-          titulo={eAdepto(selectedProfile) ? selectedProfile.name : (selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name)}
+          titulo={
+            !extractRolesFromProfile(selectedProfile).includes('player')
+              ? selectedProfile.name
+              : (selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name)
+          }
           legenda={
             eAdepto(selectedProfile)
               ? 'Adepto CSC'
-              : [
+              : extractRolesFromProfile(selectedProfile).includes('player')
+              ? [
                   (selectedProfile.shirt_name || selectedProfile.nickname) ? selectedProfile.name : null,
-                  extractRolesFromProfile(selectedProfile).includes('player')
-                    ? (selectedProfile.jersey_number ? `nº ${selectedProfile.jersey_number}` : 'sem número')
-                    : null,
-                  parsePositions(selectedProfile.position).length > 0 && extractRolesFromProfile(selectedProfile).includes('player')
+                  selectedProfile.jersey_number ? `nº ${selectedProfile.jersey_number}` : 'sem número',
+                  parsePositions(selectedProfile.position).length > 0
                     ? normalizePositionName(parsePositions(selectedProfile.position)[0])
                     : null,
                 ].filter(Boolean).join(' · ')
+              : undefined
           }
         >
           <div className="space-y-6">
@@ -2704,15 +2721,17 @@ const TeamManagementPage: React.FC = () => {
                     </h4>
 
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                      <div className={`bg-white/6 p-2.5 rounded-xl min-w-0 ${!extractRolesFromProfile(selectedProfile).includes('player') ? 'col-span-2' : ''}`}>
                         <p className="text-white/65 font-bold uppercase text-[9px]">Nome Completo</p>
                         <p className="font-extrabold text-white mt-0.5">{selectedProfile.name}</p>
                       </div>
 
-                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                        <p className="text-white/65 font-bold uppercase text-[9px]">Nome na Camisola</p>
-                        <p className="font-extrabold text-white mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
-                      </div>
+                      {extractRolesFromProfile(selectedProfile).includes('player') && (
+                        <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                          <p className="text-white/65 font-bold uppercase text-[9px]">Nome na Camisola</p>
+                          <p className="font-extrabold text-white mt-0.5">{selectedProfile.shirt_name || selectedProfile.nickname || '-'}</p>
+                        </div>
+                      )}
 
                       <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
                         <p className="text-white/65 font-bold uppercase text-[9px]">Data de Nascimento / Idade</p>
@@ -2854,16 +2873,16 @@ const TeamManagementPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 3. Dados Bancários (Débito Direto) */}
+                  {/* 3. Dados Bancários */}
                   <div className="cartao-simples p-4 space-y-3">
                     <h4 className="text-xs font-black text-white/80 uppercase tracking-wider flex items-center gap-1.5">
                       <Shield size={14} className="text-csc-gold" />
-                      <span>3. Dados Bancários & Quotas</span>
+                      <span>{extractRolesFromProfile(selectedProfile).includes('player') ? '3. Dados Bancários & Quotas' : '3. Dados Bancários'}</span>
                     </h4>
 
                     <div className="bg-white/10 p-3 rounded-xl border-t-white/20 shadow-sm shadow-black/10 flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-white/65 font-bold uppercase text-[9px]">IBAN (Débito Direto de Quotas)</p>
+                        <p className="text-white/65 font-bold uppercase text-[9px]">{extractRolesFromProfile(selectedProfile).includes('player') ? 'IBAN (Débito Direto de Quotas)' : 'IBAN'}</p>
                         <p className="font-black text-white font-mono text-xs mt-0.5">
                           {selectedProfile.iban || 'Nenhum IBAN registado'}
                         </p>
@@ -2875,42 +2894,44 @@ const TeamManagementPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* A janela de quota e os meses dispensados — estavam só no
-                        formulário de edição, e são o que explica a dívida de
-                        alguém sem ser preciso abrir a edição para ver. */}
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                        <p className="text-white/65 font-bold uppercase text-[9px]">Início de atividade</p>
-                        <p className="font-extrabold text-white mt-0.5">
-                          {selectedProfile.quota_start_date
-                            ? fmtData(selectedProfile.quota_start_date)
-                            : 'Do estado do perfil'}
-                        </p>
-                      </div>
+                    {/* A janela de quota e os meses dispensados — só para quem tem papel de jogador */}
+                    {extractRolesFromProfile(selectedProfile).includes('player') && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                            <p className="text-white/65 font-bold uppercase text-[9px]">Início de atividade</p>
+                            <p className="font-extrabold text-white mt-0.5">
+                              {selectedProfile.quota_start_date
+                                ? fmtData(selectedProfile.quota_start_date)
+                                : 'Do estado do perfil'}
+                            </p>
+                          </div>
 
-                      <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
-                        <p className="text-white/65 font-bold uppercase text-[9px]">Fim de atividade</p>
-                        <p className="font-extrabold text-white mt-0.5">
-                          {selectedProfile.quota_end_date
-                            ? fmtData(selectedProfile.quota_end_date)
-                            : 'Sem fim marcado'}
-                        </p>
-                      </div>
-                    </div>
+                          <div className="bg-white/6 p-2.5 rounded-xl min-w-0">
+                            <p className="text-white/65 font-bold uppercase text-[9px]">Fim de atividade</p>
+                            <p className="font-extrabold text-white mt-0.5">
+                              {selectedProfile.quota_end_date
+                                ? fmtData(selectedProfile.quota_end_date)
+                                : 'Sem fim marcado'}
+                            </p>
+                          </div>
+                        </div>
 
-                    <div className="bg-white/6 p-2.5 rounded-xl">
-                      <p className="text-white/65 font-bold uppercase text-[9px]">Meses dispensados de quota</p>
-                      <p className="font-extrabold text-white mt-0.5 text-xs">
-                        {dispensasDaFicha === null
-                          ? 'A ler…'
-                          : dispensasDaFicha.length === 0
-                            ? 'Nenhum'
-                            : dispensasDaFicha
-                                .map(m => MESES_CURTOS[Number(m) - 1])
-                                .filter(Boolean)
-                                .join(' · ')}
-                      </p>
-                    </div>
+                        <div className="bg-white/6 p-2.5 rounded-xl">
+                          <p className="text-white/65 font-bold uppercase text-[9px]">Meses dispensados de quota</p>
+                          <p className="font-extrabold text-white mt-0.5 text-xs">
+                            {dispensasDaFicha === null
+                              ? 'A ler…'
+                              : dispensasDaFicha.length === 0
+                                ? 'Nenhum'
+                                : dispensasDaFicha
+                                    .map(m => MESES_CURTOS[Number(m) - 1])
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* 4. Saúde & Contacto de Emergência */}

@@ -59,6 +59,7 @@ export const FIXTURES_BASE: Fixtures = {
   announcements: [],
   dues: [],
   transactions: [],
+  audit_logs: [],
 }
 
 /** Sessão com validade longa: o cliente aceita-a sem ir à rede renovar. */

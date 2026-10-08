@@ -19,7 +19,7 @@ import { Botao } from '../ui'
 import type { TournamentRules } from '../clube/torneios'
 import { mensagemDeErro } from '../../lib/erros'
 import { eAdepto } from '../../lib/papeis'
-import { convocarAdeptosParaJogo } from '../../lib/convocatoriasAdeptos'
+import { convocarAdeptosParaJogo, removerAdeptosSeSemJogadores } from '../../lib/convocatoriasAdeptos'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../ui/formulario'
 
 /**
@@ -369,7 +369,12 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     if (existente) {
       const { error } = await supabase.from('callups').delete().eq('id', existente.id)
       if (error) toast.error('Erro ao tirar da convocatória: ' + mensagemDeErro(error))
-      else await aoMudarConvocatoria()
+      else {
+        if (tipo === 'match') {
+          await removerAdeptosSeSemJogadores(evento.id)
+        }
+        await aoMudarConvocatoria()
+      }
       return
     }
     const motivo = impedimento(p)

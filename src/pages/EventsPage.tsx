@@ -22,12 +22,11 @@ import {
 } from 'lucide-react'
 import { PartilharConvocatoria } from '../components/callups/PartilharConvocatoria'
 import { partilharConvocatoriaWhatsApp, copiarLinkConvocatoria } from '../lib/convocatoriaPartilha'
-import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
+import { useAuth, extractRolesFromProfile, type Profile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
-import type { Profile } from '../context/AuthContext'
 import { eAdepto } from '../lib/papeis'
-import { convocarAdeptosParaJogo } from '../lib/convocatoriasAdeptos'
+import { convocarAdeptosParaJogo, removerAdeptosSeSemJogadores } from '../lib/convocatoriasAdeptos'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { QuickFieldModal } from '../components/QuickFieldModal'
@@ -1036,10 +1035,25 @@ const EventsPage: React.FC = () => {
   const handleRemovePlayerFromCallup = async (callupId: string, eventId: string) => {
     /* Faz-se logo e desfaz-se no toast (decisão da auditoria de design):
        tirar um atleta é um gesto frequente, e uma pergunta a cada um cansava. */
+    const ev = events.find(e => e.id === eventId)
     const removida = (eventCallups[eventId] || []).find(c => c.id === callupId)
     try {
       const { error } = await supabase.from('callups').delete().eq('id', callupId)
       if (error) throw error
+
+      if (ev?.type === 'match') {
+        const restantes = (eventCallups[eventId] || []).filter(c => c.id !== callupId)
+        const atletasRestantes = restantes.filter(c => !eAdepto(c.player))
+        if (atletasRestantes.length === 0) {
+          await removerAdeptosSeSemJogadores(eventId)
+          setEventCallups(prev => ({
+            ...prev,
+            [eventId]: []
+          }))
+          toast.info('Último jogador retirado. Adeptos removidos da convocatória.')
+          return
+        }
+      }
 
       setEventCallups(prev => ({
         ...prev,
@@ -1072,9 +1086,25 @@ const EventsPage: React.FC = () => {
   /** Tirar de uma vez quem ficou sem condições depois de convocado. */
   const handleTirarVarios = async (callupIds: string[], eventId: string) => {
     if (callupIds.length === 0) return
+    const ev = events.find(e => e.id === eventId)
     try {
       const { error } = await supabase.from('callups').delete().in('id', callupIds)
       if (error) throw error
+
+      if (ev?.type === 'match') {
+        const restantes = (eventCallups[eventId] || []).filter(c => !callupIds.includes(c.id))
+        const atletasRestantes = restantes.filter(c => !eAdepto(c.player))
+        if (atletasRestantes.length === 0) {
+          await removerAdeptosSeSemJogadores(eventId)
+          setEventCallups(prev => ({
+            ...prev,
+            [eventId]: []
+          }))
+          toast.info('Todos os jogadores foram retirados. Adeptos removidos da convocatória.')
+          return
+        }
+      }
+
       setEventCallups(prev => ({
         ...prev,
         [eventId]: (prev[eventId] || []).filter(c => !callupIds.includes(c.id)),
