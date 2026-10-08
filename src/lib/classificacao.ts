@@ -105,7 +105,12 @@ export const calcularClassificacao = <T extends EquipaDoGrupo>(
   teams: T[],
   matches: JogoDaSerie[],
   groupId: string,
+  regrasOuDesempate?: 'head_to_head' | 'goal_difference' | { tiebreaker?: 'head_to_head' | 'goal_difference' } | null,
 ): LinhaClassificacao<T>[] => {
+  const criterioDesempate = typeof regrasOuDesempate === 'string'
+    ? regrasOuDesempate
+    : regrasOuDesempate?.tiebreaker || 'head_to_head'
+
   const groupTeams = teams.filter(t => t.group_id === groupId)
 
   const stats: Record<string, LinhaClassificacao<T>> = {}
@@ -175,7 +180,24 @@ export const calcularClassificacao = <T extends EquipaDoGrupo>(
   linhas.sort((a, b) => {
     if (a.p !== b.p) return b.p - a.p
 
-    // Empatadas: manda o confronto direto, se chegaram a jogar uma com a outra.
+    // Se o desempate for por Diferença de Golos Geral primeiro:
+    if (criterioDesempate === 'goal_difference') {
+      if (a.dg !== b.dg) return b.dg - a.dg
+      if (a.gm !== b.gm) return b.gm - a.gm
+      
+      const h2hA = a.headToHead[b.team.id]
+      const h2hB = b.headToHead[a.team.id]
+      if (h2hA && h2hB) {
+        if (h2hA.p !== h2hB.p) return h2hB.p - h2hA.p
+        const dgA = h2hA.gm - h2hA.gs
+        const dgB = h2hB.gm - h2hB.gs
+        if (dgA !== dgB) return dgB - dgA
+        if (h2hA.gm !== h2hB.gm) return h2hB.gm - h2hA.gm
+      }
+      return 0
+    }
+
+    // Por omissão: Confronto Direto (head_to_head) primeiro:
     const h2hA = a.headToHead[b.team.id]
     const h2hB = b.headToHead[a.team.id]
     if (h2hA && h2hB) {

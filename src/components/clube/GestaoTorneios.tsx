@@ -461,17 +461,30 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                 <div className="p-4 border-t border-white/10 grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto">
                 
                   <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px]">Formato da Competição</h4>
-                  <div className="col-span-1">
-                    <label className={ETIQUETA}>Modelo de Liga</label>
-                    <select 
-                      value={tourRules.format || 'single_league'} 
-                      onChange={e => setTourRules({...tourRules, format: e.target.value as any})} 
-                      className={CAMPO}
-                    >
-                      <option value="single_league">Liga Única (1 Fase)</option>
-                      <option value="two_phases">2 Fases (Grupos + Fase Final)</option>
-                    </select>
-                  </div>
+                    <div className="grid grid-cols-2 gap-3 col-span-1">
+                      <div>
+                        <label className={ETIQUETA}>Modelo de Liga</label>
+                        <select 
+                          value={tourRules.format || 'single_league'} 
+                          onChange={e => setTourRules({...tourRules, format: e.target.value as any})} 
+                          className={CAMPO}
+                        >
+                          <option value="single_league">Liga Única (1 Fase)</option>
+                          <option value="two_phases">2 Fases (Grupos + Fase Final)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Critério de Desempate</label>
+                        <select
+                          value={tourRules.tiebreaker || 'head_to_head'}
+                          onChange={e => setTourRules({...tourRules, tiebreaker: e.target.value as any})}
+                          className={CAMPO}
+                        >
+                          <option value="head_to_head">Confronto Direto (H2H)</option>
+                          <option value="goal_difference">Diferença de Golos Geral</option>
+                        </select>
+                      </div>
+                    </div>
 
                   <div className="grid grid-cols-2 gap-3 col-span-1">
                     <div>

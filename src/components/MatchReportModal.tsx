@@ -604,6 +604,11 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                   <span className="text-[10px] uppercase font-bold tracking-widest text-csc-verde-texto">
                     {homeScore !== null ? 'Resultado Final' : 'Sem Resultado'}
                   </span>
+                  {tournamentRules?.match_duration_mins && (
+                    <span className="text-[9.5px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full mt-0.5" title={`Duração regulamentar: ${tournamentRules.half_duration_mins ? `2x${tournamentRules.half_duration_mins}m` : `${tournamentRules.match_duration_mins}m`}`}>
+                      ⏱️ {tournamentRules.half_duration_mins ? `2x${tournamentRules.half_duration_mins}'` : `${tournamentRules.match_duration_mins}'`}
+                    </span>
+                  )}
                 </div>
 
                 {/* Equipa 2 */}
@@ -876,6 +881,41 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             />
           </div>
         </div>
+
+        {/* Falta de Comparência / Walkover (W.O.) */}
+        {(() => {
+          const woScoreStr = (tournamentRules?.walkover_score || '5-0').trim()
+          const parts = woScoreStr.split('-').map((s: string) => parseInt(s.trim(), 10))
+          const woGolos = !isNaN(parts[0]) && parts[0] > 0 ? parts[0] : 5
+
+          return (
+            <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-white/5 border border-white/10">
+              <span className="text-[11px] font-bold text-white/60">Atalho W.O. ({woGolos}-0):</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHomeScore(woGolos)
+                    setAwayScore(0)
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10.5px] font-black tracking-wide transition-colors"
+                >
+                  Vitória {leftSigla}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHomeScore(0)
+                    setAwayScore(woGolos)
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10.5px] font-black tracking-wide transition-colors"
+                >
+                  Vitória {rightSigla}
+                </button>
+              </div>
+            </div>
+          )
+        })()}
 
         {/*
           A conta à vista enquanto se escreve, e não só ao gravar: quem soma

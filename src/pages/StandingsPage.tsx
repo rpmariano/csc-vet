@@ -183,7 +183,7 @@ export const StandingsPage = () => {
   /* A tabela e os desempates vivem em `src/lib/classificacao.ts` — a Home
      mostra a mesma classificação e não pode fazer a conta por sua conta. */
   const getStandingsForGroup = (groupId: string) =>
-    calcularClassificacao(teams, matches, groupId)
+    calcularClassificacao(teams, matches, groupId, selectedTournament?.rules)
 
   // --- JORNADAS (agendar + registar resultados) ---
   const openJornadaModal = (groupId: string) => {
@@ -723,7 +723,38 @@ export const StandingsPage = () => {
                                     </span>
                                   </div>
 
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    {(() => {
+                                      const woScoreStr = (selectedTournament?.rules?.walkover_score || '5-0').trim()
+                                      const parts = woScoreStr.split('-').map((s: string) => parseInt(s.trim(), 10))
+                                      const woGolos = !isNaN(parts[0]) && parts[0] > 0 ? parts[0] : 5
+                                      return (
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setEditHomeScore(String(woGolos))
+                                              setEditAwayScore('0')
+                                            }}
+                                            className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold"
+                                            title={`Vitória por Falta de Comparência (${woGolos}-0)`}
+                                          >
+                                            W.O. {casa.sigla}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setEditHomeScore('0')
+                                              setEditAwayScore(String(woGolos))
+                                            }}
+                                            className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold"
+                                            title={`Vitória por Falta de Comparência (0-${woGolos})`}
+                                          >
+                                            W.O. {fora.sigla}
+                                          </button>
+                                        </div>
+                                      )
+                                    })()}
                                     <input
                                       type="date"
                                       value={editDate}

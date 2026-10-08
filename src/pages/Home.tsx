@@ -201,7 +201,7 @@ const Home: React.FC = () => {
             .limit(1),
           /* Só as provas a decorrer: uma prova agendada não tem tabela para
              mostrar, e o cartão levava a um ecrã vazio. */
-          supabase.from('tournaments').select('id, name, season, status').eq('status', 'ativo'),
+          supabase.from('tournaments').select('id, name, season, status, rules').eq('status', 'ativo'),
           supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date, status, photo_url, role, roles'),
         ])
 
@@ -341,7 +341,7 @@ const Home: React.FC = () => {
           conta é a da `StandingsPage` — a mesma função, para as duas tabelas
           não poderem discordar.
         */
-        const provasBrutas = (torneios ?? []) as { id: string; name: string; season: string | null }[]
+        const provasBrutas = (torneios ?? []) as { id: string; name: string; season: string | null; rules?: any }[]
         const idsProvas = provasBrutas.map(t => t.id)
         const [
           { data: gruposT },
@@ -384,6 +384,7 @@ const Home: React.FC = () => {
                   equipasDaProva,
                   jogosSerie.filter(m => m.tournament_id === t.id),
                   grupo.id,
+                  t.rules,
                 ),
               )
             : []

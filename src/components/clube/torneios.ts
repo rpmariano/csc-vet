@@ -8,6 +8,8 @@
 
 export interface TournamentRules {
   format?: 'single_league' | 'two_phases'
+  /** Critério principal de desempate na classificação: confronto direto ('head_to_head') ou diferença de golos geral ('goal_difference'). */
+  tiebreaker?: 'head_to_head' | 'goal_difference'
   /** Número de lugares que se apuram para a fase final ou playoff (ex: 2 ou 4 primeiros). */
   promotion_spots?: number
   /** Número de lugares de descida / taça consolação (opcional). */
@@ -47,6 +49,7 @@ export interface TournamentRules {
 
 export const DEFAULT_TOURNAMENT_RULES: TournamentRules = {
   format: 'single_league',
+  tiebreaker: 'head_to_head',
   min_age: 35,
   exceptions_allowed: true,
   exceptions_count: 3,
