@@ -121,12 +121,29 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   // Players
   const [playerStats, setPlayerStats] = useState<PlayerMatchStat[]>([])
 
+  const [rulesState, setRulesState] = useState<any>(tournamentRules || null)
+
+  useEffect(() => {
+    setRulesState(tournamentRules || null)
+  }, [tournamentRules])
+
   useEffect(() => {
     if (!isOpen || !eventId) return
 
     const loadData = async () => {
       setLoading(true)
       try {
+        // Se as regras não vieram por prop e o evento tem tournament_id, carrega-as
+        if (!tournamentRules && event?.tournament_id) {
+          const { data: tData } = await supabase
+            .from('tournaments')
+            .select('rules')
+            .eq('id', event.tournament_id)
+            .maybeSingle()
+          if (tData?.rules) {
+            setRulesState(tData.rules)
+          }
+        }
         // 1. Parse Event description
         const parsed = parseMatchReportMetadata(event?.description)
         setTacticalFormation(parsed.tacticalFormation)
@@ -604,9 +621,9 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                   <span className="text-[10px] uppercase font-bold tracking-widest text-csc-verde-texto">
                     {homeScore !== null ? 'Resultado Final' : 'Sem Resultado'}
                   </span>
-                  {tournamentRules?.match_duration_mins && (
-                    <span className="text-[9.5px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full mt-0.5" title={`Duração regulamentar: ${tournamentRules.half_duration_mins ? `2x${tournamentRules.half_duration_mins}m` : `${tournamentRules.match_duration_mins}m`}`}>
-                      ⏱️ {tournamentRules.half_duration_mins ? `2x${tournamentRules.half_duration_mins}'` : `${tournamentRules.match_duration_mins}'`}
+                  {rulesState?.match_duration_mins && (
+                    <span className="text-[9.5px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full mt-0.5" title={`Duração regulamentar: ${rulesState.half_duration_mins ? `2x${rulesState.half_duration_mins}m` : `${rulesState.match_duration_mins}m`}`}>
+                      ⏱️ {rulesState.half_duration_mins ? `2x${rulesState.half_duration_mins}'` : `${rulesState.match_duration_mins}'`}
                     </span>
                   )}
                 </div>
@@ -884,7 +901,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
         {/* Falta de Comparência / Walkover (W.O.) */}
         {(() => {
-          const woScoreStr = (tournamentRules?.walkover_score || '5-0').trim()
+          const woScoreStr = (rulesState?.walkover_score || tournamentRules?.walkover_score || '5-0').trim()
           const parts = woScoreStr.split('-').map((s: string) => parseInt(s.trim(), 10))
           const woGolos = !isNaN(parts[0]) && parts[0] > 0 ? parts[0] : 5
 

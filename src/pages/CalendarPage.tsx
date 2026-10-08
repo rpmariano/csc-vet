@@ -139,6 +139,7 @@ interface Event {
     season?: string | null
     image_url?: string | null
     organizer_name?: string | null
+    rules?: any
   } | null
   max_players?: number | null
   home_away?: 'home' | 'away' | 'neutral' | null
@@ -321,7 +322,7 @@ const CalendarPage: React.FC = () => {
       const [evRes, callupsRes, myCallupsRes, profilesRes, fieldsRes] = await Promise.all([
         supabase
           .from('events')
-          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season, image_url, organizer_name), field:fields(id, name, address)')
+          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season, image_url, organizer_name, rules), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
         fetchAllCallups('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
         myCallupsPromise,
@@ -1010,6 +1011,20 @@ const CalendarPage: React.FC = () => {
                 {event.tournament.name}
               </span>
             )}
+
+            {(() => {
+              const tr = event.tournament?.rules
+              const half = tr?.half_duration_mins ?? (tr?.match_duration_mins ? Math.round(tr.match_duration_mins / 2) : 35)
+              const total = tr?.match_duration_mins ?? 70
+              if (isMatch) {
+                return (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-white/80 shrink-0" title={`Duração regulamentar: 2x${half}m (${total}m)`}>
+                    ⏱️ 2x{half}'
+                  </span>
+                )
+              }
+              return null
+            })()}
           </div>
 
           {/*
@@ -1770,6 +1785,20 @@ const CalendarPage: React.FC = () => {
                     {selectedEvent.home_away === 'away' ? 'Fora' : selectedEvent.home_away === 'neutral' ? 'Campo neutro' : 'Em casa'}
                   </span>
                 )}
+
+                {(() => {
+                  const tr = selectedEvent.tournament?.rules
+                  const half = tr?.half_duration_mins ?? (tr?.match_duration_mins ? Math.round(tr.match_duration_mins / 2) : 35)
+                  const total = tr?.match_duration_mins ?? 70
+                  if (selectedEvent.type === 'match') {
+                    return (
+                      <span className="inline-flex items-center h-[22px] px-2.5 rounded-[11px] bg-white/10 font-display font-bold text-[9.5px] text-white/80" title={`Duração regulamentar: 2x${half}m (${total}m)`}>
+                        ⏱️ 2x{half}'
+                      </span>
+                    )
+                  }
+                  return null
+                })()}
               </div>
 
             </div>

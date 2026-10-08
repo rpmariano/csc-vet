@@ -1982,6 +1982,19 @@ const EventsPage: React.FC = () => {
                       } ${CORES_TIPO[activeCallupModalEvent.type as keyof typeof CORES_TIPO]?.texto ?? 'text-white'}`}>
                         {activeCallupModalEvent.type === 'match' ? 'Jogo' : activeCallupModalEvent.type === 'practice' ? 'Treino' : 'Convívio'}
                       </span>
+                      {(() => {
+                        const tr = tournaments.find(t => t.id === activeCallupModalEvent.tournament_id)?.rules
+                        const half = tr?.half_duration_mins ?? (tr?.match_duration_mins ? Math.round(tr.match_duration_mins / 2) : 35)
+                        const total = tr?.match_duration_mins ?? 70
+                        if (activeCallupModalEvent.type === 'match') {
+                          return (
+                            <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-lg flex items-center gap-1" title={`Duração regulamentar: 2x${half}m (${total}m)`}>
+                              ⏱️ 2x{half}'
+                            </span>
+                          )
+                        }
+                        return null
+                      })()}
                     </div>
 
                     <p className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
