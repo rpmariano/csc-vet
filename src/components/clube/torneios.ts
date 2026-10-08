@@ -18,7 +18,13 @@ export interface TournamentRules {
   match_duration_mins: number;
   half_duration_mins: number;
   rolling_subs: boolean;
+  /** Se ativa suspensão por acumulação de amarelos (0 ou desativado = desativado). */
+  yellow_cards_suspension_enabled?: boolean;
   yellow_cards_to_suspension: number;
+  /** Suspensão automática de 1 jogo por expulsão direta (cartão vermelho). Opcional/configurável. */
+  red_card_suspension?: boolean;
+  /** Suspensão automática de 1 jogo por acumulação de 2 amarelos no mesmo jogo. Opcional/configurável. */
+  double_yellow_suspension?: boolean;
   walkover_score: string;
   max_walkovers_allowed: number;
   delay_tolerance_mins: number;
@@ -47,7 +53,10 @@ export const DEFAULT_TOURNAMENT_RULES: TournamentRules = {
   match_duration_mins: 70,
   half_duration_mins: 35,
   rolling_subs: true,
+  yellow_cards_suspension_enabled: true,
   yellow_cards_to_suspension: 3,
+  red_card_suspension: true,
+  double_yellow_suspension: true,
   walkover_score: '5-0',
   max_walkovers_allowed: 3,
   delay_tolerance_mins: 20

@@ -96,6 +96,7 @@ interface HistoricoDoAtleta {
   amarelos: number
   vermelhos: number
   suspenso: boolean
+  motivoSuspensao?: string | null
   telefone: string | null
 }
 
@@ -136,7 +137,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
           .eq('player_id', jogadorId)
           .lte('event.date_time', new Date().toISOString()),
         supabase.from('stats').select('yellow_cards, red_cards').eq('player_id', jogadorId),
-        supabase.from('tournament_suspensions').select('id').eq('player_id', jogadorId).eq('status', 'active'),
+        supabase.from('tournament_suspensions').select('id, reason').eq('player_id', jogadorId).eq('status', 'active'),
         supabase.from('profiles').select('phone').eq('id', jogadorId).maybeSingle(),
       ])
 
@@ -147,6 +148,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
         event: { date_time: string } | null
       }[]
       const cartoes = (disciplina.data ?? []) as { yellow_cards: number | null; red_cards: number | null }[]
+      const activeSuspensions = (suspensoes.data ?? []) as { id: string; reason?: string | null }[]
 
       setHistorico({
         total: linhas.length,
@@ -159,7 +161,8 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
           .map(l => l.status as 'confirmed' | 'declined'),
         amarelos: cartoes.reduce((t, c) => t + (c.yellow_cards ?? 0), 0),
         vermelhos: cartoes.reduce((t, c) => t + (c.red_cards ?? 0), 0),
-        suspenso: (suspensoes.data ?? []).length > 0,
+        suspenso: activeSuspensions.length > 0,
+        motivoSuspensao: activeSuspensions[0]?.reason ?? null,
         telefone: (ficha.data as { phone?: string | null } | null)?.phone ?? null,
       })
     }
@@ -345,7 +348,7 @@ export const FichaConvocado: React.FC<FichaConvocadoProps> = ({
             >
               {historico?.suspenso ? (
                 <span className="inline-flex items-center gap-1.5 justify-end">
-                  <ShieldAlert size={13} /> suspenso
+                  <ShieldAlert size={13} /> {historico.motivoSuspensao || 'suspenso'}
                 </span>
               ) : (
                 'sem suspensão'

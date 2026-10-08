@@ -168,6 +168,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
      aplicarem as mesmas — a Agenda não as aplicava de todo. */
   const [inscritos, setInscritos] = useState<Set<string> | null>(null)
   const [suspensos, setSuspensos] = useState<Set<string>>(new Set())
+  const [motivosSuspensao, setMotivosSuspensao] = useState<Map<string, string>>(new Map())
   const [regras, setRegras] = useState<Partial<TournamentRules> | null>(null)
 
   const aberto = evento !== null
@@ -202,22 +203,22 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     if (!aberto || !provaDaConvocatoria) {
       setInscritos(null)
       setSuspensos(new Set())
+      setMotivosSuspensao(new Map())
       setRegras(null)
       return
     }
     let cancelado = false
     Promise.all([
       supabase.from('tournament_players').select('player_id').eq('tournament_id', provaDaConvocatoria),
-      supabase.from('tournament_suspensions').select('player_id, status').eq('tournament_id', provaDaConvocatoria),
+      supabase.from('tournament_suspensions').select('player_id, reason, status').eq('tournament_id', provaDaConvocatoria),
       supabase.from('tournaments').select('rules').eq('id', provaDaConvocatoria).maybeSingle(),
     ]).then(([ins, sus, prova]) => {
       if (cancelado) return
       setInscritos(new Set(((ins.data ?? []) as { player_id: string }[]).map(l => l.player_id)))
-      setSuspensos(new Set(
-        ((sus.data ?? []) as { player_id: string; status: string }[])
-          .filter(l => l.status === 'active')
-          .map(l => l.player_id),
-      ))
+      const ativas = ((sus.data ?? []) as { player_id: string; reason?: string | null; status: string }[])
+        .filter(l => l.status === 'active')
+      setSuspensos(new Set(ativas.map(l => l.player_id)))
+      setMotivosSuspensao(new Map(ativas.map(l => [l.player_id, l.reason || 'Suspenso'])))
       setRegras(((prova.data as { rules?: Partial<TournamentRules> } | null)?.rules) ?? null)
     })
     return () => { cancelado = true }
@@ -272,7 +273,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     if (p.status === 'inactive') return 'Inativo'
     if (provaDaConvocatoria && inscritos) {
       if (!inscritos.has(p.id)) return 'Não inscrito na prova'
-      if (suspensos.has(p.id)) return 'Suspenso'
+      if (suspensos.has(p.id)) return motivosSuspensao.get(p.id) || 'Suspenso'
     }
     if (tipo === 'gathering') return null
     // Jogos e treinos são de quem tem o papel de Jogador.

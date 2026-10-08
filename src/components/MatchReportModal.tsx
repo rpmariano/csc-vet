@@ -357,32 +357,59 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           .eq('player_id', p.player_id)
 
         // Verificação de Castigos / Suspensões se este evento pertence a um torneio
-        if (event?.tournament_id && tournamentRules?.yellow_cards_to_suspension && p.yellow_cards > 0) {
-          // Precisamos buscar todos os cartões amarelos deste jogador neste torneio
-          const { data: pastStats } = await supabase
-            .from('stats')
-            .select('yellow_cards, event:events!inner(tournament_id)')
-            .eq('player_id', p.player_id)
-            .eq('events.tournament_id', event.tournament_id)
-          
-          let totalYellows = p.yellow_cards
-          if (pastStats) {
-            totalYellows = pastStats.reduce((acc, st) => acc + (st.yellow_cards || 0), 0)
-          }
+        if (event?.tournament_id) {
+          const rules = tournamentRules || {}
 
-          // Nota: Ao ler os stats acabámos de gravar o atual, portanto o current já lá pode estar incluído se o select os apanhou, 
-          // mas o UPSERT pode ter acontecido, então é mais seguro ler tudo incluindo o atual depois do UPSERT e somar.
-          // Na verdade, se pastStats traz a soma de TUDO, totalYellows = soma.
-          totalYellows = pastStats ? pastStats.reduce((acc, st) => acc + (st.yellow_cards || 0), 0) : p.yellow_cards
-
-          if (totalYellows > 0 && totalYellows % tournamentRules.yellow_cards_to_suspension === 0) {
-            newSuspensions.push(p.name)
+          // 1. Suspensão por Cartão Vermelho direto (se a regra estiver ativa, por omissão sim)
+          const redCardSuspensionEnabled = rules.red_card_suspension !== false
+          if (redCardSuspensionEnabled && p.red_cards > 0) {
+            newSuspensions.push(`${p.name} (Vermelho)`)
             await supabase.from('tournament_suspensions').insert([{
               tournament_id: event.tournament_id,
               player_id: p.player_id,
-              reason: `Acumulação de Amarelos (${totalYellows})`,
+              reason: 'Cartão Vermelho direto',
               status: 'active'
             }])
+          }
+
+          // 2. Suspensão por 2 Cartões Amarelos no mesmo jogo (se a regra estiver ativa, por omissão sim)
+          const doubleYellowSuspensionEnabled = rules.double_yellow_suspension !== false
+          if (doubleYellowSuspensionEnabled && p.yellow_cards >= 2) {
+            newSuspensions.push(`${p.name} (Duplo Amarelo)`)
+            await supabase.from('tournament_suspensions').insert([{
+              tournament_id: event.tournament_id,
+              player_id: p.player_id,
+              reason: 'Duplo Cartão Amarelo no mesmo jogo',
+              status: 'active'
+            }])
+          }
+
+          // 3. Suspensão por acumulação de amarelos ao longo do torneio (se a regra estiver ativa e limite > 0)
+          const yellowCardsLimit = Number(rules.yellow_cards_to_suspension ?? 3)
+          const yellowAccumulationEnabled = rules.yellow_cards_suspension_enabled !== false && yellowCardsLimit > 0
+
+          if (yellowAccumulationEnabled && p.yellow_cards > 0) {
+            // Buscar todos os cartões amarelos deste jogador neste torneio
+            const { data: pastStats } = await supabase
+              .from('stats')
+              .select('yellow_cards, event:events!inner(tournament_id)')
+              .eq('player_id', p.player_id)
+              .eq('events.tournament_id', event.tournament_id)
+            
+            let totalYellows = p.yellow_cards
+            if (pastStats) {
+              totalYellows = pastStats.reduce((acc, st) => acc + (st.yellow_cards || 0), 0)
+            }
+
+            if (totalYellows > 0 && totalYellows % yellowCardsLimit === 0) {
+              newSuspensions.push(`${p.name} (${totalYellows}º Amarelo)`)
+              await supabase.from('tournament_suspensions').insert([{
+                tournament_id: event.tournament_id,
+                player_id: p.player_id,
+                reason: `Acumulação de Amarelos (${totalYellows})`,
+                status: 'active'
+              }])
+            }
           }
         }
       }
@@ -390,7 +417,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       if (newSuspensions.length > 0) {
         const names = newSuspensions.join(', ')
         // Mostraremos um alerta na UI ou apenas toast
-        localStorage.setItem(`csc_suspension_alert_${event.tournament_id}`, `Os seguintes jogadores atingiram o limite de amarelos e estão suspensos no próximo jogo: ${names}`)
+        localStorage.setItem(`csc_suspension_alert_${event.tournament_id}`, `Os seguintes jogadores estão suspensos para o próximo jogo: ${names}`)
       }
 
       const nonParticipants = playerStats.filter(p => p.lineup_status === 'none' && p.goals === 0 && p.yellow_cards === 0 && p.red_cards === 0)

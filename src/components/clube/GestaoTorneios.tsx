@@ -515,13 +515,46 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                   </div>
                 
                   <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
-                  <div>
+                  <div className="space-y-1">
                     <label className={ETIQUETA}>Amarelos para Suspensão</label>
-                    <input type="number" min="0" value={tourRules.yellow_cards_to_suspension} onChange={e => setTourRules({...tourRules, yellow_cards_to_suspension: Number(e.target.value)})} className={CAMPO} />
+                    <input
+                      type="number"
+                      min="0"
+                      value={tourRules.yellow_cards_to_suspension}
+                      onChange={e => setTourRules({
+                        ...tourRules,
+                        yellow_cards_to_suspension: Number(e.target.value),
+                        yellow_cards_suspension_enabled: Number(e.target.value) > 0,
+                      })}
+                      className={CAMPO}
+                    />
+                    <p className="text-[10px] text-white/50">0 desativa a suspensão por amarelos acumulados.</p>
                   </div>
                   <div>
                     <label className={ETIQUETA}>Resultado p/ Falta Comp.</label>
                     <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({...tourRules, walkover_score: e.target.value})} className={CAMPO} placeholder="Ex: 5-0" />
+                  </div>
+
+                  <div className="col-span-1 sm:col-span-2 pt-2 border-t border-white/10 space-y-2">
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tourRules.red_card_suspension ?? true}
+                        onChange={e => setTourRules({ ...tourRules, red_card_suspension: e.target.checked })}
+                        className="w-4 h-4 text-csc-tinta rounded"
+                      />
+                      <span>Suspensão automática de 1 jogo por Cartão Vermelho direto</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tourRules.double_yellow_suspension ?? true}
+                        onChange={e => setTourRules({ ...tourRules, double_yellow_suspension: e.target.checked })}
+                        className="w-4 h-4 text-csc-tinta rounded"
+                      />
+                      <span>Suspensão automática de 1 jogo por 2º Cartão Amarelo no mesmo jogo</span>
+                    </label>
                   </div>
                 </div>
               </details>
