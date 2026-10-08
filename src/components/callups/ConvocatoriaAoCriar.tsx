@@ -7,6 +7,7 @@ import { EcraDetalhe } from '../EcraDetalhe'
 import { Botao, BlocoData } from '../ui'
 import { mensagemDeErro } from '../../lib/erros'
 import { convocarAdeptosParaJogo } from '../../lib/convocatoriasAdeptos'
+import { eAdepto } from '../../lib/papeis'
 
 /**
  * Convocar, logo a seguir a guardar o evento (ecrãs 4f e 4g).
@@ -153,7 +154,7 @@ export const ConvocatoriaAoCriar: React.FC<{
   }
 
   const quando = new Date(evento.quando)
-  const listaVisivel = eTreino && !aAjustar ? todos.filter(p => escolhidos.has(p.id)) : todos
+  const listaVisivel = (eTreino && !aAjustar ? todos.filter(p => escolhidos.has(p.id)) : todos).filter(p => !eAdepto(p))
 
   const acoes = eTreino && !aAjustar ? (
     <>

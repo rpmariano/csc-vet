@@ -179,14 +179,21 @@ test('programador (rpmariano@gmail.com) vê "Ver a app como" e pode alternar per
   // O bloco deve estar visível
   await expect(page.getByText('Ver a app como')).toBeVisible()
 
-  // Deve ter botões para Direção, Treinador, Jogador, Adepto
+  // Deve ter botões para Direção, Treinador, Jogador, Adepto e Sem perfil
   const btnTreinador = page.getByRole('button', { name: 'Treinador' })
   await expect(btnTreinador).toBeVisible()
+  const btnSemPerfil = page.getByRole('button', { name: 'Sem perfil' })
+  await expect(btnSemPerfil).toBeVisible()
 
   // Clicar em Treinador deve ativar a simulação
   await btnTreinador.click()
-  const simulatedRoleNoStorage = await page.evaluate(() => window.localStorage.getItem('csc_simulated_role'))
+  let simulatedRoleNoStorage = await page.evaluate(() => window.localStorage.getItem('csc_simulated_role'))
   expect(simulatedRoleNoStorage).toBe('coach')
+
+  // Clicar em Sem perfil deve ativar a simulação de unassigned
+  await btnSemPerfil.click()
+  simulatedRoleNoStorage = await page.evaluate(() => window.localStorage.getItem('csc_simulated_role'))
+  expect(simulatedRoleNoStorage).toBe('unassigned')
 })
 
 test('adepto não vê sinal de pagamentos, não tem "Os meus pagamentos" nem opção de quotas nos avisos', async ({ page }) => {
@@ -240,4 +247,64 @@ test('adepto não vê sinal de pagamentos, não tem "Os meus pagamentos" nem op�
   await expect(page.getByText('Comunicados', { exact: true })).toBeVisible()
   await expect(page.getByText('Quotas', { exact: true })).not.toBeVisible()
 })
+
+test('utilizador sem perfil fica isolado: vê ecrã de boas-vindas, sem barra de navegação, sem pagamentos e sem acesso a outras páginas', async ({ page }) => {
+  const perfilSemPerfil = {
+    id: '00000000-0000-4000-8000-000000000066',
+    name: 'Novo Registo',
+    email: 'novo@clube.pt',
+    role: 'unassigned',
+    roles: [],
+    status: 'inactive',
+    jersey_number: null,
+    shirt_name: null,
+    nickname: null,
+    position: null,
+    photo_url: null,
+    phone: '913000111',
+    birth_date: null,
+  }
+
+  await montarSupabaseFalso(page, {
+    profiles: [perfilSemPerfil],
+    v_players_public: [],
+    club_settings: [{ id: 1, home_field_id: null, club_name: 'GDS Cascais', initials: 'CSC' }],
+  })
+
+  // 1. Na Home, deve ver o ecrã de boas-vindas do SemPerfilAtribuido e NÃO ter barra de navegação
+  await page.goto('/csc-vet/')
+  await page.waitForLoadState('networkidle')
+
+  await expect(page.getByText('Bem vindo á nossa app!')).toBeVisible()
+  await expect(page.getByText('Rui Mariano')).toBeVisible()
+
+  // Barra de navegação inferior não deve existir
+  const barraCount = await page.locator('nav a, nav button').count()
+  expect(barraCount).toBe(0)
+
+  // Não deve ter sinal de pagamentos nem pastilha de apto/lesionado
+  await expect(page.locator('button[aria-label*="pagamento"]')).toHaveCount(0)
+  await expect(page.getByText('Apto')).toHaveCount(0)
+
+  // 2. Tentar navegar diretamente para /calendar deve redirecionar para a Home
+  await page.goto('/csc-vet/calendar')
+  await page.waitForLoadState('networkidle')
+  await page.waitForTimeout(300)
+  expect(page.url()).toContain('/csc-vet/')
+  await expect(page.getByText('Bem vindo á nossa app!')).toBeVisible()
+
+  // 3. Nas definições, vê apenas os dados de conta e botão de terminar sessão
+  await page.goto('/csc-vet/settings')
+  await page.waitForLoadState('networkidle')
+
+  await expect(page.getByText('Dados da Conta')).toBeVisible()
+  await expect(page.getByText('novo@clube.pt')).toBeVisible()
+  await expect(page.getByText('Os meus pagamentos')).not.toBeVisible()
+  await expect(page.getByText('Terminar Sessão')).toBeVisible()
+
+  // Não deve ver formulário de atleta (ex: seletores de posição ou camisola)
+  await expect(page.getByText('Posição Principal')).not.toBeVisible()
+  await expect(page.getByText('Guardar a minha ficha')).not.toBeVisible()
+})
+
 

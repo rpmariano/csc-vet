@@ -46,8 +46,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
     }
   }
 
+  const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
+
   // Sem perfil atribuído pelo clube, o utilizador só tem acesso à Home e ao seu Perfil (/settings para logout).
-  if (isUnassigned && location.pathname !== '/' && location.pathname !== '/settings') {
+  if (semPerfil && location.pathname !== '/' && location.pathname !== '/settings') {
     return <Navigate to="/" replace />
   }
 

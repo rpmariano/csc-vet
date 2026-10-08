@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { CaixaProcura } from '../ui/CaixaProcura'
-import { MapPin, ExternalLink, Sparkles, Users, Save } from 'lucide-react'
+import { MapPin, ExternalLink, Sparkles, Users, Save, Heart, ChevronDown } from 'lucide-react'
+import { CallupRow } from '../callups/CallupRow'
 import { supabase } from '../../lib/supabaseClient'
 import { toast } from '../../context/ToastContext'
 import { useClub } from '../../context/ClubContext'
@@ -20,6 +21,7 @@ import type { TournamentRules } from '../clube/torneios'
 import { mensagemDeErro } from '../../lib/erros'
 import { eAdepto } from '../../lib/papeis'
 import { convocarAdeptosParaJogo, removerAdeptosSeSemJogadores } from '../../lib/convocatoriasAdeptos'
+import { triggerHaptic } from '../../utils/haptics'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../ui/formulario'
 
 /**
@@ -157,6 +159,16 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   // seguinte, e um segundo toque entretanto convocava em duplicado.
   const aConvocarRef = useRef(false)
   const [confirmarLimpar, setConfirmarLimpar] = useState(false)
+  const [adeptosAberto, setAdeptosAberto] = useState(true)
+
+  // Em jogos, os adeptos são convocados automaticamente ao abrir a edição
+  useEffect(() => {
+    if (evento?.id && tipo === 'match') {
+      convocarAdeptosParaJogo(evento.id).then(() => {
+        aoMudarConvocatoria?.()
+      })
+    }
+  }, [evento?.id, tipo])
 
   const [campoRapido, setCampoRapido] = useState({ aberto: false, nome: '', morada: '', aGravar: false })
   const [advRapido, setAdvRapido] = useState({
@@ -285,11 +297,58 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   const convocadoDe = (p: Profile) =>
     convocatorias.find(c => c.player_id === p.id || c.player?.id === p.id)
 
-  const aptos = plantel.filter(p => impedimento(p) === null)
-  const porConvocar = aptos.filter(p => !convocadoDe(p))
+  // Os adeptos nunca aparecem na lista de escolha de jogadores da convocatória.
+  // São convocados automaticamente e aparecem na secção própria "Adeptos a apoiar".
+  const plantelAtletas = useMemo(() => {
+    return plantel.filter(p => !eAdepto(p))
+  }, [plantel])
+
+  const convocatoriasAtletas = useMemo(() => {
+    return convocatorias.filter(c => {
+      const pl = plantel.find(p => p.id === c.player_id) || c.player
+      return !eAdepto(pl as any)
+    })
+  }, [convocatorias, plantel])
+
+  const convocatoriasAdeptos = useMemo(() => {
+    return convocatorias.filter(c => {
+      const pl = plantel.find(p => p.id === c.player_id)
+      return eAdepto(pl || (c.player as any))
+    }).map(c => {
+      const pl = plantel.find(p => p.id === c.player_id) || (c.player as unknown as Profile)
+      const validStatus: 'called' | 'pending' | 'confirmed' | 'declined' =
+        (['called', 'pending', 'confirmed', 'declined'].includes(c.status) ? c.status : 'called') as any
+      return {
+        ...c,
+        status: validStatus,
+        player: pl
+      }
+    })
+  }, [convocatorias, plantel])
+
+  const aptos = useMemo(() => {
+    return plantelAtletas.filter(p => impedimento(p) === null)
+  }, [plantelAtletas, provaDaConvocatoria, inscritos, suspensos, tipo])
+
+  const porConvocar = useMemo(() => {
+    return aptos.filter(p => !convocadoDe(p))
+  }, [aptos, convocatorias])
+
   const eStaff = (p: Profile) => ['coach', 'admin'].includes(p.role)
 
   /* -------------------------------------------------------------- convocatória */
+
+  const mudarEstadoConvocatoria = async (callupId: string, status: 'called' | 'confirmed' | 'declined') => {
+    const { error } = await supabase.from('callups').update({ status }).eq('id', callupId)
+    if (error) toast.error('Erro ao atualizar: ' + mensagemDeErro(error))
+    else if (aoMudarConvocatoria) await aoMudarConvocatoria()
+  }
+
+  const removerConvocatoria = async (callupId: string) => {
+    const { error } = await supabase.from('callups').delete().eq('id', callupId)
+    if (error) toast.error('Erro ao remover: ' + mensagemDeErro(error))
+    else if (aoMudarConvocatoria) await aoMudarConvocatoria()
+  }
 
   const convocarVarios = async (quem: Profile[], texto: (n: number) => string) => {
     if (!evento || quem.length === 0 || aConvocarRef.current) return
@@ -322,7 +381,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       if (tipo === 'match') {
         await convocarAdeptosParaJogo(evento.id)
       }
-      await aoMudarConvocatoria()
+      await aoMudarConvocatoria?.()
       toast.success(novos.length > 0 ? texto(novos.length) : 'Já estavam todos convocados.')
     } catch (err) {
       toast.error('Erro ao convocar: ' + mensagemDeErro(err))
@@ -340,8 +399,11 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     try {
       const { error } = await supabase.from('callups').delete().eq('event_id', evento.id)
       if (error) throw error
-      await aoMudarConvocatoria()
-      toast.info('Todos os convocados foram tirados da convocatória.')
+      if (tipo === 'match') {
+        await convocarAdeptosParaJogo(evento.id)
+      }
+      await aoMudarConvocatoria?.()
+      toast.info('A convocatória de jogadores foi limpa.')
     } catch (err) {
       toast.error('Erro ao tirar todos: ' + mensagemDeErro(err))
     } finally {
@@ -353,15 +415,11 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   /** As regras da prova para mais um convocado: o limite e as exceções de idade. */
   const regraQueImpede = (p: Profile): string | null => {
     if (!regras) return null
-    const atletasConvocados = convocatorias.filter(c => {
-      const pl = plantel.find(pl => pl.id === c.player_id)
-      return !eAdepto(pl || (c.player as any))
-    })
-    if (regras.max_match_players && atletasConvocados.length >= regras.max_match_players) {
+    if (regras.max_match_players && convocatoriasAtletas.length >= regras.max_match_players) {
       return `A convocatória atingiu o limite da prova (${regras.max_match_players} convocados).`
     }
     if (p.birth_date && regras.min_age && regras.exceptions_allowed && idade(p.birth_date) < regras.min_age) {
-      const excecoes = convocatorias.filter(c => {
+      const excecoes = convocatoriasAtletas.filter(c => {
         const q = plantel.find(pl => pl.id === c.player_id)
         return q?.birth_date ? idade(q.birth_date) < (regras.min_age ?? 0) : false
       }).length
@@ -555,7 +613,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   /* ------------------------------------------------------------------ ecrã */
 
   const q = procura.trim().toLowerCase()
-  const lista = [...plantel].sort(compararPorCamisola).filter(p =>
+  const lista = [...plantelAtletas].sort(compararPorCamisola).filter(p =>
     !q ||
     p.name.toLowerCase().includes(q) ||
     p.shirt_name?.toLowerCase().includes(q) ||
@@ -755,8 +813,8 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
             <div className="flex items-center justify-between gap-2">
               <h2 id="editar-evento-convocatoria" className="text-xs font-black text-white flex items-center gap-1.5 flex-wrap">
                 <Users size={15} className="text-csc-gold" />
-                <span>Convocatória ({convocatorias.length}{regras?.max_match_players ? ` / ${regras.max_match_players} máx` : ''})</span>
-                {regras?.max_match_players && convocatorias.length >= regras.max_match_players && (
+                <span>Convocatória ({convocatoriasAtletas.length}{regras?.max_match_players ? ` / ${regras.max_match_players} máx` : ''})</span>
+                {regras?.max_match_players && convocatoriasAtletas.length >= regras.max_match_players && (
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-csc-gold/15 text-csc-gold border border-csc-gold/30">
                     Limite atingido
                   </span>
@@ -861,6 +919,63 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
                 )
               })}
             </ul>
+
+            {/* Lista de adeptos no fim (Anexo 3) */}
+            {tipo === 'match' && (
+              <div className="pt-2 border-t border-white/10 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic('selection'); setAdeptosAberto(prev => !prev) }}
+                  aria-expanded={adeptosAberto}
+                  className="w-full min-h-11 px-3.5 py-2.5 rounded-2xl bg-white/5 hover:bg-white/8 text-white flex items-center justify-between cursor-pointer transition-all duration-150 active:scale-98 border border-white/8"
+                >
+                  <div className="flex items-center gap-2">
+                    <Heart size={15} className="text-csc-gold fill-csc-gold/40" />
+                    <span className="font-display font-bold text-xs">
+                      Adeptos a apoiar ({convocatoriasAdeptos.length})
+                    </span>
+                    {convocatoriasAdeptos.filter(a => a.status === 'confirmed').length > 0 && (
+                      <span className="text-[10px] font-bold text-csc-verde-texto bg-csc-light/15 px-1.5 py-0.5 rounded">
+                        {convocatoriasAdeptos.filter(a => a.status === 'confirmed').length} {convocatoriasAdeptos.filter(a => a.status === 'confirmed').length === 1 ? 'confirmado' : 'confirmados'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-white/60">
+                      {adeptosAberto ? 'Recolher' : 'Ver lista'}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      className={`text-white/60 transition-transform duration-200 ${adeptosAberto ? 'rotate-180' : ''}`}
+                    />
+                  </div>
+                </button>
+
+                {adeptosAberto && (
+                  <div className="rounded-2xl bg-black/20 p-2 space-y-1 border border-white/6 animate-fade-in max-h-[300px] overflow-y-auto">
+                    {convocatoriasAdeptos.length === 0 ? (
+                      <p className="text-center py-3 text-xs text-white/50">Nenhum adepto convocado.</p>
+                    ) : (
+                      convocatoriasAdeptos.map(c => (
+                        <CallupRow
+                          key={c.id}
+                          status={c.status}
+                          player={c.player}
+                          displayName={getPlayerDisplayName(c.player)}
+                          isCoachOrAdmin={true}
+                          onConfirm={() => mudarEstadoConvocatoria(c.id, 'confirmed')}
+                          onDecline={() => mudarEstadoConvocatoria(c.id, 'declined')}
+                          onSetPending={() => mudarEstadoConvocatoria(c.id, 'called')}
+                          onRemove={() => removerConvocatoria(c.id)}
+                          impedimento={c.player?.status === 'inactive' ? 'Inativo' : null}
+                        />
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
           <label

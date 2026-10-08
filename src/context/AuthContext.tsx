@@ -224,7 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phone: userPhone || null,
           photo_url: null,
           role: 'player',
-          roles: [],
+          roles: ['player'],
           status: 'active'
         }
 
@@ -236,15 +236,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (!createErr && created) {
           data = created
-        } else if (createErr) {
-          console.error('Erro ao criar perfil base:', createErr.message)
+        } else {
+          if (createErr) {
+            console.error('Erro ao criar perfil base:', createErr.message)
+          }
+          // Garante fallback imediato para nunca deixar o utilizador sem objeto de perfil
+          data = {
+            ...newProfile,
+            role: 'unassigned',
+            roles: [],
+          } as Profile
         }
       }
 
       let unassigned = false
       if (data) {
-        // Se o perfil está marcado como inativo, o comportamento é igual a não haver correspondência
-        if (data.status === 'inactive') {
+        // Se o perfil está marcado como inativo ou já tem role unassigned, o comportamento é sempre sem perfil
+        if (data.status === 'inactive' || data.role === 'unassigned') {
           unassigned = true
         } else if (!fichaLigadaAgora) {
           // Se a conta não acabou de ser ligada a uma ficha do clube:
@@ -259,16 +267,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           )
 
           if (!temPapelReconhecido && !temAtributosDeAtleta) {
-            const { count: callupsCount } = await supabase
-              .from('callups')
-              .select('id', { count: 'exact', head: true })
-              .eq('player_id', data.id)
+            // Conta nova sem ficha desportiva atribuída: se nunca foi convocada, não tem perfil atribuído
+            try {
+              const { data: callupsList } = await supabase
+                .from('callups')
+                .select('id')
+                .eq('player_id', data.id)
+                .limit(1)
 
-            if ((callupsCount ?? 0) === 0) {
+              if (!callupsList || callupsList.length === 0) {
+                unassigned = true
+              }
+            } catch {
               unassigned = true
             }
           }
         }
+      } else {
+        unassigned = true
       }
 
       setIsUnassigned(unassigned)
@@ -416,7 +432,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     simulatedRole !== actualRole
   )
 
-  const effectiveRoles: UserRole[] = isUnassigned
+  const isEffectivelyUnassigned = Boolean(
+    isUnassigned ||
+    actualProfile?.role === 'unassigned' ||
+    actualProfile?.status === 'inactive' ||
+    simulatedRole === 'unassigned'
+  )
+
+  const effectiveRoles: UserRole[] = isEffectivelyUnassigned
     ? []
     : isSimulatingRole && simulatedRole
     ? [simulatedRole]
@@ -425,7 +448,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const effectiveProfile: Profile | null = actualProfile
     ? {
         ...actualProfile,
-        role: isUnassigned
+        role: isEffectivelyUnassigned
           ? 'unassigned'
           : isSimulatingRole && simulatedRole
           ? simulatedRole
@@ -440,7 +463,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       profile: effectiveProfile, 
       assignedRoles,
       actualRole, 
-      isUnassigned,
+      isUnassigned: isEffectivelyUnassigned,
       canSimulateRoles,
       isSimulatingRole, 
       setSimulatedRole,

@@ -63,15 +63,16 @@ const Layout: React.FC = () => {
 
   const [criarAberto, setCriarAberto] = useState(false)
 
-  const eAdmin = profile?.role === 'admin'
-  const eTreinador = profile?.role === 'coach'
+  const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
+  const eAdmin = !semPerfil && profile?.role === 'admin'
+  const eTreinador = !semPerfil && profile?.role === 'coach'
   const gere = eAdmin || eTreinador
 
   // A barra flutua sobre o conteúdo, por isso o fim da coluna tem de acabar
   // acima dela — com `margin-bottom`, não `padding-bottom`: com padding, o
   // último cartão fica dentro da caixa de scroll mas por baixo da barra.
   // Se não tiver perfil atribuído, não há barra de navegação.
-  const margemFinal = isUnassigned ? 24 : (gere ? 110 : 104)
+  const margemFinal = semPerfil ? 24 : (gere ? 110 : 104)
 
   return (
     <div className="relative min-h-dvh flex flex-col">
@@ -96,7 +97,7 @@ const Layout: React.FC = () => {
         </AreaDoEcra>
       </main>
 
-      {!isUnassigned && (
+      {!semPerfil && (
         <>
           {/* O conteúdo passa por trás da barra translúcida; sem este esbatimento
               a barra deixa de se ler quando lhe passa texto por baixo. */}

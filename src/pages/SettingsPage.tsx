@@ -54,7 +54,8 @@ const SECCAO =
   'flex items-center gap-2 mb-2.5'
 
 const SettingsPage: React.FC = () => {
-  const { profile, assignedRoles, actualRole, canSimulateRoles, setSimulatedRole, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
+  const { profile, assignedRoles, actualRole, isUnassigned, canSimulateRoles, setSimulatedRole, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
+  const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
   const { clubSettings } = useClub()
   const navegar = useNavigate()
   const estadoDaEntrada = useLocation().state as { origem?: unknown } | null
@@ -122,7 +123,7 @@ const SettingsPage: React.FC = () => {
   const [perfilCarregado, setPerfilCarregado] = useState(false)
 
   const guardaPerfil = useAlteracoesPorGravar({
-    aberto: true,
+    aberto: !semPerfil,
     pronto: perfilCarregado,
     valores: [
       formName, formShirtName, formBirthDate, formNationality, formNif, formIdNumber,
@@ -387,7 +388,9 @@ const SettingsPage: React.FC = () => {
         <div className="flex-1 min-w-0">
           <p className="font-display font-extrabold text-[14px] text-white truncate">{formName}</p>
           <p className="text-[10px] leading-snug text-white/62 mt-1">
-            {eAdepto(profile)
+            {semPerfil
+              ? `Conta sem perfil atribuído · ${clubSettings?.initials ?? CLUBE_SIGLA}`
+              : eAdepto(profile)
               ? `Perfil de adepto · ${clubSettings?.initials ?? CLUBE_SIGLA}`
               : `Ficha cadastral de atleta · ${clubSettings?.initials ?? CLUBE_SIGLA}`}
           </p>
@@ -425,7 +428,7 @@ const SettingsPage: React.FC = () => {
       </div>
 
       {/* Atividade e estado físico: só para atletas */}
-      {!eAdepto(profile) && (
+      {!eAdepto(profile) && !semPerfil && (
         <>
           <div className="flex gap-2.5">
             <div className="cartao-simples flex-1 flex items-center gap-2.5 px-3.5 py-3">
@@ -478,73 +481,75 @@ const SettingsPage: React.FC = () => {
         quanto deve não devia ter de passar por sete secções de dados
         pessoais.
       */}
-      <div className="flex gap-2.5">
-        {!eAdepto(profile) && (
+      {!semPerfil && (
+        <div className="flex gap-2.5">
+          {!eAdepto(profile) && (
+            <button
+              type="button"
+              onClick={() => { triggerHaptic('light'); setPagamentosAbertos(true) }}
+              className={`cartao-simples flex-1 min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
+                transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                  pagamentos.cor === 'vermelho'
+                    ? 'bg-csc-red/12 border-csc-red/32'
+                    : pagamentos.cor === 'laranja'
+                      ? 'bg-csc-gold/12 border-csc-gold/32'
+                      : ''
+                }`}
+            >
+              <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-display font-black text-[14px] ${
+                pagamentos.cor === 'vermelho'
+                  ? 'bg-csc-red/22 text-csc-vermelho-texto'
+                  : pagamentos.cor === 'laranja'
+                    ? 'bg-csc-gold/22 text-csc-gold'
+                    : 'bg-csc-gold/18 text-csc-gold'
+              }`}>
+                €
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-display font-extrabold text-[12.5px] text-white">
+                  Os meus pagamentos
+                </span>
+                <span className={`block text-[10px] mt-0.5 ${
+                  pagamentos.cor === 'vermelho'
+                    ? 'text-csc-vermelho-texto'
+                    : pagamentos.cor === 'laranja'
+                      ? 'text-csc-gold'
+                      : 'text-white/62'
+                }`}>
+                  {pagamentos.cor === 'vermelho'
+                    ? `${pagamentos.emAtraso.length} em atraso · ${fmtEuro(pagamentos.emAtraso.reduce((t, i) => t + i.valor, 0))}`
+                    : pagamentos.cor === 'laranja'
+                      ? `${pagamentos.aVencer.length} a vencer · ${fmtEuro(pagamentos.totalEmAviso)}`
+                      : eJogador(profile)
+                        ? 'Quotas e encargos'
+                        : 'Encargos'}
+                </span>
+              </span>
+            </button>
+          )}
+
           <button
             type="button"
-            onClick={() => { triggerHaptic('light'); setPagamentosAbertos(true) }}
-            className={`cartao-simples flex-1 min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
+            onClick={() => { triggerHaptic('light'); setAvisosAbertos(true) }}
+            className={`cartao-simples ${eAdepto(profile) ? 'w-full' : 'flex-1'} min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
               transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                pagamentos.cor === 'vermelho'
-                  ? 'bg-csc-red/12 border-csc-red/32'
-                  : pagamentos.cor === 'laranja'
-                    ? 'bg-csc-gold/12 border-csc-gold/32'
-                    : ''
-              }`}
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
           >
-            <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-display font-black text-[14px] ${
-              pagamentos.cor === 'vermelho'
-                ? 'bg-csc-red/22 text-csc-vermelho-texto'
-                : pagamentos.cor === 'laranja'
-                  ? 'bg-csc-gold/22 text-csc-gold'
-                  : 'bg-csc-gold/18 text-csc-gold'
-            }`}>
-              €
+            <span className="w-8 h-8 rounded-xl bg-white/10 text-csc-gold flex items-center justify-center shrink-0">
+              <Bell size={15} />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block font-display font-extrabold text-[12.5px] text-white">
-                Os meus pagamentos
+                Avisos
               </span>
-              <span className={`block text-[10px] mt-0.5 ${
-                pagamentos.cor === 'vermelho'
-                  ? 'text-csc-vermelho-texto'
-                  : pagamentos.cor === 'laranja'
-                    ? 'text-csc-gold'
-                    : 'text-white/62'
-              }`}>
-                {pagamentos.cor === 'vermelho'
-                  ? `${pagamentos.emAtraso.length} em atraso · ${fmtEuro(pagamentos.emAtraso.reduce((t, i) => t + i.valor, 0))}`
-                  : pagamentos.cor === 'laranja'
-                    ? `${pagamentos.aVencer.length} a vencer · ${fmtEuro(pagamentos.totalEmAviso)}`
-                    : eJogador(profile)
-                      ? 'Quotas e encargos'
-                      : 'Encargos'}
+              <span className="block text-[10px] text-white/62 mt-0.5">
+                {eAdepto(profile) ? 'Comunicados e eventos' : 'Convocatórias e mais'}
               </span>
             </span>
           </button>
-        )}
-
-        <button
-          type="button"
-          onClick={() => { triggerHaptic('light'); setAvisosAbertos(true) }}
-          className={`cartao-simples ${eAdepto(profile) ? 'w-full' : 'flex-1'} min-h-14 flex items-center gap-2.5 px-3.5 py-3 text-left cursor-pointer
-            transition-transform duration-150 active:scale-97
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold`}
-        >
-          <span className="w-8 h-8 rounded-xl bg-white/10 text-csc-gold flex items-center justify-center shrink-0">
-            <Bell size={15} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-display font-extrabold text-[12.5px] text-white">
-              Avisos
-            </span>
-            <span className="block text-[10px] text-white/62 mt-0.5">
-              {eAdepto(profile) ? 'Comunicados e eventos' : 'Convocatórias e mais'}
-            </span>
-          </span>
-        </button>
-      </div>
+        </div>
+      )}
 
       <OsMeusPagamentos
         aberto={pagamentosAbertos}
@@ -571,16 +576,18 @@ const SettingsPage: React.FC = () => {
             Ver a app como
           </p>
           <div className="flex flex-wrap gap-2 mt-3">
-            {(['admin', 'coach', 'player', 'supporter'] as const)
+            {(['admin', 'coach', 'player', 'supporter', 'unassigned'] as const)
               .map(papel => {
-                const escolhido = profile?.role === papel
+                const escolhido = papel === 'unassigned'
+                  ? Boolean(profile?.role === 'unassigned' || isUnassigned)
+                  : profile?.role === papel
                 return (
                   <button
                     key={papel}
                     type="button"
                     onClick={() => {
                       triggerHaptic('medium')
-                      setSimulatedRole(papel === actualRole ? null : papel)
+                      setSimulatedRole(escolhido ? null : papel)
                     }}
                     aria-pressed={escolhido}
                     className={`min-h-11 px-4 rounded-[22px] font-display font-bold text-xs cursor-pointer
@@ -590,7 +597,15 @@ const SettingsPage: React.FC = () => {
                           : 'bg-white/5 text-white/70'
                       }`}
                   >
-                    {papel === 'admin' ? 'Direção' : papel === 'coach' ? 'Treinador' : papel === 'player' ? 'Jogador' : 'Adepto'}
+                    {papel === 'admin'
+                      ? 'Direção'
+                      : papel === 'coach'
+                      ? 'Treinador'
+                      : papel === 'player'
+                      ? 'Jogador'
+                      : papel === 'supporter'
+                      ? 'Adepto'
+                      : 'Sem perfil'}
                     {papel === actualRole && ' (real)'}
                   </button>
                 )
@@ -613,7 +628,47 @@ const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {eAdepto(profile) ? (
+      {semPerfil ? (
+        <div className="cartao-simples p-4 space-y-4">
+          <h3 className={SECCAO}>
+            <UserIcon size={16} className="text-csc-gold" />
+            <span>Dados da Conta</span>
+          </h3>
+
+          <div className="space-y-3">
+            <div>
+              <span className={ETIQUETA}>Nome</span>
+              <p className="font-display font-extrabold text-[13px] text-white">
+                {formName || 'Não definido'}
+              </p>
+            </div>
+
+            <div>
+              <span className={ETIQUETA}>Email de Acesso</span>
+              <div className="flex items-center bg-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white/70 font-medium font-mono">
+                <Mail size={15} className="mr-2 text-white/60 shrink-0" />
+                <span>{formEmail || profile?.email || '—'}</span>
+              </div>
+            </div>
+
+            {formPhone && (
+              <div>
+                <span className={ETIQUETA}>Telemóvel</span>
+                <div className="flex items-center bg-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white/70 font-medium">
+                  <Phone size={15} className="mr-2 text-white/60 shrink-0" />
+                  <span>{formPhone}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-3.5 bg-csc-light/10 rounded-2xl border border-csc-gold/20">
+            <p className="text-xs text-white/80 leading-relaxed font-medium">
+              A tua conta foi registada com sucesso e está a aguardar que a direção ou equipa técnica atribua o teu perfil (Jogador, Treinador, Direção ou Adepto).
+            </p>
+          </div>
+        </div>
+      ) : eAdepto(profile) ? (
         <form onSubmit={handleSave} className="space-y-5">
           <div className="cartao-simples p-4 space-y-3.5">
             <h3 className={SECCAO}>

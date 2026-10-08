@@ -44,7 +44,8 @@ import { hasMatchReport, ROTULO_RESPOSTA, CORES_TIPO, compararPorCamisola } from
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../lib/jornadaDoJogo'
 import { EcraDetalhe } from '../components/EcraDetalhe'
 import { EditarEvento } from '../components/eventos/EditarEvento'
-import { useLocation, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { haEntradaAnterior } from '../lib/rotas'
 import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
 import { VoltarAOrigem } from '../components/VoltarAOrigem'
 import { BottomSheet } from '../components/BottomSheet'
@@ -231,6 +232,7 @@ const EventsPage: React.FC = () => {
   const [eventCallups, setEventCallups] = useState<Record<string, CallupWithPlayer[]>>({})
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const estadoDaEntrada = location.state as { origem?: string; abrirEdicao?: boolean } | null
   const [activeCallupModalEvent, setActiveCallupModalEvent] = useState<Event | null>(null)
   /* A ficha rápida do convocado (4a), por cima do dossier de convocatória. */
@@ -708,6 +710,8 @@ const EventsPage: React.FC = () => {
     }
 
     if (eventType === 'gathering') return true
+    // Adeptos nunca são elegíveis para jogar em jogos ou treinos
+    if (eAdepto(player)) return false
     // Jogos e treinos são só para quem tem o papel de Jogador — membros só
     // Treinador ou só Direção ficam disponíveis apenas nos convívios.
     if (!extractRolesFromProfile(player).includes('player')) return false
@@ -1223,13 +1227,23 @@ const EventsPage: React.FC = () => {
 
   const fecharEdicao = () => {
     setEventoAEditar(null)
-    if (searchParams.has('editar')) {
-      const restantes = new URLSearchParams(searchParams)
-      restantes.delete('editar')
-      const estadoAtual = location.state as Record<string, unknown> | null
-      const novoEstado = estadoAtual ? Object.fromEntries(Object.entries(estadoAtual).filter(([k]) => k !== 'abrirEdicao')) : undefined
-      setSearchParams(restantes, { replace: true, state: novoEstado && Object.keys(novoEstado).length > 0 ? novoEstado : undefined })
+    setActiveCallupModalEvent(null)
+    const idEvento = searchParams.get('convocatoria')
+    const origem = estadoDaEntrada?.origem
+    if (origem === 'Evento' || origem === 'Agenda' || searchParams.has('editar')) {
+      if (haEntradaAnterior()) {
+        navigate(-1)
+      } else if (idEvento) {
+        navigate(`/calendar?event=${idEvento}`, { replace: true })
+      } else {
+        navigate('/calendar', { replace: true })
+      }
+      return
     }
+    const restantes = new URLSearchParams(searchParams)
+    restantes.delete('editar')
+    restantes.delete('convocatoria')
+    setSearchParams(restantes, { replace: true })
   }
 
   const dossierAberto = Boolean(searchParams.get('convocatoria'))
@@ -2200,12 +2214,11 @@ const EventsPage: React.FC = () => {
           cima do dossier de onde se veio, e o "‹" volta a ele. */}
       <EditarEvento
         evento={eventoAEditar}
-        voltarPara={dossierAberto ? 'Convocatória' : 'Eventos'}
+        voltarPara={estadoDaEntrada?.origem || (dossierAberto ? 'Convocatória' : 'Eventos')}
         aoFechar={fecharEdicao}
-        aoGravado={async gravado => {
-          setActiveCallupModalEvent(prev => (prev && prev.id === gravado.id ? { ...prev, ...gravado } as Event : prev))
-          fecharEdicao()
+        aoGravado={async () => {
           await fetchData()
+          fecharEdicao()
         }}
         aoMudarConvocatoria={() => fetchData()}
         convocatorias={eventoAEditar ? (eventCallups[eventoAEditar.id] || []) : []}
@@ -2283,8 +2296,8 @@ const EventsPage: React.FC = () => {
       <ConvocatoriaAoCriar
         evento={eventoAConvocar}
         aoFechar={() => setEventoAConvocar(null)}
-        aptos={allPlayers.filter(p => isPlayerEligible(p, eventoAConvocar?.tipo ?? 'match'))}
-        todos={allPlayers}
+        aptos={allPlayers.filter(p => !eAdepto(p) && isPlayerEligible(p, eventoAConvocar?.tipo ?? 'match'))}
+        todos={allPlayers.filter(p => !eAdepto(p))}
         preEscolhidos={preEscolhidos}
         aoConvocar={() => { fetchData() }}
       />

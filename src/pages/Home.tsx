@@ -172,7 +172,7 @@ const Home: React.FC = () => {
   }, [eGestao])
 
   useEffect(() => {
-    if (!profile || isUnassigned || estadoDaFicha !== 'ligada') return
+    if (!profile || isUnassigned || profile.role === 'unassigned' || profile.status === 'inactive' || estadoDaFicha !== 'ligada') return
     let cancelado = false
 
     const carregar = async () => {
@@ -493,7 +493,8 @@ const Home: React.FC = () => {
 
   if (!profile) return null
 
-  if (isUnassigned) {
+  const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
+  if (semPerfil) {
     return <SemPerfilAtribuido />
   }
 
