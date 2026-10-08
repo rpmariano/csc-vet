@@ -283,8 +283,12 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
               <MapPin size={18} className="text-csc-gold shrink-0" />
               <span className="flex-1 min-w-0">
                 {campoPrincipal ? (
-                  <>
-                    <span className="block font-display font-bold text-[12.5px] text-white truncate">
+                  <Link
+                    to={`/club?ver=campos&campo=${campoPrincipal.id}`}
+                    onClick={() => triggerHaptic('light')}
+                    className="block group"
+                  >
+                    <span className="block font-display font-bold text-[12.5px] text-white group-hover:text-csc-gold transition-colors truncate">
                       {campoPrincipal.name}
                     </span>
                     {campoPrincipal.address && (
@@ -292,7 +296,7 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
                         {campoPrincipal.address}
                       </span>
                     )}
-                  </>
+                  </Link>
                 ) : (
                   <span className="block text-[11.5px] text-white/62">Nenhum campo associado</span>
                 )}

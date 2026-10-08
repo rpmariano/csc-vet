@@ -39,7 +39,7 @@ test('a direção vê os quatro blocos, pela ordem do que se vem cá fazer', asy
   expect(await blocos(page)).toEqual([
     { titulo: 'Equipa', linhas: ['Plantel'] },
     { titulo: 'Época', linhas: ['Eventos e convocatórias', 'Torneios e jornadas'] },
-    { titulo: 'Direção', linhas: ['Financeiro e quotas', 'Relatórios'] },
+    { titulo: 'Direção', linhas: ['Financeiro e quotas', 'Relatórios', 'Registo de auditoria'] },
     { titulo: 'Configuração', linhas: ['Adversários', 'Campos', 'Dados do clube'] },
   ])
 

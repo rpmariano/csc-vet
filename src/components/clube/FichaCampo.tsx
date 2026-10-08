@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react'
-import { MapPin, Pencil, Trash2, ExternalLink, Copy, Star, Info } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { MapPin, Pencil, Trash2, ExternalLink, Copy, Star, Info, Shield } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import { useClub } from '../../context/ClubContext'
 import { EcraDetalhe } from '../EcraDetalhe'
 import { EtiquetaSeccao, Botao, BlocoData } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 import { toast } from '../../context/ToastContext'
+import { formatOpponentSigla } from '../../lib/siglas'
 
 /**
  * Ficha do campo (ecrã 9i). É um ecrã e não uma persiana — ver `EcraDetalhe`.
@@ -26,6 +29,13 @@ export interface CampoDaFicha {
   id: string
   name: string
   address: string
+}
+
+interface AdversarioDoCampo {
+  id: string
+  name: string
+  initials?: string | null
+  logo_url?: string | null
 }
 
 interface EventoNoCampo {
@@ -67,17 +77,21 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
   aoEditar,
   aoEliminar,
 }) => {
+  const { clubSettings } = useClub()
   const [proximos, setProximos] = useState<EventoNoCampo[] | null>(null)
+  const [adversariosAssociados, setAdversariosAssociados] = useState<AdversarioDoCampo[] | null>(null)
 
   const id = campo?.id ?? null
 
   useEffect(() => {
     if (!id) {
       setProximos(null)
+      setAdversariosAssociados(null)
       return
     }
     let cancelado = false
     setProximos(null)
+    setAdversariosAssociados(null)
 
     supabase
       .from('events')
@@ -88,6 +102,15 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
       .limit(6)
       .then(({ data }) => {
         if (!cancelado) setProximos((data ?? []) as unknown as EventoNoCampo[])
+      })
+
+    supabase
+      .from('opponents')
+      .select('id, name, initials, logo_url')
+      .eq('home_field_id', id)
+      .order('name')
+      .then(({ data }) => {
+        if (!cancelado) setAdversariosAssociados((data ?? []) as AdversarioDoCampo[])
       })
 
     return () => { cancelado = true }
@@ -183,6 +206,91 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
               Não há mapa dentro da app: o "Ver no Maps" abre o Google Maps no telemóvel.
             </p>
           </div>
+
+          {/* Equipas associadas */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <EtiquetaSeccao>Equipas associadas</EtiquetaSeccao>
+              <button
+                type="button"
+                onClick={() => { triggerHaptic('light'); aoEditar() }}
+                className="text-[11px] font-bold text-csc-gold hover:underline cursor-pointer"
+              >
+                Gerir equipas
+              </button>
+            </div>
+
+            {adversariosAssociados === null ? (
+              <div className="cartao-simples h-16 animate-pulse" />
+            ) : !eCampoDoClube && adversariosAssociados.length === 0 ? (
+              <div className="cartao-simples border-dashed px-4 py-4 text-center">
+                <p className="text-[11.5px] text-white/62">
+                  Nenhuma equipa associada a este campo. Podes associar equipas em Editar campo.
+                </p>
+              </div>
+            ) : (
+              <div className="cartao-simples overflow-hidden">
+                {eCampoDoClube && (
+                  <div className="flex items-center gap-3 px-4 py-3 border-b border-white/7 last:border-b-0">
+                    {clubSettings?.logo_url ? (
+                      <img
+                        src={clubSettings.logo_url}
+                        alt=""
+                        className="w-9 h-9 object-contain bg-white/10 rounded-full p-1 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
+                        <Star size={18} />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <span className="block font-display font-bold text-xs text-white truncate">
+                        {clubSettings?.name || 'Clube'}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[10px] text-csc-gold font-bold mt-0.5">
+                        <Star size={10} /> Campo de casa do clube ({siglaClube})
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {adversariosAssociados.map(adv => (
+                  <div
+                    key={adv.id}
+                    className="flex items-center justify-between gap-3 px-4 py-3 border-t border-white/7 first:border-t-0"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {adv.logo_url ? (
+                        <img
+                          src={adv.logo_url}
+                          alt=""
+                          className="w-9 h-9 object-contain bg-white rounded-full p-1 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center shrink-0 text-white/50">
+                          <Shield size={18} />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <span className="block font-display font-bold text-xs text-white truncate">
+                          {adv.name}
+                        </span>
+                        <span className="block text-[10px] text-white/60 mt-0.5 truncate">
+                          {formatOpponentSigla(adv)} · Campo habitual
+                        </span>
+                      </div>
+                    </div>
+                    <Link
+                      to={`/club?ver=adversarios&adversario=${adv.id}`}
+                      onClick={() => triggerHaptic('light')}
+                      className="h-8 px-3 rounded-xl bg-white/8 text-white font-display font-bold text-[10.5px] flex items-center shrink-0 hover:bg-white/14 transition-colors"
+                    >
+                      Ver equipa
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
           {/* Próximos eventos aqui */}
           <section>
