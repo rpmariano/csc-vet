@@ -31,11 +31,15 @@ export const mensagemDeErro = (err: unknown): string => {
     console.error(err)
     return 'tabela em falta na base de dados (migração SQL pendente)'
   }
+  if (codigo === '42804' || /cannot be matched|datatype mismatch/i.test(mensagem)) {
+    console.error('[erros] Incompatibilidade de dados SQL:', err)
+    return 'incompatibilidade de dados na base de dados (migração SQL pendente)'
+  }
   if (/failed to fetch|networkerror|load failed|network request failed/i.test(mensagem)) {
     return 'sem ligação à internet'
   }
   if (daBase || !mensagem || err instanceof TypeError) {
-    console.error(err)
+    console.error('[erros] Erro da base de dados:', err)
     return 'tenta outra vez — se voltar a falhar, avisa a direção'
   }
   return mensagem

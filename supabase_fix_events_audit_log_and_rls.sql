@@ -1,82 +1,24 @@
 -- ============================================================================
--- Migração: Sistema de Auditoria Completo (Audit Logs) para CSC
+-- Migração: Correção do gatilho de auditoria (process_audit_log) e RLS de eventos
 -- ============================================================================
---
--- Regista todas as alterações críticas na base de dados (criação, edição e remoção)
--- de forma imutável, automática e rastreável:
--- - Perfis / Plantel (profiles)
--- - Eventos / Jogos / Treinos (events)
--- - Convocatórias (callups)
--- - Comunicados (announcements)
--- - Quotas e Finanças (dues, transactions, charges, charge_payments)
--- - Configurações do Clube, Torneios, Adversários, Campos
---
--- CARACTERÍSTICAS DE SEGURANÇA:
--- 1. Registo automático via Trigger em PostgreSQL (funciona por API, app ou script).
--- 2. Guarda o utilizador autenticado (auth.uid()), nome, papel e email no momento do evento.
--- 3. Calcula o diff exato campo a campo nas atualizações (changes JSONB).
--- 4. RLS: Só a Direção (role = 'admin') pode ler o registo de auditoria.
--- 5. Imutabilidade (WORM): Ninguém (nem admins) pode atualizar ou apagar logs.
+-- Contexto:
+-- 1. Ao atualizar, criar ou apagar eventos (events), o gatilho trg_audit_events
+--    invocava process_audit_log(), que executava:
+--      v_record_title := COALESCE(NEW.title, NEW.type);
+--    Como `title` é VARCHAR e `type` é um ENUM (public.event_type), o PostgreSQL
+--    falhava com erro 42804 (COALESCE types character varying and event_type cannot be matched),
+--    impedindo a gravação de qualquer alteração a eventos.
+-- 2. O mesmo ocorria na tabela `dues` com COALESCE(NEW.status, '') (due_status enum vs text).
+-- 3. As conversões explícitas para ::text foram adicionadas e toda a função
+--    process_audit_log() foi protegida com um bloco EXCEPTION WHEN OTHERS,
+--    garantindo que qualquer anomalia de auditoria nunca bloqueia a operação de negócio.
+-- 4. As políticas RLS de `events`, `callups` e `tournament_matches` foram
+--    reforçadas para verificar 'admin' = ANY(get_user_roles()) e 'coach' = ANY(get_user_roles()).
 -- ============================================================================
 
--- 1. Tabela de logs de auditoria
-CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-    user_name TEXT,
-    user_email TEXT,
-    user_role TEXT,
-    action TEXT NOT NULL, -- 'INSERT', 'UPDATE', 'DELETE'
-    table_name TEXT NOT NULL,
-    record_id TEXT NOT NULL,
-    record_title TEXT,
-    old_data JSONB,
-    new_data JSONB,
-    changes JSONB,
-    description TEXT
-);
+BEGIN;
 
--- Índices para pesquisa eficiente
-CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_table_name ON public.audit_logs (table_name);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON public.audit_logs (action);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs (user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_record_id ON public.audit_logs (record_id);
-
--- 2. Ativar RLS
-ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
-
--- Política de leitura: Apenas membros da Direção (admin) podem consultar
-DROP POLICY IF EXISTS "Direcao pode consultar auditoria" ON public.audit_logs;
-CREATE POLICY "Direcao pode consultar auditoria"
-    ON public.audit_logs
-    FOR SELECT
-    TO authenticated
-    USING (
-        public.get_user_role() = 'admin'
-        OR EXISTS (
-            SELECT 1 FROM public.profiles
-             WHERE profiles.id = auth.uid()
-               AND (
-                 profiles.role = 'admin'
-                 OR ('admin'::public.user_role = ANY(COALESCE(profiles.roles, ARRAY[profiles.role])))
-               )
-        )
-    );
-
--- Política de inserção: Permitir a utilizadores autenticados e triggers
-DROP POLICY IF EXISTS "Permitir insercao de logs autenticados" ON public.audit_logs;
-CREATE POLICY "Permitir insercao de logs autenticados"
-    ON public.audit_logs
-    FOR INSERT
-    TO authenticated
-    WITH CHECK (true);
-
--- Nota: NÃO existem políticas de UPDATE ou DELETE.
--- Isto garante a imutabilidade do log contra adulteração.
-
--- 3. Função do gatilho de auditoria (PL/pgSQL)
+-- 1. Corrigir função process_audit_log()
 CREATE OR REPLACE FUNCTION public.process_audit_log()
 RETURNS TRIGGER
 SECURITY DEFINER
@@ -298,97 +240,72 @@ $$;
 
 REVOKE ALL ON FUNCTION public.process_audit_log() FROM PUBLIC, anon, authenticated;
 
--- 4. Instalar Triggers nas tabelas chave
-DO $$
-DECLARE
-    t text;
-    tabelas text[] := ARRAY[
-        'profiles',
-        'events',
-        'callups',
-        'announcements',
-        'dues',
-        'transactions',
-        'charges',
-        'charge_payments',
-        'club_settings',
-        'tournaments',
-        'opponents',
-        'fields'
-    ];
-BEGIN
-    FOREACH t IN ARRAY tabelas LOOP
-        -- Verificar se a tabela existe antes de criar o trigger
-        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = t) THEN
-            EXECUTE format('DROP TRIGGER IF EXISTS trg_audit_%I ON public.%I;', t, t);
-            EXECUTE format('
-                CREATE TRIGGER trg_audit_%I
-                AFTER INSERT OR UPDATE OR DELETE ON public.%I
-                FOR EACH ROW EXECUTE FUNCTION public.process_audit_log();
-            ', t, t);
-        END IF;
-    END LOOP;
-END;
-$$;
-
--- 5. Função RPC para registo manual de auditoria via cliente (ex: autenticação, exportação)
-CREATE OR REPLACE FUNCTION public.registar_auditoria_app(
-    p_action TEXT,
-    p_table_name TEXT,
-    p_record_id TEXT,
-    p_record_title TEXT,
-    p_description TEXT,
-    p_details JSONB DEFAULT '{}'::jsonb
+-- 2. Reforçar políticas RLS de EVENTS
+DROP POLICY IF EXISTS "Apenas treinadores e admins gerem eventos" ON public.events;
+CREATE POLICY "Apenas treinadores e admins gerem eventos"
+ON public.events FOR ALL
+TO authenticated
+USING (
+    public.get_user_role() IN ('coach', 'admin')
+    OR 'admin' = ANY(public.get_user_roles())
+    OR 'coach' = ANY(public.get_user_roles())
 )
-RETURNS UUID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, auth
-AS $$
-DECLARE
-    v_user_id UUID;
-    v_user_name TEXT;
-    v_user_email TEXT;
-    v_user_role TEXT;
-    v_log_id UUID;
-BEGIN
-    v_user_id := auth.uid();
-    
-    IF v_user_id IS NOT NULL THEN
-        SELECT COALESCE(p.name, p.shirt_name, p.email, 'Utilizador'),
-               p.email,
-               p.role::text
-          INTO v_user_name, v_user_email, v_user_role
-          FROM public.profiles p
-         WHERE p.id = v_user_id;
-    END IF;
+WITH CHECK (
+    public.get_user_role() IN ('coach', 'admin')
+    OR 'admin' = ANY(public.get_user_roles())
+    OR 'coach' = ANY(public.get_user_roles())
+);
 
-    INSERT INTO public.audit_logs (
-        user_id,
-        user_name,
-        user_email,
-        user_role,
-        action,
-        table_name,
-        record_id,
-        record_title,
-        changes,
-        description
-    ) VALUES (
-        v_user_id,
-        COALESCE(v_user_name, 'Sistema'),
-        v_user_email,
-        v_user_role,
-        p_action,
-        p_table_name,
-        p_record_id,
-        p_record_title,
-        p_details,
-        p_description
-    ) RETURNING id INTO v_log_id;
+-- 3. Reforçar políticas RLS de CALLUPS
+DROP POLICY IF EXISTS "Treinadores e admins inserem convocatórias" ON public.callups;
+CREATE POLICY "Treinadores e admins inserem convocatórias"
+ON public.callups FOR INSERT
+TO authenticated
+WITH CHECK (
+    public.get_user_role() IN ('coach', 'admin')
+    OR 'admin' = ANY(public.get_user_roles())
+    OR 'coach' = ANY(public.get_user_roles())
+);
 
-    RETURN v_log_id;
-END;
-$$;
+DROP POLICY IF EXISTS "Treinadores e admins atualizam convocatórias" ON public.callups;
+CREATE POLICY "Treinadores e admins atualizam convocatórias"
+ON public.callups FOR UPDATE
+TO authenticated
+USING (
+    public.get_user_role() IN ('coach', 'admin')
+    OR 'admin' = ANY(public.get_user_roles())
+    OR 'coach' = ANY(public.get_user_roles())
+)
+WITH CHECK (
+    public.get_user_role() IN ('coach', 'admin')
+    OR 'admin' = ANY(public.get_user_roles())
+    OR 'coach' = ANY(public.get_user_roles())
+);
 
-GRANT EXECUTE ON FUNCTION public.registar_auditoria_app(TEXT, TEXT, TEXT, TEXT, TEXT, JSONB) TO authenticated;
+DROP POLICY IF EXISTS "Treinadores e admins eliminam convocatórias" ON public.callups;
+CREATE POLICY "Treinadores e admins eliminam convocatórias"
+ON public.callups FOR DELETE
+TO authenticated
+USING (
+    public.get_user_role() IN ('coach', 'admin')
+    OR 'admin' = ANY(public.get_user_roles())
+    OR 'coach' = ANY(public.get_user_roles())
+);
+
+-- 4. Reforçar políticas RLS de TOURNAMENT_MATCHES
+DROP POLICY IF EXISTS "Treinadores e admins gerem jogos de torneio" ON public.tournament_matches;
+CREATE POLICY "Treinadores e admins gerem jogos de torneio"
+ON public.tournament_matches FOR ALL
+TO authenticated
+USING (
+    public.get_user_role() IN ('coach', 'admin')
+    OR 'admin' = ANY(public.get_user_roles())
+    OR 'coach' = ANY(public.get_user_roles())
+)
+WITH CHECK (
+    public.get_user_role() IN ('coach', 'admin')
+    OR 'admin' = ANY(public.get_user_roles())
+    OR 'coach' = ANY(public.get_user_roles())
+);
+
+COMMIT;

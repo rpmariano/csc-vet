@@ -523,7 +523,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
         title: tituloFinal,
         type: tipo,
         date_time: new Date(`${data}T${hora}:00`).toISOString(),
-        meeting_time: concentracao ? `${concentracao}:00` : null,
+        meeting_time: concentracao ? (concentracao.trim().length === 5 ? `${concentracao.trim()}:00` : concentracao.trim()) : null,
         field_id: campoId || null,
         // O campo ganha (`localDoEvento()`): o texto livre é só para eventos sem campo.
         location: !campoId ? (local.trim() || null) : null,
@@ -537,7 +537,15 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       }
 
       const { error } = await supabase.from('events').update(payload).eq('id', evento.id)
-      if (error) throw error
+      if (error) {
+        if (error.message?.includes('is_active')) {
+          const { is_active: _ignored, ...semActive } = payload
+          const { error: errRetry } = await supabase.from('events').update(semActive).eq('id', evento.id)
+          if (errRetry) throw errRetry
+        } else {
+          throw error
+        }
+      }
 
       /* A jornada acompanha: mudar de prova, de jornada, de adversário ou de
          casa/fora reescreve a linha da tabela, e tirar a prova tira-o de lá. */
@@ -546,7 +554,11 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       if (espelho.estado === 'erro') toast.warning('O jogo ficou gravado, mas não entrou na tabela da prova: ' + espelho.mensagem)
 
       if (reenviar) {
-        await supabase.from('callups').update({ status: 'called' }).eq('event_id', evento.id)
+        const { error: errCallups } = await supabase.from('callups').update({ status: 'called' }).eq('event_id', evento.id)
+        if (errCallups) {
+          console.warn('Erro ao repor convocatórias para reenvio:', errCallups)
+          toast.warning('O evento foi atualizado, mas não foi possível repor o estado das respostas.')
+        }
       }
 
       setPerguntaReenvio(false)
@@ -556,6 +568,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
         : 'Evento atualizado.')
       await aoGravado({ ...evento, ...payload })
     } catch (err) {
+      setPerguntaReenvio(false)
       toast.error('Erro ao atualizar evento: ' + mensagemDeErro(err))
     } finally {
       setAGravar(false)
