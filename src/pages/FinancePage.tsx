@@ -186,7 +186,7 @@ const agruparPorCategoria = (tipo: 'income' | 'expense', movements: MovementRow[
 
 const FinancePage: React.FC = () => {
   const { profile } = useAuth()
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = profile?.role === 'admin' || (Array.isArray(profile?.roles) && profile.roles.includes('admin'))
 
   const [loading, setLoading] = useState(true)
   const [params, setParams] = useSearchParams()

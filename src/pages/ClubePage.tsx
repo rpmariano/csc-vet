@@ -218,7 +218,7 @@ const ClubePage: React.FC = () => {
   const [params, setParams] = useSearchParams()
   const { pedirSaida } = useSaidaGuardada()
   const navegar = useNavigate()
-  const eDirecao = profile?.role === 'admin'
+  const eDirecao = profile?.role === 'admin' || (Array.isArray(profile?.roles) && profile.roles.includes('admin'))
 
   const chave = params.get('ver') as ChaveDeSeccao | null
   const candidata = chave && chave in SECCOES ? SECCOES[chave] : null

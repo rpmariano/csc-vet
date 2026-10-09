@@ -237,8 +237,9 @@ const TeamManagementPage: React.FC = () => {
   })
   const handleAttemptCloseFormModal = guardaFicha.tentarFechar
 
-  const isCoachOrAdmin = currentUserProfile && ['coach', 'admin'].includes(currentUserProfile.role)
-  const isAdmin = currentUserProfile?.role === 'admin'
+  const assignedUserRoles = currentUserProfile ? extractRolesFromProfile(currentUserProfile) : []
+  const isAdmin = Boolean(currentUserProfile && (currentUserProfile.role === 'admin' || assignedUserRoles.includes('admin')))
+  const isCoachOrAdmin = Boolean(isAdmin || (currentUserProfile && (currentUserProfile.role === 'coach' || assignedUserRoles.includes('coach'))))
 
   const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
     // A base de dados é a única fonte do plantel — ver nota em CalendarPage.
@@ -747,7 +748,7 @@ const TeamManagementPage: React.FC = () => {
           status: formStatus,
           jersey_number: formRoles.includes('player') && formJerseyNumber !== '' && !isNaN(Number(formJerseyNumber)) ? Number(formJerseyNumber) : null,
           kit_size: formRoles.includes('player') ? sanitizeText(formKitSize) : null,
-          preferred_foot: formRoles.includes('player') && formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
+          preferred_foot: formRoles.includes('player') && formPreferredFoot ? sanitizeText(formPreferredFoot)?.toLowerCase() : null,
           birth_date: sanitizeDate(formBirthDate),
           nationality: sanitizeText(formNationality) || 'Portuguesa',
           position: formRoles.includes('player') ? positionStr : '',
@@ -2150,14 +2151,14 @@ const TeamManagementPage: React.FC = () => {
                         <label className={ETIQUETA} htmlFor="pe-preferido">Pé preferido</label>
                         <select
                           id="pe-preferido"
-                          value={formPreferredFoot}
+                          value={formPreferredFoot.toLowerCase()}
                           onChange={(e) => setFormPreferredFoot(e.target.value)}
                           className={CAMPO}
                         >
                           <option value="">Não indicado</option>
-                          <option value="Direito">Direito</option>
-                          <option value="Esquerdo">Esquerdo</option>
-                          <option value="Ambos">Ambos</option>
+                          <option value="direito">Direito</option>
+                          <option value="esquerdo">Esquerdo</option>
+                          <option value="ambos">Ambos</option>
                         </select>
                       </div>
                     </div>

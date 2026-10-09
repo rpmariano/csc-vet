@@ -18,10 +18,11 @@ export const mensagemDeErro = (err: unknown): string => {
   const mensagem = typeof e.message === 'string' ? e.message : ''
   const daBase = codigo !== '' || e.status !== undefined || e.statusCode !== undefined
 
-  if (codigo === '42501' || /row-level security|permission denied/i.test(mensagem)) {
+  if (codigo === '42501' || codigo === '44502' || /row-level security|permission denied/i.test(mensagem)) {
     console.error(err)
     return 'não tens permissão para fazer isto'
   }
+  if (codigo === '23514') return 'um dos campos tem um valor inválido'
   if (codigo === '23505') return 'já existe um registo igual'
   if (codigo === '23503') return 'há outros dados que dependem deste'
   if (codigo === '23502') return 'falta preencher um campo obrigatório'

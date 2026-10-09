@@ -300,7 +300,7 @@ const SettingsPage: React.FC = () => {
           photo_url: photoUrl || null,
           gdpr_consent: Boolean(formGdprConsent),
           kit_size: eJogador(profile) ? sanitizeText(formKitSize) : null,
-          preferred_foot: eJogador(profile) && formPreferredFoot ? sanitizeText(formPreferredFoot) : null,
+          preferred_foot: eJogador(profile) && formPreferredFoot ? sanitizeText(formPreferredFoot)?.toLowerCase() : null,
         }
 
     try {
@@ -1031,14 +1031,14 @@ const SettingsPage: React.FC = () => {
                   <label className={ETIQUETA} htmlFor="perfil-pe">Pé preferido</label>
                   <select
                     id="perfil-pe"
-                    value={formPreferredFoot}
+                    value={formPreferredFoot.toLowerCase()}
                     onChange={(e) => setFormPreferredFoot(e.target.value)}
                     className={CAMPO}
                   >
                     <option value="" className="bg-csc-superficie text-white">Não indicado</option>
-                    {['Direito', 'Esquerdo', 'Ambos'].map(pe => (
-                      <option key={pe} value={pe} className="bg-csc-superficie text-white">{pe}</option>
-                    ))}
+                    <option value="direito" className="bg-csc-superficie text-white">Direito</option>
+                    <option value="esquerdo" className="bg-csc-superficie text-white">Esquerdo</option>
+                    <option value="ambos" className="bg-csc-superficie text-white">Ambos</option>
                   </select>
                 </div>
               </div>

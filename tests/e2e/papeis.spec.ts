@@ -307,4 +307,115 @@ test('utilizador sem perfil fica isolado: vê ecrã de boas-vindas, sem barra de
   await expect(page.getByText('Guardar a minha ficha')).not.toBeVisible()
 })
 
+test('adepto que já existia na app faz login pela primeira vez e mantém o perfil de adepto', async ({ page }) => {
+  const perfilAdeptoExistente = {
+    id: '00000000-0000-4000-8000-000000000077',
+    name: 'Adepto Existente',
+    email: UTILIZADOR_TESTE.email,
+    role: 'supporter',
+    roles: ['supporter'],
+    status: 'active',
+    jersey_number: null,
+    shirt_name: null,
+    nickname: null,
+    position: null,
+    photo_url: null,
+    phone: '912345678',
+    birth_date: null,
+  }
+
+  // Ficha de utilizador criada automaticamente no login com role='player' pelo gatilho antigo
+  const perfilCriadoNoAuth = {
+    id: UTILIZADOR_TESTE.id,
+    name: 'Adepto Existente',
+    email: UTILIZADOR_TESTE.email,
+    role: 'player',
+    roles: ['player'],
+    status: 'active',
+    jersey_number: null,
+    shirt_name: null,
+    nickname: null,
+    position: null,
+    photo_url: null,
+    phone: null,
+    birth_date: null,
+  }
+
+  await montarSupabaseFalso(page, {
+    profiles: [perfilCriadoNoAuth, perfilAdeptoExistente],
+    'rpc:find_my_profile_match': [perfilAdeptoExistente],
+    'rpc:associate_my_profile': [{
+      ...perfilAdeptoExistente,
+      id: UTILIZADOR_TESTE.id,
+    }],
+    v_players_public: [],
+    club_settings: [{ id: 1, home_field_id: null, club_name: 'GDS Cascais', initials: 'CSC' }],
+  })
+
+  await page.goto('/csc-vet/')
+  await page.waitForLoadState('networkidle')
+
+  // Deve ter entrado como adepto (sem pagamentos, sem "Apto/Lesionado")
+  await expect(page.locator('button[aria-label*="pagamento"]')).toHaveCount(0)
+  await expect(page.getByText('Apto')).toHaveCount(0)
+
+  // Nas definições, o perfil é de adepto e não de jogador
+  await page.goto('/csc-vet/settings')
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByText('Os meus pagamentos')).not.toBeVisible()
+  await expect(page.getByText('Posição Principal')).not.toBeVisible()
+})
+
+test('membro com papéis múltiplos (admin + player, ex: André Couto) tem permissões de direção no plantel', async ({ page }) => {
+  const andreCouto = {
+    id: UTILIZADOR_TESTE.id,
+    name: 'André Couto',
+    email: 'andre.coutofz@gmail.com',
+    role: 'player', // No Supabase podia ter 'player' na coluna escalar
+    roles: ['admin', 'player'], // Mas tem admin nos papéis atribuídos
+    status: 'active',
+    jersey_number: 99,
+    shirt_name: 'A. COUTO',
+    nickname: 'A. Couto',
+    position: 'Avançado Centro',
+    photo_url: null,
+    phone: '965024912',
+    birth_date: '1981-09-21',
+  }
+
+  const colega = {
+    id: '00000000-0000-4000-8000-000000000002',
+    name: 'Colega de Equipa',
+    email: 'colega@csc-vet.local',
+    role: 'player',
+    roles: ['player'],
+    status: 'active',
+    jersey_number: 10,
+    shirt_name: 'COLEGA',
+    nickname: 'Colega',
+    position: 'Médio',
+    photo_url: null,
+    phone: null,
+    birth_date: '1985-01-01',
+  }
+
+  await montarSupabaseFalso(page, {
+    profiles: [andreCouto, colega],
+    v_players_public: [soPlantel(andreCouto), soPlantel(colega)],
+    club_settings: [{ id: 1, home_field_id: null, club_name: 'GDS Cascais', initials: 'CSC' }],
+  }, { id: andreCouto.id, email: andreCouto.email })
+
+  await page.goto(`/csc-vet/team-management?atleta=${colega.id}`)
+  await page.waitForLoadState('networkidle')
+
+  // Deve ter acesso de gestão ao plantel (não é redirecionado para a Home)
+  expect(page.url()).toContain('/team-management')
+
+  // Deve conseguir ver a ficha do colega e o botão "Editar atleta"
+  await expect(page.getByRole('heading', { level: 1, name: colega.shirt_name })).toBeVisible()
+  const botaoEditar = page.getByRole('button', { name: /Editar atleta/i })
+  await expect(botaoEditar).toBeVisible()
+})
+
+
 

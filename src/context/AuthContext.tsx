@@ -196,24 +196,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       //
       // `p_email_only` continua a ser passado porque a função ainda o aceita,
       // mas é ignorado: hoje a correspondência é sempre só por email.
-      const jaTemFichaDoClube = Boolean(data?.jersey_number || data?.shirt_name)
+      const jaTemFichaDoClube = Boolean(data?.jersey_number || data?.shirt_name || data?.role === 'supporter')
       let fichaLigadaAgora = false
       if (userEmail && !jaTemFichaDoClube) {
         const { data: matches } = await supabase.rpc('find_my_profile_match', { p_email_only: true })
         const alvo = Array.isArray(matches) ? matches[0] : matches
 
         if (alvo?.id) {
+          // Consultar o papel da ficha pré-existente antes da fusão
+          const { data: fichaOriginal } = await supabase
+            .from('profiles')
+            .select('role, roles')
+            .eq('id', alvo.id)
+            .maybeSingle()
+
           const { data: associado, error: assocErr } = await supabase.rpc('associate_my_profile', { target_id: alvo.id })
           if (assocErr) {
             console.error('Erro ao ligar a conta à ficha do clube:', assocErr.message)
           } else if (associado) {
             data = (Array.isArray(associado) ? associado[0] : associado) as Profile
             fichaLigadaAgora = true
+
+            // Se a ficha original era de adepto (ou outro papel específico do clube) e a conta ficou com 'player' por omissão:
+            if (fichaOriginal?.role && fichaOriginal.role !== 'player') {
+              data.role = fichaOriginal.role
+              data.roles = fichaOriginal.roles && fichaOriginal.roles.length > 0 ? fichaOriginal.roles : [fichaOriginal.role]
+            }
           }
         }
       }
 
-      // 3. Se ainda não existir perfil (nem no DB nem associado a atleta), criar novo membro base
+      // 3. Se ainda não existir perfil (nem no DB nem associado a atleta), criar novo membro base como 'unassigned'
       if (!data) {
         const googleName = currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name
 
@@ -223,8 +236,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: userEmail ? userEmail.trim().toLowerCase() : '',
           phone: userPhone || null,
           photo_url: null,
-          role: 'player',
-          roles: ['player'],
+          role: 'unassigned',
+          roles: [],
           status: 'active'
         }
 
@@ -445,6 +458,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ? [simulatedRole]
     : assignedRoles
 
+  const primaryAssignedRole: UserRole = assignedRoles.includes('admin')
+    ? 'admin'
+    : assignedRoles.includes('coach')
+    ? 'coach'
+    : assignedRoles.includes('player')
+    ? 'player'
+    : assignedRoles.includes('supporter')
+    ? 'supporter'
+    : (actualProfile?.role ?? 'player')
+
   const effectiveProfile: Profile | null = actualProfile
     ? {
         ...actualProfile,
@@ -452,7 +475,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ? 'unassigned'
           : isSimulatingRole && simulatedRole
           ? simulatedRole
-          : actualProfile.role,
+          : primaryAssignedRole,
         roles: effectiveRoles
       }
     : null
