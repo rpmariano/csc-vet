@@ -270,6 +270,12 @@ const TeamManagementPage: React.FC = () => {
       setLoading(false)
     }
 
+    supabase.rpc('admin_linked_profile_ids').then(({ data }) => {
+      if (data && Array.isArray(data)) {
+        setLinkedProfileIds(new Set((data as string[]) || []))
+      }
+    })
+
     if (isAdmin) {
       supabase.rpc('admin_sincronizar_contas_sem_perfil').then(({ data: inseridos, error: sincErr }) => {
         if (!sincErr && typeof inseridos === 'number' && inseridos > 0) {
@@ -284,9 +290,6 @@ const TeamManagementPage: React.FC = () => {
       })
       supabase.rpc('admin_contas_por_ligar').then(({ data }) => {
         setContasPorLigar((data as typeof contasPorLigar) ?? [])
-      })
-      supabase.rpc('admin_linked_profile_ids').then(({ data }) => {
-        setLinkedProfileIds(new Set((data as string[]) || []))
       })
     }
   }
@@ -1501,6 +1504,7 @@ const TeamManagementPage: React.FC = () => {
                   const isSemPerfil = grupoDoPerfil(person) === 'unassigned'
                   const isPersonPlayer = roles.includes('player')
                   const isPersonAdepto = eAdepto(person)
+                  const temContaLigada = linkedProfileIds.has(person.id)
                   // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
                   // omissão de parsePositions(null) mostrava sempre "Médio Centro".
                   const positions = isPersonPlayer ? parsePositions(person.position) : []
@@ -1549,15 +1553,34 @@ const TeamManagementPage: React.FC = () => {
                                 Sem perfil
                               </span>
                             ) : isPersonPlayer ? (
-                              inativo ? (
-                                <span className="text-[9.5px] text-white/35 italic shrink-0">sem jogos</span>
-                              ) : (
-                                <span className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
-                                  <span className="font-display font-bold text-[11px] text-white/62">{e.j}<span className="text-white/30">J</span></span>
-                                  <span className="font-display font-black text-[11px] text-csc-gold">{e.g}<span className="opacity-60">G</span></span>
-                                  <span className="font-display font-black text-[11px] text-csc-azul-texto">{e.a}<span className="opacity-60">A</span></span>
-                                </span>
-                              )
+                              <div className="flex items-center gap-2 shrink-0">
+                                {temContaLigada ? (
+                                  <span
+                                    title="Conta de acesso ligada"
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] font-extrabold tracking-tight shrink-0"
+                                  >
+                                    <UserCheck size={10} className="shrink-0" />
+                                    <span>Ligada</span>
+                                  </span>
+                                ) : (
+                                  <span
+                                    title="Sem conta de acesso associada"
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/6 text-white/40 border border-white/10 text-[9px] font-semibold tracking-tight shrink-0"
+                                  >
+                                    <UserX size={10} className="shrink-0 opacity-60" />
+                                    <span>Sem conta</span>
+                                  </span>
+                                )}
+                                {inativo ? (
+                                  <span className="text-[9.5px] text-white/35 italic shrink-0">sem jogos</span>
+                                ) : (
+                                  <span className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
+                                    <span className="font-display font-bold text-[11px] text-white/62">{e.j}<span className="text-white/30">J</span></span>
+                                    <span className="font-display font-black text-[11px] text-csc-gold">{e.g}<span className="opacity-60">G</span></span>
+                                    <span className="font-display font-black text-[11px] text-csc-azul-texto">{e.a}<span className="opacity-60">A</span></span>
+                                  </span>
+                                )}
+                              </div>
                             ) : null
                           }
                         />
@@ -1660,6 +1683,7 @@ const TeamManagementPage: React.FC = () => {
                     const e = jga(person.id)
                     const isPersonAdepto = eAdepto(person)
                     const isPersonPlayer = roles.includes('player')
+                    const temContaLigada = linkedProfileIds.has(person.id)
 
                     return (
                       <div
@@ -1678,20 +1702,42 @@ const TeamManagementPage: React.FC = () => {
                             transition-transform duration-150 active:scale-[0.99]
                             focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold"
                         >
-                          <span className="w-full flex items-center justify-between">
-                            <span className="font-display font-black text-[15px] text-csc-gold tabular-nums">
+                          <span className="w-full flex items-center justify-between gap-1.5">
+                            <span className="font-display font-black text-[15px] text-csc-gold tabular-nums shrink-0">
                               {isPersonPlayer && person.jersey_number ? `#${person.jersey_number}` : isPersonAdepto ? <Heart size={14} className="text-rose-400" /> : isSemPerfil ? <UserX size={14} className="text-amber-400" /> : '–'}
                             </span>
-                            {isPersonPlayer && (
-                              <span
-                                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                                  person.status === 'active' ? 'bg-csc-light'
-                                    : person.status === 'injured' ? 'bg-csc-red'
-                                    : 'bg-white/25'
-                                }`}
-                                aria-hidden="true"
-                              />
-                            )}
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {isPersonPlayer && (
+                                temContaLigada ? (
+                                  <span
+                                    title="Conta de acesso ligada"
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] font-extrabold tracking-tight truncate"
+                                  >
+                                    <UserCheck size={10} className="shrink-0" />
+                                    <span>Ligada</span>
+                                  </span>
+                                ) : (
+                                  <span
+                                    title="Sem conta de acesso associada"
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/6 text-white/40 border border-white/10 text-[9px] font-semibold tracking-tight truncate"
+                                  >
+                                    <UserX size={10} className="shrink-0 opacity-60" />
+                                    <span>Sem conta</span>
+                                  </span>
+                                )
+                              )}
+                              {isPersonPlayer && (
+                                <span
+                                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                    person.status === 'active' ? 'bg-csc-light'
+                                      : person.status === 'injured' ? 'bg-csc-red'
+                                      : 'bg-white/25'
+                                  }`}
+                                  aria-hidden="true"
+                                  title={person.status === 'active' ? 'Apto' : person.status === 'injured' ? 'Lesionado' : 'Inativo'}
+                                />
+                              )}
+                            </div>
                           </span>
 
                           {person.photo_url ? (
