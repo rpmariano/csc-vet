@@ -8,10 +8,9 @@
 --    'unassigned' (ex: Paulo Ricardo Santos / PP) não apareciam em "Contas por ligar".
 -- 3. admin_merge_profiles() mantinha o role de id_manter; quando a conta com login
 --    é 'unassigned', deve adotar o role da ficha do atleta ('player' ou outro).
--- 4. Suporte a administradores com múltiplos papéis (roles[]).
+-- 4. auth.uid() IS NOT NULL: permite que migrações diretas no SQL Editor do Supabase
+--    (onde auth.uid() é nulo) possam executar sem serem barradas pelas guardas de RLS/função.
 -- ============================================================================
-
-BEGIN;
 
 -- 1. Atualizar admin_contas_por_ligar() para incluir 'unassigned'
 CREATE OR REPLACE FUNCTION public.admin_contas_por_ligar()
@@ -27,7 +26,8 @@ SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
 BEGIN
-    IF public.get_user_role() IS DISTINCT FROM 'admin'
+    IF auth.uid() IS NOT NULL
+       AND public.get_user_role() IS DISTINCT FROM 'admin'
        AND NOT ('admin' = ANY(public.get_user_roles())) THEN
         RAISE EXCEPTION 'Apenas administradores podem consultar esta informação.';
     END IF;
@@ -62,18 +62,20 @@ DECLARE
     apagar public.profiles%ROWTYPE;
     resultado public.profiles%ROWTYPE;
 BEGIN
-    IF public.get_user_role() IS DISTINCT FROM 'admin'
+    IF auth.uid() IS NOT NULL
+       AND public.get_user_role() IS DISTINCT FROM 'admin'
        AND NOT ('admin' = ANY(public.get_user_roles())) THEN
         RAISE EXCEPTION 'Apenas administradores podem fundir fichas.';
     END IF;
+
     IF id_manter = id_apagar THEN
         RAISE EXCEPTION 'Escolhe duas fichas diferentes para fundir.';
     END IF;
 
     SELECT * INTO manter FROM public.profiles WHERE id = id_manter;
-    IF NOT FOUND THEN RAISE EXCEPTION 'Ficha a manter não encontrada.'; END IF;
+    IF NOT FOUND THEN RAISE EXCEPTION 'Ficha a manter não encontrada (id: %).', id_manter; END IF;
     SELECT * INTO apagar FROM public.profiles WHERE id = id_apagar;
-    IF NOT FOUND THEN RAISE EXCEPTION 'Ficha a apagar não encontrada.'; END IF;
+    IF NOT FOUND THEN RAISE EXCEPTION 'Ficha a apagar não encontrada (id: %).', id_apagar; END IF;
 
     IF EXISTS (SELECT 1 FROM auth.users u WHERE u.id = apagar.id) THEN
         RAISE EXCEPTION 'Não é possível apagar uma ficha com conta associada. Troca a direção da fusão para manter essa conta.';
@@ -134,23 +136,66 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 GRANT EXECUTE ON FUNCTION public.admin_merge_profiles(UUID, UUID) TO authenticated;
 
--- 3. Autocorreção / Fusão automática para o atleta Paulo Ricardo Santos (PP) se ambas as fichas existirem
+-- 3. Autocorreção / Fusão automática para o atleta Paulo Ricardo Santos (PP)
 DO $$
 DECLARE
-    v_manter UUID;
-    v_apagar UUID;
+    r_manter public.profiles%ROWTYPE;
+    r_apagar public.profiles%ROWTYPE;
+    v_auth_manter_id UUID;
+    v_auth_apagar_id UUID;
 BEGIN
-    SELECT id INTO v_manter FROM public.profiles WHERE lower(email) = 'santospricardo1980@gmail.com' LIMIT 1;
-    SELECT id INTO v_apagar FROM public.profiles WHERE lower(email) = 'santospauloricardo@sapo.pt' LIMIT 1;
+    -- 1. Localizar conta de login pelo email do Gmail
+    SELECT id INTO v_auth_manter_id 
+    FROM auth.users 
+    WHERE lower(btrim(email)) = 'santospricardo1980@gmail.com' 
+    LIMIT 1;
 
-    IF v_manter IS NOT NULL AND v_apagar IS NOT NULL AND v_manter <> v_apagar THEN
-        -- Só funde se a ficha v_manter tiver conta associada em auth.users e v_apagar não tiver
-        IF EXISTS (SELECT 1 FROM auth.users WHERE id = v_manter) AND NOT EXISTS (SELECT 1 FROM auth.users WHERE id = v_apagar) THEN
-            PERFORM public.admin_merge_profiles(v_manter, v_apagar);
-            RAISE NOTICE 'Fusão automática concluída: atleta PP associado à conta santospricardo1980@gmail.com.';
+    IF v_auth_manter_id IS NOT NULL THEN
+        -- Garantir perfil em public.profiles caso o gatilho on_auth_user_created tenha falhado
+        IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = v_auth_manter_id) THEN
+            INSERT INTO public.profiles (id, name, email, role, status)
+            VALUES (v_auth_manter_id, 'Paulo Ricardo Santos', 'santospricardo1980@gmail.com', 'unassigned', 'active');
+            RAISE NOTICE 'Perfil base criado para santospricardo1980@gmail.com (id: %).', v_auth_manter_id;
+        END IF;
+    END IF;
+
+    -- Obter registo da conta a manter (com login)
+    SELECT * INTO r_manter 
+    FROM public.profiles 
+    WHERE (v_auth_manter_id IS NOT NULL AND id = v_auth_manter_id)
+       OR lower(btrim(email)) = 'santospricardo1980@gmail.com'
+    LIMIT 1;
+
+    -- 2. Localizar ficha desportiva do atleta PP (email sapo ou nome + alcunha PP)
+    SELECT * INTO r_apagar 
+    FROM public.profiles 
+    WHERE (
+        lower(btrim(email)) = 'santospauloricardo@sapo.pt'
+        OR (name ILIKE '%Paulo Ricardo Santos%' AND nickname = 'PP')
+    )
+    AND (r_manter.id IS NULL OR id <> r_manter.id)
+    LIMIT 1;
+
+    RAISE NOTICE '-> Conta a manter (Login): id=%, nome=%, email=%', r_manter.id, r_manter.name, r_manter.email;
+    RAISE NOTICE '-> Ficha do atleta (PP): id=%, nome=%, email=%', r_apagar.id, r_apagar.name, r_apagar.email;
+
+    IF r_manter.id IS NOT NULL AND r_apagar.id IS NOT NULL THEN
+        -- Verificar se a ficha antiga do atleta tem registo em auth.users
+        SELECT id INTO v_auth_apagar_id FROM auth.users WHERE id = r_apagar.id;
+        IF v_auth_apagar_id IS NOT NULL THEN
+            RAISE NOTICE '-> A ficha antiga tinha conta em auth.users (id: %). A remover conta antiga para permitir fusão...', v_auth_apagar_id;
+            DELETE FROM auth.users WHERE id = v_auth_apagar_id;
+        END IF;
+
+        PERFORM public.admin_merge_profiles(r_manter.id, r_apagar.id);
+        RAISE NOTICE 'SUCESSO: Atleta PP fundido na conta % (id: %) com sucesso!', r_manter.email, r_manter.id;
+    ELSE
+        IF r_manter.id IS NULL THEN
+            RAISE WARNING 'Não foi encontrada a conta santospricardo1980@gmail.com em auth.users nem em profiles!';
+        END IF;
+        IF r_apagar.id IS NULL THEN
+            RAISE WARNING 'Não foi encontrada a ficha antiga do atleta PP (santospauloricardo@sapo.pt)!';
         END IF;
     END IF;
 END;
 $$;
-
-COMMIT;
