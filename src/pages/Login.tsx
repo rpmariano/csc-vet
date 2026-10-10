@@ -35,6 +35,26 @@ const TEXTOS: Record<Modo, { legenda: string; accao: string }> = {
   recuperar: { legenda: 'Enviamos-te um link para a mudar', accao: 'Enviar link' },
 }
 
+const traduzirErroAuth = (err: unknown): string => {
+  const msg = err instanceof Error ? err.message : String(err || '')
+  if (/rate limit/i.test(msg)) {
+    return 'Limite de envio de emails atingido. Aguarda alguns minutos ou pede à direção para ativar a confirmação automática no Supabase.'
+  }
+  if (/user already registered/i.test(msg)) {
+    return 'Já existe uma conta com este email. Tenta entrar ou recuperar a palavra-passe.'
+  }
+  if (/invalid login credentials/i.test(msg)) {
+    return 'Email ou palavra-passe incorretos.'
+  }
+  if (/email not confirmed/i.test(msg)) {
+    return 'O teu email ainda não foi confirmado. Verifica a tua caixa de correio.'
+  }
+  if (/password.*least 6 characters/i.test(msg)) {
+    return 'A palavra-passe deve ter pelo menos 6 caracteres.'
+  }
+  return msg || 'Ocorreu um erro inesperado.'
+}
+
 const Login: React.FC = () => {
   const { user, loading: aCarregarSessao } = useAuth()
   const { clubSettings } = useClub()
@@ -86,7 +106,7 @@ const Login: React.FC = () => {
 
     try {
       if (modo === 'registar') {
-        const { error } = await supabase.auth.signUp({
+        const { data: dadosRegisto, error } = await supabase.auth.signUp({
           email,
           password: palavraPasse,
           options: {
@@ -95,7 +115,12 @@ const Login: React.FC = () => {
           },
         })
         if (error) throw error
-        setAviso('Conta criada. Confirma o email antes de entrares.')
+        if (dadosRegisto?.session) {
+          limparDestinoAutenticacao()
+          navegar(destino, { replace: true })
+        } else {
+          setAviso('Conta criada. Confirma o email antes de entrares.')
+        }
       } else if (modo === 'recuperar') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}${caminhoNovaPalavraPasse()}`,
@@ -109,7 +134,7 @@ const Login: React.FC = () => {
         navegar(destino, { replace: true })
       }
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Ocorreu um erro inesperado.')
+      setErro(traduzirErroAuth(err))
     } finally {
       setOcupado(false)
     }

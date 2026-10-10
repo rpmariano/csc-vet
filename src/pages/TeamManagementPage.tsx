@@ -25,7 +25,8 @@ import {
   Heart,
   Camera,
   Loader2,
-  ChevronDown
+  ChevronDown,
+  UserPlus
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { BlocoDocumentos } from '../components/BlocoDocumentos'
@@ -263,6 +264,15 @@ const TeamManagementPage: React.FC = () => {
       setProfiles(ordenarPlantel([]))
     } finally {
       setLoading(false)
+    }
+
+    if (isAdmin) {
+      supabase.rpc('admin_contas_por_ligar').then(({ data }) => {
+        setContasPorLigar((data as typeof contasPorLigar) ?? [])
+      })
+      supabase.rpc('admin_linked_profile_ids').then(({ data }) => {
+        setLinkedProfileIds(new Set((data as string[]) || []))
+      })
     }
   }
 
@@ -1192,6 +1202,46 @@ const TeamManagementPage: React.FC = () => {
                 >
                   <Link2 size={13} />
                   <span>Ligar</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Banner de Contas Registadas por Associar / Sem Perfil Atribuído */}
+      {isAdmin && contasPorLigar.length > 0 && (
+        <div className="cartao-simples bg-amber-500/10 border-amber-500/30 p-3.5 space-y-3">
+          <div className="flex items-center gap-2">
+            <UserPlus size={15} className="text-amber-400 shrink-0" />
+            <h3 className="font-display font-extrabold text-[9.5px] tracking-[0.14em] uppercase text-amber-400">
+              Contas registadas por associar ({contasPorLigar.length})
+            </h3>
+          </div>
+          <p className="text-[11px] text-white/70 leading-relaxed">
+            Utilizadores que se registaram na app e ainda não foram associados a uma ficha de atleta:
+          </p>
+          <div className="space-y-2">
+            {contasPorLigar.map((conta) => (
+              <div key={conta.id} className="bg-white/5 p-3 rounded-2xl flex items-center justify-between gap-2.5">
+                <div className="min-w-0">
+                  <p className="font-display font-bold text-[12px] text-white truncate">
+                    {conta.name || 'Sem nome'}{' '}
+                    <span className="text-white/60 font-normal">({conta.email})</span>
+                  </p>
+                  <p className="text-[10px] text-amber-300/80 mt-0.5">
+                    Conta criada{conta.created_at ? ` a ${new Date(conta.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}` : ''} · Sem perfil desportivo
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={associatingLoading}
+                  onClick={() => openAssociateModal(conta as unknown as Profile)}
+                  className="min-h-10 px-3.5 rounded-xl bg-csc-gold text-csc-dark font-display font-extrabold text-[11px]
+                    flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-97 disabled:opacity-45"
+                >
+                  <Link2 size={13} />
+                  <span>Associar a atleta</span>
                 </button>
               </div>
             ))}
@@ -3120,9 +3170,15 @@ const TeamManagementPage: React.FC = () => {
                   <p className="text-white/70 mt-0.5 font-medium">Email na ficha: <strong className="text-white/80">{associatingPlayer.email}</strong></p>
                   {associatingPlayer.phone && <p className="text-white/70 font-medium">Tel: <strong className="text-white/80">{associatingPlayer.phone}</strong></p>}
                 </div>
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-csc-gold text-csc-dark rounded">
-                  Sem Conta de Login
-                </span>
+                {linkedProfileIds.has(associatingPlayer.id) ? (
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-csc-verde-escuro/60 text-csc-verde-texto border border-csc-verde-texto/30 rounded">
+                    Tem Conta de Acesso
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-csc-gold text-csc-dark rounded">
+                    Sem Conta de Login
+                  </span>
+                )}
               </div>
 
               {/* 1. Sugestões Automáticas / Coincidências Encontradas */}
@@ -3273,18 +3329,26 @@ const TeamManagementPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* 3. Qual ficha deve prevalecer — só há escolha real quando a
-                  ficha selecionada também não tem conta: se tiver, é sempre
-                  ela que fica (é a única com sessão iniciada). */}
+              {/* 3. Qual ficha deve prevalecer */}
               {selectedUserToAssociate && (() => {
+                const jogadorAtualTemConta = linkedProfileIds.has(associatingPlayer.id)
                 const alvoTemConta = linkedProfileIds.has(selectedUserToAssociate.id)
-                const manterA = alvoTemConta ? false : survivorSide === 'ficha'
+                const manterA = jogadorAtualTemConta && !alvoTemConta
+                  ? true
+                  : alvoTemConta && !jogadorAtualTemConta
+                    ? false
+                    : survivorSide === 'ficha'
+
                 return (
                   <div className="mt-4 space-y-2">
                     <h4 className="text-xs font-black text-white/80 uppercase tracking-wider">
                       Qual ficha deve prevalecer?
                     </h4>
-                    {alvoTemConta ? (
+                    {jogadorAtualTemConta && !alvoTemConta ? (
+                      <p className="text-[11px] text-white/70 bg-white/5 rounded-lg p-2.5">
+                        "{associatingPlayer.name}" tem conta de login própria — vai ser a ficha que fica; "{selectedUserToAssociate.name}" é fundida nela e os dados desportivos (número, posição, histórico) passam para a conta de "{associatingPlayer.name}".
+                      </p>
+                    ) : alvoTemConta && !jogadorAtualTemConta ? (
                       <p className="text-[11px] text-white/70 bg-white/5 rounded-lg p-2.5">
                         "{selectedUserToAssociate.name}" tem conta de login própria — vai ser sempre essa a ficha que fica; "{associatingPlayer.name}" fecha e os dados em falta em "{selectedUserToAssociate.name}" são preenchidos a partir dela.
                       </p>
@@ -3300,7 +3364,9 @@ const TeamManagementPage: React.FC = () => {
                           }`}
                         >
                           <p className="font-bold text-white truncate">{associatingPlayer.name}</p>
-                          <p className="text-white/60 text-[10px]">Sem conta de login</p>
+                          <p className="text-white/60 text-[10px]">
+                            {jogadorAtualTemConta ? 'Tem conta de login' : 'Sem conta de login'}
+                          </p>
                         </button>
                         <button
                           type="button"
@@ -3312,7 +3378,9 @@ const TeamManagementPage: React.FC = () => {
                           }`}
                         >
                           <p className="font-bold text-white truncate">{selectedUserToAssociate.name}</p>
-                          <p className="text-white/60 text-[10px]">Sem conta de login</p>
+                          <p className="text-white/60 text-[10px]">
+                            {alvoTemConta ? 'Tem conta de login' : 'Sem conta de login'}
+                          </p>
                         </button>
                       </div>
                     )}
