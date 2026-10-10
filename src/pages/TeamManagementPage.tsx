@@ -26,7 +26,8 @@ import {
   Camera,
   Loader2,
   ChevronDown,
-  UserPlus
+  UserPlus,
+  UserX
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { BlocoDocumentos } from '../components/BlocoDocumentos'
@@ -58,7 +59,7 @@ import {
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 import { fmtData } from '../lib/datas'
-import { eJogador, eAdepto } from '../lib/papeis'
+import { eJogador, eAdepto, eSemPerfil } from '../lib/papeis'
 import { contemTexto } from '../lib/texto'
 import { sincronizarNovoAdeptoEmJogosFuturos } from '../lib/convocatoriasAdeptos'
 
@@ -85,19 +86,23 @@ const ROTULOS_PAPEL: Record<string, string> = {
   coach: 'Equipa técnica',
   admin: 'Direção',
   supporter: 'Adeptos',
+  unassigned: 'Sem perfil',
 }
 
 /**
  * O plantel agrupa-se por perfil, e quem tem vários conta pelo primeiro
- * desta ordem: jogador, treinador, direção, adepto. Metade da direção deste clube
+ * desta ordem: jogador, treinador, direção, adepto, sem perfil. Metade da direção deste clube
  * também joga, e a pergunta que se faz nesta lista é quem entra em campo —
  * quem joga aparece entre os jogadores, mesmo que também dirija.
  */
-const grupoDoPerfil = (p: Profile): 'player' | 'coach' | 'admin' | 'supporter' => {
+const grupoDoPerfil = (p: Profile): 'player' | 'coach' | 'admin' | 'supporter' | 'unassigned' => {
+  if (p.role === 'unassigned') return 'unassigned'
   const papeis = extractRolesFromProfile(p)
   if (papeis.includes('player')) return 'player'
   if (papeis.includes('coach')) return 'coach'
   if (papeis.includes('admin')) return 'admin'
+  if (papeis.includes('supporter')) return 'supporter'
+  if (papeis.length === 0 && !p.jersey_number && (!p.position || p.position.trim().length === 0)) return 'unassigned'
   return 'supporter'
 }
 
@@ -133,7 +138,7 @@ const TeamManagementPage: React.FC = () => {
   // Filters, Search & View Mode
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | ProfileStatus>('all')
-  const [roleFilter, setRoleFilter] = useState<'all' | 'player' | 'coach' | 'admin' | 'supporter'>('all')
+  const [roleFilter, setRoleFilter] = useState<'all' | 'player' | 'coach' | 'admin' | 'supporter' | 'unassigned'>('all')
   const [positionFilter, setPositionFilter] = useState('all')
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   /* O handoff ordena o plantel por número; a ordenação por nome era a única
@@ -1057,6 +1062,7 @@ const TeamManagementPage: React.FC = () => {
       const targetPos = normalizePositionName(positionFilter).toLowerCase()
       return playerPosList.includes(targetPos) || contemTexto(p.position, positionFilter)
     })()
+    if (!isAdmin && grupoDoPerfil(p) === 'unassigned') return false
     const matchesRole = roleFilter === 'all' || grupoDoPerfil(p) === roleFilter
 
     return matchesSearch && matchesStatus && matchesPosition && matchesRole
@@ -1100,6 +1106,7 @@ const TeamManagementPage: React.FC = () => {
     ['coach', 'Equipa técnica'],
     ['admin', 'Direção'],
     ['supporter', 'Adeptos'],
+    ...(isAdmin ? [['unassigned', 'Sem perfil'] as const] : [])
   ] as const)
     .filter(([papel]) => roleFilter === 'all' || roleFilter === papel)
     .map(([papel, titulo]) => [
@@ -1148,11 +1155,12 @@ const TeamManagementPage: React.FC = () => {
   const totalTecnica = profiles.filter(p => grupoDoPerfil(p) === 'coach').length
   const totalAdeptos = profiles.filter(p => grupoDoPerfil(p) === 'supporter').length
   const totalDirecao = profiles.filter(p => grupoDoPerfil(p) === 'admin').length
+  const totalSemPerfil = profiles.filter(p => grupoDoPerfil(p) === 'unassigned').length
 
   // Adeptos no fim da lista: colapsados por defeito se a ver todos, expandidos se filtro ativo ou se pesquisa tiver texto
   const adeptosEstaAbertoPlantel = roleFilter === 'supporter' || Boolean(searchTerm.trim()) || adeptosPlantelAberto
 
-  const alternarPapel = (papel: 'player' | 'coach' | 'admin' | 'supporter') => {
+  const alternarPapel = (papel: 'player' | 'coach' | 'admin' | 'supporter' | 'unassigned') => {
     triggerHaptic('selection')
     if (statusFilter !== 'all' && papel !== 'player') {
       setStatusFilter('all')
@@ -1337,6 +1345,20 @@ const TeamManagementPage: React.FC = () => {
             <span className="opacity-60 tabular-nums">{totalDirecao}</span>
           </Pastilha>
         )}
+
+        {isAdmin && totalSemPerfil > 0 && (
+          <Pastilha
+            ativa={roleFilter === 'unassigned'}
+            onClick={() => alternarPapel('unassigned')}
+            className={`flex-none gap-1.5 border-amber-500/40 text-amber-300 ${roleFilter === 'unassigned' ? 'bg-amber-500/20' : ''}`}
+          >
+            <UserX size={13} className="text-amber-400" />
+            <span>Sem perfil</span>
+            <span className="opacity-90 tabular-nums bg-amber-500/20 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+              {totalSemPerfil}
+            </span>
+          </Pastilha>
+        )}
       </div>
 
       <BottomSheet
@@ -1480,8 +1502,9 @@ const TeamManagementPage: React.FC = () => {
                   </button>
                 ) : (
                   <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.07] border-b border-white/12">
+                    {titulo === 'Sem perfil' && <UserX size={13} className="text-amber-400" />}
                     <span className={`font-display font-extrabold text-[9.5px] tracking-[0.16em] uppercase ${
-                      titulo === 'Inativos' ? 'text-white/45' : 'text-csc-gold'
+                      titulo === 'Inativos' ? 'text-white/45' : titulo === 'Sem perfil' ? 'text-amber-400' : 'text-csc-gold'
                     }`}>
                       {titulo}
                     </span>
@@ -1493,6 +1516,7 @@ const TeamManagementPage: React.FC = () => {
                   <div className={isColapsada ? 'border-t border-white/12' : ''}>
                     {grupo.map((person, iLinha) => {
                   const roles = extractRolesFromProfile(person)
+                  const isSemPerfil = grupoDoPerfil(person) === 'unassigned'
                   const isPersonPlayer = roles.includes('player')
                   const isPersonAdepto = eAdepto(person)
                   // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
@@ -1517,16 +1541,19 @@ const TeamManagementPage: React.FC = () => {
                       >
                         <LinhaAtleta
                           numero={isPersonPlayer ? person.jersey_number : null}
-                          icone={isPersonAdepto ? <Heart size={14} className="text-rose-400" /> : undefined}
+                          icone={
+                            isSemPerfil ? (
+                              <UserX size={14} className="text-amber-400" />
+                            ) : isPersonAdepto ? (
+                              <Heart size={14} className="text-rose-400" />
+                            ) : undefined
+                          }
                           nome={nomeCurto}
                           foto={person.photo_url}
-                          /* Só as posições, e em sigla como no campo: o nome
-                             por extenso estava aqui a competir com a alcunha
-                             logo por cima, e "Ponta de Lança (Esq)" enchia a
-                             linha. Quem não joga não tem posições — e o grupo
-                             já diz que é da equipa técnica ou da direção. */
                           detalhe={
-                            isPersonPlayer
+                            isSemPerfil
+                              ? (person.email || 'Conta sem perfil atribuído')
+                              : isPersonPlayer
                               ? siglasDasPosicoes(positions).join(' · ')
                               : isPersonAdepto
                               ? 'Adepto CSC'
@@ -1535,7 +1562,11 @@ const TeamManagementPage: React.FC = () => {
                               : 'Direção'
                           }
                           direita={
-                            isPersonPlayer ? (
+                            isSemPerfil ? (
+                              <span className="px-2 py-0.5 text-[9.5px] font-extrabold rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                                Sem perfil
+                              </span>
+                            ) : isPersonPlayer ? (
                               inativo ? (
                                 <span className="text-[9.5px] text-white/35 italic shrink-0">sem jogos</span>
                               ) : (
@@ -1625,9 +1656,14 @@ const TeamManagementPage: React.FC = () => {
                   </button>
                 ) : (
                   titulo && (
-                    <p className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 pt-1">
-                      {titulo}
-                    </p>
+                    <div className="flex items-center gap-1.5 pt-1">
+                      {titulo === 'Sem perfil' && <UserX size={13} className="text-amber-400" />}
+                      <p className={`font-display font-extrabold text-[9px] tracking-[0.14em] uppercase ${
+                        titulo === 'Sem perfil' ? 'text-amber-400' : 'text-white/62'
+                      }`}>
+                        {titulo}
+                      </p>
+                    </div>
                   )
                 )}
 
@@ -1635,6 +1671,7 @@ const TeamManagementPage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2.5">
                   {grupo.map(person => {
                     const roles = extractRolesFromProfile(person)
+                    const isSemPerfil = grupoDoPerfil(person) === 'unassigned'
                     // Sem o papel de Jogador não há posições a mostrar — sem isto, o valor por
                     // omissão de parsePositions(null) mostrava sempre "Médio Centro".
                     const positions = roles.includes('player') ? parsePositions(person.position) : []
@@ -1646,6 +1683,8 @@ const TeamManagementPage: React.FC = () => {
                       <div
                         key={person.id}
                         className={`cartao-simples overflow-hidden flex flex-col ${
+                          isSemPerfil ? 'border-amber-500/35 bg-amber-500/5' : ''
+                        } ${
                           person.status === 'injured' && isPersonPlayer ? 'border-csc-red/35' : ''
                         }`}
                       >
@@ -1659,7 +1698,7 @@ const TeamManagementPage: React.FC = () => {
                         >
                           <span className="w-full flex items-center justify-between">
                             <span className="font-display font-black text-[15px] text-csc-gold tabular-nums">
-                              {isPersonPlayer && person.jersey_number ? `#${person.jersey_number}` : isPersonAdepto ? <Heart size={14} className="text-rose-400" /> : '–'}
+                              {isPersonPlayer && person.jersey_number ? `#${person.jersey_number}` : isPersonAdepto ? <Heart size={14} className="text-rose-400" /> : isSemPerfil ? <UserX size={14} className="text-amber-400" /> : '–'}
                             </span>
                             {isPersonPlayer && (
                               <span
@@ -1690,7 +1729,9 @@ const TeamManagementPage: React.FC = () => {
                               {person.shirt_name || person.nickname || person.name}
                             </span>
                             <span className="block text-[9.5px] text-white/62 truncate mt-0.5">
-                              {isPersonPlayer
+                              {isSemPerfil
+                                ? (person.email || 'Conta sem perfil atribuído')
+                                : isPersonPlayer
                                 ? (siglasDasPosicoes(positions).join(' · ') || 'Sem posição')
                                 : isPersonAdepto
                                 ? 'Adepto CSC'
@@ -1699,6 +1740,14 @@ const TeamManagementPage: React.FC = () => {
                                 : 'Direção'}
                             </span>
                           </span>
+
+                          {isSemPerfil && (
+                            <span className="w-full text-center pt-1.5 border-t border-white/8">
+                              <span className="px-2 py-0.5 text-[9.5px] font-extrabold rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                Sem perfil
+                              </span>
+                            </span>
+                          )}
 
                           {isPersonPlayer && (
                             <span className="w-full flex items-baseline justify-center gap-2 tabular-nums border-t border-white/8">
@@ -2527,7 +2576,9 @@ const TeamManagementPage: React.FC = () => {
           voltarPara={voltarDaFicha}
           aoVoltar={() => fecharFicha()}
           sobrancelha={
-            eAdepto(selectedProfile)
+            eSemPerfil(selectedProfile)
+              ? "Conta por atribuir"
+              : eAdepto(selectedProfile)
               ? "Ficha de adepto"
               : extractRolesFromProfile(selectedProfile).includes('player')
               ? "Ficha do atleta"
@@ -2539,7 +2590,9 @@ const TeamManagementPage: React.FC = () => {
               : (selectedProfile.shirt_name || selectedProfile.nickname || selectedProfile.name)
           }
           legenda={
-            eAdepto(selectedProfile)
+            eSemPerfil(selectedProfile)
+              ? (selectedProfile.email || 'Conta registada sem perfil atribuído')
+              : eAdepto(selectedProfile)
               ? 'Adepto CSC'
               : extractRolesFromProfile(selectedProfile).includes('player')
               ? [
@@ -2673,8 +2726,28 @@ const TeamManagementPage: React.FC = () => {
                     {r === 'admin' ? 'Direção' : r === 'coach' ? 'Treinador' : r === 'supporter' ? 'Adepto' : 'Jogador'}
                   </span>
                 ))}
+                {extractRolesFromProfile(selectedProfile).length === 0 && (
+                  <span className="font-display font-black text-[9px] tracking-[0.1em] uppercase px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                    <UserX size={11} />
+                    Sem perfil atribuído
+                  </span>
+                )}
               </div>
             </div>
+
+            {/* Aviso para contas sem perfil */}
+            {eSemPerfil(selectedProfile) && (
+              <div className="cartao-simples bg-amber-500/10 border-amber-500/30 p-3.5 space-y-2 text-left">
+                <div className="flex items-center gap-2 text-amber-400 font-display font-bold text-xs">
+                  <UserX size={15} />
+                  <span>Conta registada a aguardar atribuição</span>
+                </div>
+                <p className="text-[11px] text-white/70 leading-relaxed">
+                  Este utilizador registou-se na aplicação com o email <strong className="text-white">{selectedProfile.email}</strong>.
+                  Podes associá-lo a uma ficha de atleta existente (fundindo os registos) ou editar para lhe atribuir funções de Jogador, Treinador, Direção ou Adepto.
+                </p>
+              </div>
+            )}
 
             {/* Estatísticas da época (ecrã 3b). */}
             {extractRolesFromProfile(selectedProfile).includes('player') && (
@@ -3064,15 +3137,23 @@ const TeamManagementPage: React.FC = () => {
             {isCoachOrAdmin && (
               <div className="cartao-simples bg-csc-gold/8 border-csc-gold/25 p-4 space-y-2.5">
                 <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-csc-gold">
-                  {eAdepto(selectedProfile) ? 'Gestão do adepto' : 'Gestão do atleta'}
+                  {eSemPerfil(selectedProfile)
+                    ? 'Atribuição de Perfil'
+                    : eAdepto(selectedProfile)
+                    ? 'Gestão do adepto'
+                    : 'Gestão do atleta'}
                 </h4>
 
                 <Botao largo onClick={() => openEditModal(selectedProfile)}>
                   <Pencil size={15} aria-hidden="true" />
-                  {eAdepto(selectedProfile) ? 'Editar adepto' : 'Editar atleta'}
+                  {eSemPerfil(selectedProfile)
+                    ? 'Atribuir papel e dados'
+                    : eAdepto(selectedProfile)
+                    ? 'Editar adepto'
+                    : 'Editar atleta'}
                 </Botao>
 
-                {!eAdepto(selectedProfile) && (
+                {!eAdepto(selectedProfile) && !eSemPerfil(selectedProfile) && (
                   <>
                     <p className="text-[10.5px] leading-relaxed text-white/60">
                       Marcar como lesionado retira-o dos treinos futuros; ao voltar a apto entra outra vez.
@@ -3093,7 +3174,19 @@ const TeamManagementPage: React.FC = () => {
                 )}
 
                 {isAdmin && selectedProfile?.id && (
-                  linkedProfileIds.has(selectedProfile.id) ? (
+                  eSemPerfil(selectedProfile) ? (
+                    <button
+                      type="button"
+                      onClick={() => openAssociateModal(selectedProfile)}
+                      className="w-full min-h-12 px-4 rounded-2xl bg-csc-gold text-csc-dark
+                        font-display font-extrabold text-[12px] flex items-center justify-center gap-2 cursor-pointer
+                        transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold shadow-md"
+                    >
+                      <Link2 size={15} />
+                      Associar / Fundir a atleta existente
+                    </button>
+                  ) : linkedProfileIds.has(selectedProfile.id) ? (
                     <p className="flex items-center gap-1.5 text-[10.5px] text-csc-verde-texto font-bold pt-1">
                       <UserCheck size={13} className="shrink-0" />
                       Tem conta de acesso ligada.
@@ -3123,7 +3216,11 @@ const TeamManagementPage: React.FC = () => {
                     }}
                   >
                     <Trash2 size={15} aria-hidden="true" />
-                    {eAdepto(selectedProfile) ? 'Eliminar adepto' : 'Eliminar atleta'}
+                    {eSemPerfil(selectedProfile)
+                      ? 'Eliminar conta'
+                      : eAdepto(selectedProfile)
+                      ? 'Eliminar adepto'
+                      : 'Eliminar atleta'}
                   </Botao>
                 )}
               </div>
