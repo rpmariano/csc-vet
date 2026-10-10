@@ -280,6 +280,17 @@ const TeamManagementPage: React.FC = () => {
     fetchProfiles()
   }, [])
 
+  useEffect(() => {
+    if (isAdmin) {
+      supabase.rpc('admin_contas_por_ligar').then(({ data }) => {
+        setContasPorLigar((data as typeof contasPorLigar) ?? [])
+      })
+      supabase.rpc('admin_linked_profile_ids').then(({ data }) => {
+        setLinkedProfileIds(new Set((data as string[]) || []))
+      })
+    }
+  }, [isAdmin])
+
   /*
     Jogos, golos e assistências por atleta — a coluna "J · G · A" do ecrã 3a.
     Uma linha de `stats` é um jogo em que o atleta entrou, que é a mesma
