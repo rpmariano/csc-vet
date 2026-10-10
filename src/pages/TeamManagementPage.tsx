@@ -26,7 +26,6 @@ import {
   Camera,
   Loader2,
   ChevronDown,
-  UserPlus,
   UserX
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -272,6 +271,17 @@ const TeamManagementPage: React.FC = () => {
     }
 
     if (isAdmin) {
+      supabase.rpc('admin_sincronizar_contas_sem_perfil').then(({ data: inseridos, error: sincErr }) => {
+        if (!sincErr && typeof inseridos === 'number' && inseridos > 0) {
+          supabase
+            .from('profiles')
+            .select('*')
+            .order('name', { ascending: true })
+            .then(({ data: novosPerfis }) => {
+              if (novosPerfis) setProfiles(ordenarPlantel((novosPerfis as Profile[]) || []))
+            })
+        }
+      })
       supabase.rpc('admin_contas_por_ligar').then(({ data }) => {
         setContasPorLigar((data as typeof contasPorLigar) ?? [])
       })
@@ -287,6 +297,17 @@ const TeamManagementPage: React.FC = () => {
 
   useEffect(() => {
     if (isAdmin) {
+      supabase.rpc('admin_sincronizar_contas_sem_perfil').then(({ data: inseridos, error: sincErr }) => {
+        if (!sincErr && typeof inseridos === 'number' && inseridos > 0) {
+          supabase
+            .from('profiles')
+            .select('*')
+            .order('name', { ascending: true })
+            .then(({ data: novosPerfis }) => {
+              if (novosPerfis) setProfiles(ordenarPlantel((novosPerfis as Profile[]) || []))
+            })
+        }
+      })
       supabase.rpc('admin_contas_por_ligar').then(({ data }) => {
         setContasPorLigar((data as typeof contasPorLigar) ?? [])
       })
@@ -1228,45 +1249,6 @@ const TeamManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Banner de Contas Registadas por Associar / Sem Perfil Atribuído */}
-      {isAdmin && contasPorLigar.length > 0 && (
-        <div className="cartao-simples bg-amber-500/10 border-amber-500/30 p-3.5 space-y-3">
-          <div className="flex items-center gap-2">
-            <UserPlus size={15} className="text-amber-400 shrink-0" />
-            <h3 className="font-display font-extrabold text-[9.5px] tracking-[0.14em] uppercase text-amber-400">
-              Contas registadas por associar ({contasPorLigar.length})
-            </h3>
-          </div>
-          <p className="text-[11px] text-white/70 leading-relaxed">
-            Utilizadores que se registaram na app e ainda não foram associados a uma ficha de atleta:
-          </p>
-          <div className="space-y-2">
-            {contasPorLigar.map((conta) => (
-              <div key={conta.id} className="bg-white/5 p-3 rounded-2xl flex items-center justify-between gap-2.5">
-                <div className="min-w-0">
-                  <p className="font-display font-bold text-[12px] text-white truncate">
-                    {conta.name || 'Sem nome'}{' '}
-                    <span className="text-white/60 font-normal">({conta.email})</span>
-                  </p>
-                  <p className="text-[10px] text-amber-300/80 mt-0.5">
-                    Conta criada{conta.created_at ? ` a ${new Date(conta.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })}` : ''} · Sem perfil desportivo
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={associatingLoading}
-                  onClick={() => openAssociateModal(conta as unknown as Profile)}
-                  className="min-h-10 px-3.5 rounded-xl bg-csc-gold text-csc-dark font-display font-extrabold text-[11px]
-                    flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-97 disabled:opacity-45"
-                >
-                  <Link2 size={13} />
-                  <span>Associar a atleta</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/*
         Os três mosaicos de estado (ecrã 3a), que também são o filtro. O
