@@ -35,11 +35,12 @@ import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import { BottomSheet } from '../components/BottomSheet'
 import { CabecalhoEcra, Pastilha, Botao, EtiquetaSeccao, ACarregar, EstadoVazio } from '../components/ui'
-import { SlidersHorizontal, Shield } from 'lucide-react'
+import { SlidersHorizontal, Shield, Shirt } from 'lucide-react'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { compararPorCamisola, convocatoriaFechada, textoConvocatoriaFechada, textoPrazoResposta, formatDataCurta, localDoEvento, CORES_TIPO } from '../lib/eventos'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
+import { formatarCoresEquipamento, BadgeCoresEquipamento } from '../components/clube/equipamentos'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -149,6 +150,10 @@ interface Event {
     name: string
     initials: string
     logo_url: string
+    home_kit_color_1?: string | null
+    home_kit_color_2?: string | null
+    away_kit_color_1?: string | null
+    away_kit_color_2?: string | null
   }
   home_score?: number | null
   away_score?: number | null
@@ -322,7 +327,7 @@ const CalendarPage: React.FC = () => {
       const [evRes, callupsRes, myCallupsRes, profilesRes, fieldsRes] = await Promise.all([
         supabase
           .from('events')
-          .select('*, opponent:opponents(name, initials, logo_url), tournament:tournaments(id, name, season, image_url, organizer_name, rules), field:fields(id, name, address)')
+          .select('*, opponent:opponents(name, initials, logo_url, home_kit_color_1, home_kit_color_2, away_kit_color_1, away_kit_color_2), tournament:tournaments(id, name, season, image_url, organizer_name, rules), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
         fetchAllCallups('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
         myCallupsPromise,
@@ -1893,6 +1898,41 @@ const CalendarPage: React.FC = () => {
                     )
                   })()}
                 </div>
+
+                {/* Equipamento previsto para o adversário */}
+                {(() => {
+                  if (selectedEvent.type !== 'match' || !selectedEvent.opponent) return null
+                  const opp = selectedEvent.opponent
+                  const fora = selectedEvent.home_away === 'away'
+                  // Se jogamos fora, o adversário joga em casa (usa a camisola principal).
+                  // Se jogamos em casa, o adversário joga fora (usa a camisola alternativa, se tiver).
+                  const cor1 = fora ? opp.home_kit_color_1 : (opp.away_kit_color_1 || opp.home_kit_color_1)
+                  const cor2 = fora ? opp.home_kit_color_2 : (opp.away_kit_color_1 ? opp.away_kit_color_2 : opp.home_kit_color_2)
+                  const tipoUso = fora
+                    ? 'Principal (em casa)'
+                    : opp.away_kit_color_1 && opp.away_kit_color_1.toUpperCase() !== 'X'
+                      ? 'Alternativa (fora)'
+                      : 'Principal'
+
+                  if (!cor1 && !cor2) return null
+
+                  return (
+                    <div className="cartao-simples px-4 py-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Shirt size={17} className="text-csc-gold shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-display font-bold text-[9px] tracking-[0.14em] uppercase text-white/55">
+                            Equipamento do adversário · {tipoUso}
+                          </p>
+                          <p className="font-display font-extrabold text-[13px] text-white truncate mt-0.5">
+                            {formatarCoresEquipamento(cor1, cor2)}
+                          </p>
+                        </div>
+                      </div>
+                      <BadgeCoresEquipamento cor1={cor1} cor2={cor2} tamanho="medio" />
+                    </div>
+                  )
+                })()}
 
                 {/* Observações / Descrição (diretamente acima da confirmação) */}
                 {(() => {

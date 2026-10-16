@@ -185,6 +185,10 @@ interface Opponent {
   home_field_id?: string | null
   contact_name?: string | null
   contact_phone?: string | null
+  home_kit_color_1?: string | null
+  home_kit_color_2?: string | null
+  away_kit_color_1?: string | null
+  away_kit_color_2?: string | null
 }
 interface TournamentRules {
   min_age: number;
@@ -298,6 +302,10 @@ const EventsPage: React.FC = () => {
   const [quickOppHomeFieldId, setQuickOppHomeFieldId] = useState('')
   const [quickOppContactName, setQuickOppContactName] = useState('')
   const [quickOppContactPhone, setQuickOppContactPhone] = useState('')
+  const [quickOppHomeKitColor1, setQuickOppHomeKitColor1] = useState('')
+  const [quickOppHomeKitColor2, setQuickOppHomeKitColor2] = useState('')
+  const [quickOppAwayKitColor1, setQuickOppAwayKitColor1] = useState('')
+  const [quickOppAwayKitColor2, setQuickOppAwayKitColor2] = useState('')
   const [isSavingQuickOpp, setIsSavingQuickOpp] = useState(false)
 
   /* O evento em edição — o formulário é o `EditarEvento`, o mesmo da Agenda. */
@@ -356,6 +364,10 @@ const EventsPage: React.FC = () => {
     setQuickOppHomeFieldId('')
     setQuickOppContactName('')
     setQuickOppContactPhone('')
+    setQuickOppHomeKitColor1('')
+    setQuickOppHomeKitColor2('')
+    setQuickOppAwayKitColor1('')
+    setQuickOppAwayKitColor2('')
   }
 
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
@@ -412,7 +424,11 @@ const EventsPage: React.FC = () => {
         initials: quickOppInitials.trim() || undefined,
         home_field_id: quickOppHomeFieldId || null,
         contact_name: quickOppContactName.trim() || null,
-        contact_phone: quickOppContactPhone.trim() || null
+        contact_phone: quickOppContactPhone.trim() || null,
+        home_kit_color_1: quickOppHomeKitColor1.trim() || null,
+        home_kit_color_2: quickOppHomeKitColor2.trim() || null,
+        away_kit_color_1: quickOppAwayKitColor1.trim() || null,
+        away_kit_color_2: quickOppAwayKitColor2.trim() || null,
       }
 
       const { data, error } = await supabase
@@ -423,7 +439,11 @@ const EventsPage: React.FC = () => {
           initials: newOppPayload.initials || null,
           home_field_id: newOppPayload.home_field_id || null,
           contact_name: newOppPayload.contact_name || null,
-          contact_phone: newOppPayload.contact_phone || null
+          contact_phone: newOppPayload.contact_phone || null,
+          home_kit_color_1: newOppPayload.home_kit_color_1 || null,
+          home_kit_color_2: newOppPayload.home_kit_color_2 || null,
+          away_kit_color_1: newOppPayload.away_kit_color_1 || null,
+          away_kit_color_2: newOppPayload.away_kit_color_2 || null,
         }])
         .select()
         .single()
@@ -443,6 +463,13 @@ const EventsPage: React.FC = () => {
       setIsQuickOpponentModalOpen(false)
       setQuickOppName('')
       setQuickOppInitials('')
+      setQuickOppHomeFieldId('')
+      setQuickOppContactName('')
+      setQuickOppContactPhone('')
+      setQuickOppHomeKitColor1('')
+      setQuickOppHomeKitColor2('')
+      setQuickOppAwayKitColor1('')
+      setQuickOppAwayKitColor2('')
       setQuickOppHomeFieldId('')
       setQuickOppContactName('')
       setQuickOppContactPhone('')
@@ -596,7 +623,7 @@ const EventsPage: React.FC = () => {
       const [evRes, fRes, oRes, tRes, profRes, callRes, tpRes, suspRes] = await Promise.all([
         supabase.from('events').select('*').order('date_time', { ascending: false }),
         supabase.from('fields').select('id, name, address'),
-        supabase.from('opponents').select('id, name, initials, home_field_id'),
+        supabase.from('opponents').select('id, name, initials, logo_url, home_field_id, home_kit_color_1, home_kit_color_2, away_kit_color_1, away_kit_color_2'),
         supabase.from('tournaments').select('id, name, season, rules'),
         // Plantel: a vista traz só as colunas de equipa (sem IBAN, NIF, morada,
         // contactos ou notas médicas), por isso qualquer membro a pode ler.
@@ -2249,12 +2276,20 @@ const EventsPage: React.FC = () => {
         homeFieldId={quickOppHomeFieldId}
         contactName={quickOppContactName}
         contactPhone={quickOppContactPhone}
+        homeKitColor1={quickOppHomeKitColor1}
+        homeKitColor2={quickOppHomeKitColor2}
+        awayKitColor1={quickOppAwayKitColor1}
+        awayKitColor2={quickOppAwayKitColor2}
         fields={fields}
         onNameChange={setQuickOppName}
         onInitialsChange={setQuickOppInitials}
         onHomeFieldIdChange={setQuickOppHomeFieldId}
         onContactNameChange={setQuickOppContactName}
         onContactPhoneChange={setQuickOppContactPhone}
+        onHomeKitColor1Change={setQuickOppHomeKitColor1}
+        onHomeKitColor2Change={setQuickOppHomeKitColor2}
+        onAwayKitColor1Change={setQuickOppAwayKitColor1}
+        onAwayKitColor2Change={setQuickOppAwayKitColor2}
         onSubmit={handleSaveQuickOpponent}
         onClose={fecharQuickOppModal}
         isSaving={isSavingQuickOpp}

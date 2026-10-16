@@ -1,10 +1,11 @@
 import React from 'react'
-import { Shield } from 'lucide-react'
+import { Shield, Shirt } from 'lucide-react'
 import Modal from './Modal'
 import { Botao } from './ui'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
 import { CLASSE_CAMPO as CAMPO_DIALOGO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from './ui/formulario'
+import { BadgeCoresEquipamento, CORES_EQUIPAMENTO_SUGERIDAS, separarCoresDigitadas } from './clube/equipamentos'
 
 /** Um submit sem evento a sério — o formulário só lhe chama `preventDefault`. */
 const EVENTO_FALSO = { preventDefault: () => {} } as React.FormEvent
@@ -21,6 +22,10 @@ export interface QuickOpponentModalProps {
   homeFieldId: string
   contactName: string
   contactPhone: string
+  homeKitColor1?: string
+  homeKitColor2?: string
+  awayKitColor1?: string
+  awayKitColor2?: string
   /** Campos disponíveis para "Campo Habitual". */
   fields: { id: string; name: string }[]
   onNameChange: (valor: string) => void
@@ -28,6 +33,10 @@ export interface QuickOpponentModalProps {
   onHomeFieldIdChange: (valor: string) => void
   onContactNameChange: (valor: string) => void
   onContactPhoneChange: (valor: string) => void
+  onHomeKitColor1Change?: (valor: string) => void
+  onHomeKitColor2Change?: (valor: string) => void
+  onAwayKitColor1Change?: (valor: string) => void
+  onAwayKitColor2Change?: (valor: string) => void
   onSubmit: (e: React.FormEvent) => void
   /** Fecho pedido pelo utilizador (X, Cancelar, Escape ou clique no fundo). */
   onClose: () => void
@@ -41,12 +50,20 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
   homeFieldId,
   contactName,
   contactPhone,
+  homeKitColor1 = '',
+  homeKitColor2 = '',
+  awayKitColor1 = '',
+  awayKitColor2 = '',
   fields,
   onNameChange,
   onInitialsChange,
   onHomeFieldIdChange,
   onContactNameChange,
   onContactPhoneChange,
+  onHomeKitColor1Change,
+  onHomeKitColor2Change,
+  onAwayKitColor1Change,
+  onAwayKitColor2Change,
   onSubmit,
   onClose,
   isSaving = false,
@@ -54,7 +71,7 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
   /* Um adversário meio preenchido não se perde por um Escape ou um clique ao lado. */
   const guarda = useAlteracoesPorGravar({
     aberto: isOpen,
-    valores: [name, initials, homeFieldId, contactName, contactPhone],
+    valores: [name, initials, homeFieldId, contactName, contactPhone, homeKitColor1, homeKitColor2, awayKitColor1, awayKitColor2],
     aoGravar: () => onSubmit(EVENTO_FALSO),
     aoSair: onClose,
     descricao: 'O adversário que estás a criar ainda não foi gravado. Se saíres agora, perde-se.',
@@ -143,6 +160,92 @@ export const QuickOpponentModal: React.FC<QuickOpponentModalProps> = ({
               />
             </div>
           </div>
+
+          {onHomeKitColor1Change && (
+            <div className="pt-2.5 border-t border-white/12 space-y-2.5">
+              <span className="block font-display font-extrabold text-[9.5px] uppercase tracking-wider text-csc-gold">
+                Cores dos Equipamentos (opcional)
+              </span>
+
+              {/* Principal / Casa */}
+              <div className="p-2.5 bg-white/5 rounded-xl border border-white/10 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-white flex items-center gap-1.5">
+                    <Shirt size={12} className="text-csc-gold" /> Principal (Casa)
+                  </span>
+                  <BadgeCoresEquipamento cor1={homeKitColor1} cor2={homeKitColor2} tamanho="pequeno" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    list="lista-cores-sugeridas-quick"
+                    value={homeKitColor1}
+                    onChange={e => {
+                      const sep = separarCoresDigitadas(e.target.value)
+                      if (sep) {
+                        onHomeKitColor1Change(sep.cor1)
+                        onHomeKitColor2Change?.(sep.cor2)
+                      } else {
+                        onHomeKitColor1Change(e.target.value)
+                      }
+                    }}
+                    placeholder="Cor 1 (ex: Vermelho)"
+                    className={CAMPO_DIALOGO}
+                  />
+                  <input
+                    type="text"
+                    list="lista-cores-sugeridas-quick"
+                    value={homeKitColor2}
+                    onChange={e => onHomeKitColor2Change?.(e.target.value)}
+                    placeholder="Cor 2 (opcional)"
+                    className={CAMPO_DIALOGO}
+                  />
+                </div>
+              </div>
+
+              {/* Alternativa / Fora */}
+              <div className="p-2.5 bg-white/5 rounded-xl border border-white/10 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-white flex items-center gap-1.5">
+                    <Shirt size={12} className="text-csc-gold" /> Alternativa (Fora)
+                  </span>
+                  <BadgeCoresEquipamento cor1={awayKitColor1} cor2={awayKitColor2} tamanho="pequeno" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    list="lista-cores-sugeridas-quick"
+                    value={awayKitColor1}
+                    onChange={e => {
+                      const sep = separarCoresDigitadas(e.target.value)
+                      if (sep) {
+                        onAwayKitColor1Change?.(sep.cor1)
+                        onAwayKitColor2Change?.(sep.cor2)
+                      } else {
+                        onAwayKitColor1Change?.(e.target.value)
+                      }
+                    }}
+                    placeholder="Cor 1 (ex: Verde)"
+                    className={CAMPO_DIALOGO}
+                  />
+                  <input
+                    type="text"
+                    list="lista-cores-sugeridas-quick"
+                    value={awayKitColor2}
+                    onChange={e => onAwayKitColor2Change?.(e.target.value)}
+                    placeholder="Cor 2 (opcional)"
+                    className={CAMPO_DIALOGO}
+                  />
+                </div>
+              </div>
+
+              <datalist id="lista-cores-sugeridas-quick">
+                {CORES_EQUIPAMENTO_SUGERIDAS.map(cor => (
+                  <option key={cor} value={cor} />
+                ))}
+              </datalist>
+            </div>
+          )}
 
           <div className="flex gap-2.5 pt-3 border-t border-white/12">
             <Botao aparencia="vidro" className="flex-1" onClick={guarda.tentarFechar}>Cancelar</Botao>

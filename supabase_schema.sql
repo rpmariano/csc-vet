@@ -70,6 +70,10 @@ CREATE TABLE IF NOT EXISTS public.opponents (
     contact_name TEXT,
     contact_phone TEXT,
     home_field_id UUID REFERENCES public.fields(id) ON DELETE SET NULL,
+    home_kit_color_1 TEXT,
+    home_kit_color_2 TEXT,
+    away_kit_color_1 TEXT,
+    away_kit_color_2 TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 ALTER TABLE public.opponents ENABLE ROW LEVEL SECURITY;
@@ -616,6 +620,7 @@ CREATE TABLE IF NOT EXISTS public.club_settings (
     initials TEXT NOT NULL DEFAULT 'SIGLA',
     logo_url TEXT,
     primary_color TEXT DEFAULT '#1c1c1c',
+    home_field_id UUID REFERENCES public.fields(id) ON DELETE SET NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 

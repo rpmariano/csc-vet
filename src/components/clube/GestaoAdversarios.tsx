@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Shield, Trash2, Save, Pencil } from 'lucide-react'
+import { Shield, Trash2, Save, Pencil, Shirt } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useClub } from '../../context/ClubContext'
 import { toast } from '../../context/ToastContext'
@@ -16,6 +16,12 @@ import { CAMPO, ETIQUETA, type Adversario, type Campo } from './comum'
 import { mensagemDeErro } from '../../lib/erros'
 import { BotaoIcone, EstadoVazio, Botao, BotaoCriar } from '../ui'
 import { ProcuraEFiltros } from '../ProcuraEFiltros'
+import {
+  BadgeCoresEquipamento,
+  formatarCoresEquipamento,
+  separarCoresDigitadas,
+  CORES_EQUIPAMENTO_SUGERIDAS,
+} from './equipamentos'
 import type { PropsDaSeccao } from './seccao'
 
 /*
@@ -41,6 +47,10 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   const [contacto, setContacto] = useState('')
   const [telefone, setTelefone] = useState('')
   const [campoHabitual, setCampoHabitual] = useState('')
+  const [homeKitColor1, setHomeKitColor1] = useState('')
+  const [homeKitColor2, setHomeKitColor2] = useState('')
+  const [awayKitColor1, setAwayKitColor1] = useState('')
+  const [awayKitColor2, setAwayKitColor2] = useState('')
   const [emblemaAtual, setEmblemaAtual] = useState<string | null>(null)
   const [emblemaNovo, setEmblemaNovo] = useState<File | null>(null)
   const [aEnviar, setAEnviar] = useState(false)
@@ -72,6 +82,10 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
     setContacto('')
     setTelefone('')
     setCampoHabitual('')
+    setHomeKitColor1('')
+    setHomeKitColor2('')
+    setAwayKitColor1('')
+    setAwayKitColor2('')
     setEmblemaAtual(null)
     setEmblemaNovo(null)
     setModalAberto(true)
@@ -85,9 +99,36 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
     setContacto(a.contact_name || '')
     setTelefone(a.contact_phone || '')
     setCampoHabitual(a.home_field_id || '')
+    setHomeKitColor1(a.home_kit_color_1 || '')
+    setHomeKitColor2(a.home_kit_color_2 || '')
+    setAwayKitColor1(a.away_kit_color_1 || '')
+    setAwayKitColor2(a.away_kit_color_2 || '')
     setEmblemaAtual(a.logo_url || null)
     setEmblemaNovo(null)
     setModalAberto(true)
+  }
+
+  const aoMudarCor = (tipo: 'home' | 'away', num: 1 | 2, valor: string) => {
+    if (num === 1) {
+      const separadas = separarCoresDigitadas(valor)
+      if (separadas) {
+        if (tipo === 'home') {
+          setHomeKitColor1(separadas.cor1)
+          setHomeKitColor2(separadas.cor2)
+        } else {
+          setAwayKitColor1(separadas.cor1)
+          setAwayKitColor2(separadas.cor2)
+        }
+        return
+      }
+    }
+    if (tipo === 'home') {
+      if (num === 1) setHomeKitColor1(valor)
+      else setHomeKitColor2(valor)
+    } else {
+      if (num === 1) setAwayKitColor1(valor)
+      else setAwayKitColor2(valor)
+    }
   }
 
   const gravar = async () => {
@@ -118,6 +159,10 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
         contact_name: contacto.trim(),
         contact_phone: telefone.trim(),
         home_field_id: campoHabitual || null,
+        home_kit_color_1: homeKitColor1.trim() || null,
+        home_kit_color_2: homeKitColor2.trim() || null,
+        away_kit_color_1: awayKitColor1.trim() || null,
+        away_kit_color_2: awayKitColor2.trim() || null,
       }
 
       const { error } = emEdicao
@@ -141,7 +186,19 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   */
   const guarda = useAlteracoesPorGravar({
     aberto: modalAberto,
-    valores: [emEdicao, nome, sigla, contacto, telefone, campoHabitual, emblemaNovo?.name ?? null],
+    valores: [
+      emEdicao,
+      nome,
+      sigla,
+      contacto,
+      telefone,
+      campoHabitual,
+      emblemaNovo?.name ?? null,
+      homeKitColor1,
+      homeKitColor2,
+      awayKitColor1,
+      awayKitColor2,
+    ],
     aoGravar: gravar,
     aoSair: () => setModalAberto(false),
     descricao: 'As alterações a este adversário ainda não foram gravadas. Se saíres agora, perdem-se.',
@@ -188,7 +245,11 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
       (a.initials && a.initials.toLowerCase().includes(q)) ||
       (a.contact_name && a.contact_name.toLowerCase().includes(q)) ||
       (a.contact_phone && a.contact_phone.includes(q)) ||
-      (campo && campo.name.toLowerCase().includes(q))
+      (campo && campo.name.toLowerCase().includes(q)) ||
+      (a.home_kit_color_1 && a.home_kit_color_1.toLowerCase().includes(q)) ||
+      (a.home_kit_color_2 && a.home_kit_color_2.toLowerCase().includes(q)) ||
+      (a.away_kit_color_1 && a.away_kit_color_1.toLowerCase().includes(q)) ||
+      (a.away_kit_color_2 && a.away_kit_color_2.toLowerCase().includes(q))
     )
   })
 
@@ -238,6 +299,22 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                       <span className="block text-[11px] text-white/55 mt-0.5 truncate">
                         {[a.initials, campo?.name ?? 'Sem campo associado'].filter(Boolean).join(' · ')}
                       </span>
+                      {(a.home_kit_color_1 || a.away_kit_color_1) && (
+                        <span className="flex items-center gap-2 mt-1 text-[10px] text-white/70">
+                          {a.home_kit_color_1 && (
+                            <span className="inline-flex items-center gap-1 bg-white/6 px-1.5 py-0.5 rounded-md">
+                              <BadgeCoresEquipamento cor1={a.home_kit_color_1} cor2={a.home_kit_color_2} tamanho="pequeno" />
+                              <span className="truncate">{formatarCoresEquipamento(a.home_kit_color_1, a.home_kit_color_2)}</span>
+                            </span>
+                          )}
+                          {a.away_kit_color_1 && a.away_kit_color_1.toUpperCase() !== 'X' && (
+                            <span className="inline-flex items-center gap-1 bg-white/6 px-1.5 py-0.5 rounded-md">
+                              <BadgeCoresEquipamento cor1={a.away_kit_color_1} cor2={a.away_kit_color_2} tamanho="pequeno" />
+                              <span className="truncate">{formatarCoresEquipamento(a.away_kit_color_1, a.away_kit_color_2)}</span>
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </span>
                   </button>
                   <div className="flex items-center shrink-0">
@@ -324,6 +401,106 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Equipamentos / Camisolas (Casa e Fora) */}
+          <div className="pt-2 border-t border-white/10 space-y-3">
+            <div>
+              <span className="block font-display font-extrabold text-[10px] tracking-[0.14em] uppercase text-csc-gold">
+                Cores dos equipamentos
+              </span>
+              <p className="text-[11px] text-white/60 mt-0.5">
+                Indica as cores da camisola principal (em casa) e alternativa (fora). Podem ser até duas cores cada.
+              </p>
+            </div>
+
+            {/* Camisola Principal (Em Casa) */}
+            <div className="p-3 bg-white/5 rounded-xl border border-white/10 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-display font-bold text-[11px] text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Shirt size={13} className="text-csc-gold" /> Camisola Principal (Casa)
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10.5px] font-bold text-white/70">
+                    {formatarCoresEquipamento(homeKitColor1, homeKitColor2, 'Por definir')}
+                  </span>
+                  <BadgeCoresEquipamento cor1={homeKitColor1} cor2={homeKitColor2} tamanho="medio" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={ETIQUETA} htmlFor="clube-adv-home-cor1">Cor principal</label>
+                  <input
+                    id="clube-adv-home-cor1"
+                    type="text"
+                    list="lista-cores-sugeridas-adv"
+                    value={homeKitColor1}
+                    onChange={e => aoMudarCor('home', 1, e.target.value)}
+                    placeholder="Ex: Vermelho"
+                    className={CAMPO}
+                  />
+                </div>
+                <div>
+                  <label className={ETIQUETA} htmlFor="clube-adv-home-cor2">2.ª cor (opcional)</label>
+                  <input
+                    id="clube-adv-home-cor2"
+                    type="text"
+                    list="lista-cores-sugeridas-adv"
+                    value={homeKitColor2}
+                    onChange={e => aoMudarCor('home', 2, e.target.value)}
+                    placeholder="Ex: Branco"
+                    className={CAMPO}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Camisola Alternativa (Fora) */}
+            <div className="p-3 bg-white/5 rounded-xl border border-white/10 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-display font-bold text-[11px] text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Shirt size={13} className="text-csc-gold" /> Camisola Alternativa (Fora)
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10.5px] font-bold text-white/70">
+                    {formatarCoresEquipamento(awayKitColor1, awayKitColor2, 'Por definir (X)')}
+                  </span>
+                  <BadgeCoresEquipamento cor1={awayKitColor1} cor2={awayKitColor2} tamanho="medio" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={ETIQUETA} htmlFor="clube-adv-away-cor1">Cor principal</label>
+                  <input
+                    id="clube-adv-away-cor1"
+                    type="text"
+                    list="lista-cores-sugeridas-adv"
+                    value={awayKitColor1}
+                    onChange={e => aoMudarCor('away', 1, e.target.value)}
+                    placeholder="Ex: Verde"
+                    className={CAMPO}
+                  />
+                </div>
+                <div>
+                  <label className={ETIQUETA} htmlFor="clube-adv-away-cor2">2.ª cor (opcional)</label>
+                  <input
+                    id="clube-adv-away-cor2"
+                    type="text"
+                    list="lista-cores-sugeridas-adv"
+                    value={awayKitColor2}
+                    onChange={e => aoMudarCor('away', 2, e.target.value)}
+                    placeholder="Ex: Preto"
+                    className={CAMPO}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <datalist id="lista-cores-sugeridas-adv">
+              {CORES_EQUIPAMENTO_SUGERIDAS.map(cor => (
+                <option key={cor} value={cor} />
+              ))}
+            </datalist>
           </div>
 
           <div>

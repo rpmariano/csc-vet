@@ -75,3 +75,29 @@ test('cada prova diz o seu estado, e são várias', async ({ page }) => {
   await expect(links).toHaveCount(2)
   await expect(links.first()).toHaveAttribute('href', /torneio=t1/)
 })
+
+test('mostra as cores dos equipamentos principal (casa) e alternativo (fora)', async ({ page }) => {
+  const advComEquipamento = {
+    ...adversario,
+    home_kit_color_1: 'Vermelho',
+    home_kit_color_2: 'Branco',
+    away_kit_color_1: 'Verde',
+    away_kit_color_2: 'Preto',
+  }
+  await montarSupabaseFalso(page, {
+    ...fixtures,
+    opponents: [advComEquipamento],
+  })
+  await page.goto('/csc-vet/clube?ver=adversarios&adversario=o1')
+
+  const ficha = painel(page)
+  await expect(ficha).toBeVisible()
+
+  // Secção de equipamentos
+  await expect(ficha.getByText('Equipamentos')).toBeVisible()
+  await expect(ficha.getByText('Principal · Casa')).toBeVisible()
+  await expect(ficha.getByText('Vermelho / Branco')).toBeVisible()
+  await expect(ficha.getByText('Alternativa · Fora')).toBeVisible()
+  await expect(ficha.getByText('Verde / Preto')).toBeVisible()
+})
+

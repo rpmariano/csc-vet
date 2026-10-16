@@ -107,6 +107,10 @@ export const NOMES_CAMPOS: Record<string, string> = {
   category_id: 'Categoria',
   season: 'Época',
   target_audience: 'Público-alvo',
+  home_kit_color_1: 'Camisola principal (cor 1)',
+  home_kit_color_2: 'Camisola principal (cor 2)',
+  away_kit_color_1: 'Camisola alternativa (cor 1)',
+  away_kit_color_2: 'Camisola alternativa (cor 2)',
 }
 
 export const formatarValorCampo = (campo: string, valor: unknown): string => {

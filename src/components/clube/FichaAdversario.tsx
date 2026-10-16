@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, Pencil, Trash2, Phone, User, Shield } from 'lucide-react'
+import { MapPin, Pencil, Trash2, Phone, User, Shield, Shirt } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { EcraDetalhe } from '../EcraDetalhe'
 import { formatOpponentSigla } from '../../lib/siglas'
 import { EtiquetaSeccao, Botao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
+import { formatarCoresEquipamento, BadgeCoresEquipamento } from './equipamentos'
 
 /**
  * Ficha do adversário (ecrã 9h).
@@ -31,6 +32,10 @@ export interface AdversarioDaFicha {
   contact_name?: string
   contact_phone?: string
   home_field_id: string | null
+  home_kit_color_1?: string | null
+  home_kit_color_2?: string | null
+  away_kit_color_1?: string | null
+  away_kit_color_2?: string | null
 }
 
 interface Confronto {
@@ -317,6 +322,66 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
               >
                 Mudar
               </button>
+            </div>
+          </section>
+ 
+          {/* Equipamentos (Principal e Alternativo) */}
+          <section>
+            <EtiquetaSeccao className="mb-2">Equipamentos</EtiquetaSeccao>
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* Camisola principal (em casa) */}
+              <div className="cartao-simples p-3.5 flex flex-col justify-between min-h-[92px]">
+                <div>
+                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                    <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55">
+                      Principal · Casa
+                    </span>
+                    <BadgeCoresEquipamento
+                      cor1={adversario.home_kit_color_1}
+                      cor2={adversario.home_kit_color_2}
+                      tamanho="medio"
+                    />
+                  </div>
+                  <p className="font-display font-black text-[13.5px] text-white leading-tight">
+                    {formatarCoresEquipamento(
+                      adversario.home_kit_color_1,
+                      adversario.home_kit_color_2,
+                      'Não definida',
+                    )}
+                  </p>
+                </div>
+                <span className="text-[10px] text-white/45 mt-2 flex items-center gap-1.5">
+                  <Shirt size={12} className="shrink-0 text-white/55" />
+                  <span>Em casa</span>
+                </span>
+              </div>
+
+              {/* Camisola alternativa (fora) */}
+              <div className="cartao-simples p-3.5 flex flex-col justify-between min-h-[92px]">
+                <div>
+                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                    <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55">
+                      Alternativa · Fora
+                    </span>
+                    <BadgeCoresEquipamento
+                      cor1={adversario.away_kit_color_1}
+                      cor2={adversario.away_kit_color_2}
+                      tamanho="medio"
+                    />
+                  </div>
+                  <p className="font-display font-black text-[13.5px] text-white leading-tight">
+                    {formatarCoresEquipamento(
+                      adversario.away_kit_color_1,
+                      adversario.away_kit_color_2,
+                      'Não definida (X)',
+                    )}
+                  </p>
+                </div>
+                <span className="text-[10px] text-white/45 mt-2 flex items-center gap-1.5">
+                  <Shirt size={12} className="shrink-0 text-white/55" />
+                  <span>Fora</span>
+                </span>
+              </div>
             </div>
           </section>
 

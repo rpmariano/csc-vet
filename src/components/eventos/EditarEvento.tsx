@@ -67,7 +67,16 @@ export interface EventoEditavel {
 }
 
 export interface CampoDoEvento { id: string; name: string; address?: string | null }
-export interface AdversarioDoEvento { id: string; name: string; initials?: string | null; home_field_id?: string | null }
+export interface AdversarioDoEvento {
+  id: string
+  name: string
+  initials?: string | null
+  home_field_id?: string | null
+  home_kit_color_1?: string | null
+  home_kit_color_2?: string | null
+  away_kit_color_1?: string | null
+  away_kit_color_2?: string | null
+}
 export interface ProvaDoEvento { id: string; name: string; season?: string | null }
 
 /** Uma linha de `callups` do evento, com o atleta aninhado quando vem. */
@@ -172,7 +181,9 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
 
   const [campoRapido, setCampoRapido] = useState({ aberto: false, nome: '', morada: '', aGravar: false })
   const [advRapido, setAdvRapido] = useState({
-    aberto: false, nome: '', sigla: '', campoId: '', contacto: '', telefone: '', aGravar: false,
+    aberto: false, nome: '', sigla: '', campoId: '', contacto: '', telefone: '',
+    homeKitColor1: '', homeKitColor2: '', awayKitColor1: '', awayKitColor2: '',
+    aGravar: false,
   })
 
   /* As regras da prova escolhida: quem está inscrito, quem está suspenso, e
@@ -609,13 +620,21 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
         home_field_id: advRapido.campoId || null,
         contact_name: advRapido.contacto.trim() || null,
         contact_phone: advRapido.telefone.trim() || null,
+        home_kit_color_1: advRapido.homeKitColor1.trim() || null,
+        home_kit_color_2: advRapido.homeKitColor2.trim() || null,
+        away_kit_color_1: advRapido.awayKitColor1.trim() || null,
+        away_kit_color_2: advRapido.awayKitColor2.trim() || null,
       }
       const { data: linha, error } = await supabase.from('opponents').insert([novo]).select().single()
       if (error) throw error
       const adversario = (linha as AdversarioDoEvento) || novo
       aoCriarAdversario(adversario)
       setAdversarioId(adversario.id)
-      setAdvRapido({ aberto: false, nome: '', sigla: '', campoId: '', contacto: '', telefone: '', aGravar: false })
+      setAdvRapido({
+        aberto: false, nome: '', sigla: '', campoId: '', contacto: '', telefone: '',
+        homeKitColor1: '', homeKitColor2: '', awayKitColor1: '', awayKitColor2: '',
+        aGravar: false,
+      })
       toast.success('Adversário registado.')
     } catch (err) {
       toast.error('Erro ao criar adversário: ' + mensagemDeErro(err))
@@ -1039,14 +1058,26 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
         homeFieldId={advRapido.campoId}
         contactName={advRapido.contacto}
         contactPhone={advRapido.telefone}
+        homeKitColor1={advRapido.homeKitColor1}
+        homeKitColor2={advRapido.homeKitColor2}
+        awayKitColor1={advRapido.awayKitColor1}
+        awayKitColor2={advRapido.awayKitColor2}
         fields={campos}
         onNameChange={nome => setAdvRapido(a => ({ ...a, nome }))}
         onInitialsChange={sigla => setAdvRapido(a => ({ ...a, sigla }))}
         onHomeFieldIdChange={campoId => setAdvRapido(a => ({ ...a, campoId }))}
         onContactNameChange={contacto => setAdvRapido(a => ({ ...a, contacto }))}
         onContactPhoneChange={telefone => setAdvRapido(a => ({ ...a, telefone }))}
+        onHomeKitColor1Change={homeKitColor1 => setAdvRapido(a => ({ ...a, homeKitColor1 }))}
+        onHomeKitColor2Change={homeKitColor2 => setAdvRapido(a => ({ ...a, homeKitColor2 }))}
+        onAwayKitColor1Change={awayKitColor1 => setAdvRapido(a => ({ ...a, awayKitColor1 }))}
+        onAwayKitColor2Change={awayKitColor2 => setAdvRapido(a => ({ ...a, awayKitColor2 }))}
         onSubmit={gravarAdversarioRapido}
-        onClose={() => setAdvRapido({ aberto: false, nome: '', sigla: '', campoId: '', contacto: '', telefone: '', aGravar: false })}
+        onClose={() => setAdvRapido({
+          aberto: false, nome: '', sigla: '', campoId: '', contacto: '', telefone: '',
+          homeKitColor1: '', homeKitColor2: '', awayKitColor1: '', awayKitColor2: '',
+          aGravar: false,
+        })}
         isSaving={advRapido.aGravar}
       />
 
