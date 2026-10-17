@@ -7,6 +7,7 @@ import { formatOpponentSigla } from '../../lib/siglas'
 import { EtiquetaSeccao, Botao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 import { formatarCoresEquipamento, BadgeCoresEquipamento } from './equipamentos'
+import { obterCampoEquipaOficial, obterEquipamentoEquipaOficial } from '../../lib/sincronizarEquipas'
 
 /**
  * Ficha do adversário (ecrã 9h).
@@ -282,108 +283,123 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
           )}
 
           {/* Campo principal */}
-          <section>
-            <EtiquetaSeccao className="mb-2">Campo principal</EtiquetaSeccao>
-            <div className="cartao-simples flex items-center gap-3 px-4 py-3.5">
-              <MapPin size={18} className="text-csc-gold shrink-0" />
-              <span className="flex-1 min-w-0">
-                {campoPrincipal ? (
-                  <Link
-                    to={`/club?ver=campos&campo=${campoPrincipal.id}`}
-                    onClick={() => triggerHaptic('light')}
-                    className="block group"
-                  >
-                    <span className="block font-display font-bold text-[12.5px] text-white group-hover:text-csc-gold transition-colors truncate">
-                      {campoPrincipal.name}
-                    </span>
-                    {campoPrincipal.address && (
-                      <span className="block text-[10.5px] text-white/62 mt-0.5 truncate">
-                        {campoPrincipal.address}
-                      </span>
-                    )}
-                  </Link>
-                ) : (
-                  <span className="block text-[11.5px] text-white/62">Nenhum campo associado</span>
-                )}
-              </span>
-              {/*
-                O handoff manda este botão para a lista de campos, que é uma
-                lista de leitura e não mudava nada. Quem muda o campo principal
-                de um adversário é o diálogo de edição, que já tem o seletor —
-                é para lá que vai.
-              */}
-              <button
-                type="button"
-                onClick={() => { triggerHaptic('light'); aoEditar() }}
-                className="h-11 px-3.5 rounded-[18px] bg-white/8 text-white
-                  font-display font-extrabold text-[11px] flex items-center shrink-0 cursor-pointer
-                  transition-transform duration-150 active:scale-97
-                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-              >
-                Mudar
-              </button>
-            </div>
-          </section>
- 
-          {/* Equipamentos (Principal e Alternativo) */}
-          <section>
-            <EtiquetaSeccao className="mb-2">Equipamentos</EtiquetaSeccao>
-            <div className="grid grid-cols-2 gap-2.5">
-              {/* Camisola principal (em casa) */}
-              <div className="cartao-simples p-3.5 flex flex-col justify-between min-h-[92px]">
-                <div>
-                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                    <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55">
-                      Principal · Casa
-                    </span>
-                    <BadgeCoresEquipamento
-                      cor1={adversario.home_kit_color_1}
-                      cor2={adversario.home_kit_color_2}
-                      tamanho="medio"
-                    />
-                  </div>
-                  <p className="font-display font-black text-[13.5px] text-white leading-tight">
-                    {formatarCoresEquipamento(
-                      adversario.home_kit_color_1,
-                      adversario.home_kit_color_2,
-                      'Não definida',
-                    )}
-                  </p>
-                </div>
-                <span className="text-[10px] text-white/45 mt-2 flex items-center gap-1.5">
-                  <Shirt size={12} className="shrink-0 text-white/55" />
-                  <span>Em casa</span>
-                </span>
-              </div>
+          {(() => {
+            const ofcCampo = (!campoPrincipal && adversario) ? obterCampoEquipaOficial(adversario.name) : null
+            const campoEfetivo = campoPrincipal || (ofcCampo ? { id: 'ofc-' + (adversario?.id ?? '0'), name: ofcCampo.nome, address: ofcCampo.morada } : null)
 
-              {/* Camisola alternativa (fora) */}
-              <div className="cartao-simples p-3.5 flex flex-col justify-between min-h-[92px]">
-                <div>
-                  <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                    <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55">
-                      Alternativa · Fora
+            const ofcEquip = adversario ? obterEquipamentoEquipaOficial(adversario.name) : null
+            const homeKit1 = adversario?.home_kit_color_1 || ofcEquip?.home1 || null
+            const homeKit2 = adversario?.home_kit_color_2 || ofcEquip?.home2 || null
+            const awayKit1 = adversario?.away_kit_color_1 || ofcEquip?.away1 || null
+            const awayKit2 = adversario?.away_kit_color_2 || ofcEquip?.away2 || null
+
+            return (
+              <>
+                <section>
+                  <EtiquetaSeccao className="mb-2">Campo principal</EtiquetaSeccao>
+                  <div className="cartao-simples flex items-center gap-3 px-4 py-3.5">
+                    <MapPin size={18} className="text-csc-gold shrink-0" />
+                    <span className="flex-1 min-w-0">
+                      {campoEfetivo ? (
+                        <Link
+                          to={campoEfetivo.id.startsWith('ofc-') ? '/club?ver=campos' : `/club?ver=campos&campo=${campoEfetivo.id}`}
+                          onClick={() => triggerHaptic('light')}
+                          className="block group"
+                        >
+                          <span className="block font-display font-bold text-[12.5px] text-white group-hover:text-csc-gold transition-colors truncate">
+                            {campoEfetivo.name}
+                          </span>
+                          {campoEfetivo.address && (
+                            <span className="block text-[10.5px] text-white/62 mt-0.5 truncate">
+                              {campoEfetivo.address}
+                            </span>
+                          )}
+                        </Link>
+                      ) : (
+                        <span className="block text-[11.5px] text-white/62">Nenhum campo associado</span>
+                      )}
                     </span>
-                    <BadgeCoresEquipamento
-                      cor1={adversario.away_kit_color_1}
-                      cor2={adversario.away_kit_color_2}
-                      tamanho="medio"
-                    />
+                    {/*
+                      O handoff manda este botão para a lista de campos, que é uma
+                      lista de leitura e não mudava nada. Quem muda o campo principal
+                      de um adversário é o diálogo de edição, que já tem o seletor —
+                      é para lá que vai.
+                    */}
+                    <button
+                      type="button"
+                      onClick={() => { triggerHaptic('light'); aoEditar() }}
+                      className="h-11 px-3.5 rounded-[18px] bg-white/8 text-white
+                        font-display font-extrabold text-[11px] flex items-center shrink-0 cursor-pointer
+                        transition-transform duration-150 active:scale-97
+                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                    >
+                      Mudar
+                    </button>
                   </div>
-                  <p className="font-display font-black text-[13.5px] text-white leading-tight">
-                    {formatarCoresEquipamento(
-                      adversario.away_kit_color_1,
-                      adversario.away_kit_color_2,
-                      'Não definida (X)',
-                    )}
-                  </p>
-                </div>
-                <span className="text-[10px] text-white/45 mt-2 flex items-center gap-1.5">
-                  <Shirt size={12} className="shrink-0 text-white/55" />
-                  <span>Fora</span>
-                </span>
-              </div>
-            </div>
-          </section>
+                </section>
+
+                {/* Equipamentos (Principal e Alternativo) */}
+                <section>
+                  <EtiquetaSeccao className="mb-2">Equipamentos</EtiquetaSeccao>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Camisola principal (em casa) */}
+                    <div className="cartao-simples p-3.5 flex flex-col justify-between min-h-[92px]">
+                      <div>
+                        <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                          <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55">
+                            Principal · Casa
+                          </span>
+                          <BadgeCoresEquipamento
+                            cor1={homeKit1}
+                            cor2={homeKit2}
+                            tamanho="medio"
+                          />
+                        </div>
+                        <p className="font-display font-black text-[13.5px] text-white leading-tight">
+                          {formatarCoresEquipamento(
+                            homeKit1,
+                            homeKit2,
+                            'Não definida',
+                          )}
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-white/45 mt-2 flex items-center gap-1.5">
+                        <Shirt size={12} className="shrink-0 text-white/55" />
+                        <span>Em casa</span>
+                      </span>
+                    </div>
+
+                    {/* Camisola alternativa (fora) */}
+                    <div className="cartao-simples p-3.5 flex flex-col justify-between min-h-[92px]">
+                      <div>
+                        <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                          <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/55">
+                            Alternativa · Fora
+                          </span>
+                          <BadgeCoresEquipamento
+                            cor1={awayKit1}
+                            cor2={awayKit2}
+                            tamanho="medio"
+                          />
+                        </div>
+                        <p className="font-display font-black text-[13.5px] text-white leading-tight">
+                          {formatarCoresEquipamento(
+                            awayKit1,
+                            awayKit2,
+                            'Não definida (X)',
+                          )}
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-white/45 mt-2 flex items-center gap-1.5">
+                        <Shirt size={12} className="shrink-0 text-white/55" />
+                        <span>Fora</span>
+                      </span>
+                    </div>
+                  </div>
+                </section>
+              </>
+            )
+          })()}
 
           {/* As provas em que o adversário está inscrito — podem ser várias, e
               cada uma no seu ponto. */}

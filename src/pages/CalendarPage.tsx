@@ -41,6 +41,7 @@ import { compararPorCamisola, convocatoriaFechada, textoConvocatoriaFechada, tex
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
 import { formatarCoresEquipamento, BadgeCoresEquipamento } from '../components/clube/equipamentos'
+import { obterEquipamentoEquipaOficial } from '../lib/sincronizarEquipas'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -1175,9 +1176,13 @@ const CalendarPage: React.FC = () => {
             const clean = parseMatchReportMetadata(event.description).cleanDescription
             if (!clean) return null
             return (
-              <p className="px-5 py-3 border-t border-white/13 text-[11.5px] leading-relaxed text-white/70 whitespace-pre-line">
-                {clean}
-              </p>
+              <div className="px-5 py-3 border-t border-white/13">
+                <div className="bg-white rounded-2xl px-4 py-3 shadow-sm text-csc-tinta">
+                  <p className="text-[11.5px] font-semibold leading-relaxed text-csc-tinta whitespace-pre-line">
+                    {clean}
+                  </p>
+                </div>
+              </div>
             )
           })()}
 
@@ -1903,14 +1908,20 @@ const CalendarPage: React.FC = () => {
                 {(() => {
                   if (selectedEvent.type !== 'match' || !selectedEvent.opponent) return null
                   const opp = selectedEvent.opponent
+                  const ofc = obterEquipamentoEquipaOficial(opp.name)
+                  const oppHome1 = opp.home_kit_color_1 || ofc?.home1 || null
+                  const oppHome2 = opp.home_kit_color_2 || ofc?.home2 || null
+                  const oppAway1 = opp.away_kit_color_1 || ofc?.away1 || null
+                  const oppAway2 = opp.away_kit_color_2 || ofc?.away2 || null
+
                   const fora = selectedEvent.home_away === 'away'
                   // Se jogamos fora, o adversário joga em casa (usa a camisola principal).
                   // Se jogamos em casa, o adversário joga fora (usa a camisola alternativa, se tiver).
-                  const cor1 = fora ? opp.home_kit_color_1 : (opp.away_kit_color_1 || opp.home_kit_color_1)
-                  const cor2 = fora ? opp.home_kit_color_2 : (opp.away_kit_color_1 ? opp.away_kit_color_2 : opp.home_kit_color_2)
+                  const cor1 = fora ? oppHome1 : (oppAway1 || oppHome1)
+                  const cor2 = fora ? oppHome2 : (oppAway1 ? oppAway2 : oppHome2)
                   const tipoUso = fora
                     ? 'Principal (em casa)'
-                    : opp.away_kit_color_1 && opp.away_kit_color_1.toUpperCase() !== 'X'
+                    : oppAway1 && oppAway1.toUpperCase() !== 'X'
                       ? 'Alternativa (fora)'
                       : 'Principal'
 
@@ -1939,11 +1950,9 @@ const CalendarPage: React.FC = () => {
                   const clean = parseMatchReportMetadata(selectedEvent.description).cleanDescription
                   if (!clean) return null
                   return (
-                    /* Sem o rótulo a negrito: nos outros cartões a nota da equipa
-                       técnica é uma banda de texto, e "Observações & Informações:"
-                       pesava mais do que o que vinha a seguir. */
-                    <div className="cartao-simples px-4 py-3">
-                      <p className="text-[11.5px] leading-relaxed text-white/70 whitespace-pre-line">{clean}</p>
+                    /* Fundo branco e texto escuro para destacar as observações e dar realce aos ícones/emojis */
+                    <div className="bg-white rounded-[22px] px-4.5 py-3.5 shadow-md shadow-black/20 text-csc-tinta">
+                      <p className="text-[12px] font-semibold leading-relaxed whitespace-pre-line text-csc-tinta">{clean}</p>
                     </div>
                   )
                 })()}

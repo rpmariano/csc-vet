@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Shield, Trash2, Save, Pencil, Shirt } from 'lucide-react'
+import { Shield, Trash2, Save, Pencil, Shirt, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useClub } from '../../context/ClubContext'
 import { toast } from '../../context/ToastContext'
@@ -22,6 +22,11 @@ import {
   separarCoresDigitadas,
   CORES_EQUIPAMENTO_SUGERIDAS,
 } from './equipamentos'
+import {
+  sincronizarEquipasEOficiais,
+  obterCampoEquipaOficial,
+  obterEquipamentoEquipaOficial,
+} from '../../lib/sincronizarEquipas'
 import type { PropsDaSeccao } from './seccao'
 
 /*
@@ -39,6 +44,8 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   const [carregado, setCarregado] = useState(false)
   const [campos, setCampos] = useState<Campo[]>([])
   const [procura, setProcura] = useState('')
+  const [sincronizando, setSincronizando] = useState(false)
+  const sincronizacaoExecutadaRef = useRef(false)
 
   const [modalAberto, setModalAberto] = useState(false)
   const [emEdicao, setEmEdicao] = useState<string | null>(null)
@@ -67,9 +74,45 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
       supabase.from('opponents').select('*').order('name'),
       supabase.from('fields').select('*').order('name'),
     ])
-    setAdversarios((resAdv.data as Adversario[]) ?? [])
-    setCampos((resCampos.data as Campo[]) ?? [])
+    const advs = (resAdv.data as Adversario[]) ?? []
+    const cmps = (resCampos.data as Campo[]) ?? []
+    setAdversarios(advs)
+    setCampos(cmps)
     setCarregado(true)
+
+    // Sincronização automática transparente: se equipas estiverem sem campo ou equipamentos
+    const precisaSincronizar = advs.some(a => !a.home_field_id || !a.home_kit_color_1) || advs.length < 14
+    if (precisaSincronizar && !sincronizacaoExecutadaRef.current) {
+      sincronizacaoExecutadaRef.current = true
+      executarSincronizacao(true)
+    }
+  }
+
+  const executarSincronizacao = async (silencioso = false) => {
+    if (sincronizando) return
+    setSincronizando(true)
+    if (!silencioso) {
+      toast.info('A sincronizar equipas oficiais, campos e equipamentos…')
+    }
+    try {
+      const res = await sincronizarEquipasEOficiais()
+      const [resAdv, resCampos] = await Promise.all([
+        supabase.from('opponents').select('*').order('name'),
+        supabase.from('fields').select('*').order('name'),
+      ])
+      setAdversarios((resAdv.data as Adversario[]) ?? [])
+      setCampos((resCampos.data as Campo[]) ?? [])
+      if (!silencioso) {
+        toast.success(`Sincronização concluída! ${res.equipasAtualizadas} equipas e ${res.camposAtualizados} campos sincronizados.`)
+      }
+    } catch (err: any) {
+      console.error('Erro ao sincronizar equipas:', err)
+      if (!silencioso) {
+        toast.error('Erro ao sincronizar equipas: ' + mensagemDeErro(err))
+      }
+    } finally {
+      setSincronizando(false)
+    }
   }
 
   useEffect(() => { carregar() }, [])
@@ -239,23 +282,50 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
   const filtrados = adversarios.filter(a => {
     const q = procura.toLowerCase().trim()
     if (!q) return true
-    const campo = campos.find(c => c.id === a.home_field_id)
+    let campo = campos.find(c => c.id === a.home_field_id)
+    if (!campo) {
+      const ofc = obterCampoEquipaOficial(a.name)
+      if (ofc) campo = { id: '', name: ofc.nome, address: ofc.morada }
+    }
+    const ofcEq = obterEquipamentoEquipaOficial(a.name)
+    const hk1 = a.home_kit_color_1 || ofcEq?.home1
+    const hk2 = a.home_kit_color_2 || ofcEq?.home2
+    const ak1 = a.away_kit_color_1 || ofcEq?.away1
+    const ak2 = a.away_kit_color_2 || ofcEq?.away2
+
     return (
       a.name.toLowerCase().includes(q) ||
       (a.initials && a.initials.toLowerCase().includes(q)) ||
       (a.contact_name && a.contact_name.toLowerCase().includes(q)) ||
       (a.contact_phone && a.contact_phone.includes(q)) ||
-      (campo && campo.name.toLowerCase().includes(q)) ||
-      (a.home_kit_color_1 && a.home_kit_color_1.toLowerCase().includes(q)) ||
-      (a.home_kit_color_2 && a.home_kit_color_2.toLowerCase().includes(q)) ||
-      (a.away_kit_color_1 && a.away_kit_color_1.toLowerCase().includes(q)) ||
-      (a.away_kit_color_2 && a.away_kit_color_2.toLowerCase().includes(q))
+      (campo && (campo.name.toLowerCase().includes(q) || (campo.address && campo.address.toLowerCase().includes(q)))) ||
+      (hk1 && hk1.toLowerCase().includes(q)) ||
+      (hk2 && hk2.toLowerCase().includes(q)) ||
+      (ak1 && ak1.toLowerCase().includes(q)) ||
+      (ak2 && ak2.toLowerCase().includes(q))
     )
   })
 
   return (
     <div className="space-y-4">
-      {cabecalho(<BotaoCriar rotulo="Criar adversário" onClick={abrirCriacao} />)}
+      {cabecalho(
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { triggerHaptic('light'); executarSincronizacao(false) }}
+            disabled={sincronizando}
+            aria-label="Sincronizar equipas oficiais e campos habituais"
+            className="h-11 px-3.5 rounded-[18px] bg-white/8 hover:bg-white/12 text-white
+              font-display font-extrabold text-[11px] flex items-center gap-2 shrink-0 cursor-pointer
+              transition-transform duration-150 active:scale-97 disabled:opacity-50
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+          >
+            <RefreshCw size={14} className={sincronizando ? 'animate-spin text-csc-gold' : 'text-csc-gold'} />
+            <span>{sincronizando ? 'A sincronizar…' : 'Sincronizar dados oficiais'}</span>
+          </button>
+          <BotaoCriar rotulo="Criar adversário" onClick={abrirCriacao} />
+        </div>
+      )}
       <ProcuraEFiltros
         procura={procura}
         aoProcurar={setProcura}
@@ -276,7 +346,21 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
         ) : (
           <div>
             {filtrados.map(a => {
-              const campo = campos.find(c => c.id === a.home_field_id)
+              let campo = campos.find(c => c.id === a.home_field_id)
+              if (!campo) {
+                const ofcCampo = obterCampoEquipaOficial(a.name)
+                if (ofcCampo) {
+                  const cExistente = campos.find(c => c.name.toLowerCase().trim() === ofcCampo.nome.toLowerCase().trim())
+                  campo = cExistente ?? { id: 'ofc-' + a.id, name: ofcCampo.nome, address: ofcCampo.morada }
+                }
+              }
+
+              const ofcEquip = obterEquipamentoEquipaOficial(a.name)
+              const homeKit1 = a.home_kit_color_1 || ofcEquip?.home1 || null
+              const homeKit2 = a.home_kit_color_2 || ofcEquip?.home2 || null
+              const awayKit1 = a.away_kit_color_1 || ofcEquip?.away1 || null
+              const awayKit2 = a.away_kit_color_2 || ofcEquip?.away2 || null
+
               return (
                 <div key={a.id} className="linha-leve flex items-center gap-2 pl-4 pr-2 py-2.5">
                   <button
@@ -299,18 +383,18 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                       <span className="block text-[11px] text-white/55 mt-0.5 truncate">
                         {[a.initials, campo?.name ?? 'Sem campo associado'].filter(Boolean).join(' · ')}
                       </span>
-                      {(a.home_kit_color_1 || a.away_kit_color_1) && (
+                      {(homeKit1 || awayKit1) && (
                         <span className="flex items-center gap-2 mt-1 text-[10px] text-white/70">
-                          {a.home_kit_color_1 && (
+                          {homeKit1 && (
                             <span className="inline-flex items-center gap-1 bg-white/6 px-1.5 py-0.5 rounded-md">
-                              <BadgeCoresEquipamento cor1={a.home_kit_color_1} cor2={a.home_kit_color_2} tamanho="pequeno" />
-                              <span className="truncate">{formatarCoresEquipamento(a.home_kit_color_1, a.home_kit_color_2)}</span>
+                              <BadgeCoresEquipamento cor1={homeKit1} cor2={homeKit2} tamanho="pequeno" />
+                              <span className="truncate">{formatarCoresEquipamento(homeKit1, homeKit2)}</span>
                             </span>
                           )}
-                          {a.away_kit_color_1 && a.away_kit_color_1.toUpperCase() !== 'X' && (
+                          {awayKit1 && awayKit1.toUpperCase() !== 'X' && (
                             <span className="inline-flex items-center gap-1 bg-white/6 px-1.5 py-0.5 rounded-md">
-                              <BadgeCoresEquipamento cor1={a.away_kit_color_1} cor2={a.away_kit_color_2} tamanho="pequeno" />
-                              <span className="truncate">{formatarCoresEquipamento(a.away_kit_color_1, a.away_kit_color_2)}</span>
+                              <BadgeCoresEquipamento cor1={awayKit1} cor2={awayKit2} tamanho="pequeno" />
+                              <span className="truncate">{formatarCoresEquipamento(awayKit1, awayKit2)}</span>
                             </span>
                           )}
                         </span>
@@ -555,7 +639,16 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
         aberto={fichaAberta}
         adversario={adversarioAberto}
         campoPrincipal={
-          adversarioAberto ? (campos.find(c => c.id === adversarioAberto.home_field_id) ?? null) : null
+          adversarioAberto
+            ? (() => {
+                const cEncontrado = campos.find(c => c.id === adversarioAberto.home_field_id)
+                if (cEncontrado) return cEncontrado
+                const ofc = obterCampoEquipaOficial(adversarioAberto.name)
+                if (!ofc) return null
+                const cExistente = campos.find(c => c.name.toLowerCase().trim() === ofc.nome.toLowerCase().trim())
+                return cExistente ?? { id: 'ofc-' + adversarioAberto.id, name: ofc.nome, address: ofc.morada }
+              })()
+            : null
         }
         siglaClube={formatClubSigla(clubSettings?.initials)}
         aoFechar={fecharFicha}
