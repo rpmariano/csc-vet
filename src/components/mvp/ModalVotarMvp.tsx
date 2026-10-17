@@ -140,6 +140,10 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
   }, [isOpen, eventId, profile])
 
   const handleTogglePlayer = (playerId: string) => {
+    if (initialVote) {
+      toast.info('O teu voto já foi submetido anteriormente e não pode ser alterado.')
+      return
+    }
     if (!isEligible) {
       toast.warning('Apenas os atletas convocados e a equipa técnica têm direito de voto.')
       return
@@ -165,13 +169,17 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
   }
 
   const handleSwapChoices = () => {
-    if (!firstChoiceId && !secondChoiceId) return
+    if (initialVote || (!firstChoiceId && !secondChoiceId)) return
     triggerHaptic('medium')
     setFirstChoiceId(secondChoiceId)
     setSecondChoiceId(firstChoiceId)
   }
 
   const handleSubmit = async () => {
+    if (initialVote) {
+      toast.warning('O teu voto já foi submetido anteriormente e não pode ser alterado.')
+      return
+    }
     if (!profile?.id) {
       toast.error('Inicia sessão para poderes votar.')
       return
@@ -194,7 +202,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
       const res = await registarVotoMvp(eventId, profile.id, firstChoiceId, secondChoiceId)
       if (res.ok) {
         triggerHaptic('medium')
-        toast.success(initialVote ? 'Os teus votos de MVP foram atualizados!' : 'Voto registado com sucesso! Obrigado!')
+        toast.success('Voto registado com sucesso! Obrigado!')
         if (onVoteSubmitted) onVoteSubmitted()
         onClose()
       } else {
@@ -241,6 +249,15 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
           </div>
         </div>
 
+        {initialVote && (
+          <div className="p-3 bg-csc-verde-suave/20 border border-csc-verde-suave/40 rounded-2xl text-xs text-csc-verde-texto flex items-center gap-2.5">
+            <Check size={18} className="text-csc-verde-texto shrink-0" />
+            <p className="leading-snug font-semibold text-white">
+              O teu voto já foi submetido. De acordo com o regulamento, uma vez submetido o voto não pode ser alterado.
+            </p>
+          </div>
+        )}
+
         {!isEligible && (
           <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-2xl text-xs text-red-200 flex items-center gap-2.5">
             <AlertCircle size={18} className="text-red-400 shrink-0" />
@@ -256,7 +273,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
             <span className="text-xs font-display font-extrabold text-white/80 uppercase tracking-wider">
               As tuas escolhas:
             </span>
-            {firstChoiceId && secondChoiceId && (
+            {firstChoiceId && secondChoiceId && !initialVote && (
               <button
                 type="button"
                 onClick={handleSwapChoices}
@@ -283,7 +300,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
                   <Trophy size={13} className="text-csc-gold" />
                   1º Lugar · 3 Pontos
                 </span>
-                {firstPlayer && (
+                {firstPlayer && !initialVote && (
                   <button
                     type="button"
                     onClick={() => { triggerHaptic('light'); setFirstChoiceId(null) }}
@@ -329,7 +346,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
                   <Medal size={13} className="text-csc-azul-texto" />
                   2º Lugar · 1 Ponto
                 </span>
-                {secondPlayer && (
+                {secondPlayer && !initialVote && (
                   <button
                     type="button"
                     onClick={() => { triggerHaptic('light'); setSecondChoiceId(null) }}
@@ -452,23 +469,31 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
 
         {/* Botão de Gravação */}
         <div className="pt-2">
-          <Botao
-            onClick={handleSubmit}
-            disabled={!isEligible || !firstChoiceId || !secondChoiceId || submitting}
-            className="w-full justify-center text-sm py-3"
-          >
-            {!isEligible
-              ? 'Apenas convocados e equipa técnica podem votar'
-              : submitting
-              ? 'A gravar votos...'
-              : firstChoiceId && secondChoiceId
-              ? initialVote
-                ? 'Atualizar Votos (3 pts + 1 pt)'
-                : 'Confirmar Votos (3 pts + 1 pt)'
-              : !firstChoiceId
-              ? 'Escolhe o 1º Lugar (3 pts)'
-              : 'Escolhe o 2º Lugar (1 pt)'}
-          </Botao>
+          {initialVote ? (
+            <Botao
+              onClick={onClose}
+              aparencia="vidro"
+              className="w-full justify-center text-sm py-3"
+            >
+              Voto já submetido (Fechar)
+            </Botao>
+          ) : (
+            <Botao
+              onClick={handleSubmit}
+              disabled={!isEligible || !firstChoiceId || !secondChoiceId || submitting}
+              className="w-full justify-center text-sm py-3"
+            >
+              {!isEligible
+                ? 'Apenas convocados e equipa técnica podem votar'
+                : submitting
+                ? 'A gravar votos...'
+                : firstChoiceId && secondChoiceId
+                ? 'Confirmar Votos (3 pts + 1 pt)'
+                : !firstChoiceId
+                ? 'Escolhe o 1º Lugar (3 pts)'
+                : 'Escolhe o 2º Lugar (1 pt)'}
+            </Botao>
+          )}
         </div>
       </div>
     </BottomSheet>

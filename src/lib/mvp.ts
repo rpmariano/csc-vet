@@ -124,48 +124,20 @@ export async function obterTodosVotosMvp(): Promise<MvpVote[]> {
   }
 }
 
-/** Sincroniza a coluna `is_mvp` na tabela `stats` com base no jogador com mais pontos (3 pts para 1º, 1 pt para 2º) */
+/** 
+ * Para assegurar a confidencialidade dos vencedores de MVP (de consulta restrita
+ * a Rui Mariano e Pedro Vieira no separador MVP), a coluna pública `is_mvp` 
+ * na tabela `stats` permanece desativada.
+ */
 export async function sincronizarMvpNaTabelaStats(eventId: string): Promise<void> {
   try {
-    const votos = await obterVotosDoJogo(eventId)
-    if (votos.length === 0) return
-
-    const pontosMap: Record<string, number> = {}
-    for (const v of votos) {
-      if (v.player1_id) pontosMap[v.player1_id] = (pontosMap[v.player1_id] || 0) + 3
-      if (v.player2_id) pontosMap[v.player2_id] = (pontosMap[v.player2_id] || 0) + 1
-    }
-
-    let maxPontos = 0
-    for (const pts of Object.values(pontosMap)) {
-      if (pts > maxPontos) maxPontos = pts
-    }
-
-    if (maxPontos === 0) return
-
-    const vencedores = Object.entries(pontosMap)
-      .filter(([, pts]) => pts === maxPontos)
-      .map(([pid]) => pid)
-
-    // Atualiza todos os stats deste evento
-    const { data: statsAtuais } = await supabase
+    await supabase
       .from('stats')
-      .select('id, player_id, is_mvp')
+      .update({ is_mvp: false })
       .eq('event_id', eventId)
-
-    if (!statsAtuais) return
-
-    for (const st of statsAtuais) {
-      const deveSerMvp = vencedores.includes(st.player_id)
-      if (st.is_mvp !== deveSerMvp) {
-        await supabase
-          .from('stats')
-          .update({ is_mvp: deveSerMvp })
-          .eq('id', st.id)
-      }
-    }
+      .eq('is_mvp', true)
   } catch (e) {
-    console.warn('Erro ao sincronizar is_mvp com stats:', e)
+    console.warn('Erro ao atualizar stats:', e)
   }
 }
 
@@ -245,15 +217,30 @@ export async function registarVotoMvp(
   }
 
   try {
+    // Uma vez submetido o voto, já não se pode alterar
+    const { data: votoExistente } = await supabase
+      .from('mvp_votes')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('voter_id', voterId)
+      .maybeSingle()
+
+    if (votoExistente) {
+      return {
+        ok: false,
+        error: 'O teu voto já foi submetido anteriormente e não pode ser alterado.'
+      }
+    }
+
     const { error } = await supabase
       .from('mvp_votes')
-      .upsert({
+      .insert({
         event_id: eventId,
         voter_id: voterId,
         player1_id: player1Id,
         player2_id: player2Id,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'event_id,voter_id' })
+      })
 
     if (error) {
       console.error('Erro ao registar voto MVP:', error)

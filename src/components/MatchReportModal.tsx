@@ -131,8 +131,6 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const { profile } = useAuth()
   const [modalVotarMvpAberto, setModalVotarMvpAberto] = useState(false)
   const [mostrarPartilha, setMostrarPartilha] = useState(false)
-  const [votosDoJogo, setVotosDoJogo] = useState<MvpVote[]>([])
-  const [mvpEleitosIds, setMvpEleitosIds] = useState<string[]>([])
   const [meuVotoMvp, setMeuVotoMvp] = useState<MvpVote | null>(null)
   const [isConvocado, setIsConvocado] = useState(false)
   const [eleitoresDoJogo, setEleitoresDoJogo] = useState<EleitorMvpInfo[]>([])
@@ -241,21 +239,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
         // 3. Votos de MVP deste jogo
         const votos = await obterVotosDoJogo(eventId)
-        setVotosDoJogo(votos)
         const meu = votos.find(v => v.voter_id === profile?.id) || null
         setMeuVotoMvp(meu)
-
-        const pontos: Record<string, number> = {}
-        for (const v of votos) {
-          if (v.player1_id) pontos[v.player1_id] = (pontos[v.player1_id] || 0) + 3
-          if (v.player2_id) pontos[v.player2_id] = (pontos[v.player2_id] || 0) + 1
-        }
-        let maxPontos = 0
-        for (const pts of Object.values(pontos)) {
-          if (pts > maxPontos) maxPontos = pts
-        }
-        const eleitos = maxPontos > 0 ? Object.entries(pontos).filter(([_, p]) => p === maxPontos).map(([pid]) => pid) : []
-        setMvpEleitosIds(eleitos)
         // Convocado apenas se tiver convocatória válida (não recusada) ou participou no jogo
         const callupDoUser = profile?.id ? callupMap.get(profile.id) : null
         const convocadoValido = Boolean(
@@ -713,58 +698,12 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               </div>
             </div>
 
-            {/* Bloco de Votação e Destaque do MVP */}
-            {!jogoPorRealizar && homeScore !== null && (
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-csc-gold/15 via-white/[0.04] to-transparent border border-csc-gold/30 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center border border-csc-gold/40 shrink-0">
-                      <Award size={18} />
-                    </div>
-                    <div>
-                      <h4 className="font-display font-extrabold text-sm text-white leading-tight">
-                        Votação MVP do Jogo
-                      </h4>
-                      <p className="text-[11px] text-white/60">
-                        {votosDoJogo.length > 0
-                          ? `${votosDoJogo.length} ${votosDoJogo.length === 1 ? 'pessoa votou' : 'pessoas votaram'}`
-                          : 'Votação aberta aos atletas convocados e equipa técnica'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {(isConvocado || isCoachOrAdmin) && (
-                    <button
-                      type="button"
-                      onClick={() => setModalVotarMvpAberto(true)}
-                      className="px-3.5 py-1.5 rounded-xl bg-csc-gold text-csc-tinta font-display font-extrabold text-xs
-                        hover:bg-csc-gold/90 transition-all flex items-center gap-1 shadow-md shadow-csc-gold/10 cursor-pointer active:scale-97 shrink-0"
-                    >
-                      {meuVotoMvp ? 'Alterar Voto' : 'Votar MVP'}
-                    </button>
-                  )}
-                </div>
-
-                {mvpEleitosIds.length > 0 && (
-                  <div className="pt-2 border-t border-white/10 flex items-center gap-2 text-xs">
-                    <span className="text-csc-gold font-bold">🏆 MVP Eleito:</span>
-                    <span className="text-white font-black">
-                      {playerStats
-                        .filter(p => mvpEleitosIds.includes(p.player_id))
-                        .map(p => p.shirt_name || p.name)
-                        .join(' & ')}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Secção: Quem tem de votar no MVP e se já votou ou não */}
             {!jogoPorRealizar && homeScore !== null && eleitoresDoJogo.length > 0 && (
               <SecaoEleitoresMvp
                 eleitores={eleitoresDoJogo}
                 currentUserId={profile?.id}
-                onVotarClick={(isConvocado || isCoachOrAdmin) ? () => setModalVotarMvpAberto(true) : undefined}
+                onVotarClick={(isConvocado || isCoachOrAdmin) && !meuVotoMvp ? () => setModalVotarMvpAberto(true) : undefined}
               />
             )}
 
@@ -843,11 +782,6 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                               <div className="min-w-0">
                                 <p className="text-xs font-black text-white truncate flex items-center gap-1.5">
                                   <span>{displayName}</span>
-                                  {(mvpEleitosIds.includes(p.player_id) || (mvpEleitosIds.length === 0 && p.is_mvp)) && (
-                                    <span className="text-[10px] font-black bg-csc-gold/15 text-csc-gold px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                      <Award size={10} className="text-csc-gold" /> MVP
-                                    </span>
-                                  )}
                                 </p>
                                 {p.position && (
                                   <div className="flex items-center gap-1 flex-wrap mt-0.5">
@@ -906,11 +840,6 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                               <div className="min-w-0">
                                 <p className="text-xs font-black text-white truncate flex items-center gap-1.5">
                                   <span>{displayName}</span>
-                                  {(mvpEleitosIds.includes(p.player_id) || (mvpEleitosIds.length === 0 && p.is_mvp)) && (
-                                    <span className="text-[10px] font-black bg-csc-gold/15 text-csc-gold px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                      <Award size={10} className="text-csc-gold" /> MVP
-                                    </span>
-                                  )}
                                 </p>
                                 {p.position && (
                                   <div className="flex items-center gap-1 flex-wrap mt-0.5">
@@ -1286,24 +1215,11 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       eventId={eventId}
       eventTitle={`${leftSigla} vs ${rightSigla}`}
       eventDate={event?.date_time ? new Date(event.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' }) : undefined}
-      scoreText={homeScore !== null && awayScore !== null ? `${homeScore} - ${awayScore}` : undefined}
       onVoteSubmitted={async () => {
         const votos = await obterVotosDoJogo(eventId)
-        setVotosDoJogo(votos)
         const meu = votos.find(v => v.voter_id === profile?.id) || null
         setMeuVotoMvp(meu)
 
-        const pontos: Record<string, number> = {}
-        for (const v of votos) {
-          if (v.player1_id) pontos[v.player1_id] = (pontos[v.player1_id] || 0) + 3
-          if (v.player2_id) pontos[v.player2_id] = (pontos[v.player2_id] || 0) + 1
-        }
-        let maxP = 0
-        for (const pts of Object.values(pontos)) {
-          if (pts > maxP) maxP = pts
-        }
-        const eleitos = maxP > 0 ? Object.entries(pontos).filter(([_, p]) => p === maxP).map(([pid]) => pid) : []
-        setMvpEleitosIds(eleitos)
         setEleitoresDoJogo(prev => prev.map(e => {
           const v = votos.find(vt => vt.voter_id === e.id)
           return {

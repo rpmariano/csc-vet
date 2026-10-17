@@ -17,7 +17,12 @@ WHERE profile_id IN (
     SELECT id FROM public.profiles WHERE email = 'rpmariano@gmail.com'
 ) AND tipo = 'voto_mvp';
 
--- 3. Resumo dos votos atuais na base de dados
+-- 3. Repõe a coluna is_mvp a falso na tabela stats para não expor vencedores
+UPDATE public.stats
+SET is_mvp = FALSE
+WHERE is_mvp = TRUE;
+
+-- 4. Resumo dos votos atuais na base de dados
 SELECT 
     v.id,
     v.event_id,
