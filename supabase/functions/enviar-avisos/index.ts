@@ -100,7 +100,63 @@ Deno.serve(async (req: Request) => {
   const { data: avisos, error: erroFila } = await supabase.rpc('avisos_pendentes')
   if (erroFila) return new Response(erroFila.message, { status: 500 })
 
-  const fila = (avisos ?? []) as Aviso[]
+  let fila = (avisos ?? []) as Aviso[]
+
+  // Salvaguarda: filtrar notificações de MVP indesejadas (jogos passados/fechados ou perfil de Direção)
+  const mvpAvisos = fila.filter(a => a.tipo === 'voto_mvp')
+  if (mvpAvisos.length > 0) {
+    const eventIds = [...new Set(mvpAvisos.map(a => a.origem_id).filter(Boolean))] as string[]
+    const { data: eventos } = await supabase
+      .from('events')
+      .select('id, date_time, is_friendly, matchday, mvp_voting_closed')
+      .in('id', eventIds)
+
+    const eventoMap = new Map((eventos ?? []).map((e: any) => [e.id, e]))
+
+    const profileIds = [...new Set(mvpAvisos.map(a => a.profile_id))]
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, email, role, roles')
+      .in('id', profileIds)
+
+    const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]))
+
+    // Convocatórias de jogadores para saber se foram chamados
+    const { data: callups } = await supabase
+      .from('callups')
+      .select('event_id, player_id, status')
+      .in('event_id', eventIds)
+      .in('player_id', profileIds)
+      .neq('status', 'declined')
+
+    const convocadosSet = new Set((callups ?? []).map((c: any) => `${c.event_id}_${c.player_id}`))
+
+    fila = fila.filter(a => {
+      if (a.tipo !== 'voto_mvp') return true
+      if (!a.origem_id) return false
+
+      const ev = eventoMap.get(a.origem_id)
+      if (!ev) return false
+      // Se a votação estiver fechada ou for amigável ou jogo anterior/igual a 12/10/2026
+      if (ev.mvp_voting_closed === true || ev.is_friendly === true || ev.matchday === 1) return false
+      if (ev.date_time && new Date(ev.date_time).getTime() <= new Date('2026-10-12T23:59:59+01:00').getTime()) return false
+
+      const p = profileMap.get(a.profile_id)
+      if (p) {
+        const email = (p.email || '').toLowerCase().trim()
+        if (email === 'rpmariano@gmail.com') return false
+
+        const isDirecao = p.role === 'admin' || (Array.isArray(p.roles) && p.roles.includes('admin'))
+        const foiConvocado = convocadosSet.has(`${a.origem_id}_${a.profile_id}`)
+
+        // Se for perfil de Direção e não estiver convocado como jogador, NÃO pode receber aviso de MVP
+        if (isDirecao && !foiConvocado) return false
+      }
+
+      return true
+    })
+  }
+
   if (fila.length === 0) {
     return Response.json({ enviados: 0, falhados: 0, caixas_apagadas: 0 })
   }

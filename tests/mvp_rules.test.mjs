@@ -506,4 +506,77 @@ test('Sincronização de dados oficiais NÃO sobrepõe siglas existentes', () =>
   assert.equal(updatePayload.home_field_id, 'field-123', 'Campos em falta continuam a ser preenchidos')
 })
 
+// ==============================================================================
+// 9. TESTE DO FILTRO DE NOTIFICAÇÕES PUSH DE VOTO MVP (CARTEIRO / EDGE FUNCTION)
+// ==============================================================================
+test('Filtro de notificações voto_mvp no carteiro: exclui jogos passados, amigáveis, e Direção pura', () => {
+  const eventos = [
+    { id: 'ev-amigavel', is_friendly: true, date_time: '2026-10-04T10:00:00Z', mvp_voting_closed: true },
+    { id: 'ev-jornada1', is_friendly: false, matchday: 1, date_time: '2026-10-11T10:00:00Z', mvp_voting_closed: true },
+    { id: 'ev-jornada2-futura', is_friendly: false, matchday: 2, date_time: '2026-10-18T10:00:00Z', mvp_voting_closed: false },
+  ]
+  const eventoMap = new Map(eventos.map(e => [e.id, e]))
+
+  const perfis = [
+    { id: 'user-rui', email: 'rpmariano@gmail.com', role: 'admin', roles: ['admin'] },
+    { id: 'user-admin-puro', email: 'outro.admin@csc.pt', role: 'admin', roles: ['admin'] },
+    { id: 'user-treinador', email: 'treinador@csc.pt', role: 'coach', roles: ['coach'] },
+    { id: 'user-jogador-convocado', email: 'jogador@csc.pt', role: 'player', roles: ['player'] },
+  ]
+  const profileMap = new Map(perfis.map(p => [p.id, p]))
+
+  const callups = [
+    { event_id: 'ev-jornada2-futura', player_id: 'user-jogador-convocado', status: 'called' }
+  ]
+  const convocadosSet = new Set(callups.map(c => `${c.event_id}_${c.player_id}`))
+
+  const fila = [
+    // 1. Rui Mariano no jogo da 1ª jornada (DEVE SER BLOQUEADO)
+    { tipo: 'voto_mvp', origem_id: 'ev-jornada1', profile_id: 'user-rui' },
+    // 2. Rui Mariano no jogo amigável (DEVE SER BLOQUEADO)
+    { tipo: 'voto_mvp', origem_id: 'ev-amigavel', profile_id: 'user-rui' },
+    // 3. Rui Mariano no jogo da jornada 2 futura (DEVE SER BLOQUEADO por ser admin e não convocado)
+    { tipo: 'voto_mvp', origem_id: 'ev-jornada2-futura', profile_id: 'user-rui' },
+    // 4. Outro admin não convocado no jogo da jornada 2 futura (DEVE SER BLOQUEADO)
+    { tipo: 'voto_mvp', origem_id: 'ev-jornada2-futura', profile_id: 'user-admin-puro' },
+    // 5. Treinador no jogo da 1ª jornada (DEVE SER BLOQUEADO pois o jogo já encerrou)
+    { tipo: 'voto_mvp', origem_id: 'ev-jornada1', profile_id: 'user-treinador' },
+    // 6. Treinador no jogo futuro da jornada 2 aberta (DEVE PASSAR)
+    { tipo: 'voto_mvp', origem_id: 'ev-jornada2-futura', profile_id: 'user-treinador' },
+    // 7. Jogador convocado no jogo futuro da jornada 2 aberta (DEVE PASSAR)
+    { tipo: 'voto_mvp', origem_id: 'ev-jornada2-futura', profile_id: 'user-jogador-convocado' },
+  ]
+
+  const filaFiltrada = fila.filter(a => {
+    if (a.tipo !== 'voto_mvp') return true
+    if (!a.origem_id) return false
+
+    const ev = eventoMap.get(a.origem_id)
+    if (!ev) return false
+    if (ev.mvp_voting_closed === true || ev.is_friendly === true || ev.matchday === 1) return false
+    if (ev.date_time && new Date(ev.date_time).getTime() <= new Date('2026-10-12T23:59:59+01:00').getTime()) return false
+
+    const p = profileMap.get(a.profile_id)
+    if (p) {
+      const email = (p.email || '').toLowerCase().trim()
+      if (email === 'rpmariano@gmail.com') return false
+
+      const isDirecao = p.role === 'admin' || (Array.isArray(p.roles) && p.roles.includes('admin'))
+      const foiConvocado = convocadosSet.has(`${a.origem_id}_${a.profile_id}`)
+
+      if (isDirecao && !foiConvocado) return false
+    }
+
+    return true
+  })
+
+  assert.equal(filaFiltrada.length, 2, 'Apenas 2 avisos legítimos devem ser enviados')
+  assert.equal(filaFiltrada[0].profile_id, 'user-treinador', 'Treinador legítimo no jogo futuro aberto passa')
+  assert.equal(filaFiltrada[1].profile_id, 'user-jogador-convocado', 'Jogador convocado legítimo no jogo futuro aberto passa')
+  assert.ok(!filaFiltrada.some(a => a.profile_id === 'user-rui'), 'Rui Mariano NUNCA recebe avisos de MVP')
+  assert.ok(!filaFiltrada.some(a => a.origem_id === 'ev-jornada1'), 'Jogo da 1ª jornada NUNCA gera avisos')
+  assert.ok(!filaFiltrada.some(a => a.origem_id === 'ev-amigavel'), 'Jogos amigáveis NUNCA geram avisos')
+})
+
+
 
