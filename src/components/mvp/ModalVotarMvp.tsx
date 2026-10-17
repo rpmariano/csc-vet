@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Award, Check, Sparkles, AlertCircle, ArrowLeftRight, X, Trophy, Medal } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
-import { eAdepto, eTreinador, eAdmin } from '../../lib/papeis'
+import { eAdepto, eTreinador } from '../../lib/papeis'
 import { compararPorCamisola } from '../../lib/eventos'
 import { registarVotoMvp, obterVotosDoJogo, type MvpVote, type PlayerSummary } from '../../lib/mvp'
 import { triggerHaptic } from '../../utils/haptics'
@@ -117,15 +117,15 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
           setSecondChoiceId(null)
         }
 
-        // Verificar elegibilidade: apenas convocados (não recusados) ou participantes ou equipa técnica
-        const isStaff = profile ? (eTreinador(profile) || eAdmin(profile)) : false
+        // Verificar elegibilidade: apenas convocados (não recusados) ou treinadores. Direção pura não vota.
+        const isCoach = profile ? eTreinador(profile) : false
         const myCallup = profile?.id ? callupMap.get(profile.id) : null
         const myStat = profile?.id ? statMap.get(profile.id) : null
         const isConvocadoOuParticipante = Boolean(
           (myCallup && myCallup.status !== 'declined') ||
           (myStat && (myStat.lineup_status !== 'none' || myStat.goals > 0 || myStat.assists > 0 || myStat.yellow_cards > 0 || myStat.red_cards > 0))
         )
-        setIsEligible(Boolean(isStaff || isConvocadoOuParticipante))
+        setIsEligible(Boolean(isCoach || isConvocadoOuParticipante))
       } catch (err) {
         console.error('Erro ao carregar dados de votação MVP:', err)
       } finally {
@@ -145,7 +145,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
       return
     }
     if (!isEligible) {
-      toast.warning('Apenas os atletas convocados e a equipa técnica têm direito de voto.')
+      toast.warning('Apenas os atletas convocados e os treinadores têm direito de voto.')
       return
     }
     triggerHaptic('light')
@@ -185,7 +185,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
       return
     }
     if (!isEligible) {
-      toast.error('Apenas atletas convocados e equipa técnica podem votar.')
+      toast.error('Apenas atletas convocados e treinadores podem votar.')
       return
     }
     if (!firstChoiceId || !secondChoiceId) {
@@ -262,7 +262,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
           <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-2xl text-xs text-red-200 flex items-center gap-2.5">
             <AlertCircle size={18} className="text-red-400 shrink-0" />
             <p className="leading-snug">
-              Apenas os atletas convocados para esta partida e a equipa técnica têm direito de voto para o MVP.
+              Apenas os atletas convocados para esta partida e os treinadores têm direito de voto para o MVP.
             </p>
           </div>
         )}
@@ -484,7 +484,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
               className="w-full justify-center text-sm py-3"
             >
               {!isEligible
-                ? 'Apenas convocados e equipa técnica podem votar'
+                ? 'Apenas convocados e treinadores podem votar'
                 : submitting
                 ? 'A gravar votos...'
                 : firstChoiceId && secondChoiceId

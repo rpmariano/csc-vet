@@ -51,8 +51,13 @@ TO authenticated
 WITH CHECK (
     auth.uid() = voter_id
     AND (
-        -- Equipa técnica ou direção
-        public.get_user_role() IN ('coach', 'admin')
+        -- Apenas treinadores (perfil de direção não tem direito a voto)
+        public.get_user_role() = 'coach'
+        OR EXISTS (
+            SELECT 1 FROM public.profiles p
+            WHERE p.id = auth.uid()
+              AND ('coach'::user_role = ANY (COALESCE(p.roles, ARRAY[p.role])))
+        )
         -- Ou atleta convocado que não recusou
         OR EXISTS (
             SELECT 1 FROM public.callups c

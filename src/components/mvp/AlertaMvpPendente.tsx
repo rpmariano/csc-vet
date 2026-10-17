@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { Award, ChevronRight, Sparkles } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
-import { eAdepto, eTreinador, eAdmin } from '../../lib/papeis'
+import { eAdepto, eTreinador } from '../../lib/papeis'
 import { obterTodosVotosMvp } from '../../lib/mvp'
 import { ModalVotarMvp } from './ModalVotarMvp'
 import { CartaoSimples, EtiquetaSeccao } from '../ui'
@@ -28,7 +28,8 @@ export const AlertaMvpPendente: React.FC = () => {
     if (!profile?.id || eAdepto(profile)) return
 
     try {
-      const isStaff = eTreinador(profile) || eAdmin(profile)
+      // Apenas treinadores ou atletas convocados podem votar. Direção pura não vota.
+      const isCoach = eTreinador(profile)
 
       // 1. Procurar jogos com resultado dos últimos 21 dias
       const dataLimite = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString()
@@ -74,8 +75,8 @@ export const AlertaMvpPendente: React.FC = () => {
       // Jogos elegíveis onde ainda não votou
       const pendentes: JogoPendenteMvp[] = []
       for (const ev of eventosData) {
-        // Elegível se convocado OU equipa técnica/admin
-        const elegivel = convocadosIds.has(ev.id) || isStaff
+        // Elegível se convocado OU treinador
+        const elegivel = convocadosIds.has(ev.id) || isCoach
         const jaVotou = meusVotosIds.has(ev.id)
 
         if (elegivel && !jaVotou) {

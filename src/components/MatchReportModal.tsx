@@ -5,7 +5,7 @@ import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJog
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
-import { eAdepto } from '../lib/papeis'
+import { eAdepto, eTreinador } from '../lib/papeis'
 import { toast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { EcraDetalhe } from './EcraDetalhe'
@@ -703,7 +703,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               <SecaoEleitoresMvp
                 eleitores={eleitoresDoJogo}
                 currentUserId={profile?.id}
-                onVotarClick={(isConvocado || isCoachOrAdmin) && !meuVotoMvp ? () => setModalVotarMvpAberto(true) : undefined}
+                onVotarClick={(isConvocado || Boolean(profile && eTreinador(profile))) && !meuVotoMvp ? () => setModalVotarMvpAberto(true) : undefined}
               />
             )}
 

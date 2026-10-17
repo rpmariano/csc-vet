@@ -5,7 +5,7 @@ import { localDoEvento } from './eventos'
 import { CLUBE_SIGLA } from './clube'
 import { triggerHaptic } from '../utils/haptics'
 import { toast } from '../context/ToastContext'
-import { eAdepto, eTreinador, eAdmin } from './papeis'
+import { eAdepto, eTreinador } from './papeis'
 
 export interface EleitorMvpInfo {
   id: string
@@ -143,7 +143,7 @@ export async function sincronizarMvpNaTabelaStats(eventId: string): Promise<void
 
 /**
  * Garante que apenas atletas convocados (que não recusaram a convocatória ou que participaram no jogo)
- * e equipa técnica/direção têm autorização para votar no MVP.
+ * e treinadores têm autorização para votar no MVP. O perfil de direção pura não dá direito de voto.
  */
 export async function verificarElegibilidadeVotoMvp(
   eventId: string,
@@ -151,18 +151,18 @@ export async function verificarElegibilidadeVotoMvp(
 ): Promise<boolean> {
   if (!eventId || !voterId) return false
   try {
-    // 1. Verificar se é equipa técnica / direção (coach ou admin)
+    // 1. Verificar se tem perfil de treinador (coach)
     const { data: profile } = await supabase
       .from('v_players_public')
       .select('role, roles')
       .eq('id', voterId)
       .maybeSingle()
 
-    if (profile && (eTreinador(profile) || eAdmin(profile))) {
+    if (profile && eTreinador(profile)) {
       return true
     }
 
-    // 2. Verificar se foi convocado (e não recusou)
+    // 2. Verificar se foi convocado como jogador (e não recusou)
     const { data: callup } = await supabase
       .from('callups')
       .select('id, status')
@@ -207,12 +207,12 @@ export async function registarVotoMvp(
     return { ok: false, error: 'Tens de escolher dois jogadores diferentes.' }
   }
 
-  // Validação estrita: apenas convocados e equipa técnica podem votar
+  // Validação estrita: apenas convocados e treinadores podem votar
   const elegivel = await verificarElegibilidadeVotoMvp(eventId, voterId)
   if (!elegivel) {
     return {
       ok: false,
-      error: 'Apenas os jogadores convocados e a equipa técnica podem votar no MVP deste jogo.'
+      error: 'Apenas os jogadores convocados e os treinadores podem votar no MVP deste jogo.'
     }
   }
 
@@ -310,18 +310,17 @@ export function calcularEleitoresDoJogo(
     }
   }
 
-  // 2. Equipa Técnica e Direção (coaches e admins)
+  // 2. Equipa Técnica (apenas treinadores; o perfil de direção pura não tem direito a voto)
   for (const p of allProfiles || []) {
     if (eAdepto(p) || p.status === 'inactive') continue
     const isCoach = eTreinador(p)
-    const isAdmin = eAdmin(p)
 
-    if (isCoach || isAdmin) {
+    if (isCoach) {
       if (idsProcessados.has(p.id)) {
         // Já incluído como jogador/convocado, acrescentar menção ao cargo técnico
         const idx = eleitores.findIndex(e => e.id === p.id)
         if (idx !== -1) {
-          eleitores[idx].funcao += isCoach ? ' / Treinador' : ' / Direção'
+          eleitores[idx].funcao += ' / Treinador'
         }
       } else {
         idsProcessados.add(p.id)
@@ -332,7 +331,7 @@ export function calcularEleitoresDoJogo(
           shirt_name: p.shirt_name,
           jersey_number: p.jersey_number,
           photo_url: p.photo_url,
-          funcao: isCoach ? 'Treinador' : 'Direção',
+          funcao: 'Treinador',
           categoria: 'staff',
           jaVotou: Boolean(voto),
           escolhas: voto ? [voto.player1_id, voto.player2_id] : undefined,
