@@ -130,9 +130,16 @@ WITH prefs AS (
          COALESCE(np.fichas_por_preencher, true)       AS fichas,
          COALESCE(np.silencio_inicio, TIME '23:00')    AS silencio_inicio,
          COALESCE(np.silencio_fim, TIME '08:00')       AS silencio_fim,
-         ('player'::user_role = ANY (COALESCE(p.roles, ARRAY[p.role])))                       AS joga,
-         (ARRAY['coach','admin']::user_role[] && COALESCE(p.roles, ARRAY[p.role]))            AS gere,
-         ('supporter'::user_role = ANY (COALESCE(p.roles, ARRAY[p.role])))                    AS adepto
+         (
+           p.role = 'supporter'::user_role
+           OR ('supporter'::user_role = ANY (COALESCE(p.roles, ARRAY[]::user_role[])))
+         )                                                                                    AS adepto,
+         (
+           p.role <> 'supporter'::user_role
+           AND NOT ('supporter'::user_role = ANY (COALESCE(p.roles, ARRAY[]::user_role[])))
+           AND ('player'::user_role = ANY (COALESCE(p.roles, ARRAY[p.role])))
+         )                                                                                    AS joga,
+         (ARRAY['coach','admin']::user_role[] && COALESCE(p.roles, ARRAY[p.role]))            AS gere
     FROM profiles p
     LEFT JOIN notification_preferences np ON np.profile_id = p.id
    WHERE EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.profile_id = p.id)
@@ -147,7 +154,7 @@ WITH prefs AS (
          END
 ),
 
--- 1. Convocatórias pendentes
+-- 1. Convocatórias
 convocatorias AS (
   SELECT a.profile_id,
          'convocatoria'::text AS tipo,
@@ -170,9 +177,11 @@ convocatorias AS (
      AND e.is_active IS DISTINCT FROM false
      AND e.date_time > now()
      AND (e.type <> 'practice' OR e.date_time <= now() + interval '6 days')
+     -- Adeptos só recebem avisos de jogos e convívios (nunca de treinos)
+     AND (NOT a.adepto OR e.type IN ('match', 'gathering'))
 ),
 
--- 2. Comunicados publicados
+-- 2. Comunicados (respeita público-alvo)
 comunicados AS (
   SELECT a.profile_id,
          'comunicado'::text AS tipo,
@@ -184,9 +193,8 @@ comunicados AS (
     CROSS JOIN announcements an
    WHERE a.comunicados
      AND an.published_at > now() - interval '14 days'
-     AND an.is_active IS DISTINCT FROM false
      AND (
-       NOT a.adepto 
+       NOT a.adepto
        OR (
          COALESCE(an.target_audience, 'all') <> 'no_supporters'
          AND an.content NOT LIKE '%<!--target:no_supporters-->%'
@@ -198,89 +206,58 @@ comunicados AS (
      )
 ),
 
--- 3. Quotas em atraso
+-- 3. Quotas vencidas (APENAS atletas que jogam, NUNCA adeptos)
 quotas AS (
   SELECT a.profile_id,
-         'quota_atrasada'::text AS tipo,
-         'Tens quotas em atraso'::text AS titulo,
-         to_char(q.mes, 'TMMonth "de" YYYY', 'nls_date_language=Portuguese') || ' por regularizar.' AS corpo,
-         '/financas'::text AS destino,
-         ('00000000-0000-0000-0000-' || to_char(q.mes, 'YYYYMMDD') || '0000')::uuid AS origem_id
+         'quota'::text AS tipo,
+         'Quota em atraso'::text AS titulo,
+         initcap(to_char(v.month_start, 'TMMonth')) || ' ' || to_char(v.month_start, 'YYYY')
+           || ' — ' || trim(to_char(v.expected_amount, '999D99')) || ' €' AS corpo,
+         '/settings'::text AS destino,
+         md5(a.profile_id::text || v.month_year)::uuid AS origem_id
     FROM acordados a
-    JOIN profiles p ON p.id = a.profile_id
-    CROSS JOIN LATERAL (
-      SELECT date_trunc('month', d)::date AS mes
-        FROM generate_series(
-          date_trunc('month', GREATEST(COALESCE(p.created_at::date, CURRENT_DATE), '2024-09-01'::date))::timestamp,
-          date_trunc('month', CURRENT_DATE)::timestamp,
-          interval '1 month'
-        ) d
-    ) q
+    JOIN v_quota_status v ON v.player_id = a.profile_id
    WHERE a.quotas
      AND a.joga
-     AND NOT EXISTS (
-       SELECT 1 FROM monthly_dues md
-        WHERE md.player_id = a.profile_id
-          AND md.month = q.mes
-          AND md.status = 'pago'
-     )
-     AND NOT EXISTS (
-       SELECT 1 FROM push_logs pl
-        WHERE pl.profile_id = a.profile_id
-          AND pl.tipo = 'quota_atrasada'
-          AND pl.enviado_em >= date_trunc('month', now())
-     )
-   LIMIT 1
+     AND NOT a.adepto
+     AND v.status = 'late'
 ),
 
--- 4. Eventos sem convocatória (apenas staff/direção)
+-- 4. Evento por convocar (gestão)
 sem_convocatoria AS (
   SELECT a.profile_id,
-         'sem_convocatoria'::text AS tipo,
+         'sem-convocatoria'::text AS tipo,
          'Evento sem convocatória'::text AS titulo,
-         e.title || ' (' || to_char(e.date_time AT TIME ZONE 'Europe/Lisbon', 'DD/MM HH24:MI') || ') ainda não tem convocados.' AS corpo,
-         '/events'::text AS destino,
+         COALESCE(e.title, 'Evento') || ' a ' || to_char(e.date_time AT TIME ZONE 'Europe/Lisbon', 'DD/MM')
+           || ' — ninguém foi convocado.' AS corpo,
+         '/events?convocatoria=' || e.id::text AS destino,
          e.id AS origem_id
     FROM acordados a
     CROSS JOIN events e
-   WHERE a.gere
-     AND a.sem_convocatoria
+   WHERE a.sem_convocatoria AND a.gere
+     AND e.type IN ('match', 'gathering')
      AND e.is_active IS DISTINCT FROM false
-     AND e.date_time BETWEEN now() AND now() + interval '3 days'
+     AND e.date_time > now()
      AND NOT EXISTS (SELECT 1 FROM callups c WHERE c.event_id = e.id)
-     AND NOT EXISTS (
-       SELECT 1 FROM push_logs pl
-        WHERE pl.profile_id = a.profile_id
-          AND pl.tipo = 'sem_convocatoria'
-          AND pl.origem_id = e.id
-          AND pl.enviado_em >= now() - interval '24 hours'
-     )
 ),
 
--- 5. Fichas de jogo por preencher (apenas staff/direção)
-fichas_pendentes AS (
+-- 5. Jogo passado sem ficha (gestão)
+fichas AS (
   SELECT a.profile_id,
-         'ficha_jogo'::text AS tipo,
+         'ficha'::text AS tipo,
          'Ficha de jogo por preencher'::text AS titulo,
-         'O jogo contra ' || COALESCE(o.name, 'adversário') || ' terminou. Preenche o resultado e os marcadores.' AS corpo,
-         '/events'::text AS destino,
+         'O jogo de ' || to_char(e.date_time AT TIME ZONE 'Europe/Lisbon', 'DD/MM')
+           || ' ainda não tem resultado.' AS corpo,
+         '/competicao?ver=fichas&jogo=' || e.id::text AS destino,
          e.id AS origem_id
     FROM acordados a
     CROSS JOIN events e
-    LEFT JOIN opponents o ON o.id = e.opponent_id
-   WHERE a.gere
-     AND a.fichas
+   WHERE a.fichas AND a.gere
      AND e.type = 'match'
      AND e.is_active IS DISTINCT FROM false
-     AND e.date_time BETWEEN now() - interval '48 hours' AND now() - interval '2 hours'
-     AND (e.home_score IS NULL OR e.away_score IS NULL)
-     AND NOT EXISTS (
-       SELECT 1 FROM push_logs pl
-        WHERE pl.profile_id = a.profile_id
-          AND pl.tipo = 'ficha_jogo'
-          AND pl.origem_id = e.id
-          AND pl.enviado_em >= now() - interval '24 hours'
-     )
+     AND e.date_time < now() - interval '12 hours'
+     AND e.date_time > now() - interval '30 days'
+     AND e.home_score IS NULL
 ),
 
 -- 6. Votos de MVP pendentes: APENAS para jogadores convocados e equipa técnica/direção que ainda não votaram
@@ -319,25 +296,25 @@ votos_mvp_pendentes AS (
         WHERE mv.event_id = e.id
           AND mv.voter_id = a.profile_id
      )
-     -- Só notifica uma vez por dia por jogo
-     AND NOT EXISTS (
-       SELECT 1 FROM push_logs pl
-        WHERE pl.profile_id = a.profile_id
-          AND pl.tipo = 'voto_mvp'
-          AND pl.origem_id = e.id
-          AND pl.enviado_em >= now() - interval '24 hours'
-     )
-)
+),
 
-SELECT * FROM convocatorias
-UNION ALL
-SELECT * FROM comunicados
-UNION ALL
-SELECT * FROM quotas
-UNION ALL
-SELECT * FROM sem_convocatoria
-UNION ALL
-SELECT * FROM fichas_pendentes
-UNION ALL
-SELECT * FROM votos_mvp_pendentes;
+tudo AS (
+  SELECT * FROM convocatorias
+  UNION ALL SELECT * FROM comunicados
+  UNION ALL SELECT * FROM quotas
+  UNION ALL SELECT * FROM sem_convocatoria
+  UNION ALL SELECT * FROM fichas
+  UNION ALL SELECT * FROM votos_mvp_pendentes
+)
+SELECT t.profile_id, t.tipo, t.titulo, t.corpo, t.destino, t.origem_id
+  FROM tudo t
+ WHERE NOT EXISTS (
+   SELECT 1 FROM notification_deliveries d
+    WHERE d.profile_id = t.profile_id
+      AND d.tipo = t.tipo
+      AND d.origem_id IS NOT DISTINCT FROM t.origem_id
+ );
 $$;
+
+REVOKE ALL ON FUNCTION public.avisos_pendentes() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.avisos_pendentes() TO service_role;
