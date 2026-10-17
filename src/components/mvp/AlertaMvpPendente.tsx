@@ -92,26 +92,10 @@ export const AlertaMvpPendente: React.FC = () => {
         }
       }
 
-      // Suporte a modo de teste explícito via query (?test_mvp=1)
-      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-      const modoTeste = params?.has('test_mvp') || params?.has('test_mvp_alert')
-      if (modoTeste && pendentes.length === 0 && eventosData.length > 0) {
-        const ev = eventosData[0]
-        const opp = Array.isArray(ev.opponent) ? ev.opponent[0] : ev.opponent
-        pendentes.push({
-          id: ev.id,
-          title: ev.title,
-          date_time: ev.date_time,
-          home_away: ev.home_away,
-          home_score: ev.home_score,
-          away_score: ev.away_score,
-          opponent: opp,
-        })
-      }
-
       setJogosPendentes(pendentes)
 
       // Abrir modal diretamente se o URL veio de uma notificação push (?mvp_event=ID)
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
       const mvpEventId = params?.get('mvp_event')
       if (mvpEventId) {
         const evAlvo = eventosData.find(e => e.id === mvpEventId)
