@@ -1,5 +1,6 @@
 -- ============================================================================
--- MIGRAÇÃO DEFINITIVA: CORRIGIR NOTIFICAÇÕES MVP, ENCERRAR JOGOS PASSADOS E CORRIGIR PERFIS
+-- MIGRAÇÃO DEFINITIVA: CORRIGIR NOTIFICAÇÕES MVP, ENCERRAR JOGOS PASSADOS,
+-- ELIMINAR NOTIFICAÇÕES DE FALTA DE CONVOCATÓRIA E CORRIGIR PERFIS
 -- ============================================================================
 -- 1. Garante a coluna mvp_voting_closed em public.events
 -- 2. Fecha a votação de MVP de todos os jogos amigáveis passados
@@ -8,7 +9,9 @@
 -- 5. Atualiza a constraint de tipo em notification_deliveries para suportar 'voto_mvp'
 -- 6. Marca na base de dados (notification_deliveries) os avisos de MVP dos jogos passados
 --    como já entregues para que nunca mais voltem a ser enviados
--- 7. Atualiza avisos_pendentes() com tipagem compatível (origem_id uuid) e
+-- 7. Elimina as notificações push de falta de convocatória da fila avisos_pendentes()
+--    (o alerta visual permanece intacto na homepage da app)
+-- 8. Atualiza avisos_pendentes() com tipagem compatível (origem_id uuid) e
 --    exclusão estrita de Direção (admin) e jogos passados/encerrados.
 -- ============================================================================
 
@@ -111,7 +114,7 @@ $$;
 REVOKE ALL ON FUNCTION public.registar_envio(uuid, text, text, text, text, uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.registar_envio(uuid, text, text, text, text, uuid) TO service_role;
 
--- 8. Função avisos_pendentes() definitiva
+-- 8. Função avisos_pendentes() definitiva (sem avisos push de falta de convocatória)
 DROP FUNCTION IF EXISTS public.avisos_pendentes();
 
 CREATE OR REPLACE FUNCTION public.avisos_pendentes()
@@ -132,7 +135,6 @@ WITH prefs AS (
          COALESCE(np.convocatorias, true)              AS convocatorias,
          COALESCE(np.comunicados, true)                AS comunicados,
          COALESCE(np.quotas_em_atraso, true)           AS quotas,
-         COALESCE(np.eventos_sem_convocatoria, true)   AS sem_convocatoria,
          COALESCE(np.fichas_por_preencher, true)       AS fichas,
          COALESCE(np.silencio_inicio, TIME '23:00')    AS silencio_inicio,
          COALESCE(np.silencio_fim, TIME '08:00')       AS silencio_fim,
@@ -241,25 +243,7 @@ quotas AS (
      AND v.status = 'late'
 ),
 
--- 4. Sem convocatória
-sem_convocatoria AS (
-  SELECT a.profile_id,
-         'sem-convocatoria'::text AS tipo,
-         'Evento sem convocatória'::text AS titulo,
-         COALESCE(e.title, 'Evento') || ' a ' || to_char(e.date_time AT TIME ZONE 'Europe/Lisbon', 'DD/MM')
-           || ' — ninguém foi convocado.' AS corpo,
-         '/events?convocatoria=' || e.id::text AS destino,
-         e.id AS origem_id
-    FROM acordados a
-    CROSS JOIN events e
-   WHERE a.sem_convocatoria AND a.gere
-     AND e.type IN ('match', 'gathering')
-     AND e.is_active IS DISTINCT FROM false
-     AND e.date_time > now()
-     AND NOT EXISTS (SELECT 1 FROM callups c WHERE c.event_id = e.id)
-),
-
--- 5. Fichas por preencher
+-- 4. Fichas por preencher
 fichas AS (
   SELECT a.profile_id,
          'ficha'::text AS tipo,
@@ -278,7 +262,7 @@ fichas AS (
      AND e.home_score IS NULL
 ),
 
--- 6. Votos de MVP pendentes:
+-- 5. Votos de MVP pendentes:
 -- APENAS para jogos futuros com votação aberta (NUNCA amigáveis, NUNCA 1ª jornada ou jogos passados já fechados)
 -- e APENAS para treinadores puros ou atletas convocados (não recusados) ou que jogaram.
 votos_mvp_pendentes AS (
@@ -326,7 +310,6 @@ tudo AS (
   SELECT * FROM convocatorias
   UNION ALL SELECT * FROM comunicados
   UNION ALL SELECT * FROM quotas
-  UNION ALL SELECT * FROM sem_convocatoria
   UNION ALL SELECT * FROM fichas
   UNION ALL SELECT * FROM votos_mvp_pendentes
 )

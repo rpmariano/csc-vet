@@ -70,7 +70,7 @@ const OMISSOES: Preferencias = {
 /** As chaves que são mesmo avisos — o silêncio não conta. */
 const AVISOS = [
   'convocatorias', 'comunicados', 'quotas_em_atraso',
-  'eventos_sem_convocatoria', 'fichas_por_preencher',
+  'fichas_por_preencher',
 ] as const
 
 const algumLigado = (p: Preferencias) => AVISOS.some(chave => p[chave])
@@ -87,7 +87,6 @@ const DO_ADEPTO: readonly { chave: keyof Preferencias; titulo: string; nota: str
 ]
 
 const DE_QUEM_GERE: readonly { chave: keyof Preferencias; titulo: string; nota: string }[] = [
-  { chave: 'eventos_sem_convocatoria', titulo: 'Evento sem convocatória', nota: 'Enquanto ninguém estiver convocado' },
   { chave: 'fichas_por_preencher', titulo: 'Ficha de jogo por preencher', nota: 'No dia seguinte ao jogo' },
 ]
 

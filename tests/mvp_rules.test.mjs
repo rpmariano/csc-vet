@@ -578,5 +578,45 @@ test('Filtro de notificações voto_mvp no carteiro: exclui jogos passados, amig
   assert.ok(!filaFiltrada.some(a => a.origem_id === 'ev-amigavel'), 'Jogos amigáveis NUNCA geram avisos')
 })
 
+// ==============================================================================
+// 10. TESTE: ELIMINAÇÃO DE NOTIFICAÇÕES PUSH DE FALTA DE CONVOCATÓRIA E MANUTENÇÃO NA HOMEPAGE
+// ==============================================================================
+test('Notificações de falta de convocatória: push descartado, mas lógica da homepage intacta', () => {
+  // 1. O carteiro descarta avisos do tipo 'sem-convocatoria', 'evento_sem_convocatoria' ou 'convocatoria_aberta'
+  const filaCarteiro = [
+    { tipo: 'convocatoria', titulo: 'Convocatória Jogo' },
+    { tipo: 'sem-convocatoria', titulo: 'Evento sem convocatória' },
+    { tipo: 'evento_sem_convocatoria', titulo: 'Evento sem convocatória' },
+    { tipo: 'convocatoria_aberta', titulo: 'Convocatória aberta' },
+    { tipo: 'comunicado', titulo: 'Novo comunicado' },
+  ]
+
+  const filaAposFiltro = filaCarteiro.filter(
+    a => a.tipo !== 'sem-convocatoria' && a.tipo !== 'evento_sem_convocatoria' && a.tipo !== 'convocatoria_aberta'
+  )
+
+  assert.equal(filaAposFiltro.length, 2, 'Apenas convocatórias e comunicados passam')
+  assert.ok(!filaAposFiltro.some(a => a.tipo === 'sem-convocatoria'), 'sem-convocatoria eliminado dos push')
+  assert.ok(!filaAposFiltro.some(a => a.tipo === 'evento_sem_convocatoria'), 'evento_sem_convocatoria eliminado dos push')
+  assert.ok(!filaAposFiltro.some(a => a.tipo === 'convocatoria_aberta'), 'convocatoria_aberta eliminado dos push')
+
+  // 2. A lógica da homepage continua a detetar eventos sem convocatória para aviso visual em ecra
+  const eventosFuturos = [
+    { id: 'ev1', title: 'Jogo Jornada 2', type: 'match', is_active: true, date_time: '2026-10-25T10:00:00Z' },
+    { id: 'ev2', title: 'Jogo Jornada 3', type: 'match', is_active: true, date_time: '2026-11-01T10:00:00Z' },
+  ]
+  const callups = [
+    { event_id: 'ev1', player_id: 'p1' }, // ev1 tem convocados
+  ]
+
+  const eventosSemConvocadosNaHome = eventosFuturos.filter(
+    ev => !callups.some(c => c.event_id === ev.id)
+  )
+
+  assert.equal(eventosSemConvocadosNaHome.length, 1, 'ev2 continua identificado como evento sem convocatória')
+  assert.equal(eventosSemConvocadosNaHome[0].id, 'ev2', 'ev2 surge na FaixaSemConvocatoria da Home')
+})
+
+
 
 

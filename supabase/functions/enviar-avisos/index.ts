@@ -102,6 +102,9 @@ Deno.serve(async (req: Request) => {
 
   let fila = (avisos ?? []) as Aviso[]
 
+  // Eliminar notificações de falta de convocatória (conforme pedido, o aviso mantém-se apenas na homepage)
+  fila = fila.filter(a => a.tipo !== 'sem-convocatoria' && a.tipo !== 'evento_sem_convocatoria' && a.tipo !== 'convocatoria_aberta')
+
   // Salvaguarda: filtrar notificações de MVP indesejadas (jogos passados/fechados ou perfil de Direção)
   const mvpAvisos = fila.filter(a => a.tipo === 'voto_mvp')
   if (mvpAvisos.length > 0) {
