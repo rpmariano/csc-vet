@@ -11,11 +11,15 @@ WHERE voter_id IN (
     SELECT id FROM public.profiles WHERE email = 'rpmariano@gmail.com'
 );
 
--- 2. Limpa qualquer aviso push registado de teste para o tipo 'voto_mvp'
-DELETE FROM public.avisos_enviados
-WHERE profile_id IN (
-    SELECT id FROM public.profiles WHERE email = 'rpmariano@gmail.com'
-) AND tipo = 'voto_mvp';
+-- 2. Assegura que nenhum aviso push de voto_mvp volta a ser enfileirado para Rui Mariano
+-- ao marcar todos os jogos como já enviados em avisos_enviados:
+INSERT INTO public.avisos_enviados (profile_id, tipo, origem_id, enviado_em)
+SELECT p.id, 'voto_mvp', e.id::text, now()
+FROM public.profiles p
+CROSS JOIN public.events e
+WHERE p.email = 'rpmariano@gmail.com'
+  AND e.type = 'match'
+ON CONFLICT (profile_id, tipo, origem_id) DO NOTHING;
 
 -- 3. Repõe a coluna is_mvp a falso na tabela stats para não expor vencedores
 UPDATE public.stats

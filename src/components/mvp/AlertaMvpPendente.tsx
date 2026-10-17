@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { Award, ChevronRight, Sparkles } from 'lucide-react'
+import { Award, ChevronRight, Sparkles, X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
-import { eAdepto, eTreinador } from '../../lib/papeis'
+import { eAdepto, eTreinador, eJogador } from '../../lib/papeis'
 import { obterTodosVotosMvp } from '../../lib/mvp'
 import { ModalVotarMvp } from './ModalVotarMvp'
 import { CartaoSimples, EtiquetaSeccao } from '../ui'
@@ -16,6 +16,28 @@ export interface JogoPendenteMvp {
   home_score?: number | null
   away_score?: number | null
   opponent?: { name: string; initials?: string | null } | null
+}
+
+export async function fecharNotificacoesMvp(): Promise<void> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+  try {
+    const reg = await navigator.serviceWorker.ready
+    const notifs = await reg.getNotifications()
+    notifs.forEach((n) => {
+      const tag = (n.tag || '').toLowerCase()
+      const title = (n.title || '').toLowerCase()
+      if (
+        tag.startsWith('voto_mvp') ||
+        tag.includes('teste') ||
+        title.includes('mvp') ||
+        title.includes('votação de mvp')
+      ) {
+        n.close()
+      }
+    })
+  } catch (e) {
+    console.debug('Erro ao fechar notificações de MVP:', e)
+  }
 }
 
 export const AlertaMvpPendente: React.FC = () => {
@@ -72,14 +94,49 @@ export const AlertaMvpPendente: React.FC = () => {
         todosVotos.filter(v => v.voter_id === profile.id).map(v => v.event_id)
       )
 
+      // Rui Mariano (administração): descartar alertas residuais de teste
+      const emailNorm = (profile?.email || '').toLowerCase().trim()
+      if (emailNorm === 'rpmariano@gmail.com' && !isCoach) {
+        setJogosPendentes([])
+        if (typeof window !== 'undefined' && window.location.search) {
+          const url = new URL(window.location.href)
+          let mudou = false
+          if (url.searchParams.has('mvp_event')) {
+            url.searchParams.delete('mvp_event')
+            mudou = true
+          }
+          if (url.searchParams.has('test_mvp')) {
+            url.searchParams.delete('test_mvp')
+            mudou = true
+          }
+          if (url.searchParams.has('test_mvp_alert')) {
+            url.searchParams.delete('test_mvp_alert')
+            mudou = true
+          }
+          if (mudou) {
+            window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''))
+          }
+        }
+        fecharNotificacoesMvp()
+        return
+      }
+
       // Jogos elegíveis onde ainda não votou
       const pendentes: JogoPendenteMvp[] = []
-      for (const ev of eventosData) {
-        // Elegível se convocado OU treinador
-        const elegivel = convocadosIds.has(ev.id) || isCoach
-        const jaVotou = meusVotosIds.has(ev.id)
+      const isPlayer = eJogador(profile)
 
-        if (elegivel && !jaVotou) {
+      for (const ev of eventosData) {
+        // Elegível se convocado como jogador OU treinador
+        const elegivel = (isPlayer && convocadosIds.has(ev.id)) || isCoach
+        const jaVotou = meusVotosIds.has(ev.id)
+        let dispensado = false
+        try {
+          dispensado = localStorage.getItem(`csc_mvp_alerta_dispensado_${ev.id}`) === 'true'
+        } catch {
+          // ignore
+        }
+
+        if (elegivel && !jaVotou && !dispensado) {
           const opp = Array.isArray(ev.opponent) ? ev.opponent[0] : ev.opponent
           pendentes.push({
             id: ev.id,
@@ -99,18 +156,9 @@ export const AlertaMvpPendente: React.FC = () => {
       const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
       const mvpEventId = params?.get('mvp_event')
       if (mvpEventId) {
-        const evAlvo = eventosData.find(e => e.id === mvpEventId)
+        const evAlvo = pendentes.find(e => e.id === mvpEventId)
         if (evAlvo) {
-          const opp = Array.isArray(evAlvo.opponent) ? evAlvo.opponent[0] : evAlvo.opponent
-          setJogoSelecionado({
-            id: evAlvo.id,
-            title: evAlvo.title,
-            date_time: evAlvo.date_time,
-            home_away: evAlvo.home_away,
-            home_score: evAlvo.home_score,
-            away_score: evAlvo.away_score,
-            opponent: opp,
-          })
+          setJogoSelecionado(evAlvo)
           setModalAberto(true)
         }
       }
@@ -120,6 +168,7 @@ export const AlertaMvpPendente: React.FC = () => {
   }, [profile])
 
   useEffect(() => {
+    fecharNotificacoesMvp()
     verificarPendencias()
   }, [verificarPendencias])
 
@@ -139,6 +188,25 @@ export const AlertaMvpPendente: React.FC = () => {
     triggerHaptic('light')
     setJogoSelecionado(j)
     setModalAberto(true)
+  }
+
+  const dispensarAlerta = (e: React.MouseEvent, idJogo: string) => {
+    e.stopPropagation()
+    triggerHaptic('light')
+    try {
+      localStorage.setItem(`csc_mvp_alerta_dispensado_${idJogo}`, 'true')
+    } catch {
+      // ignore
+    }
+    setJogosPendentes((prev) => prev.filter((j) => j.id !== idJogo))
+    fecharNotificacoesMvp()
+    if (typeof window !== 'undefined' && window.location.search) {
+      const url = new URL(window.location.href)
+      if (url.searchParams.get('mvp_event') === idJogo) {
+        url.searchParams.delete('mvp_event')
+        window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''))
+      }
+    }
   }
 
   return (
@@ -172,6 +240,16 @@ export const AlertaMvpPendente: React.FC = () => {
               </p>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={(e) => dispensarAlerta(e, jogo.id)}
+            className="w-8 h-8 -mr-1 -mt-1 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            title="Dispensar aviso"
+            aria-label="Dispensar aviso de votação"
+          >
+            <X size={16} />
+          </button>
         </div>
 
         <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
