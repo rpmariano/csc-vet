@@ -4,49 +4,36 @@ import { FilaSeparadores, CabecalhoEcra } from '../components/ui'
 import { StandingsPage } from './StandingsPage'
 import MatchReportsPage from './MatchReportsPage'
 import StatsPage from './StatsPage'
+import MvpPage from './MvpPage'
+import { useAuth } from '../context/AuthContext'
+import { temAcessoMVP } from '../lib/mvp'
 
-/**
- * Competição — o terceiro lugar da barra do jogador.
- *
- * Junta num só ecrã as três páginas que estavam soltas na navegação:
- * classificações, fichas de jogo e estatísticas. Não são três sítios
- * diferentes — são três formas de olhar para a mesma época, e como tal
- * pertencem a separadores e não a entradas de menu.
- *
- * O separador escolhido vai no endereço (`?ver=`), para o retroceder do
- * browser funcionar e para se poder mandar um link direto às classificações.
- * **Quem escreve no endereço aqui dentro tem de acrescentar, não substituir** —
- * um `setSearchParams({ x })` numa das três páginas apaga o `?ver=` e faz o
- * ecrã saltar para o primeiro separador.
- *
- * O conteúdo é, para já, o das páginas existentes tal como estão — ainda com
- * o aspeto claro. São redesenhadas na fase 4; o que muda aqui é onde vivem.
- *
- * As três são importadas diretamente e não por `React.lazy`. Não é só por
- * serem o próprio conteúdo deste ecrã (a Competição já vem no seu pedaço de
- * código): com um `<Suspense>` aqui dentro, a atualização de localização do
- * React Router deixava de ser confirmada e o retroceder do browser passava a
- * não fechar a persiana da ficha de jogo — de forma intermitente noutros
- * ecrãs, sempre neste. Ver o risco P2 no CLAUDE.md.
- */
-
-const SEPARADORES = ['Classificações', 'Fichas de Jogo', 'Estatísticas'] as const
-
-/** Valor no endereço para cada separador — estável, ao contrário do índice. */
-const CHAVES = ['classificacoes', 'fichas', 'estatisticas'] as const
-
+const SEPARADORES_BASE = ['Classificações', 'Fichas de Jogo', 'Estatísticas'] as const
+const CHAVES_BASE = ['classificacoes', 'fichas', 'estatisticas'] as const
 
 const CompeticaoPage: React.FC = () => {
+  const { profile } = useAuth()
   const [params, setParams] = useSearchParams()
 
+  const temAcesso = useMemo(() => temAcessoMVP(profile), [profile])
+
+  const separadores = useMemo(() => {
+    return temAcesso ? [...SEPARADORES_BASE, 'MVP'] : [...SEPARADORES_BASE]
+  }, [temAcesso])
+
+  const chaves = useMemo(() => {
+    return temAcesso ? [...CHAVES_BASE, 'mvp'] : [...CHAVES_BASE]
+  }, [temAcesso])
+
   const ativo = useMemo(() => {
-    const i = CHAVES.indexOf((params.get('ver') ?? '') as (typeof CHAVES)[number])
+    const chave = params.get('ver') ?? ''
+    const i = chaves.indexOf(chave)
     return i >= 0 ? i : 0
-  }, [params])
+  }, [params, chaves])
 
   const escolher = (indice: number) => {
     const seguintes = new URLSearchParams(params)
-    seguintes.set('ver', CHAVES[indice])
+    seguintes.set('ver', chaves[indice])
     // `replace`: andar entre separadores não deve encher o histórico — quem
     // carrega em retroceder quer sair da Competição, não desfazer três
     // toques nos separadores.
@@ -58,7 +45,7 @@ const CompeticaoPage: React.FC = () => {
       <CabecalhoEcra titulo="Competição" sobrancelha="Época em curso" />
 
       <FilaSeparadores
-        itens={SEPARADORES}
+        itens={separadores}
         ativo={ativo}
         onEscolher={escolher}
         ariaLabel="Secções da competição"
@@ -67,9 +54,10 @@ const CompeticaoPage: React.FC = () => {
       />
 
       <div id="painel-competicao" role="tabpanel" aria-labelledby={`painel-competicao-sep-${ativo}`}>
-        {ativo === 0 && <StandingsPage />}
-        {ativo === 1 && <MatchReportsPage />}
-        {ativo === 2 && <StatsPage />}
+        {chaves[ativo] === 'classificacoes' && <StandingsPage />}
+        {chaves[ativo] === 'fichas' && <MatchReportsPage />}
+        {chaves[ativo] === 'estatisticas' && <StatsPage />}
+        {chaves[ativo] === 'mvp' && temAcesso && <MvpPage />}
       </div>
     </div>
   )

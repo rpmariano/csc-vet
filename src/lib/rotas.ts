@@ -23,6 +23,14 @@ export const caminhoEvento = (idEvento: string): string =>
 export const enderecoEvento = (idEvento: string): string =>
   `${window.location.origin}${caminhoEvento(idEvento)}`
 
+/** Caminho absoluto (sem domínio) da ficha de jogo. */
+export const caminhoFichaJogo = (idEvento: string): string =>
+  `${BASE}competicao?ver=fichas&jogo=${encodeURIComponent(idEvento)}`
+
+/** Endereço completo (com domínio) da ficha de jogo. */
+export const enderecoFichaJogo = (idEvento: string): string =>
+  `${window.location.origin}${caminhoFichaJogo(idEvento)}`
+
 /**
  * O nome do ecrã em que se está, para o "‹" de quem se abrir a partir dele.
  *
@@ -41,6 +49,7 @@ export const nomeDoEcra = (pathname: string, search: string): string => {
       if (p.has('jogo')) return 'Ficha de jogo'
       if (p.get('ver') === 'fichas') return 'Fichas de Jogo'
       if (p.get('ver') === 'estatisticas') return 'Estatísticas'
+      if (p.get('ver') === 'mvp') return 'MVP'
       return 'Classificações'
     case '/events': return p.has('convocatoria') ? 'Convocatória' : 'Eventos'
     case '/team-management': return p.has('atleta') ? 'Ficha do atleta' : 'Plantel'

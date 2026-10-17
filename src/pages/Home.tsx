@@ -22,6 +22,7 @@ import {
   FaixaConvidarAvisos,
   PersianaConvidarAvisos,
 } from '../components/ConvidarAvisos'
+import { AlertaMvpPendente } from '../components/mvp/AlertaMvpPendente'
 import { CarrosselCartoes } from '../components/home/CarrosselCartoes'
 import { CartaoProximoJogo, type JogoDaHome } from '../components/home/CartaoProximoJogo'
 import { PorResponder, type PendenteDaHome } from '../components/home/PorResponder'
@@ -549,6 +550,9 @@ const Home: React.FC = () => {
               </button>
             </CartaoSimples>
           ))}
+
+          {/* Alerta de votação pendente de MVP */}
+          <AlertaMvpPendente />
 
           {/* O próximo jogo, uma página por jogo marcado. */}
           {aCarregar ? (

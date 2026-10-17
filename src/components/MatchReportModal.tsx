@@ -7,6 +7,7 @@ import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 import { eAdepto } from '../lib/papeis'
 import { toast } from '../context/ToastContext'
+import { useAuth } from '../context/AuthContext'
 import { EcraDetalhe } from './EcraDetalhe'
 import { Botao, ACarregar } from './ui'
 import { CLUBE_SIGLA } from '../lib/clube'
@@ -14,6 +15,10 @@ import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
 import { ConfirmModal } from './ConfirmModal'
 import { CLASSE_CAMPO } from './ui/formulario'
+import { PartilharFichaJogo } from './mvp/PartilharFichaJogo'
+import { ModalVotarMvp } from './mvp/ModalVotarMvp'
+import { SecaoEleitoresMvp } from './mvp/SecaoEleitoresMvp'
+import { notificarFichaJogoPublicada, obterVotosDoJogo, calcularEleitoresDoJogo, type MvpVote, type EleitorMvpInfo } from '../lib/mvp'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -122,6 +127,16 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   // Players
   const [playerStats, setPlayerStats] = useState<PlayerMatchStat[]>([])
 
+  // MVP & Partilha
+  const { profile } = useAuth()
+  const [modalVotarMvpAberto, setModalVotarMvpAberto] = useState(false)
+  const [mostrarPartilha, setMostrarPartilha] = useState(false)
+  const [votosDoJogo, setVotosDoJogo] = useState<MvpVote[]>([])
+  const [mvpEleitosIds, setMvpEleitosIds] = useState<string[]>([])
+  const [meuVotoMvp, setMeuVotoMvp] = useState<MvpVote | null>(null)
+  const [isConvocado, setIsConvocado] = useState(false)
+  const [eleitoresDoJogo, setEleitoresDoJogo] = useState<EleitorMvpInfo[]>([])
+
   const [rulesState, setRulesState] = useState<any>(tournamentRules || null)
 
   useEffect(() => {
@@ -223,6 +238,37 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         })
 
         setPlayerStats(merged)
+
+        // 3. Votos de MVP deste jogo
+        const votos = await obterVotosDoJogo(eventId)
+        setVotosDoJogo(votos)
+        const meu = votos.find(v => v.voter_id === profile?.id) || null
+        setMeuVotoMvp(meu)
+
+        const contagem: Record<string, number> = {}
+        for (const v of votos) {
+          if (v.player1_id) contagem[v.player1_id] = (contagem[v.player1_id] || 0) + 1
+          if (v.player2_id) contagem[v.player2_id] = (contagem[v.player2_id] || 0) + 1
+        }
+        let maxVotos = 0
+        for (const cnt of Object.values(contagem)) {
+          if (cnt > maxVotos) maxVotos = cnt
+        }
+        const eleitos = maxVotos > 0 ? Object.entries(contagem).filter(([_, c]) => c === maxVotos).map(([pid]) => pid) : []
+        setMvpEleitosIds(eleitos)
+        // Convocado apenas se tiver convocatória válida (não recusada) ou participou no jogo
+        const callupDoUser = profile?.id ? callupMap.get(profile.id) : null
+        const convocadoValido = Boolean(
+          profile?.id && (
+            (callupDoUser && callupDoUser.status !== 'declined') ||
+            statMap.has(profile.id)
+          )
+        )
+        setIsConvocado(convocadoValido)
+
+        // Calcular eleitores obrigatórios do jogo (convocados + equipa técnica) e estado de votação
+        const eleitores = calcularEleitoresDoJogo(allProfiles, callupsData || [], statsData || [], votos)
+        setEleitoresDoJogo(eleitores)
       } catch (err) {
         console.error('Error loading match report:', err)
       } finally {
@@ -231,7 +277,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     }
 
     loadData()
-  }, [isOpen, eventId, event, isCoachOrAdmin])
+  }, [isOpen, eventId, event, isCoachOrAdmin, profile?.id])
 
   const handleStatChange = (playerId: string, field: keyof PlayerMatchStat, value: any) => {
     setPlayerStats(prev => prev.map(p => {
@@ -266,13 +312,6 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       const newStatus: 'starter' | 'sub' = currentStarters < MAX_STARTERS_LIMIT ? 'starter' : 'sub'
       return prev.map(p => p.player_id === playerId ? { ...p, lineup_status: newStatus } : p)
     })
-  }
-
-  const handleToggleMvp = (playerId: string) => {
-    setPlayerStats(prev => prev.map(p => ({
-      ...p,
-      is_mvp: p.player_id === playerId ? !p.is_mvp : false
-    })))
   }
 
   /*
@@ -449,9 +488,22 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       }
 
       setSaveSuccess(true)
+      setMostrarPartilha(true)
       setIsEditModalOpen(false)
+
+      // Notificar automaticamente atletas e equipa técnica para votação MVP
+      notificarFichaJogoPublicada(
+        {
+          ...event,
+          id: eventId,
+          home_score: homeScore,
+          away_score: awayScore,
+        },
+        { clubeSigla: CLUBE_SIGLA }
+      ).catch(e => console.warn('Erro ao notificar publicação de ficha:', e))
+
       if (onSaved) onSaved()
-      setTimeout(() => setSaveSuccess(false), 3000)
+      setTimeout(() => setSaveSuccess(false), 4000)
     } catch (err) {
       console.error('Error saving match report:', err)
       toast.error('Erro ao guardar a ficha de jogo. Tenta outra vez.')
@@ -558,15 +610,30 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
         {/*
           O confronto é o título do ecrã, a prova e a data a legenda; aqui fica
-          só o que se faz com a ficha. Era um cabeçalho próprio dentro da
-          persiana — sobrancelha, prova, "CSC vs X", data —, e passou para o
-          cabeçalho do ecrã quando a ficha deixou de ser persiana.
+          só o que se faz com a ficha.
         */}
         {isCoachOrAdmin && !jogoPorRealizar && !loading && (
-          <Botao largo onClick={() => setIsEditModalOpen(true)}>
-            <Pencil size={15} aria-hidden="true" />
-            <span>Editar ficha de jogo</span>
-          </Botao>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Botao largo onClick={() => setIsEditModalOpen(true)}>
+              <Pencil size={15} aria-hidden="true" />
+              <span>Editar ficha de jogo</span>
+            </Botao>
+            <Botao largo aparencia="vidro" onClick={() => setMostrarPartilha(prev => !prev)}>
+              <Award size={15} className="text-csc-gold" aria-hidden="true" />
+              <span>{mostrarPartilha ? 'Ocultar partilha' : 'Partilhar / WhatsApp'}</span>
+            </Botao>
+          </div>
+        )}
+
+        {(mostrarPartilha || saveSuccess) && (
+          <PartilharFichaJogo
+            evento={{
+              ...event,
+              id: eventId,
+              home_score: homeScore,
+              away_score: awayScore,
+            }}
+          />
         )}
 
         {saveSuccess && (
@@ -646,6 +713,61 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               </div>
             </div>
 
+            {/* Bloco de Votação e Destaque do MVP */}
+            {!jogoPorRealizar && homeScore !== null && (
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-csc-gold/15 via-white/[0.04] to-transparent border border-csc-gold/30 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center border border-csc-gold/40 shrink-0">
+                      <Award size={18} />
+                    </div>
+                    <div>
+                      <h4 className="font-display font-extrabold text-sm text-white leading-tight">
+                        Votação MVP do Jogo
+                      </h4>
+                      <p className="text-[11px] text-white/60">
+                        {votosDoJogo.length > 0
+                          ? `${votosDoJogo.length} ${votosDoJogo.length === 1 ? 'pessoa votou' : 'pessoas votaram'}`
+                          : 'Votação aberta aos atletas convocados e equipa técnica'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(isConvocado || isCoachOrAdmin) && (
+                    <button
+                      type="button"
+                      onClick={() => setModalVotarMvpAberto(true)}
+                      className="px-3.5 py-1.5 rounded-xl bg-csc-gold text-csc-tinta font-display font-extrabold text-xs
+                        hover:bg-csc-gold/90 transition-all flex items-center gap-1 shadow-md shadow-csc-gold/10 cursor-pointer active:scale-97 shrink-0"
+                    >
+                      {meuVotoMvp ? 'Alterar Voto' : 'Votar (2 MVP)'}
+                    </button>
+                  )}
+                </div>
+
+                {mvpEleitosIds.length > 0 && (
+                  <div className="pt-2 border-t border-white/10 flex items-center gap-2 text-xs">
+                    <span className="text-csc-gold font-bold">🏆 MVP Eleito:</span>
+                    <span className="text-white font-black">
+                      {playerStats
+                        .filter(p => mvpEleitosIds.includes(p.player_id))
+                        .map(p => p.shirt_name || p.name)
+                        .join(' & ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Secção: Quem tem de votar no MVP e se já votou ou não */}
+            {!jogoPorRealizar && homeScore !== null && eleitoresDoJogo.length > 0 && (
+              <SecaoEleitoresMvp
+                eleitores={eleitoresDoJogo}
+                currentUserId={profile?.id}
+                onVotarClick={(isConvocado || isCoachOrAdmin) ? () => setModalVotarMvpAberto(true) : undefined}
+              />
+            )}
+
             {/*
               Tático, golos e disciplina (ecrã 2a): três mosaicos numa fila,
               não três cartões empilhados. Estavam com ``, e os
@@ -721,7 +843,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                               <div className="min-w-0">
                                 <p className="text-xs font-black text-white truncate flex items-center gap-1.5">
                                   <span>{displayName}</span>
-                                  {p.is_mvp && (
+                                  {(mvpEleitosIds.includes(p.player_id) || (mvpEleitosIds.length === 0 && p.is_mvp)) && (
                                     <span className="text-[10px] font-black bg-csc-gold/15 text-csc-gold px-1.5 py-0.5 rounded flex items-center gap-0.5">
                                       <Award size={10} className="text-csc-gold" /> MVP
                                     </span>
@@ -782,8 +904,13 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                                 {p.jersey_number || '—'}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-xs font-black text-white truncate">
-                                  {displayName}
+                                <p className="text-xs font-black text-white truncate flex items-center gap-1.5">
+                                  <span>{displayName}</span>
+                                  {(mvpEleitosIds.includes(p.player_id) || (mvpEleitosIds.length === 0 && p.is_mvp)) && (
+                                    <span className="text-[10px] font-black bg-csc-gold/15 text-csc-gold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                      <Award size={10} className="text-csc-gold" /> MVP
+                                    </span>
+                                  )}
                                 </p>
                                 {p.position && (
                                   <div className="flex items-center gap-1 flex-wrap mt-0.5">
@@ -980,7 +1107,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 return (
                 <div key={p.player_id} className="p-3 flex flex-col gap-2.5 bg-white/5 rounded-2xl">
 
-                  {/* Quem é, e se foi MVP. */}
+                  {/* Dados do atleta. */}
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="w-8 h-8 rounded-full bg-[rgba(11,45,11,.9)] border border-csc-gold/35 text-csc-gold font-display font-extrabold text-[11px] flex items-center justify-center shrink-0">
                       {p.jersey_number || '–'}
@@ -993,21 +1120,6 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                         </span>
                       )}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleMvp(p.player_id)}
-                      aria-pressed={p.is_mvp}
-                      title="Melhor em campo"
-                      className={`min-h-11 px-3 rounded-[18px] font-display font-black text-[10.5px] shrink-0 cursor-pointer
-                        transition-transform duration-150 active:scale-97
-                        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                          p.is_mvp
-                            ? 'bg-csc-gold text-csc-tinta '
-                            : 'bg-white/6 text-white/62'
-                        }`}
-                    >
-                      MVP
-                    </button>
                   </div>
 
                   {/* Titular, suplente ou não jogou — os três lados da mesma escolha. */}
@@ -1166,6 +1278,42 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       variant="warning"
       onConfirm={() => { setGolosSemMarcador(false); handleSaveReport(true) }}
       onCancel={() => setGolosSemMarcador(false)}
+    />
+
+    <ModalVotarMvp
+      isOpen={modalVotarMvpAberto}
+      onClose={() => setModalVotarMvpAberto(false)}
+      eventId={eventId}
+      eventTitle={`${leftSigla} vs ${rightSigla}`}
+      eventDate={event?.date_time ? new Date(event.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' }) : undefined}
+      scoreText={homeScore !== null && awayScore !== null ? `${homeScore} - ${awayScore}` : undefined}
+      onVoteSubmitted={async () => {
+        const votos = await obterVotosDoJogo(eventId)
+        setVotosDoJogo(votos)
+        const meu = votos.find(v => v.voter_id === profile?.id) || null
+        setMeuVotoMvp(meu)
+
+        const contagem: Record<string, number> = {}
+        for (const v of votos) {
+          if (v.player1_id) contagem[v.player1_id] = (contagem[v.player1_id] || 0) + 1
+          if (v.player2_id) contagem[v.player2_id] = (contagem[v.player2_id] || 0) + 1
+        }
+        let maxV = 0
+        for (const cnt of Object.values(contagem)) {
+          if (cnt > maxV) maxV = cnt
+        }
+        const eleitos = maxV > 0 ? Object.entries(contagem).filter(([_, c]) => c === maxV).map(([pid]) => pid) : []
+        setMvpEleitosIds(eleitos)
+        setEleitoresDoJogo(prev => prev.map(e => {
+          const v = votos.find(vt => vt.voter_id === e.id)
+          return {
+            ...e,
+            jaVotou: Boolean(v),
+            escolhas: v ? [v.player1_id, v.player2_id] : undefined
+          }
+        }))
+        if (onSaved) onSaved()
+      }}
     />
     </>
   )
