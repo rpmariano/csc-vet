@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Award, Check, Sparkles, AlertCircle } from 'lucide-react'
+import { Award, Check, Sparkles, AlertCircle, ArrowLeftRight, X, Trophy, Medal } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import { eAdepto, eTreinador, eAdmin } from '../../lib/papeis'
@@ -39,7 +39,8 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [players, setPlayers] = useState<PlayerVoteOption[]>([])
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [firstChoiceId, setFirstChoiceId] = useState<string | null>(null)
+  const [secondChoiceId, setSecondChoiceId] = useState<string | null>(null)
   const [initialVote, setInitialVote] = useState<MvpVote | null>(null)
   const [isEligible, setIsEligible] = useState(true)
 
@@ -108,10 +109,12 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
         const meuVoto = votosDoJogo.find(v => v.voter_id === profile.id)
         if (meuVoto) {
           setInitialVote(meuVoto)
-          setSelectedIds([meuVoto.player1_id, meuVoto.player2_id].filter(Boolean))
+          setFirstChoiceId(meuVoto.player1_id || null)
+          setSecondChoiceId(meuVoto.player2_id || null)
         } else {
           setInitialVote(null)
-          setSelectedIds([])
+          setFirstChoiceId(null)
+          setSecondChoiceId(null)
         }
 
         // Verificar elegibilidade: apenas convocados (não recusados) ou participantes ou equipa técnica
@@ -142,15 +145,30 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
       return
     }
     triggerHaptic('light')
-    if (selectedIds.includes(playerId)) {
-      setSelectedIds(prev => prev.filter(id => id !== playerId))
-    } else {
-      if (selectedIds.length >= 2) {
-        toast.warning('Já escolheste 2 jogadores. Desmarca um para selecionar outro.')
-        return
-      }
-      setSelectedIds(prev => [...prev, playerId])
+
+    if (firstChoiceId === playerId) {
+      setFirstChoiceId(null)
+      return
     }
+    if (secondChoiceId === playerId) {
+      setSecondChoiceId(null)
+      return
+    }
+
+    if (!firstChoiceId) {
+      setFirstChoiceId(playerId)
+    } else if (!secondChoiceId) {
+      setSecondChoiceId(playerId)
+    } else {
+      toast.warning('Já escolheste o 1º e o 2º melhor. Remove um para selecionar outro.')
+    }
+  }
+
+  const handleSwapChoices = () => {
+    if (!firstChoiceId && !secondChoiceId) return
+    triggerHaptic('medium')
+    setFirstChoiceId(secondChoiceId)
+    setSecondChoiceId(firstChoiceId)
   }
 
   const handleSubmit = async () => {
@@ -162,14 +180,18 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
       toast.error('Apenas atletas convocados e equipa técnica podem votar.')
       return
     }
-    if (selectedIds.length !== 2) {
-      toast.warning('Deves selecionar exatamente 2 jogadores.')
+    if (!firstChoiceId || !secondChoiceId) {
+      toast.warning('Deves selecionar o 1º melhor (3 pts) e o 2º melhor (1 pt).')
+      return
+    }
+    if (firstChoiceId === secondChoiceId) {
+      toast.warning('Tens de escolher dois jogadores diferentes.')
       return
     }
 
     setSubmitting(true)
     try {
-      const res = await registarVotoMvp(eventId, profile.id, selectedIds[0], selectedIds[1])
+      const res = await registarVotoMvp(eventId, profile.id, firstChoiceId, secondChoiceId)
       if (res.ok) {
         triggerHaptic('medium')
         toast.success(initialVote ? 'Os teus votos de MVP foram atualizados!' : 'Voto registado com sucesso! Obrigado!')
@@ -184,6 +206,9 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
       setSubmitting(false)
     }
   }
+
+  const firstPlayer = players.find(p => p.id === firstChoiceId)
+  const secondPlayer = players.find(p => p.id === secondChoiceId)
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title="Votação de MVP">
@@ -211,7 +236,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
           <div className="mt-3 pt-3 border-t border-white/10 flex items-start gap-2 text-xs text-white/80">
             <Sparkles size={15} className="text-csc-gold shrink-0 mt-0.5" />
             <p className="leading-snug">
-              Cada pessoa vota em <strong>dois jogadores</strong> que achou terem estado melhor. O jogador com mais votos no final será eleito o MVP da partida.
+              Vota no que consideras o <strong>Melhor (3 pontos)</strong> e no <strong>Segundo Melhor (1 ponto)</strong>. O jogador com mais pontos no total deste jogo será eleito o MVP!
             </p>
           </div>
         </div>
@@ -225,104 +250,224 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
           </div>
         )}
 
-        {/* Indicador de Seleção */}
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-display font-bold text-white/70">
-            Escolhe 2 jogadores:
-          </span>
-          <span
-            className={`text-xs font-display font-extrabold px-2.5 py-1 rounded-full ${
-              selectedIds.length === 2
-                ? 'bg-csc-gold/20 text-csc-gold border border-csc-gold/40'
-                : selectedIds.length === 1
-                ? 'bg-csc-blue/20 text-csc-azul-texto border border-csc-blue/40'
-                : 'bg-white/10 text-white/60'
-            }`}
-          >
-            {selectedIds.length} de 2 selecionados
-          </span>
+        {/* Caixas de Seleção dos 2 Lugares (1º Lugar - 3 pts / 2º Lugar - 1 pt) */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-display font-extrabold text-white/80 uppercase tracking-wider">
+              As tuas escolhas:
+            </span>
+            {firstChoiceId && secondChoiceId && (
+              <button
+                type="button"
+                onClick={handleSwapChoices}
+                className="text-[11px] font-display font-bold text-csc-gold hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
+                title="Trocar ordem de votos"
+              >
+                <ArrowLeftRight size={12} />
+                <span>Trocar ordem</span>
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {/* Slot 1º Lugar (3 pts) */}
+            <div
+              className={`p-3 rounded-2xl border transition-all ${
+                firstPlayer
+                  ? 'bg-csc-gold/15 border-csc-gold shadow-sm shadow-csc-gold/10'
+                  : 'bg-white/[0.03] border-dashed border-white/20'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="text-[10.5px] font-display font-black uppercase tracking-wider text-csc-gold flex items-center gap-1">
+                  <Trophy size={13} className="text-csc-gold" />
+                  1º Lugar · 3 Pontos
+                </span>
+                {firstPlayer && (
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic('light'); setFirstChoiceId(null) }}
+                    className="p-1 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                    title="Remover 1º lugar"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              {firstPlayer ? (
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-7 h-7 rounded-full bg-csc-gold text-csc-tinta font-display font-black text-xs flex items-center justify-center shrink-0">
+                    {firstPlayer.jersey_number || '—'}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display font-extrabold text-xs text-white truncate">
+                      {firstPlayer.shirt_name || firstPlayer.name}
+                    </p>
+                    <p className="text-[10px] text-csc-gold truncate font-semibold">
+                      Melhor do jogo (+3 pts)
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-white/40 italic py-1">
+                  Toca num atleta abaixo para definir o 1º
+                </p>
+              )}
+            </div>
+
+            {/* Slot 2º Lugar (1 pt) */}
+            <div
+              className={`p-3 rounded-2xl border transition-all ${
+                secondPlayer
+                  ? 'bg-csc-blue/20 border-csc-blue/50 shadow-sm shadow-csc-blue/10'
+                  : 'bg-white/[0.03] border-dashed border-white/20'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="text-[10.5px] font-display font-black uppercase tracking-wider text-csc-azul-texto flex items-center gap-1">
+                  <Medal size={13} className="text-csc-azul-texto" />
+                  2º Lugar · 1 Ponto
+                </span>
+                {secondPlayer && (
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic('light'); setSecondChoiceId(null) }}
+                    className="p-1 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                    title="Remover 2º lugar"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              {secondPlayer ? (
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-7 h-7 rounded-full bg-csc-blue text-white font-display font-black text-xs flex items-center justify-center shrink-0">
+                    {secondPlayer.jersey_number || '—'}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display font-extrabold text-xs text-white truncate">
+                      {secondPlayer.shirt_name || secondPlayer.name}
+                    </p>
+                    <p className="text-[10px] text-csc-azul-texto truncate font-semibold">
+                      2º melhor do jogo (+1 pt)
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-white/40 italic py-1">
+                  Toca num atleta abaixo para definir o 2º
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
-        {loading ? (
-          <ACarregar texto="A carregar convocados do jogo..." />
-        ) : players.length === 0 ? (
-          <div className="text-center py-8 text-white/60 text-xs">
-            Nenhum atleta associado a este jogo.
+        {/* Lista de Atletas Disponíveis */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between px-1 pt-1">
+            <span className="text-xs font-display font-bold text-white/70">
+              Plantel do jogo ({players.length}):
+            </span>
           </div>
-        ) : (
-          <div className="space-y-1.5 max-h-[50vh] overflow-y-auto pr-1">
-            {players.map(p => {
-              const isSelected = selectedIds.includes(p.id)
-              const displayName = p.shirt_name || p.name
 
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => handleTogglePlayer(p.id)}
-                  className={`w-full text-left p-3 rounded-2xl flex items-center justify-between gap-3 transition-all duration-150 cursor-pointer border ${
-                    isSelected
-                      ? 'bg-csc-gold/15 border-csc-gold shadow-md shadow-csc-gold/10'
-                      : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.07]'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span
-                      className={`w-8 h-8 rounded-full font-display font-black text-xs flex items-center justify-center shrink-0 border ${
-                        isSelected
-                          ? 'bg-csc-gold text-csc-tinta border-csc-gold'
-                          : 'bg-csc-dark text-csc-gold border-csc-gold/40'
-                      }`}
-                    >
-                      {p.jersey_number || '—'}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-display font-extrabold text-[13px] text-white truncate">
-                        {displayName}
-                      </p>
-                      <div className="flex items-center gap-1.5 text-[10px] text-white/60 flex-wrap mt-0.5">
-                        {p.position && <span>{p.position}</span>}
-                        {p.goals ? (
-                          <span className="text-csc-gold font-bold">⚽ {p.goals} golo{p.goals > 1 ? 's' : ''}</span>
-                        ) : null}
-                        {p.assists ? (
-                          <span className="text-csc-azul-texto font-bold">👟 {p.assists} assist.</span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
+          {loading ? (
+            <ACarregar texto="A carregar convocados do jogo..." />
+          ) : players.length === 0 ? (
+            <div className="text-center py-8 text-white/60 text-xs">
+              Nenhum atleta associado a este jogo.
+            </div>
+          ) : (
+            <div className="space-y-1.5 max-h-[42vh] overflow-y-auto pr-1">
+              {players.map(p => {
+                const isFirst = firstChoiceId === p.id
+                const isSecond = secondChoiceId === p.id
+                const displayName = p.shirt_name || p.name
 
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border transition-all ${
-                      isSelected
-                        ? 'bg-csc-gold border-csc-gold text-csc-tinta'
-                        : 'border-white/25 bg-black/20 text-transparent'
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleTogglePlayer(p.id)}
+                    className={`w-full text-left p-3 rounded-2xl flex items-center justify-between gap-3 transition-all duration-150 cursor-pointer border ${
+                      isFirst
+                        ? 'bg-csc-gold/15 border-csc-gold shadow-md shadow-csc-gold/10'
+                        : isSecond
+                        ? 'bg-csc-blue/20 border-csc-blue/60 shadow-md shadow-csc-blue/10'
+                        : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.07]'
                     }`}
                   >
-                    <Check size={14} strokeWidth={3} />
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        )}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`w-8 h-8 rounded-full font-display font-black text-xs flex items-center justify-center shrink-0 border ${
+                          isFirst
+                            ? 'bg-csc-gold text-csc-tinta border-csc-gold'
+                            : isSecond
+                            ? 'bg-csc-blue text-white border-csc-blue'
+                            : 'bg-csc-dark text-csc-gold border-csc-gold/40'
+                        }`}
+                      >
+                        {p.jersey_number || '—'}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-display font-extrabold text-[13px] text-white truncate">
+                          {displayName}
+                        </p>
+                        <div className="flex items-center gap-1.5 text-[10px] text-white/60 flex-wrap mt-0.5">
+                          {p.position && <span>{p.position}</span>}
+                          {p.goals ? (
+                            <span className="text-csc-gold font-bold">⚽ {p.goals} golo{p.goals > 1 ? 's' : ''}</span>
+                          ) : null}
+                          {p.assists ? (
+                            <span className="text-csc-azul-texto font-bold">👟 {p.assists} assist.</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isFirst ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-csc-gold text-csc-tinta text-[11px] font-display font-black shadow-xs">
+                          <Check size={13} strokeWidth={3} />
+                          1º (3 pts)
+                        </span>
+                      ) : isSecond ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-csc-blue text-white text-[11px] font-display font-black shadow-xs">
+                          <Check size={13} strokeWidth={3} />
+                          2º (1 pt)
+                        </span>
+                      ) : (
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center border border-white/20 bg-black/20 text-transparent">
+                          <Check size={14} strokeWidth={3} />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Botão de Gravação */}
         <div className="pt-2">
           <Botao
             onClick={handleSubmit}
-            disabled={!isEligible || selectedIds.length !== 2 || submitting}
+            disabled={!isEligible || !firstChoiceId || !secondChoiceId || submitting}
             className="w-full justify-center text-sm py-3"
           >
             {!isEligible
               ? 'Apenas convocados e equipa técnica podem votar'
               : submitting
-              ? 'A gravar voto...'
-              : selectedIds.length === 2
+              ? 'A gravar votos...'
+              : firstChoiceId && secondChoiceId
               ? initialVote
-                ? 'Atualizar Votos'
-                : 'Confirmar Voto (2 jogadores)'
-              : `Seleciona mais ${2 - selectedIds.length} jogador${2 - selectedIds.length === 1 ? '' : 'es'}`}
+                ? 'Atualizar Votos (3 pts + 1 pt)'
+                : 'Confirmar Votos (3 pts + 1 pt)'
+              : !firstChoiceId
+              ? 'Escolhe o 1º Lugar (3 pts)'
+              : 'Escolhe o 2º Lugar (1 pt)'}
           </Botao>
         </div>
       </div>

@@ -245,16 +245,16 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const meu = votos.find(v => v.voter_id === profile?.id) || null
         setMeuVotoMvp(meu)
 
-        const contagem: Record<string, number> = {}
+        const pontos: Record<string, number> = {}
         for (const v of votos) {
-          if (v.player1_id) contagem[v.player1_id] = (contagem[v.player1_id] || 0) + 1
-          if (v.player2_id) contagem[v.player2_id] = (contagem[v.player2_id] || 0) + 1
+          if (v.player1_id) pontos[v.player1_id] = (pontos[v.player1_id] || 0) + 3
+          if (v.player2_id) pontos[v.player2_id] = (pontos[v.player2_id] || 0) + 1
         }
-        let maxVotos = 0
-        for (const cnt of Object.values(contagem)) {
-          if (cnt > maxVotos) maxVotos = cnt
+        let maxPontos = 0
+        for (const pts of Object.values(pontos)) {
+          if (pts > maxPontos) maxPontos = pts
         }
-        const eleitos = maxVotos > 0 ? Object.entries(contagem).filter(([_, c]) => c === maxVotos).map(([pid]) => pid) : []
+        const eleitos = maxPontos > 0 ? Object.entries(pontos).filter(([_, p]) => p === maxPontos).map(([pid]) => pid) : []
         setMvpEleitosIds(eleitos)
         // Convocado apenas se tiver convocatória válida (não recusada) ou participou no jogo
         const callupDoUser = profile?.id ? callupMap.get(profile.id) : null
@@ -740,7 +740,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                       className="px-3.5 py-1.5 rounded-xl bg-csc-gold text-csc-tinta font-display font-extrabold text-xs
                         hover:bg-csc-gold/90 transition-all flex items-center gap-1 shadow-md shadow-csc-gold/10 cursor-pointer active:scale-97 shrink-0"
                     >
-                      {meuVotoMvp ? 'Alterar Voto' : 'Votar (2 MVP)'}
+                      {meuVotoMvp ? 'Alterar Voto' : 'Votar MVP'}
                     </button>
                   )}
                 </div>
@@ -1293,16 +1293,16 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const meu = votos.find(v => v.voter_id === profile?.id) || null
         setMeuVotoMvp(meu)
 
-        const contagem: Record<string, number> = {}
+        const pontos: Record<string, number> = {}
         for (const v of votos) {
-          if (v.player1_id) contagem[v.player1_id] = (contagem[v.player1_id] || 0) + 1
-          if (v.player2_id) contagem[v.player2_id] = (contagem[v.player2_id] || 0) + 1
+          if (v.player1_id) pontos[v.player1_id] = (pontos[v.player1_id] || 0) + 3
+          if (v.player2_id) pontos[v.player2_id] = (pontos[v.player2_id] || 0) + 1
         }
-        let maxV = 0
-        for (const cnt of Object.values(contagem)) {
-          if (cnt > maxV) maxV = cnt
+        let maxP = 0
+        for (const pts of Object.values(pontos)) {
+          if (pts > maxP) maxP = pts
         }
-        const eleitos = maxV > 0 ? Object.entries(contagem).filter(([_, c]) => c === maxV).map(([pid]) => pid) : []
+        const eleitos = maxP > 0 ? Object.entries(pontos).filter(([_, p]) => p === maxP).map(([pid]) => pid) : []
         setMvpEleitosIds(eleitos)
         setEleitoresDoJogo(prev => prev.map(e => {
           const v = votos.find(vt => vt.voter_id === e.id)

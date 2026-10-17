@@ -147,7 +147,7 @@ export const AlertaMvpPendente: React.FC = () => {
               </h4>
 
               <p className="text-[11.5px] text-white/70 mt-1 leading-snug">
-                Já saiu a ficha de jogo ({dataFmt}). Vota nos <strong>2 jogadores</strong> que consideras terem estado melhor!
+                Já saiu a ficha de jogo ({dataFmt}). Vota no <strong>Melhor (3 pts)</strong> e no <strong>2º Melhor (1 pt)</strong> em campo!
               </p>
             </div>
           </div>
@@ -156,7 +156,7 @@ export const AlertaMvpPendente: React.FC = () => {
         <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
           <span className="text-[10px] text-white/50 italic flex items-center gap-1">
             <Sparkles size={11} className="text-csc-gold" />
-            2 votos por pessoa
+            1º Lugar (3 pts) + 2º Lugar (1 pt)
           </span>
           <button
             type="button"

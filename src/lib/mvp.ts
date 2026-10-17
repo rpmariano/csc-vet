@@ -124,27 +124,27 @@ export async function obterTodosVotosMvp(): Promise<MvpVote[]> {
   }
 }
 
-/** Sincroniza a coluna `is_mvp` na tabela `stats` com base no jogador mais votado */
+/** Sincroniza a coluna `is_mvp` na tabela `stats` com base no jogador com mais pontos (3 pts para 1º, 1 pt para 2º) */
 export async function sincronizarMvpNaTabelaStats(eventId: string): Promise<void> {
   try {
     const votos = await obterVotosDoJogo(eventId)
     if (votos.length === 0) return
 
-    const contagem: Record<string, number> = {}
+    const pontosMap: Record<string, number> = {}
     for (const v of votos) {
-      if (v.player1_id) contagem[v.player1_id] = (contagem[v.player1_id] || 0) + 1
-      if (v.player2_id) contagem[v.player2_id] = (contagem[v.player2_id] || 0) + 1
+      if (v.player1_id) pontosMap[v.player1_id] = (pontosMap[v.player1_id] || 0) + 3
+      if (v.player2_id) pontosMap[v.player2_id] = (pontosMap[v.player2_id] || 0) + 1
     }
 
-    let maxVotos = 0
-    for (const cnt of Object.values(contagem)) {
-      if (cnt > maxVotos) maxVotos = cnt
+    let maxPontos = 0
+    for (const pts of Object.values(pontosMap)) {
+      if (pts > maxPontos) maxPontos = pts
     }
 
-    if (maxVotos === 0) return
+    if (maxPontos === 0) return
 
-    const vencedores = Object.entries(contagem)
-      .filter(([, cnt]) => cnt === maxVotos)
+    const vencedores = Object.entries(pontosMap)
+      .filter(([, pts]) => pts === maxPontos)
       .map(([pid]) => pid)
 
     // Atualiza todos os stats deste evento
@@ -423,7 +423,8 @@ export function textoFichaJogoWhatsApp(
   linhas.push('━━━━━━━━━━━━━━━━━━━━━')
   linhas.push('🏆 *VOTAÇÃO MVP DO JOGO*')
   linhas.push('A ficha de jogo já está disponível na aplicação!')
-  linhas.push('Acede ao link abaixo e vota nos *2 jogadores* que consideras terem estado melhor em campo:')
+  linhas.push('Acede ao link abaixo e vota no *Melhor (3 pts)* e no *2º Melhor (1 pt)* em campo:')
+  linhas.push('👉 O jogador com mais pontos será eleito o MVP da partida!')
   linhas.push('')
   linhas.push(`👉 ${url}`)
   linhas.push('━━━━━━━━━━━━━━━━━━━━━')

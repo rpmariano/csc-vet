@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import {
   Award,
   Trophy,
@@ -8,18 +8,27 @@ import {
   Lock,
   Sparkles,
   Calendar,
+  SlidersHorizontal,
+  FileText,
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
+import { useClub } from '../context/ClubContext'
 import { temAcessoMVP, obterTodosVotosMvp, type MvpVote, type PlayerSummary } from '../lib/mvp'
-import { CartaoSimples, EtiquetaSeccao, ACarregar, EstadoVazio, FilaSeparadores } from '../components/ui'
+import { ACarregar, EstadoVazio, FilaSeparadores, Botao } from '../components/ui'
+import { BottomSheet } from '../components/BottomSheet'
+import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
+import { MatchReportModal } from '../components/MatchReportModal'
 import { triggerHaptic } from '../utils/haptics'
-import { CLUBE_SIGLA } from '../lib/clube'
+import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
+import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
+import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 
 interface Opponent {
   id: string
   name: string
   initials?: string | null
+  logo_url?: string | null
 }
 
 interface Tournament {
@@ -52,6 +61,7 @@ const SEPARADORES_VISTA = ['Classificações', 'Jogos & Votos'] as const
 
 export const MvpPage: React.FC = () => {
   const { profile } = useAuth()
+  const { clubSettings } = useClub()
   const [loading, setLoading] = useState(true)
   const [matches, setMatches] = useState<MatchEvent[]>([])
   const [tournaments, setTournaments] = useState<Tournament[]>([])
@@ -60,120 +70,127 @@ export const MvpPage: React.FC = () => {
 
   // Filtros
   const [selectedComp, setSelectedComp] = useState<string>('all')
+  const [voteFilter, setVoteFilter] = useState<'all' | 'with_votes' | 'no_votes'>('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
+
+  // Vistas e Seleção
   const [vistaIndice, setVistaIndice] = useState(0)
   const [tabelaAtiva, setTabelaAtiva] = useState<'mvpWins' | 'totalVotes'>('mvpWins')
   const [jogoExpandido, setJogoExpandido] = useState<string | null>(null)
+  const [eventoParaFicha, setEventoParaFicha] = useState<MatchEvent | null>(null)
 
   const autorizado = useMemo(() => temAcessoMVP(profile), [profile])
+  const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
 
-  useEffect(() => {
+  const carregarDados = useCallback(async () => {
     if (!autorizado) return
+    setLoading(true)
+    try {
+      const [
+        { data: eventsData },
+        { data: tourData },
+        { data: profilesData },
+        votosData,
+      ] = await Promise.all([
+        supabase
+          .from('events')
+          .select('id, title, date_time, is_friendly, tournament_id, opponent_id, home_away, home_score, away_score, opponent:opponents(id, name, initials, logo_url), tournament:tournaments(id, name, season, rules)')
+          .eq('type', 'match')
+          .order('date_time', { ascending: false }),
+        supabase.from('tournaments').select('id, name, season').order('name'),
+        supabase.from('v_players_public').select('id, name, shirt_name, jersey_number, photo_url, position'),
+        obterTodosVotosMvp(),
+      ])
 
-    let cancelado = false
-    const carregar = async () => {
-      setLoading(true)
-      try {
-        const [
-          { data: eventsData },
-          { data: tourData },
-          { data: profilesData },
-          votosData,
-        ] = await Promise.all([
-          supabase
-            .from('events')
-            .select('id, title, date_time, is_friendly, tournament_id, opponent_id, home_away, home_score, away_score, opponent:opponents(id, name, initials), tournament:tournaments(id, name, season)')
-            .eq('type', 'match')
-            .order('date_time', { ascending: false }),
-          supabase.from('tournaments').select('id, name, season').order('name'),
-          supabase.from('v_players_public').select('id, name, shirt_name, jersey_number, photo_url, position'),
-          obterTodosVotosMvp(),
-        ])
+      const mappedMatches = (eventsData || []).map((e: any) => ({
+        ...e,
+        opponent: Array.isArray(e.opponent) ? e.opponent[0] : e.opponent,
+        tournament: Array.isArray(e.tournament) ? e.tournament[0] : e.tournament,
+      })) as MatchEvent[]
 
-        if (cancelado) return
+      setMatches(mappedMatches)
+      setTournaments((tourData || []) as Tournament[])
 
-        const mappedMatches = (eventsData || []).map((e: any) => ({
-          ...e,
-          opponent: Array.isArray(e.opponent) ? e.opponent[0] : e.opponent,
-          tournament: Array.isArray(e.tournament) ? e.tournament[0] : e.tournament,
-        })) as MatchEvent[]
-
-        setMatches(mappedMatches)
-        setTournaments((tourData || []) as Tournament[])
-
-        const map = new Map<string, PlayerSummary>()
-        for (const p of profilesData || []) {
-          map.set(p.id, p)
-        }
-        setPlayersMap(map)
-        setAllVotes(votosData)
-      } catch (err) {
-        console.error('Erro ao carregar dados do ecrã MVP:', err)
-      } finally {
-        if (!cancelado) setLoading(false)
+      const map = new Map<string, PlayerSummary>()
+      for (const p of profilesData || []) {
+        map.set(p.id, p)
       }
-    }
-
-    carregar()
-    return () => {
-      cancelado = true
+      setPlayersMap(map)
+      setAllVotes(votosData)
+    } catch (err) {
+      console.error('Erro ao carregar dados do ecrã MVP:', err)
+    } finally {
+      setLoading(false)
     }
   }, [autorizado])
 
-  // Filtrar jogos pela competição selecionada
-  const filteredMatches = useMemo(() => {
-    return matches.filter(m => {
-      if (selectedComp === 'all') return true
-      if (selectedComp === 'friendly') {
-        return m.is_friendly || !m.tournament_id
-      }
-      return m.tournament_id === selectedComp
-    })
-  }, [matches, selectedComp])
+  useEffect(() => {
+    carregarDados()
+  }, [carregarDados])
 
-  const filteredMatchIds = useMemo(() => new Set(filteredMatches.map(m => m.id)), [filteredMatches])
-
-  // Votos relevantes para o filtro ativo
-  const filteredVotes = useMemo(() => {
-    return allVotes.filter(v => filteredMatchIds.has(v.event_id))
-  }, [allVotes, filteredMatchIds])
-
-  // Processar votos e apurar MVP por jogo
+  // Processar votos e apurar MVP por jogo com base em PONTOS (3 pts para 1º, 1 pt para 2º)
   const resultadosPorJogo = useMemo(() => {
     const mapa = new Map<
       string,
       {
         totalVotantes: number
         totalVotos: number
-        contagem: { playerId: string; votos: number; player?: PlayerSummary }[]
+        totalPontos: number
+        contagem: {
+          playerId: string
+          pontos: number
+          votos1: number
+          votos2: number
+          votos: number
+          player?: PlayerSummary
+        }[]
         mvpIds: string[]
-        maxVotos: number
+        maxPontos: number
         votosDetalhados: { voterId: string; voterName: string; escolhas: [string, string] }[]
       }
     >()
 
     for (const m of matches) {
       const votosDoJogo = allVotes.filter(v => v.event_id === m.id)
-      const contagemMap: Record<string, number> = {}
+      const pontosMap: Record<string, number> = {}
+      const votos1Map: Record<string, number> = {}
+      const votos2Map: Record<string, number> = {}
+      const votosTotalMap: Record<string, number> = {}
 
       for (const v of votosDoJogo) {
-        if (v.player1_id) contagemMap[v.player1_id] = (contagemMap[v.player1_id] || 0) + 1
-        if (v.player2_id) contagemMap[v.player2_id] = (contagemMap[v.player2_id] || 0) + 1
+        if (v.player1_id) {
+          pontosMap[v.player1_id] = (pontosMap[v.player1_id] || 0) + 3
+          votos1Map[v.player1_id] = (votos1Map[v.player1_id] || 0) + 1
+          votosTotalMap[v.player1_id] = (votosTotalMap[v.player1_id] || 0) + 1
+        }
+        if (v.player2_id) {
+          pontosMap[v.player2_id] = (pontosMap[v.player2_id] || 0) + 1
+          votos2Map[v.player2_id] = (votos2Map[v.player2_id] || 0) + 1
+          votosTotalMap[v.player2_id] = (votosTotalMap[v.player2_id] || 0) + 1
+        }
       }
 
-      let max = 0
-      for (const c of Object.values(contagemMap)) {
-        if (c > max) max = c
+      let maxPontos = 0
+      for (const p of Object.values(pontosMap)) {
+        if (p > maxPontos) maxPontos = p
       }
 
-      const mvpIds = max > 0 ? Object.entries(contagemMap).filter(([, c]) => c === max).map(([pid]) => pid) : []
+      const mvpIds = maxPontos > 0 ? Object.entries(pontosMap).filter(([, p]) => p === maxPontos).map(([pid]) => pid) : []
 
-      const contagem = Object.entries(contagemMap)
-        .map(([playerId, votos]) => ({
+      const contagem = Object.keys(pontosMap)
+        .map(playerId => ({
           playerId,
-          votos,
+          pontos: pontosMap[playerId] || 0,
+          votos1: votos1Map[playerId] || 0,
+          votos2: votos2Map[playerId] || 0,
+          votos: votosTotalMap[playerId] || 0,
           player: playersMap.get(playerId),
         }))
-        .sort((a, b) => b.votos - a.votos)
+        .sort((a, b) => {
+          if (b.pontos !== a.pontos) return b.pontos - a.pontos
+          return b.votos - a.votos
+        })
 
       const votosDetalhados = votosDoJogo.map(v => {
         const voter = playersMap.get(v.voter_id)
@@ -187,9 +204,10 @@ export const MvpPage: React.FC = () => {
       mapa.set(m.id, {
         totalVotantes: votosDoJogo.length,
         totalVotos: votosDoJogo.length * 2,
+        totalPontos: votosDoJogo.length * 4,
         contagem,
         mvpIds,
-        maxVotos: max,
+        maxPontos,
         votosDetalhados,
       })
     }
@@ -197,11 +215,69 @@ export const MvpPage: React.FC = () => {
     return mapa
   }, [matches, allVotes, playersMap])
 
-  // Totalizadores para as 2 tabelas classificativas
+  // 1. Filtrar apenas jogos ocorridos (data passada OU com resultado OU com votos)
+  const pastMatches = useMemo(() => {
+    const now = Date.now()
+    return matches.filter(m => {
+      const eventTime = new Date(m.date_time).getTime()
+      const hasScore = m.home_score !== null && m.home_score !== undefined
+      const hasVotes = (resultadosPorJogo.get(m.id)?.totalVotos || 0) > 0
+      return eventTime <= now || hasScore || hasVotes
+    })
+  }, [matches, resultadosPorJogo])
+
+  // 2. Filtrar jogos pela competição selecionada ('all' | tournament_id | 'friendly')
+  const matchesByComp = useMemo(() => {
+    return pastMatches.filter(m => {
+      if (selectedComp === 'all') return true
+      if (selectedComp === 'friendly') {
+        return m.is_friendly || !m.tournament_id
+      }
+      return m.tournament_id === selectedComp
+    })
+  }, [pastMatches, selectedComp])
+
+  // 3. Filtrar jogos por pesquisa de texto e estado de votação
+  const filteredMatches = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    return matchesByComp.filter(m => {
+      const res = resultadosPorJogo.get(m.id)
+      const temVotos = (res?.totalVotos || 0) > 0
+      if (voteFilter === 'with_votes' && !temVotos) return false
+      if (voteFilter === 'no_votes' && temVotos) return false
+
+      if (!term) return true
+      const oppName = (m.opponent?.name || '').toLowerCase()
+      const oppInitials = (m.opponent?.initials || '').toLowerCase()
+      const tourName = (m.tournament?.name || '').toLowerCase()
+      const title = (m.title || '').toLowerCase()
+
+      const playersInMatch = (res?.contagem || []).some(c => {
+        const pName = (c.player?.name || '').toLowerCase()
+        const pShirt = (c.player?.shirt_name || '').toLowerCase()
+        return pName.includes(term) || pShirt.includes(term)
+      })
+
+      return (
+        oppName.includes(term) ||
+        oppInitials.includes(term) ||
+        tourName.includes(term) ||
+        title.includes(term) ||
+        playersInMatch
+      )
+    })
+  }, [matchesByComp, searchTerm, voteFilter, resultadosPorJogo])
+
+  // Votos relevantes para o filtro ativo de competição
+  const filteredCompMatchIds = useMemo(() => new Set(matchesByComp.map(m => m.id)), [matchesByComp])
+  const filteredVotes = useMemo(() => {
+    return allVotes.filter(v => filteredCompMatchIds.has(v.event_id))
+  }, [allVotes, filteredCompMatchIds])
+
+  // Totalizadores para as 2 tabelas classificativas (baseados na competição ativa)
   const leaderboard = useMemo(() => {
     const stats: Record<string, PlayerStatsMvp> = {}
 
-    // Inicializar jogadores que receberam votos
     for (const v of filteredVotes) {
       const pids = [v.player1_id, v.player2_id].filter(Boolean)
       for (const pid of pids) {
@@ -223,8 +299,7 @@ export const MvpPage: React.FC = () => {
       }
     }
 
-    // Contar vitórias de MVP por jogo e jogos em que foi votado
-    for (const m of filteredMatches) {
+    for (const m of matchesByComp) {
       const res = resultadosPorJogo.get(m.id)
       if (!res) continue
 
@@ -244,7 +319,7 @@ export const MvpPage: React.FC = () => {
     }
 
     return Object.values(stats)
-  }, [filteredVotes, filteredMatches, resultadosPorJogo, playersMap])
+  }, [filteredVotes, matchesByComp, resultadosPorJogo, playersMap])
 
   // Tabela 1: Mais Prémios MVP
   const rankingMvpWins = useMemo(() => {
@@ -266,36 +341,35 @@ export const MvpPage: React.FC = () => {
       })
   }, [leaderboard])
 
-  // Agrupar jogos por competição
-  const jogosAgrupados = useMemo(() => {
-    const grupos: { nome: string; torneioId: string | null; isFriendly: boolean; jogos: MatchEvent[] }[] = []
+  // Rótulo descritivo da competição ativa
+  const compLabel = useMemo(() => {
+    if (selectedComp === 'all') return 'Toda a Época'
+    if (selectedComp === 'friendly') return 'Amigáveis / Treino'
+    const tour = tournaments.find(t => t.id === selectedComp)
+    return tour?.name || 'Competição'
+  }, [selectedComp, tournaments])
 
-    // 1. Torneios oficiais
-    for (const t of tournaments) {
-      const jogosDoTorneio = filteredMatches.filter(m => m.tournament_id === t.id)
-      if (jogosDoTorneio.length > 0) {
-        grupos.push({
-          nome: t.name,
-          torneioId: t.id,
-          isFriendly: false,
-          jogos: jogosDoTorneio,
-        })
-      }
+  const resumoFiltros = useMemo(() => {
+    const list: string[] = []
+    if (selectedComp !== 'all') {
+      list.push(compLabel)
     }
-
-    // 2. Jogos amigáveis / de treino
-    const amigaveis = filteredMatches.filter(m => m.is_friendly || !m.tournament_id)
-    if (amigaveis.length > 0) {
-      grupos.push({
-        nome: 'Jogos Amigáveis & Treino',
-        torneioId: null,
-        isFriendly: true,
-        jogos: amigaveis,
-      })
+    if (voteFilter === 'with_votes') {
+      list.push('Com votos')
+    } else if (voteFilter === 'no_votes') {
+      list.push('Sem votos')
     }
+    return list
+  }, [selectedComp, compLabel, voteFilter])
 
-    return grupos
-  }, [filteredMatches, tournaments])
+  const temFiltros = selectedComp !== 'all' || voteFilter !== 'all' || searchTerm.trim() !== ''
+
+  const limparFiltros = () => {
+    triggerHaptic('light')
+    setSelectedComp('all')
+    setVoteFilter('all')
+    setSearchTerm('')
+  }
 
   if (!autorizado) {
     return (
@@ -318,50 +392,8 @@ export const MvpPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-5 pb-8">
-      {/* 1. Barra de Filtro de Competição */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <button
-          type="button"
-          onClick={() => { triggerHaptic('light'); setSelectedComp('all') }}
-          className={`h-9 px-4 rounded-xl font-display font-extrabold text-xs whitespace-nowrap transition-all cursor-pointer ${
-            selectedComp === 'all'
-              ? 'bg-csc-gold text-csc-tinta shadow-md shadow-csc-gold/10'
-              : 'bg-white/[0.06] text-white/70 hover:bg-white/10 hover:text-white border border-white/10'
-          }`}
-        >
-          Toda a Época
-        </button>
-
-        {tournaments.map(t => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => { triggerHaptic('light'); setSelectedComp(t.id) }}
-            className={`h-9 px-4 rounded-xl font-display font-extrabold text-xs whitespace-nowrap transition-all cursor-pointer ${
-              selectedComp === t.id
-                ? 'bg-csc-gold text-csc-tinta shadow-md shadow-csc-gold/10'
-                : 'bg-white/[0.06] text-white/70 hover:bg-white/10 hover:text-white border border-white/10'
-            }`}
-          >
-            {t.name}
-          </button>
-        ))}
-
-        <button
-          type="button"
-          onClick={() => { triggerHaptic('light'); setSelectedComp('friendly') }}
-          className={`h-9 px-4 rounded-xl font-display font-extrabold text-xs whitespace-nowrap transition-all cursor-pointer ${
-            selectedComp === 'friendly'
-              ? 'bg-csc-gold text-csc-tinta shadow-md shadow-csc-gold/10'
-              : 'bg-white/[0.06] text-white/70 hover:bg-white/10 hover:text-white border border-white/10'
-          }`}
-        >
-          Amigáveis / Treino
-        </button>
-      </div>
-
-      {/* 2. Seletor de Vista (Classificações vs Jogos) */}
+    <div className="space-y-4 pb-12">
+      {/* 1. Seletor de Vista (Classificações vs Jogos & Votos) */}
       <FilaSeparadores
         itens={SEPARADORES_VISTA}
         ativo={vistaIndice}
@@ -370,10 +402,110 @@ export const MvpPage: React.FC = () => {
         idPainel="painel-mvp-vistas"
       />
 
-      {/* 3. VISTA: TABELAS CLASSIFICATIVAS */}
+      {/* 2. Barra de Procura e Filtro Integrada */}
+      <ProcuraEFiltros
+        procura={searchTerm}
+        aoProcurar={setSearchTerm}
+        placeholder={vistaIndice === 0 ? "Procurar atleta ou prova..." : "Adversário, prova ou atleta..."}
+        rotulo="Procurar no MVP"
+        aoAbrirFiltros={() => setFiltrosAbertos(true)}
+        filtrosAtivos={resumoFiltros.length > 0}
+        resumo={resumoFiltros}
+        contagem={
+          vistaIndice === 0
+            ? `${rankingMvpWins.length} atletas`
+            : `${filteredMatches.length} ${filteredMatches.length === 1 ? 'jogo' : 'jogos'}`
+        }
+        aoLimpar={limparFiltros}
+      />
+
+      {/* 3. Persiana de Filtros (BottomSheet com Competição Dinâmica e Estado de Votos) */}
+      <BottomSheet
+        isOpen={filtrosAbertos}
+        onClose={() => setFiltrosAbertos(false)}
+        title="Filtrar MVP"
+        description="Escolhe a competição ou âmbito dos jogos"
+        tone="dark"
+        icon={
+          <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
+            <SlidersHorizontal size={17} />
+          </div>
+        }
+        footer={
+          <>
+            <Botao aparencia="vidro" onClick={limparFiltros} disabled={!temFiltros}>
+              Limpar
+            </Botao>
+            <Botao onClick={() => setFiltrosAbertos(false)}>
+              Aplicar filtros
+            </Botao>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {/* Seletor Dinâmico de Competição */}
+          <div>
+            <label className={ETIQUETA} htmlFor="filtro-mvp-comp">
+              Competição / Âmbito
+            </label>
+            <select
+              id="filtro-mvp-comp"
+              value={selectedComp}
+              onChange={e => { triggerHaptic('selection'); setSelectedComp(e.target.value) }}
+              className={CAMPO}
+            >
+              <option value="all">Toda a Época (Geral)</option>
+              {tournaments.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.name}{t.season ? ` (${t.season})` : ''}
+                </option>
+              ))}
+              <option value="friendly">Jogos Amigáveis & Treino</option>
+            </select>
+          </div>
+
+          {/* Filtro de Estado de Voto (relevante para os jogos) */}
+          {vistaIndice === 1 && (
+            <div>
+              <label className={ETIQUETA} htmlFor="filtro-mvp-estado">
+                Estado da Votação
+              </label>
+              <select
+                id="filtro-mvp-estado"
+                value={voteFilter}
+                onChange={e => { triggerHaptic('selection'); setVoteFilter(e.target.value as any) }}
+                className={CAMPO}
+              >
+                <option value="all">Todos os jogos realizados</option>
+                <option value="with_votes">Apenas jogos com votos registados</option>
+                <option value="no_votes">Apenas jogos sem votos ainda</option>
+              </select>
+            </div>
+          )}
+        </div>
+      </BottomSheet>
+
+      {/* 4. VISTA: CLASSIFICAÇÕES */}
       {vistaIndice === 0 && (
         <div className="space-y-4">
-          {/* Seletor entre as 2 competições/totalizadores */}
+          {/* Indicador da competição a contar */}
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] font-display font-extrabold uppercase tracking-wider text-csc-gold flex items-center gap-1.5">
+              <Trophy size={13} />
+              A contar: {compLabel}
+            </span>
+            {selectedComp !== 'all' && (
+              <button
+                type="button"
+                onClick={() => { triggerHaptic('light'); setSelectedComp('all') }}
+                className="text-[10px] text-white/50 hover:text-white underline cursor-pointer"
+              >
+                Ver época inteira
+              </button>
+            )}
+          </div>
+
+          {/* Seletor entre as 2 tabelas classificativas */}
           <div className="grid grid-cols-2 gap-2 bg-white/[0.04] p-1.5 rounded-2xl border border-white/10">
             <button
               type="button"
@@ -403,16 +535,16 @@ export const MvpPage: React.FC = () => {
           </div>
 
           {/* Explicação da métrica */}
-          <div className="px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-[11.5px] text-white/60 leading-snug flex items-start gap-2">
+          <div className="px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] text-white/60 leading-snug flex items-start gap-2">
             <Sparkles size={14} className="text-csc-gold shrink-0 mt-0.5" />
             <p>
               {tabelaAtiva === 'mvpWins' ? (
                 <>
-                  <strong>Mais Nomeações MVP:</strong> Ordena os atletas pelo número de vezes que foram eleitos o <em>Melhor em Campo</em> num jogo.
+                  <strong>Mais Prémios MVP:</strong> Atletas com mais eleições de <em>Melhor em Campo</em> em {compLabel.toLowerCase()} (em cada jogo, o 1º escolhido ganha 3 pts e o 2º ganha 1 pt; vence o jogo quem acumular mais pontos).
                 </>
               ) : (
                 <>
-                  <strong>Total de Votos Recebidos:</strong> Recompensa a regularidade ao somar todos os votos individuais que cada jogador recebeu ao longo da época.
+                  <strong>Mais Votados (Total):</strong> Soma de todas as nomeações individuais ao longo da época (cada voto recebido como 1º ou como 2º conta como 1 voto).
                 </>
               )}
             </p>
@@ -449,7 +581,6 @@ export const MvpPage: React.FC = () => {
                         className="px-3.5 py-3 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          {/* Posição */}
                           <span
                             className={`w-6 text-center font-display font-black text-xs shrink-0 ${
                               pos === 1
@@ -464,26 +595,23 @@ export const MvpPage: React.FC = () => {
                             {pos}º
                           </span>
 
-                          {/* Número da camisola */}
-                          <span className="w-7 h-7 rounded-full bg-csc-dark text-csc-gold border border-csc-gold/40 font-display font-black text-[11px] flex items-center justify-center shrink-0">
+                          <span className="w-8 h-8 rounded-full bg-csc-dark text-csc-gold border border-csc-gold/40 font-display font-black text-xs flex items-center justify-center shrink-0">
                             {p.jersey_number || '—'}
                           </span>
 
-                          {/* Nome e Posição */}
                           <div className="min-w-0">
                             <p className="font-display font-extrabold text-[13px] text-white truncate">
                               {p.shirt_name || p.name}
                             </p>
                             <p className="text-[10px] text-white/50 truncate">
-                              {p.position || 'Jogador'} • {p.totalVotes} {p.totalVotes === 1 ? 'voto total' : 'votos totais'}
+                              {p.position || 'Jogador'} • {p.totalVotes} {p.totalVotes === 1 ? 'voto recebido' : 'votos recebidos'}
                             </p>
                           </div>
                         </div>
 
-                        {/* Contagem de MVP */}
                         <div className="text-right shrink-0">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-csc-gold/15 text-csc-gold border border-csc-gold/30 font-display font-black text-xs">
-                            <Award size={13} />
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-csc-gold/20 text-csc-gold border border-csc-gold/30 font-display font-black text-xs">
+                            <Award size={14} />
                             {p.mvpWins} {p.mvpWins === 1 ? 'MVP' : 'MVPs'}
                           </span>
                         </div>
@@ -499,7 +627,7 @@ export const MvpPage: React.FC = () => {
                 <EstadoVazio
                   icone={Vote}
                   titulo="Sem votos registados"
-                  texto="Os votos atribuídos aos atletas ao longo da época aparecerão totalizados aqui."
+                  texto="Os votos atribuídos aos atletas aparecerão totalizados aqui."
                 />
               </div>
             ) : (
@@ -537,7 +665,7 @@ export const MvpPage: React.FC = () => {
                             {pos}º
                           </span>
 
-                          <span className="w-7 h-7 rounded-full bg-csc-dark text-csc-gold border border-csc-gold/40 font-display font-black text-[11px] flex items-center justify-center shrink-0">
+                          <span className="w-8 h-8 rounded-full bg-csc-dark text-csc-gold border border-csc-gold/40 font-display font-black text-xs flex items-center justify-center shrink-0">
                             {p.jersey_number || '—'}
                           </span>
 
@@ -552,7 +680,7 @@ export const MvpPage: React.FC = () => {
                         </div>
 
                         <div className="text-right shrink-0">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-csc-blue/20 text-csc-azul-texto border border-csc-blue/30 font-display font-black text-xs">
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-csc-blue/20 text-csc-azul-texto border border-csc-blue/30 font-display font-black text-xs">
                             <Vote size={13} />
                             {p.totalVotes} {p.totalVotes === 1 ? 'voto' : 'votos'}
                           </span>
@@ -567,203 +695,296 @@ export const MvpPage: React.FC = () => {
         </div>
       )}
 
-      {/* 4. VISTA: JOGOS & VOTAÇÕES (LISTA POR JOGO AGRUPADA) */}
+      {/* 5. VISTA: JOGOS & VOTOS (Estilo limpo igual às Fichas de Jogo) */}
       {vistaIndice === 1 && (
-        <div className="space-y-6">
-          {jogosAgrupados.length === 0 ? (
+        <div className="space-y-3">
+          {filteredMatches.length === 0 ? (
             <div className="py-12">
               <EstadoVazio
                 icone={Calendar}
                 titulo="Nenhum jogo encontrado"
-                texto="Não existem jogos registados para o filtro selecionado."
+                texto={temFiltros ? "Tenta ajustar a pesquisa ou o filtro de competição." : "Assim que houver jogos realizados, aparecerão listados aqui."}
               />
             </div>
           ) : (
-            jogosAgrupados.map(grupo => (
-              <div key={grupo.nome} className="space-y-3">
-                <div className="flex items-center gap-2 px-1">
-                  <EtiquetaSeccao como="h3" className="text-csc-gold font-display font-extrabold text-xs uppercase tracking-wider">
-                    {grupo.nome}
-                  </EtiquetaSeccao>
-                  <span className="text-[10px] text-white/40">
-                    ({grupo.jogos.length} {grupo.jogos.length === 1 ? 'jogo' : 'jogos'})
-                  </span>
-                </div>
+            filteredMatches.map(m => {
+              const res = resultadosPorJogo.get(m.id)
+              const temVotos = res && res.totalVotos > 0
+              const expandido = jogoExpandido === m.id
 
-                <div className="space-y-3">
-                  {grupo.jogos.map(j => {
-                    const res = resultadosPorJogo.get(j.id)
-                    const d = new Date(j.date_time)
-                    const dataFmt = d.toLocaleDateString('pt-PT', {
-                      weekday: 'short',
-                      day: '2-digit',
-                      month: 'short',
-                    })
-                    const csc = CLUBE_SIGLA
-                    const opp = j.opponent?.initials || j.opponent?.name || 'Adversário'
-                    const confronto = j.home_away === 'away' ? `${opp} vs ${csc}` : `${csc} vs ${opp}`
-                    const placar =
-                      j.home_score !== null && j.away_score !== null
-                        ? j.home_away === 'away'
-                          ? `${j.away_score} - ${j.home_score}`
-                          : `${j.home_score} - ${j.away_score}`
-                        : null
+              const dateObj = new Date(m.date_time)
+              const dataCurta = [
+                dateObj.toLocaleDateString('pt-PT', { weekday: 'short' }).replace(/\.?(-feira)?,?$/, ''),
+                dateObj.getDate(),
+                dateObj.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', ''),
+              ].join(' ').replace(' ', ', ')
+              const hora = dateObj.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
 
-                    const expandido = jogoExpandido === j.id
-                    const temVotos = res && res.totalVotos > 0
+              const isAway = m.home_away === 'away'
+              const cscSigla = formatClubSigla(clubSettings?.initials)
+              const oppSigla = formatOpponentSigla(m.opponent)
 
-                    return (
-                      <CartaoSimples key={j.id} className="p-4 space-y-3.5">
-                        {/* Linha de Topo do Jogo */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <span className="text-[10px] font-display font-extrabold uppercase tracking-wider text-white/50">
-                              {dataFmt}
-                            </span>
-                            <h4 className="font-display font-extrabold text-sm text-white mt-0.5">
-                              {confronto}
-                            </h4>
-                          </div>
+              const leftSigla = isAway ? oppSigla : cscSigla
+              const rightSigla = isAway ? cscSigla : oppSigla
 
-                          {placar && (
-                            <span className="px-2.5 py-1 rounded-xl bg-black/40 border border-white/10 text-white font-display font-black text-xs tabular-nums">
-                              {placar}
-                            </span>
-                          )}
+              const cscLogo = obterEmblemaEfetivo(clubSettings?.logo_url, 'Cascais', cscSigla)
+              const oppLogo = obterEmblemaEfetivo(m.opponent?.logo_url, m.opponent?.name, oppSigla)
+              const leftLogo = isAway ? oppLogo : cscLogo
+              const rightLogo = isAway ? cscLogo : oppLogo
+
+              const hasScore = m.home_score !== null && m.home_score !== undefined
+              const leftScore = isAway ? m.away_score : m.home_score
+              const rightScore = isAway ? m.home_score : m.away_score
+
+              return (
+                <div
+                  key={m.id}
+                  className="cartao-simples w-full p-3.5 space-y-3 transition-colors"
+                >
+                  {/* Linha superior: Data à esquerda, competição à direita */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-display font-black text-[11.5px] text-white capitalize">
+                      {dataCurta} · {hora}
+                    </span>
+
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      {m.tournament ? (
+                        <span className="font-display font-bold text-[9.5px] text-csc-verde-texto bg-csc-light/15 px-2.5 py-0.5 rounded-full truncate max-w-[150px]">
+                          {m.tournament.name}
+                        </span>
+                      ) : m.is_friendly ? (
+                        <span className="font-display font-bold text-[9.5px] text-csc-gold bg-csc-gold/12 px-2.5 py-0.5 rounded-full">
+                          Amigável
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+
+                  {/* Confronto e Placar central */}
+                  <div className="flex items-center justify-between gap-2 py-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      {leftLogo ? (
+                        <img src={leftLogo} alt="" className="w-6 h-6 object-contain shrink-0" />
+                      ) : (
+                        <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center font-display font-black text-[10px] text-white/70 shrink-0">
+                          {leftSigla.slice(0, 2)}
+                        </span>
+                      )}
+                      <span className="font-display font-extrabold text-[13px] text-white truncate">
+                        {leftSigla}
+                      </span>
+                    </div>
+
+                    {hasScore ? (
+                      <div className="px-3 py-1 rounded-xl bg-black/40 border border-white/10 font-display font-black text-sm text-white tabular-nums shrink-0">
+                        {leftScore} - {rightScore}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-white/40 font-semibold px-2 shrink-0">vs</span>
+                    )}
+
+                    <div className="flex items-center gap-2 min-w-0 flex-1 justify-end text-right">
+                      <span className="font-display font-extrabold text-[13px] text-white truncate">
+                        {rightSigla}
+                      </span>
+                      {rightLogo ? (
+                        <img src={rightLogo} alt="" className="w-6 h-6 object-contain shrink-0" />
+                      ) : (
+                        <span className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center font-display font-black text-[10px] text-white/70 shrink-0">
+                          {rightSigla.slice(0, 2)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Destaque do MVP do jogo */}
+                  {temVotos && res.mvpIds.length > 0 ? (
+                    <div className="p-3 rounded-xl bg-gradient-to-r from-csc-gold/20 via-csc-gold/10 to-transparent border border-csc-gold/40 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 font-black shadow-xs">
+                          <Award size={16} />
                         </div>
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-display font-bold uppercase tracking-wider text-csc-gold block">
+                            MVP da Partida
+                          </span>
+                          <p className="font-display font-black text-sm text-white truncate">
+                            {res.mvpIds
+                              .map(pid => {
+                                const p = playersMap.get(pid)
+                                return p?.shirt_name || p?.name || 'Atleta'
+                              })
+                              .join(' & ')}
+                          </p>
+                        </div>
+                      </div>
 
-                        {/* Destaque do MVP do jogo */}
-                        {temVotos ? (
-                          <div className="p-3 rounded-xl bg-csc-gold/15 border border-csc-gold/30 flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="w-8 h-8 rounded-full bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 font-black">
-                                <Award size={16} />
-                              </div>
-                              <div className="min-w-0">
-                                <span className="text-[10px] font-display font-bold uppercase tracking-wider text-csc-gold block">
-                                  MVP do Jogo
-                                </span>
-                                <p className="font-display font-black text-xs text-white truncate">
-                                  {res.mvpIds
-                                    .map(pid => {
-                                      const p = playersMap.get(pid)
-                                      return p?.shirt_name || p?.name || 'Atleta'
-                                    })
-                                    .join(' & ')}
-                                </p>
-                              </div>
-                            </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[11px] font-display font-black text-csc-gold bg-csc-gold/20 px-2 py-0.5 rounded-lg border border-csc-gold/30 block">
+                          {res.maxPontos} {res.maxPontos === 1 ? 'ponto' : 'pontos'}
+                        </span>
+                        <span className="text-[9.5px] text-white/50 block mt-0.5">
+                          {res.totalVotantes} votantes · {res.totalVotos} votos
+                        </span>
+                      </div>
+                    </div>
+                  ) : temVotos ? (
+                    <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs">
+                      <span className="text-white/80 font-bold flex items-center gap-1.5">
+                        <Vote size={14} className="text-csc-gold" />
+                        {res.totalVotos} votos registados ({res.totalVotantes} votantes)
+                      </span>
+                      <span className="text-[10px] text-csc-gold font-bold">Votação em aberto</span>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] text-white/40 italic flex items-center justify-between">
+                      <span>Ainda sem votos registados para este jogo.</span>
+                      <span className="text-[10px] text-white/30">Votação na ficha</span>
+                    </div>
+                  )}
 
-                            <span className="text-[11px] font-display font-black text-csc-gold px-2 py-0.5 rounded-lg bg-csc-gold/20">
-                              {res.maxVotos} {res.maxVotos === 1 ? 'voto' : 'votos'}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] text-white/50 italic text-center">
-                            Ainda sem votos registados para este jogo.
-                          </div>
-                        )}
+                  {/* Barra de Ações: Ver votos detalhados e Ficha de jogo */}
+                  <div className="pt-1 flex items-center justify-between gap-2 border-t border-white/5">
+                    {temVotos ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light')
+                          setJogoExpandido(expandido ? null : m.id)
+                        }}
+                        className="text-xs font-display font-bold text-white/70 hover:text-white flex items-center gap-1 cursor-pointer py-1"
+                      >
+                        <span>{expandido ? 'Ocultar detalhes' : `Ver detalhes dos votos (${res.contagem.length})`}</span>
+                        {expandido ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-white/30 italic">Sem ocorrências de voto</span>
+                    )}
 
-                        {/* Lista dos Jogadores Votados no Jogo */}
-                        {temVotos && (
-                          <div className="space-y-1.5 pt-1">
-                            <span className="text-[10px] font-display font-bold uppercase tracking-wider text-white/40 block">
-                              Votos da partida ({res.totalVotantes} votantes · {res.totalVotos} votos):
-                            </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light')
+                        setEventoParaFicha(m)
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-[11px] font-display font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <FileText size={12} className="text-csc-gold" />
+                      <span>Ficha de jogo</span>
+                    </button>
+                  </div>
 
-                            <div className="space-y-1">
-                              {res.contagem.map(item => {
-                                const percentagem =
-                                  res.totalVotos > 0 ? Math.round((item.votos / res.totalVotos) * 100) : 0
-                                const isMvp = res.mvpIds.includes(item.playerId)
+                  {/* Detalhe Expandido de Votação do Jogo */}
+                  {expandido && temVotos && (
+                    <div className="pt-2 space-y-3 border-t border-white/10">
+                      {/* Distribuição de Pontos e Votos */}
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-display font-extrabold uppercase tracking-wider text-csc-gold block">
+                          Pontuação do Jogo ({res.totalVotantes} votantes · 1º: 3 pts, 2º: 1 pt):
+                        </span>
 
-                                return (
-                                  <div
-                                    key={item.playerId}
-                                    className={`p-2 rounded-xl flex items-center justify-between gap-2 text-xs border ${
-                                      isMvp
-                                        ? 'bg-csc-gold/[0.08] border-csc-gold/25'
-                                        : 'bg-white/[0.02] border-white/5'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <span className="w-5 h-5 rounded-full bg-csc-dark text-csc-gold text-[10px] font-display font-black flex items-center justify-center border border-csc-gold/30 shrink-0">
-                                        {item.player?.jersey_number || '—'}
-                                      </span>
-                                      <span className="font-display font-bold text-white truncate text-[11.5px]">
-                                        {item.player?.shirt_name || item.player?.name || 'Atleta'}
-                                      </span>
+                        <div className="space-y-1">
+                          {res.contagem.map(item => {
+                            const isMvp = res.mvpIds.includes(item.playerId)
+
+                            return (
+                              <div
+                                key={item.playerId}
+                                className={`p-2 rounded-xl flex items-center justify-between gap-2 text-xs border ${
+                                  isMvp
+                                    ? 'bg-csc-gold/[0.12] border-csc-gold/30'
+                                    : 'bg-white/[0.03] border-white/5'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="w-5 h-5 rounded-full bg-csc-dark text-csc-gold text-[10px] font-display font-black flex items-center justify-center border border-csc-gold/30 shrink-0">
+                                    {item.player?.jersey_number || '—'}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <span className="font-display font-bold text-white truncate text-[11.5px] flex items-center gap-1.5">
+                                      <span>{item.player?.shirt_name || item.player?.name || 'Atleta'}</span>
                                       {isMvp && (
                                         <span className="text-[9px] font-black uppercase px-1 rounded bg-csc-gold text-csc-tinta shrink-0">
                                           MVP
                                         </span>
                                       )}
-                                    </div>
-
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <span className="text-[11px] font-display font-extrabold text-white/80 tabular-nums">
-                                        {item.votos} {item.votos === 1 ? 'voto' : 'votos'}
-                                      </span>
-                                      <span className="text-[10px] text-white/40 tabular-nums w-8 text-right">
-                                        {percentagem}%
-                                      </span>
-                                    </div>
+                                    </span>
+                                    <p className="text-[10px] text-white/50">
+                                      {item.votos1 > 0 ? `${item.votos1}x 1º (3 pts)` : ''}
+                                      {item.votos1 > 0 && item.votos2 > 0 ? ' · ' : ''}
+                                      {item.votos2 > 0 ? `${item.votos2}x 2º (1 pt)` : ''}
+                                    </p>
                                   </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
+                                </div>
 
-                        {/* Detalhes de quem votou (Transparência para Administração / Pedro Vieira) */}
-                        {temVotos && res.votosDetalhados.length > 0 && (
-                          <div className="pt-2 border-t border-white/5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                triggerHaptic('light')
-                                setJogoExpandido(expandido ? null : j.id)
-                              }}
-                              className="w-full flex items-center justify-between text-[11px] font-display font-bold text-white/50 hover:text-white/80 transition-colors cursor-pointer py-1"
-                            >
-                              <span>Ver detalhe dos votantes ({res.votosDetalhados.length})</span>
-                              {expandido ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                            </button>
-
-                            {expandido && (
-                              <div className="mt-2 space-y-1 bg-black/30 p-2.5 rounded-xl border border-white/5 text-[11px]">
-                                {res.votosDetalhados.map((v, i) => {
-                                  const p1 = playersMap.get(v.escolhas[0])
-                                  const p2 = playersMap.get(v.escolhas[1])
-                                  const p1Name = p1?.shirt_name || p1?.name || 'Atleta'
-                                  const p2Name = p2?.shirt_name || p2?.name || 'Atleta'
-
-                                  return (
-                                    <div
-                                      key={i}
-                                      className="flex items-center justify-between gap-2 py-1 border-b border-white/5 last:border-none"
-                                    >
-                                      <span className="text-white/70 font-semibold truncate">
-                                        {v.voterName}:
-                                      </span>
-                                      <span className="text-csc-gold font-bold text-right truncate">
-                                        {p1Name} & {p2Name}
-                                      </span>
-                                    </div>
-                                  )
-                                })}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-[11.5px] font-display font-black text-csc-gold tabular-nums">
+                                    {item.pontos} {item.pontos === 1 ? 'pt' : 'pts'}
+                                  </span>
+                                  <span className="text-[10px] text-white/40 tabular-nums">
+                                    ({item.votos} {item.votos === 1 ? 'voto' : 'votos'})
+                                  </span>
+                                </div>
                               </div>
-                            )}
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Transparência dos Votantes */}
+                      {res.votosDetalhados.length > 0 && (
+                        <div className="space-y-1.5 pt-1 border-t border-white/5">
+                          <span className="text-[10px] font-display font-extrabold uppercase tracking-wider text-white/50 block">
+                            Registo de votos individuais:
+                          </span>
+                          <div className="bg-black/30 p-2.5 rounded-xl border border-white/5 space-y-1 text-xs">
+                            {res.votosDetalhados.map((v, i) => {
+                              const p1 = playersMap.get(v.escolhas[0])
+                              const p2 = playersMap.get(v.escolhas[1])
+                              const p1Name = p1?.shirt_name || p1?.name || 'Atleta'
+                              const p2Name = p2?.shirt_name || p2?.name || 'Atleta'
+
+                              return (
+                                <div
+                                  key={i}
+                                  className="flex items-center justify-between gap-2 py-0.5 border-b border-white/5 last:border-none"
+                                >
+                                  <span className="text-white/70 font-semibold truncate text-[11.5px]">
+                                    {v.voterName}:
+                                  </span>
+                                  <div className="flex items-center gap-1.5 text-right truncate text-[11px]">
+                                    <span className="text-csc-gold font-bold">1º {p1Name} (3 pts)</span>
+                                    <span className="text-white/40">·</span>
+                                    <span className="text-csc-azul-texto font-bold">2º {p2Name} (1 pt)</span>
+                                  </div>
+                                </div>
+                              )
+                            })}
                           </div>
-                        )}
-                      </CartaoSimples>
-                    )
-                  })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
+      )}
+
+      {/* Modal Ficha de Jogo quando se clica em "Ficha de jogo" */}
+      {eventoParaFicha && (
+        <MatchReportModal
+          isOpen={Boolean(eventoParaFicha)}
+          onClose={() => setEventoParaFicha(null)}
+          eventId={eventoParaFicha.id}
+          event={eventoParaFicha}
+          isCoachOrAdmin={Boolean(isCoachOrAdmin)}
+          voltarPara="MVP"
+          onSaved={() => {
+            carregarDados()
+          }}
+        />
       )}
     </div>
   )
