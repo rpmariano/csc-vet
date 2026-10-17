@@ -106,3 +106,45 @@ export async function desligarAvisos(): Promise<void> {
   await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
   await sub.unsubscribe()
 }
+
+/**
+ * Dispara uma notificação local de teste para o dispositivo atual.
+ * Permite ao administrador/desenvolvedor testar visualmente o aviso de votação MVP e o clique de navegação.
+ */
+export async function enviarNotificacaoTesteMvp(eventoId?: string): Promise<{ ok: boolean; erro?: string }> {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return { ok: false, erro: 'Este dispositivo ou browser não suporta notificações.' }
+  }
+
+  let permissao = Notification.permission
+  if (permissao !== 'granted') {
+    try {
+      permissao = await Notification.requestPermission()
+    } catch {
+      // Browsers antigos ou modo restrito
+    }
+  }
+
+  if (permissao !== 'granted') {
+    return {
+      ok: false,
+      erro: 'Permissão de notificações não concedida. Por favor ativa as notificações nas definições do teu browser.',
+    }
+  }
+
+  try {
+    const destino = eventoId ? `/?mvp_event=${eventoId}` : '/?test_mvp=1'
+    const reg = await navigator.serviceWorker.ready
+    await reg.showNotification('🏆 Votação MVP do Jogo', {
+      body: 'A ficha de jogo já saiu! Vota no Melhor (3 pts) e no 2º Melhor (1 pt) em campo.',
+      icon: '/csc-vet/pwa-192x192.png',
+      badge: '/csc-vet/pwa-192x192.png',
+      tag: 'voto_mvp:teste',
+      data: { destino },
+      lang: 'pt-PT',
+    })
+    return { ok: true }
+  } catch (err: any) {
+    return { ok: false, erro: err?.message || 'Não foi possível disparar a notificação.' }
+  }
+}

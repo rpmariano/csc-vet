@@ -10,6 +10,7 @@ import {
   Calendar,
   SlidersHorizontal,
   FileText,
+  BellRing,
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -19,7 +20,10 @@ import { ACarregar, EstadoVazio, FilaSeparadores, Botao } from '../components/ui
 import { BottomSheet } from '../components/BottomSheet'
 import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import { MatchReportModal } from '../components/MatchReportModal'
+import { ModalVotarMvp } from '../components/mvp/ModalVotarMvp'
 import { triggerHaptic } from '../utils/haptics'
+import { toast } from '../context/ToastContext'
+import { enviarNotificacaoTesteMvp } from '../lib/push'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
@@ -79,9 +83,32 @@ export const MvpPage: React.FC = () => {
   const [tabelaAtiva, setTabelaAtiva] = useState<'mvpWins' | 'totalVotes'>('mvpWins')
   const [jogoExpandido, setJogoExpandido] = useState<string | null>(null)
   const [eventoParaFicha, setEventoParaFicha] = useState<MatchEvent | null>(null)
+  const [aTestarNotificacao, setATestarNotificacao] = useState(false)
+  const [eventoParaVotarTeste, setEventoParaVotarTeste] = useState<MatchEvent | null>(null)
 
   const autorizado = useMemo(() => temAcessoMVP(profile), [profile])
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
+
+  const handleTestarNotificacao = async () => {
+    triggerHaptic('medium')
+    setATestarNotificacao(true)
+    try {
+      const ultimoJogo = pastMatches[0] || matches[0]
+      const res = await enviarNotificacaoTesteMvp(ultimoJogo?.id)
+      if (res.ok) {
+        toast.success('Notificação de teste enviada para o teu dispositivo! Toca nela para abrir o modal de votação.')
+      } else {
+        toast.info(res.erro || 'A abrir votação de teste...')
+        if (ultimoJogo) {
+          setEventoParaVotarTeste(ultimoJogo)
+        }
+      }
+    } catch {
+      toast.error('Erro ao disparar notificação de teste.')
+    } finally {
+      setATestarNotificacao(false)
+    }
+  }
 
   const carregarDados = useCallback(async () => {
     if (!autorizado) return
@@ -393,6 +420,32 @@ export const MvpPage: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-12">
+      {/* Ação de Teste de Notificação e Interface (Exclusivo Administração / Pedro Vieira) */}
+      <div className="p-3.5 rounded-2xl bg-csc-gold/10 border border-csc-gold/30 flex items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-csc-gold text-csc-tinta flex items-center justify-center shrink-0 font-black shadow-xs">
+            <BellRing size={16} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-display font-extrabold text-xs text-white truncate">
+              Testar Notificação & Votação MVP
+            </p>
+            <p className="text-[10.5px] text-white/60 truncate">
+              Envia um aviso para o teu telemóvel para validares a interface
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleTestarNotificacao}
+          disabled={aTestarNotificacao}
+          className="px-3.5 py-1.5 rounded-xl bg-csc-gold text-csc-tinta font-display font-extrabold text-xs hover:bg-csc-gold/90 transition-all shrink-0 cursor-pointer active:scale-97 shadow-md shadow-csc-gold/10"
+        >
+          {aTestarNotificacao ? 'A enviar...' : 'Enviar teste'}
+        </button>
+      </div>
+
       {/* 1. Seletor de Vista (Classificações vs Jogos & Votos) */}
       <FilaSeparadores
         itens={SEPARADORES_VISTA}
@@ -982,6 +1035,29 @@ export const MvpPage: React.FC = () => {
           isCoachOrAdmin={Boolean(isCoachOrAdmin)}
           voltarPara="MVP"
           onSaved={() => {
+            carregarDados()
+          }}
+        />
+      )}
+
+      {/* Modal de teste direto de votação MVP */}
+      {eventoParaVotarTeste && (
+        <ModalVotarMvp
+          isOpen={Boolean(eventoParaVotarTeste)}
+          onClose={() => setEventoParaVotarTeste(null)}
+          eventId={eventoParaVotarTeste.id}
+          eventTitle={eventoParaVotarTeste.title}
+          eventDate={new Date(eventoParaVotarTeste.date_time).toLocaleDateString('pt-PT', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+          })}
+          scoreText={
+            eventoParaVotarTeste.home_score !== null && eventoParaVotarTeste.away_score !== null
+              ? `${eventoParaVotarTeste.home_score} - ${eventoParaVotarTeste.away_score}`
+              : undefined
+          }
+          onVoteSubmitted={() => {
             carregarDados()
           }}
         />
