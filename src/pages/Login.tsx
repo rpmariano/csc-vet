@@ -13,6 +13,7 @@ import {
   limparDestinoAutenticacao,
 } from '../lib/rotas'
 import { CLUBE_NOME } from '../lib/clube'
+import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 
 /**
  * A entrada na app: entrar (10a), registar (10b) e recuperar a palavra-passe
@@ -173,7 +174,7 @@ const Login: React.FC = () => {
     <MolduraEntrada>
       <div className="flex flex-col items-center gap-3.5 pb-1.5">
         <img
-          src={clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'}
+          src={obterEmblemaEfetivo(clubSettings?.logo_url, 'Cascais', 'CSC') || '/csc-vet/cascais-emblem.png'}
           alt=""
           className="w-22 h-22 rounded-full bg-white object-contain p-2 flex-none"
           style={{ width: 88, height: 88, boxShadow: '0 14px 34px -12px rgba(0,0,0,.8)' }}

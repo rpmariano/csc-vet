@@ -7,7 +7,7 @@ import { formatOpponentSigla } from '../../lib/siglas'
 import { EtiquetaSeccao, Botao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 import { formatarCoresEquipamento, BadgeCoresEquipamento } from './equipamentos'
-import { obterCampoEquipaOficial, obterEquipamentoEquipaOficial } from '../../lib/sincronizarEquipas'
+import { obterCampoEquipaOficial, obterEquipamentoEquipaOficial, obterEmblemaEfetivo } from '../../lib/sincronizarEquipas'
 
 /**
  * Ficha do adversário (ecrã 9h).
@@ -212,23 +212,26 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
           */}
           <div className="cartao-simples px-4 py-4">
             <div className="flex items-center gap-3.5">
-              {adversario.logo_url ? (
-                <img
-                  src={adversario.logo_url}
-                  alt=""
-                  className="w-14 h-14 object-contain bg-white rounded-2xl border border-white/12 p-1.5 shrink-0"
-                />
-              ) : (
-                /* Sem emblema desenha-se um escudo, nunca as iniciais: a sigla
-                   está aqui mesmo ao lado, e repeti-la era lê-la duas vezes. */
-                <span
-                  className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center
-                    text-white/35 shrink-0"
-                  aria-hidden="true"
-                >
-                  <Shield size={24} />
-                </span>
-              )}
+              {(() => {
+                const emblemaSrc = obterEmblemaEfetivo(adversario.logo_url, adversario.name, adversario.initials)
+                return emblemaSrc ? (
+                  <img
+                    src={emblemaSrc}
+                    alt=""
+                    className="w-14 h-14 object-contain bg-white rounded-2xl border border-white/12 p-1.5 shrink-0"
+                  />
+                ) : (
+                  /* Sem emblema desenha-se um escudo, nunca as iniciais: a sigla
+                     está aqui mesmo ao lado, e repeti-la era lê-la duas vezes. */
+                  <span
+                    className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center
+                      text-white/35 shrink-0"
+                    aria-hidden="true"
+                  >
+                    <Shield size={24} />
+                  </span>
+                )
+              })()}
               <span className="flex-1 min-w-0">
                 <span className="block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62">
                   Sigla nos placares

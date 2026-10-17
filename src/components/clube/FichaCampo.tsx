@@ -8,6 +8,7 @@ import { EtiquetaSeccao, Botao, BlocoData } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 import { toast } from '../../context/ToastContext'
 import { formatOpponentSigla } from '../../lib/siglas'
+import { obterEmblemaEfetivo } from '../../lib/sincronizarEquipas'
 
 /**
  * Ficha do campo (ecrã 9i). É um ecrã e não uma persiana — ver `EcraDetalhe`.
@@ -230,49 +231,54 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
               </div>
             ) : (
               <div className="cartao-simples overflow-hidden">
-                {eCampoDoClube && (
-                  <div className="flex items-center gap-3 px-4 py-3 border-b border-white/7 last:border-b-0">
-                    {clubSettings?.logo_url ? (
-                      <img
-                        src={clubSettings.logo_url}
-                        alt=""
-                        className="w-9 h-9 object-contain bg-white/10 rounded-full p-1 shrink-0"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
-                        <Star size={18} />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <span className="block font-display font-bold text-xs text-white truncate">
-                        {clubSettings?.name || 'Clube'}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-[10px] text-csc-gold font-bold mt-0.5">
-                        <Star size={10} /> Campo de casa do clube ({siglaClube})
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {adversariosAssociados.map(adv => (
-                  <div
-                    key={adv.id}
-                    className="flex items-center justify-between gap-3 px-4 py-3 border-t border-white/7 first:border-t-0"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      {adv.logo_url ? (
+                {eCampoDoClube && (() => {
+                  const logoClube = obterEmblemaEfetivo(clubSettings?.logo_url, 'Cascais', siglaClube)
+                  return (
+                    <div className="flex items-center gap-3 px-4 py-3 border-b border-white/7 last:border-b-0">
+                      {logoClube ? (
                         <img
-                          src={adv.logo_url}
+                          src={logoClube}
                           alt=""
-                          className="w-9 h-9 object-contain bg-white rounded-full p-1 shrink-0"
+                          className="w-9 h-9 object-contain bg-white/10 rounded-full p-1 shrink-0"
                         />
                       ) : (
-                        <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center shrink-0 text-white/50">
-                          <Shield size={18} />
+                        <div className="w-9 h-9 rounded-full bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0">
+                          <Star size={18} />
                         </div>
                       )}
-                      <div className="min-w-0">
+                      <div className="flex-1 min-w-0">
                         <span className="block font-display font-bold text-xs text-white truncate">
-                          {adv.name}
+                          {clubSettings?.name || 'Clube'}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[10px] text-csc-gold font-bold mt-0.5">
+                          <Star size={10} /> Campo de casa do clube ({siglaClube})
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })()}
+                {adversariosAssociados.map(adv => {
+                  const logoAdv = obterEmblemaEfetivo(adv.logo_url, adv.name, adv.initials)
+                  return (
+                    <div
+                      key={adv.id}
+                      className="flex items-center justify-between gap-3 px-4 py-3 border-t border-white/7 first:border-t-0"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {logoAdv ? (
+                          <img
+                            src={logoAdv}
+                            alt=""
+                            className="w-9 h-9 object-contain bg-white rounded-full p-1 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center shrink-0 text-white/50">
+                            <Shield size={18} />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <span className="block font-display font-bold text-xs text-white truncate">
+                            {adv.name}
                         </span>
                         <span className="block text-[10px] text-white/60 mt-0.5 truncate">
                           {formatOpponentSigla(adv)} · Campo habitual
@@ -287,7 +293,7 @@ export const FichaCampo: React.FC<FichaCampoProps> = ({
                       Ver equipa
                     </Link>
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </section>

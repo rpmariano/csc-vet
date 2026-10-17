@@ -4,6 +4,7 @@ import { Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock, Aler
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJogo'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
+import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 import { eAdepto } from '../lib/papeis'
 import { toast } from '../context/ToastContext'
 import { EcraDetalhe } from './EcraDetalhe'
@@ -525,6 +526,11 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const leftName = isAway ? (event?.opponent?.name || 'Adversário') : CLUBE_SIGLA
   const rightName = isAway ? CLUBE_SIGLA : (event?.opponent?.name || 'Adversário')
 
+  const oppLogo = obterEmblemaEfetivo(event?.opponent?.logo_url, event?.opponent?.name, oppSigla)
+  const cscLogo = obterEmblemaEfetivo(null, 'Cascais', cscSigla) || '/csc-vet/cascais-emblem.png'
+  const leftLogo = isAway ? oppLogo : cscLogo
+  const rightLogo = isAway ? cscLogo : oppLogo
+
   const starters = playerStats.filter(p => p.lineup_status === 'starter')
   const subs = playerStats.filter(p => p.lineup_status === 'sub')
 
@@ -593,14 +599,10 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 {/* Equipa 1 */}
                 <div className="col-span-4 flex flex-col items-center gap-1">
                   <div className="w-14 h-14 rounded-2xl bg-white p-1.5 border border-white/30 flex items-center justify-center shrink-0">
-                    {isAway ? (
-                      event?.opponent?.logo_url ? (
-                        <img src={event.opponent.logo_url} alt={leftSigla} className="w-full h-full object-contain" />
-                      ) : (
-                        <span className="font-black text-csc-dark text-sm">{leftSigla}</span>
-                      )
+                    {leftLogo ? (
+                      <img src={leftLogo} alt={leftSigla} className="w-full h-full object-contain" />
                     ) : (
-                      <img src="/csc-vet/cascais-emblem.png" alt="CSC" className="w-full h-full object-contain" />
+                      <span className="font-black text-csc-dark text-sm">{leftSigla}</span>
                     )}
                   </div>
                   <span className="text-base font-black uppercase text-white tracking-wide">{leftSigla}</span>
@@ -631,14 +633,10 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 {/* Equipa 2 */}
                 <div className="col-span-4 flex flex-col items-center gap-1">
                   <div className="w-14 h-14 rounded-2xl bg-white p-1.5 border border-white/30 flex items-center justify-center shrink-0">
-                    {!isAway ? (
-                      event?.opponent?.logo_url ? (
-                        <img src={event.opponent.logo_url} alt={rightSigla} className="w-full h-full object-contain" />
-                      ) : (
-                        <span className="font-black text-csc-dark text-sm">{rightSigla}</span>
-                      )
+                    {rightLogo ? (
+                      <img src={rightLogo} alt={rightSigla} className="w-full h-full object-contain" />
                     ) : (
-                      <img src="/csc-vet/cascais-emblem.png" alt="CSC" className="w-full h-full object-contain" />
+                      <span className="font-black text-csc-dark text-sm">{rightSigla}</span>
                     )}
                   </div>
                   <span className="text-base font-black uppercase text-white tracking-wide">{rightSigla}</span>

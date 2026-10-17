@@ -9,6 +9,7 @@ import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
 import { useGuardaDeSaida } from '../../context/SaidaGuardadaContext'
 import { CAMPO, ETIQUETA, type Campo } from './comum'
 import { mensagemDeErro } from '../../lib/erros'
+import { obterEmblemaEfetivo } from '../../lib/sincronizarEquipas'
 
 /*
   Dados do clube — nome, sigla, emblema e campo de casa.
@@ -205,11 +206,14 @@ export const DadosDoClube: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
 
         <div className="my-6 flex justify-center">
           <div className="w-36 h-36 bg-white/5 border-2 border-dashed border-white/15 rounded-2xl flex items-center justify-center overflow-hidden p-3">
-            {clubSettings?.logo_url ? (
-              <img src={clubSettings.logo_url} alt="Emblema do clube" className="w-full h-full object-contain" />
-            ) : (
-              <Shield size={48} className="text-white/20" />
-            )}
+            {(() => {
+              const emblemaClube = obterEmblemaEfetivo(clubSettings?.logo_url, 'Cascais', 'CSC')
+              return emblemaClube ? (
+                <img src={emblemaClube} alt="Emblema do clube" className="w-full h-full object-contain" />
+              ) : (
+                <Shield size={48} className="text-white/20" />
+              )
+            })()}
           </div>
         </div>
 

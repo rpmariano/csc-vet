@@ -11,6 +11,7 @@ export interface EquipaOficialDef {
   awayKit2: string | null
   grupo: 'Grupo A' | 'Grupo B'
   aliases: string[]
+  emblema: string
 }
 
 export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
@@ -26,6 +27,7 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit2: 'Amarelo',
     grupo: 'Grupo A',
     aliases: ['janas', 'mucifal'],
+    emblema: 'emblemas/janas.png',
   },
   {
     nome: 'DS Private TV',
@@ -37,7 +39,8 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit1: 'Branco',
     awayKit2: null,
     grupo: 'Grupo A',
-    aliases: ['private', 'dsp', 'ds private'],
+    aliases: ['private', 'dsp', 'ds private', 'ds private tv'],
+    emblema: 'emblemas/ds-private-torres.png',
   },
   {
     nome: 'Tires',
@@ -49,7 +52,8 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit1: 'Branco',
     awayKit2: null,
     grupo: 'Grupo A',
-    aliases: ['tires', 'urd tires'],
+    aliases: ['tires', 'urd tires', 'urd'],
+    emblema: 'emblemas/urd-tires.png',
   },
   {
     nome: 'Veteranos Sul',
@@ -61,7 +65,8 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit1: 'Vermelho',
     awayKit2: 'Preto',
     grupo: 'Grupo A',
-    aliases: ['veteranos', 'vsul', 'vet. sul', 'veteranos sul'],
+    aliases: ['veteranos', 'vsul', 'vet. sul', 'veteranos sul', 'santa cruz'],
+    emblema: 'emblemas/santa-cruz.png',
   },
   {
     nome: 'Melo Falcão',
@@ -73,7 +78,8 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit1: 'Amarelo',
     awayKit2: null,
     grupo: 'Grupo A',
-    aliases: ['falcao', 'falcão', 'melo', 'melo falcao'],
+    aliases: ['falcao', 'falcão', 'melo', 'melo falcao', 'melo falcão'],
+    emblema: 'emblemas/melo-falcao.png',
   },
   {
     nome: 'Lisbon Casuals',
@@ -86,6 +92,7 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit2: null,
     grupo: 'Grupo A',
     aliases: ['casuals', 'lisbon', 'lisbon casuals', 'lcas'],
+    emblema: 'emblemas/lisbon-casuals.png',
   },
   {
     nome: 'Banco Portugal',
@@ -98,6 +105,7 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit2: null,
     grupo: 'Grupo A',
     aliases: ['banco', 'gdbp', 'bpor', 'banco portugal', 'banco de portugal'],
+    emblema: 'emblemas/banco-portugal.png',
   },
   {
     nome: 'Camarate',
@@ -109,7 +117,8 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit1: 'Preto',
     awayKit2: null,
     grupo: 'Grupo A',
-    aliases: ['camarate', 'aguias', 'águias', 'gdac', 'gd aguias camarate'],
+    aliases: ['camarate', 'aguias', 'águias', 'gdac', 'gd aguias camarate', 'áuias'],
+    emblema: 'emblemas/aguias-camarate.png',
   },
 
   // Grupo B
@@ -124,6 +133,7 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit2: 'Preto',
     grupo: 'Grupo B',
     aliases: ['estrelas', 'estrelas lisboa', 'elis'],
+    emblema: 'emblemas/estrelas-lisboa.png',
   },
   {
     nome: 'Técnico',
@@ -136,6 +146,7 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit2: null,
     grupo: 'Grupo B',
     aliases: ['tecnico', 'técnico', 'aeist', 'ist', 'tec'],
+    emblema: 'emblemas/tecnico.png',
   },
   {
     nome: 'Ferroviário',
@@ -147,7 +158,8 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit1: 'Azul',
     awayKit2: 'Amarelo',
     grupo: 'Grupo B',
-    aliases: ['ferroviario', 'ferroviário', 'cfp', 'clube ferroviario'],
+    aliases: ['ferroviario', 'ferroviário', 'cfp', 'clube ferroviario', 'ferroviarios'],
+    emblema: 'emblemas/ferroviario.png',
   },
   {
     nome: 'Torre',
@@ -160,6 +172,7 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit2: null,
     grupo: 'Grupo B',
     aliases: ['torre', 'afd', 'caravelas', 'afd torre', 'torre cascais'],
+    emblema: 'emblemas/afd-torre.png',
   },
   {
     nome: 'Bola Cacém',
@@ -171,7 +184,8 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit1: 'Azul',
     awayKit2: null,
     grupo: 'Grupo B',
-    aliases: ['cacem', 'cacém', 'bola', 'bola cacem', 'bcac'],
+    aliases: ['cacem', 'cacém', 'bola', 'bola cacem', 'bcac', 'zambujeiro'],
+    emblema: 'emblemas/zambujeiro.jpg',
   },
   {
     nome: 'Amora',
@@ -184,6 +198,7 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit2: 'Cinza',
     grupo: 'Grupo B',
     aliases: ['amora', 'medideira', 'amora fc', 'amo'],
+    emblema: 'emblemas/amora.png',
   },
   {
     nome: 'Cascais',
@@ -196,6 +211,7 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit2: null,
     grupo: 'Grupo B',
     aliases: ['cascais', 'dramatico', 'dramático', 'csc', 'gds cascais'],
+    emblema: 'cascais-emblem.png',
   },
 ]
 
@@ -207,6 +223,25 @@ function normalizarTexto(s: string): string {
     .replace(/[^\w\s]/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/**
+ * Resolve o URL de um emblema garantindo compatibilidade com o caminho base do Vite/GitHub Pages.
+ * Se for uma URL externa (http/https) ou base64 (data:), mantém-na intacta.
+ */
+export function resolverUrlEmblema(url: string | null | undefined): string {
+  if (!url) return ''
+  const u = url.trim()
+  if (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('data:')) {
+    return u
+  }
+  const base = import.meta.env.BASE_URL || '/'
+  const limpo = u.startsWith('/') ? u.slice(1) : u
+  const baseSemBarra = base.replace(/^\/|\/$/g, '')
+  if (baseSemBarra && limpo.startsWith(baseSemBarra + '/')) {
+    return '/' + limpo
+  }
+  return base + limpo
 }
 
 /**
@@ -253,7 +288,7 @@ export function correspondeEquipaOficial(
 /**
  * Encontra a definição oficial de uma equipa a partir do seu nome ou sigla.
  */
-export function encontrarDefinicaoOficial(nomeOuSigla: string): EquipaOficialDef | null {
+export function encontrarDefinicaoOficial(nomeOuSigla: string | null | undefined): EquipaOficialDef | null {
   if (!nomeOuSigla) return null
   return EQUIPAS_OFICIAIS.find(eq => correspondeEquipaOficial(eq, nomeOuSigla, nomeOuSigla)) ?? null
 }
@@ -286,6 +321,31 @@ export function obterEquipamentoEquipaOficial(nomeEquipa: string): {
   }
 }
 
+/**
+ * Helper para obter o emblema oficial empacotado na app para uma dada equipa.
+ */
+export function obterEmblemaEquipaOficial(nomeOuSigla: string | null | undefined): string | null {
+  if (!nomeOuSigla) return null
+  const def = encontrarDefinicaoOficial(nomeOuSigla)
+  if (!def || !def.emblema) return null
+  return resolverUrlEmblema(def.emblema)
+}
+
+/**
+ * Retorna o emblema a usar: ou o logo da base de dados (resolvido com o URL correto)
+ * ou o emblema oficial empacotado na app como fallback.
+ */
+export function obterEmblemaEfetivo(
+  logoUrl: string | null | undefined,
+  nomeEquipa: string | null | undefined,
+  siglaEquipa?: string | null | undefined
+): string | null {
+  if (logoUrl && logoUrl.trim()) {
+    return resolverUrlEmblema(logoUrl)
+  }
+  return obterEmblemaEquipaOficial(nomeEquipa || siglaEquipa)
+}
+
 export interface ResultadoSincronizacao {
   camposAtualizados: number
   equipasAtualizadas: number
@@ -296,7 +356,7 @@ export interface ResultadoSincronizacao {
 /**
  * Sincroniza todas as 15 equipas e os 12 campos oficiais diretamente na base de dados Supabase.
  * É 100% idempotente, atualiza todos os registos correspondentes (incluindo duplicados)
- * e garante que nenhuma equipa fica com campo ou equipamentos a null.
+ * e garante que nenhuma equipa fica com campo, equipamentos ou emblema a null.
  */
 export async function sincronizarEquipasEOficiais(): Promise<ResultadoSincronizacao> {
   const detalhes: string[] = []
@@ -369,14 +429,16 @@ export async function sincronizarEquipasEOficiais(): Promise<ResultadoSincroniza
     }
   }
 
-  // 2. Atualizar campo de Cascais no club_settings (se a tabela suportar as colunas)
+  // 2. Atualizar campo e emblema de Cascais no club_settings
   const idCampoCascais = mapaCampos.get(normalizarTexto('GDS Cascais'))
+  const logoCascais = resolverUrlEmblema('cascais-emblem.png')
   if (idCampoCascais) {
     try {
       await supabase.from('club_settings').update({
         home_field_id: idCampoCascais,
         home_kit_color_1: 'Verde',
         away_kit_color_1: 'Branco',
+        logo_url: logoCascais,
       }).eq('id', 1)
     } catch {
       // Ignorar se colunas de club_settings ainda não tiverem sido criadas
@@ -394,8 +456,8 @@ export async function sincronizarEquipasEOficiais(): Promise<ResultadoSincroniza
   }
 
   for (const eq of EQUIPAS_OFICIAIS) {
-    // Cascais é o nosso próprio clube; gerido em club_settings, mas se existir em opponents atualiza-se também
     const campoId = mapaCampos.get(normalizarTexto(eq.campoNome)) ?? null
+    const logoUrlOficial = resolverUrlEmblema(eq.emblema)
 
     const correspondentes = (adversariosExistentes ?? []).filter(a =>
       correspondeEquipaOficial(eq, a.name, a.initials)
@@ -411,30 +473,37 @@ export async function sincronizarEquipasEOficiais(): Promise<ResultadoSincroniza
     }
 
     if (correspondentes.length > 0) {
-      // Atualizar TODOS os registos correspondentes (evita que duplicados fiquem sem informação)
+      // Atualizar TODOS os registos correspondentes
       for (const adv of correspondentes) {
+        const updatePayload: Record<string, any> = { ...payload }
+        // Se não tiver emblema ou se for um caminho inválido, preenche com o oficial
+        if (!adv.logo_url) {
+          updatePayload.logo_url = logoUrlOficial
+        }
+
         const { error } = await supabase
           .from('opponents')
-          .update(payload)
+          .update(updatePayload)
           .eq('id', adv.id)
 
         if (!error) {
           equipasAtualizadas++
-          detalhes.push(`${adv.name}: campo ${eq.campoNome} e equipamentos atualizados`)
+          detalhes.push(`${adv.name}: campo, equipamentos e emblema atualizados`)
         }
       }
     } else {
-      // Se não existir adversário para esta equipa oficial, criamos novo registo
+      // Se não existir adversário para esta equipa oficial, criamos novo registo com emblema
       const { error } = await supabase
         .from('opponents')
         .insert({
           name: eq.nome,
+          logo_url: logoUrlOficial,
           ...payload,
         })
 
       if (!error) {
         equipasCriadas++
-        detalhes.push(`${eq.nome}: criada com campo ${eq.campoNome} e equipamentos`)
+        detalhes.push(`${eq.nome}: criada com campo, equipamentos e emblema`)
       }
     }
   }

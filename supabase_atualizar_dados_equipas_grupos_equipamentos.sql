@@ -154,18 +154,20 @@ UPDATE public.club_settings
        home_kit_color_1 = 'Verde',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Branco',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(club_settings.logo_url, '/csc-vet/cascais-emblem.png')
  WHERE id = 1;
 
 -- ----------------------------------------------------------------------------
--- 3. ATUALIZAR OU CRIAR CADA UMA DAS 15 EQUIPAS COM CAMPO E EQUIPAMENTOS
+-- 3. ATUALIZAR OU CRIAR CADA UMA DAS 15 EQUIPAS COM CAMPO, EQUIPAMENTOS E EMBLEMA
 -- ----------------------------------------------------------------------------
 
 -- 1. Janas (Grupo A) - Campo: Mucifalense, Casa: Azul/Amarelo, Fora: Cinzento/Amarelo
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, home_kit_color_2, away_kit_color_1, away_kit_color_2)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, home_kit_color_2, away_kit_color_1, away_kit_color_2, logo_url)
 SELECT 'Janas', 'JAN', 
        (SELECT id FROM public.fields WHERE name ILIKE '%mucifal%' LIMIT 1),
-       'Azul', 'Amarelo', 'Cinzento', 'Amarelo'
+       'Azul', 'Amarelo', 'Cinzento', 'Amarelo',
+       '/csc-vet/emblemas/janas.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%janas%');
 
 UPDATE public.opponents
@@ -174,14 +176,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Azul',
        home_kit_color_2 = 'Amarelo',
        away_kit_color_1 = 'Cinzento',
-       away_kit_color_2 = 'Amarelo'
+       away_kit_color_2 = 'Amarelo',
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/janas.png')
  WHERE name ILIKE '%janas%';
 
 -- 2. DS Private TV (Grupo A) - Campo: SMD Caneças, Casa: Preto, Fora: Branco
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, logo_url)
 SELECT 'DS Private TV', 'DSP',
        (SELECT id FROM public.fields WHERE name ILIKE '%cane_as%' LIMIT 1),
-       'Preto', 'Branco'
+       'Preto', 'Branco',
+       '/csc-vet/emblemas/ds-private-torres.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%private%' OR name ILIKE '%dsp%');
 
 UPDATE public.opponents
@@ -190,14 +194,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Preto',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Branco',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/ds-private-torres.png')
  WHERE name ILIKE '%private%' OR name ILIKE '%dsp%';
 
 -- 3. Tires (Grupo A) - Campo: URD Tires, Casa: Verde, Fora: Branco
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, logo_url)
 SELECT 'Tires', 'TIR',
        (SELECT id FROM public.fields WHERE name ILIKE '%tires%' LIMIT 1),
-       'Verde', 'Branco'
+       'Verde', 'Branco',
+       '/csc-vet/emblemas/urd-tires.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%tires%');
 
 UPDATE public.opponents
@@ -206,14 +212,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Verde',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Branco',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/urd-tires.png')
  WHERE name ILIKE '%tires%';
 
 -- 4. Veteranos Sul (Grupo A) - Campo: SC Frielas, Casa: Azul, Fora: Vermelho/Preto
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, away_kit_color_2)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, away_kit_color_2, logo_url)
 SELECT 'Veteranos Sul', 'VSUL',
        (SELECT id FROM public.fields WHERE name ILIKE '%frielas%' LIMIT 1),
-       'Azul', 'Vermelho', 'Preto'
+       'Azul', 'Vermelho', 'Preto',
+       '/csc-vet/emblemas/santa-cruz.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%veteranos%' OR initials = 'VSUL');
 
 UPDATE public.opponents
@@ -222,14 +230,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Azul',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Vermelho',
-       away_kit_color_2 = 'Preto'
+       away_kit_color_2 = 'Preto',
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/santa-cruz.png')
  WHERE name ILIKE '%veteranos%' OR initials = 'VSUL';
 
 -- 5. Melo Falcão (Grupo A) - Campo: SL Olivais, Casa: Verde, Fora: Amarelo
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, logo_url)
 SELECT 'Melo Falcão', 'MFAL',
        (SELECT id FROM public.fields WHERE name ILIKE '%olivais%' LIMIT 1),
-       'Verde', 'Amarelo'
+       'Verde', 'Amarelo',
+       '/csc-vet/emblemas/melo-falcao.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%falc_o%' OR name ILIKE '%melo%');
 
 UPDATE public.opponents
@@ -238,14 +248,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Verde',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Amarelo',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/melo-falcao.png')
  WHERE name ILIKE '%falc_o%' OR name ILIKE '%melo%';
 
 -- 6. Lisbon Casuals (Grupo A) - Campo: 9 Abril Trajouce, Casa: Azul, Fora: Amarelo
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, logo_url)
 SELECT 'Lisbon Casuals', 'LCAS',
        (SELECT id FROM public.fields WHERE name ILIKE '%trajouce%' OR name ILIKE '%9%abril%' LIMIT 1),
-       'Azul', 'Amarelo'
+       'Azul', 'Amarelo',
+       '/csc-vet/emblemas/lisbon-casuals.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%casuals%' OR name ILIKE '%lisbon%');
 
 UPDATE public.opponents
@@ -254,14 +266,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Azul',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Amarelo',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/lisbon-casuals.png')
  WHERE name ILIKE '%casuals%' OR name ILIKE '%lisbon%';
 
 -- 7. Banco Portugal (Grupo A) - Campo: SMD Caneças, Casa: Azul, Fora: Branco
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, logo_url)
 SELECT 'Banco Portugal', 'BPOR',
        (SELECT id FROM public.fields WHERE name ILIKE '%cane_as%' LIMIT 1),
-       'Azul', 'Branco'
+       'Azul', 'Branco',
+       '/csc-vet/emblemas/banco-portugal.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%banco%' OR initials = 'BPOR' OR initials = 'GDBP');
 
 UPDATE public.opponents
@@ -270,14 +284,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Azul',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Branco',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/banco-portugal.png')
  WHERE name ILIKE '%banco%' OR initials = 'BPOR' OR initials = 'GDBP';
 
 -- 8. Camarate (Grupo A) - Campo: GD Águias Camarate, Casa: Verde/Branco, Fora: Preto
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, home_kit_color_2, away_kit_color_1)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, home_kit_color_2, away_kit_color_1, logo_url)
 SELECT 'Camarate', 'CAM',
        (SELECT id FROM public.fields WHERE name ILIKE '%camarate%' OR name ILIKE '%_guias%' LIMIT 1),
-       'Verde', 'Branco', 'Preto'
+       'Verde', 'Branco', 'Preto',
+       '/csc-vet/emblemas/aguias-camarate.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%camarate%' OR name ILIKE '%_guias%' OR initials = 'CAM' OR initials = 'GDAC');
 
 UPDATE public.opponents
@@ -286,14 +302,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Verde',
        home_kit_color_2 = 'Branco',
        away_kit_color_1 = 'Preto',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/aguias-camarate.png')
  WHERE name ILIKE '%camarate%' OR name ILIKE '%_guias%' OR initials = 'CAM' OR initials = 'GDAC';
 
 -- 9. Estrelas Lisboa (Grupo B) - Campo: SL Olivais, Casa: Vermelho/Branco, Fora: Verde/Preto
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, home_kit_color_2, away_kit_color_1, away_kit_color_2)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, home_kit_color_2, away_kit_color_1, away_kit_color_2, logo_url)
 SELECT 'Estrelas Lisboa', 'ELIS',
        (SELECT id FROM public.fields WHERE name ILIKE '%olivais%' LIMIT 1),
-       'Vermelho', 'Branco', 'Verde', 'Preto'
+       'Vermelho', 'Branco', 'Verde', 'Preto',
+       '/csc-vet/emblemas/estrelas-lisboa.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%estrelas%');
 
 UPDATE public.opponents
@@ -302,14 +320,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Vermelho',
        home_kit_color_2 = 'Branco',
        away_kit_color_1 = 'Verde',
-       away_kit_color_2 = 'Preto'
+       away_kit_color_2 = 'Preto',
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/estrelas-lisboa.png')
  WHERE name ILIKE '%estrelas%';
 
 -- 10. Técnico (Grupo B) - Campo: SC Frielas, Casa: Azul Celeste, Fora: Azul Escuro
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, logo_url)
 SELECT 'Técnico', 'TEC',
        (SELECT id FROM public.fields WHERE name ILIKE '%frielas%' LIMIT 1),
-       'Azul Celeste', 'Azul Escuro'
+       'Azul Celeste', 'Azul Escuro',
+       '/csc-vet/emblemas/tecnico.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%t_cnico%' OR name ILIKE '%aeist%' OR initials = 'TEC');
 
 UPDATE public.opponents
@@ -318,14 +338,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Azul Celeste',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Azul Escuro',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/tecnico.png')
  WHERE name ILIKE '%t_cnico%' OR name ILIKE '%aeist%' OR initials = 'TEC';
 
 -- 11. Ferroviário (Grupo B) - Campo: Clube Ferroviário, Casa: Amarelo/Azul, Fora: X
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, home_kit_color_2, away_kit_color_1, away_kit_color_2)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, home_kit_color_2, away_kit_color_1, away_kit_color_2, logo_url)
 SELECT 'Ferroviário', 'FER',
        (SELECT id FROM public.fields WHERE name ILIKE '%ferrovi_rio%' LIMIT 1),
-       'Amarelo', 'Azul', NULL, NULL
+       'Amarelo', 'Azul', NULL, NULL,
+       '/csc-vet/emblemas/ferroviario.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%ferrovi_rio%' OR initials = 'FER');
 
 UPDATE public.opponents
@@ -334,14 +356,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Amarelo',
        home_kit_color_2 = 'Azul',
        away_kit_color_1 = NULL,
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/ferroviario.png')
  WHERE name ILIKE '%ferrovi_rio%' OR initials = 'FER';
 
 -- 12. Torre (Grupo B) - Campo: AFD Torre, Casa: Vermelho, Fora: Azul
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, logo_url)
 SELECT 'Torre', 'TOR',
        (SELECT id FROM public.fields WHERE (name ILIKE '%torre%' OR name ILIKE '%caravelas%' OR name ILIKE '%afd%') AND name NOT ILIKE '%gds%' LIMIT 1),
-       'Vermelho', 'Azul'
+       'Vermelho', 'Azul',
+       '/csc-vet/emblemas/afd-torre.png'
 WHERE NOT EXISTS (
   SELECT 1 FROM public.opponents 
   WHERE name ILIKE '%torre%' OR name ILIKE '%afd%' OR initials = 'TOR'
@@ -353,14 +377,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Vermelho',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Azul',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/afd-torre.png')
  WHERE name ILIKE '%torre%' OR name ILIKE '%afd%' OR initials = 'TOR';
 
 -- 13. Bola Cacém (Grupo B) - Campo: CD Agualva, Casa: Branco, Fora: Azul
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, logo_url)
 SELECT 'Bola Cacém', 'BCAC',
        (SELECT id FROM public.fields WHERE name ILIKE '%agualva%' LIMIT 1),
-       'Branco', 'Azul'
+       'Branco', 'Azul',
+       '/csc-vet/emblemas/zambujeiro.jpg'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%cac_m%' OR name ILIKE '%bola%');
 
 UPDATE public.opponents
@@ -369,14 +395,16 @@ UPDATE public.opponents
        home_kit_color_1 = 'Branco',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Azul',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/zambujeiro.jpg')
  WHERE name ILIKE '%cac_m%' OR name ILIKE '%bola%';
 
 -- 14. Amora (Grupo B) - Campo: Amora FC, Casa: Azul, Fora: Branco/Cinza
-INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, away_kit_color_2)
+INSERT INTO public.opponents (name, initials, home_field_id, home_kit_color_1, away_kit_color_1, away_kit_color_2, logo_url)
 SELECT 'Amora', 'AMO',
        (SELECT id FROM public.fields WHERE name ILIKE '%amora%' OR name ILIKE '%medideira%' LIMIT 1),
-       'Azul', 'Branco', 'Cinza'
+       'Azul', 'Branco', 'Cinza',
+       '/csc-vet/emblemas/amora.png'
 WHERE NOT EXISTS (SELECT 1 FROM public.opponents WHERE name ILIKE '%amora%');
 
 UPDATE public.opponents
@@ -385,7 +413,8 @@ UPDATE public.opponents
        home_kit_color_1 = 'Azul',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Branco',
-       away_kit_color_2 = 'Cinza'
+       away_kit_color_2 = 'Cinza',
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/emblemas/amora.png')
  WHERE name ILIKE '%amora%';
 
 -- 15. Cascais (Grupo B) - Campo: GDS Cascais, Casa: Verde, Fora: Branco
@@ -396,7 +425,8 @@ UPDATE public.opponents
        home_kit_color_1 = 'Verde',
        home_kit_color_2 = NULL,
        away_kit_color_1 = 'Branco',
-       away_kit_color_2 = NULL
+       away_kit_color_2 = NULL,
+       logo_url = COALESCE(opponents.logo_url, '/csc-vet/cascais-emblem.png')
  WHERE (name ILIKE '%cascais%' OR initials = 'CSC') AND name NOT ILIKE '%torre%';
 
 -- ----------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import { Phone, MessageCircle, LogOut, Shield } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { formatClubSigla } from '../lib/siglas'
+import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 import { CartaoSimples } from './ui'
 
 /**
@@ -15,7 +16,7 @@ export const SemPerfilAtribuido: React.FC = () => {
   const { profile, user, signOut } = useAuth()
   const { clubSettings } = useClub()
 
-  const emblema = clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'
+  const emblema = obterEmblemaEfetivo(clubSettings?.logo_url, 'Cascais', 'CSC') || '/csc-vet/cascais-emblem.png'
   const sigla = formatClubSigla(clubSettings?.initials)
 
   return (

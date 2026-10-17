@@ -26,6 +26,7 @@ import {
   sincronizarEquipasEOficiais,
   obterCampoEquipaOficial,
   obterEquipamentoEquipaOficial,
+  obterEmblemaEfetivo,
 } from '../../lib/sincronizarEquipas'
 import type { PropsDaSeccao } from './seccao'
 
@@ -80,8 +81,8 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
     setCampos(cmps)
     setCarregado(true)
 
-    // Sincronização automática transparente: se equipas estiverem sem campo ou equipamentos
-    const precisaSincronizar = advs.some(a => !a.home_field_id || !a.home_kit_color_1) || advs.length < 14
+    // Sincronização automática transparente: se equipas estiverem sem campo, equipamentos ou emblema
+    const precisaSincronizar = advs.some(a => !a.home_field_id || !a.home_kit_color_1 || !a.logo_url) || advs.length < 14
     if (precisaSincronizar && !sincronizacaoExecutadaRef.current) {
       sincronizacaoExecutadaRef.current = true
       executarSincronizacao(true)
@@ -360,6 +361,7 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
               const homeKit2 = a.home_kit_color_2 || ofcEquip?.home2 || null
               const awayKit1 = a.away_kit_color_1 || ofcEquip?.away1 || null
               const awayKit2 = a.away_kit_color_2 || ofcEquip?.away2 || null
+              const emblemaSrc = obterEmblemaEfetivo(a.logo_url, a.name, a.initials)
 
               return (
                 <div key={a.id} className="linha-leve flex items-center gap-2 pl-4 pr-2 py-2.5">
@@ -371,8 +373,8 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                   >
                     {/* Sem emblema desenha-se um escudo, nunca as iniciais: a
                         sigla já vai na letra pequena. */}
-                    {a.logo_url ? (
-                      <img src={a.logo_url} alt="" className="w-10 h-10 object-contain bg-white rounded-full p-1 shrink-0" />
+                    {emblemaSrc ? (
+                      <img src={emblemaSrc} alt="" className="w-10 h-10 object-contain bg-white rounded-full p-1 shrink-0" />
                     ) : (
                       <span className="w-10 h-10 rounded-full bg-white/8 flex items-center justify-center shrink-0" aria-hidden="true">
                         <Shield size={17} className="text-white/45" />

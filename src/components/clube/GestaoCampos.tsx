@@ -14,6 +14,7 @@ import { FichaCampo } from './FichaCampo'
 import { formatClubSigla, formatOpponentSigla } from '../../lib/siglas'
 import { CAMPO, ETIQUETA, type Campo, type Adversario } from './comum'
 import { mensagemDeErro } from '../../lib/erros'
+import { obterEmblemaEfetivo } from '../../lib/sincronizarEquipas'
 import { BotaoIcone, EstadoVazio, Botao, BotaoCriar } from '../ui'
 import { ProcuraEFiltros } from '../ProcuraEFiltros'
 import type { PropsDaSeccao } from './seccao'
@@ -385,13 +386,16 @@ export const GestaoCampos: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            {a.logo_url ? (
-                              <img src={a.logo_url} alt="" className="w-6 h-6 object-contain bg-white rounded-full p-0.5 shrink-0" />
-                            ) : (
-                              <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center shrink-0 text-white/40">
-                                <Shield size={13} />
-                              </div>
-                            )}
+                            {(() => {
+                              const emblemaSrc = obterEmblemaEfetivo(a.logo_url, a.name, a.initials)
+                              return emblemaSrc ? (
+                                <img src={emblemaSrc} alt="" className="w-6 h-6 object-contain bg-white rounded-full p-0.5 shrink-0" />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center shrink-0 text-white/40">
+                                  <Shield size={13} />
+                                </div>
+                              )
+                            })()}
                             <div className="min-w-0">
                               <span className="block font-display font-medium text-xs text-white truncate">
                                 {a.name}

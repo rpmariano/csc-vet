@@ -30,6 +30,7 @@ import { ProvasEmCurso, type ProvaDaHome } from '../components/home/ProvasEmCurs
 import { Aniversariantes, type AniversarianteDaHome } from '../components/home/Aniversariantes'
 import { calcularClassificacao, janelaDoClube } from '../lib/classificacao'
 import { mensagemDeErro } from '../lib/erros'
+import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 
 /**
  * Hoje — o primeiro ecrã, e o único que responde a "o que é que me diz
@@ -498,7 +499,7 @@ const Home: React.FC = () => {
     return <SemPerfilAtribuido />
   }
 
-  const emblema = clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'
+  const emblema = obterEmblemaEfetivo(clubSettings?.logo_url, 'Cascais', 'CSC') || '/csc-vet/cascais-emblem.png'
   const sigla = formatClubSigla(clubSettings?.initials)
   return (
     <div className="space-y-4 pb-2">

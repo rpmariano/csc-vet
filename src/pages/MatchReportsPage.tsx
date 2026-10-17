@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
+import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 import { useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
 import { BottomSheet } from '../components/BottomSheet'
@@ -423,8 +424,10 @@ export const MatchReportsPage: React.FC = () => {
             const leftSigla = isAway ? oppSigla : cscSigla
             const rightSigla = isAway ? cscSigla : oppSigla
 
-            const leftLogo = isAway ? m.opponent?.logo_url : '/csc-vet/cascais-emblem.png'
-            const rightLogo = isAway ? '/csc-vet/cascais-emblem.png' : m.opponent?.logo_url
+            const cscLogo = obterEmblemaEfetivo(clubSettings?.logo_url, 'Cascais', cscSigla)
+            const oppLogo = obterEmblemaEfetivo(m.opponent?.logo_url, m.opponent?.name, oppSigla)
+            const leftLogo = isAway ? oppLogo : cscLogo
+            const rightLogo = isAway ? cscLogo : oppLogo
 
             const locationStr = m.field?.name || m.location || 'Campo a definir'
             const hasScore = m.home_score !== null && m.home_score !== undefined

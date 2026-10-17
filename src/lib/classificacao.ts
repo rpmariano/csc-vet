@@ -1,4 +1,5 @@
 import { formatClubSigla, formatOpponentSigla } from './siglas'
+import { obterEmblemaEfetivo } from './sincronizarEquipas'
 
 /**
  * A classificação de um grupo de torneio — pontos, jogos e desempates.
@@ -37,7 +38,7 @@ export const equipaDoTorneio = (
   if (!team?.opponent_id) {
     return {
       sigla: formatClubSigla(clube?.initials),
-      logo: clube?.logo_url ?? null,
+      logo: obterEmblemaEfetivo(clube?.logo_url, 'Cascais', clube?.initials),
       eOClube: true,
     }
   }
@@ -48,7 +49,7 @@ export const equipaDoTorneio = (
        que ninguém escreveu. Numa tabela há largura para a sigla a sério; a
        reconstrução fica de reserva, para um adversário sem sigla nenhuma. */
     sigla: team.opponent?.initials?.trim() || formatOpponentSigla(team.opponent),
-    logo: team.opponent?.logo_url ?? null,
+    logo: obterEmblemaEfetivo(team.opponent?.logo_url, team.opponent?.name, team.opponent?.initials),
     eOClube: false,
   }
 }

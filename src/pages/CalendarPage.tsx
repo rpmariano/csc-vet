@@ -41,7 +41,7 @@ import { compararPorCamisola, convocatoriaFechada, textoConvocatoriaFechada, tex
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
 import { formatarCoresEquipamento, BadgeCoresEquipamento } from '../components/clube/equipamentos'
-import { obterEquipamentoEquipaOficial } from '../lib/sincronizarEquipas'
+import { obterEquipamentoEquipaOficial, obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -960,8 +960,10 @@ const CalendarPage: React.FC = () => {
       </div>
     )
 
-    const cscBlock = () => blocoEquipa(clubSettings?.logo_url, cscSigla, nomeClube)
-    const opponentBlock = () => blocoEquipa(event.opponent?.logo_url, oppSigla, nomeAdversario)
+    const cscLogo = obterEmblemaEfetivo(clubSettings?.logo_url, nomeClube, cscSigla)
+    const opponentLogo = obterEmblemaEfetivo(event.opponent?.logo_url, nomeAdversario, oppSigla)
+    const cscBlock = () => blocoEquipa(cscLogo, cscSigla, nomeClube)
+    const opponentBlock = () => blocoEquipa(opponentLogo, oppSigla, nomeAdversario)
 
     const TipoIcon = isMatch ? Trophy : isPractice ? TrainingIcon : PartyPopper
     const cores = CORES_TIPO[event.type]

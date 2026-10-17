@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useClub } from '../../context/ClubContext'
 import { useEpocaAtual } from '../../hooks/useEpocaAtual'
 import { formatClubSigla } from '../../lib/siglas'
+import { obterEmblemaEfetivo } from '../../lib/sincronizarEquipas'
 import { useFichaPorLigar } from '../FichaPorLigar'
 import { AvatarPerfil, PastilhaEstado } from '../ui'
 import { AnnouncementsInboxButton } from '../AnnouncementsInbox'
@@ -50,7 +51,7 @@ export const CabecalhoApp: React.FC = () => {
 
   if (!profile) return null
 
-  const emblema = clubSettings?.logo_url || '/csc-vet/cascais-emblem.png'
+  const emblema = obterEmblemaEfetivo(clubSettings?.logo_url, 'Cascais', 'CSC') || '/csc-vet/cascais-emblem.png'
   const sigla = formatClubSigla(clubSettings?.initials)
 
   return (

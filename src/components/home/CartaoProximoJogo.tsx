@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MapPin, ExternalLink, CheckCircle2, XCircle, Shield } from 'lucide-react'
 import { CartaoVidro } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
+import { obterEmblemaEfetivo } from '../../lib/sincronizarEquipas'
 
 /**
  * Uma página do carrossel do próximo jogo (bloco 2 da Home).
@@ -117,7 +118,10 @@ export const CartaoProximoJogo: React.FC<{
     </span>
   )
   const nos = equipa(emblemaClube, nomeClube)
-  const eles = equipa(jogo.opponent?.logo_url ?? null, jogo.opponent?.name ?? 'Adversário')
+  const eles = equipa(
+    obterEmblemaEfetivo(jogo.opponent?.logo_url, jogo.opponent?.name, jogo.opponent?.initials),
+    jogo.opponent?.name ?? 'Adversário'
+  )
 
   /* Todo o bloco abre o evento na Agenda. Não pode ser um `<button>`: tem lá
      dentro o link do Maps e os dois botões de resposta. Fica o papel e o
