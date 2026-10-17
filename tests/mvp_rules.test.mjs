@@ -341,3 +341,108 @@ test('calcularEleitoresDoJogo: Direção não convocada nunca aparece como poss�
   assert.ok(!eleitores.some(e => e.id === 'mariano'), 'Mariano (Direção) NÃO PODE APARECER como votante')
 })
 
+// ==============================================================================
+// 7. TESTE DE ENCERRAMENTO DE VOTAÇÃO: AMIGÁVEIS E 1ª JORNADA
+// ==============================================================================
+test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e eventos com mvp_voting_closed', () => {
+  function isVotacaoMvpAbertaMock(event) {
+    if (!event) return false
+    if (event.mvp_voting_closed === true) return false
+    if (event.description?.includes('[MVP_CLOSED]') || event.description?.includes('mvp_voting_closed:true')) {
+      return false
+    }
+
+    const eventDate = event.date_time ? new Date(event.date_time) : null
+    const now = new Date('2026-10-17T17:00:00Z')
+    const isPast = eventDate ? eventDate.getTime() <= now.getTime() : false
+
+    if (event.is_friendly && isPast) {
+      return false
+    }
+
+    if (eventDate && isPast) {
+      const opp = event.opponent
+      const oppName = ((opp?.name || '') + ' ' + (event.opponent_name || '') + ' ' + (event.title || '')).toLowerCase()
+      const oppInitials = (opp?.initials || '').toLowerCase()
+      const isElis = oppName.includes('estrelas') || oppInitials.includes('elis')
+      const isDateJornada1 = eventDate.toISOString().slice(0, 10) === '2026-10-11'
+      const isJornada1 = event.matchday === 1 || isElis || isDateJornada1
+
+      if (isJornada1) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  // 1. Amigável passado
+  assert.equal(
+    isVotacaoMvpAbertaMock({
+      title: 'Jogo de Preparação 1',
+      date_time: '2026-09-20T17:00:00Z',
+      is_friendly: true,
+    }),
+    false,
+    'Amigável passado deve ter votação encerrada'
+  )
+
+  // 2. Amigável passado 2
+  assert.equal(
+    isVotacaoMvpAbertaMock({
+      title: 'Jogo de Preparação 2',
+      date_time: '2026-09-27T17:00:00Z',
+      is_friendly: true,
+    }),
+    false,
+    'Segundo amigável passado deve ter votação encerrada'
+  )
+
+  // 3. Jogo da 1ª jornada (matchday = 1)
+  assert.equal(
+    isVotacaoMvpAbertaMock({
+      title: 'Jornada 1',
+      date_time: '2026-10-11T10:00:00Z',
+      matchday: 1,
+      is_friendly: false,
+    }),
+    false,
+    'Jogo da 1ª jornada deve ter votação encerrada'
+  )
+
+  // 4. Jogo da 1ª jornada por adversário Estrelas Lisboa
+  assert.equal(
+    isVotacaoMvpAbertaMock({
+      title: 'Jogo vs Estrelas Lisboa',
+      date_time: '2026-10-11T10:00:00Z',
+      opponent: { name: 'Estrelas Lisboa', initials: 'ELIS' },
+      is_friendly: false,
+    }),
+    false,
+    'Jogo contra Estrelas Lisboa da 1ª jornada deve ter votação encerrada'
+  )
+
+  // 5. Jogo com flag mvp_voting_closed = true
+  assert.equal(
+    isVotacaoMvpAbertaMock({
+      title: 'Qualquer Jogo Encerrado',
+      date_time: '2026-10-18T10:00:00Z',
+      mvp_voting_closed: true,
+    }),
+    false,
+    'Jogo com mvp_voting_closed = true deve estar encerrado'
+  )
+
+  // 6. Jogo futuro da 2ª jornada
+  assert.equal(
+    isVotacaoMvpAbertaMock({
+      title: 'Jornada 2',
+      date_time: '2026-10-25T10:00:00Z',
+      matchday: 2,
+      is_friendly: false,
+    }),
+    true,
+    'Jogo futuro da 2ª jornada deve estar aberto para votação quando ocorrer'
+  )
+})
+

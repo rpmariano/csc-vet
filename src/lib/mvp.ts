@@ -194,6 +194,58 @@ export async function verificarElegibilidadeVotoMvp(
   }
 }
 
+/**
+ * Determina se a votação de MVP está aberta para um determinado jogo.
+ * Regras de encerramento:
+ * 1. Jogos com `mvp_voting_closed === true` ou tag `[MVP_CLOSED]`.
+ * 2. Os dois jogos amigáveis passados da época.
+ * 3. O jogo da 1ª jornada (11/10/2026 vs Estrelas Lisboa).
+ */
+export function isVotacaoMvpAberta(event: {
+  id?: string
+  date_time?: string
+  is_friendly?: boolean | null
+  matchday?: number | null
+  description?: string | null
+  mvp_voting_closed?: boolean | null
+  opponent_name?: string | null
+  title?: string | null
+  opponent?: { name?: string; initials?: string | null } | null
+} | null | undefined): boolean {
+  if (!event) return false
+
+  // 1. Flag explícita na base de dados ou na descrição
+  if (event.mvp_voting_closed === true) return false
+  if (event.description?.includes('[MVP_CLOSED]') || event.description?.includes('mvp_voting_closed:true')) {
+    return false
+  }
+
+  // 2. Os dois jogos amigáveis passados têm a votação fechada
+  const eventDate = event.date_time ? new Date(event.date_time) : null
+  const now = new Date()
+  const isPast = eventDate ? eventDate.getTime() <= now.getTime() : false
+
+  if (event.is_friendly && isPast) {
+    return false
+  }
+
+  // 3. O jogo da 1ª jornada (11/10/2026 vs Estrelas Lisboa) tem a votação fechada
+  if (eventDate && isPast) {
+    const opp = event.opponent
+    const oppName = ((opp?.name || '') + ' ' + (event.opponent_name || '') + ' ' + (event.title || '')).toLowerCase()
+    const oppInitials = (opp?.initials || '').toLowerCase()
+    const isElis = oppName.includes('estrelas') || oppInitials.includes('elis')
+    const isDateJornada1 = eventDate.toISOString().slice(0, 10) === '2026-10-11'
+    const isJornada1 = event.matchday === 1 || isElis || isDateJornada1
+
+    if (isJornada1) {
+      return false
+    }
+  }
+
+  return true
+}
+
 /** Submete ou atualiza o voto de um utilizador (2 jogadores distintos). */
 export async function registarVotoMvp(
   eventId: string,
@@ -206,6 +258,27 @@ export async function registarVotoMvp(
   }
   if (player1Id === player2Id) {
     return { ok: false, error: 'Tens de escolher dois jogadores diferentes.' }
+  }
+
+  // Verificar se a votação está aberta para este jogo
+  try {
+    const { data: ev } = await supabase
+      .from('events')
+      .select('id, date_time, is_friendly, matchday, description, mvp_voting_closed, opponent:opponents(name, initials)')
+      .eq('id', eventId)
+      .maybeSingle()
+
+    if (ev) {
+      const opp = Array.isArray(ev.opponent) ? ev.opponent[0] : ev.opponent
+      if (!isVotacaoMvpAberta({ ...ev, opponent: opp })) {
+        return {
+          ok: false,
+          error: 'A votação de MVP para este jogo já se encontra encerrada.'
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Erro ao verificar se votação MVP está aberta:', e)
   }
 
   // Validação estrita: apenas convocados e treinadores podem votar

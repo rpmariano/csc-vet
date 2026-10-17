@@ -18,7 +18,7 @@ import { CLASSE_CAMPO } from './ui/formulario'
 import { PartilharFichaJogo } from './mvp/PartilharFichaJogo'
 import { ModalVotarMvp } from './mvp/ModalVotarMvp'
 import { SecaoEleitoresMvp } from './mvp/SecaoEleitoresMvp'
-import { notificarFichaJogoPublicada, obterVotosDoJogo, calcularEleitoresDoJogo, type MvpVote, type EleitorMvpInfo } from '../lib/mvp'
+import { notificarFichaJogoPublicada, obterVotosDoJogo, calcularEleitoresDoJogo, isVotacaoMvpAberta, type MvpVote, type EleitorMvpInfo } from '../lib/mvp'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -714,8 +714,11 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               <SecaoEleitoresMvp
                 eleitores={eleitoresDoJogo}
                 currentUserId={profile?.id}
+                votacaoAberta={isVotacaoMvpAberta(event)}
                 onVotarClick={
-                  (isConvocado || Boolean(profile && eTreinador(profile) && !eAdmin(profile) && profile.role !== 'admin' && !profile.roles?.includes('admin'))) && !meuVotoMvp
+                  isVotacaoMvpAberta(event) &&
+                  (isConvocado || Boolean(profile && eTreinador(profile) && !eAdmin(profile) && profile.role !== 'admin' && !profile.roles?.includes('admin'))) &&
+                  !meuVotoMvp
                     ? () => setModalVotarMvpAberto(true)
                     : undefined
                 }

@@ -14,6 +14,7 @@ import { triggerHaptic } from '../../utils/haptics'
 interface SecaoEleitoresMvpProps {
   eleitores: EleitorMvpInfo[]
   currentUserId?: string
+  votacaoAberta?: boolean
   onVotarClick?: () => void
 }
 
@@ -22,6 +23,7 @@ type FiltroVoto = 'todos' | 'pendentes' | 'votaram'
 export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
   eleitores,
   currentUserId,
+  votacaoAberta = true,
   onVotarClick,
 }) => {
   const [expandido, setExpandido] = useState(true)
@@ -82,15 +84,22 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-white/10 text-white/80 border border-white/15">
                 {votaram}/{total}
               </span>
+              {!votacaoAberta && (
+                <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded-full bg-white/10 text-white/50 border border-white/10">
+                  Votação Encerrada
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-white/60 truncate mt-0.5">
-              Convocados e equipa técnica · {percentagem}% já votaram
+              {!votacaoAberta
+                ? 'Convocados e equipa técnica · Votação encerrada'
+                : `Convocados e equipa técnica · ${percentagem}% já votaram`}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {euPendente && (
+          {euPendente && votacaoAberta && (
             <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-full bg-csc-gold text-csc-tinta shadow-sm animate-pulse">
               O teu voto está pendente!
             </span>

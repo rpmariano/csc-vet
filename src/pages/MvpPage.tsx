@@ -14,7 +14,7 @@ import {
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
-import { temAcessoMVP, obterTodosVotosMvp, sincronizarMvpNaTabelaStats, type MvpVote, type PlayerSummary } from '../lib/mvp'
+import { temAcessoMVP, obterTodosVotosMvp, sincronizarMvpNaTabelaStats, isVotacaoMvpAberta, type MvpVote, type PlayerSummary } from '../lib/mvp'
 import { ACarregar, EstadoVazio, FilaSeparadores, Botao } from '../components/ui'
 import { BottomSheet } from '../components/BottomSheet'
 import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
@@ -42,6 +42,9 @@ interface MatchEvent {
   title: string
   date_time: string
   is_friendly?: boolean | null
+  matchday?: number | null
+  description?: string | null
+  mvp_voting_closed?: boolean | null
   tournament_id?: string | null
   opponent_id?: string | null
   home_away?: 'home' | 'away' | 'neutral' | null
@@ -95,7 +98,7 @@ export const MvpPage: React.FC = () => {
       ] = await Promise.all([
         supabase
           .from('events')
-          .select('id, title, date_time, is_friendly, tournament_id, opponent_id, home_away, home_score, away_score, opponent:opponents(id, name, initials, logo_url), tournament:tournaments(id, name, season, rules)')
+          .select('id, title, date_time, is_friendly, matchday, description, mvp_voting_closed, tournament_id, opponent_id, home_away, home_score, away_score, opponent:opponents(id, name, initials, logo_url), tournament:tournaments(id, name, season, rules)')
           .eq('type', 'match')
           .order('date_time', { ascending: false }),
         supabase.from('tournaments').select('id, name, season').order('name'),
@@ -764,7 +767,7 @@ export const MvpPage: React.FC = () => {
                       {dataCurta} · {hora}
                     </span>
 
-                    <span className="flex items-center gap-1.5 shrink-0">
+                    <span className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
                       {m.tournament ? (
                         <span className="font-display font-bold text-[9.5px] text-csc-verde-texto bg-csc-light/15 px-2.5 py-0.5 rounded-full truncate max-w-[150px]">
                           {m.tournament.name}
@@ -774,6 +777,11 @@ export const MvpPage: React.FC = () => {
                           Amigável
                         </span>
                       ) : null}
+                      {!isVotacaoMvpAberta(m) && (
+                        <span className="font-display font-bold text-[9.5px] text-white/50 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10">
+                          Votação Encerrada
+                        </span>
+                      )}
                     </span>
                   </div>
 

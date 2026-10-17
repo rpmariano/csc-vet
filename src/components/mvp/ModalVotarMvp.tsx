@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { Award, Check, Sparkles, AlertCircle, ArrowLeftRight, X, Trophy, Medal } from 'lucide-react'
+import { Award, Check, Sparkles, AlertCircle, ArrowLeftRight, X, Trophy, Medal, Lock } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import { eAdepto, eTreinador, eAdmin } from '../../lib/papeis'
 import { compararPorCamisola } from '../../lib/eventos'
-import { registarVotoMvp, obterVotosDoJogo, type MvpVote, type PlayerSummary } from '../../lib/mvp'
+import { registarVotoMvp, obterVotosDoJogo, isVotacaoMvpAberta, type MvpVote, type PlayerSummary } from '../../lib/mvp'
 import { triggerHaptic } from '../../utils/haptics'
 import { toast } from '../../context/ToastContext'
 import { BottomSheet } from '../BottomSheet'
@@ -43,6 +43,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
   const [secondChoiceId, setSecondChoiceId] = useState<string | null>(null)
   const [initialVote, setInitialVote] = useState<MvpVote | null>(null)
   const [isEligible, setIsEligible] = useState(true)
+  const [votacaoEncerrada, setVotacaoEncerrada] = useState(false)
 
   useEffect(() => {
     if (!isOpen || !eventId || !profile?.id) return
@@ -51,18 +52,31 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
     const carregar = async () => {
       setLoading(true)
       try {
-        const [{ data: profilesData }, { data: callupsData }, { data: statsData }, votosDoJogo] =
-          await Promise.all([
-            supabase
-              .from('v_players_public')
-              .select('id, name, shirt_name, jersey_number, photo_url, position, role, roles')
-              .order('jersey_number', { ascending: true, nullsFirst: false }),
-            supabase.from('callups').select('player_id, status, notes').eq('event_id', eventId),
-            supabase.from('stats').select('*').eq('event_id', eventId),
-            obterVotosDoJogo(eventId),
-          ])
+        const [
+          { data: profilesData },
+          { data: callupsData },
+          { data: statsData },
+          votosDoJogo,
+          { data: eventData },
+        ] = await Promise.all([
+          supabase
+            .from('v_players_public')
+            .select('id, name, shirt_name, jersey_number, photo_url, position, role, roles')
+            .order('jersey_number', { ascending: true, nullsFirst: false }),
+          supabase.from('callups').select('player_id, status, notes').eq('event_id', eventId),
+          supabase.from('stats').select('*').eq('event_id', eventId),
+          obterVotosDoJogo(eventId),
+          supabase
+            .from('events')
+            .select('id, title, date_time, is_friendly, matchday, opponent_name, description, mvp_voting_closed')
+            .eq('id', eventId)
+            .maybeSingle(),
+        ])
 
         if (cancelado) return
+
+        const aberta = isVotacaoMvpAberta(eventData)
+        setVotacaoEncerrada(!aberta)
 
         const callupMap = new Map((callupsData || []).map(c => [c.player_id, c]))
         const statMap = new Map((statsData || []).map(s => [s.player_id, s]))
@@ -141,6 +155,10 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
   }, [isOpen, eventId, profile])
 
   const handleTogglePlayer = (playerId: string) => {
+    if (votacaoEncerrada) {
+      toast.warning('A votação de MVP para este jogo já se encontra encerrada.')
+      return
+    }
     if (initialVote) {
       toast.info('O teu voto já foi submetido anteriormente e não pode ser alterado.')
       return
@@ -170,13 +188,17 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
   }
 
   const handleSwapChoices = () => {
-    if (initialVote || (!firstChoiceId && !secondChoiceId)) return
+    if (votacaoEncerrada || initialVote || (!firstChoiceId && !secondChoiceId)) return
     triggerHaptic('medium')
     setFirstChoiceId(secondChoiceId)
     setSecondChoiceId(firstChoiceId)
   }
 
   const handleSubmit = async () => {
+    if (votacaoEncerrada) {
+      toast.warning('A votação de MVP para este jogo já se encontra encerrada.')
+      return
+    }
     if (initialVote) {
       toast.warning('O teu voto já foi submetido anteriormente e não pode ser alterado.')
       return
@@ -249,6 +271,15 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
             </p>
           </div>
         </div>
+
+        {votacaoEncerrada && (
+          <div className="p-3 bg-white/10 border border-white/20 rounded-2xl text-xs text-white/80 flex items-center gap-2.5">
+            <Lock size={18} className="text-white/60 shrink-0" />
+            <p className="leading-snug">
+              A votação de MVP para este jogo já se encontra encerrada.
+            </p>
+          </div>
+        )}
 
         {initialVote && (
           <div className="p-3 bg-csc-verde-suave/20 border border-csc-verde-suave/40 rounded-2xl text-xs text-csc-verde-texto flex items-center gap-2.5">
@@ -470,7 +501,15 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
 
         {/* Botão de Gravação */}
         <div className="pt-2">
-          {initialVote ? (
+          {votacaoEncerrada ? (
+            <Botao
+              onClick={onClose}
+              aparencia="vidro"
+              className="w-full justify-center text-sm py-3"
+            >
+              Votação Encerrada (Fechar)
+            </Botao>
+          ) : initialVote ? (
             <Botao
               onClick={onClose}
               aparencia="vidro"

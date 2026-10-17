@@ -3,7 +3,7 @@ import { Award, ChevronRight, Sparkles, X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import { eAdepto, eTreinador, eJogador, eAdmin } from '../../lib/papeis'
-import { obterTodosVotosMvp } from '../../lib/mvp'
+import { obterTodosVotosMvp, isVotacaoMvpAberta } from '../../lib/mvp'
 import { ModalVotarMvp } from './ModalVotarMvp'
 import { CartaoSimples, EtiquetaSeccao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
@@ -127,6 +127,11 @@ export const AlertaMvpPendente: React.FC = () => {
       const isPlayer = eJogador(profile)
 
       for (const ev of eventosData) {
+        const opp = Array.isArray(ev.opponent) ? ev.opponent[0] : ev.opponent
+        const evObj = { ...ev, opponent: opp }
+        // Se a votação estiver encerrada (ex.: amigáveis passados e 1ª jornada), não gera alerta
+        if (!isVotacaoMvpAberta(evObj)) continue
+
         // Elegível se convocado como jogador OU treinador
         const elegivel = (isPlayer && convocadosIds.has(ev.id)) || isCoach
         const jaVotou = meusVotosIds.has(ev.id)
@@ -138,7 +143,6 @@ export const AlertaMvpPendente: React.FC = () => {
         }
 
         if (elegivel && !jaVotou && !dispensado) {
-          const opp = Array.isArray(ev.opponent) ? ev.opponent[0] : ev.opponent
           pendentes.push({
             id: ev.id,
             title: ev.title,
