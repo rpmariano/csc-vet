@@ -209,12 +209,22 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
         away_kit_color_2: awayKitColor2.trim() || null,
       }
 
-      const { error } = emEdicao
-        ? await supabase.from('opponents').update(valores).eq('id', emEdicao)
-        : await supabase.from('opponents').insert([valores])
+      const { data, error } = emEdicao
+        ? await supabase.from('opponents').update(valores).eq('id', emEdicao).select()
+        : await supabase.from('opponents').insert([valores]).select()
       if (error) throw error
 
+      if (data && data.length > 0) {
+        const itemAtualizado = data[0] as Adversario
+        setAdversarios(prev =>
+          emEdicao
+            ? prev.map(a => (a.id === emEdicao ? itemAtualizado : a))
+            : [...prev, itemAtualizado].sort((a, b) => a.name.localeCompare(b.name))
+        )
+      }
+
       toast.success(emEdicao ? 'Adversário atualizado com sucesso!' : 'Adversário criado com sucesso!')
+      guarda.marcarComoGravado()
       setModalAberto(false)
       carregar()
     } catch (err: any) {
@@ -657,9 +667,7 @@ export const GestaoAdversarios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
         voltarPara={voltarPara}
         aoEditar={() => {
           if (!adversarioAberto) return
-          const alvo = adversarioAberto
-          fecharFicha()
-          abrirEdicao(alvo)
+          abrirEdicao(adversarioAberto)
         }}
         aoEliminar={() => {
           if (!adversarioAberto) return

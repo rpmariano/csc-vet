@@ -236,9 +236,19 @@ export const FichaAdversario: React.FC<FichaAdversarioProps> = ({
                 <span className="block font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62">
                   Sigla nos placares
                 </span>
-                <span className="block font-display font-black text-[22px] text-white leading-none mt-1 truncate">
-                  {adversario.initials || formatOpponentSigla(adversario)}
-                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-display font-black text-[22px] text-white leading-none truncate">
+                    {adversario.initials || formatOpponentSigla(adversario)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic('light'); aoEditar() }}
+                    title="Editar sigla do adversário"
+                    className="p-1 text-white/40 hover:text-csc-gold rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                </div>
               </span>
             </div>
 

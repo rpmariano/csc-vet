@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Botao, BotaoIcone } from './ui'
 import { supabase } from '../lib/supabaseClient'
-import { Trash2, Shield, Plus } from 'lucide-react'
+import { Trash2, Shield, Plus, Pencil } from 'lucide-react'
 import { toast } from '../context/ToastContext'
 import { ConfirmModal } from './ConfirmModal'
 import { Modal } from './Modal'
@@ -64,6 +64,43 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     onConfirm: () => {}
   })
   const closeConfirmModal = () => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))
+
+  const [adversarioEmEdicao, setAdversarioEmEdicao] = useState<{ id: string; name: string; initials: string } | null>(null)
+  const [gravandoAdversario, setGravandoAdversario] = useState(false)
+
+  const handleGravarAdversario = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!adversarioEmEdicao) return
+    setGravandoAdversario(true)
+    try {
+      const payload = {
+        name: adversarioEmEdicao.name.trim(),
+        initials: adversarioEmEdicao.initials.trim() || null,
+      }
+      const { error } = await supabase
+        .from('opponents')
+        .update(payload)
+        .eq('id', adversarioEmEdicao.id)
+      if (error) throw error
+
+      toast.success('Adversário atualizado com sucesso!')
+      setTeams(prev =>
+        prev.map(t =>
+          t.opponent?.id === adversarioEmEdicao.id
+            ? { ...t, opponent: { ...t.opponent, ...payload } }
+            : t
+        )
+      )
+      setOpponents(prev =>
+        prev.map(o => (o.id === adversarioEmEdicao.id ? { ...o, ...payload } : o))
+      )
+      setAdversarioEmEdicao(null)
+    } catch (err: any) {
+      toast.error('Erro ao atualizar adversário: ' + mensagemDeErro(err))
+    } finally {
+      setGravandoAdversario(false)
+    }
+  }
 
   /* O efeito fica **depois** da função que chama: em cima referia uma `const`
      ainda por inicializar, o que só funciona porque o corpo do componente
@@ -232,28 +269,34 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
                     <div key={g.id} className="cartao-simples p-4">
                       <h4 className="font-black text-white mb-3">{g.name} <span className="text-xs text-white/62 font-medium">(Fase {g.phase})</span></h4>
                       <div className="space-y-2">
-                        {teams.filter(t => t.group_id === g.id).map(t => (
-                          <div key={t.id} className="text-sm font-medium text-white/80 bg-white/6 px-3 py-2 rounded-lg flex justify-between items-center">
-                            {/* Sigla e emblema, como na classificacao: o nome por
-                                extenso nao cabe, e o emblema do proprio clube
-                                vinha de um ficheiro estatico em vez de
-                                `club_settings`. */}
-                            {(() => {
-                              const { sigla, logo, eOClube } = equipaDoTorneio(t, clubSettings)
-                              return (
-                                <span className="flex items-center gap-2 min-w-0">
-                                  {logo ? (
-                                    <img src={logo} alt="" className="w-5 h-5 rounded-full object-contain bg-white shrink-0" />
-                                  ) : (
-                                    <Shield size={16} className={eOClube ? 'text-csc-gold' : 'text-white/62'} />
-                                  )}
-                                  <span className={`truncate ${eOClube ? 'font-bold text-csc-gold' : ''}`}>{sigla}</span>
-                                </span>
-                              )
-                            })()}
-                            <BotaoIcone rotulo="Tirar a equipa do grupo" icone={Trash2} perigo discreto onClick={() => handleRemoveTeam(t.id)} />
-                          </div>
-                        ))}
+                        {teams.filter(t => t.group_id === g.id).map(t => {
+                          const { sigla, logo, eOClube } = equipaDoTorneio(t, clubSettings)
+                          return (
+                            <div key={t.id} className="text-sm font-medium text-white/80 bg-white/6 px-3 py-2 rounded-lg flex justify-between items-center gap-2">
+                              <span className="flex items-center gap-2 min-w-0">
+                                {logo ? (
+                                  <img src={logo} alt="" className="w-5 h-5 rounded-full object-contain bg-white shrink-0" />
+                                ) : (
+                                  <Shield size={16} className={eOClube ? 'text-csc-gold' : 'text-white/62'} />
+                                )}
+                                <span className={`truncate ${eOClube ? 'font-bold text-csc-gold' : ''}`}>{sigla}</span>
+                              </span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {!eOClube && t.opponent && (
+                                  <BotaoIcone
+                                    rotulo={`Editar sigla e nome de ${t.opponent.name}`}
+                                    icone={Pencil}
+                                    discreto
+                                    onClick={() => setAdversarioEmEdicao({ id: t.opponent.id, name: t.opponent.name, initials: t.opponent.initials || '' })}
+                                  />
+                                )}
+                                {!eOClube && (
+                                  <BotaoIcone rotulo="Tirar a equipa do grupo" icone={Trash2} perigo discreto onClick={() => handleRemoveTeam(t.id)} />
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
                         {teams.filter(t => t.group_id === g.id).length === 0 && (
                           <div className="text-xs text-white/62 italic">Sem equipas neste grupo.</div>
                         )}
@@ -322,6 +365,55 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       />
 
       <UnsavedChangesModal {...guardaGrupo.props} />
+
+      <Modal
+        isOpen={Boolean(adversarioEmEdicao)}
+        onClose={() => setAdversarioEmEdicao(null)}
+        title="Editar equipa adversária"
+        icon={<Shield size={20} className="text-csc-gold" />}
+      >
+        {adversarioEmEdicao && (
+          <form onSubmit={handleGravarAdversario} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-white/60 mb-1" htmlFor="lm-adv-nome">
+                Nome da equipa *
+              </label>
+              <input
+                id="lm-adv-nome"
+                type="text"
+                required
+                value={adversarioEmEdicao.name}
+                onChange={e => setAdversarioEmEdicao({ ...adversarioEmEdicao, name: e.target.value })}
+                className={CLASSE_CAMPO}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-white/60 mb-1" htmlFor="lm-adv-sigla">
+                Sigla nos placares e tabelas
+              </label>
+              <input
+                id="lm-adv-sigla"
+                type="text"
+                value={adversarioEmEdicao.initials}
+                onChange={e => setAdversarioEmEdicao({ ...adversarioEmEdicao, initials: e.target.value })}
+                placeholder="Ex: GDPCC"
+                className={CLASSE_CAMPO}
+              />
+              <p className="text-[11px] text-white/60 mt-1">
+                Aparece na classificação do torneio e nos placares de jogos.
+              </p>
+            </div>
+            <div className="pt-3 border-t border-white/10 flex gap-2 justify-end">
+              <Botao aparencia="vidro" type="button" onClick={() => setAdversarioEmEdicao(null)}>
+                Cancelar
+              </Botao>
+              <Botao type="submit" disabled={gravandoAdversario}>
+                {gravandoAdversario ? 'A guardar…' : 'Guardar alterações'}
+              </Botao>
+            </div>
+          </form>
+        )}
+      </Modal>
     </>
   )
 }

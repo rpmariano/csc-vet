@@ -463,32 +463,44 @@ export async function sincronizarEquipasEOficiais(): Promise<ResultadoSincroniza
       correspondeEquipaOficial(eq, a.name, a.initials)
     )
 
-    const payload = {
-      initials: eq.sigla,
-      home_field_id: campoId,
-      home_kit_color_1: eq.homeKit1,
-      home_kit_color_2: eq.homeKit2,
-      away_kit_color_1: eq.awayKit1,
-      away_kit_color_2: eq.awayKit2,
-    }
-
     if (correspondentes.length > 0) {
-      // Atualizar TODOS os registos correspondentes
+      // Atualizar APENAS campos em falta nos registos correspondentes.
+      // NUNCA sobrepor a sigla (initials) se o utilizador já tiver definido/personalizado uma!
       for (const adv of correspondentes) {
-        const updatePayload: Record<string, any> = { ...payload }
-        // Se não tiver emblema ou se for um caminho inválido, preenche com o oficial
+        const updatePayload: Record<string, any> = {}
+
+        if (!adv.initials || !adv.initials.trim()) {
+          updatePayload.initials = eq.sigla
+        }
+        if (!adv.home_field_id && campoId) {
+          updatePayload.home_field_id = campoId
+        }
+        if (!adv.home_kit_color_1 && eq.homeKit1) {
+          updatePayload.home_kit_color_1 = eq.homeKit1
+        }
+        if (!adv.home_kit_color_2 && eq.homeKit2) {
+          updatePayload.home_kit_color_2 = eq.homeKit2
+        }
+        if (!adv.away_kit_color_1 && eq.awayKit1) {
+          updatePayload.away_kit_color_1 = eq.awayKit1
+        }
+        if (!adv.away_kit_color_2 && eq.awayKit2) {
+          updatePayload.away_kit_color_2 = eq.awayKit2
+        }
         if (!adv.logo_url) {
           updatePayload.logo_url = logoUrlOficial
         }
 
-        const { error } = await supabase
-          .from('opponents')
-          .update(updatePayload)
-          .eq('id', adv.id)
+        if (Object.keys(updatePayload).length > 0) {
+          const { error } = await supabase
+            .from('opponents')
+            .update(updatePayload)
+            .eq('id', adv.id)
 
-        if (!error) {
-          equipasAtualizadas++
-          detalhes.push(`${adv.name}: campo, equipamentos e emblema atualizados`)
+          if (!error) {
+            equipasAtualizadas++
+            detalhes.push(`${adv.name}: dados oficiais em falta preenchidos`)
+          }
         }
       }
     } else {
@@ -497,8 +509,13 @@ export async function sincronizarEquipasEOficiais(): Promise<ResultadoSincroniza
         .from('opponents')
         .insert({
           name: eq.nome,
+          initials: eq.sigla,
+          home_field_id: campoId,
+          home_kit_color_1: eq.homeKit1,
+          home_kit_color_2: eq.homeKit2,
+          away_kit_color_1: eq.awayKit1,
+          away_kit_color_2: eq.awayKit2,
           logo_url: logoUrlOficial,
-          ...payload,
         })
 
       if (!error) {

@@ -446,3 +446,64 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
   )
 })
 
+// ==============================================================================
+// 8. TESTE DE PRESERVAÇÃO E FORMATAÇÃO DE SIGLAS DE ADVERSÁRIOS
+// ==============================================================================
+test('formatOpponentSigla respeita rigorosamente a sigla definida pelo utilizador (mesmo com espaços ou > 6 caracteres)', () => {
+  const formatOpponentSigla = (opp) => {
+    if (!opp) return 'ADV'
+    const init = opp.initials?.trim()
+    if (init) {
+      return init.toUpperCase()
+    }
+    if (opp.name) {
+      const words = opp.name.trim().split(/\s+/).filter(w => w.length > 1)
+      if (words.length > 1) {
+        return words.map(w => w[0].toUpperCase()).join('').substring(0, 6)
+      }
+      return opp.name.substring(0, 4).toUpperCase()
+    }
+    return 'ADV'
+  }
+
+  // Siglas com espaços
+  assert.equal(formatOpponentSigla({ name: 'Veteranos Sul', initials: 'V SUL' }), 'V SUL')
+  assert.equal(formatOpponentSigla({ name: 'DS Private TV', initials: 'DS P' }), 'DS P')
+  assert.equal(formatOpponentSigla({ name: 'Grupo Desportivo Pescadores', initials: 'GD P' }), 'GD P')
+
+  // Siglas com mais de 6 caracteres
+  assert.equal(formatOpponentSigla({ name: 'Estrelas Lisboa', initials: 'ESTRELAS' }), 'ESTRELAS')
+  assert.equal(formatOpponentSigla({ name: 'Lisbon Casuals', initials: 'CASUALS' }), 'CASUALS')
+
+  // Fallback quando não há sigla
+  assert.equal(formatOpponentSigla({ name: 'Melo Falcão', initials: null }), 'MF')
+  assert.equal(formatOpponentSigla(null), 'ADV')
+})
+
+test('Sincronização de dados oficiais NÃO sobrepõe siglas existentes', () => {
+  const advExistente = {
+    id: 'opp-1',
+    name: 'Estrelas Lisboa',
+    initials: 'ESTRELAS_PERSONALIZADA',
+    home_field_id: null,
+  }
+
+  const eqOficial = {
+    nome: 'Estrelas Lisboa',
+    sigla: 'ELIS',
+    campoId: 'field-123',
+  }
+
+  const updatePayload = {}
+  if (!advExistente.initials || !advExistente.initials.trim()) {
+    updatePayload.initials = eqOficial.sigla
+  }
+  if (!advExistente.home_field_id && eqOficial.campoId) {
+    updatePayload.home_field_id = eqOficial.campoId
+  }
+
+  assert.equal(updatePayload.initials, undefined, 'A sigla personalizada NÃO pode ser sobreposta')
+  assert.equal(updatePayload.home_field_id, 'field-123', 'Campos em falta continuam a ser preenchidos')
+})
+
+

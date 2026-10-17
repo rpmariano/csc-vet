@@ -18,13 +18,14 @@ export const formatClubSigla = (initials?: string | null): string => {
 
 export const formatOpponentSigla = (opp?: { name?: string; initials?: string | null } | null): string => {
   if (!opp) return 'ADV'
-  if (opp.initials && opp.initials.trim().length <= 6 && !opp.initials.trim().includes(' ')) {
-    return opp.initials.trim().toUpperCase()
+  const init = opp.initials?.trim()
+  if (init) {
+    return init.toUpperCase()
   }
   if (opp.name) {
     const words = opp.name.trim().split(/\s+/).filter(w => w.length > 1)
     if (words.length > 1) {
-      return words.map(w => w[0].toUpperCase()).join('').substring(0, 5)
+      return words.map(w => w[0].toUpperCase()).join('').substring(0, 6)
     }
     return opp.name.substring(0, 4).toUpperCase()
   }
