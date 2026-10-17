@@ -97,10 +97,18 @@ export const sincronizarJogoNaJornada = async (
   }
 
   if (!nossa || !deles || !grupoId) {
-    /* Sem os dois no mesmo grupo não há linha possível. A anterior sai: o
-       jogo pode ter mudado de adversário para um que ainda não está inscrito. */
-    const erro = await tirarEspelho()
-    return erro ? { estado: 'erro', mensagem: erro } : { estado: 'sem-equipas' }
+    const eu = (equipas ?? []).find(e => e.opponent_id === null)
+    const ele = (equipas ?? []).find(e => e.opponent_id === evento.opponent_id)
+    if (eu && ele) {
+      nossa = eu
+      deles = ele
+      grupoId = eu.group_id ?? ele.group_id ?? porFase[0]?.id
+    }
+  }
+
+  if (!nossa || !deles || !grupoId) {
+    /* Se um deles ainda não está inscrito no torneio, avisar sem apagar histórico */
+    return { estado: 'sem-equipas' }
   }
 
   const fora = evento.home_away === 'away'

@@ -171,8 +171,8 @@ export const StandingsPage = () => {
 
     if (groupsRes.data) {
       setGroups(groupsRes.data)
-      const maxPhase = Math.max(...groupsRes.data.map(g => g.phase), 1)
-      setActivePhase(maxPhase)
+      const phases = Array.from(new Set(groupsRes.data.map(g => g.phase))).sort((a, b) => a - b)
+      setActivePhase(prev => (phases.includes(prev) ? prev : (phases[0] ?? 1)))
     }
     if (teamsRes.data) setTeams(teamsRes.data)
     if (matchesRes.data) setMatches(matchesRes.data)
