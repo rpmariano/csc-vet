@@ -233,3 +233,111 @@ test('Alerta pode ser dispensado e lembrado localmente', () => {
   assert.equal(pendentesNaoDispensados.length, 1)
   assert.equal(pendentesNaoDispensados[0].id, 'match_456')
 })
+
+// ==============================================================================
+// 8. TESTE DE DERIVAÇÃO ESTRITA DE PAPÉIS (DIREÇÃO NÃO É TREINADOR NEM JOGADOR)
+// ==============================================================================
+test('Derivação de papéis: admin é estritamente admin e nunca herda coach ou player', () => {
+  const VALID_ROLES = ['player', 'coach', 'admin', 'supporter']
+
+  function extractRolesFromProfile(profile) {
+    if (!profile) return []
+    if (profile.status === 'inactive') return []
+    const rawRole = profile.role
+    if (rawRole === 'unassigned') return []
+
+    if (Array.isArray(profile.roles) && profile.roles.length === 0) return []
+    const defaultRole = rawRole && VALID_ROLES.includes(rawRole) ? rawRole : undefined
+    if (defaultRole === 'supporter' || rawRole === 'supporter') return ['supporter']
+
+    if (Array.isArray(profile.roles) && profile.roles.length > 0) {
+      const fromColumn = profile.roles.filter(r => VALID_ROLES.includes(r))
+      if (fromColumn.includes('supporter')) return ['supporter']
+      if (fromColumn.length > 0) {
+        return defaultRole && !fromColumn.includes(defaultRole) ? [...fromColumn, defaultRole] : fromColumn
+      }
+    }
+
+    if (profile.role === 'admin') return ['admin']
+    if (profile.role === 'coach') return ['coach']
+    if (profile.role === 'supporter') return ['supporter']
+    if (profile.role === 'player') return ['player']
+    return []
+  }
+
+  const pAdminSemRoles = { id: 'mariano', role: 'admin' }
+  const rolesAdmin = extractRolesFromProfile(pAdminSemRoles)
+  assert.deepEqual(rolesAdmin, ['admin'])
+  assert.ok(!rolesAdmin.includes('coach'), 'Direção NÃO pode ter papel de treinador')
+  assert.ok(!rolesAdmin.includes('player'), 'Direção NÃO pode ter papel de jogador')
+
+  const pAdminComRoles = { id: 'mariano', role: 'admin', roles: ['admin'] }
+  const rolesAdminComRoles = extractRolesFromProfile(pAdminComRoles)
+  assert.deepEqual(rolesAdminComRoles, ['admin'])
+})
+
+// ==============================================================================
+// 9. TESTE DE CALCULAR ELEITORES: DIREÇÃO NÃO CONVOCADA NUNCA APARECE
+// ==============================================================================
+test('calcularEleitoresDoJogo: Direção não convocada nunca aparece como possível votante', () => {
+  function eAdepto(p) { return p.role === 'supporter' || (p.roles && p.roles.includes('supporter')) }
+  function eAdmin(p) { return p.role === 'admin' || (p.roles && p.roles.includes('admin')) }
+  function eTreinador(p) { return p.role === 'coach' || (p.roles && p.roles.includes('coach')) }
+
+  function calcularEleitoresDoJogoMock(allProfiles, callups, stats, votos) {
+    const callupMap = new Map((callups || []).map(c => [c.player_id, c]))
+    const statMap = new Map((stats || []).map(s => [s.player_id, s]))
+    const votosMap = new Map((votos || []).map(v => [v.voter_id, v]))
+    const eleitores = []
+    const idsProcessados = new Set()
+
+    for (const p of allProfiles || []) {
+      if (eAdepto(p)) continue
+      const callup = callupMap.get(p.id)
+      const st = statMap.get(p.id)
+      if (callup?.status === 'declined' && !st) continue
+      const foiConvocado = Boolean(callup)
+      const participou = Boolean(st && (st.lineup_status !== 'none' || st.goals > 0))
+
+      if (foiConvocado || participou) {
+        idsProcessados.add(p.id)
+        eleitores.push({ id: p.id, name: p.name, funcao: 'Convocado', categoria: 'jogador' })
+      }
+    }
+
+    for (const p of allProfiles || []) {
+      if (eAdepto(p) || p.status === 'inactive') continue
+      // Membros de Direção / Admin não são equipa técnica votante
+      const isDirecao = eAdmin(p) || p.role === 'admin' || (Array.isArray(p.roles) && p.roles.includes('admin'))
+      if (isDirecao) continue
+
+      const isCoach = eTreinador(p)
+      if (isCoach) {
+        if (!idsProcessados.has(p.id)) {
+          idsProcessados.add(p.id)
+          eleitores.push({ id: p.id, name: p.name, funcao: 'Treinador', categoria: 'staff' })
+        }
+      }
+    }
+
+    return eleitores
+  }
+
+  const perfis = [
+    { id: 'mariano', name: 'Mariano', role: 'admin', roles: ['admin'] },
+    { id: 'couto', name: 'André Couto', role: 'coach', roles: ['coach'] },
+    { id: 'rocha', name: 'Rocha', role: 'player', roles: ['player'] },
+  ]
+
+  const convocatorias = [
+    { player_id: 'rocha', status: 'accepted' }
+  ]
+
+  const eleitores = calcularEleitoresDoJogoMock(perfis, convocatorias, [], [])
+
+  assert.equal(eleitores.length, 2, 'Devem existir apenas 2 eleitores: Rocha (jogador) e André Couto (treinador)')
+  assert.ok(eleitores.some(e => e.id === 'rocha'), 'Rocha deve estar na lista como jogador')
+  assert.ok(eleitores.some(e => e.id === 'couto'), 'André Couto deve estar na lista como treinador')
+  assert.ok(!eleitores.some(e => e.id === 'mariano'), 'Mariano (Direção) NÃO PODE APARECER como votante')
+})
+

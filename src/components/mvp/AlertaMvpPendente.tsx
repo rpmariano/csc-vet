@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { Award, ChevronRight, Sparkles, X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
-import { eAdepto, eTreinador, eJogador } from '../../lib/papeis'
+import { eAdepto, eTreinador, eJogador, eAdmin } from '../../lib/papeis'
 import { obterTodosVotosMvp } from '../../lib/mvp'
 import { ModalVotarMvp } from './ModalVotarMvp'
 import { CartaoSimples, EtiquetaSeccao } from '../ui'
@@ -51,7 +51,8 @@ export const AlertaMvpPendente: React.FC = () => {
 
     try {
       // Apenas treinadores ou atletas convocados podem votar. Direção pura não vota.
-      const isCoach = eTreinador(profile)
+      const isDirecao = Boolean(profile && (eAdmin(profile) || profile.role === 'admin' || profile.roles?.includes('admin')))
+      const isCoach = eTreinador(profile) && !isDirecao
 
       // 1. Procurar jogos com resultado dos últimos 21 dias
       const dataLimite = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString()

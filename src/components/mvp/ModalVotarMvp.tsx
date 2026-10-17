@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Award, Check, Sparkles, AlertCircle, ArrowLeftRight, X, Trophy, Medal } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
-import { eAdepto, eTreinador } from '../../lib/papeis'
+import { eAdepto, eTreinador, eAdmin } from '../../lib/papeis'
 import { compararPorCamisola } from '../../lib/eventos'
 import { registarVotoMvp, obterVotosDoJogo, type MvpVote, type PlayerSummary } from '../../lib/mvp'
 import { triggerHaptic } from '../../utils/haptics'
@@ -118,7 +118,8 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
         }
 
         // Verificar elegibilidade: apenas convocados (não recusados) ou treinadores. Direção pura não vota.
-        const isCoach = profile ? eTreinador(profile) : false
+        const isDirecao = Boolean(profile && (eAdmin(profile) || profile.role === 'admin' || profile.roles?.includes('admin')))
+        const isCoach = Boolean(profile && eTreinador(profile) && !isDirecao)
         const myCallup = profile?.id ? callupMap.get(profile.id) : null
         const myStat = profile?.id ? statMap.get(profile.id) : null
         const isConvocadoOuParticipante = Boolean(

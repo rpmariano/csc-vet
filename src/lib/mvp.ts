@@ -5,7 +5,7 @@ import { localDoEvento } from './eventos'
 import { CLUBE_SIGLA } from './clube'
 import { triggerHaptic } from '../utils/haptics'
 import { toast } from '../context/ToastContext'
-import { eAdepto, eTreinador } from './papeis'
+import { eAdepto, eTreinador, eAdmin } from './papeis'
 
 export interface EleitorMvpInfo {
   id: string
@@ -151,14 +151,15 @@ export async function verificarElegibilidadeVotoMvp(
 ): Promise<boolean> {
   if (!eventId || !voterId) return false
   try {
-    // 1. Verificar se tem perfil de treinador (coach)
+    // 1. Verificar se tem perfil de treinador (coach) — Direção pura não vota
     const { data: profile } = await supabase
       .from('v_players_public')
       .select('role, roles')
       .eq('id', voterId)
       .maybeSingle()
 
-    if (profile && eTreinador(profile)) {
+    const isDirecao = profile && (eAdmin(profile) || profile.role === 'admin' || (Array.isArray(profile.roles) && profile.roles.includes('admin')))
+    if (profile && eTreinador(profile) && !isDirecao) {
       return true
     }
 
@@ -313,6 +314,10 @@ export function calcularEleitoresDoJogo(
   // 2. Equipa Técnica (apenas treinadores; o perfil de direção pura não tem direito a voto)
   for (const p of allProfiles || []) {
     if (eAdepto(p) || p.status === 'inactive') continue
+    // Membros de Direção / Admin não são equipa técnica votante
+    const isDirecao = eAdmin(p) || p.role === 'admin' || (Array.isArray(p.roles) && p.roles.includes('admin'))
+    if (isDirecao) continue
+
     const isCoach = eTreinador(p)
 
     if (isCoach) {

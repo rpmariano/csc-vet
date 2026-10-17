@@ -130,9 +130,9 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
     if (parsed.length > 0) return parsed
   }
 
-  // 3. Derivar da coluna `role`
-  if (profile.role === 'admin') return ['admin', 'coach', 'player']
-  if (profile.role === 'coach') return ['coach', 'player']
+  // 3. Derivar da coluna `role` (estrita: Direção é apenas admin, não é coach nem player)
+  if (profile.role === 'admin') return ['admin']
+  if (profile.role === 'coach') return ['coach']
   if (profile.role === 'supporter') return ['supporter']
   if (profile.role === 'player') return ['player']
   return []
@@ -441,8 +441,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const actualRole = actualProfile?.role ?? null
   const isSimulatingRole = Boolean(
     canSimulateRoles &&
-    simulatedRole &&
-    simulatedRole !== actualRole
+    simulatedRole !== null
   )
 
   const isEffectivelyUnassigned = Boolean(

@@ -5,7 +5,7 @@ import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJog
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
-import { eAdepto, eTreinador } from '../lib/papeis'
+import { eAdepto, eTreinador, eAdmin } from '../lib/papeis'
 import { toast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { EcraDetalhe } from './EcraDetalhe'
@@ -186,7 +186,18 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const callupMap = new Map((callupsData || []).map(c => [c.player_id, c]))
         const statMap = new Map((statsData || []).map(s => [s.player_id, s]))
 
-        const allProfiles = profilesData || []
+        const rawProfiles = profilesData || []
+        // Sincronizar o perfil efetivo do utilizador atual (incluindo simulação de papel) em allProfiles
+        const allProfiles = rawProfiles.map(p => {
+          if (profile && p.id === profile.id) {
+            return {
+              ...p,
+              role: profile.role,
+              roles: profile.roles || [profile.role]
+            }
+          }
+          return p
+        })
         const relevantProfiles = allProfiles.filter(p => {
           if (callupMap.has(p.id)) return true
           if (statMap.has(p.id)) return true
@@ -703,7 +714,11 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               <SecaoEleitoresMvp
                 eleitores={eleitoresDoJogo}
                 currentUserId={profile?.id}
-                onVotarClick={(isConvocado || Boolean(profile && eTreinador(profile))) && !meuVotoMvp ? () => setModalVotarMvpAberto(true) : undefined}
+                onVotarClick={
+                  (isConvocado || Boolean(profile && eTreinador(profile) && !eAdmin(profile) && profile.role !== 'admin' && !profile.roles?.includes('admin'))) && !meuVotoMvp
+                    ? () => setModalVotarMvpAberto(true)
+                    : undefined
+                }
               />
             )}
 
