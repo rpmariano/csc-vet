@@ -8,6 +8,7 @@ import { Botao, BlocoData } from '../ui'
 import { mensagemDeErro } from '../../lib/erros'
 import { convocarAdeptosParaJogo } from '../../lib/convocatoriasAdeptos'
 import { eAdepto } from '../../lib/papeis'
+import { obterTodasDisponibilidadesDoJogo, type RespostaDisponibilidade } from '../../lib/disponibilidadeJogo'
 
 /**
  * Convocar, logo a seguir a guardar o evento (ecrãs 4f e 4g).
@@ -80,6 +81,7 @@ export const ConvocatoriaAoCriar: React.FC<{
   const [escolhidos, setEscolhidos] = useState<Set<string>>(new Set())
   const [aGravar, setAGravar] = useState(false)
   const [aAjustar, setAAjustar] = useState(false)
+  const [disponibilidades, setDisponibilidades] = useState<Record<string, RespostaDisponibilidade>>({})
 
   const idsAptos = new Set(aptos.map(p => p.id))
   const eTreino = evento?.tipo === 'practice'
@@ -89,6 +91,11 @@ export const ConvocatoriaAoCriar: React.FC<{
     // Num treino a escolha já está feita: todos os aptos.
     setEscolhidos(new Set(eTreino ? aptos.map(p => p.id) : preEscolhidos))
     setAAjustar(false)
+
+    // Se for um jogo, carregar as disponibilidades respondidas pelos atletas na sondagem acoplada
+    if (evento.tipo === 'match') {
+      obterTodasDisponibilidadesDoJogo(evento.id).then(setDisponibilidades)
+    }
   }, [evento?.id])
 
   if (!evento) return null
@@ -297,6 +304,12 @@ export const ConvocatoriaAoCriar: React.FC<{
                   </span>
                   <span className="block text-[9.5px] text-white/62 truncate mt-0.5">
                     {p.status === 'injured' ? 'lesionado' : p.status === 'inactive' ? 'inativo' : 'apto'}
+                    {evento.tipo === 'match' && disponibilidades[p.id] === 'available' && (
+                      <span className="ml-1.5 font-bold text-csc-verde-texto">· Disponível</span>
+                    )}
+                    {evento.tipo === 'match' && disponibilidades[p.id] === 'unavailable' && (
+                      <span className="ml-1.5 font-bold text-csc-vermelho-texto">· Indisponível</span>
+                    )}
                   </span>
                 </span>
 

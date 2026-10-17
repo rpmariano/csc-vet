@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Share2, MessageCircle, Copy, Check } from 'lucide-react'
+import { Share2, MessageCircle, Copy, Check, Trophy } from 'lucide-react'
 import {
   copiarLinkConvocatoria,
   partilharConvocatoriaWhatsApp,
@@ -9,6 +9,7 @@ import type {
   OpcoesPartilha,
 } from '../../lib/convocatoriaPartilha'
 import { enderecoEvento } from '../../lib/rotas'
+import { obterJogoAntecedidoPeloTreino } from '../../lib/disponibilidadeJogo'
 
 interface PartilharConvocatoriaProps {
   evento: EventoPartilha
@@ -27,6 +28,10 @@ export const PartilharConvocatoria: React.FC<PartilharConvocatoriaProps> = ({
   const [copiado, setCopiado] = useState(false)
   const url = enderecoEvento(evento.id)
 
+  const jogoAntecedido = evento.type === 'practice'
+    ? (opcoes?.jogoAntecedido ?? (opcoes?.todosEventos ? obterJogoAntecedidoPeloTreino(evento, opcoes.todosEventos) : null))
+    : null
+
   const handleCopiar = async () => {
     const sucesso = await copiarLinkConvocatoria(evento.id)
     if (sucesso) {
@@ -36,7 +41,7 @@ export const PartilharConvocatoria: React.FC<PartilharConvocatoriaProps> = ({
   }
 
   const handleWhatsApp = () => {
-    partilharConvocatoriaWhatsApp(evento, opcoes)
+    partilharConvocatoriaWhatsApp(evento, { ...opcoes, jogoAntecedido })
   }
 
   if (compacto) {
@@ -86,6 +91,16 @@ export const PartilharConvocatoria: React.FC<PartilharConvocatoriaProps> = ({
         </div>
       </div>
 
+      {/* Indicador de sondagem de jogo acoplada ao treino */}
+      {jogoAntecedido && (
+        <div className="bg-csc-gold/10 border border-csc-gold/25 rounded-xl px-3 py-2 flex items-center gap-2">
+          <Trophy size={14} className="text-csc-gold shrink-0" />
+          <p className="text-[11px] text-csc-gold font-bold leading-tight">
+            Inclui sondagem acoplada para o jogo contra {jogoAntecedido.opponent?.name || jogoAntecedido.opponent?.initials || 'adversário'} ({new Date(jogoAntecedido.date_time).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })})
+          </p>
+        </div>
+      )}
+
       {/* Caixa do Link */}
       <div className="flex items-center gap-2 bg-black/25 px-3 py-2 rounded-xl border border-white/10 text-xs">
         <span className="text-white/60 truncate flex-1 select-all font-mono text-[11px]">
@@ -114,7 +129,7 @@ export const PartilharConvocatoria: React.FC<PartilharConvocatoriaProps> = ({
             transition-transform duration-150 active:scale-97 border border-white/15"
         >
           {copiado ? <Check size={16} className="text-csc-verde-texto" /> : <Copy size={16} />}
-          <span>{copiado ? 'Copiado!' : 'Copiar link'}</span>
+          <span>{copiado ? 'Link copiado!' : 'Copiar link'}</span>
         </button>
       </div>
     </div>

@@ -42,6 +42,8 @@ import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_ETIQUETA_CAMPO as ETIQUETA_FILTRO } from '../components/ui/formulario'
 import { formatarCoresEquipamento, BadgeCoresEquipamento } from '../components/clube/equipamentos'
 import { obterEquipamentoEquipaOficial, obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
+import { obterJogoAntecedidoPeloTreino } from '../lib/disponibilidadeJogo'
+import { SondagemDisponibilidadeJogo } from '../components/callups/SondagemDisponibilidadeJogo'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -1260,6 +1262,25 @@ const CalendarPage: React.FC = () => {
                     </div>
                   </>
                 )}
+
+                {/* Sondagem acoplada para o próximo jogo quando o treino antecede um jogo */}
+                {(() => {
+                  if (event.type !== 'practice' || isAdepto || !profile) return null
+                  const jogoAntecedido = obterJogoAntecedidoPeloTreino(event, events)
+                  if (!jogoAntecedido) return null
+                  return (
+                    <div onClick={e => e.stopPropagation()}>
+                      <SondagemDisponibilidadeJogo
+                        jogo={jogoAntecedido}
+                        playerId={profile.id}
+                        campos={fields}
+                        clubeSigla={clubSettings?.initials}
+                        compacto
+                        isCoachOrAdmin={Boolean(isCoachOrAdmin)}
+                      />
+                    </div>
+                  )
+                })()}
               </div>
             )
           })()}
@@ -2107,6 +2128,22 @@ const CalendarPage: React.FC = () => {
                     </div>
                   )
                 })()}
+
+                {/* Sondagem acoplada para o próximo jogo quando o treino anteceder um jogo */}
+                {(() => {
+                  if (selectedEvent.type !== 'practice' || isAdepto || !profile) return null
+                  const jogoAntecedido = obterJogoAntecedidoPeloTreino(selectedEvent, events)
+                  if (!jogoAntecedido) return null
+                  return (
+                    <SondagemDisponibilidadeJogo
+                      jogo={jogoAntecedido}
+                      playerId={profile.id}
+                      campos={fields}
+                      clubeSigla={clubSettings?.initials}
+                      isCoachOrAdmin={Boolean(isCoachOrAdmin)}
+                    />
+                  )
+                })()}
               </div>
 
               {/*
@@ -2150,6 +2187,7 @@ const CalendarPage: React.FC = () => {
                     clubeNome: clubSettings?.name,
                     clubeSigla: clubSettings?.initials,
                     campos: fields,
+                    todosEventos: events,
                   }}
                 />
 

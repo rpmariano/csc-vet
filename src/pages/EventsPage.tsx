@@ -2097,6 +2097,7 @@ const EventsPage: React.FC = () => {
                           clubeNome: clubSettings?.name,
                           clubeSigla: clubSettings?.initials,
                           campos: fields,
+                          todosEventos: events,
                         })
                       }}
                     />
@@ -2139,6 +2140,7 @@ const EventsPage: React.FC = () => {
                       clubeNome: clubSettings?.name,
                       clubeSigla: clubSettings?.initials,
                       campos: fields,
+                      todosEventos: events,
                     }}
                   />
                 </div>
