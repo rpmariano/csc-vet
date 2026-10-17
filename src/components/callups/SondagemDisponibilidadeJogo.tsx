@@ -7,6 +7,9 @@ import {
   gravarDisponibilidadeAtleta,
 } from '../../lib/disponibilidadeJogo'
 import { localDoEvento } from '../../lib/eventos'
+import type { Profile } from '../../context/AuthContext'
+import { getPlayerDisplayName } from '../../lib/eventos'
+import { eAdepto } from '../../lib/papeis'
 import { CLUBE_SIGLA } from '../../lib/clube'
 import { triggerHaptic } from '../../utils/haptics'
 
@@ -17,6 +20,7 @@ export interface SondagemDisponibilidadeJogoProps {
   clubeSigla?: string
   compacto?: boolean
   isCoachOrAdmin?: boolean
+  plantel?: readonly Profile[]
   aoResponder?: (status: RespostaDisponibilidade) => void
 }
 
@@ -27,6 +31,7 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
   clubeSigla = CLUBE_SIGLA,
   compacto = false,
   isCoachOrAdmin = false,
+  plantel = [],
   aoResponder,
 }) => {
   const [minhaResposta, setMinhaResposta] = useState<RespostaDisponibilidade | null>(null)
@@ -48,8 +53,22 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
         })
       }
     }
+
+    const handleAtualizacao = (e: Event) => {
+      const custom = e as CustomEvent<{ matchId: string; playerId: string; status: RespostaDisponibilidade }>
+      if (custom.detail?.matchId === jogo?.id) {
+        setTodasRespostas(prev => ({ ...prev, [custom.detail.playerId]: custom.detail.status }))
+        if (custom.detail.playerId === playerId) {
+          setMinhaResposta(custom.detail.status)
+        }
+      }
+    }
+
+    window.addEventListener('csc_match_availability_updated', handleAtualizacao)
+
     return () => {
       ativo = false
+      window.removeEventListener('csc_match_availability_updated', handleAtualizacao)
     }
   }, [jogo?.id, playerId, isCoachOrAdmin])
 
@@ -257,7 +276,7 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
 
         {/* Resumo da equipa para treinadores/admins */}
         {isCoachOrAdmin && listaValores.length > 0 && (
-          <div className="pt-2 border-t border-white/10">
+          <div className="pt-2 border-t border-white/10 space-y-2">
             <button
               type="button"
               onClick={() => {
@@ -272,6 +291,54 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
               </span>
               {aMostrarEquipa ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
+
+            {aMostrarEquipa && (
+              <div className="pt-2 border-t border-white/10 space-y-2.5">
+                {/* Disponíveis */}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1">
+                    <CheckCircle2 size={11} />
+                    Disponíveis ({contagemDisponiveis})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {plantel.filter(p => !eAdepto(p) && todasRespostas[p.id] === 'available').map(p => (
+                      <span
+                        key={p.id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10.5px] font-medium"
+                      >
+                        <span className="font-bold text-[9px] opacity-75">{p.jersey_number ?? '–'}</span>
+                        <span>{getPlayerDisplayName(p)}</span>
+                      </span>
+                    ))}
+                    {contagemDisponiveis === 0 && (
+                      <span className="text-[10.5px] text-white/40 italic">Nenhum atleta</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Indisponíveis */}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-rose-400 mb-1 flex items-center gap-1">
+                    <XCircle size={11} />
+                    Indisponíveis ({contagemIndisponiveis})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {plantel.filter(p => !eAdepto(p) && todasRespostas[p.id] === 'unavailable').map(p => (
+                      <span
+                        key={p.id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[10.5px] font-medium"
+                      >
+                        <span className="font-bold text-[9px] opacity-75">{p.jersey_number ?? '–'}</span>
+                        <span>{getPlayerDisplayName(p)}</span>
+                      </span>
+                    ))}
+                    {contagemIndisponiveis === 0 && (
+                      <span className="text-[10.5px] text-white/40 italic">Nenhum atleta</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

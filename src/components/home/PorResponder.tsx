@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { CartaoSimples, EtiquetaSeccao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
 import { CarrosselCartoes } from './CarrosselCartoes'
+import { SondagemDisponibilidadeJogo } from '../callups/SondagemDisponibilidadeJogo'
+import { PainelDisponibilidadeJogo } from '../callups/PainelDisponibilidadeJogo'
+import type { EventoComDataETipo } from '../../lib/disponibilidadeJogo'
+import type { Profile } from '../../context/AuthContext'
 
 /**
  * "Por responder" (bloco 3 da Home): os compromissos que ainda esperam a
@@ -25,6 +29,8 @@ export interface PendenteDaHome {
   date_time: string
   local: string
   prova: string | null
+  jogoAntecedido?: EventoComDataETipo | null
+  eventoOriginal?: EventoComDataETipo | null
 }
 
 const TIPO = { match: 'Jogo', practice: 'Treino', gathering: 'Convívio' } as const
@@ -32,11 +38,25 @@ const TIPO = { match: 'Jogo', practice: 'Treino', gathering: 'Convívio' } as co
 const DIA = new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: 'short' })
 const DIA_SEMANA = new Intl.DateTimeFormat('pt-PT', { weekday: 'long' })
 
-export const PorResponder: React.FC<{
+export interface PorResponderProps {
   pendentes: PendenteDaHome[]
   isAdepto?: boolean
+  profile?: Profile | null
+  clubeSigla?: string
+  isCoachOrAdmin?: boolean
+  plantel?: readonly Profile[]
   aoResponder: (id: string, status: 'confirmed' | 'declined') => void
-}> = ({ pendentes, isAdepto = false, aoResponder }) => {
+}
+
+export const PorResponder: React.FC<PorResponderProps> = ({
+  pendentes,
+  isAdepto = false,
+  profile,
+  clubeSigla,
+  isCoachOrAdmin = false,
+  plantel = [],
+  aoResponder,
+}) => {
   const navegar = useNavigate()
   if (pendentes.length === 0) return null
 
@@ -107,6 +127,33 @@ export const PorResponder: React.FC<{
             Não
           </button>
         </div>
+
+        {/* Sondagem acoplada para o próximo jogo quando for um treino que antecede um jogo */}
+        {p.tipo === 'practice' && p.jogoAntecedido && !isAdepto && profile && (
+          <div onClick={e => e.stopPropagation()}>
+            <SondagemDisponibilidadeJogo
+              jogo={p.jogoAntecedido}
+              playerId={profile.id}
+              clubeSigla={clubeSigla}
+              compacto
+              isCoachOrAdmin={isCoachOrAdmin}
+              plantel={plantel}
+            />
+          </div>
+        )}
+
+        {/* Sondagem pré-jogo se o evento for um jogo */}
+        {p.tipo === 'match' && p.eventoOriginal && !isAdepto && profile && (
+          <div onClick={e => e.stopPropagation()}>
+            <PainelDisponibilidadeJogo
+              jogo={p.eventoOriginal}
+              playerId={profile.id}
+              isCoachOrAdmin={isCoachOrAdmin}
+              compacto
+              plantel={plantel}
+            />
+          </div>
+        )}
       </CartaoSimples>
     )
   })

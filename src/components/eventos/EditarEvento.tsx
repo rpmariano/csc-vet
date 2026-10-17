@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { CaixaProcura } from '../ui/CaixaProcura'
-import { MapPin, ExternalLink, Sparkles, Users, Save, Heart, ChevronDown } from 'lucide-react'
+import { MapPin, ExternalLink, Sparkles, Users, Save, Heart, ChevronDown, CheckCircle2, Trophy } from 'lucide-react'
 import { CallupRow } from '../callups/CallupRow'
 import { supabase } from '../../lib/supabaseClient'
 import { toast } from '../../context/ToastContext'
@@ -10,6 +10,7 @@ import { useAlteracoesPorGravar } from '../../hooks/useAlteracoesPorGravar'
 import { getGoogleMapsUrl, getPlayerDisplayName, compararPorCamisola } from '../../lib/eventos'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS, type EventoParaJornada } from '../../lib/jornadaDoJogo'
 import { parseMatchReportMetadata, buildDescriptionWithMatchReport } from '../MatchReportModal'
+import { obterTodasDisponibilidadesDoJogo, type RespostaDisponibilidade } from '../../lib/disponibilidadeJogo'
 import { EcraDetalhe } from '../EcraDetalhe'
 import { UnsavedChangesModal } from '../UnsavedChangesModal'
 import { QuickFieldModal } from '../QuickFieldModal'
@@ -169,6 +170,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   const aConvocarRef = useRef(false)
   const [confirmarLimpar, setConfirmarLimpar] = useState(false)
   const [adeptosAberto, setAdeptosAberto] = useState(true)
+  const [disponibilidades, setDisponibilidades] = useState<Record<string, RespostaDisponibilidade>>({})
 
   // Em jogos, os adeptos são convocados automaticamente ao abrir a edição
   useEffect(() => {
@@ -176,6 +178,28 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
       convocarAdeptosParaJogo(evento.id).then(() => {
         aoMudarConvocatoria?.()
       })
+    }
+  }, [evento?.id, tipo])
+
+  // Em jogos, carregar as disponibilidades respondidas pelos atletas na sondagem pré-jogo
+  useEffect(() => {
+    if (!evento?.id || tipo !== 'match') {
+      setDisponibilidades({})
+      return
+    }
+
+    obterTodasDisponibilidadesDoJogo(evento.id).then(setDisponibilidades)
+
+    const handleAtualizacao = (e: Event) => {
+      const custom = e as CustomEvent<{ matchId: string; playerId: string; status: RespostaDisponibilidade }>
+      if (custom.detail?.matchId === evento.id) {
+        setDisponibilidades(prev => ({ ...prev, [custom.detail.playerId]: custom.detail.status }))
+      }
+    }
+
+    window.addEventListener('csc_match_availability_updated', handleAtualizacao)
+    return () => {
+      window.removeEventListener('csc_match_availability_updated', handleAtualizacao)
     }
   }, [evento?.id, tipo])
 
@@ -344,6 +368,22 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   const porConvocar = useMemo(() => {
     return aptos.filter(p => !convocadoDe(p))
   }, [aptos, convocatorias])
+
+  const porConvocarDisponiveis = useMemo(() => {
+    return porConvocar.filter(p => disponibilidades[p.id] === 'available')
+  }, [porConvocar, disponibilidades])
+
+  const contagemDisponiveis = useMemo(() => {
+    return aptos.filter(p => disponibilidades[p.id] === 'available').length
+  }, [aptos, disponibilidades])
+
+  const contagemIndisponiveis = useMemo(() => {
+    return aptos.filter(p => disponibilidades[p.id] === 'unavailable').length
+  }, [aptos, disponibilidades])
+
+  const contagemSemResposta = useMemo(() => {
+    return aptos.filter(p => !disponibilidades[p.id]).length
+  }, [aptos, disponibilidades])
 
   const eStaff = (p: Profile) => ['coach', 'admin'].includes(p.role)
 
@@ -863,14 +903,52 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
               </p>
             )}
 
-            <div className="grid grid-cols-2 gap-1.5">
+            {tipo === 'match' && (
+              <div className="p-3 bg-white/5 rounded-2xl border border-csc-gold/25 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-display font-bold text-csc-gold flex items-center gap-1.5">
+                    <Trophy size={14} /> Sondagem pré-jogo (treino anterior)
+                  </span>
+                  <span className="text-[10px] text-white/60">
+                    {contagemDisponiveis + contagemIndisponiveis} de {aptos.length} responderam
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 text-center text-[11px]">
+                  <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+                    <div className="text-emerald-400 font-extrabold text-sm">{contagemDisponiveis}</div>
+                    <div className="text-[10px] text-white/70">Disponíveis</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/25">
+                    <div className="text-rose-400 font-extrabold text-sm">{contagemIndisponiveis}</div>
+                    <div className="text-[10px] text-white/70">Indisponíveis</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                    <div className="text-white/60 font-extrabold text-sm">{contagemSemResposta}</div>
+                    <div className="text-[10px] text-white/50">Sem resposta</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className={`grid gap-1.5 ${tipo === 'match' && contagemDisponiveis > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {tipo === 'match' && contagemDisponiveis > 0 && (
+                <Botao
+                  type="button"
+                  aparencia="verde"
+                  onClick={() => convocarVarios(porConvocarDisponiveis, n => `${n} jogador(es) disponível(eis) convocado(s).`)}
+                  disabled={porConvocarDisponiveis.length === 0 || aConvocar}
+                >
+                  <CheckCircle2 size={13} />
+                  {aConvocar ? '…' : `Disponíveis (${porConvocarDisponiveis.length})`}
+                </Botao>
+              )}
               <Botao
                 type="button"
                 onClick={() => convocarVarios(porConvocar, n => `${n} convocado(s).`)}
                 disabled={porConvocar.length === 0 || aConvocar}
               >
                 <Sparkles size={13} />
-                {aConvocar ? 'A processar…' : `Todos (${porConvocar.length})`}
+                {aConvocar ? '…' : `Todos (${porConvocar.length})`}
               </Botao>
               <Botao
                 type="button"
@@ -916,6 +994,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
                 const motivo = impedimento(p)
                 // Quem não pode ir e não está convocado não se marca; quem está, tira-se.
                 const bloqueado = Boolean(motivo) && !convocado
+                const respostaDisp = tipo === 'match' ? disponibilidades[p.id] : null
                 return (
                   <li key={p.id}>
                     <button
@@ -923,7 +1002,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
                       onClick={() => alternar(p)}
                       disabled={bloqueado}
                       aria-pressed={convocado}
-                      className={`w-full min-h-12 flex items-center gap-2.5 px-3 py-2 text-left text-xs cursor-pointer
+                      className={`w-full min-h-12 flex items-center gap-2 px-3 py-2 text-left text-xs cursor-pointer
                         disabled:cursor-not-allowed disabled:opacity-55
                         focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-csc-gold ${
                           convocado ? 'bg-csc-gold/10 text-white' : 'text-white/80'
@@ -945,6 +1024,23 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-csc-red/15 text-csc-vermelho-texto shrink-0">
                           {motivo}
                         </span>
+                      )}
+                      {tipo === 'match' && (
+                        respostaDisp === 'available' ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/35 shrink-0 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            Disponível
+                          </span>
+                        ) : respostaDisp === 'unavailable' ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/35 shrink-0 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                            Indisponível
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-white/5 text-white/40 border border-white/5 shrink-0">
+                            Sem resposta
+                          </span>
+                        )
                       )}
                     </button>
                   </li>

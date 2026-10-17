@@ -35,7 +35,14 @@ export const equipaDoTorneio = (
   team: { opponent_id?: string | null; opponent?: { name?: string; initials?: string | null; logo_url?: string | null } | null } | null | undefined,
   clube: { initials?: string | null; logo_url?: string | null } | null | undefined,
 ): { sigla: string; logo: string | null; eOClube: boolean } => {
-  if (!team?.opponent_id) {
+  if (!team) {
+    return {
+      sigla: '—',
+      logo: null,
+      eOClube: false,
+    }
+  }
+  if (!team.opponent_id) {
     return {
       sigla: formatClubSigla(clube?.initials),
       logo: obterEmblemaEfetivo(clube?.logo_url, 'Cascais', clube?.initials),

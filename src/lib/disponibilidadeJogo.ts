@@ -73,17 +73,7 @@ export async function obterDisponibilidadeAtleta(
   matchId: string,
   playerId: string,
 ): Promise<RespostaDisponibilidade | null> {
-  // 1. Verificar cache local primeiro
-  try {
-    const salvoLocal = localStorage.getItem(chaveLocal(matchId, playerId))
-    if (salvoLocal === 'available' || salvoLocal === 'unavailable') {
-      return salvoLocal
-    }
-  } catch {
-    // Ignorar erro de localStorage
-  }
-
-  // 2. Procurar na base de dados (tabela match_availabilities)
+  // 1. Procurar na base de dados primeiro (tabela match_availabilities)
   try {
     const { data, error } = await supabase
       .from('match_availabilities')
@@ -103,6 +93,16 @@ export async function obterDisponibilidadeAtleta(
     }
   } catch {
     // Tabela pode ainda não existir em produção antes da migração
+  }
+
+  // 2. Verificar cache local como fallback
+  try {
+    const salvoLocal = localStorage.getItem(chaveLocal(matchId, playerId))
+    if (salvoLocal === 'available' || salvoLocal === 'unavailable') {
+      return salvoLocal
+    }
+  } catch {
+    // Ignorar erro de localStorage
   }
 
   return null
@@ -174,6 +174,15 @@ export async function gravarDisponibilidadeAtleta(
     localStorage.setItem(chaveLocal(matchId, playerId), status)
   } catch {
     // Ignorar
+  }
+
+  // Notificar componentes ativos na janela atual
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('csc_match_availability_updated', {
+        detail: { matchId, playerId, status },
+      }),
+    )
   }
 
   // 2. Gravar no Supabase (se a tabela match_availabilities existir)

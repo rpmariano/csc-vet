@@ -21,6 +21,7 @@ import {
   Copy
 } from 'lucide-react'
 import { PartilharConvocatoria } from '../components/callups/PartilharConvocatoria'
+import { PainelDisponibilidadeJogo } from '../components/callups/PainelDisponibilidadeJogo'
 import { partilharConvocatoriaWhatsApp, copiarLinkConvocatoria } from '../lib/convocatoriaPartilha'
 import { useAuth, extractRolesFromProfile, type Profile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
@@ -2165,6 +2166,17 @@ const EventsPage: React.FC = () => {
                   </button>
                 )}
               </div>
+            )}
+
+            {/* Se for um jogo, mostrar o painel de disponibilidade pré-jogo */}
+            {activeCallupModalEvent.type === 'match' && (
+              <PainelDisponibilidadeJogo
+                jogo={activeCallupModalEvent}
+                playerId={profile?.id}
+                isCoachOrAdmin={Boolean(isCoachOrAdmin)}
+                plantel={allPlayers}
+                aoEditarConvocatoria={isCoachOrAdmin ? () => openEditModal(activeCallupModalEvent) : undefined}
+              />
             )}
 
             {(() => {

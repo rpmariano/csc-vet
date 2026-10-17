@@ -31,6 +31,8 @@ import { Aniversariantes, type AniversarianteDaHome } from '../components/home/A
 import { calcularClassificacao, janelaDoClube } from '../lib/classificacao'
 import { mensagemDeErro } from '../lib/erros'
 import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
+import { obterJogoAntecedidoPeloTreino, type EventoComDataETipo } from '../lib/disponibilidadeJogo'
+import type { Profile } from '../context/AuthContext'
 
 /**
  * Hoje — o primeiro ecrã, e o único que responde a "o que é que me diz
@@ -121,6 +123,7 @@ const Home: React.FC = () => {
 
   const [jogos, setJogos] = useState<JogoDaHome[]>([])
   const [pendentes, setPendentes] = useState<PendenteDaHome[]>([])
+  const [plantelEquipa, setPlantelEquipa] = useState<Profile[]>([])
   const [ultimo, setUltimo] = useState<UltimoJogoDaHome | null>(null)
   const [provas, setProvas] = useState<ProvaDaHome[]>([])
   const [aniversariantes, setAniversariantes] = useState<AniversarianteDaHome[]>([])
@@ -207,7 +210,7 @@ const Home: React.FC = () => {
         ])
 
         if (cancelado) return
-
+        setPlantelEquipa(((plantel ?? []) as unknown as Profile[]))
 
         // Rascunhos ficam de fora: a Home mostra o que está marcado a sério.
         const marcados = ((futuros as unknown as EventoBruto[]) ?? []).filter(e => e.is_active !== false)
@@ -297,6 +300,10 @@ const Home: React.FC = () => {
               date_time: e.date_time,
               local: ondeE(e),
               prova: e.tournament?.name ?? null,
+              jogoAntecedido: e.type === 'practice'
+                ? (obterJogoAntecedidoPeloTreino(e as unknown as EventoComDataETipo, marcados as unknown as EventoComDataETipo[]) as EventoComDataETipo | null)
+                : null,
+              eventoOriginal: e as unknown as EventoComDataETipo,
             })),
         )
 
@@ -570,7 +577,15 @@ const Home: React.FC = () => {
             </CartaoVidro>
           )}
 
-          <PorResponder pendentes={pendentes} isAdepto={eAdepto(profile)} aoResponder={responder} />
+          <PorResponder
+            pendentes={pendentes}
+            isAdepto={eAdepto(profile)}
+            profile={profile}
+            clubeSigla={sigla}
+            isCoachOrAdmin={Boolean(eGestao)}
+            plantel={plantelEquipa}
+            aoResponder={responder}
+          />
 
           {/*
             O convite vem logo a seguir ao que está por responder, e não acima

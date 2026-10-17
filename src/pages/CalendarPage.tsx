@@ -44,6 +44,7 @@ import { formatarCoresEquipamento, BadgeCoresEquipamento } from '../components/c
 import { obterEquipamentoEquipaOficial, obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 import { obterJogoAntecedidoPeloTreino } from '../lib/disponibilidadeJogo'
 import { SondagemDisponibilidadeJogo } from '../components/callups/SondagemDisponibilidadeJogo'
+import { PainelDisponibilidadeJogo } from '../components/callups/PainelDisponibilidadeJogo'
 
 /** Como se lê cada filtro de estado — no título da lista e no resumo do cabeçalho. */
 const ROTULOS_ESTADO: Record<string, string> = {
@@ -1277,6 +1278,23 @@ const CalendarPage: React.FC = () => {
                         clubeSigla={clubSettings?.initials}
                         compacto
                         isCoachOrAdmin={Boolean(isCoachOrAdmin)}
+                        plantel={allPlayers}
+                      />
+                    </div>
+                  )
+                })()}
+
+                {/* Sondagem de disponibilidade do jogo no cartão do próprio jogo */}
+                {(() => {
+                  if (event.type !== 'match' || isAdepto) return null
+                  return (
+                    <div onClick={e => e.stopPropagation()}>
+                      <PainelDisponibilidadeJogo
+                        jogo={event}
+                        playerId={profile?.id}
+                        isCoachOrAdmin={Boolean(isCoachOrAdmin)}
+                        compacto
+                        plantel={allPlayers}
                       />
                     </div>
                   )
@@ -2141,6 +2159,25 @@ const CalendarPage: React.FC = () => {
                       campos={fields}
                       clubeSigla={clubSettings?.initials}
                       isCoachOrAdmin={Boolean(isCoachOrAdmin)}
+                      plantel={allPlayers}
+                    />
+                  )
+                })()}
+
+                {/* Sondagem de disponibilidade no próprio jogo */}
+                {(() => {
+                  if (selectedEvent.type !== 'match' || isAdepto) return null
+                  return (
+                    <PainelDisponibilidadeJogo
+                      jogo={selectedEvent}
+                      playerId={profile?.id}
+                      isCoachOrAdmin={Boolean(isCoachOrAdmin)}
+                      plantel={allPlayers}
+                      aoEditarConvocatoria={isCoachOrAdmin ? () => {
+                        navigate(`/events?convocatoria=${selectedEvent.id}`, {
+                          state: { origem: nomeDoEcra(location.pathname, location.search) },
+                        })
+                      } : undefined}
                     />
                   )
                 })()}
