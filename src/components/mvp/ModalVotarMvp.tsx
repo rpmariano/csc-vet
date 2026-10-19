@@ -83,20 +83,6 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
         const aberta = isVotacaoMvpAberta(eventoObj)
         setVotacaoEncerrada(!aberta)
 
-        // Se a votação está aberta mas na base de dados ainda estava como fechada (devido à migração anterior),
-        // repara automaticamente o registo na base de dados
-        if (aberta && (rawEvent?.mvp_voting_closed === true || eventData?.mvp_voting_closed === true) && eventId) {
-          supabase
-            .from('events')
-            .update({ mvp_voting_closed: false })
-            .eq('id', eventId)
-            .then(({ error }) => {
-              if (error) {
-                console.warn('Erro ao atualizar mvp_voting_closed na BD:', error.message)
-              }
-            })
-        }
-
         const callupMap = new Map((callupsData || []).map(c => [c.player_id, c]))
         const statMap = new Map((statsData || []).map(s => [s.player_id, s]))
 

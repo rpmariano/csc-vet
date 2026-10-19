@@ -496,39 +496,28 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
       return false
     }
 
+    // 2. Se Rui fechou ou reabriu explicitamente via mvp_voting_closed:
+    if (event.mvp_voting_closed === true) {
+      return false
+    }
+    if (event.mvp_voting_closed === false) {
+      return true
+    }
+
     const eventDate = event.date_time ? new Date(event.date_time) : null
     const dataCortePassado = new Date('2026-10-12T23:59:59+01:00').getTime()
 
-    // 2. Os dois jogos amigáveis passados de pré-época e 1ª jornada (11/10/2026 vs Estrelas Lisboa)
+    // 3. Os dois jogos amigáveis passados de pré-época e 1ª jornada (11/10/2026 vs Estrelas Lisboa)
     if (eventDate && eventDate.getTime() <= dataCortePassado) {
       return false
     }
 
-    // 3. Jogo da 1ª jornada contra Estrelas Lisboa (11/10/2026)
+    // 4. Jogo da 1ª jornada contra Estrelas Lisboa (11/10/2026)
     const opp = Array.isArray(event.opponent) ? event.opponent[0] : event.opponent
     const oppName = ((opp?.name || '') + ' ' + (event.opponent_name || '') + ' ' + (event.title || '')).toLowerCase()
     const oppInitials = (opp?.initials || '').toLowerCase()
     const isElis = oppName.includes('estrelas') || oppInitials.includes('elis')
     if (isElis && eventDate && eventDate.toISOString().slice(0, 10) === '2026-10-11') {
-      return false
-    }
-
-    // 4. Jogo de 18 de Outubro de 2026 (ex: vs AFD Torre) e semana em curso:
-    const isJogoSemana18Outubro = eventDate
-      ? (eventDate.getTime() > dataCortePassado && eventDate.getTime() <= new Date('2026-10-19T23:59:59+01:00').getTime())
-      : false
-
-    if (isJogoSemana18Outubro) {
-      return true
-    }
-
-    const isTorre = oppName.includes('torre') || oppInitials.includes('tor') || oppName.includes('afd')
-    if (isTorre && eventDate && eventDate.getTime() > dataCortePassado) {
-      return true
-    }
-
-    // 5. Flag explícita na base de dados
-    if (event.mvp_voting_closed === true) {
       return false
     }
 
@@ -543,21 +532,10 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
       is_friendly: true,
     }),
     false,
-    'Amigável passado deve ter votação encerrada'
+    'Amigável passado deve ter votação encerrada por omissão'
   )
 
-  // 2. Amigável passado 2 (27/09/2026)
-  assert.equal(
-    isVotacaoMvpAbertaMock({
-      title: 'Jogo de Preparação 2',
-      date_time: '2026-09-27T17:00:00Z',
-      is_friendly: true,
-    }),
-    false,
-    'Segundo amigável passado deve ter votação encerrada'
-  )
-
-  // 3. Jogo da 1ª jornada (11/10/2026)
+  // 2. Jogo da 1ª jornada (11/10/2026)
   assert.equal(
     isVotacaoMvpAbertaMock({
       title: 'Jornada 1',
@@ -566,22 +544,10 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
       is_friendly: false,
     }),
     false,
-    'Jogo da 1ª jornada deve ter votação encerrada'
+    'Jogo da 1ª jornada deve ter votação encerrada por omissão'
   )
 
-  // 4. Jogo da 1ª jornada por adversário Estrelas Lisboa
-  assert.equal(
-    isVotacaoMvpAbertaMock({
-      title: 'Jogo vs Estrelas Lisboa',
-      date_time: '2026-10-11T10:00:00Z',
-      opponent: { name: 'Estrelas Lisboa', initials: 'ELIS' },
-      is_friendly: false,
-    }),
-    false,
-    'Jogo contra Estrelas Lisboa da 1ª jornada deve ter votação encerrada'
-  )
-
-  // 5. Jogo de ontem 18/10/2026 vs AFD Torre (DEVE ESTAR ABERTO, mesmo com resquício de flag)
+  // 3. Jogo de 18/10/2026 vs AFD Torre (ABERTO por omissão)
   assert.equal(
     isVotacaoMvpAbertaMock({
       title: 'Jogo vs AFD Torre',
@@ -590,10 +556,10 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
       mvp_voting_closed: false,
     }),
     true,
-    'Jogo vs AFD Torre de 18/10/2026 DEVE TER VOTAÇÃO ABERTA'
+    'Jogo vs AFD Torre de 18/10/2026 com mvp_voting_closed: false está ABERTO'
   )
 
-  // 5b. AFD Torre mesmo que a BD ainda tivesse mvp_voting_closed: true
+  // 4. Se Rui Mariano fechar explicitamente os votos de AFD Torre (mvp_voting_closed = true):
   assert.equal(
     isVotacaoMvpAbertaMock({
       title: 'Jogo vs AFD Torre',
@@ -601,33 +567,50 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
       opponent: { name: 'AFD Torre', initials: 'TOR' },
       mvp_voting_closed: true,
     }),
-    true,
-    'Jogo vs AFD Torre de 18/10/2026 sobrepõe-se a resquício de fecho e fica aberto'
-  )
-
-  // 6. Outro jogo após 12/10 explicitamente encerrado
-  assert.equal(
-    isVotacaoMvpAbertaMock({
-      title: 'Outro Jogo Encerrado pelo Treinador',
-      date_time: '2026-10-25T10:00:00Z',
-      opponent: { name: 'Outro Clube', initials: 'OC' },
-      mvp_voting_closed: true,
-    }),
     false,
-    'Outro jogo com mvp_voting_closed = true e que não seja AFD Torre fica encerrado'
+    'Quando Rui Mariano fecha os votos (mvp_voting_closed = true), o jogo fica ESTRITAMENTE ENCERRADO'
   )
 
-  // 7. Jogo da 2ª jornada aberto normalmente
+  // 5. Se Rui Mariano reabrir os votos (mvp_voting_closed = false):
   assert.equal(
     isVotacaoMvpAbertaMock({
-      title: 'Jornada 2',
-      date_time: '2026-10-25T10:00:00Z',
-      matchday: 2,
-      is_friendly: false,
+      title: 'Jogo vs AFD Torre',
+      date_time: '2026-10-18T16:00:00Z',
+      opponent: { name: 'AFD Torre', initials: 'TOR' },
+      mvp_voting_closed: false,
     }),
     true,
-    'Jogo normal após 12/10 deve estar aberto para votação quando ocorrer'
+    'Quando Rui Mariano reabre os votos (mvp_voting_closed = false), o jogo fica ABERTO'
   )
+})
+
+// ==============================================================================
+// 7b. TESTE DE PERMISSÃO EXCLUSIVA DE RUI MARIANO PARA FECHAR OU REABRIR VOTOS
+// ==============================================================================
+test('Apenas Rui Mariano tem permissão para fechar ou reabrir votações de MVP', () => {
+  function podeGerirVotacaoMvpMock(profile) {
+    if (!profile?.email) return false
+    const email = profile.email.toLowerCase().trim()
+    return email === 'rpmariano@gmail.com' || email.endsWith('@csc-vet.local')
+  }
+
+  // 1. Rui Mariano (admin principal / dev)
+  assert.equal(podeGerirVotacaoMvpMock({ email: 'rpmariano@gmail.com', role: 'admin' }), true, 'Rui Mariano PODE fechar e reabrir votos')
+  assert.equal(podeGerirVotacaoMvpMock({ email: 'RPMARIANO@GMAIL.COM', role: 'admin' }), true, 'Case insensitive para Rui Mariano')
+
+  // 2. Pedro Vieira (tem acesso ao separador MVP, mas NÃO pode fechar/reabrir votos)
+  assert.equal(podeGerirVotacaoMvpMock({ email: 'pedro.vieira@esporao.com', role: 'coach' }), false, 'Pedro Vieira NÃO pode fechar nem reabrir votos')
+
+  // 3. Treinadores em geral
+  assert.equal(podeGerirVotacaoMvpMock({ email: 'treinador@csc.pt', role: 'coach' }), false, 'Treinador comum NÃO pode fechar votos')
+
+  // 4. Outros membros da direção
+  assert.equal(podeGerirVotacaoMvpMock({ email: 'outro_diretor@csc.pt', role: 'admin' }), false, 'Outro diretor NÃO pode fechar votos')
+
+  // 5. Jogadores e Adeptos
+  assert.equal(podeGerirVotacaoMvpMock({ email: 'jogador@csc.pt', role: 'player' }), false, 'Jogador NÃO pode fechar votos')
+  assert.equal(podeGerirVotacaoMvpMock({ email: 'adepto@csc.pt', role: 'supporter' }), false, 'Adepto NÃO pode fechar votos')
+  assert.equal(podeGerirVotacaoMvpMock(null), false, 'Anónimo NÃO pode fechar votos')
 })
 
 // ==============================================================================

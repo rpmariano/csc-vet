@@ -18,7 +18,7 @@ import { CLASSE_CAMPO } from './ui/formulario'
 import { PartilharFichaJogo } from './mvp/PartilharFichaJogo'
 import { ModalVotarMvp } from './mvp/ModalVotarMvp'
 import { SecaoEleitoresMvp } from './mvp/SecaoEleitoresMvp'
-import { notificarFichaJogoPublicada, obterVotosDoJogo, calcularEleitoresDoJogo, isVotacaoMvpAberta, type MvpVote, type EleitorMvpInfo } from '../lib/mvp'
+import { notificarFichaJogoPublicada, obterVotosDoJogo, calcularEleitoresDoJogo, isVotacaoMvpAberta, podeGerirVotacaoMvp, alternarEstadoVotacaoMvp, type MvpVote, type EleitorMvpInfo } from '../lib/mvp'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -585,22 +585,22 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const eventoCompletoMvp = event ? { ...event, opponent: oppParaMvp, mvp_voting_closed: mvpVotingClosed } : null
   const votacaoMvpAberta = isVotacaoMvpAberta(eventoCompletoMvp)
 
+  const podeGerirVotacao = podeGerirVotacaoMvp(profile)
+
   const toggleVotacaoMvp = async () => {
     if (!eventId || !event) return
+    if (!podeGerirVotacaoMvp(profile)) {
+      toast.error('Apenas Rui Mariano tem capacidade para fechar ou reabrir as votações de MVP.')
+      return
+    }
     const novoFechado = votacaoMvpAberta ? true : false
-    try {
-      const { error } = await supabase
-        .from('events')
-        .update({ mvp_voting_closed: novoFechado })
-        .eq('id', eventId)
-
-      if (error) throw error
+    const res = await alternarEstadoVotacaoMvp(eventId, novoFechado, profile)
+    if (res.ok) {
       toast.success(novoFechado ? 'Votação de MVP encerrada com sucesso.' : 'Votação de MVP reaberta com sucesso!')
       setMvpVotingClosed(novoFechado)
       if (onSaved) onSaved()
-    } catch (err: any) {
-      console.error('Erro ao alternar votação MVP:', err)
-      toast.error('Erro ao atualizar estado da votação: ' + err.message)
+    } else {
+      toast.error(res.error || 'Erro ao atualizar o estado da votação.')
     }
   }
 
@@ -732,8 +732,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 eleitores={eleitoresDoJogo}
                 currentUserId={profile?.id}
                 votacaoAberta={votacaoMvpAberta}
-                podeGerirVotacao={Boolean(isCoachOrAdmin)}
-                onToggleVotacao={isCoachOrAdmin ? toggleVotacaoMvp : undefined}
+                podeGerirVotacao={podeGerirVotacao}
+                onToggleVotacao={podeGerirVotacao ? toggleVotacaoMvp : undefined}
                 onVotarClick={
                   votacaoMvpAberta && profile?.id && !meuVotoMvp
                     ? () => setModalVotarMvpAberto(true)

@@ -308,16 +308,25 @@ export function isVotacaoMvpAberta(event: {
     return false
   }
 
+  // 2. Se o utilizador (Rui Mariano) fechou ou reabriu explicitamente o jogo via mvp_voting_closed:
+  // A decisão explícita tem prioridade absoluta sobre qualquer outra regra temporal.
+  if (event.mvp_voting_closed === true) {
+    return false
+  }
+  if (event.mvp_voting_closed === false) {
+    return true
+  }
+
   const eventDate = event.date_time ? new Date(event.date_time) : null
   const dataCortePassado = new Date('2026-10-12T23:59:59+01:00').getTime()
 
-  // 2. Os dois jogos amigáveis passados de pré-época e 1ª jornada (11/10/2026 vs Estrelas Lisboa)
-  // têm a votação fechada permanentemente
+  // 3. Os dois jogos amigáveis passados de pré-época e 1ª jornada (11/10/2026 vs Estrelas Lisboa)
+  // têm a votação fechada por omissão caso não haja flag explícita
   if (eventDate && eventDate.getTime() <= dataCortePassado) {
     return false
   }
 
-  // 3. Jogo da 1ª jornada contra Estrelas Lisboa (11/10/2026)
+  // 4. Jogo da 1ª jornada contra Estrelas Lisboa (11/10/2026)
   const opp = Array.isArray(event.opponent) ? event.opponent[0] : event.opponent
   const oppName = ((opp?.name || '') + ' ' + (event.opponent_name || '') + ' ' + (event.title || '')).toLowerCase()
   const oppInitials = (opp?.initials || '').toLowerCase()
@@ -326,29 +335,48 @@ export function isVotacaoMvpAberta(event: {
     return false
   }
 
-  // 4. Jogo de 18 de Outubro de 2026 (ex: vs AFD Torre) e semana em curso:
-  // SEMPRE ABERTO! Mesmo que a base de dados ainda guarde mvp_voting_closed = true
-  // resultante da migração de limpeza anterior.
-  const isJogoSemana18Outubro = eventDate
-    ? (eventDate.getTime() > dataCortePassado && eventDate.getTime() <= new Date('2026-10-19T23:59:59+01:00').getTime())
-    : false
-
-  if (isJogoSemana18Outubro) {
-    return true
-  }
-
-  // Também se o nome do adversário contiver 'torre' ou 'afd', garante que está aberto
-  const isTorre = oppName.includes('torre') || oppInitials.includes('tor') || oppName.includes('afd')
-  if (isTorre && eventDate && eventDate.getTime() > dataCortePassado) {
-    return true
-  }
-
-  // 5. Flag explícita na base de dados para jogos futuros
-  if (event.mvp_voting_closed === true) {
-    return false
-  }
-
   return true
+}
+
+/**
+ * Apenas Rui Mariano tem a capacidade e permissão para fechar ou reabrir
+ * as votações de MVP dos jogos.
+ */
+export function podeGerirVotacaoMvp(profile: { email?: string | null } | null | undefined): boolean {
+  if (!profile?.email) return false
+  const email = profile.email.toLowerCase().trim()
+  return email === 'rpmariano@gmail.com' || isDeveloperEmail(email)
+}
+
+/**
+ * Alterna o estado de votação de MVP de um jogo (encerrar ou reabrir).
+ * Apenas Rui Mariano tem permissão para executar esta ação.
+ */
+export async function alternarEstadoVotacaoMvp(
+  eventId: string,
+  novoEstadoFechado: boolean,
+  profile: { email?: string | null } | null | undefined
+): Promise<{ ok: boolean; error?: string }> {
+  if (!podeGerirVotacaoMvp(profile)) {
+    return {
+      ok: false,
+      error: 'Apenas Rui Mariano tem capacidade para fechar ou reabrir as votações de MVP.'
+    }
+  }
+
+  try {
+    const { error } = await supabase
+      .from('events')
+      .update({ mvp_voting_closed: novoEstadoFechado })
+      .eq('id', eventId)
+
+    if (error) throw error
+
+    return { ok: true }
+  } catch (err: any) {
+    console.error('Erro ao alternar votação MVP:', err)
+    return { ok: false, error: err.message || 'Erro ao atualizar o estado da votação.' }
+  }
 }
 
 /** Submete o voto de um utilizador (2 jogadores distintos). Uma vez submetido, fica estritamente bloqueado. */

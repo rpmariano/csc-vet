@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronUp,
   Lock,
+  Unlock,
   Sparkles,
   Calendar,
   SlidersHorizontal,
@@ -14,7 +15,8 @@ import {
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
-import { temAcessoMVP, obterTodosVotosMvp, isVotacaoMvpAberta, type MvpVote, type PlayerSummary } from '../lib/mvp'
+import { toast } from '../context/ToastContext'
+import { temAcessoMVP, obterTodosVotosMvp, isVotacaoMvpAberta, podeGerirVotacaoMvp, alternarEstadoVotacaoMvp, type MvpVote, type PlayerSummary } from '../lib/mvp'
 import { ACarregar, EstadoVazio, FilaSeparadores, Botao } from '../components/ui'
 import { BottomSheet } from '../components/BottomSheet'
 import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
@@ -84,7 +86,22 @@ export const MvpPage: React.FC = () => {
   const [eventoParaFicha, setEventoParaFicha] = useState<MatchEvent | null>(null)
 
   const autorizado = useMemo(() => temAcessoMVP(profile), [profile])
+  const podeGerirVotacoes = useMemo(() => podeGerirVotacaoMvp(profile), [profile])
   const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
+
+  const handleToggleVotacao = async (m: MatchEvent) => {
+    if (!podeGerirVotacoes) return
+    const aberta = isVotacaoMvpAberta(m)
+    const novoFechado = aberta ? true : false
+    triggerHaptic('medium')
+    const res = await alternarEstadoVotacaoMvp(m.id, novoFechado, profile)
+    if (res.ok) {
+      toast.success(novoFechado ? 'Votação de MVP encerrada com sucesso.' : 'Votação de MVP reaberta com sucesso!')
+      setMatches(prev => prev.map(match => match.id === m.id ? { ...match, mvp_voting_closed: novoFechado } : match))
+    } else {
+      toast.error(res.error || 'Erro ao atualizar estado da votação.')
+    }
+  }
 
   const carregarDados = useCallback(async () => {
     if (!autorizado) return
@@ -762,10 +779,34 @@ export const MvpPage: React.FC = () => {
                           Amigável
                         </span>
                       ) : null}
-                      {!isVotacaoMvpAberta(m) && (
-                        <span className="font-display font-bold text-[9.5px] text-white/50 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10">
-                          Votação Encerrada
+                      {!isVotacaoMvpAberta(m) ? (
+                        <span className="font-display font-bold text-[9.5px] text-white/50 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/10 flex items-center gap-1">
+                          <Lock size={10} />
+                          <span>Votação Encerrada</span>
                         </span>
+                      ) : (
+                        <span className="font-display font-bold text-[9.5px] text-csc-verde-texto bg-csc-light/15 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                          <Vote size={10} />
+                          <span>Votação Aberta</span>
+                        </span>
+                      )}
+                      {podeGerirVotacoes && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleToggleVotacao(m)
+                          }}
+                          className={`text-[9.5px] font-display font-black px-2.5 py-0.5 rounded-full border flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${
+                            isVotacaoMvpAberta(m)
+                              ? 'bg-red-500/15 text-red-200 border-red-500/30 hover:bg-red-500/25'
+                              : 'bg-csc-verde-suave/20 text-csc-verde-texto border-csc-verde-suave/40 hover:bg-csc-verde-suave/30'
+                          }`}
+                          title={isVotacaoMvpAberta(m) ? 'Encerrar votação de MVP deste jogo' : 'Reabrir votação de MVP deste jogo'}
+                        >
+                          {isVotacaoMvpAberta(m) ? <Lock size={10} /> : <Unlock size={10} />}
+                          <span>{isVotacaoMvpAberta(m) ? 'Fechar votos' : 'Reabrir votos'}</span>
+                        </button>
                       )}
                     </span>
                   </div>
