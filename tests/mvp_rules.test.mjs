@@ -132,54 +132,34 @@ test('Tabela de Mais Prémios MVP: apenas lista atletas com mvpWins > 0', () => 
 })
 
 // ==============================================================================
-// 5. TESTE DE ELEGIBILIDADE DE VOTO (APENAS TREINADORES E JOGADORES CONVOCADOS)
+// 5. TESTE DE ELEGIBILIDADE DE VOTO (ABERTO A TODOS OS UTILIZADORES AUTENTICADOS)
 // ==============================================================================
-test('Regra de Elegibilidade: direção/admin pura NÃO vota, apenas treinador e jogador convocado votam', () => {
-  function eTreinador(p) {
-    if (!p) return false
-    if (p.role === 'coach') return true
-    if (Array.isArray(p.roles) && (p.roles.includes('coach') || p.roles.includes('treinador'))) return true
-    return false
+test('Regra de Elegibilidade: todos os utilizadores autenticados da aplicação podem votar no MVP', () => {
+  function verificarElegibilidadeMock(profile) {
+    return Boolean(profile && profile.id)
   }
 
-  function eJogador(p) {
-    if (!p) return false
-    if (p.role === 'player') return true
-    if (Array.isArray(p.roles) && (p.roles.includes('player') || p.roles.includes('jogador'))) return true
-    return false
-  }
-
-  function verificarElegibilidadeMock(profile, callup, stat) {
-    const isCoach = eTreinador(profile)
-    const isPlayer = eJogador(profile)
-    const foiConvocado = callup && callup.status !== 'declined'
-    const participou = Boolean(stat)
-
-    // Apenas treinadores ou atletas convocados/que jogaram
-    return isCoach || (isPlayer && (foiConvocado || participou))
-  }
-
-  // 1. Membro da Direção / Admin puro (sem convocatória, sem papel de treinador)
+  // 1. Membro da Direção / Admin
   const perfilAdmin = { id: 'admin1', role: 'admin', roles: ['admin', 'direcao'], email: 'rpmariano@gmail.com' }
-  assert.equal(verificarElegibilidadeMock(perfilAdmin, null, null), false, 'Admin / Direção pura NÃO pode votar')
+  assert.equal(verificarElegibilidadeMock(perfilAdmin), true, 'Admin / Direção PODE votar')
 
-  // 2. Treinador (não convocado como atleta)
+  // 2. Treinador
   const perfilTreinador = { id: 'coach1', role: 'coach', roles: ['coach', 'treinador'] }
-  assert.equal(verificarElegibilidadeMock(perfilTreinador, null, null), true, 'Treinador PODE votar')
+  assert.equal(verificarElegibilidadeMock(perfilTreinador), true, 'Treinador PODE votar')
 
-  // 3. Jogador Convocado (aceite)
+  // 3. Jogador Convocado
   const perfilJogadorConvocado = { id: 'player1', role: 'player', roles: ['player'] }
-  assert.equal(verificarElegibilidadeMock(perfilJogadorConvocado, { status: 'accepted' }, null), true, 'Jogador convocado PODE votar')
+  assert.equal(verificarElegibilidadeMock(perfilJogadorConvocado), true, 'Jogador convocado PODE votar')
 
   // 4. Jogador NÃO convocado
-  assert.equal(verificarElegibilidadeMock(perfilJogadorConvocado, null, null), false, 'Jogador não convocado NÃO pode votar')
+  assert.equal(verificarElegibilidadeMock(perfilJogadorConvocado), true, 'Jogador não convocado também PODE votar')
 
-  // 5. Jogador que recusou convocatória e não jogou
-  assert.equal(verificarElegibilidadeMock(perfilJogadorConvocado, { status: 'declined' }, null), false, 'Jogador que recusou convocatória NÃO pode votar')
-
-  // 6. Adepto
+  // 5. Adepto
   const perfilAdepto = { id: 'supporter1', role: 'supporter', roles: ['supporter'] }
-  assert.equal(verificarElegibilidadeMock(perfilAdepto, null, null), false, 'Adepto NÃO pode votar')
+  assert.equal(verificarElegibilidadeMock(perfilAdepto), true, 'Adepto PODE votar')
+
+  // 6. Visitante não autenticado (sem ID)
+  assert.equal(verificarElegibilidadeMock(null), false, 'Visitante não autenticado NÃO pode votar')
 })
 
 // ==============================================================================
@@ -277,9 +257,10 @@ test('Derivação de papéis: admin é estritamente admin e nunca herda coach ou
 })
 
 // ==============================================================================
-// 9. TESTE DE CALCULAR ELEITORES: DIREÇÃO NÃO CONVOCADA NUNCA APARECE
 // ==============================================================================
-test('calcularEleitoresDoJogo: Direção não convocada nunca aparece como possível votante', () => {
+// 9. TESTE DE CALCULAR ELEITORES: INCLUI CONVOCADOS, EQUIPA TÉCNICA E DIREÇÃO
+// ==============================================================================
+test('calcularEleitoresDoJogo: inclui convocados, equipa técnica e direção como eleitores', () => {
   function eAdepto(p) { return p.role === 'supporter' || (p.roles && p.roles.includes('supporter')) }
   function eAdmin(p) { return p.role === 'admin' || (p.roles && p.roles.includes('admin')) }
   function eTreinador(p) { return p.role === 'coach' || (p.roles && p.roles.includes('coach')) }
@@ -307,15 +288,13 @@ test('calcularEleitoresDoJogo: Direção não convocada nunca aparece como poss�
 
     for (const p of allProfiles || []) {
       if (eAdepto(p) || p.status === 'inactive') continue
-      // Membros de Direção / Admin não são equipa técnica votante
       const isDirecao = eAdmin(p) || p.role === 'admin' || (Array.isArray(p.roles) && p.roles.includes('admin'))
-      if (isDirecao) continue
-
       const isCoach = eTreinador(p)
-      if (isCoach) {
+
+      if (isCoach || isDirecao) {
         if (!idsProcessados.has(p.id)) {
           idsProcessados.add(p.id)
-          eleitores.push({ id: p.id, name: p.name, funcao: 'Treinador', categoria: 'staff' })
+          eleitores.push({ id: p.id, name: p.name, funcao: isCoach ? 'Treinador' : 'Direção', categoria: 'staff' })
         }
       }
     }
@@ -335,10 +314,10 @@ test('calcularEleitoresDoJogo: Direção não convocada nunca aparece como poss�
 
   const eleitores = calcularEleitoresDoJogoMock(perfis, convocatorias, [], [])
 
-  assert.equal(eleitores.length, 2, 'Devem existir apenas 2 eleitores: Rocha (jogador) e André Couto (treinador)')
+  assert.equal(eleitores.length, 3, 'Devem existir 3 eleitores: Rocha (jogador), André Couto (treinador) e Mariano (Direção)')
   assert.ok(eleitores.some(e => e.id === 'rocha'), 'Rocha deve estar na lista como jogador')
   assert.ok(eleitores.some(e => e.id === 'couto'), 'André Couto deve estar na lista como treinador')
-  assert.ok(!eleitores.some(e => e.id === 'mariano'), 'Mariano (Direção) NÃO PODE APARECER como votante')
+  assert.ok(eleitores.some(e => e.id === 'mariano' && e.funcao === 'Direção'), 'Mariano (Direção) pode votar e surge na lista')
 })
 
 // ==============================================================================

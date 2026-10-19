@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { Award, ChevronRight, Sparkles, X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
-import { eAdepto, eTreinador, eJogador, eAdmin } from '../../lib/papeis'
 import { obterTodosVotosMvp, isVotacaoMvpAberta } from '../../lib/mvp'
 import { ModalVotarMvp } from './ModalVotarMvp'
 import { CartaoSimples, EtiquetaSeccao } from '../ui'
@@ -47,13 +46,9 @@ export const AlertaMvpPendente: React.FC = () => {
   const [modalAberto, setModalAberto] = useState(false)
 
   const verificarPendencias = useCallback(async () => {
-    if (!profile?.id || eAdepto(profile)) return
+    if (!profile?.id) return
 
     try {
-      // Apenas treinadores ou atletas convocados podem votar. Direção pura não vota.
-      const isDirecao = Boolean(profile && (eAdmin(profile) || profile.role === 'admin' || profile.roles?.includes('admin')))
-      const isCoach = eTreinador(profile) && !isDirecao
-
       // 1. Procurar jogos com resultado dos últimos 21 dias
       const dataLimite = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString()
       const { data: eventosData, error: errEventos } = await supabase
@@ -69,62 +64,14 @@ export const AlertaMvpPendente: React.FC = () => {
         return
       }
 
-      const matchIds = eventosData.map(e => e.id)
-
-      // 2. Convocatórias do utilizador (não recusadas), presenças em jogo e votos existentes
-      const [{ data: minhasConvocatorias }, { data: meusStats }, todosVotos] = await Promise.all([
-        supabase
-          .from('callups')
-          .select('event_id')
-          .eq('player_id', profile.id)
-          .neq('status', 'declined')
-          .in('event_id', matchIds),
-        supabase
-          .from('stats')
-          .select('event_id')
-          .eq('player_id', profile.id)
-          .in('event_id', matchIds),
-        obterTodosVotosMvp(),
-      ])
-
-      const convocadosIds = new Set([
-        ...(minhasConvocatorias || []).map(c => c.event_id),
-        ...(meusStats || []).map(s => s.event_id),
-      ])
+      // 2. Votos existentes do utilizador
+      const todosVotos = await obterTodosVotosMvp()
       const meusVotosIds = new Set(
         todosVotos.filter(v => v.voter_id === profile.id).map(v => v.event_id)
       )
 
-      // Rui Mariano (administração): descartar alertas residuais de teste
-      const emailNorm = (profile?.email || '').toLowerCase().trim()
-      if (emailNorm === 'rpmariano@gmail.com' && !isCoach) {
-        setJogosPendentes([])
-        if (typeof window !== 'undefined' && window.location.search) {
-          const url = new URL(window.location.href)
-          let mudou = false
-          if (url.searchParams.has('mvp_event')) {
-            url.searchParams.delete('mvp_event')
-            mudou = true
-          }
-          if (url.searchParams.has('test_mvp')) {
-            url.searchParams.delete('test_mvp')
-            mudou = true
-          }
-          if (url.searchParams.has('test_mvp_alert')) {
-            url.searchParams.delete('test_mvp_alert')
-            mudou = true
-          }
-          if (mudou) {
-            window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''))
-          }
-        }
-        fecharNotificacoesMvp()
-        return
-      }
-
-      // Jogos elegíveis onde ainda não votou
+      // Jogos com votação aberta onde o utilizador ainda não votou
       const pendentes: JogoPendenteMvp[] = []
-      const isPlayer = eJogador(profile)
 
       for (const ev of eventosData) {
         const opp = Array.isArray(ev.opponent) ? ev.opponent[0] : ev.opponent
@@ -132,8 +79,6 @@ export const AlertaMvpPendente: React.FC = () => {
         // Se a votação estiver encerrada (ex.: amigáveis passados e 1ª jornada), não gera alerta
         if (!isVotacaoMvpAberta(evObj)) continue
 
-        // Elegível se convocado como jogador OU treinador
-        const elegivel = (isPlayer && convocadosIds.has(ev.id)) || isCoach
         const jaVotou = meusVotosIds.has(ev.id)
         let dispensado = false
         try {
@@ -142,7 +87,7 @@ export const AlertaMvpPendente: React.FC = () => {
           // ignore
         }
 
-        if (elegivel && !jaVotou && !dispensado) {
+        if (!jaVotou && !dispensado) {
           pendentes.push({
             id: ev.id,
             title: ev.title,

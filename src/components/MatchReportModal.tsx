@@ -5,7 +5,7 @@ import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJog
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
-import { eAdepto, eTreinador, eAdmin } from '../lib/papeis'
+import { eAdepto } from '../lib/papeis'
 import { toast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { EcraDetalhe } from './EcraDetalhe'
@@ -132,7 +132,6 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const [modalVotarMvpAberto, setModalVotarMvpAberto] = useState(false)
   const [mostrarPartilha, setMostrarPartilha] = useState(false)
   const [meuVotoMvp, setMeuVotoMvp] = useState<MvpVote | null>(null)
-  const [isConvocado, setIsConvocado] = useState(false)
   const [eleitoresDoJogo, setEleitoresDoJogo] = useState<EleitorMvpInfo[]>([])
   const [mvpVotingClosed, setMvpVotingClosed] = useState<boolean>(event?.mvp_voting_closed ?? false)
 
@@ -257,17 +256,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const votos = await obterVotosDoJogo(eventId)
         const meu = votos.find(v => v.voter_id === profile?.id) || null
         setMeuVotoMvp(meu)
-        // Convocado apenas se tiver convocatória válida (não recusada) ou participou no jogo
-        const callupDoUser = profile?.id ? callupMap.get(profile.id) : null
-        const convocadoValido = Boolean(
-          profile?.id && (
-            (callupDoUser && callupDoUser.status !== 'declined') ||
-            statMap.has(profile.id)
-          )
-        )
-        setIsConvocado(convocadoValido)
 
-        // Calcular eleitores obrigatórios do jogo (convocados + equipa técnica) e estado de votação
+        // Calcular eleitores do jogo (convocados + equipa técnica + direção) e estado de votação
         const eleitores = calcularEleitoresDoJogo(allProfiles, callupsData || [], statsData || [], votos)
         setEleitoresDoJogo(eleitores)
       } catch (err) {
@@ -745,9 +735,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 podeGerirVotacao={Boolean(isCoachOrAdmin)}
                 onToggleVotacao={isCoachOrAdmin ? toggleVotacaoMvp : undefined}
                 onVotarClick={
-                  votacaoMvpAberta &&
-                  (isConvocado || Boolean(profile && eTreinador(profile) && !eAdmin(profile) && profile.role !== 'admin' && !profile.roles?.includes('admin'))) &&
-                  !meuVotoMvp
+                  votacaoMvpAberta && profile?.id && !meuVotoMvp
                     ? () => setModalVotarMvpAberto(true)
                     : undefined
                 }

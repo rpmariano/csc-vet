@@ -142,56 +142,15 @@ export async function sincronizarMvpNaTabelaStats(eventId: string): Promise<void
 }
 
 /**
- * Garante que apenas atletas convocados (que não recusaram a convocatória ou que participaram no jogo)
- * e treinadores têm autorização para votar no MVP. O perfil de direção pura não dá direito de voto.
+ * Verifica a elegibilidade para votar no MVP.
+ * Aberto a todos os utilizadores autenticados da aplicação.
  */
 export async function verificarElegibilidadeVotoMvp(
   eventId: string,
   voterId: string
 ): Promise<boolean> {
   if (!eventId || !voterId) return false
-  try {
-    // 1. Verificar se tem perfil de treinador (coach) — Direção pura não vota
-    const { data: profile } = await supabase
-      .from('v_players_public')
-      .select('role, roles')
-      .eq('id', voterId)
-      .maybeSingle()
-
-    const isDirecao = profile && (eAdmin(profile) || profile.role === 'admin' || (Array.isArray(profile.roles) && profile.roles.includes('admin')))
-    if (profile && eTreinador(profile) && !isDirecao) {
-      return true
-    }
-
-    // 2. Verificar se foi convocado como jogador (e não recusou)
-    const { data: callup } = await supabase
-      .from('callups')
-      .select('id, status')
-      .eq('event_id', eventId)
-      .eq('player_id', voterId)
-      .maybeSingle()
-
-    if (callup && callup.status !== 'declined') {
-      return true
-    }
-
-    // 3. Verificar se participou no jogo (tem registo em stats)
-    const { data: stat } = await supabase
-      .from('stats')
-      .select('id')
-      .eq('event_id', eventId)
-      .eq('player_id', voterId)
-      .maybeSingle()
-
-    if (stat) {
-      return true
-    }
-
-    return false
-  } catch (err) {
-    console.warn('Erro ao verificar elegibilidade de voto MVP:', err)
-    return false
-  }
+  return true
 }
 
 /**
@@ -404,21 +363,23 @@ export function calcularEleitoresDoJogo(
     }
   }
 
-  // 2. Equipa Técnica (apenas treinadores; o perfil de direção pura não tem direito a voto)
+  // 2. Equipa Técnica e Direção
   for (const p of allProfiles || []) {
     if (eAdepto(p) || p.status === 'inactive') continue
-    // Membros de Direção / Admin não são equipa técnica votante
     const isDirecao = eAdmin(p) || p.role === 'admin' || (Array.isArray(p.roles) && p.roles.includes('admin'))
-    if (isDirecao) continue
-
     const isCoach = eTreinador(p)
 
-    if (isCoach) {
+    if (isCoach || isDirecao) {
       if (idsProcessados.has(p.id)) {
-        // Já incluído como jogador/convocado, acrescentar menção ao cargo técnico
+        // Já incluído como jogador/convocado, acrescentar menção ao cargo técnico / direção
         const idx = eleitores.findIndex(e => e.id === p.id)
         if (idx !== -1) {
-          eleitores[idx].funcao += ' / Treinador'
+          if (isCoach && !eleitores[idx].funcao.includes('Treinador')) {
+            eleitores[idx].funcao += ' / Treinador'
+          }
+          if (isDirecao && !eleitores[idx].funcao.includes('Direção')) {
+            eleitores[idx].funcao += ' / Direção'
+          }
         }
       } else {
         idsProcessados.add(p.id)
@@ -429,12 +390,36 @@ export function calcularEleitoresDoJogo(
           shirt_name: p.shirt_name,
           jersey_number: p.jersey_number,
           photo_url: p.photo_url,
-          funcao: 'Treinador',
+          funcao: isCoach ? 'Treinador' : 'Direção',
           categoria: 'staff',
           jaVotou: Boolean(voto),
           escolhas: voto ? [voto.player1_id, voto.player2_id] : undefined,
         })
       }
+    }
+  }
+
+  // 3. Quaisquer outros utilizadores que tenham votado (ex: adeptos, outros atletas)
+  for (const p of allProfiles || []) {
+    if (idsProcessados.has(p.id)) continue
+    const voto = votosMap.get(p.id)
+    if (voto) {
+      idsProcessados.add(p.id)
+      let funcao = 'Votante'
+      if (eAdepto(p)) funcao = 'Adepto'
+      else if (p.role === 'player' || (Array.isArray(p.roles) && p.roles.includes('player'))) funcao = 'Atleta'
+
+      eleitores.push({
+        id: p.id,
+        name: p.name,
+        shirt_name: p.shirt_name,
+        jersey_number: p.jersey_number,
+        photo_url: p.photo_url,
+        funcao,
+        categoria: 'staff',
+        jaVotou: true,
+        escolhas: [voto.player1_id, voto.player2_id],
+      })
     }
   }
 
