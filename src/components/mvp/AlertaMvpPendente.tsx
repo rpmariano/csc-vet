@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { Award, ChevronRight, Sparkles, X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
-import { obterTodosVotosMvp, isVotacaoMvpAberta } from '../../lib/mvp'
+import { obterVotosDoUtilizador, obterVotoMvpLocal, isVotacaoMvpAberta } from '../../lib/mvp'
 import { ModalVotarMvp } from './ModalVotarMvp'
 import { CartaoSimples, EtiquetaSeccao } from '../ui'
 import { triggerHaptic } from '../../utils/haptics'
@@ -64,11 +64,9 @@ export const AlertaMvpPendente: React.FC = () => {
         return
       }
 
-      // 2. Votos existentes do utilizador
-      const todosVotos = await obterTodosVotosMvp()
-      const meusVotosIds = new Set(
-        todosVotos.filter(v => v.voter_id === profile.id).map(v => v.event_id)
-      )
+      // 2. Votos existentes do utilizador (consulta direta do utilizador + cache local)
+      const meusVotos = await obterVotosDoUtilizador(profile.id)
+      const meusVotosIds = new Set(meusVotos.map(v => v.event_id))
 
       // Jogos com votação aberta onde o utilizador ainda não votou
       const pendentes: JogoPendenteMvp[] = []
@@ -79,7 +77,7 @@ export const AlertaMvpPendente: React.FC = () => {
         // Se a votação estiver encerrada (ex.: amigáveis passados e 1ª jornada), não gera alerta
         if (!isVotacaoMvpAberta(evObj)) continue
 
-        const jaVotou = meusVotosIds.has(ev.id)
+        const jaVotou = meusVotosIds.has(ev.id) || Boolean(obterVotoMvpLocal(ev.id, profile.id))
         let dispensado = false
         try {
           dispensado = localStorage.getItem(`csc_mvp_alerta_dispensado_${ev.id}`) === 'true'
@@ -236,7 +234,12 @@ export const AlertaMvpPendente: React.FC = () => {
             month: 'long',
           })}
           scoreText={placar}
-          onVoteSubmitted={verificarPendencias}
+          onVoteSubmitted={() => {
+            if (jogoSelecionado?.id) {
+              setJogosPendentes((prev) => prev.filter((j) => j.id !== jogoSelecionado.id))
+            }
+            verificarPendencias()
+          }}
         />
       )}
     </>

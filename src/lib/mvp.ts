@@ -87,21 +87,147 @@ export function temAcessoMVP(profile: { email?: string | null; name?: string | n
   return false
 }
 
+export interface VotoLocalCache {
+  eventId: string
+  voterId: string
+  player1Id: string
+  player2Id: string
+  votedAt: string
+}
+
+/** Guarda o voto submetido pelo utilizador em cache local (localStorage). */
+export function salvarVotoMvpLocal(
+  eventId: string,
+  voterId: string,
+  player1Id: string,
+  player2Id: string
+): void {
+  if (typeof window === 'undefined') return
+  try {
+    const key = `csc_mvp_voto_${eventId}_${voterId}`
+    const dados: VotoLocalCache = {
+      eventId,
+      voterId,
+      player1Id,
+      player2Id,
+      votedAt: new Date().toISOString()
+    }
+    localStorage.setItem(key, JSON.stringify(dados))
+    // Marca também o alerta do jogo como dispensado na homepage
+    localStorage.setItem(`csc_mvp_alerta_dispensado_${eventId}`, 'true')
+  } catch (e) {
+    console.debug('Erro ao salvar voto local:', e)
+  }
+}
+
+/** Obtém um voto guardado em cache local para um dado evento e utilizador. */
+export function obterVotoMvpLocal(eventId: string, voterId: string): MvpVote | null {
+  if (typeof window === 'undefined' || !eventId || !voterId) return null
+  try {
+    const key = `csc_mvp_voto_${eventId}_${voterId}`
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const dados = JSON.parse(raw) as VotoLocalCache
+    if (!dados || dados.eventId !== eventId || dados.voterId !== voterId) return null
+    return {
+      id: `local_${eventId}_${voterId}`,
+      event_id: dados.eventId,
+      voter_id: dados.voterId,
+      player1_id: dados.player1Id,
+      player2_id: dados.player2Id,
+      created_at: dados.votedAt,
+      updated_at: dados.votedAt,
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Obtém todos os votos do utilizador atual (BD + cache local). */
+export async function obterVotosDoUtilizador(voterId: string): Promise<MvpVote[]> {
+  if (!voterId) return []
+  try {
+    const { data, error } = await supabase
+      .from('mvp_votes')
+      .select('*')
+      .eq('voter_id', voterId)
+
+    let votos = (data || []) as MvpVote[]
+
+    // Combinar com votos locais guardados no dispositivo
+    if (typeof window !== 'undefined') {
+      try {
+        const prefix = 'csc_mvp_voto_'
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && key.startsWith(prefix) && key.endsWith(`_${voterId}`)) {
+            const raw = localStorage.getItem(key)
+            if (raw) {
+              const dados = JSON.parse(raw) as VotoLocalCache
+              if (dados.eventId && !votos.some(v => v.event_id === dados.eventId)) {
+                votos.push({
+                  id: `local_${dados.eventId}_${voterId}`,
+                  event_id: dados.eventId,
+                  voter_id: voterId,
+                  player1_id: dados.player1Id,
+                  player2_id: dados.player2Id,
+                  created_at: dados.votedAt,
+                  updated_at: dados.votedAt,
+                })
+              }
+            }
+          }
+        }
+      } catch {
+        // ignore local storage errors
+      }
+    }
+
+    if (error) {
+      console.warn('Erro ao carregar votos do utilizador:', error.message)
+    }
+    return votos
+  } catch (err) {
+    console.warn('Exceção ao obter votos do utilizador:', err)
+    return []
+  }
+}
+
 /** Obtém todos os votos registados para um determinado evento. */
-export async function obterVotosDoJogo(eventId: string): Promise<MvpVote[]> {
+export async function obterVotosDoJogo(eventId: string, voterId?: string): Promise<MvpVote[]> {
   try {
     const { data, error } = await supabase
       .from('mvp_votes')
       .select('*')
       .eq('event_id', eventId)
 
+    let votos = (data || []) as MvpVote[]
+
+    if (voterId) {
+      const temVoto = votos.some(v => v.voter_id === voterId)
+      if (!temVoto) {
+        const local = obterVotoMvpLocal(eventId, voterId)
+        if (local) {
+          votos = [...votos, local]
+        }
+      }
+    }
+
     if (error) {
       console.warn('Erro ao carregar votos do jogo (a tabela pode ainda não existir):', error.message)
+      if (voterId) {
+        const local = obterVotoMvpLocal(eventId, voterId)
+        if (local) return [local]
+      }
       return []
     }
-    return (data || []) as MvpVote[]
+    return votos
   } catch (err) {
     console.warn('Exceção ao obter votos do jogo:', err)
+    if (voterId) {
+      const local = obterVotoMvpLocal(eventId, voterId)
+      if (local) return [local]
+    }
     return []
   }
 }
@@ -225,7 +351,7 @@ export function isVotacaoMvpAberta(event: {
   return true
 }
 
-/** Submete ou atualiza o voto de um utilizador (2 jogadores distintos). */
+/** Submete o voto de um utilizador (2 jogadores distintos). Uma vez submetido, fica estritamente bloqueado. */
 export async function registarVotoMvp(
   eventId: string,
   voterId: string,
@@ -239,7 +365,16 @@ export async function registarVotoMvp(
     return { ok: false, error: 'Tens de escolher dois jogadores diferentes.' }
   }
 
-  // Verificar se a votação está aberta para este jogo
+  // 1. Verificação local imediata: se já votou neste jogo, bloqueia
+  const votoLocal = obterVotoMvpLocal(eventId, voterId)
+  if (votoLocal) {
+    return {
+      ok: false,
+      error: 'O teu voto já foi submetido anteriormente e não pode ser alterado.'
+    }
+  }
+
+  // 2. Verificar se a votação está aberta para este jogo
   try {
     const { data: ev } = await supabase
       .from('events')
@@ -260,7 +395,7 @@ export async function registarVotoMvp(
     console.warn('Erro ao verificar se votação MVP está aberta:', e)
   }
 
-  // Validação: utilizador autenticado
+  // 3. Validação: utilizador autenticado
   const elegivel = await verificarElegibilidadeVotoMvp(eventId, voterId)
   if (!elegivel) {
     return {
@@ -270,15 +405,21 @@ export async function registarVotoMvp(
   }
 
   try {
-    // Uma vez submetido o voto, já não se pode alterar
+    // 4. Verificação no Supabase: uma vez submetido o voto, já não se pode alterar
     const { data: votoExistente } = await supabase
       .from('mvp_votes')
-      .select('id')
+      .select('id, player1_id, player2_id')
       .eq('event_id', eventId)
       .eq('voter_id', voterId)
       .maybeSingle()
 
     if (votoExistente) {
+      salvarVotoMvpLocal(
+        eventId,
+        voterId,
+        votoExistente.player1_id || player1Id,
+        votoExistente.player2_id || player2Id
+      )
       return {
         ok: false,
         error: 'O teu voto já foi submetido anteriormente e não pode ser alterado.'
@@ -296,9 +437,20 @@ export async function registarVotoMvp(
       })
 
     if (error) {
+      // Se deu erro de chave única (já existe), guarda localmente e avisa
+      if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
+        salvarVotoMvpLocal(eventId, voterId, player1Id, player2Id)
+        return {
+          ok: false,
+          error: 'O teu voto já foi submetido anteriormente e não pode ser alterado.'
+        }
+      }
       console.error('Erro ao registar voto MVP:', error)
       return { ok: false, error: error.message }
     }
+
+    // 5. Guardar em cache local imediatamente para assegurar o bloqueio na interface
+    salvarVotoMvpLocal(eventId, voterId, player1Id, player2Id)
 
     // Tentar manter stats em sincronia com o vencedor
     sincronizarMvpNaTabelaStats(eventId).catch(() => {})

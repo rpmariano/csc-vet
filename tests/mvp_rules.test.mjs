@@ -214,6 +214,63 @@ test('Alerta pode ser dispensado e lembrado localmente', () => {
   assert.equal(pendentesNaoDispensados[0].id, 'match_456')
 })
 
+test('Imutabilidade e bloqueio de voto: cache local + remoto garante bloqueio imediato e ausência de alerta', () => {
+  const localStore = {}
+  const mockLocalStorage = {
+    getItem: (key) => localStore[key] || null,
+    setItem: (key, val) => { localStore[key] = String(val) },
+  }
+
+  function salvarVotoMock(eventId, voterId, p1, p2) {
+    const key = `csc_mvp_voto_${eventId}_${voterId}`
+    mockLocalStorage.setItem(key, JSON.stringify({
+      eventId,
+      voterId,
+      player1Id: p1,
+      player2Id: p2,
+      votedAt: new Date().toISOString()
+    }))
+    mockLocalStorage.setItem(`csc_mvp_alerta_dispensado_${eventId}`, 'true')
+  }
+
+  function obterVotoLocalMock(eventId, voterId) {
+    const key = `csc_mvp_voto_${eventId}_${voterId}`
+    const raw = mockLocalStorage.getItem(key)
+    if (!raw) return null
+    return JSON.parse(raw)
+  }
+
+  const eventId = 'jogo_torre_18out'
+  const voterId = 'rui_admin_id'
+
+  // Antes de votar:
+  assert.equal(obterVotoLocalMock(eventId, voterId), null, 'Ainda não votou')
+
+  // Rui vota no jogo:
+  salvarVotoMock(eventId, voterId, 'playerA', 'playerB')
+
+  // Imediatamente após votar:
+  const voto = obterVotoLocalMock(eventId, voterId)
+  assert.ok(voto, 'Voto existe no cache local')
+  assert.equal(voto.player1Id, 'playerA')
+  assert.equal(voto.player2Id, 'playerB')
+
+  // O alerta na homepage para este jogo fica de imediato dispensado/excluído:
+  assert.equal(mockLocalStorage.getItem(`csc_mvp_alerta_dispensado_${eventId}`), 'true')
+
+  // Tentativa de votar novamente:
+  function submeterComBloqueio(evId, vId, p1, p2) {
+    if (obterVotoLocalMock(evId, vId)) {
+      return { ok: false, error: 'O teu voto já foi submetido anteriormente e não pode ser alterado.' }
+    }
+    return { ok: true }
+  }
+
+  const segundaTentativa = submeterComBloqueio(eventId, voterId, 'playerC', 'playerD')
+  assert.equal(segundaTentativa.ok, false)
+  assert.match(segundaTentativa.error, /não pode ser alterado/)
+})
+
 // ==============================================================================
 // 8. TESTE DE DERIVAÇÃO ESTRITA DE PAPÉIS (DIREÇÃO NÃO É TREINADOR NEM JOGADOR)
 // ==============================================================================

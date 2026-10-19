@@ -14,7 +14,7 @@ import {
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
-import { temAcessoMVP, obterTodosVotosMvp, sincronizarMvpNaTabelaStats, isVotacaoMvpAberta, type MvpVote, type PlayerSummary } from '../lib/mvp'
+import { temAcessoMVP, obterTodosVotosMvp, isVotacaoMvpAberta, type MvpVote, type PlayerSummary } from '../lib/mvp'
 import { ACarregar, EstadoVazio, FilaSeparadores, Botao } from '../components/ui'
 import { BottomSheet } from '../components/BottomSheet'
 import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
@@ -120,22 +120,7 @@ export const MvpPage: React.FC = () => {
         map.set(p.id, p)
       }
       setPlayersMap(map)
-
-      let votosLimpos = votosData || []
-      // Elimina dados dos votos de teste de Rui Mariano conforme solicitado
-      const emailNorm = (profile?.email || '').toLowerCase().trim()
-      if (emailNorm === 'rpmariano@gmail.com' && profile?.id) {
-        const meusVotos = votosLimpos.filter(v => v.voter_id === profile.id)
-        if (meusVotos.length > 0) {
-          await supabase.from('mvp_votes').delete().eq('voter_id', profile.id)
-          for (const v of meusVotos) {
-            await sincronizarMvpNaTabelaStats(v.event_id)
-          }
-          votosLimpos = votosLimpos.filter(v => v.voter_id !== profile.id)
-        }
-      }
-
-      setAllVotes(votosLimpos)
+      setAllVotes((votosData || []) as MvpVote[])
     } catch (err) {
       console.error('Erro ao carregar dados do ecrã MVP:', err)
     } finally {

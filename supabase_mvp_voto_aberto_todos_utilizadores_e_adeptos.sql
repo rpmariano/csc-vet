@@ -16,14 +16,13 @@ WITH CHECK (
     auth.uid() = voter_id
 );
 
--- 2. Atualizar RLS de atualização em public.mvp_votes
+-- 2. Imutabilidade do voto: uma vez submetido o voto, fica estritamente bloqueado contra alteração
 DROP POLICY IF EXISTS "Utilizador altera o seu próprio voto MVP" ON public.mvp_votes;
-CREATE POLICY "Utilizador altera o seu próprio voto MVP"
-ON public.mvp_votes FOR UPDATE
+-- Não existe política de UPDATE para utilizadores comuns: o voto é imutável após ser inserido
+
+-- 3. Garantir permissões de leitura a utilizadores autenticados
+DROP POLICY IF EXISTS "Votos MVP legíveis por utilizadores autenticados" ON public.mvp_votes;
+CREATE POLICY "Votos MVP legíveis por utilizadores autenticados"
+ON public.mvp_votes FOR SELECT
 TO authenticated
-USING (
-    auth.uid() = voter_id
-)
-WITH CHECK (
-    auth.uid() = voter_id
-);
+USING (true);

@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import { eAdepto } from '../../lib/papeis'
 import { compararPorCamisola } from '../../lib/eventos'
-import { registarVotoMvp, obterVotosDoJogo, isVotacaoMvpAberta, type MvpVote, type PlayerSummary } from '../../lib/mvp'
+import { registarVotoMvp, obterVotosDoJogo, isVotacaoMvpAberta, salvarVotoMvpLocal, obterVotoMvpLocal, type MvpVote, type PlayerSummary } from '../../lib/mvp'
 import { triggerHaptic } from '../../utils/haptics'
 import { toast } from '../../context/ToastContext'
 import { BottomSheet } from '../BottomSheet'
@@ -67,7 +67,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
             .order('jersey_number', { ascending: true, nullsFirst: false }),
           supabase.from('callups').select('player_id, status, notes').eq('event_id', eventId),
           supabase.from('stats').select('*').eq('event_id', eventId),
-          obterVotosDoJogo(eventId),
+          obterVotosDoJogo(eventId, profile.id),
           supabase
             .from('events')
             .select('id, title, date_time, is_friendly, matchday, description, mvp_voting_closed, opponent:opponents(name, initials)')
@@ -138,8 +138,8 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
 
         setPlayers(options)
 
-        // Verificar se o utilizador já votou
-        const meuVoto = votosDoJogo.find(v => v.voter_id === profile.id)
+        // Verificar se o utilizador já votou (remotamente ou em cache local)
+        const meuVoto = votosDoJogo.find(v => v.voter_id === profile.id) || obterVotoMvpLocal(eventId, profile.id)
         if (meuVoto) {
           setInitialVote(meuVoto)
           setFirstChoiceId(meuVoto.player1_id || null)
@@ -235,12 +235,29 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
     try {
       const res = await registarVotoMvp(eventId, profile.id, firstChoiceId, secondChoiceId)
       if (res.ok) {
+        salvarVotoMvpLocal(eventId, profile.id, firstChoiceId, secondChoiceId)
+        setInitialVote({
+          id: `voto_${eventId}_${profile.id}`,
+          event_id: eventId,
+          voter_id: profile.id,
+          player1_id: firstChoiceId,
+          player2_id: secondChoiceId,
+        })
         triggerHaptic('medium')
         toast.success('Voto registado com sucesso! Obrigado!')
         if (onVoteSubmitted) onVoteSubmitted()
         onClose()
       } else {
         toast.error(res.error || 'Não foi possível gravar o voto.')
+        if (res.error?.includes('já foi submetido') || res.error?.includes('não pode ser alterado')) {
+          const votoLocal = obterVotoMvpLocal(eventId, profile.id)
+          if (votoLocal) {
+            setInitialVote(votoLocal)
+            setFirstChoiceId(votoLocal.player1_id || null)
+            setSecondChoiceId(votoLocal.player2_id || null)
+          }
+          if (onVoteSubmitted) onVoteSubmitted()
+        }
       }
     } catch {
       toast.error('Ocorreu um erro ao submeter o teu voto.')
@@ -450,12 +467,17 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
                     key={p.id}
                     type="button"
                     onClick={() => handleTogglePlayer(p.id)}
-                    className={`w-full text-left p-3 rounded-2xl flex items-center justify-between gap-3 transition-all duration-150 cursor-pointer border ${
+                    disabled={Boolean(initialVote) || votacaoEncerrada}
+                    className={`w-full text-left p-3 rounded-2xl flex items-center justify-between gap-3 transition-all duration-150 border ${
+                      Boolean(initialVote) || votacaoEncerrada
+                        ? 'cursor-default opacity-75'
+                        : 'cursor-pointer hover:bg-white/[0.07]'
+                    } ${
                       isFirst
-                        ? 'bg-csc-gold/15 border-csc-gold shadow-md shadow-csc-gold/10'
+                        ? 'bg-csc-gold/15 border-csc-gold shadow-md shadow-csc-gold/10 !opacity-100'
                         : isSecond
-                        ? 'bg-csc-blue/20 border-csc-blue/60 shadow-md shadow-csc-blue/10'
-                        : 'bg-white/[0.04] border-white/10 hover:bg-white/[0.07]'
+                        ? 'bg-csc-blue/20 border-csc-blue/60 shadow-md shadow-csc-blue/10 !opacity-100'
+                        : 'bg-white/[0.04] border-white/10'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
