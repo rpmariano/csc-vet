@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { compararPorCamisola } from '../lib/eventos'
 import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
-import { Award, Footprints, Flame, Users, SlidersHorizontal } from 'lucide-react'
+import { Footprints, Flame, Users, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { Pastilha, Botao, ACarregar } from '../components/ui'
 import { BottomSheet } from '../components/BottomSheet'
@@ -120,7 +120,6 @@ interface RawStat {
   assists: number
   yellow_cards: number
   red_cards: number
-  is_mvp: boolean
   events?: {
     id: string
     title: string
@@ -150,7 +149,6 @@ interface PlayerStats {
   assists: number
   yellow_cards: number
   red_cards: number
-  mvp_count: number
   games_played: number
 }
 
@@ -244,7 +242,6 @@ const StatsPage: React.FC = () => {
           assists: 0,
           yellow_cards: 0,
           red_cards: 0,
-          mvp_count: 0,
           games_played: 0
         }
       }
@@ -253,7 +250,6 @@ const StatsPage: React.FC = () => {
       playerMap[pid].assists += item.assists || 0
       playerMap[pid].yellow_cards += item.yellow_cards || 0
       playerMap[pid].red_cards += item.red_cards || 0
-      playerMap[pid].mvp_count += item.is_mvp ? 1 : 0
       playerMap[pid].games_played += 1
     })
 
@@ -276,13 +272,6 @@ const StatsPage: React.FC = () => {
     return [...aggregatedStats]
       .filter(p => p.assists > 0)
       .sort((a, b) => b.assists - a.assists)
-      .slice(0, 3)
-  }, [aggregatedStats])
-
-  const topMvps = useMemo(() => {
-    return [...aggregatedStats]
-      .filter(p => p.mvp_count > 0)
-      .sort((a, b) => b.mvp_count - a.mvp_count)
       .slice(0, 3)
   }, [aggregatedStats])
 
@@ -483,19 +472,6 @@ const StatsPage: React.FC = () => {
             valor: `${p.assists} ${p.assists === 1 ? 'assistência' : 'assistências'}`,
           }))}
         />
-
-        <Podio
-          titulo="MVP do jogo"
-          icone={<Award size={15} />}
-          cor="text-csc-verde-texto"
-          corDestaque="bg-csc-light text-white"
-          vazio="Sem registo de MVPs neste contexto."
-          linhas={topMvps.map(p => ({
-            id: p.id,
-            nome: p.shirt_name || p.name,
-            valor: `${p.mvp_count} MVP`,
-          }))}
-        />
       </div>
 
       {/* 5. Tabela Completa de Rendimento do Plantel */}
@@ -508,7 +484,7 @@ const StatsPage: React.FC = () => {
 }
 
 // ─── Componente de Tabela com Ordenação ────────────────────────────────────────
-type SortKey = 'name' | 'games_played' | 'goals' | 'assists' | 'mvp_count' | 'yellow_cards' | 'red_cards'
+type SortKey = 'name' | 'games_played' | 'goals' | 'assists' | 'yellow_cards' | 'red_cards'
 type SortDir = 'asc' | 'desc'
 
 function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats: PlayerStats[], activeFilterLabel: string }) {
@@ -567,14 +543,13 @@ function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats:
               <Coluna col="games_played" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>J</Coluna>
               <Coluna col="goals" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>G</Coluna>
               <Coluna col="assists" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>A</Coluna>
-              <Coluna col="mvp_count" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>MVP</Coluna>
               <Coluna col="red_cards" sortKey={sortKey} sortDir={sortDir} aoOrdenar={handleSort}>Disc.</Coluna>
             </tr>
           </thead>
           <tbody>
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-white/62 italic text-xs">
+                <td colSpan={5} className="px-4 py-8 text-center text-white/62 italic text-xs">
                   Sem registos para {activeFilterLabel.toLowerCase()}.
                 </td>
               </tr>
@@ -599,9 +574,6 @@ function TableSection({ aggregatedStats, activeFilterLabel }: { aggregatedStats:
                   </td>
                   <td className={`px-2 py-2.5 text-center font-display font-black text-[12px] tabular-nums ${player.assists > 0 ? 'text-csc-azul-texto' : 'text-white/30'}`}>
                     {player.assists}
-                  </td>
-                  <td className={`px-2 py-2.5 text-center font-display font-black text-[12px] tabular-nums ${player.mvp_count > 0 ? 'text-csc-verde-texto' : 'text-white/30'}`}>
-                    {player.mvp_count || '–'}
                   </td>
                   <td className="pl-2 pr-3.5 py-2.5">
                     <span className="flex items-center justify-center gap-1.5">

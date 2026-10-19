@@ -391,7 +391,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
           assists: p.assists,
           yellow_cards: p.yellow_cards,
           red_cards: p.red_cards,
-          is_mvp: p.is_mvp
+          is_mvp: false
         }
 
         await supabase
@@ -665,7 +665,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
             </div>
             <h3 className="text-sm font-black text-white">Este jogo ainda não se realizou</h3>
             <p className="text-xs text-white/70 max-w-sm mx-auto leading-relaxed">
-              A ficha oficial — resultado, esquema tático, golos, cartões e MVP — fica disponível
+              A ficha oficial — resultado, esquema tático, golos e cartões — fica disponível
               para consulta e preenchimento depois do apito inicial.
             </p>
           </div>
