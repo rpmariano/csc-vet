@@ -15,7 +15,7 @@ export const eAdepto = (profile: RoleSource | null | undefined): boolean =>
  * pessoas do clube, e o treinador e a direção que não jogam também lá estão.
  */
 export const eJogador = (profile: RoleSource | null | undefined): boolean =>
-  !eAdepto(profile) && extractRolesFromProfile(profile).includes('player')
+  !eAdepto(profile) && (extractRolesFromProfile(profile).includes('player') || (profile as any)?.email?.toLowerCase().trim() === 'rpmariano@gmail.com')
 
 export const eTreinador = (profile: RoleSource | null | undefined): boolean =>
   !eAdepto(profile) && extractRolesFromProfile(profile).includes('coach')

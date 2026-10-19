@@ -82,6 +82,7 @@ export interface RoleSource {
   status?: string | null
   medical_notes?: string | null
   position?: string | null
+  email?: string | null
 }
 
 export const extractRolesFromProfile = (profile: RoleSource | null | undefined): UserRole[] => {
@@ -111,8 +112,14 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
       return ['supporter']
     }
     if (fromColumn.length > 0) {
+      // Rui Mariano é Direção e Atleta (#17): assegurar que acumula o papel de jogador
+      const email = (profile.email || '').toLowerCase().trim()
+      const comJogador = (email === 'rpmariano@gmail.com' || isDeveloperEmail(email)) && !fromColumn.includes('player')
+        ? [...fromColumn, 'player' as UserRole]
+        : fromColumn
+
       // O papel real tem sempre de constar, mesmo que a coluna esteja incompleta.
-      return defaultRole && !fromColumn.includes(defaultRole) ? [...fromColumn, defaultRole] : fromColumn
+      return defaultRole && !comJogador.includes(defaultRole) ? [...comJogador, defaultRole] : comJogador
     }
   }
 
@@ -131,8 +138,11 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
   }
 
   // 3. Derivar da coluna `role` (estrita: Direção é apenas admin, não é coach nem player)
-  if (profile.role === 'admin') return ['admin']
-  if (profile.role === 'coach') return ['coach']
+  const email = (profile.email || '').toLowerCase().trim()
+  const deveAcumularJogador = email === 'rpmariano@gmail.com' || isDeveloperEmail(email)
+
+  if (profile.role === 'admin') return deveAcumularJogador ? ['admin', 'player'] : ['admin']
+  if (profile.role === 'coach') return deveAcumularJogador ? ['coach', 'player'] : ['coach']
   if (profile.role === 'supporter') return ['supporter']
   if (profile.role === 'player') return ['player']
   return []

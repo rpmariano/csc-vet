@@ -44,14 +44,14 @@ const prazoPorExtenso = (item: ItemPagamento): string => {
 }
 
 export const SinalPagamentos: React.FC = () => {
-  const { profile, assignedRoles } = useAuth()
+  const { profile } = useAuth()
   const [aberto, setAberto] = useState(false)
 
-  /* As quotas e os encargos são de quem joga, seja qual for o outro chapéu. Adeptos nunca pagam quotas. */
-  const temPapelDeJogador = !eAdepto(profile) && assignedRoles.includes('player')
-  const estado = useEstadoPagamentos(profile, temPapelDeJogador)
+  /* As quotas e os encargos são de quem não é adepto. */
+  const ativo = Boolean(profile?.id) && !eAdepto(profile)
+  const estado = useEstadoPagamentos(profile, ativo)
 
-  if (!temPapelDeJogador || estado.cor === null) return null
+  if (!ativo || estado.cor === null) return null
 
   const vermelho = estado.cor === 'vermelho'
   const classes = vermelho

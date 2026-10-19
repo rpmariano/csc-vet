@@ -26,11 +26,10 @@ UPDATE public.stats
 SET is_mvp = FALSE
 WHERE is_mvp = TRUE;
 
--- 4. Repõe o perfil de Rui Mariano estritamente como Direção ('admin')
--- removendo qualquer herança indevida de treinador ('coach') ou jogador ('player'):
+-- 4. Repõe o perfil de Rui Mariano como Direção e Jogador ('admin' + 'player'):
 UPDATE public.profiles
-SET role = 'admin'::public.user_role,
-    roles = ARRAY['admin']::public.user_role[]
+SET role = 'player'::public.user_role,
+    roles = ARRAY['admin', 'player']::public.user_role[]
 WHERE email = 'rpmariano@gmail.com';
 
 -- 4. Resumo dos votos atuais na base de dados
