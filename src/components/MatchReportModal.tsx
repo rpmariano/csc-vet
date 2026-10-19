@@ -257,8 +257,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const meu = votos.find(v => v.voter_id === profile?.id) || null
         setMeuVotoMvp(meu)
 
-        // Calcular eleitores do jogo (convocados + equipa técnica + direção) e estado de votação
-        const eleitores = calcularEleitoresDoJogo(allProfiles, callupsData || [], statsData || [], votos)
+        // Calcular eleitores do jogo (convocados + equipa técnica + direção + utilizador atual/adepto) e estado de votação
+        const eleitores = calcularEleitoresDoJogo(allProfiles, callupsData || [], statsData || [], votos, profile?.id)
         setEleitoresDoJogo(eleitores)
       } catch (err) {
         console.error('Error loading match report:', err)
@@ -1256,14 +1256,24 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         const meu = votos.find(v => v.voter_id === profile?.id) || null
         setMeuVotoMvp(meu)
 
-        setEleitoresDoJogo(prev => prev.map(e => {
-          const v = votos.find(vt => vt.voter_id === e.id)
-          return {
-            ...e,
-            jaVotou: Boolean(v),
-            escolhas: v ? [v.player1_id, v.player2_id] : undefined
-          }
-        }))
+        try {
+          const [{ data: perfisNovos }, { data: callupsNovos }, { data: statsNovos }] = await Promise.all([
+            supabase.from('v_players_public').select('id, name, shirt_name, jersey_number, photo_url, position, role, roles').order('jersey_number', { ascending: true, nullsFirst: false }),
+            supabase.from('callups').select('player_id, status, notes').eq('event_id', eventId),
+            supabase.from('stats').select('*').eq('event_id', eventId)
+          ])
+          const listaEleitores = calcularEleitoresDoJogo(
+            perfisNovos || [],
+            callupsNovos || [],
+            statsNovos || [],
+            votos,
+            profile?.id
+          )
+          setEleitoresDoJogo(listaEleitores)
+        } catch (e) {
+          console.warn('Erro ao atualizar eleitores após voto:', e)
+        }
+
         if (onSaved) onSaved()
       }}
     />

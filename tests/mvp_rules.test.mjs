@@ -258,20 +258,49 @@ test('Derivação de papéis: admin é estritamente admin e nunca herda coach ou
 
 // ==============================================================================
 // ==============================================================================
-// 9. TESTE DE CALCULAR ELEITORES: INCLUI CONVOCADOS, EQUIPA TÉCNICA E DIREÇÃO
+// 9. TESTE DE CALCULAR ELEITORES: HIERARQUIA ESTRITA DE CARGOS E ACESSO A ADEPTOS
 // ==============================================================================
-test('calcularEleitoresDoJogo: inclui convocados, equipa técnica e direção como eleitores', () => {
+test('calcularEleitoresDoJogo: hierarquia de cargos (jogador > treinador > direção única) e inclusão de adeptos', () => {
   function eAdepto(p) { return p.role === 'supporter' || (p.roles && p.roles.includes('supporter')) }
-  function eAdmin(p) { return p.role === 'admin' || (p.roles && p.roles.includes('admin')) }
-  function eTreinador(p) { return p.role === 'coach' || (p.roles && p.roles.includes('coach')) }
+  function eAdmin(p) { return !eAdepto(p) && (p.role === 'admin' || (p.roles && p.roles.includes('admin'))) }
+  function eTreinador(p) { return !eAdepto(p) && (p.role === 'coach' || (p.roles && p.roles.includes('coach'))) }
+  function eJogador(p) { return !eAdepto(p) && (p.role === 'player' || (p.roles && p.roles.includes('player'))) }
 
-  function calcularEleitoresDoJogoMock(allProfiles, callups, stats, votos) {
+  function determinarFuncaoPerfilMvpMock(profile, contextoJogo) {
+    if (contextoJogo?.foiConvocado || (contextoJogo?.lineupStatus && contextoJogo.lineupStatus !== 'none')) {
+      let funcao = 'Convocado'
+      if (contextoJogo.lineupStatus === 'starter') funcao = 'Titular'
+      else if (contextoJogo.lineupStatus === 'sub') funcao = 'Suplente'
+      return { funcao, categoria: 'jogador' }
+    }
+
+    const isJog = eJogador(profile)
+    const isCoach = eTreinador(profile)
+    const isAdmin = eAdmin(profile)
+
+    // 1. Jogador tem prioridade máxima sobre quaisquer cargos acumulados (ex.: Jogador + Direção -> Jogador)
+    if (isJog) return { funcao: 'Jogador', categoria: 'jogador' }
+
+    // 2. Treinador tem prioridade sobre Direção (ex.: Treinador + Direção -> Treinador)
+    if (isCoach) return { funcao: 'Treinador', categoria: 'staff' }
+
+    // 3. Direção é SÓ quem for unicamente Direção (não joga e não treina)
+    if (isAdmin) return { funcao: 'Direção', categoria: 'staff' }
+
+    // 4. Adepto
+    if (eAdepto(profile)) return { funcao: 'Adepto', categoria: 'staff' }
+
+    return { funcao: 'Votante', categoria: 'staff' }
+  }
+
+  function calcularEleitoresDoJogoMock(allProfiles, callups, stats, votos, currentUserId) {
     const callupMap = new Map((callups || []).map(c => [c.player_id, c]))
     const statMap = new Map((stats || []).map(s => [s.player_id, s]))
     const votosMap = new Map((votos || []).map(v => [v.voter_id, v]))
     const eleitores = []
     const idsProcessados = new Set()
 
+    // 1. Convocados e participantes
     for (const p of allProfiles || []) {
       if (eAdepto(p)) continue
       const callup = callupMap.get(p.id)
@@ -282,20 +311,48 @@ test('calcularEleitoresDoJogo: inclui convocados, equipa técnica e direção co
 
       if (foiConvocado || participou) {
         idsProcessados.add(p.id)
-        eleitores.push({ id: p.id, name: p.name, funcao: 'Convocado', categoria: 'jogador' })
+        let lineupStatus = st?.lineup_status
+        if (!lineupStatus && callup?.notes?.includes('starter')) lineupStatus = 'starter'
+        const { funcao, categoria } = determinarFuncaoPerfilMvpMock(p, { foiConvocado: true, lineupStatus })
+        const voto = votosMap.get(p.id)
+        eleitores.push({ id: p.id, name: p.name, funcao, categoria, jaVotou: Boolean(voto) })
       }
     }
 
+    // 2. Elementos com funções técnicas ou de direção
     for (const p of allProfiles || []) {
+      if (idsProcessados.has(p.id)) continue
       if (eAdepto(p) || p.status === 'inactive') continue
-      const isDirecao = eAdmin(p) || p.role === 'admin' || (Array.isArray(p.roles) && p.roles.includes('admin'))
       const isCoach = eTreinador(p)
+      const isAdmin = eAdmin(p)
 
-      if (isCoach || isDirecao) {
-        if (!idsProcessados.has(p.id)) {
-          idsProcessados.add(p.id)
-          eleitores.push({ id: p.id, name: p.name, funcao: isCoach ? 'Treinador' : 'Direção', categoria: 'staff' })
-        }
+      if (isCoach || isAdmin) {
+        idsProcessados.add(p.id)
+        const { funcao, categoria } = determinarFuncaoPerfilMvpMock(p)
+        const voto = votosMap.get(p.id)
+        eleitores.push({ id: p.id, name: p.name, funcao, categoria, jaVotou: Boolean(voto) })
+      }
+    }
+
+    // 3. Outros utilizadores que tenham votado (ex: adeptos)
+    for (const p of allProfiles || []) {
+      if (idsProcessados.has(p.id)) continue
+      const voto = votosMap.get(p.id)
+      if (voto) {
+        idsProcessados.add(p.id)
+        const { funcao, categoria } = determinarFuncaoPerfilMvpMock(p)
+        eleitores.push({ id: p.id, name: p.name, funcao, categoria, jaVotou: true })
+      }
+    }
+
+    // 4. Utilizador atual se autenticado
+    if (currentUserId && !idsProcessados.has(currentUserId)) {
+      const meProfile = allProfiles?.find(p => p.id === currentUserId)
+      if (meProfile && meProfile.status !== 'inactive') {
+        idsProcessados.add(meProfile.id)
+        const { funcao, categoria } = determinarFuncaoPerfilMvpMock(meProfile)
+        const voto = votosMap.get(meProfile.id)
+        eleitores.push({ id: meProfile.id, name: meProfile.name, funcao, categoria, jaVotou: Boolean(voto) })
       }
     }
 
@@ -303,21 +360,71 @@ test('calcularEleitoresDoJogo: inclui convocados, equipa técnica e direção co
   }
 
   const perfis = [
-    { id: 'mariano', name: 'Mariano', role: 'admin', roles: ['admin'] },
-    { id: 'couto', name: 'André Couto', role: 'coach', roles: ['coach'] },
-    { id: 'rocha', name: 'Rocha', role: 'player', roles: ['player'] },
+    // 1. Titular convocado que também é admin no clube
+    { id: 'rocha', name: 'Rocha', role: 'player', roles: ['player', 'admin'] },
+    // 2. Namora: jogador que acumula com direção, NÃO foi convocado para este jogo
+    { id: 'namora', name: 'Namora', role: 'player', roles: ['player', 'admin'] },
+    // 3. J. Costa: jogador que acumula com direção, NÃO foi convocado para este jogo
+    { id: 'jcosta', name: 'J. Costa', role: 'player', roles: ['player', 'admin'] },
+    // 4. Ramalho: treinador que também tem admin
+    { id: 'ramalho', name: 'Ramalho', role: 'coach', roles: ['coach', 'admin'] },
+    // 5. Marco Neves: treinador
+    { id: 'marco', name: 'Marco Neves', role: 'coach', roles: ['coach'] },
+    // 6. Luis Alexandre Sousa: unicamente Direção
+    { id: 'luis', name: 'Luis Alexandre Sousa', role: 'admin', roles: ['admin'] },
+    // 7. Sónia: adepta que já votou
+    { id: 'sonia', name: 'Sónia Adepta', role: 'supporter', roles: ['supporter'] },
   ]
 
   const convocatorias = [
-    { player_id: 'rocha', status: 'accepted' }
+    { player_id: 'rocha', status: 'accepted', notes: 'starter' }
   ]
 
-  const eleitores = calcularEleitoresDoJogoMock(perfis, convocatorias, [], [])
+  const votos = [
+    { voter_id: 'sonia', player1_id: 'rocha', player2_id: 'namora' }
+  ]
 
-  assert.equal(eleitores.length, 3, 'Devem existir 3 eleitores: Rocha (jogador), André Couto (treinador) e Mariano (Direção)')
-  assert.ok(eleitores.some(e => e.id === 'rocha'), 'Rocha deve estar na lista como jogador')
-  assert.ok(eleitores.some(e => e.id === 'couto'), 'André Couto deve estar na lista como treinador')
-  assert.ok(eleitores.some(e => e.id === 'mariano' && e.funcao === 'Direção'), 'Mariano (Direção) pode votar e surge na lista')
+  const eleitores = calcularEleitoresDoJogoMock(perfis, convocatorias, [], votos)
+
+  // Validações estritas conforme o pedido do utilizador:
+  // 1. Rocha é titular
+  const eleitorRocha = eleitores.find(e => e.id === 'rocha')
+  assert.equal(eleitorRocha.funcao, 'Titular', 'Rocha convocado titular surge como Titular')
+  assert.equal(eleitorRocha.categoria, 'jogador')
+
+  // 2. Namora acumula Jogador + Direção -> DEVE APARECER JOGADOR (não Direção!)
+  const eleitorNamora = eleitores.find(e => e.id === 'namora')
+  assert.equal(eleitorNamora.funcao, 'Jogador', 'Namora (jogador + direção) surge estritamente como Jogador')
+  assert.equal(eleitorNamora.categoria, 'jogador')
+
+  // 3. J. Costa acumula Jogador + Direção -> DEVE APARECER JOGADOR (não Direção!)
+  const eleitorJCosta = eleitores.find(e => e.id === 'jcosta')
+  assert.equal(eleitorJCosta.funcao, 'Jogador', 'J. Costa (jogador + direção) surge estritamente como Jogador')
+  assert.equal(eleitorJCosta.categoria, 'jogador')
+
+  // 4. Ramalho acumula Treinador + Direção -> DEVE APARECER TREINADOR (não Direção!)
+  const eleitorRamalho = eleitores.find(e => e.id === 'ramalho')
+  assert.equal(eleitorRamalho.funcao, 'Treinador', 'Ramalho (treinador + direção) surge como Treinador')
+  assert.equal(eleitorRamalho.categoria, 'staff')
+
+  // 5. Marco Neves é Treinador
+  const eleitorMarco = eleitores.find(e => e.id === 'marco')
+  assert.equal(eleitorMarco.funcao, 'Treinador', 'Marco Neves surge como Treinador')
+
+  // 6. Luis Alexandre Sousa é unicamente Direção -> DEVE SER O ÚNICO COM DIREÇÃO!
+  const eleitorLuis = eleitores.find(e => e.id === 'luis')
+  assert.equal(eleitorLuis.funcao, 'Direção', 'Luis Alexandre Sousa surge como Direção')
+  assert.equal(eleitorLuis.categoria, 'staff')
+
+  const todosComDirecao = eleitores.filter(e => e.funcao === 'Direção')
+  assert.equal(todosComDirecao.length, 1, 'Apenas quem for unicamente Direção tem a função Direção')
+  assert.equal(todosComDirecao[0].id, 'luis')
+
+  // 7. Sónia é Adepta e votou -> Surge com função Adepto
+  const eleitorSonia = eleitores.find(e => e.id === 'sonia')
+  assert.equal(eleitorSonia.funcao, 'Adepto', 'Adepta que votou surge com a função Adepto')
+  assert.equal(eleitorSonia.categoria, 'staff')
+  assert.equal(eleitorSonia.jaVotou, true)
 })
 
 // ==============================================================================

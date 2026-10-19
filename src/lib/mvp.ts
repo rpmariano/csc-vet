@@ -5,7 +5,7 @@ import { localDoEvento } from './eventos'
 import { CLUBE_SIGLA } from './clube'
 import { triggerHaptic } from '../utils/haptics'
 import { toast } from '../context/ToastContext'
-import { eAdepto, eTreinador, eAdmin } from './papeis'
+import { eAdepto, eJogador, eTreinador, eAdmin } from './papeis'
 
 export interface EleitorMvpInfo {
   id: string
@@ -260,12 +260,12 @@ export async function registarVotoMvp(
     console.warn('Erro ao verificar se votação MVP está aberta:', e)
   }
 
-  // Validação estrita: apenas convocados e treinadores podem votar
+  // Validação: utilizador autenticado
   const elegivel = await verificarElegibilidadeVotoMvp(eventId, voterId)
   if (!elegivel) {
     return {
       ok: false,
-      error: 'Apenas os jogadores convocados e os treinadores podem votar no MVP deste jogo.'
+      error: 'Inicia sessão na aplicação para poderes votar no MVP deste jogo.'
     }
   }
 
@@ -311,14 +311,69 @@ export async function registarVotoMvp(
 }
 
 /**
- * Calcula a lista de eleitores obrigatórios do jogo (convocados + equipa técnica)
+ * Determina a função e categoria a apresentar para um perfil nos eleitores MVP,
+ * respeitando a hierarquia estrita:
+ * 1. Convocado / Titular / Suplente no jogo (se aplicável ao evento)
+ * 2. Se acumula funções com Jogador (ex.: jogador + direção) -> 'Jogador'
+ * 3. Se acumula Treinador com Direção -> 'Treinador'
+ * 4. 'Direção' é APENAS quem for unicamente direção (não joga nem treina)
+ * 5. Se for adepto -> 'Adepto'
+ */
+export function determinarFuncaoPerfilMvp(
+  profile: any,
+  contextoJogo?: {
+    lineupStatus?: string | null
+    foiConvocado?: boolean
+  }
+): { funcao: string; categoria: 'jogador' | 'staff' } {
+  // Se participou ou foi convocado no jogo
+  if (contextoJogo?.foiConvocado || (contextoJogo?.lineupStatus && contextoJogo.lineupStatus !== 'none')) {
+    let funcao = 'Convocado'
+    if (contextoJogo.lineupStatus === 'starter') {
+      funcao = 'Titular'
+    } else if (contextoJogo.lineupStatus === 'sub') {
+      funcao = 'Suplente'
+    }
+    return { funcao, categoria: 'jogador' }
+  }
+
+  const isJog = eJogador(profile) || profile?.role === 'player' || (Array.isArray(profile?.roles) && profile.roles.includes('player'))
+  const isCoach = eTreinador(profile) || profile?.role === 'coach' || (Array.isArray(profile?.roles) && profile.roles.includes('coach'))
+  const isAdmin = eAdmin(profile) || profile?.role === 'admin' || (Array.isArray(profile?.roles) && profile.roles.includes('admin'))
+
+  // 1. Jogador tem prioridade máxima sobre quaisquer outros cargos acumulados (ex.: Jogador + Direção -> Jogador)
+  if (isJog) {
+    return { funcao: 'Jogador', categoria: 'jogador' }
+  }
+
+  // 2. Treinador tem prioridade sobre Direção (ex.: Treinador + Direção -> Treinador)
+  if (isCoach) {
+    return { funcao: 'Treinador', categoria: 'staff' }
+  }
+
+  // 3. Direção é SÓ quem for unicamente Direção (não joga e não treina)
+  if (isAdmin) {
+    return { funcao: 'Direção', categoria: 'staff' }
+  }
+
+  // 4. Adepto
+  if (eAdepto(profile) || profile?.role === 'supporter' || (Array.isArray(profile?.roles) && profile.roles.includes('supporter'))) {
+    return { funcao: 'Adepto', categoria: 'staff' }
+  }
+
+  return { funcao: 'Votante', categoria: 'staff' }
+}
+
+/**
+ * Calcula a lista de eleitores do jogo (convocados + equipa técnica + direção + adeptos/votantes)
  * e o respetivo estado de votação (votou vs pendente).
  */
 export function calcularEleitoresDoJogo(
   allProfiles: any[],
   callups: any[],
   stats: any[],
-  votos: MvpVote[]
+  votos: MvpVote[],
+  currentUserId?: string
 ): EleitorMvpInfo[] {
   const callupMap = new Map((callups || []).map(c => [c.player_id, c]))
   const statMap = new Map((stats || []).map(s => [s.player_id, s]))
@@ -341,12 +396,19 @@ export function calcularEleitoresDoJogo(
 
     if (foiConvocado || participou) {
       idsProcessados.add(p.id)
-      let funcao = 'Convocado'
-      if (st?.lineup_status === 'starter' || callup?.notes?.includes('lineup:starter') || callup?.notes?.includes('starter')) {
-        funcao = 'Titular'
-      } else if (st?.lineup_status === 'sub' || callup?.notes?.includes('lineup:sub') || callup?.notes?.includes('sub')) {
-        funcao = 'Suplente'
+      let lineupStatus = st?.lineup_status
+      if (!lineupStatus || lineupStatus === 'none') {
+        if (callup?.notes?.includes('lineup:starter') || callup?.notes?.includes('starter')) {
+          lineupStatus = 'starter'
+        } else if (callup?.notes?.includes('lineup:sub') || callup?.notes?.includes('sub')) {
+          lineupStatus = 'sub'
+        }
       }
+
+      const { funcao, categoria } = determinarFuncaoPerfilMvp(p, {
+        foiConvocado: true,
+        lineupStatus
+      })
 
       const voto = votosMap.get(p.id)
       eleitores.push({
@@ -356,58 +418,46 @@ export function calcularEleitoresDoJogo(
         jersey_number: p.jersey_number,
         photo_url: p.photo_url,
         funcao,
-        categoria: 'jogador',
+        categoria,
         jaVotou: Boolean(voto),
         escolhas: voto ? [voto.player1_id, voto.player2_id] : undefined,
       })
     }
   }
 
-  // 2. Equipa Técnica e Direção
+  // 2. Elementos com funções técnicas ou de direção
   for (const p of allProfiles || []) {
+    if (idsProcessados.has(p.id)) continue
     if (eAdepto(p) || p.status === 'inactive') continue
-    const isDirecao = eAdmin(p) || p.role === 'admin' || (Array.isArray(p.roles) && p.roles.includes('admin'))
-    const isCoach = eTreinador(p)
 
-    if (isCoach || isDirecao) {
-      if (idsProcessados.has(p.id)) {
-        // Já incluído como jogador/convocado, acrescentar menção ao cargo técnico / direção
-        const idx = eleitores.findIndex(e => e.id === p.id)
-        if (idx !== -1) {
-          if (isCoach && !eleitores[idx].funcao.includes('Treinador')) {
-            eleitores[idx].funcao += ' / Treinador'
-          }
-          if (isDirecao && !eleitores[idx].funcao.includes('Direção')) {
-            eleitores[idx].funcao += ' / Direção'
-          }
-        }
-      } else {
-        idsProcessados.add(p.id)
-        const voto = votosMap.get(p.id)
-        eleitores.push({
-          id: p.id,
-          name: p.name,
-          shirt_name: p.shirt_name,
-          jersey_number: p.jersey_number,
-          photo_url: p.photo_url,
-          funcao: isCoach ? 'Treinador' : 'Direção',
-          categoria: 'staff',
-          jaVotou: Boolean(voto),
-          escolhas: voto ? [voto.player1_id, voto.player2_id] : undefined,
-        })
-      }
+    const isCoach = eTreinador(p) || p.role === 'coach' || (Array.isArray(p.roles) && p.roles.includes('coach'))
+    const isAdmin = eAdmin(p) || p.role === 'admin' || (Array.isArray(p.roles) && p.roles.includes('admin'))
+
+    if (isCoach || isAdmin) {
+      idsProcessados.add(p.id)
+      const { funcao, categoria } = determinarFuncaoPerfilMvp(p)
+      const voto = votosMap.get(p.id)
+      eleitores.push({
+        id: p.id,
+        name: p.name,
+        shirt_name: p.shirt_name,
+        jersey_number: p.jersey_number,
+        photo_url: p.photo_url,
+        funcao,
+        categoria,
+        jaVotou: Boolean(voto),
+        escolhas: voto ? [voto.player1_id, voto.player2_id] : undefined,
+      })
     }
   }
 
-  // 3. Quaisquer outros utilizadores que tenham votado (ex: adeptos, outros atletas)
+  // 3. Quaisquer outros utilizadores que tenham votado (ex.: adeptos, atletas não convocados)
   for (const p of allProfiles || []) {
     if (idsProcessados.has(p.id)) continue
     const voto = votosMap.get(p.id)
     if (voto) {
       idsProcessados.add(p.id)
-      let funcao = 'Votante'
-      if (eAdepto(p)) funcao = 'Adepto'
-      else if (p.role === 'player' || (Array.isArray(p.roles) && p.roles.includes('player'))) funcao = 'Atleta'
+      const { funcao, categoria } = determinarFuncaoPerfilMvp(p)
 
       eleitores.push({
         id: p.id,
@@ -416,9 +466,31 @@ export function calcularEleitoresDoJogo(
         jersey_number: p.jersey_number,
         photo_url: p.photo_url,
         funcao,
-        categoria: 'staff',
+        categoria,
         jaVotou: true,
         escolhas: [voto.player1_id, voto.player2_id],
+      })
+    }
+  }
+
+  // 4. Se o utilizador atual estiver autenticado e não estiver na lista (ex.: adepto a ver a ficha),
+  // inclui-o como eleitor para que veja a sua opção de voto
+  if (currentUserId && !idsProcessados.has(currentUserId)) {
+    const meProfile = allProfiles?.find(p => p.id === currentUserId)
+    if (meProfile && meProfile.status !== 'inactive') {
+      idsProcessados.add(meProfile.id)
+      const { funcao, categoria } = determinarFuncaoPerfilMvp(meProfile)
+      const voto = votosMap.get(meProfile.id)
+      eleitores.push({
+        id: meProfile.id,
+        name: meProfile.name,
+        shirt_name: meProfile.shirt_name,
+        jersey_number: meProfile.jersey_number,
+        photo_url: meProfile.photo_url,
+        funcao,
+        categoria,
+        jaVotou: Boolean(voto),
+        escolhas: voto ? [voto.player1_id, voto.player2_id] : undefined,
       })
     }
   }

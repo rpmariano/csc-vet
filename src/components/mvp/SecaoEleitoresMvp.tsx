@@ -61,8 +61,11 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
   }, [eleitores, filtro, currentUserId])
 
   const euPendente = useMemo(() => {
-    return eleitores.some(e => e.id === currentUserId && !e.jaVotou)
-  }, [eleitores, currentUserId])
+    return Boolean(
+      (onVotarClick && !eleitores.some(e => e.id === currentUserId && e.jaVotou)) ||
+      eleitores.some(e => e.id === currentUserId && !e.jaVotou)
+    )
+  }, [eleitores, currentUserId, onVotarClick])
 
   if (total === 0) return null
 
@@ -98,8 +101,8 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
             </div>
             <p className="text-[11px] text-white/60 truncate mt-0.5">
               {!votacaoAberta
-                ? 'Convocados e equipa técnica · Votação encerrada'
-                : `Convocados e equipa técnica · ${percentagem}% já votaram`}
+                ? 'Atletas, equipa técnica e adeptos · Votação encerrada'
+                : `Votação aberta a todos · ${percentagem}% já votaram`}
             </p>
           </div>
         </div>
@@ -251,6 +254,10 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
                         <span className="w-7 h-7 rounded-full bg-csc-dark text-csc-gold border border-csc-gold/40 text-xs font-display font-black flex items-center justify-center shrink-0 shadow-xs">
                           {e.jersey_number || '—'}
                         </span>
+                      ) : e.funcao === 'Adepto' ? (
+                        <span className="w-7 h-7 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs flex items-center justify-center shrink-0">
+                          <Award size={14} />
+                        </span>
                       ) : (
                         <span className="w-7 h-7 rounded-full bg-csc-blue/20 text-csc-azul-texto border border-csc-blue/40 text-xs flex items-center justify-center shrink-0">
                           <Shield size={14} />
@@ -275,10 +282,14 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
                                 ? 'bg-csc-gold/15 text-csc-gold'
                                 : e.funcao.includes('Suplente')
                                 ? 'bg-csc-blue/15 text-csc-azul-texto'
+                                : e.funcao === 'Jogador' || e.funcao.includes('Jogador') || e.funcao.includes('Convocado')
+                                ? 'bg-amber-500/15 text-amber-300'
                                 : e.funcao.includes('Treinador')
                                 ? 'bg-emerald-500/15 text-emerald-300'
                                 : e.funcao.includes('Direção')
                                 ? 'bg-purple-500/15 text-purple-300'
+                                : e.funcao.includes('Adepto')
+                                ? 'bg-cyan-500/15 text-cyan-300'
                                 : 'bg-white/10 text-white/70'
                             }`}
                           >
