@@ -150,8 +150,8 @@ Deno.serve(async (req: Request) => {
       const oppName = (opp?.name || '').toLowerCase()
       const isAfdTorre = oppName.includes('torre') || oppName.includes('afd')
 
-      // Se for AFD Torre (18/10/2026), manter aberta; caso contrário respeitar mvp_voting_closed se explicitamente fechado
-      if (!isAfdTorre && ev.mvp_voting_closed === true) return false
+      // Se a votação foi fechada por Rui Mariano (mvp_voting_closed === true), não envia avisos
+      if (ev.mvp_voting_closed === true) return false
 
       const p = profileMap.get(a.profile_id)
       if (p) {
