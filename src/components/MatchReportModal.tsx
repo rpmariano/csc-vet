@@ -1260,6 +1260,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       isOpen={modalVotarMvpAberto}
       onClose={() => setModalVotarMvpAberto(false)}
       eventId={eventId}
+      event={eventoCompletoMvp || event}
       eventTitle={`${leftSigla} vs ${rightSigla}`}
       eventDate={event?.date_time ? new Date(event.date_time).toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' }) : undefined}
       onVoteSubmitted={async () => {

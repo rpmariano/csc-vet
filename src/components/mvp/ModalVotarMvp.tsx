@@ -14,6 +14,7 @@ interface ModalVotarMvpProps {
   isOpen: boolean
   onClose: () => void
   eventId: string
+  event?: any
   eventTitle?: string
   eventDate?: string
   scoreText?: string
@@ -30,6 +31,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
   isOpen,
   onClose,
   eventId,
+  event: eventProp,
   eventTitle = 'Jogo',
   eventDate,
   scoreText,
@@ -68,21 +70,22 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
           obterVotosDoJogo(eventId),
           supabase
             .from('events')
-            .select('id, title, date_time, is_friendly, matchday, opponent_name, description, mvp_voting_closed, opponent:opponents(name, initials)')
+            .select('id, title, date_time, is_friendly, matchday, description, mvp_voting_closed, opponent:opponents(name, initials)')
             .eq('id', eventId)
             .maybeSingle(),
         ])
 
         if (cancelado) return
 
-        const opp = Array.isArray(eventData?.opponent) ? eventData.opponent[0] : eventData?.opponent
-        const eventoObj = eventData ? { ...eventData, opponent: opp } : null
+        const rawEvent = eventData || eventProp
+        const opp = Array.isArray(rawEvent?.opponent) ? rawEvent.opponent[0] : rawEvent?.opponent
+        const eventoObj = rawEvent ? { ...rawEvent, opponent: opp } : null
         const aberta = isVotacaoMvpAberta(eventoObj)
         setVotacaoEncerrada(!aberta)
 
         // Se a votação está aberta mas na base de dados ainda estava como fechada (devido à migração anterior),
         // repara automaticamente o registo na base de dados
-        if (aberta && eventData?.mvp_voting_closed === true && eventId) {
+        if (aberta && (rawEvent?.mvp_voting_closed === true || eventData?.mvp_voting_closed === true) && eventId) {
           supabase
             .from('events')
             .update({ mvp_voting_closed: false })

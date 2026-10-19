@@ -283,6 +283,7 @@ export const AlertaMvpPendente: React.FC = () => {
             setJogoSelecionado(null)
           }}
           eventId={jogoSelecionado.id}
+          event={jogoSelecionado}
           eventTitle={jogoSelecionado.title}
           eventDate={new Date(jogoSelecionado.date_time).toLocaleDateString('pt-PT', {
             weekday: 'long',

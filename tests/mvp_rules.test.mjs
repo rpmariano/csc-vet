@@ -346,7 +346,7 @@ test('calcularEleitoresDoJogo: Direção não convocada nunca aparece como poss�
 // ==============================================================================
 test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e mantém aberto AFD Torre (18/10/2026)', () => {
   function isVotacaoMvpAbertaMock(event) {
-    if (!event) return false
+    if (!event) return true
 
     // 1. Tag explícita na descrição
     if (event.description?.includes('[MVP_CLOSED]') || event.description?.includes('mvp_voting_closed:true')) {
@@ -354,16 +354,15 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
     }
 
     const eventDate = event.date_time ? new Date(event.date_time) : null
-    const dataCortePassado = new Date('2026-10-12T23:59:59+01:00')
-    const isJogoPassadoAntesDe13Outubro = eventDate ? eventDate.getTime() <= dataCortePassado.getTime() : false
+    const dataCortePassado = new Date('2026-10-12T23:59:59+01:00').getTime()
 
     // 2. Os dois jogos amigáveis passados de pré-época e 1ª jornada (11/10/2026 vs Estrelas Lisboa)
-    if (isJogoPassadoAntesDe13Outubro) {
+    if (eventDate && eventDate.getTime() <= dataCortePassado) {
       return false
     }
 
     // 3. Jogo da 1ª jornada contra Estrelas Lisboa (11/10/2026)
-    const opp = event.opponent
+    const opp = Array.isArray(event.opponent) ? event.opponent[0] : event.opponent
     const oppName = ((opp?.name || '') + ' ' + (event.opponent_name || '') + ' ' + (event.title || '')).toLowerCase()
     const oppInitials = (opp?.initials || '').toLowerCase()
     const isElis = oppName.includes('estrelas') || oppInitials.includes('elis')
@@ -371,18 +370,22 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
       return false
     }
 
-    // 4. Jogo de 18 de Outubro de 2026 (vs AFD Torre) e jogos recentes após 12/10:
-    const isTorre = oppName.includes('torre') || oppInitials.includes('tor')
-    const isJogoApos12Outubro = eventDate ? eventDate.getTime() > dataCortePassado.getTime() : false
-    if (isTorre && isJogoApos12Outubro) {
+    // 4. Jogo de 18 de Outubro de 2026 (ex: vs AFD Torre) e semana em curso:
+    const isJogoSemana18Outubro = eventDate
+      ? (eventDate.getTime() > dataCortePassado && eventDate.getTime() <= new Date('2026-10-19T23:59:59+01:00').getTime())
+      : false
+
+    if (isJogoSemana18Outubro) {
+      return true
+    }
+
+    const isTorre = oppName.includes('torre') || oppInitials.includes('tor') || oppName.includes('afd')
+    if (isTorre && eventDate && eventDate.getTime() > dataCortePassado) {
       return true
     }
 
     // 5. Flag explícita na base de dados
     if (event.mvp_voting_closed === true) {
-      if (isTorre && isJogoApos12Outubro) {
-        return true
-      }
       return false
     }
 
