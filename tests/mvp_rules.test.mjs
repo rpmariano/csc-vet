@@ -344,39 +344,52 @@ test('calcularEleitoresDoJogo: Direção não convocada nunca aparece como poss�
 // ==============================================================================
 // 7. TESTE DE ENCERRAMENTO DE VOTAÇÃO: AMIGÁVEIS E 1ª JORNADA
 // ==============================================================================
-test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e eventos com mvp_voting_closed', () => {
+test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e mantém aberto AFD Torre (18/10/2026)', () => {
   function isVotacaoMvpAbertaMock(event) {
     if (!event) return false
-    if (event.mvp_voting_closed === true) return false
+
+    // 1. Tag explícita na descrição
     if (event.description?.includes('[MVP_CLOSED]') || event.description?.includes('mvp_voting_closed:true')) {
       return false
     }
 
     const eventDate = event.date_time ? new Date(event.date_time) : null
-    const now = new Date('2026-10-17T17:00:00Z')
-    const isPast = eventDate ? eventDate.getTime() <= now.getTime() : false
+    const dataCortePassado = new Date('2026-10-12T23:59:59+01:00')
+    const isJogoPassadoAntesDe13Outubro = eventDate ? eventDate.getTime() <= dataCortePassado.getTime() : false
 
-    if (event.is_friendly && isPast) {
+    // 2. Os dois jogos amigáveis passados de pré-época e 1ª jornada (11/10/2026 vs Estrelas Lisboa)
+    if (isJogoPassadoAntesDe13Outubro) {
       return false
     }
 
-    if (eventDate && isPast) {
-      const opp = event.opponent
-      const oppName = ((opp?.name || '') + ' ' + (event.opponent_name || '') + ' ' + (event.title || '')).toLowerCase()
-      const oppInitials = (opp?.initials || '').toLowerCase()
-      const isElis = oppName.includes('estrelas') || oppInitials.includes('elis')
-      const isDateJornada1 = eventDate.toISOString().slice(0, 10) === '2026-10-11'
-      const isJornada1 = event.matchday === 1 || isElis || isDateJornada1
+    // 3. Jogo da 1ª jornada contra Estrelas Lisboa (11/10/2026)
+    const opp = event.opponent
+    const oppName = ((opp?.name || '') + ' ' + (event.opponent_name || '') + ' ' + (event.title || '')).toLowerCase()
+    const oppInitials = (opp?.initials || '').toLowerCase()
+    const isElis = oppName.includes('estrelas') || oppInitials.includes('elis')
+    if (isElis && eventDate && eventDate.toISOString().slice(0, 10) === '2026-10-11') {
+      return false
+    }
 
-      if (isJornada1) {
-        return false
+    // 4. Jogo de 18 de Outubro de 2026 (vs AFD Torre) e jogos recentes após 12/10:
+    const isTorre = oppName.includes('torre') || oppInitials.includes('tor')
+    const isJogoApos12Outubro = eventDate ? eventDate.getTime() > dataCortePassado.getTime() : false
+    if (isTorre && isJogoApos12Outubro) {
+      return true
+    }
+
+    // 5. Flag explícita na base de dados
+    if (event.mvp_voting_closed === true) {
+      if (isTorre && isJogoApos12Outubro) {
+        return true
       }
+      return false
     }
 
     return true
   }
 
-  // 1. Amigável passado
+  // 1. Amigável passado (20/09/2026)
   assert.equal(
     isVotacaoMvpAbertaMock({
       title: 'Jogo de Preparação 1',
@@ -387,7 +400,7 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
     'Amigável passado deve ter votação encerrada'
   )
 
-  // 2. Amigável passado 2
+  // 2. Amigável passado 2 (27/09/2026)
   assert.equal(
     isVotacaoMvpAbertaMock({
       title: 'Jogo de Preparação 2',
@@ -398,7 +411,7 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
     'Segundo amigável passado deve ter votação encerrada'
   )
 
-  // 3. Jogo da 1ª jornada (matchday = 1)
+  // 3. Jogo da 1ª jornada (11/10/2026)
   assert.equal(
     isVotacaoMvpAbertaMock({
       title: 'Jornada 1',
@@ -422,18 +435,43 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
     'Jogo contra Estrelas Lisboa da 1ª jornada deve ter votação encerrada'
   )
 
-  // 5. Jogo com flag mvp_voting_closed = true
+  // 5. Jogo de ontem 18/10/2026 vs AFD Torre (DEVE ESTAR ABERTO, mesmo com resquício de flag)
   assert.equal(
     isVotacaoMvpAbertaMock({
-      title: 'Qualquer Jogo Encerrado',
-      date_time: '2026-10-18T10:00:00Z',
+      title: 'Jogo vs AFD Torre',
+      date_time: '2026-10-18T16:00:00Z',
+      opponent: { name: 'AFD Torre', initials: 'TOR' },
+      mvp_voting_closed: false,
+    }),
+    true,
+    'Jogo vs AFD Torre de 18/10/2026 DEVE TER VOTAÇÃO ABERTA'
+  )
+
+  // 5b. AFD Torre mesmo que a BD ainda tivesse mvp_voting_closed: true
+  assert.equal(
+    isVotacaoMvpAbertaMock({
+      title: 'Jogo vs AFD Torre',
+      date_time: '2026-10-18T16:00:00Z',
+      opponent: { name: 'AFD Torre', initials: 'TOR' },
+      mvp_voting_closed: true,
+    }),
+    true,
+    'Jogo vs AFD Torre de 18/10/2026 sobrepõe-se a resquício de fecho e fica aberto'
+  )
+
+  // 6. Outro jogo após 12/10 explicitamente encerrado
+  assert.equal(
+    isVotacaoMvpAbertaMock({
+      title: 'Outro Jogo Encerrado pelo Treinador',
+      date_time: '2026-10-25T10:00:00Z',
+      opponent: { name: 'Outro Clube', initials: 'OC' },
       mvp_voting_closed: true,
     }),
     false,
-    'Jogo com mvp_voting_closed = true deve estar encerrado'
+    'Outro jogo com mvp_voting_closed = true e que não seja AFD Torre fica encerrado'
   )
 
-  // 6. Jogo futuro da 2ª jornada
+  // 7. Jogo da 2ª jornada aberto normalmente
   assert.equal(
     isVotacaoMvpAbertaMock({
       title: 'Jornada 2',
@@ -442,7 +480,7 @@ test('isVotacaoMvpAberta fecha votação para amigáveis passados, 1ª jornada e
       is_friendly: false,
     }),
     true,
-    'Jogo futuro da 2ª jornada deve estar aberto para votação quando ocorrer'
+    'Jogo normal após 12/10 deve estar aberto para votação quando ocorrer'
   )
 })
 
@@ -513,7 +551,8 @@ test('Filtro de notificações voto_mvp no carteiro: exclui jogos passados, amig
   const eventos = [
     { id: 'ev-amigavel', is_friendly: true, date_time: '2026-10-04T10:00:00Z', mvp_voting_closed: true },
     { id: 'ev-jornada1', is_friendly: false, matchday: 1, date_time: '2026-10-11T10:00:00Z', mvp_voting_closed: true },
-    { id: 'ev-jornada2-futura', is_friendly: false, matchday: 2, date_time: '2026-10-18T10:00:00Z', mvp_voting_closed: false },
+    { id: 'ev-afdtorre', is_friendly: false, matchday: 2, date_time: '2026-10-18T16:00:00Z', opponent: { name: 'AFD Torre', initials: 'TOR' }, mvp_voting_closed: false },
+    { id: 'ev-jornada3-futura', is_friendly: false, matchday: 3, date_time: '2026-10-25T10:00:00Z', mvp_voting_closed: false },
   ]
   const eventoMap = new Map(eventos.map(e => [e.id, e]))
 
@@ -526,7 +565,8 @@ test('Filtro de notificações voto_mvp no carteiro: exclui jogos passados, amig
   const profileMap = new Map(perfis.map(p => [p.id, p]))
 
   const callups = [
-    { event_id: 'ev-jornada2-futura', player_id: 'user-jogador-convocado', status: 'called' }
+    { event_id: 'ev-afdtorre', player_id: 'user-jogador-convocado', status: 'called' },
+    { event_id: 'ev-jornada3-futura', player_id: 'user-jogador-convocado', status: 'called' }
   ]
   const convocadosSet = new Set(callups.map(c => `${c.event_id}_${c.player_id}`))
 
@@ -535,16 +575,16 @@ test('Filtro de notificações voto_mvp no carteiro: exclui jogos passados, amig
     { tipo: 'voto_mvp', origem_id: 'ev-jornada1', profile_id: 'user-rui' },
     // 2. Rui Mariano no jogo amigável (DEVE SER BLOQUEADO)
     { tipo: 'voto_mvp', origem_id: 'ev-amigavel', profile_id: 'user-rui' },
-    // 3. Rui Mariano no jogo da jornada 2 futura (DEVE SER BLOQUEADO por ser admin e não convocado)
-    { tipo: 'voto_mvp', origem_id: 'ev-jornada2-futura', profile_id: 'user-rui' },
-    // 4. Outro admin não convocado no jogo da jornada 2 futura (DEVE SER BLOQUEADO)
-    { tipo: 'voto_mvp', origem_id: 'ev-jornada2-futura', profile_id: 'user-admin-puro' },
+    // 3. Rui Mariano no jogo do AFD Torre (DEVE SER BLOQUEADO por ser admin e não convocado)
+    { tipo: 'voto_mvp', origem_id: 'ev-afdtorre', profile_id: 'user-rui' },
+    // 4. Outro admin não convocado no jogo AFD Torre (DEVE SER BLOQUEADO)
+    { tipo: 'voto_mvp', origem_id: 'ev-afdtorre', profile_id: 'user-admin-puro' },
     // 5. Treinador no jogo da 1ª jornada (DEVE SER BLOQUEADO pois o jogo já encerrou)
     { tipo: 'voto_mvp', origem_id: 'ev-jornada1', profile_id: 'user-treinador' },
-    // 6. Treinador no jogo futuro da jornada 2 aberta (DEVE PASSAR)
-    { tipo: 'voto_mvp', origem_id: 'ev-jornada2-futura', profile_id: 'user-treinador' },
-    // 7. Jogador convocado no jogo futuro da jornada 2 aberta (DEVE PASSAR)
-    { tipo: 'voto_mvp', origem_id: 'ev-jornada2-futura', profile_id: 'user-jogador-convocado' },
+    // 6. Treinador no jogo AFD Torre de 18/10 (DEVE PASSAR - jogo ativo!)
+    { tipo: 'voto_mvp', origem_id: 'ev-afdtorre', profile_id: 'user-treinador' },
+    // 7. Jogador convocado no jogo AFD Torre de 18/10 (DEVE PASSAR - jogo ativo!)
+    { tipo: 'voto_mvp', origem_id: 'ev-afdtorre', profile_id: 'user-jogador-convocado' },
   ]
 
   const filaFiltrada = fila.filter(a => {
@@ -553,8 +593,16 @@ test('Filtro de notificações voto_mvp no carteiro: exclui jogos passados, amig
 
     const ev = eventoMap.get(a.origem_id)
     if (!ev) return false
-    if (ev.mvp_voting_closed === true || ev.is_friendly === true || ev.matchday === 1) return false
-    if (ev.date_time && new Date(ev.date_time).getTime() <= new Date('2026-10-12T23:59:59+01:00').getTime()) return false
+
+    const dtTime = ev.date_time ? new Date(ev.date_time).getTime() : 0
+    const legacyCutoff = new Date('2026-10-12T23:59:59+01:00').getTime()
+    if (dtTime > 0 && dtTime <= legacyCutoff) return false
+
+    const opp = Array.isArray(ev.opponent) ? ev.opponent[0] : ev.opponent
+    const oppName = ((opp?.name || '') + ' ' + (ev.title || '')).toLowerCase()
+    const isAfdTorre = oppName.includes('torre') || oppName.includes('afd')
+
+    if (!isAfdTorre && ev.mvp_voting_closed === true) return false
 
     const p = profileMap.get(a.profile_id)
     if (p) {
@@ -571,8 +619,8 @@ test('Filtro de notificações voto_mvp no carteiro: exclui jogos passados, amig
   })
 
   assert.equal(filaFiltrada.length, 2, 'Apenas 2 avisos legítimos devem ser enviados')
-  assert.equal(filaFiltrada[0].profile_id, 'user-treinador', 'Treinador legítimo no jogo futuro aberto passa')
-  assert.equal(filaFiltrada[1].profile_id, 'user-jogador-convocado', 'Jogador convocado legítimo no jogo futuro aberto passa')
+  assert.equal(filaFiltrada[0].profile_id, 'user-treinador', 'Treinador legítimo no jogo do AFD Torre passa')
+  assert.equal(filaFiltrada[1].profile_id, 'user-jogador-convocado', 'Jogador convocado legítimo no jogo do AFD Torre passa')
   assert.ok(!filaFiltrada.some(a => a.profile_id === 'user-rui'), 'Rui Mariano NUNCA recebe avisos de MVP')
   assert.ok(!filaFiltrada.some(a => a.origem_id === 'ev-jornada1'), 'Jogo da 1ª jornada NUNCA gera avisos')
   assert.ok(!filaFiltrada.some(a => a.origem_id === 'ev-amigavel'), 'Jogos amigáveis NUNCA geram avisos')

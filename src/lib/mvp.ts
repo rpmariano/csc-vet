@@ -196,10 +196,14 @@ export async function verificarElegibilidadeVotoMvp(
 
 /**
  * Determina se a votação de MVP está aberta para um determinado jogo.
- * Regras de encerramento:
- * 1. Jogos com `mvp_voting_closed === true` ou tag `[MVP_CLOSED]`.
- * 2. Os dois jogos amigáveis passados da época.
- * 3. O jogo da 1ª jornada (11/10/2026 vs Estrelas Lisboa).
+ * Regras:
+ * 1. Jogos anteriores a 13 de Outubro de 2026 (amigáveis de pré-época e 1ª jornada vs Estrelas Lisboa)
+ *    estão encerrados permanentemente.
+ * 2. O jogo de 18 de Outubro de 2026 (vs AFD Torre) e jogos recentes da época
+ *    estão ABERTOS para votação.
+ * 3. Jogos com tag explícita '[MVP_CLOSED]' na descrição estão encerrados.
+ * 4. Jogos com mvp_voting_closed === true estão encerrados (exceto jogos após 12/10 que foram
+ *    fechados inadvertidamente pela migração anterior e devem permanecer abertos).
  */
 export function isVotacaoMvpAberta(event: {
   id?: string
@@ -214,33 +218,45 @@ export function isVotacaoMvpAberta(event: {
 } | null | undefined): boolean {
   if (!event) return false
 
-  // 1. Flag explícita na base de dados ou na descrição
-  if (event.mvp_voting_closed === true) return false
+  // 1. Tag explícita na descrição
   if (event.description?.includes('[MVP_CLOSED]') || event.description?.includes('mvp_voting_closed:true')) {
     return false
   }
 
-  // 2. Os dois jogos amigáveis passados têm a votação fechada
   const eventDate = event.date_time ? new Date(event.date_time) : null
-  const now = new Date()
-  const isPast = eventDate ? eventDate.getTime() <= now.getTime() : false
+  const dataCortePassado = new Date('2026-10-12T23:59:59+01:00')
+  const isJogoPassadoAntesDe13Outubro = eventDate ? eventDate.getTime() <= dataCortePassado.getTime() : false
 
-  if (event.is_friendly && isPast) {
+  // 2. Os dois jogos amigáveis passados de pré-época e 1ª jornada (11/10/2026 vs Estrelas Lisboa)
+  // têm a votação fechada permanentemente
+  if (isJogoPassadoAntesDe13Outubro) {
     return false
   }
 
-  // 3. O jogo da 1ª jornada (11/10/2026 vs Estrelas Lisboa) tem a votação fechada
-  if (eventDate && isPast) {
-    const opp = event.opponent
-    const oppName = ((opp?.name || '') + ' ' + (event.opponent_name || '') + ' ' + (event.title || '')).toLowerCase()
-    const oppInitials = (opp?.initials || '').toLowerCase()
-    const isElis = oppName.includes('estrelas') || oppInitials.includes('elis')
-    const isDateJornada1 = eventDate.toISOString().slice(0, 10) === '2026-10-11'
-    const isJornada1 = event.matchday === 1 || isElis || isDateJornada1
+  // 3. Jogo da 1ª jornada contra Estrelas Lisboa (11/10/2026)
+  const opp = event.opponent
+  const oppName = ((opp?.name || '') + ' ' + (event.opponent_name || '') + ' ' + (event.title || '')).toLowerCase()
+  const oppInitials = (opp?.initials || '').toLowerCase()
+  const isElis = oppName.includes('estrelas') || oppInitials.includes('elis')
+  if (isElis && eventDate && eventDate.toISOString().slice(0, 10) === '2026-10-11') {
+    return false
+  }
 
-    if (isJornada1) {
-      return false
+  // 4. Jogo de 18 de Outubro de 2026 (vs AFD Torre) e jogos recentes após 12/10:
+  // A votação DEVE estar ABERTA!
+  const isTorre = oppName.includes('torre') || oppInitials.includes('tor')
+  const isJogoApos12Outubro = eventDate ? eventDate.getTime() > dataCortePassado.getTime() : false
+  if (isTorre && isJogoApos12Outubro) {
+    return true
+  }
+
+  // 5. Flag explícita na base de dados
+  if (event.mvp_voting_closed === true) {
+    // Se for o jogo recente contra a AFD Torre, garante que está aberto
+    if (isTorre && isJogoApos12Outubro) {
+      return true
     }
+    return false
   }
 
   return true

@@ -21,20 +21,15 @@ ADD COLUMN IF NOT EXISTS mvp_voting_closed BOOLEAN DEFAULT FALSE;
 
 COMMENT ON COLUMN public.events.mvp_voting_closed IS 'Indica se a votação de MVP para este jogo foi encerrada.';
 
--- 2. Encerrar votações dos amigáveis passados
+-- 2. Encerrar votações dos amigáveis de pré-época e do jogo da 1ª jornada (jogos até 12/10/2026)
 UPDATE public.events
 SET mvp_voting_closed = TRUE
-WHERE is_friendly = TRUE 
-  AND date_time < now();
+WHERE date_time <= '2026-10-12 23:59:59+01'::timestamptz;
 
--- 3. Encerrar votação do jogo da 1ª jornada (11/10/2026 vs Estrelas Lisboa) e anteriores
+-- 3. Garantir que os jogos a partir de 13/10/2026 (ex: jogo de ontem 18/10/2026 vs AFD Torre) têm votação ABERTA
 UPDATE public.events
-SET mvp_voting_closed = TRUE
-WHERE type = 'match'
-  AND (
-    matchday = 1 
-    OR date_time <= '2026-10-12 23:59:59+01'::timestamptz
-  );
+SET mvp_voting_closed = FALSE
+WHERE date_time > '2026-10-12 23:59:59+01'::timestamptz;
 
 -- 4. Corrigir perfis de Direção (garante que Rui Mariano é apenas admin, não treinador nem jogador)
 UPDATE public.profiles
@@ -67,7 +62,7 @@ CHECK (tipo IN (
   'voto_mvp'
 ));
 
--- 6. Registar envio prévio de voto_mvp para todos os jogos encerrados/amigáveis/1ª jornada
+-- 6. Registar envio prévio de voto_mvp para todos os jogos encerrados no passado (até 12/10/2026)
 -- para garantir que a fila SQL nunca mais os seleciona para nenhum utilizador
 INSERT INTO public.notification_deliveries (profile_id, tipo, titulo, corpo, destino, origem_id, enviada_em)
 SELECT p.id,
@@ -80,16 +75,19 @@ SELECT p.id,
   FROM public.profiles p
  CROSS JOIN public.events e
  WHERE e.type = 'match'
-   AND (
-     e.mvp_voting_closed = TRUE
-     OR e.is_friendly = TRUE
-     OR e.date_time <= '2026-10-12 23:59:59+01'::timestamptz
-   )
+   AND e.date_time <= '2026-10-12 23:59:59+01'::timestamptz
    AND NOT EXISTS (
      SELECT 1 FROM public.notification_deliveries nd
       WHERE nd.profile_id = p.id
         AND nd.tipo = 'voto_mvp'
         AND nd.origem_id = e.id
+   );
+
+-- Limpar falsos bloqueios de entrega para jogos a partir de 13/10/2026 (ex: jogo de ontem vs AFD Torre)
+DELETE FROM public.notification_deliveries
+ WHERE tipo = 'voto_mvp'
+   AND origem_id IN (
+     SELECT id FROM public.events WHERE date_time > '2026-10-12 23:59:59+01'::timestamptz
    );
 
 -- 7. Função registar_envio() atualizada

@@ -7,6 +7,8 @@ import {
   ChevronUp,
   Shield,
   Award,
+  Lock,
+  Unlock,
 } from 'lucide-react'
 import type { EleitorMvpInfo } from '../../lib/mvp'
 import { triggerHaptic } from '../../utils/haptics'
@@ -15,6 +17,8 @@ interface SecaoEleitoresMvpProps {
   eleitores: EleitorMvpInfo[]
   currentUserId?: string
   votacaoAberta?: boolean
+  podeGerirVotacao?: boolean
+  onToggleVotacao?: () => void
   onVotarClick?: () => void
 }
 
@@ -24,6 +28,8 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
   eleitores,
   currentUserId,
   votacaoAberta = true,
+  podeGerirVotacao = false,
+  onToggleVotacao,
   onVotarClick,
 }) => {
   const [expandido, setExpandido] = useState(true)
@@ -99,6 +105,25 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {podeGerirVotacao && onToggleVotacao && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                triggerHaptic('medium')
+                onToggleVotacao()
+              }}
+              className={`text-[10px] font-display font-bold px-2.5 py-1 rounded-xl border transition-all flex items-center gap-1 cursor-pointer ${
+                votacaoAberta
+                  ? 'bg-red-500/15 text-red-200 border-red-500/30 hover:bg-red-500/25'
+                  : 'bg-csc-verde-suave/20 text-csc-verde-texto border-csc-verde-suave/40 hover:bg-csc-verde-suave/30'
+              }`}
+              title={votacaoAberta ? 'Encerrar Votação MVP' : 'Reabrir Votação MVP'}
+            >
+              {votacaoAberta ? <Lock size={11} /> : <Unlock size={11} />}
+              <span>{votacaoAberta ? 'Encerrar' : 'Reabrir'}</span>
+            </button>
+          )}
           {euPendente && votacaoAberta && (
             <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-full bg-csc-gold text-csc-tinta shadow-sm animate-pulse">
               O teu voto está pendente!

@@ -134,8 +134,13 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const [meuVotoMvp, setMeuVotoMvp] = useState<MvpVote | null>(null)
   const [isConvocado, setIsConvocado] = useState(false)
   const [eleitoresDoJogo, setEleitoresDoJogo] = useState<EleitorMvpInfo[]>([])
+  const [mvpVotingClosed, setMvpVotingClosed] = useState<boolean>(event?.mvp_voting_closed ?? false)
 
   const [rulesState, setRulesState] = useState<any>(tournamentRules || null)
+
+  useEffect(() => {
+    setMvpVotingClosed(event?.mvp_voting_closed ?? false)
+  }, [event?.mvp_voting_closed])
 
   useEffect(() => {
     setRulesState(tournamentRules || null)
@@ -586,6 +591,28 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const totalYellows = playerStats.reduce((sum, p) => sum + p.yellow_cards, 0)
   const totalReds = playerStats.reduce((sum, p) => sum + p.red_cards, 0)
 
+  const oppParaMvp = Array.isArray(event?.opponent) ? event?.opponent[0] : event?.opponent
+  const eventoCompletoMvp = event ? { ...event, opponent: oppParaMvp, mvp_voting_closed: mvpVotingClosed } : null
+  const votacaoMvpAberta = isVotacaoMvpAberta(eventoCompletoMvp)
+
+  const toggleVotacaoMvp = async () => {
+    if (!eventId || !event) return
+    const novoFechado = votacaoMvpAberta ? true : false
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ mvp_voting_closed: novoFechado })
+        .eq('id', eventId)
+
+      if (error) throw error
+      toast.success(novoFechado ? 'Votação de MVP encerrada com sucesso.' : 'Votação de MVP reaberta com sucesso!')
+      setMvpVotingClosed(novoFechado)
+      if (onSaved) onSaved()
+    } catch (err: any) {
+      console.error('Erro ao alternar votação MVP:', err)
+      toast.error('Erro ao atualizar estado da votação: ' + err.message)
+    }
+  }
 
   return (
     <>
@@ -714,9 +741,11 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
               <SecaoEleitoresMvp
                 eleitores={eleitoresDoJogo}
                 currentUserId={profile?.id}
-                votacaoAberta={isVotacaoMvpAberta(event)}
+                votacaoAberta={votacaoMvpAberta}
+                podeGerirVotacao={Boolean(isCoachOrAdmin)}
+                onToggleVotacao={isCoachOrAdmin ? toggleVotacaoMvp : undefined}
                 onVotarClick={
-                  isVotacaoMvpAberta(event) &&
+                  votacaoMvpAberta &&
                   (isConvocado || Boolean(profile && eTreinador(profile) && !eAdmin(profile) && profile.role !== 'admin' && !profile.roles?.includes('admin'))) &&
                   !meuVotoMvp
                     ? () => setModalVotarMvpAberto(true)

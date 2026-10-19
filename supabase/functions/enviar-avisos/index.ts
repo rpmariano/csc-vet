@@ -111,7 +111,7 @@ Deno.serve(async (req: Request) => {
     const eventIds = [...new Set(mvpAvisos.map(a => a.origem_id).filter(Boolean))] as string[]
     const { data: eventos } = await supabase
       .from('events')
-      .select('id, date_time, is_friendly, matchday, mvp_voting_closed')
+      .select('id, date_time, is_friendly, matchday, mvp_voting_closed, opponent:opponents(name, initials)')
       .in('id', eventIds)
 
     const eventoMap = new Map((eventos ?? []).map((e: any) => [e.id, e]))
@@ -140,9 +140,18 @@ Deno.serve(async (req: Request) => {
 
       const ev = eventoMap.get(a.origem_id)
       if (!ev) return false
-      // Se a votação estiver fechada ou for amigável ou jogo anterior/igual a 12/10/2026
-      if (ev.mvp_voting_closed === true || ev.is_friendly === true || ev.matchday === 1) return false
-      if (ev.date_time && new Date(ev.date_time).getTime() <= new Date('2026-10-12T23:59:59+01:00').getTime()) return false
+
+      // Se o jogo ocorreu até 12 de Outubro de 2026 (amigáveis pré-época e 1ª jornada com Estrelas Lisboa), está fechado
+      const dtTime = ev.date_time ? new Date(ev.date_time).getTime() : 0
+      const legacyCutoff = new Date('2026-10-12T23:59:59+01:00').getTime()
+      if (dtTime > 0 && dtTime <= legacyCutoff) return false
+
+      const opp = Array.isArray(ev.opponent) ? ev.opponent[0] : ev.opponent
+      const oppName = (opp?.name || '').toLowerCase()
+      const isAfdTorre = oppName.includes('torre') || oppName.includes('afd')
+
+      // Se for AFD Torre (18/10/2026), manter aberta; caso contrário respeitar mvp_voting_closed se explicitamente fechado
+      if (!isAfdTorre && ev.mvp_voting_closed === true) return false
 
       const p = profileMap.get(a.profile_id)
       if (p) {
