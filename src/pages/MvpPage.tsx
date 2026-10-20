@@ -994,19 +994,30 @@ export const MvpPage: React.FC = () => {
                               const p2 = playersMap.get(v.escolhas[1])
                               const p1Name = p1?.shirt_name || p1?.name || 'Atleta'
                               const p2Name = p2?.shirt_name || p2?.name || 'Atleta'
+                              const autovoto1 = v.voterId === v.escolhas[0]
+                              const autovoto2 = v.voterId === v.escolhas[1]
 
                               return (
                                 <div
                                   key={i}
                                   className="flex items-center justify-between gap-2 py-0.5 border-b border-white/5 last:border-none"
                                 >
-                                  <span className="text-white/70 font-semibold truncate text-[11.5px]">
-                                    {v.voterName}:
+                                  <span className="text-white/70 font-semibold truncate text-[11.5px] flex items-center gap-1.5">
+                                    <span>{v.voterName}:</span>
+                                    {(autovoto1 || autovoto2) && (
+                                      <span className="text-[9px] font-black uppercase tracking-wider text-csc-vermelho-texto bg-csc-red/20 border border-csc-red/35 px-1.5 py-0.2 rounded">
+                                        Autovoto
+                                      </span>
+                                    )}
                                   </span>
                                   <div className="flex items-center gap-1.5 text-right truncate text-[11px]">
-                                    <span className="text-csc-gold font-bold">1º {p1Name} (3 pts)</span>
+                                    <span className={`font-bold ${autovoto1 ? 'text-csc-vermelho-texto line-through' : 'text-csc-gold'}`}>
+                                      1º {p1Name} (3 pts)
+                                    </span>
                                     <span className="text-white/40">·</span>
-                                    <span className="text-csc-azul-texto font-bold">2º {p2Name} (1 pt)</span>
+                                    <span className={`font-bold ${autovoto2 ? 'text-csc-vermelho-texto line-through' : 'text-csc-azul-texto'}`}>
+                                      2º {p2Name} (1 pt)
+                                    </span>
                                   </div>
                                 </div>
                               )

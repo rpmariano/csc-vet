@@ -164,6 +164,10 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
       toast.warning('Inicia sessão na aplicação para poderes votar no MVP.')
       return
     }
+    if (profile?.id && playerId === profile.id) {
+      toast.warning('Não é permitido votar em ti próprio.')
+      return
+    }
     triggerHaptic('light')
 
     if (firstChoiceId === playerId) {
@@ -214,6 +218,10 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
     }
     if (firstChoiceId === secondChoiceId) {
       toast.warning('Tens de escolher dois jogadores diferentes.')
+      return
+    }
+    if (firstChoiceId === profile.id || secondChoiceId === profile.id) {
+      toast.warning('Não é permitido votar em ti próprio.')
       return
     }
 
@@ -446,6 +454,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
               {players.map(p => {
                 const isFirst = firstChoiceId === p.id
                 const isSecond = secondChoiceId === p.id
+                const isSelf = Boolean(profile?.id && p.id === profile.id)
                 const displayName = p.shirt_name || p.name
 
                 return (
@@ -453,9 +462,11 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
                     key={p.id}
                     type="button"
                     onClick={() => handleTogglePlayer(p.id)}
-                    disabled={Boolean(initialVote) || votacaoEncerrada}
+                    disabled={Boolean(initialVote) || votacaoEncerrada || isSelf}
                     className={`w-full text-left p-3 rounded-2xl flex items-center justify-between gap-3 transition-all duration-150 border ${
-                      Boolean(initialVote) || votacaoEncerrada
+                      isSelf
+                        ? 'cursor-not-allowed opacity-40 bg-white/[0.02] border-white/5'
+                        : Boolean(initialVote) || votacaoEncerrada
                         ? 'cursor-default opacity-75'
                         : 'cursor-pointer hover:bg-white/[0.07]'
                     } ${
@@ -463,6 +474,8 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
                         ? 'bg-csc-gold/15 border-csc-gold shadow-md shadow-csc-gold/10 !opacity-100'
                         : isSecond
                         ? 'bg-csc-blue/20 border-csc-blue/60 shadow-md shadow-csc-blue/10 !opacity-100'
+                        : isSelf
+                        ? ''
                         : 'bg-white/[0.04] border-white/10'
                     }`}
                   >
@@ -495,7 +508,11 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {isFirst ? (
+                      {isSelf ? (
+                        <span className="text-[10px] font-display font-bold text-white/50 bg-white/5 border border-white/10 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                          Tu (não elegível)
+                        </span>
+                      ) : isFirst ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-csc-gold text-csc-tinta text-[11px] font-display font-black shadow-xs">
                           <Check size={13} strokeWidth={3} />
                           1º (3 pts)

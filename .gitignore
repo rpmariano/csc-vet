@@ -41,3 +41,8 @@ Redesign UI app futebol veteranos.zip
 
 # Chaves VAPID geradas por scripts/gerar-chaves-vapid.mjs — a privada é um segredo.
 chaves-vapid.local.txt
+
+
+# Supabase CLI temporary files
+supabase/.temp/
+.temp/

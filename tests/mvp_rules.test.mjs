@@ -271,6 +271,37 @@ test('Imutabilidade e bloqueio de voto: cache local + remoto garante bloqueio im
   assert.match(segundaTentativa.error, /não pode ser alterado/)
 })
 
+test('Proibição de autovoto: jogador não pode votar em si próprio para 1º nem para 2º lugar', () => {
+  function validarVotoMvpMock(voterId, player1Id, player2Id) {
+    if (!voterId || !player1Id || !player2Id) {
+      return { ok: false, error: 'Dados de voto incompletos.' }
+    }
+    if (player1Id === player2Id) {
+      return { ok: false, error: 'Tens de escolher dois jogadores diferentes.' }
+    }
+    if (player1Id === voterId || player2Id === voterId) {
+      return { ok: false, error: 'Não é permitido votar em ti próprio.' }
+    }
+    return { ok: true }
+  }
+
+  const voterId = 'jogador_marcelo_id'
+
+  // Caso 1: Votar em si próprio no 1º lugar (3 pts)
+  const voto1 = validarVotoMvpMock(voterId, voterId, 'outro_jogador_id')
+  assert.equal(voto1.ok, false)
+  assert.equal(voto1.error, 'Não é permitido votar em ti próprio.')
+
+  // Caso 2: Votar em si próprio no 2º lugar (1 pt)
+  const voto2 = validarVotoMvpMock(voterId, 'outro_jogador_id', voterId)
+  assert.equal(voto2.ok, false)
+  assert.equal(voto2.error, 'Não é permitido votar em ti próprio.')
+
+  // Caso 3: Votar em dois colegas diferentes (válido)
+  const votoValido = validarVotoMvpMock(voterId, 'colega1_id', 'colega2_id')
+  assert.equal(votoValido.ok, true)
+})
+
 // ==============================================================================
 // 8. TESTE DE DERIVAÇÃO ESTRITA DE PAPÉIS (DIREÇÃO NÃO É TREINADOR NEM JOGADOR)
 // ==============================================================================

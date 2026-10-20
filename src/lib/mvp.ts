@@ -392,6 +392,9 @@ export async function registarVotoMvp(
   if (player1Id === player2Id) {
     return { ok: false, error: 'Tens de escolher dois jogadores diferentes.' }
   }
+  if (player1Id === voterId || player2Id === voterId) {
+    return { ok: false, error: 'Não é permitido votar em ti próprio.' }
+  }
 
   // 1. Verificação local imediata: se já votou neste jogo, bloqueia
   const votoLocal = obterVotoMvpLocal(eventId, voterId)
