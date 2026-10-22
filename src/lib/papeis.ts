@@ -23,6 +23,8 @@ export const eTreinador = (profile: RoleSource | null | undefined): boolean =>
 export const eAdmin = (profile: RoleSource | null | undefined): boolean =>
   !eAdepto(profile) && extractRolesFromProfile(profile).includes('admin')
 
+export const eTreinadorOuAdmin = (profile: RoleSource | null | undefined): boolean =>
+  Boolean(profile && (eAdmin(profile) || eTreinador(profile) || ['coach', 'admin'].includes((profile as any).role)))
+
 export const eSemPerfil = (profile: (RoleSource & { jersey_number?: number | null }) | null | undefined): boolean =>
   Boolean(profile?.role === 'unassigned' || (extractRolesFromProfile(profile).length === 0 && !profile?.jersey_number && !profile?.position))
-

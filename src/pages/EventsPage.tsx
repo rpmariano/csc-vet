@@ -26,7 +26,7 @@ import { partilharConvocatoriaWhatsApp, copiarLinkConvocatoria } from '../lib/co
 import { useAuth, extractRolesFromProfile, type Profile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
-import { eAdepto } from '../lib/papeis'
+import { eAdepto, eTreinadorOuAdmin } from '../lib/papeis'
 import { convocarAdeptosParaJogo, removerAdeptosSeSemJogadores } from '../lib/convocatoriasAdeptos'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -371,7 +371,7 @@ const EventsPage: React.FC = () => {
     setQuickOppAwayKitColor2('')
   }
 
-  const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
+  const isCoachOrAdmin = Boolean(eTreinadorOuAdmin(profile))
 
   const handleSaveQuickField = async (e: React.FormEvent) => {
     e.preventDefault()

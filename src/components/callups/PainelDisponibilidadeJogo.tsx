@@ -10,6 +10,7 @@ import type { Profile } from '../../context/AuthContext'
 import { getPlayerDisplayName } from '../../lib/eventos'
 import { eAdepto } from '../../lib/papeis'
 import { triggerHaptic } from '../../utils/haptics'
+import { supabase } from '../../lib/supabaseClient'
 
 export interface PainelDisponibilidadeJogoProps {
   jogo: EventoComDataETipo
@@ -32,11 +33,36 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
   const [todasRespostas, setTodasRespostas] = useState<Record<string, RespostaDisponibilidade>>({})
   const [aGravar, setAGravar] = useState(false)
   const [aMostrarLista, setAMostrarLista] = useState(false)
+  const [plantelFallback, setPlantelFallback] = useState<Profile[]>([])
+
+  // Se o plantel não tiver sido fornecido, carregar perfis ativos da BD
+  useEffect(() => {
+    if (plantel && plantel.length > 0) return
+
+    let ativo = true
+    supabase
+      .from('profiles')
+      .select('id, name, nickname, jersey_number, role, roles, status')
+      .eq('status', 'active')
+      .then(({ data, error }) => {
+        if (!error && data && ativo) {
+          setPlantelFallback(data as Profile[])
+        }
+      })
+
+    return () => {
+      ativo = false
+    }
+  }, [plantel])
+
+  const listaPlantel = useMemo(() => {
+    return plantel && plantel.length > 0 ? plantel : plantelFallback
+  }, [plantel, plantelFallback])
 
   // Filtrar apenas atletas (não adeptos nem staff puro se aplicável)
   const atletas = useMemo(() => {
-    return plantel.filter(p => !eAdepto(p))
-  }, [plantel])
+    return listaPlantel.filter(p => !eAdepto(p))
+  }, [listaPlantel])
 
   const carregarDados = () => {
     if (!jogo?.id) return
@@ -62,8 +88,28 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
     }
 
     window.addEventListener('csc_match_availability_updated', handleAtualizacao)
+
+    // Subscrever alterações em tempo real via Supabase Realtime
+    const channel = supabase
+      .channel(`rt_painel_match_avail_${jogo?.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'match_availabilities', filter: `match_id=eq.${jogo?.id}` },
+        payload => {
+          const row = (payload.new || {}) as { player_id?: string; status?: RespostaDisponibilidade }
+          if (row.player_id && row.status) {
+            setTodasRespostas(prev => ({ ...prev, [row.player_id!]: row.status! }))
+            if (row.player_id === playerId) {
+              setMinhaResposta(row.status)
+            }
+          }
+        },
+      )
+      .subscribe()
+
     return () => {
       window.removeEventListener('csc_match_availability_updated', handleAtualizacao)
+      supabase.removeChannel(channel)
     }
   }, [jogo?.id, playerId])
 
@@ -92,7 +138,25 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
     return atletas.filter(p => !todasRespostas[p.id])
   }, [atletas, todasRespostas])
 
-  const totalRespostas = disponiveis.length + indisponiveis.length
+  // Atletas que eventualmente responderam mas não constam na lista filtrada
+  const outrosDisponiveis = useMemo(() => {
+    const idsJa = new Set(disponiveis.map(p => p.id))
+    return Object.entries(todasRespostas)
+      .filter(([id, st]) => st === 'available' && !idsJa.has(id))
+      .map(([id]) => listaPlantel.find(p => p.id === id) || ({ id, name: 'Atleta' } as Profile))
+  }, [todasRespostas, disponiveis, listaPlantel])
+
+  const outrosIndisponiveis = useMemo(() => {
+    const idsJa = new Set(indisponiveis.map(p => p.id))
+    return Object.entries(todasRespostas)
+      .filter(([id, st]) => st === 'unavailable' && !idsJa.has(id))
+      .map(([id]) => listaPlantel.find(p => p.id === id) || ({ id, name: 'Atleta' } as Profile))
+  }, [todasRespostas, indisponiveis, listaPlantel])
+
+  const todosDisponiveis = useMemo(() => [...disponiveis, ...outrosDisponiveis], [disponiveis, outrosDisponiveis])
+  const todosIndisponiveis = useMemo(() => [...indisponiveis, ...outrosIndisponiveis], [indisponiveis, outrosIndisponiveis])
+
+  const totalRespostas = todosDisponiveis.length + todosIndisponiveis.length
 
   if (compacto) {
     return (
@@ -106,7 +170,7 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
           </div>
           {isCoachOrAdmin ? (
             <span className="font-display font-bold text-[10.5px] text-emerald-400 shrink-0">
-              {disponiveis.length} disp. · {indisponiveis.length} indisp.
+              {todosDisponiveis.length} disp. · {todosIndisponiveis.length} indisp. · {semResposta.length} sem resp.
             </span>
           ) : minhaResposta === 'available' ? (
             <span className="text-[10px] font-bold text-csc-verde-texto flex items-center gap-1">
@@ -241,7 +305,7 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
                 <div className="font-display font-black text-lg text-emerald-400">
-                  {disponiveis.length}
+                  {todosDisponiveis.length}
                 </div>
                 <div className="text-[10px] font-bold text-emerald-300/80 uppercase tracking-wider">
                   Disponíveis
@@ -250,7 +314,7 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
 
               <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25">
                 <div className="font-display font-black text-lg text-rose-400">
-                  {indisponiveis.length}
+                  {todosIndisponiveis.length}
                 </div>
                 <div className="text-[10px] font-bold text-rose-300/80 uppercase tracking-wider">
                   Indisponíveis
@@ -290,13 +354,13 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1">
                     <CheckCircle2 size={12} />
-                    Disponíveis ({disponiveis.length})
+                    Disponíveis ({todosDisponiveis.length})
                   </p>
-                  {disponiveis.length === 0 ? (
+                  {todosDisponiveis.length === 0 ? (
                     <p className="text-[11px] text-white/40 italic px-2">Nenhum atleta indicou disponibilidade ainda.</p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
-                      {disponiveis.map(p => (
+                      {todosDisponiveis.map(p => (
                         <span
                           key={p.id}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-medium"
@@ -313,13 +377,13 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wider text-rose-400 mb-1 flex items-center gap-1">
                     <XCircle size={12} />
-                    Indisponíveis ({indisponiveis.length})
+                    Indisponíveis ({todosIndisponiveis.length})
                   </p>
-                  {indisponiveis.length === 0 ? (
+                  {todosIndisponiveis.length === 0 ? (
                     <p className="text-[11px] text-white/40 italic px-2">Nenhum atleta indicou indisponibilidade.</p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
-                      {indisponiveis.map(p => (
+                      {todosIndisponiveis.map(p => (
                         <span
                           key={p.id}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[11px] font-medium"

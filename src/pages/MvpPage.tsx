@@ -23,6 +23,7 @@ import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import { MatchReportModal } from '../components/MatchReportModal'
 import { triggerHaptic } from '../utils/haptics'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
+import { eTreinadorOuAdmin } from '../lib/papeis'
 import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 
@@ -87,7 +88,7 @@ export const MvpPage: React.FC = () => {
 
   const autorizado = useMemo(() => temAcessoMVP(profile), [profile])
   const podeGerirVotacoes = useMemo(() => podeGerirVotacaoMvp(profile), [profile])
-  const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
+  const isCoachOrAdmin = Boolean(eTreinadorOuAdmin(profile))
 
   const handleToggleVotacao = async (m: MatchEvent) => {
     if (!podeGerirVotacoes) return

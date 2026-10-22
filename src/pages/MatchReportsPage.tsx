@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { MatchReportModal, parseMatchReportMetadata } from '../components/MatchReportModal'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
+import { eTreinadorOuAdmin } from '../lib/papeis'
 import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 import { useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../hooks/useVoltarDaFicha'
@@ -95,7 +96,7 @@ export const MatchReportsPage: React.FC = () => {
   const isReportModalOpen = Boolean(searchParams.get('jogo'))
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
-  const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
+  const isCoachOrAdmin = Boolean(eTreinadorOuAdmin(profile))
 
   const fetchMatches = async () => {
     setLoading(true)

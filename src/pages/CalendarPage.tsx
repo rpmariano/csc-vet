@@ -14,7 +14,7 @@ import {
   Heart
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
-import { eAdepto } from '../lib/papeis'
+import { eAdepto, eTreinadorOuAdmin } from '../lib/papeis'
 import { contemTexto } from '../lib/texto'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
@@ -548,7 +548,7 @@ const CalendarPage: React.FC = () => {
     fetchTargetEvent()
   }, [searchParams, events, profile])
 
-  const isCoachOrAdmin = profile && ['coach', 'admin'].includes(profile.role)
+  const isCoachOrAdmin = Boolean(eTreinadorOuAdmin(profile))
   const isAdepto = eAdepto(profile)
 
 

@@ -15,7 +15,7 @@ import { useAuth } from '../context/AuthContext'
 import { useAnnouncements, incluiAdeptos, limparEtiquetasConteudo } from '../context/AnnouncementsContext'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
-import { eAdepto } from '../lib/papeis'
+import { eAdepto, eTreinadorOuAdmin } from '../lib/papeis'
 import { triggerHaptic } from '../utils/haptics'
 import Modal from '../components/Modal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -47,7 +47,7 @@ const AnnouncementsPage: React.FC = () => {
   const { profile } = useAuth()
   // A rota está aberta a todos os autenticados (a RLS já protege a escrita);
   // só coach/admin veem o formulário de criação e as ações de gestão.
-  const isCoachOrAdmin = profile?.role === 'coach' || profile?.role === 'admin'
+  const isCoachOrAdmin = Boolean(eTreinadorOuAdmin(profile))
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')

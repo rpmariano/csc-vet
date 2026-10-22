@@ -73,6 +73,8 @@ export async function obterDisponibilidadeAtleta(
   matchId: string,
   playerId: string,
 ): Promise<RespostaDisponibilidade | null> {
+  let dbStatus: RespostaDisponibilidade | null = null
+
   // 1. Procurar na base de dados primeiro (tabela match_availabilities)
   try {
     const { data, error } = await supabase
@@ -83,23 +85,45 @@ export async function obterDisponibilidadeAtleta(
       .maybeSingle()
 
     if (!error && data?.status) {
-      const st = data.status as RespostaDisponibilidade
+      dbStatus = data.status as RespostaDisponibilidade
       try {
-        localStorage.setItem(chaveLocal(matchId, playerId), st)
+        localStorage.setItem(chaveLocal(matchId, playerId), dbStatus)
       } catch {
         // Ignorar
       }
-      return st
+      return dbStatus
     }
-  } catch {
-    // Tabela pode ainda não existir em produção antes da migração
+  } catch (err) {
+    console.warn('Erro ao ler disponibilidade da BD:', err)
   }
 
   // 2. Verificar cache local como fallback
   try {
     const salvoLocal = localStorage.getItem(chaveLocal(matchId, playerId))
     if (salvoLocal === 'available' || salvoLocal === 'unavailable') {
-      return salvoLocal
+      // Se estava em cache local e não existia na base de dados, sincronizar automaticamente com o Supabase
+      if (!dbStatus) {
+        Promise.resolve(
+          supabase
+            .from('match_availabilities')
+            .upsert(
+              {
+                match_id: matchId,
+                player_id: playerId,
+                status: salvoLocal,
+                responded_at: new Date().toISOString(),
+              },
+              { onConflict: 'match_id,player_id' },
+            ),
+        )
+          .then(({ error }) => {
+            if (error) {
+              console.warn('Falha na sincronização em background de disponibilidade local:', error.message)
+            }
+          })
+          .catch(() => {})
+      }
+      return salvoLocal as RespostaDisponibilidade
     }
   } catch {
     // Ignorar erro de localStorage
@@ -140,10 +164,14 @@ export async function obterTodasDisponibilidadesDoJogo(
       .select('player_id, status')
       .eq('match_id', matchId)
 
-    if (!error && data) {
+    if (error) {
+      console.warn('Erro ao ler todas as disponibilidades do jogo:', error.message)
+    } else if (data) {
+      const dbIds = new Set<string>()
       for (const row of data as { player_id: string; status: string }[]) {
         if (row.status === 'available' || row.status === 'unavailable') {
           mapa[row.player_id] = row.status as RespostaDisponibilidade
+          dbIds.add(row.player_id)
           try {
             localStorage.setItem(chaveLocal(matchId, row.player_id), row.status)
           } catch {
@@ -151,9 +179,30 @@ export async function obterTodasDisponibilidadesDoJogo(
           }
         }
       }
+
+      // Se o utilizador atual tem resposta guardada localmente que ainda não estava na BD, sincronizar agora
+      try {
+        const { data: authData } = await supabase.auth.getUser()
+        const currentUserId = authData?.user?.id
+        if (currentUserId && mapa[currentUserId] && !dbIds.has(currentUserId)) {
+          await supabase
+            .from('match_availabilities')
+            .upsert(
+              {
+                match_id: matchId,
+                player_id: currentUserId,
+                status: mapa[currentUserId],
+                responded_at: new Date().toISOString(),
+              },
+              { onConflict: 'match_id,player_id' },
+            )
+        }
+      } catch {
+        // Ignorar
+      }
     }
-  } catch {
-    // Tabela ainda pode não existir na base de dados
+  } catch (err) {
+    console.warn('Exceção ao obter disponibilidades do jogo:', err)
   }
 
   return mapa
@@ -185,7 +234,7 @@ export async function gravarDisponibilidadeAtleta(
     )
   }
 
-  // 2. Gravar no Supabase (se a tabela match_availabilities existir)
+  // 2. Gravar no Supabase (tabela match_availabilities)
   try {
     const { error } = await supabase
       .from('match_availabilities')

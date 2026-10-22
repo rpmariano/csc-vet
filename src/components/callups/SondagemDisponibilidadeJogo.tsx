@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { Trophy, Clock, MapPin, CheckCircle2, XCircle, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import type { EventoComDataETipo, RespostaDisponibilidade } from '../../lib/disponibilidadeJogo'
 import {
@@ -12,6 +12,7 @@ import { getPlayerDisplayName } from '../../lib/eventos'
 import { eAdepto } from '../../lib/papeis'
 import { CLUBE_SIGLA } from '../../lib/clube'
 import { triggerHaptic } from '../../utils/haptics'
+import { supabase } from '../../lib/supabaseClient'
 
 export interface SondagemDisponibilidadeJogoProps {
   jogo: EventoComDataETipo
@@ -38,6 +39,36 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
   const [todasRespostas, setTodasRespostas] = useState<Record<string, RespostaDisponibilidade>>({})
   const [aGravar, setAGravar] = useState(false)
   const [aMostrarEquipa, setAMostrarEquipa] = useState(false)
+  const [plantelFallback, setPlantelFallback] = useState<Profile[]>([])
+
+  // Se o plantel não tiver sido passado pelo componente pai, carregar os perfis ativos da BD
+  useEffect(() => {
+    if (plantel && plantel.length > 0) return
+
+    let ativo = true
+    supabase
+      .from('profiles')
+      .select('id, name, nickname, jersey_number, role, roles, status')
+      .eq('status', 'active')
+      .then(({ data, error }) => {
+        if (!error && data && ativo) {
+          setPlantelFallback(data as Profile[])
+        }
+      })
+
+    return () => {
+      ativo = false
+    }
+  }, [plantel])
+
+  const listaPlantel = useMemo(() => {
+    return plantel && plantel.length > 0 ? plantel : plantelFallback
+  }, [plantel, plantelFallback])
+
+  // Filtrar apenas atletas (não adeptos)
+  const atletas = useMemo(() => {
+    return listaPlantel.filter(p => !eAdepto(p))
+  }, [listaPlantel])
 
   // Carregar disponibilidade deste atleta e do jogo
   useEffect(() => {
@@ -66,9 +97,28 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
 
     window.addEventListener('csc_match_availability_updated', handleAtualizacao)
 
+    // Subscrever alterações em tempo real via Supabase Realtime
+    const channel = supabase
+      .channel(`rt_match_avail_${jogo?.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'match_availabilities', filter: `match_id=eq.${jogo?.id}` },
+        payload => {
+          const row = (payload.new || {}) as { player_id?: string; status?: RespostaDisponibilidade }
+          if (row.player_id && row.status) {
+            setTodasRespostas(prev => ({ ...prev, [row.player_id!]: row.status! }))
+            if (row.player_id === playerId) {
+              setMinhaResposta(row.status)
+            }
+          }
+        },
+      )
+      .subscribe()
+
     return () => {
       ativo = false
       window.removeEventListener('csc_match_availability_updated', handleAtualizacao)
+      supabase.removeChannel(channel)
     }
   }, [jogo?.id, playerId, isCoachOrAdmin])
 
@@ -100,10 +150,36 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
 
   const { nome: localNome } = localDoEvento(jogo, campos)
 
-  // Contagens para treinadores
-  const listaValores = Object.values(todasRespostas)
-  const contagemDisponiveis = listaValores.filter(s => s === 'available').length
-  const contagemIndisponiveis = listaValores.filter(s => s === 'unavailable').length
+  // Agrupamentos por resposta
+  const disponiveis = useMemo(() => {
+    return atletas.filter(p => todasRespostas[p.id] === 'available')
+  }, [atletas, todasRespostas])
+
+  const indisponiveis = useMemo(() => {
+    return atletas.filter(p => todasRespostas[p.id] === 'unavailable')
+  }, [atletas, todasRespostas])
+
+  const semResposta = useMemo(() => {
+    return atletas.filter(p => !todasRespostas[p.id])
+  }, [atletas, todasRespostas])
+
+  // Atletas que eventualmente responderam mas não constam na lista filtrada de atletas
+  const outrosDisponiveis = useMemo(() => {
+    const idsJa = new Set(disponiveis.map(p => p.id))
+    return Object.entries(todasRespostas)
+      .filter(([id, st]) => st === 'available' && !idsJa.has(id))
+      .map(([id]) => listaPlantel.find(p => p.id === id) || ({ id, name: 'Atleta' } as Profile))
+  }, [todasRespostas, disponiveis, listaPlantel])
+
+  const outrosIndisponiveis = useMemo(() => {
+    const idsJa = new Set(indisponiveis.map(p => p.id))
+    return Object.entries(todasRespostas)
+      .filter(([id, st]) => st === 'unavailable' && !idsJa.has(id))
+      .map(([id]) => listaPlantel.find(p => p.id === id) || ({ id, name: 'Atleta' } as Profile))
+  }, [todasRespostas, indisponiveis, listaPlantel])
+
+  const todosDisponiveis = useMemo(() => [...disponiveis, ...outrosDisponiveis], [disponiveis, outrosDisponiveis])
+  const todosIndisponiveis = useMemo(() => [...indisponiveis, ...outrosIndisponiveis], [indisponiveis, outrosIndisponiveis])
 
   if (compacto) {
     return (
@@ -162,6 +238,22 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
             Indisponível
           </button>
         </div>
+
+        {isCoachOrAdmin && (
+          <div className="pt-1 border-t border-white/10 flex items-center justify-between text-[10.5px]">
+            <span className="font-display font-bold text-emerald-400">
+              {todosDisponiveis.length} disp.
+            </span>
+            <span className="text-white/40">·</span>
+            <span className="font-display font-bold text-rose-400">
+              {todosIndisponiveis.length} indisp.
+            </span>
+            <span className="text-white/40">·</span>
+            <span className="font-display font-bold text-white/60">
+              {semResposta.length} sem resp.
+            </span>
+          </div>
+        )}
       </div>
     )
   }
@@ -275,68 +367,122 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
         </div>
 
         {/* Resumo da equipa para treinadores/admins */}
-        {isCoachOrAdmin && listaValores.length > 0 && (
-          <div className="pt-2 border-t border-white/10 space-y-2">
+        {isCoachOrAdmin && (
+          <div className="pt-2 border-t border-white/10 space-y-2.5">
+            {/* Grelha de contadores */}
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+                <div className="font-display font-black text-lg text-emerald-400">
+                  {todosDisponiveis.length}
+                </div>
+                <div className="text-[10px] font-bold text-emerald-300/80 uppercase tracking-wider">
+                  Disponíveis
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25">
+                <div className="font-display font-black text-lg text-rose-400">
+                  {todosIndisponiveis.length}
+                </div>
+                <div className="text-[10px] font-bold text-rose-300/80 uppercase tracking-wider">
+                  Indisponíveis
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                <div className="font-display font-black text-lg text-white/70">
+                  {semResposta.length}
+                </div>
+                <div className="text-[10px] font-bold text-white/50 uppercase tracking-wider">
+                  Sem Resposta
+                </div>
+              </div>
+            </div>
+
+            {/* Botão de abrir/fechar lista discriminada */}
             <button
               type="button"
               onClick={() => {
                 triggerHaptic('light')
                 setAMostrarEquipa(v => !v)
               }}
-              className="w-full flex items-center justify-between text-[11.5px] font-bold text-csc-gold hover:underline cursor-pointer py-1"
+              className="w-full py-1.5 px-3 rounded-xl bg-white/5 hover:bg-white/8 text-csc-gold font-display font-bold text-xs flex items-center justify-between transition-colors cursor-pointer"
             >
               <span className="flex items-center gap-1.5">
                 <Users size={14} />
-                Respostas da equipa ({contagemDisponiveis} disponíveis · {contagemIndisponiveis} indisponíveis)
+                {aMostrarEquipa ? 'Ocultar lista de atletas' : 'Ver lista de respostas da equipa'}
               </span>
               {aMostrarEquipa ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
 
+            {/* Listas discriminadas */}
             {aMostrarEquipa && (
-              <div className="pt-2 border-t border-white/10 space-y-2.5">
+              <div className="pt-2 border-t border-white/10 space-y-3">
                 {/* Disponíveis */}
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400 mb-1 flex items-center gap-1">
-                    <CheckCircle2 size={11} />
-                    Disponíveis ({contagemDisponiveis})
+                    <CheckCircle2 size={12} />
+                    Disponíveis ({todosDisponiveis.length})
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {plantel.filter(p => !eAdepto(p) && todasRespostas[p.id] === 'available').map(p => (
-                      <span
-                        key={p.id}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10.5px] font-medium"
-                      >
-                        <span className="font-bold text-[9px] opacity-75">{p.jersey_number ?? '–'}</span>
-                        <span>{getPlayerDisplayName(p)}</span>
-                      </span>
-                    ))}
-                    {contagemDisponiveis === 0 && (
-                      <span className="text-[10.5px] text-white/40 italic">Nenhum atleta</span>
-                    )}
-                  </div>
+                  {todosDisponiveis.length === 0 ? (
+                    <p className="text-[11px] text-white/40 italic px-2">Nenhum atleta indicou disponibilidade ainda.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {todosDisponiveis.map(p => (
+                        <span
+                          key={p.id}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10.5px] font-medium"
+                        >
+                          <span className="font-bold text-[9px] opacity-75">{p.jersey_number ?? '–'}</span>
+                          <span>{getPlayerDisplayName(p)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Indisponíveis */}
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wider text-rose-400 mb-1 flex items-center gap-1">
-                    <XCircle size={11} />
-                    Indisponíveis ({contagemIndisponiveis})
+                    <XCircle size={12} />
+                    Indisponíveis ({todosIndisponiveis.length})
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {plantel.filter(p => !eAdepto(p) && todasRespostas[p.id] === 'unavailable').map(p => (
-                      <span
-                        key={p.id}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[10.5px] font-medium"
-                      >
-                        <span className="font-bold text-[9px] opacity-75">{p.jersey_number ?? '–'}</span>
-                        <span>{getPlayerDisplayName(p)}</span>
-                      </span>
-                    ))}
-                    {contagemIndisponiveis === 0 && (
-                      <span className="text-[10.5px] text-white/40 italic">Nenhum atleta</span>
-                    )}
-                  </div>
+                  {todosIndisponiveis.length === 0 ? (
+                    <p className="text-[11px] text-white/40 italic px-2">Nenhum atleta indicou indisponibilidade.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {todosIndisponiveis.map(p => (
+                        <span
+                          key={p.id}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[10.5px] font-medium"
+                        >
+                          <span className="font-bold text-[9px] opacity-75">{p.jersey_number ?? '–'}</span>
+                          <span>{getPlayerDisplayName(p)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
+
+                {/* Sem Resposta */}
+                {semResposta.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-white/50 mb-1">
+                      Sem Resposta ({semResposta.length})
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {semResposta.map(p => (
+                        <span
+                          key={p.id}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/60 text-[10.5px]"
+                        >
+                          <span className="font-display text-[9px] opacity-60">{p.jersey_number ?? '–'}</span>
+                          <span>{getPlayerDisplayName(p)}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

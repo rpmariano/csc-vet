@@ -6,7 +6,7 @@ import { CLUBE_NOME } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla } from '../lib/siglas'
-import { eAdepto } from '../lib/papeis'
+import { eAdepto, eTreinadorOuAdmin } from '../lib/papeis'
 import { convocatoriaFechada, textoConvocatoriaFechada } from '../lib/eventos'
 import { triggerHaptic } from '../utils/haptics'
 import { CartaoVidro, CartaoSimples, EtiquetaSeccao } from '../components/ui'
@@ -157,7 +157,7 @@ const Home: React.FC = () => {
   }
 
   /* O alerta de convocatórias em falta é de quem gere; ver 4c/4d. */
-  const eGestao = profile?.role === 'coach' || profile?.role === 'admin'
+  const eGestao = Boolean(eTreinadorOuAdmin(profile))
   const eventosSemConvocatoria = useEventosSemConvocatoria(Boolean(eGestao))
   const [alertaAberto, setAlertaAberto] = useState(false)
 
