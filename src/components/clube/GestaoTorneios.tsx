@@ -14,9 +14,21 @@ import { ConfirmModal } from '../ConfirmModal'
 import { LeagueManager } from '../LeagueManager'
 import { CAMPO, ETIQUETA } from './comum'
 import {
-  DEFAULT_TOURNAMENT_RULES, redistributeInstallments,
-  type Torneio, type TournamentRules,
+  DEFAULT_TOURNAMENT_RULES,
+  DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
+  redistributeInstallments,
+  isTorneioEliminatoria,
+  verificarElegibilidadeIdadeTorneio,
+  type Torneio,
+  type TournamentRules,
 } from './torneios'
+import {
+  garantirTacaVeteranos2026,
+  NOME_TACA_VETERANOS_2026,
+  EPOCA_TACA_VETERANOS_2026,
+  ORGANIZADOR_TACA_VETERANOS_2026,
+  IMAGEM_TACA_VETERANOS_2026,
+} from '../../lib/tacaVeteranos2026'
 import { mensagemDeErro } from '../../lib/erros'
 import { ProcuraEFiltros } from '../ProcuraEFiltros'
 import type { PropsDaSeccao } from './seccao'
@@ -87,7 +99,12 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
     setProfiles(resPlantel.data ?? [])
   }
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => {
+    carregar()
+    garantirTacaVeteranos2026().then(id => {
+      if (id) carregar()
+    })
+  }, [])
 
   /*
     O [+] da barra manda para cá com `?criar=jornada`. Uma jornada nasce dentro
@@ -117,6 +134,20 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
     setIsTourModalOpen(true)
   }
 
+  const aplicarModeloTacaVeteranos = () => {
+    triggerHaptic('light')
+    if (!tourName.trim()) setTourName(NOME_TACA_VETERANOS_2026)
+    if (!tourSeason.trim()) setTourSeason(EPOCA_TACA_VETERANOS_2026)
+    if (!tourOrganizerName.trim()) setTourOrganizerName(ORGANIZADOR_TACA_VETERANOS_2026)
+    if (!existingTourImageUrl && !tourImage) setExistingTourImageUrl(IMAGEM_TACA_VETERANOS_2026)
+    setTourRules(prev => ({
+      ...DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
+      registration_fee: prev.registration_fee,
+      knockout_matches: prev.knockout_matches,
+    }))
+    toast.success('Normas da Taça de Veteranos (UCFFCC) aplicadas!')
+  }
+
   const abrirEdicao = async (t: Torneio) => {
     triggerHaptic('light')
     setEditingTourId(t.id)
@@ -126,7 +157,8 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
     setTourOrganizerName(t.organizer_name || '')
     setTourImage(null)
     setExistingTourImageUrl(t.image_url || null)
-    setTourRules(t.rules || DEFAULT_TOURNAMENT_RULES)
+    const baseRules = isTorneioEliminatoria(t) ? DEFAULT_KNOCKOUT_TOURNAMENT_RULES : DEFAULT_TOURNAMENT_RULES
+    setTourRules({ ...baseRules, ...(t.rules || {}) })
     setTourPlayers([])
     setInscritosCarregados(false)
     setIsTourModalOpen(true)
@@ -281,6 +313,8 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
     return bateNoTexto && bateNoEstado
   })
 
+  const isFormatoTaca = tourRules.format === 'knockout'
+
   return (
     <>
       <div className="space-y-4">
@@ -333,41 +367,45 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
             <EstadoVazio icone={Trophy} titulo="Nenhum torneio encontrado." texto="Tenta mudar a procura ou cria uma competição nova." />
           ) : (
             <div>
-              {filtrados.map(t => (
-                <div
-                  key={t.id}
-                  className="linha-leve flex justify-between items-center gap-3 pl-4 pr-2 py-3"
-                >
-                  {/* O estado é a cor da letra pequena, e não uma pastilha
-                      com moldura por baixo do nome. */}
-                  <div className="min-w-0">
-                    <h4 className="font-display font-extrabold text-[13.5px] text-white truncate">{t.name}</h4>
-                    <p className="text-[11px] mt-0.5 truncate">
-                      <span className={`font-bold ${
-                        t.status === 'ativo' ? 'text-csc-verde-texto' :
-                        t.status === 'terminado' ? 'text-white/55' : 'text-csc-gold'
-                      }`}>
-                        {({ ativo: 'A decorrer', agendado: 'Agendado', terminado: 'Terminado' } as Record<string, string>)[t.status] ?? t.status}
-                      </span>
-                      {t.season && <span className="text-white/55"> · {t.season}</span>}
-                    </p>
-                  </div>
+              {filtrados.map(t => {
+                const ehTaca = isTorneioEliminatoria(t)
+                return (
+                  <div
+                    key={t.id}
+                    className="linha-leve flex justify-between items-center gap-3 pl-4 pr-2 py-3"
+                  >
+                    {/* O estado é a cor da letra pequena, e não uma pastilha
+                        com moldura por baixo do nome. */}
+                    <div className="min-w-0">
+                      <h4 className="font-display font-extrabold text-[13.5px] text-white truncate">{t.name}</h4>
+                      <p className="text-[11px] mt-0.5 truncate">
+                        <span className={`font-bold ${
+                          t.status === 'ativo' ? 'text-csc-verde-texto' :
+                          t.status === 'terminado' ? 'text-white/55' : 'text-csc-gold'
+                        }`}>
+                          {({ ativo: 'A decorrer', agendado: 'Agendado', terminado: 'Terminado' } as Record<string, string>)[t.status] ?? t.status}
+                        </span>
+                        {t.season && <span className="text-white/55"> · {t.season}</span>}
+                        <span className="text-white/50"> · {ehTaca ? 'Taça / Eliminatórias' : 'Liga'}</span>
+                      </p>
+                    </div>
 
-                  {/* Os três botões sem caixa (`discreto`): continuam com 44px
-                      de alvo, e deixam de ser três quadrados por linha. */}
-                  <div className="flex items-center shrink-0">
-                    <BotaoIcone discreto rotulo={`Gerir Grupos e Equipas: ${t.name}`} icone={Shield} onClick={() => abrirGestorDeLiga(t.id)} />
-                    <BotaoIcone discreto rotulo={`Editar o torneio ${t.name}`} icone={Pencil} onClick={() => abrirEdicao(t)} />
-                    <BotaoIcone discreto rotulo={`Eliminar o torneio ${t.name}`} icone={Trash2} perigo onClick={() => eliminar(t.id, t.name)} />
+                    {/* Os três botões sem caixa (`discreto`): continuam com 44px
+                        de alvo, e deixam de ser três quadrados por linha. */}
+                    <div className="flex items-center shrink-0">
+                      <BotaoIcone discreto rotulo={`Gerir Grupos e Equipas: ${t.name}`} icone={Shield} onClick={() => abrirGestorDeLiga(t.id)} />
+                      <BotaoIcone discreto rotulo={`Editar o torneio ${t.name}`} icone={Pencil} onClick={() => abrirEdicao(t)} />
+                      <BotaoIcone discreto rotulo={`Eliminar o torneio ${t.name}`} icone={Trash2} perigo onClick={() => eliminar(t.id, t.name)} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
       </div>
 
-      {/* Criar e editar um torneio é um ecrã, não um modal: são 22 campos —
+      {/* Criar e editar um torneio é um ecrã, não um modal: são campos de
           regras, pontuação, desempates, inscritos —, e numa caixa a 90% da
           altura liam-se a rolar por dentro de outra página. */}
       <EcraDetalhe
@@ -458,103 +496,315 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                   <span>Regras da prova (opcional)</span>
                   <ChevronDown size={15} className="text-white/62 group-open:rotate-180 transition-transform" />
                 </summary>
-                <div className="p-4 border-t border-white/10 grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto">
-                
-                  <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px]">Formato da Competição</h4>
-                    <div className="grid grid-cols-2 gap-3 col-span-1">
+                <div className="p-4 border-t border-white/10 grid grid-cols-1 gap-3 max-h-[380px] overflow-y-auto">
+                  <div className="flex items-center justify-between gap-2 pb-1 border-b border-white/10">
+                    <h4 className="text-xs font-black text-white/62 uppercase tracking-wider">Formato da Competição</h4>
+                    <button
+                      type="button"
+                      onClick={aplicarModeloTacaVeteranos}
+                      className="text-[11px] font-bold text-csc-gold hover:underline text-right"
+                    >
+                      Aplicar normas Taça de Veteranos (UCFFCC)
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 col-span-1">
+                    <div>
+                      <label className={ETIQUETA}>Modelo de Liga</label>
+                      <select
+                        value={tourRules.format || 'single_league'}
+                        onChange={e => {
+                          const novoFormato = e.target.value as TournamentRules['format']
+                          if (novoFormato === 'knockout' && tourRules.format !== 'knockout') {
+                            setTourRules(prev => ({
+                              ...DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
+                              registration_fee: prev.registration_fee,
+                              knockout_matches: prev.knockout_matches,
+                              format: 'knockout',
+                            }))
+                          } else {
+                            setTourRules({ ...tourRules, format: novoFormato })
+                          }
+                        }}
+                        className={CAMPO}
+                      >
+                        <option value="single_league">Liga Única (1 Fase)</option>
+                        <option value="two_phases">2 Fases (Grupos + Fase Final)</option>
+                        <option value="knockout">Taça / Eliminatórias (Taça de Portugal)</option>
+                      </select>
+                    </div>
+
+                    {isFormatoTaca ? (
                       <div>
-                        <label className={ETIQUETA}>Modelo de Liga</label>
-                        <select 
-                          value={tourRules.format || 'single_league'} 
-                          onChange={e => setTourRules({...tourRules, format: e.target.value as any})} 
+                        <label className={ETIQUETA}>Desempate na Eliminatória</label>
+                        <select
+                          value={tourRules.knockout_tiebreaker || 'penalties'}
+                          onChange={e => setTourRules({ ...tourRules, knockout_tiebreaker: e.target.value as any })}
                           className={CAMPO}
                         >
-                          <option value="single_league">Liga Única (1 Fase)</option>
-                          <option value="two_phases">2 Fases (Grupos + Fase Final)</option>
+                          <option value="penalties">Grandes Penalidades (no fim do tempo)</option>
+                          <option value="extra_time_penalties">Prolongamento + Grandes Penalidades</option>
+                          <option value="two_legs">Eliminatória a 2 Mãos</option>
                         </select>
                       </div>
+                    ) : (
                       <div>
                         <label className={ETIQUETA}>Critério de Desempate</label>
                         <select
                           value={tourRules.tiebreaker || 'head_to_head'}
-                          onChange={e => setTourRules({...tourRules, tiebreaker: e.target.value as any})}
+                          onChange={e => setTourRules({ ...tourRules, tiebreaker: e.target.value as any })}
                           className={CAMPO}
                         >
                           <option value="head_to_head">Confronto Direto (H2H)</option>
                           <option value="goal_difference">Diferença de Golos Geral</option>
                         </select>
                       </div>
-                    </div>
-
-                  <div className="grid grid-cols-2 gap-3 col-span-1">
-                    <div>
-                      <label className={ETIQUETA}>Apurados Fase Final (topo)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={tourRules.promotion_spots ?? 0}
-                        onChange={e => setTourRules({ ...tourRules, promotion_spots: Number(e.target.value) })}
-                        className={CAMPO}
-                        placeholder="Ex: 2 (passam à fase seguinte)"
-                      />
-                      <p className="text-[10px] text-white/50 mt-0.5">Destaca as equipas apuradas na tabela.</p>
-                    </div>
-                    <div>
-                      <label className={ETIQUETA}>Lugares Fundo (opcional)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={tourRules.relegation_spots ?? 0}
-                        onChange={e => setTourRules({ ...tourRules, relegation_spots: Number(e.target.value) })}
-                        className={CAMPO}
-                        placeholder="Ex: 0"
-                      />
-                      <p className="text-[10px] text-white/50 mt-0.5">Taça de consolação / descida.</p>
-                    </div>
+                    )}
                   </div>
 
+                  {isFormatoTaca ? (
+                    <div className="grid grid-cols-1 gap-3 col-span-1">
+                      <div>
+                        <label className={ETIQUETA}>Fase Inicial da Prova</label>
+                        <select
+                          value={tourRules.knockout_starting_round || 'round_of_16'}
+                          onChange={e => setTourRules({ ...tourRules, knockout_starting_round: e.target.value as any })}
+                          className={CAMPO}
+                        >
+                          <option value="round_of_16">Oitavos de Final</option>
+                          <option value="quarter_finals">Quartos de Final</option>
+                          <option value="semi_finals">Meias Finais</option>
+                          <option value="final">Final</option>
+                        </select>
+                        <p className="text-[10px] text-white/50 mt-0.5">Sistema "Taça de Portugal" com jogos a eliminar até à Final.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 col-span-1">
+                      <div>
+                        <label className={ETIQUETA}>Apurados Fase Final (topo)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={tourRules.promotion_spots ?? 0}
+                          onChange={e => setTourRules({ ...tourRules, promotion_spots: Number(e.target.value) })}
+                          className={CAMPO}
+                          placeholder="Ex: 2 (passam à fase seguinte)"
+                        />
+                        <p className="text-[10px] text-white/50 mt-0.5">Destaca as equipas apuradas na tabela.</p>
+                      </div>
+                      <div>
+                        <label className={ETIQUETA}>Lugares Fundo (opcional)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={tourRules.relegation_spots ?? 0}
+                          onChange={e => setTourRules({ ...tourRules, relegation_spots: Number(e.target.value) })}
+                          className={CAMPO}
+                          placeholder="Ex: 0"
+                        />
+                        <p className="text-[10px] text-white/50 mt-0.5">Taça de consolação / descida.</p>
+                      </div>
+                    </div>
+                  )}
+
                   <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Idades & Inscrições</h4>
-                  <div>
-                    <label className={ETIQUETA}>Idade Mínima</label>
-                    <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({...tourRules, min_age: Number(e.target.value)})} className={CAMPO} />
+                  <div className="grid grid-cols-2 gap-3 col-span-1">
+                    <div>
+                      <label className={ETIQUETA}>Idade Mínima</label>
+                      <input type="number" min="0" value={tourRules.min_age} onChange={e => setTourRules({ ...tourRules, min_age: Number(e.target.value) })} className={CAMPO} />
+                    </div>
+                    <div>
+                      <label className={ETIQUETA}>Ano Nasc. Máximo (opcional)</label>
+                      <input
+                        type="number"
+                        min="1940"
+                        max="2020"
+                        value={tourRules.max_birth_year ?? ''}
+                        onChange={e => setTourRules({
+                          ...tourRules,
+                          max_birth_year: e.target.value === '' ? null : Number(e.target.value),
+                        })}
+                        placeholder="Ex: 1990 (≤ 1990)"
+                        className={CAMPO}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className={ETIQUETA}>Permitir Exceções</label>
-                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({...tourRules, exceptions_allowed: e.target.value === 'true'})} className={CAMPO}>
+                    <select value={tourRules.exceptions_allowed ? 'true' : 'false'} onChange={e => setTourRules({ ...tourRules, exceptions_allowed: e.target.value === 'true' })} className={CAMPO}>
                       <option value="true">Sim</option>
                       <option value="false">Não</option>
                     </select>
                   </div>
                   <div>
                     <label className={ETIQUETA}>Máx. Exceções de Idade</label>
-                    <input type="number" min="0" value={tourRules.exceptions_count} onChange={e => setTourRules({...tourRules, exceptions_count: Number(e.target.value)})} className={CAMPO} disabled={!tourRules.exceptions_allowed} />
+                    <input type="number" min="0" value={tourRules.exceptions_count} onChange={e => setTourRules({ ...tourRules, exceptions_count: Number(e.target.value) })} className={CAMPO} disabled={!tourRules.exceptions_allowed} />
                   </div>
-                  <div>
-                    <label className={ETIQUETA}>Idade Mín. da Exceção</label>
-                    <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({...tourRules, exceptions_min_age: Number(e.target.value)})} className={CAMPO} disabled={!tourRules.exceptions_allowed} />
+                  <div className="grid grid-cols-2 gap-3 col-span-1">
+                    <div>
+                      <label className={ETIQUETA}>Idade Mín. da Exceção</label>
+                      <input type="number" min="0" value={tourRules.exceptions_min_age} onChange={e => setTourRules({ ...tourRules, exceptions_min_age: Number(e.target.value) })} className={CAMPO} disabled={!tourRules.exceptions_allowed} />
+                    </div>
+                    <div>
+                      <label className={ETIQUETA}>Ano Nasc. Máx. Exceção</label>
+                      <input
+                        type="number"
+                        min="1940"
+                        max="2020"
+                        value={tourRules.exceptions_max_birth_year ?? ''}
+                        onChange={e => setTourRules({
+                          ...tourRules,
+                          exceptions_max_birth_year: e.target.value === '' ? null : Number(e.target.value),
+                        })}
+                        placeholder="Ex: 1991"
+                        className={CAMPO}
+                        disabled={!tourRules.exceptions_allowed}
+                      />
+                    </div>
                   </div>
 
                   <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Plantel & Convocatórias</h4>
+                  <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tourRules.unlimited_squad ?? false}
+                      onChange={e => setTourRules({
+                        ...tourRules,
+                        unlimited_squad: e.target.checked,
+                        max_squad_size: e.target.checked ? 999 : (tourRules.max_squad_size === 999 ? 25 : tourRules.max_squad_size),
+                      })}
+                      className="w-4 h-4 text-csc-tinta rounded"
+                    />
+                    <span>Número ilimitado de jogadores inscritos no plantel da Prova</span>
+                  </label>
                   <div>
                     <label className={ETIQUETA}>Máx. Inscritos (Plantel)</label>
-                    <input type="number" min="0" value={tourRules.max_squad_size} onChange={e => setTourRules({...tourRules, max_squad_size: Number(e.target.value)})} className={CAMPO} />
+                    <input
+                      type="number"
+                      min="0"
+                      value={tourRules.max_squad_size}
+                      disabled={tourRules.unlimited_squad}
+                      onChange={e => setTourRules({ ...tourRules, max_squad_size: Number(e.target.value) })}
+                      className={`${CAMPO} disabled:opacity-50`}
+                    />
                   </div>
                   <div>
                     <label className={ETIQUETA}>Máx. Convocados / Jogo</label>
-                    <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({...tourRules, max_match_players: Number(e.target.value)})} className={CAMPO} />
+                    <input type="number" min="0" value={tourRules.max_match_players} onChange={e => setTourRules({ ...tourRules, max_match_players: Number(e.target.value) })} className={CAMPO} />
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 col-span-1">
+                    <div>
+                      <label className={ETIQUETA}>Prazo de Atualização da Lista</label>
+                      <input
+                        type="text"
+                        value={tourRules.roster_update_deadline ?? ''}
+                        onChange={e => setTourRules({ ...tourRules, roster_update_deadline: e.target.value })}
+                        placeholder="Ex: Até às 17h00 da 5ª feira anterior ao jogo"
+                        className={CAMPO}
+                      />
+                    </div>
+                    <div>
+                      <label className={ETIQUETA}>Exame Médico Válido Até (opcional)</label>
+                      <input
+                        type="date"
+                        value={tourRules.medical_exam_valid_until ?? ''}
+                        onChange={e => setTourRules({ ...tourRules, medical_exam_valid_until: e.target.value || null })}
+                        className={CAMPO}
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-1 pt-1 space-y-2">
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tourRules.forbid_fpf_federated ?? false}
+                        onChange={e => setTourRules({ ...tourRules, forbid_fpf_federated: e.target.checked })}
+                        className="w-4 h-4 text-csc-tinta rounded"
+                      />
+                      <span>Proibir jogadores federados na FPF (Futebol 11 ou Futsal) com jogos na época atual</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tourRules.exclusive_club_representation ?? true}
+                        onChange={e => setTourRules({ ...tourRules, exclusive_club_representation: e.target.checked })}
+                        className="w-4 h-4 text-csc-tinta rounded"
+                      />
+                      <span>Um jogador só pode representar um Clube no decorrer da Prova</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tourRules.require_id_document ?? true}
+                        onChange={e => setTourRules({ ...tourRules, require_id_document: e.target.checked })}
+                        className="w-4 h-4 text-csc-tinta rounded"
+                      />
+                      <span>Obrigatório apresentar documento de identificação em cada jogo</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tourRules.require_medical_exam ?? false}
+                        onChange={e => setTourRules({ ...tourRules, require_medical_exam: e.target.checked })}
+                        className="w-4 h-4 text-csc-tinta rounded"
+                      />
+                      <span>Obrigatório Exame Médico Desportivo válido</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tourRules.require_insurance ?? false}
+                        onChange={e => setTourRules({ ...tourRules, require_insurance: e.target.checked })}
+                        className="w-4 h-4 text-csc-tinta rounded"
+                      />
+                      <span>Obrigatório Seguro Desportivo válido</span>
+                    </label>
                   </div>
 
-                  <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo & Subs</h4>
+                  <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Duração do Jogo, Subs & Equipamentos</h4>
                   <div>
                     <label className={ETIQUETA}>Duração Total (mins)</label>
-                    <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({...tourRules, match_duration_mins: Number(e.target.value)})} className={CAMPO} />
+                    <input type="number" min="0" value={tourRules.match_duration_mins} onChange={e => setTourRules({ ...tourRules, match_duration_mins: Number(e.target.value) })} className={CAMPO} />
                   </div>
+                  <div className="grid grid-cols-2 gap-3 col-span-1">
+                    <div>
+                      <label className={ETIQUETA}>Duração 1ª Parte (mins)</label>
+                      <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({ ...tourRules, half_duration_mins: Number(e.target.value) })} className={CAMPO} />
+                    </div>
+                    <div>
+                      <label className={ETIQUETA}>Intervalo (mins)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tourRules.halftime_duration_mins ?? 10}
+                        onChange={e => setTourRules({ ...tourRules, halftime_duration_mins: Number(e.target.value) })}
+                        className={CAMPO}
+                      />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tourRules.rolling_subs ?? true}
+                      onChange={e => setTourRules({ ...tourRules, rolling_subs: e.target.checked })}
+                      className="w-4 h-4 text-csc-tinta rounded"
+                    />
+                    <span>Substituições volantes e sem limite</span>
+                  </label>
                   <div>
-                    <label className={ETIQUETA}>Duração 1ª Parte (mins)</label>
-                    <input type="number" min="0" value={tourRules.half_duration_mins} onChange={e => setTourRules({...tourRules, half_duration_mins: Number(e.target.value)})} className={CAMPO} />
+                    <label className={ETIQUETA}>Conflito de Equipamentos (Equipamento Alternativo)</label>
+                    <select
+                      value={tourRules.kit_conflict_rule || 'away_changes'}
+                      onChange={e => setTourRules({ ...tourRules, kit_conflict_rule: e.target.value as any })}
+                      className={CAMPO}
+                    >
+                      <option value="away_changes">Muda a equipa visitante (fora)</option>
+                      <option value="home_changes">Muda a equipa visitada / em casa (lado esquerdo do calendário)</option>
+                    </select>
                   </div>
-                
-                  <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Disciplina & Sanções</h4>
+
+                  <h4 className="col-span-1 text-xs font-black text-white/62 uppercase tracking-wider mb-[-5px] mt-2">Disciplina, Sanções & Arbitragem</h4>
                   <div className="space-y-1">
                     <label className={ETIQUETA}>Amarelos para Suspensão</label>
                     <input
@@ -568,11 +818,38 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                       })}
                       className={CAMPO}
                     />
-                    <p className="text-[10px] text-white/50">0 desativa a suspensão por amarelos acumulados.</p>
+                    <p className="text-[10px] text-white/50">0 desativa a suspensão por amarelos acumulados (ex: 2 na Taça de Veteranos).</p>
                   </div>
                   <div>
                     <label className={ETIQUETA}>Resultado p/ Falta Comp.</label>
-                    <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({...tourRules, walkover_score: e.target.value})} className={CAMPO} placeholder="Ex: 5-0" />
+                    <input type="text" value={tourRules.walkover_score} onChange={e => setTourRules({ ...tourRules, walkover_score: e.target.value })} className={CAMPO} placeholder="Ex: 5-0 ou 3-0" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 col-span-1">
+                    <div>
+                      <label className={ETIQUETA}>Entidade de Arbitragem</label>
+                      <input
+                        type="text"
+                        value={tourRules.referee_entity ?? ''}
+                        onChange={e => setTourRules({ ...tourRules, referee_entity: e.target.value })}
+                        placeholder="Ex: NAFLS (AF Lisboa)"
+                        className={CAMPO}
+                      />
+                    </div>
+                    <div>
+                      <label className={ETIQUETA}>Custo Arbitragem / Jogo (€)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={tourRules.referee_fee_per_match ?? ''}
+                        onChange={e => setTourRules({
+                          ...tourRules,
+                          referee_fee_per_match: e.target.value === '' ? null : Number(e.target.value),
+                        })}
+                        placeholder="Ex: 50"
+                        className={CAMPO}
+                      />
+                    </div>
                   </div>
 
                   <div className="col-span-1 sm:col-span-2 pt-2 border-t border-white/10 space-y-2">
@@ -594,6 +871,26 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                         className="w-4 h-4 text-csc-tinta rounded"
                       />
                       <span>Suspensão automática de 1 jogo por 2º Cartão Amarelo no mesmo jogo</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tourRules.violent_conduct_expulsion ?? false}
+                        onChange={e => setTourRules({ ...tourRules, violent_conduct_expulsion: e.target.checked })}
+                        className="w-4 h-4 text-csc-tinta rounded"
+                      />
+                      <span>Agressão violenta penalizada com impedimento de continuar a participar na Prova</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={tourRules.suspensions_carry_over ?? false}
+                        onChange={e => setTourRules({ ...tourRules, suspensions_carry_over: e.target.checked })}
+                        className="w-4 h-4 text-csc-tinta rounded"
+                      />
+                      <span>Jogos de suspensão não cumpridos transitam para a edição seguinte</span>
                     </label>
                   </div>
                 </div>
@@ -738,7 +1035,9 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                     <div>
                       <h4 className="text-sm font-bold text-white">Plantel Inscrito</h4>
                       <p className="text-[10px] text-white/70 uppercase font-bold tracking-wider mt-0.5">
-                        {tourPlayers.length} / {tourRules.max_squad_size} Inscritos
+                        {tourRules.unlimited_squad
+                          ? `${tourPlayers.length} Inscritos (Ilimitado)`
+                          : `${tourPlayers.length} / ${tourRules.max_squad_size} Inscritos`}
                       </p>
                     </div>
                   </div>
@@ -747,17 +1046,16 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                       const currentExceptionsCount = tourPlayers.filter(pid => {
                         const pData = profiles.find(pr => pr.id === pid)
                         if (!pData) return false
-                        const pAge = pData.birth_date ? Math.floor((new Date().getTime() - new Date(pData.birth_date).getTime()) / 3.15576e+10) : null
-                        return pAge !== null && pAge < (tourRules.min_age || 0)
+                        const elig = verificarElegibilidadeIdadeTorneio(pData.birth_date, tourRules)
+                        return elig.isTooYoung
                       }).length
 
                       // Só quem tem o papel de Jogador é elegível para inscrição em torneio —
                       // membros só Treinador ou só Direção não entram nesta lista.
                       return profiles.filter(p => extractRolesFromProfile(p).includes('player')).map(p => {
-                        const age = p.birth_date ? Math.floor((new Date().getTime() - new Date(p.birth_date).getTime()) / 3.15576e+10) : null
-                        const isTooYoung = age !== null && age < (tourRules.min_age || 0)
-                        const isExceptionButValid = isTooYoung && tourRules.exceptions_allowed && age >= tourRules.exceptions_min_age
-                      
+                        const elig = verificarElegibilidadeIdadeTorneio(p.birth_date, tourRules)
+                        const { age, birthYear, isTooYoung, isExceptionButValid } = elig
+
                         // Disable if too young and exceptions not allowed, or too young and under the min exception age
                         let isInvalid = isTooYoung && !isExceptionButValid
                         const isSelected = tourPlayers.includes(p.id)
@@ -779,7 +1077,7 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                   {age !== null && (
                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isTooYoung ? (isExceptionButValid ? 'bg-csc-gold/15 text-csc-gold' : 'bg-csc-red/15 text-csc-vermelho-texto') : 'bg-csc-light/16 text-csc-verde-texto'}`}>
-                                      {age} anos
+                                      {age} anos{birthYear && tourRules.max_birth_year ? ` (${birthYear})` : ''}
                                     </span>
                                   )}
                                   {playerPositions.map((pos: string, idx: number) => (
@@ -797,7 +1095,7 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                                 disabled={isInvalid}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    if (tourPlayers.length >= tourRules.max_squad_size) {
+                                    if (!tourRules.unlimited_squad && tourPlayers.length >= tourRules.max_squad_size) {
                                       toast.warning(`Limite de plantel (${tourRules.max_squad_size}) atingido!`)
                                       return
                                     }

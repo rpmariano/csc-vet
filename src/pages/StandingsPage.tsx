@@ -4,7 +4,10 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
-import { Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check, CalendarDays, ScrollText, SlidersHorizontal } from 'lucide-react'
+import {
+  Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check,
+  CalendarDays, ScrollText, SlidersHorizontal, MapPin, Clock, ChevronDown,
+} from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
 import { BottomSheet } from '../components/BottomSheet'
@@ -12,14 +15,24 @@ import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
 import { useClub } from '../context/ClubContext'
 import { Botao, Pastilha, BotaoIcone, ACarregar, EstadoVazio } from '../components/ui'
 import { calcularClassificacao, equipaDoTorneio, jogoTerminado } from '../lib/classificacao'
+import {
+  isTorneioEliminatoria,
+  obterRotuloEliminatoria,
+  DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
+  type KnockoutMatchMeta,
+} from '../components/clube/torneios'
+import {
+  garantirTacaVeteranos2026,
+  obterMetaJogoKnockout,
+  resolverEquipaKnockout,
+  determinarVencedorKnockout,
+} from '../lib/tacaVeteranos2026'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 
 const ROTULO_PROVAS = { current: 'Em curso e agendadas', history: 'Terminadas' } as const
-
-/** Campo e etiqueta dos formulários, o mesmo desenho da Agenda e dos Eventos. */
 
 /**
  * Emblema pequeno de uma equipa de torneio, o mesmo da tabela. Sem emblema
@@ -58,6 +71,27 @@ export const StandingsPage = () => {
   const [matches, setMatches] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [activePhase, setActivePhase] = useState<number>(1)
+
+  // Filtro de eliminatória para torneios de Taça (0 = Todas, 1 = Oitavos, 2 = Quartos, 3 = Meias, 4 = Final)
+  const [eliminatoriaFiltro, setEliminatoriaFiltro] = useState<number>(0)
+
+  // Modal de criar/editar jogo de eliminatória (Taça)
+  const [knockoutModalOpen, setKnockoutModalOpen] = useState(false)
+  const [knockoutEditId, setKnockoutEditId] = useState<string | null>(null)
+  const [koMatchNumber, setKoMatchNumber] = useState('1')
+  const [koRound, setKoRound] = useState('1')
+  const [koHomeTeamId, setKoHomeTeamId] = useState('')
+  const [koAwayTeamId, setKoAwayTeamId] = useState('')
+  const [koHomePlaceholder, setKoHomePlaceholder] = useState('')
+  const [koAwayPlaceholder, setKoAwayPlaceholder] = useState('')
+  const [koDate, setKoDate] = useState('')
+  const [koTime, setKoTime] = useState('')
+  const [koLocation, setKoLocation] = useState('')
+  const [koHomeScore, setKoHomeScore] = useState('')
+  const [koAwayScore, setKoAwayScore] = useState('')
+  const [koHomePenalties, setKoHomePenalties] = useState('')
+  const [koAwayPenalties, setKoAwayPenalties] = useState('')
+  const [savingKnockout, setSavingKnockout] = useState(false)
 
   // Jornadas — só admin/coach mexem aqui; a introdução de resultados vive na Classificação
   // (junto da tabela que alimenta), em vez de num ecrã de administração à parte.
@@ -112,10 +146,14 @@ export const StandingsPage = () => {
 
   useEffect(() => {
     fetchTournaments()
+    garantirTacaVeteranos2026().then(id => {
+      if (id) fetchTournaments()
+    })
   }, [])
 
   useEffect(() => {
     if (!selectedTourId) return
+    setEliminatoriaFiltro(0)
     fetchStandingsData()
     /* A prova escolhida acompanha o endereço — `replace` porque andar entre
        provas não deve encher o histórico. */
@@ -147,13 +185,21 @@ export const StandingsPage = () => {
     const { data } = await supabase.from('tournaments').select('*').order('created_at', { ascending: false })
     if (data) {
       setTournaments(data)
-      const active = data.find(t => t.status === 'ativo')
-      if (active) setSelectedTourId(active.id)
-      else {
+      setSelectedTourId(prev => {
+        if (prev && data.some(t => t.id === prev)) return prev
+        const doEndereco = params.get('torneio')
+        if (doEndereco && data.some(t => t.id === doEndereco)) return doEndereco
+        const active = data.find(t => t.status === 'ativo')
+        if (active) return active.id
         const firstCurrent = data.find(t => t.status !== 'terminado')
-        if (firstCurrent) setSelectedTourId(firstCurrent.id)
-        else if (data.length > 0) { setTourViewFilter('history'); setVistaInicial('history'); setSelectedTourId(data[0].id) }
-      }
+        if (firstCurrent) return firstCurrent.id
+        if (data.length > 0) {
+          setTourViewFilter('history')
+          setVistaInicial('history')
+          return data[0].id
+        }
+        return ''
+      })
     }
   }
 
@@ -264,6 +310,7 @@ export const StandingsPage = () => {
        num jogo que já não existe, e o guarda de alterações por gravar
        continuava a achar que havia um resultado por gravar. */
     setEditingMatchId(null)
+    setKnockoutModalOpen(false)
     if (error) {
       toast.error('Não foi possível eliminar o jogo: ' + mensagemDeErro(error))
       return
@@ -272,10 +319,164 @@ export const StandingsPage = () => {
     fetchStandingsData()
   }
 
+  // --- KNOCKOUT / ELIMINATÓRIAS (Taça de Portugal) ---
+  const openNewKnockoutMatch = (defaultRound = 1) => {
+    triggerHaptic('light')
+    const existingNums = matches.map((m, idx) => {
+      const meta = obterMetaJogoKnockout(selectedTournament?.rules, m, matches)
+      return meta?.match_number ?? idx + 1
+    })
+    const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1
+    setKnockoutEditId(null)
+    setKoMatchNumber(String(nextNum))
+    setKoRound(String(defaultRound || 1))
+    setKoHomeTeamId('')
+    setKoAwayTeamId('')
+    setKoHomePlaceholder('')
+    setKoAwayPlaceholder('')
+    setKoDate('')
+    setKoTime('15H00')
+    setKoLocation('')
+    setKoHomeScore('')
+    setKoAwayScore('')
+    setKoHomePenalties('')
+    setKoAwayPenalties('')
+    setKnockoutModalOpen(true)
+  }
+
+  const openEditKnockoutMatch = (m: any, fallbackNumber: number) => {
+    triggerHaptic('light')
+    const meta = obterMetaJogoKnockout(selectedTournament?.rules, m, matches)
+    setKnockoutEditId(m.id)
+    setKoMatchNumber(String(meta?.match_number ?? fallbackNumber))
+    setKoRound(String(m.matchday || 1))
+    setKoHomeTeamId(m.home_team_id || '')
+    setKoAwayTeamId(m.away_team_id || '')
+    setKoHomePlaceholder(meta?.home_placeholder || '')
+    setKoAwayPlaceholder(meta?.away_placeholder || '')
+    setKoDate(m.match_date ? String(m.match_date).slice(0, 10) : '')
+    setKoTime(meta?.match_time || '')
+    setKoLocation(meta?.location || '')
+    setKoHomeScore(m.home_score !== null && m.home_score !== undefined ? String(m.home_score) : '')
+    setKoAwayScore(m.away_score !== null && m.away_score !== undefined ? String(m.away_score) : '')
+    setKoHomePenalties(meta?.home_penalties !== null && meta?.home_penalties !== undefined ? String(meta.home_penalties) : '')
+    setKoAwayPenalties(meta?.away_penalties !== null && meta?.away_penalties !== undefined ? String(meta.away_penalties) : '')
+    setKnockoutModalOpen(true)
+  }
+
+  const handleSaveKnockoutMatch = async () => {
+    if (!selectedTourId || !selectedTournament) return
+    const roundNum = parseInt(koRound, 10) || 1
+    const matchNum = parseInt(koMatchNumber, 10) || 1
+    const hasScore = koHomeScore !== '' && koAwayScore !== ''
+    const hasPens = koHomePenalties !== '' && koAwayPenalties !== ''
+
+    if (!koHomeTeamId && !koHomePlaceholder.trim()) {
+      toast.warning('Escolhe a equipa visitada (casa) ou indica a referência (ex: VENCEDOR JOGO 1).')
+      return
+    }
+    if (!koAwayTeamId && !koAwayPlaceholder.trim()) {
+      toast.warning('Escolhe a equipa visitante (fora) ou indica a referência (ex: VENCEDOR JOGO 2).')
+      return
+    }
+
+    setSavingKnockout(true)
+    try {
+      // Garantir que existe pelo menos um grupo para o torneio
+      let groupId = groups[0]?.id
+      if (!groupId) {
+        const { data: novoGrupo, error: erroGrupo } = await supabase
+          .from('tournament_groups')
+          .insert([{ tournament_id: selectedTourId, name: 'Quadro Competitivo', phase: 1 }])
+          .select('id')
+          .single()
+        if (erroGrupo) throw erroGrupo
+        groupId = novoGrupo.id
+      }
+
+      const payload = {
+        tournament_id: selectedTourId,
+        group_id: groupId,
+        matchday: roundNum,
+        home_team_id: koHomeTeamId || null,
+        away_team_id: koAwayTeamId || null,
+        match_date: koDate || null,
+        home_score: hasScore ? parseInt(koHomeScore, 10) : null,
+        away_score: hasScore ? parseInt(koAwayScore, 10) : null,
+        status: hasScore ? 'finished' : 'scheduled',
+      }
+
+      let savedMatchId = knockoutEditId
+      if (knockoutEditId) {
+        const { error } = await supabase.from('tournament_matches').update(payload).eq('id', knockoutEditId)
+        if (error) throw error
+      } else {
+        const { data: inserido, error } = await supabase
+          .from('tournament_matches')
+          .insert([payload])
+          .select('id')
+          .single()
+        if (error) throw error
+        savedMatchId = inserido?.id ?? null
+      }
+
+      // Atualizar metadados do jogo da eliminatória em `tournaments.rules.knockout_matches`
+      const currentRules = selectedTournament.rules || DEFAULT_KNOCKOUT_TOURNAMENT_RULES
+      const currentMetaMap: Record<string, KnockoutMatchMeta> = {
+        ...(currentRules.knockout_matches && !Array.isArray(currentRules.knockout_matches) ? currentRules.knockout_matches : {}),
+      }
+
+      const newMeta: KnockoutMatchMeta = {
+        match_id: savedMatchId || undefined,
+        match_number: matchNum,
+        matchday: roundNum,
+        round_label: obterRotuloEliminatoria(roundNum),
+        home_placeholder: koHomeTeamId ? null : (koHomePlaceholder.trim() || null),
+        away_placeholder: koAwayTeamId ? null : (koAwayPlaceholder.trim() || null),
+        location: koLocation.trim() || null,
+        match_date: koDate || null,
+        match_time: koTime.trim() || null,
+        home_penalties: hasPens ? parseInt(koHomePenalties, 10) : null,
+        away_penalties: hasPens ? parseInt(koAwayPenalties, 10) : null,
+      }
+
+      if (savedMatchId) {
+        currentMetaMap[savedMatchId] = newMeta
+      }
+      currentMetaMap[`jogo_${matchNum}`] = newMeta
+
+      const novasRegras = {
+        ...currentRules,
+        knockout_matches: currentMetaMap,
+      }
+
+      const { error: erroTour } = await supabase
+        .from('tournaments')
+        .update({ rules: novasRegras })
+        .eq('id', selectedTourId)
+      if (erroTour) throw erroTour
+
+      setTournaments(prev => prev.map(t => (t.id === selectedTourId ? { ...t, rules: novasRegras } : t)))
+      setMatches(prev => {
+        if (knockoutEditId) {
+          return prev.map(m => (m.id === knockoutEditId ? { ...m, ...payload } : m))
+        }
+        return [...prev, { id: savedMatchId || `ko-${Date.now()}`, ...payload }]
+      })
+      toast.success(knockoutEditId ? `Jogo ${matchNum} atualizado!` : `Jogo ${matchNum} adicionado!`)
+      setKnockoutModalOpen(false)
+    } catch (err: any) {
+      toast.error('Erro ao guardar jogo da eliminatória: ' + mensagemDeErro(err))
+    } finally {
+      setSavingKnockout(false)
+    }
+  }
+
   const phaseGroups = groups.filter(g => g.phase === activePhase)
   const phasesAvailable = Array.from(new Set(groups.map(g => g.phase))).sort((a, b) => a - b)
   const selectedTournament = tournaments.find(t => t.id === selectedTourId)
   const jornadaModalGroup = groups.find(g => g.id === jornadaModalGroupId)
+  const ehTorneioTaca = isTorneioEliminatoria(selectedTournament)
 
   return (
     <div className="space-y-4">
@@ -284,14 +485,6 @@ export const StandingsPage = () => {
         Competição, aqui em cima — este é o cabeçalho do separador, e por isso
         a sobrancelha diz de que torneios se está a falar em vez de repetir a
         palavra "Classificações".
-
-        O handoff escolhe o torneio em pastilhas, não num menu: são dois ou
-        três por época, e uma pastilha diz quantos há sem se abrir. As
-        pastilhas escolhem (navegação); o "em curso / terminadas" filtra quais
-        aparecem, e por isso vive atrás do funil, como nas Fichas de Jogo e
-        nas Estatísticas (decisão de 2026-09-26). Era um botão com ar de
-        etiqueta, com o organizador da prova colado ao lado como se fosse parte
-        do filtro.
       */}
       {tournaments.length > 0 && (
         <div className="space-y-3">
@@ -391,6 +584,305 @@ export const StandingsPage = () => {
           icone={Trophy}
           titulo={tourViewFilter === 'history' ? 'Ainda não há torneios terminados.' : 'Não há torneios a decorrer.'}
         />
+      ) : ehTorneioTaca ? (
+        /* =====================================================================
+           VISTA DE TAÇA / ELIMINATÓRIAS (Sistema "Taça de Portugal")
+           ===================================================================== */
+        (() => {
+          const rules = { ...DEFAULT_KNOCKOUT_TOURNAMENT_RULES, ...(selectedTournament?.rules || {}) }
+          const rounds = [1, 2, 3, 4]
+          const visibleRounds = eliminatoriaFiltro === 0 ? rounds : rounds.filter(r => r === eliminatoriaFiltro)
+
+          return (
+            <div className="space-y-4">
+              {/* Normas e Regras da Prova (colapsável) */}
+              <details className="cartao-simples overflow-hidden group">
+                <summary className="px-4 py-3 cursor-pointer flex items-center justify-between gap-2 hover:bg-white/5 transition-colors">
+                  <div className="min-w-0">
+                    <p className="font-display font-bold text-[9px] tracking-[0.12em] uppercase text-csc-gold">
+                      Sistema "Taça de Portugal" · Eliminatórias
+                    </p>
+                    <p className="font-display font-extrabold text-[13px] text-white truncate mt-0.5">
+                      Normas de Participação e Regras ({rules.match_duration_mins ?? 70}' · Máx. {rules.max_match_players ?? 20}/jogo)
+                    </p>
+                  </div>
+                  <ChevronDown size={16} className="text-white/60 shrink-0 group-open:rotate-180 transition-transform" />
+                </summary>
+                <div className="px-4 pb-3.5 pt-2 border-t border-white/10 space-y-2 text-[11.5px] text-white/80">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-white/5 rounded-xl p-2.5">
+                      <p className="text-[9.5px] font-bold uppercase tracking-wider text-white/55">Duração e Subs</p>
+                      <p className="font-bold text-white mt-0.5">
+                        {rules.match_duration_mins ?? 70} min (2×{rules.half_duration_mins ?? 35}' + {rules.halftime_duration_mins ?? 10}' int.)
+                      </p>
+                      <p className="text-[10.5px] text-white/65 mt-0.5">
+                        {rules.rolling_subs !== false ? 'Substituições volantes sem limite' : 'Substituições limitadas'}
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-2.5">
+                      <p className="text-[9.5px] font-bold uppercase tracking-wider text-white/55">Desempate</p>
+                      <p className="font-bold text-white mt-0.5">
+                        {rules.knockout_tiebreaker === 'extra_time_penalties'
+                          ? 'Prolongamento + Penalties'
+                          : rules.knockout_tiebreaker === 'two_legs'
+                          ? 'Eliminatória a 2 Mãos'
+                          : 'Grandes Penalidades'}
+                      </p>
+                      <p className="text-[10.5px] text-white/65 mt-0.5">
+                        No final do tempo regulamentar
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-2.5">
+                      <p className="text-[9.5px] font-bold uppercase tracking-wider text-white/55">Idades e Plantel</p>
+                      <p className="font-bold text-white mt-0.5">
+                        {rules.max_birth_year ? `Nascidos ≤ ${rules.max_birth_year}` : `Mín. ${rules.min_age ?? 35} anos`}
+                      </p>
+                      <p className="text-[10.5px] text-white/65 mt-0.5">
+                        {rules.exceptions_allowed
+                          ? `${rules.exceptions_count ?? 1} exceção (${rules.exceptions_max_birth_year ? `nasc. ${rules.exceptions_max_birth_year}` : `≥ ${rules.exceptions_min_age} anos`})`
+                          : 'Sem exceções de idade'}
+                        {' · '}
+                        {rules.unlimited_squad ? 'Inscritos ilimitados' : `Máx. ${rules.max_squad_size} inscritos`}
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-2.5">
+                      <p className="text-[9.5px] font-bold uppercase tracking-wider text-white/55">Disciplina e Árbitros</p>
+                      <p className="font-bold text-white mt-0.5">
+                        Suspensão ao {rules.yellow_cards_to_suspension ?? 2}º amarelo
+                      </p>
+                      <p className="text-[10.5px] text-white/65 mt-0.5">
+                        {rules.referee_entity || 'Trios AF Lisboa'}
+                        {rules.referee_fee_per_match ? ` (${rules.referee_fee_per_match}€/jogo)` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-csc-gold/10 border border-csc-gold/25 rounded-xl px-3 py-2 text-[11px] text-white/85 space-y-1">
+                    <p>
+                      <span className="font-bold text-csc-gold">Equipamento Alternativo:</span>{' '}
+                      {rules.kit_conflict_rule === 'home_changes'
+                        ? 'Muda a equipa considerada a jogar em casa (visitado — lado esquerdo do calendário).'
+                        : 'Muda a equipa visitante (fora).'}
+                    </p>
+                    {rules.roster_update_deadline && (
+                      <p>
+                        <span className="font-bold text-csc-gold">Inscrições:</span> {rules.roster_update_deadline}
+                        {rules.medical_exam_valid_until ? ` · Exame Médico válido até ${new Date(rules.medical_exam_valid_until).toLocaleDateString('pt-PT')}` : ''}
+                      </p>
+                    )}
+                    {rules.suspensions_carry_over && (
+                      <p>
+                        <span className="font-bold text-csc-gold">Sanções:</span> Jogos de suspensão não cumpridos transitam para a edição seguinte.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </details>
+
+              {/* Navegação por Eliminatória + Botão Adicionar Jogo */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="sem-barra-rolagem flex gap-1.5 overflow-x-auto pb-0.5">
+                  <Pastilha
+                    ativa={eliminatoriaFiltro === 0}
+                    onClick={() => { triggerHaptic('selection'); setEliminatoriaFiltro(0) }}
+                    className="flex-none"
+                  >
+                    Todas
+                  </Pastilha>
+                  {rounds.map(r => (
+                    <Pastilha
+                      key={r}
+                      ativa={eliminatoriaFiltro === r}
+                      onClick={() => { triggerHaptic('selection'); setEliminatoriaFiltro(r) }}
+                      className="flex-none"
+                    >
+                      {obterRotuloEliminatoria(r)}
+                    </Pastilha>
+                  ))}
+                </div>
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => openNewKnockoutMatch(eliminatoriaFiltro || 1)}
+                    className="min-h-10 px-3 rounded-[18px] bg-csc-gold/15 text-csc-gold font-display font-extrabold text-[10.5px] flex items-center gap-1 shrink-0 cursor-pointer transition-transform duration-150 active:scale-97"
+                  >
+                    <Plus size={12} />
+                    Novo jogo
+                  </button>
+                )}
+              </div>
+
+              {/* Quadro de Eliminatórias */}
+              {visibleRounds.map(roundNum => {
+                const roundMatches = matches
+                  .filter(m => (m.matchday || 1) === roundNum)
+                  .sort((a, b) => {
+                    const metaA = obterMetaJogoKnockout(selectedTournament?.rules, a, matches)
+                    const metaB = obterMetaJogoKnockout(selectedTournament?.rules, b, matches)
+                    return (metaA?.match_number ?? 99) - (metaB?.match_number ?? 99)
+                  })
+
+                return (
+                  <div key={roundNum} className="cartao-simples overflow-hidden">
+                    <div className="bg-csc-dark px-4 py-3 border-b-2 border-csc-gold flex items-center justify-between gap-2">
+                      <div>
+                        <h3 className="font-display font-black text-white text-[15px] leading-tight">
+                          {obterRotuloEliminatoria(roundNum)}
+                        </h3>
+                        <p className="text-[10.5px] text-white/62 mt-0.5">
+                          {selectedTournament?.name}
+                          {selectedTournament?.season ? ` · ${selectedTournament.season}` : ''}
+                        </p>
+                      </div>
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => openNewKnockoutMatch(roundNum)}
+                          className="min-h-9 px-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-csc-gold font-display font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus size={11} />
+                          Jogo
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="p-3 space-y-2.5 bg-csc-dark/30">
+                      {roundMatches.length === 0 ? (
+                        <p className="text-[11px] text-white/55 italic py-2 text-center">
+                          Sem jogos registados nesta eliminatória.
+                        </p>
+                      ) : (
+                        roundMatches.map((m, idx) => {
+                          const meta = obterMetaJogoKnockout(selectedTournament?.rules, m, matches)
+                          const matchNumber = meta?.match_number ?? idx + 1
+                          const casa = resolverEquipaKnockout('home', m, meta, matches, teams, clubSettings, selectedTournament?.rules)
+                          const fora = resolverEquipaKnockout('away', m, meta, matches, teams, clubSettings, selectedTournament?.rules)
+                          const terminado = jogoTerminado(m)
+                          const vencedor = determinarVencedorKnockout(m, meta)
+                          const nosso = casa.eOClube || fora.eOClube
+                          const daFicha = Boolean(m.event_id)
+                          const temFicha = daFicha && terminado
+                          const dataFormatada = m.match_date
+                            ? new Date(m.match_date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                            : 'Data a definir'
+
+                          const corEquipa = (lado: 'home' | 'away', eq: typeof casa) => {
+                            if (eq.eOClube) return 'text-csc-gold'
+                            if (eq.isPlaceholder) return 'text-white/65 italic'
+                            if (!terminado || !vencedor) return 'text-white/90'
+                            return vencedor === lado ? 'text-white font-black' : 'text-white/45'
+                          }
+
+                          return (
+                            <div
+                              key={m.id}
+                              className={`rounded-[15px] p-3 border-l-[3px] space-y-2 ${
+                                nosso ? 'border-l-csc-gold bg-csc-gold/10' : 'border-l-white/20 bg-white/5'
+                              }`}
+                            >
+                              {/* Topo do cartão do jogo: Jogo N | Data | Hora | Local */}
+                              <div className="flex items-center justify-between gap-2 text-[10px] text-white/65 flex-wrap">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="px-2 py-0.5 rounded-md bg-csc-gold/20 text-csc-gold font-display font-black uppercase tracking-wider">
+                                    Jogo {matchNumber}
+                                  </span>
+                                  <span className="font-bold text-white/80 tabular-nums">{dataFormatada}</span>
+                                  {meta?.match_time && (
+                                    <span className="inline-flex items-center gap-0.5 text-csc-gold/90 font-bold">
+                                      <Clock size={10} />
+                                      {meta.match_time}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  {meta?.location && (
+                                    <span className="inline-flex items-center gap-1 text-white/70 font-semibold">
+                                      <MapPin size={10} className="text-csc-gold/75" />
+                                      {meta.location}
+                                    </span>
+                                  )}
+                                  {temFicha && (
+                                    <Link
+                                      to={`/competicao?ver=fichas&jogo=${m.event_id}`}
+                                      state={{ origem: 'Classificações' }}
+                                      onClick={() => triggerHaptic('light')}
+                                      title="Abrir Ficha de Jogo"
+                                      className="p-1 rounded-lg bg-csc-gold/20 text-csc-gold hover:bg-csc-gold/30"
+                                    >
+                                      <ScrollText size={12} />
+                                    </Link>
+                                  )}
+                                  {canManage && (
+                                    <button
+                                      type="button"
+                                      onClick={() => openEditKnockoutMatch(m, matchNumber)}
+                                      aria-label={`Editar Jogo ${matchNumber}`}
+                                      className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/75 cursor-pointer"
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Linha Visitado vs Visitante */}
+                              <div className="flex items-center gap-2 pt-0.5">
+                                <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0 text-right">
+                                  <div className="min-w-0">
+                                    <p className={`truncate font-display font-bold text-[12px] ${corEquipa('home', casa)}`}>
+                                      {casa.nome}
+                                    </p>
+                                    {casa.placeholder && casa.resolvidoDePlaceholder && (
+                                      <p className="text-[9px] text-csc-gold/80 font-bold uppercase">
+                                        ({casa.placeholder})
+                                      </p>
+                                    )}
+                                  </div>
+                                  {!casa.isPlaceholder && <EmblemaTorneio logo={casa.logo} eOClube={casa.eOClube} />}
+                                </div>
+
+                                {terminado ? (
+                                  <div className="shrink-0 flex flex-col items-center">
+                                    <span className="px-2.5 py-1 rounded-lg bg-white text-csc-tinta font-display font-black text-[12.5px] tabular-nums">
+                                      {m.home_score} - {m.away_score}
+                                    </span>
+                                    {meta?.home_penalties !== null && meta?.home_penalties !== undefined &&
+                                      meta?.away_penalties !== null && meta?.away_penalties !== undefined && (
+                                        <span className="text-[9.5px] font-bold text-csc-gold mt-0.5 tabular-nums">
+                                          ({meta.home_penalties}-{meta.away_penalties} gp)
+                                        </span>
+                                      )}
+                                  </div>
+                                ) : (
+                                  <span className="shrink-0 w-10 text-center font-display font-black text-[11px] tracking-[0.08em] text-csc-gold/85">
+                                    VS
+                                  </span>
+                                )}
+
+                                <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                                  {!fora.isPlaceholder && <EmblemaTorneio logo={fora.logo} eOClube={fora.eOClube} />}
+                                  <div className="min-w-0">
+                                    <p className={`truncate font-display font-bold text-[12px] ${corEquipa('away', fora)}`}>
+                                      {fora.nome}
+                                    </p>
+                                    {fora.placeholder && fora.resolvidoDePlaceholder && (
+                                      <p className="text-[9px] text-csc-gold/80 font-bold uppercase">
+                                        ({fora.placeholder})
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()
       ) : groups.length === 0 ? (
         <EstadoVazio
           icone={Info}
@@ -437,12 +929,6 @@ export const StandingsPage = () => {
                 /*
                   Um grupo é um cartão (ecrã 1c): faixa verde com o nome e a
                   prova, régua dourada, e a tabela por baixo.
-
-                  A tabela mostra sempre as dez colunas do handoff. Os golos
-                  marcados e sofridos estavam escondidos abaixo de `sm:` —
-                  numa app só de telemóvel isso quer dizer escondidos sempre,
-                  e são eles que explicam a diferença de golos. Ficam à vista,
-                  e a tabela rola na horizontal quando não cabe.
                 */
                 <div key={g.id} className="cartao-simples overflow-hidden">
                   <div className="bg-csc-dark px-4 py-3 border-b-2 border-csc-gold">
@@ -563,25 +1049,7 @@ export const StandingsPage = () => {
                     </div>
                   )}
 
-                  {/*
-                    Jornadas do grupo (ecrã 2d), no rodapé do cartão da tabela:
-                    é a tabela que elas explicam, e no handoff vêm logo por
-                    baixo dela.
-
-                    **Vê-se uma jornada de cada vez**, escolhida nas pastilhas.
-                    Abertas todas, uma prova de dez jornadas a seis jogos punha
-                    mais de sessenta linhas entre a tabela do Grupo A e a do
-                    Grupo B — chegar ao segundo grupo era um scroll sem fim. A
-                    pastilha aqui é navegação e não filtro, por isso fica à
-                    vista, como as das provas lá em cima.
-
-                    Abre na jornada em foco: a primeira com jogos por realizar,
-                    ou a última quando está tudo lançado.
-
-                    Os jogos do clube entram na tabela pela ficha de jogo; o
-                    que aqui se lança são os resultados das outras equipas da
-                    série — daí o aviso ao pé do botão de nova jornada.
-                  */}
+                  {/* Jornadas do grupo */}
                   <div className="border-t border-white/10 px-3.5 py-3.5 space-y-3 bg-csc-dark/30">
                     <div className="flex items-center justify-between gap-2">
                       <h4 className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 flex items-center gap-1.5">
@@ -635,8 +1103,6 @@ export const StandingsPage = () => {
                                   }
                                 >
                                   J{md}
-                                  {/* O ponto dourado diz que ainda falta lançar
-                                      resultado — é o que se anda à procura. */}
                                   {porRealizar > 0 && (
                                     <span className={`w-1.5 h-1.5 rounded-full ${md === jornadaAtiva ? 'bg-csc-tinta/45' : 'bg-csc-gold'}`} />
                                   )}
@@ -652,23 +1118,12 @@ export const StandingsPage = () => {
                             const fora = equipaDoTorneio(teams.find(t => t.id === m.away_team_id), clubSettings)
                             const terminado = jogoTerminado(m)
                             const nosso = casa.eOClube || fora.eOClube
-                            /* O nosso jogo é o espelho do evento: o resultado
-                               vem da ficha de jogo e escreve-se lá, senão os
-                               dois sítios ficavam a dizer coisas diferentes. */
                             const daFicha = Boolean(m.event_id)
-                            /* Com resultado lançado há ficha para abrir; sem
-                               ele o jogo é nosso mas ainda não tem ficha
-                               nenhuma, e a linha diz isso em vez de convidar a
-                               abrir uma página vazia. */
                             const temFicha = daFicha && terminado
                             const data = m.match_date
                               ? new Date(m.match_date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })
                               : '—'
 
-                            /* Num jogo lançado, quem ganhou lê-se a branco e
-                               quem perdeu esbate — a linha diz o resultado
-                               antes de se olhar para o placar. O clube é sempre
-                               dourado, como na tabela. */
                             const cor = (eq: { eOClube: boolean }, golos: number, contra: number) =>
                               eq.eOClube
                                 ? 'text-csc-gold'
@@ -680,13 +1135,6 @@ export const StandingsPage = () => {
                                       ? 'text-white/45'
                                       : 'text-white/75'
 
-                            /*
-                              A edição abre na própria linha: dois números, a
-                              data e os botões. O lápis e o caixote deixaram de
-                              estar em cada jogo — eram dois quadrados cinzentos
-                              por linha, seis por jornada, e o que se lê numa
-                              lista de jornadas é o resultado.
-                            */
                             if (editingMatchId === m.id && !daFicha) {
                               return (
                                 <div key={m.id} className="rounded-[14px] bg-csc-gold/10 p-2.5 space-y-2">
@@ -786,12 +1234,7 @@ export const StandingsPage = () => {
                               )
                             }
 
-                            /* A barra à esquerda marca os nossos jogos, como as
-                               linhas de "Os meus pagamentos" marcam o estado. */
                             const linha =
-                              /* `gap-1.5` e `px-2`: as siglas são o que se lê,
-                                 e com o ícone da ficha à direita um "CA
-                                 Montijo" saía truncado a meio. */
                               'w-full min-h-11 flex items-center gap-1.5 px-2 py-1.5 rounded-[14px] border-l-[3px] ' +
                               (nosso ? 'border-l-csc-gold bg-csc-gold/10' : 'border-l-white/15 bg-white/5')
 
@@ -811,9 +1254,6 @@ export const StandingsPage = () => {
                                     {m.home_score} - {m.away_score}
                                   </span>
                                 ) : (
-                                  /* Por realizar não leva pastilha nenhuma: o
-                                     "VS" dourado, como no cartão de jogo da
-                                     Home, já diz que não há resultado. */
                                   <span className="shrink-0 w-10 text-center font-display font-black text-[11px] tracking-[0.08em] text-csc-gold/80">
                                     VS
                                   </span>
@@ -827,9 +1267,6 @@ export const StandingsPage = () => {
                               </>
                             )
 
-                            /* Um jogo nosso já lançado abre a ficha: é lá que
-                               está o resultado, os marcadores e os cartões, e
-                               daqui só se via o placar. */
                             if (temFicha) {
                               return (
                                 <Link
@@ -863,9 +1300,6 @@ export const StandingsPage = () => {
                               <div key={m.id} className={linha}>
                                 {conteudo}
                                 {daFicha && (
-                                  /* Nosso, marcado, e ainda sem ficha: o ícone
-                                     apagado ao lado do dourado dos que já a
-                                     têm diz de relance quais faltam lançar. */
                                   <span
                                     className="shrink-0 text-white/20"
                                     title="Jogo nosso, ainda sem ficha de jogo"
@@ -887,6 +1321,217 @@ export const StandingsPage = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL: Editar / Novo Jogo de Eliminatória (Taça) */}
+      <Modal
+        isOpen={knockoutModalOpen}
+        onClose={() => setKnockoutModalOpen(false)}
+        size="lg"
+        headerStyle="brand"
+        icon={<Trophy size={18} className="text-csc-gold" />}
+        title={knockoutEditId ? `Editar Jogo ${koMatchNumber}` : 'Novo Jogo da Eliminatória'}
+        description={selectedTournament?.name}
+        closeOnOverlayClick={false}
+        footer={
+          <>
+            {knockoutEditId && (
+              <Botao
+                aparencia="perigo"
+                onClick={() => setMatchToDelete(knockoutEditId)}
+                disabled={savingKnockout}
+              >
+                <Trash2 size={15} />
+                Eliminar
+              </Botao>
+            )}
+            <Botao aparencia="vidro" onClick={() => setKnockoutModalOpen(false)} disabled={savingKnockout}>
+              Cancelar
+            </Botao>
+            <Botao onClick={handleSaveKnockoutMatch} disabled={savingKnockout}>
+              {savingKnockout ? 'A guardar…' : 'Guardar jogo'}
+            </Botao>
+          </>
+        }
+      >
+        <div className="space-y-3.5">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-round">Eliminatória</label>
+              <select
+                id="ko-round"
+                value={koRound}
+                onChange={e => setKoRound(e.target.value)}
+                className={CAMPO}
+              >
+                <option value="1">Oitavos de Final</option>
+                <option value="2">Quartos de Final</option>
+                <option value="3">Meias Finais</option>
+                <option value="4">Final</option>
+              </select>
+            </div>
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-match-num">Jogo Nº</label>
+              <input
+                id="ko-match-num"
+                type="number"
+                min="1"
+                value={koMatchNumber}
+                onChange={e => setKoMatchNumber(e.target.value)}
+                className={CAMPO}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-home-team">Visitado (Equipa da Casa — Lado Esquerdo)</label>
+              <select
+                id="ko-home-team"
+                value={koHomeTeamId}
+                onChange={e => {
+                  setKoHomeTeamId(e.target.value)
+                  if (e.target.value) setKoHomePlaceholder('')
+                }}
+                className={CAMPO}
+              >
+                <option value="">Por definir / Vencedor de jogo anterior…</option>
+                {teams.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.opponent_id === null ? (clubSettings?.name || 'Cascais') : (t.opponent?.name || equipaDoTorneio(t, clubSettings).sigla)} ({equipaDoTorneio(t, clubSettings).sigla})
+                  </option>
+                ))}
+              </select>
+              {!koHomeTeamId && (
+                <input
+                  type="text"
+                  value={koHomePlaceholder}
+                  onChange={e => setKoHomePlaceholder(e.target.value)}
+                  placeholder="Ex: VENCEDOR JOGO 2"
+                  className={`${CAMPO} mt-1.5`}
+                />
+              )}
+            </div>
+
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-away-team">Visitante (Equipa de Fora — Lado Direito)</label>
+              <select
+                id="ko-away-team"
+                value={koAwayTeamId}
+                onChange={e => {
+                  setKoAwayTeamId(e.target.value)
+                  if (e.target.value) setKoAwayPlaceholder('')
+                }}
+                className={CAMPO}
+              >
+                <option value="">Por definir / Vencedor de jogo anterior…</option>
+                {teams.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.opponent_id === null ? (clubSettings?.name || 'Cascais') : (t.opponent?.name || equipaDoTorneio(t, clubSettings).sigla)} ({equipaDoTorneio(t, clubSettings).sigla})
+                  </option>
+                ))}
+              </select>
+              {!koAwayTeamId && (
+                <input
+                  type="text"
+                  value={koAwayPlaceholder}
+                  onChange={e => setKoAwayPlaceholder(e.target.value)}
+                  placeholder="Ex: VENCEDOR JOGO 1"
+                  className={`${CAMPO} mt-1.5`}
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-date">Data</label>
+              <input
+                id="ko-date"
+                type="date"
+                value={koDate}
+                onChange={e => setKoDate(e.target.value)}
+                className={CAMPO}
+              />
+            </div>
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-time">Horário</label>
+              <input
+                id="ko-time"
+                type="text"
+                value={koTime}
+                onChange={e => setKoTime(e.target.value)}
+                placeholder="Ex: 15H00"
+                className={CAMPO}
+              />
+            </div>
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-location">Local</label>
+              <input
+                id="ko-location"
+                type="text"
+                value={koLocation}
+                onChange={e => setKoLocation(e.target.value)}
+                placeholder="Ex: Cascais"
+                className={CAMPO}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-home-score">Golos Visitado</label>
+              <input
+                id="ko-home-score"
+                type="number"
+                min="0"
+                value={koHomeScore}
+                onChange={e => setKoHomeScore(e.target.value)}
+                placeholder="—"
+                className={`${CAMPO} text-center font-black`}
+              />
+            </div>
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-away-score">Golos Visitante</label>
+              <input
+                id="ko-away-score"
+                type="number"
+                min="0"
+                value={koAwayScore}
+                onChange={e => setKoAwayScore(e.target.value)}
+                placeholder="—"
+                className={`${CAMPO} text-center font-black`}
+              />
+            </div>
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-home-pens">Penalties Visitado (se empate)</label>
+              <input
+                id="ko-home-pens"
+                type="number"
+                min="0"
+                value={koHomePenalties}
+                onChange={e => setKoHomePenalties(e.target.value)}
+                placeholder="Opcional"
+                className={`${CAMPO} text-center`}
+              />
+            </div>
+            <div>
+              <label className={ETIQUETA} htmlFor="ko-away-pens">Penalties Visitante (se empate)</label>
+              <input
+                id="ko-away-pens"
+                type="number"
+                min="0"
+                value={koAwayPenalties}
+                onChange={e => setKoAwayPenalties(e.target.value)}
+                placeholder="Opcional"
+                className={`${CAMPO} text-center`}
+              />
+            </div>
+          </div>
+          <p className="text-[10.5px] text-white/60">
+            Quando um jogo termina, qualquer jogo seguinte com referência <span className="text-csc-gold font-bold">VENCEDOR JOGO {koMatchNumber}</span> passa automaticamente a mostrar a equipa vencedora.
+          </p>
+        </div>
+      </Modal>
 
       {/* MODAL: Nova Jornada — moldura partilhada (Escape, prisão de foco, rodapé fixo) */}
       <Modal
@@ -935,8 +1580,6 @@ export const StandingsPage = () => {
           <div className="space-y-2">
             <span className={ETIQUETA}>Jogos desta jornada</span>
             {jornadaFixtures.map((f, idx) => (
-              // grid com colunas de 0 mínimo: os nomes longos das equipas truncam
-              // dentro do select em vez de esticarem o modal na horizontal.
               <div key={idx} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2">
                 <select
                   value={f.home}
@@ -985,7 +1628,7 @@ export const StandingsPage = () => {
       <ConfirmModal
         isOpen={!!matchToDelete}
         title="Eliminar jogo"
-        description="Este jogo é eliminado e, se já tinha resultado, deixa de contar para a classificação do grupo."
+        description="Este jogo é eliminado e deixa de constar no quadro competitivo."
         confirmText="Sim, eliminar jogo"
         onConfirm={handleDeleteMatch}
         onCancel={() => setMatchToDelete(null)}

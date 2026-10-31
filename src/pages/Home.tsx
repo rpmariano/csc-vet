@@ -29,41 +29,21 @@ import { PorResponder, type PendenteDaHome } from '../components/home/PorRespond
 import { UltimoJogo, type UltimoJogoDaHome } from '../components/home/UltimoJogo'
 import { ProvasEmCurso, type ProvaDaHome } from '../components/home/ProvasEmCurso'
 import { Aniversariantes, type AniversarianteDaHome } from '../components/home/Aniversariantes'
-import { calcularClassificacao, janelaDoClube } from '../lib/classificacao'
+import { calcularClassificacao, janelaDoClube, jogoTerminado } from '../lib/classificacao'
+import { isTorneioEliminatoria, obterRotuloEliminatoria } from '../components/clube/torneios'
+import {
+  garantirTacaVeteranos2026,
+  obterMetaJogoKnockout,
+  resolverEquipaKnockout,
+} from '../lib/tacaVeteranos2026'
 import { mensagemDeErro } from '../lib/erros'
 import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
 import { obterJogoAntecedidoPeloTreino, type EventoComDataETipo } from '../lib/disponibilidadeJogo'
 import type { Profile } from '../context/AuthContext'
 
 /**
- * Hoje — o primeiro ecrã, e o único que responde a "o que é que me diz
- * respeito agora".
- *
- * Segue o cartão **4a** do `Home Redesign.dc.html`, por blocos: cabeçalho,
- * próximo jogo em carrossel, o que está por responder, o último jogo, as
- * provas a decorrer, e os anos de quem faz este mês.
- *
- * Três coisas do desenho não estão aqui, e nenhuma por esquecimento:
- *
- * - **A meteorologia** do cartão do jogo ("19° · vento 24 km/h"): a app não
- *   tem fonte nenhuma, e um número inventado num cartão que diz a que horas é
- *   a concentração seria pior do que a ausência dele.
- * - **A cronologia dos golos** no último jogo: `stats` guarda contagens por
- *   jogador e por jogo, não golos ao minuto com a assistência emparelhada.
- * - **A tabela de classificação**: `tournament_matches` está vazia, e o
- *   algoritmo dos desempates vive na `StandingsPage`.
- *
- * Cada uma fica registada em `docs/ecras-por-desenhar.md` com o que precisaria.
- */
-
-
-/**
  * O nome por que a pessoa é tratada: alcunha ou nome da camisola, e só depois
  * o próprio.
- *
- * O `name` é `NOT NULL` na base, mas não está sempre lá quando esta função
- * corre: uma conta criada com o Google sem nome no perfil chegava aqui com
- * `undefined` e derrubava a Home inteira.
  */
 function primeiroNome(
   p?: { name?: string | null; nickname?: string | null; shirt_name?: string | null } | null,
@@ -108,6 +88,7 @@ interface EquipaBruta {
 }
 
 interface JogoSerieBruto {
+  id?: string
   tournament_id: string
   group_id: string
   matchday: number
@@ -116,6 +97,7 @@ interface JogoSerieBruto {
   away_team_id: string
   home_score: number | null
   away_score: number | null
+  match_date?: string | null
 }
 
 const Home: React.FC = () => {
@@ -130,25 +112,11 @@ const Home: React.FC = () => {
   const [aniversariantes, setAniversariantes] = useState<AniversarianteDaHome[]>([])
   const [aCarregar, setACarregar] = useState(true)
 
-  /*
-    Conta registada que nunca chegou a ser ligada à ficha que o clube já lhe
-    tinha (ecrã 11a). Substitui a Home inteira: sem ficha não há convocatória
-    nem nada que mostrar, e nenhum dos blocos diria porquê.
-  */
   const estadoDaFicha = useFichaPorLigar(profile, assignedRoles)
   const semFicha = estadoDaFicha === 'por-ligar'
 
-  /*
-    O convite para ligar os avisos. Não é decoração: sem ele a app só avisa
-    quem se lembrou de a abrir, e é por isso que há 1191 convocatórias sem
-    resposta. Aparece em faixa a quem nunca escolheu, e outra vez logo a seguir
-    a uma resposta — que é quando a pergunta se explica sozinha.
-  */
   const convite = useConviteAvisos(profile?.id, assignedRoles.includes('player') && !eAdepto(profile))
   const [conviteAberto, setConviteAberto] = useState(false)
-  /* Retido, e não derivado do `aberto`: a persiana leva 240ms a sair, e um
-     motivo que se apagasse ao fechar trocava a frase à vista de quem está a
-     ver a persiana deslizar para baixo. */
   const [conviteMotivo, setConviteMotivo] = useState<'faixa' | 'acabou-de-responder'>('faixa')
 
   const abrirConvite = (motivo: 'faixa' | 'acabou-de-responder') => {
@@ -183,6 +151,7 @@ const Home: React.FC = () => {
     const carregar = async () => {
       setACarregar(true)
       try {
+        garantirTacaVeteranos2026().catch(() => {})
         const agora = new Date().toISOString()
 
         const [
@@ -268,20 +237,6 @@ const Home: React.FC = () => {
             }),
         )
 
-        /*
-          Por responder: o que ainda espera resposta minha e **não está já no
-          cartão de cima**. Um jogo que se pode responder no carrossel não
-          precisa de aparecer outra vez três linhas abaixo, com os mesmos dois
-          botões — era a mesma pergunta feita duas vezes no mesmo ecrã. Na
-          prática sobram os convívios, e os jogos que ficarem de fora do
-          carrossel por serem mais do que cinco.
-
-          Os treinos entram, mas só dentro da janela deles — seis dias antes,
-          e isso quem decide é o `convocatoriaFechada`. Fora dela não são
-          "por responder": são uma pergunta que ainda não foi feita, e a lista
-          teria sempre lá o treino da semana seguinte. O que **nunca** acontece
-          é um treino subir ao cartão de cima: esse é dos jogos.
-        */
         const idsEmCima = new Set(jogosEmCima.map(e => e.id))
         setPendentes(
           marcados
@@ -365,7 +320,7 @@ const Home: React.FC = () => {
                 .in('tournament_id', idsProvas),
               supabase
                 .from('tournament_matches')
-                .select('tournament_id, group_id, matchday, status, home_team_id, away_team_id, home_score, away_score')
+                .select('id, tournament_id, group_id, matchday, status, home_team_id, away_team_id, home_score, away_score, match_date')
                 .in('tournament_id', idsProvas),
             ])
           : [{ data: [] }, { data: [] }, { data: [] }]
@@ -376,10 +331,67 @@ const Home: React.FC = () => {
         const jogosSerie = (jogosT ?? []) as JogoSerieBruto[]
 
         setProvas(provasBrutas.map(t => {
+          const equipasDaProva = equipas.filter(e => e.tournament_id === t.id)
+          const jogosDaProva = jogosSerie.filter(m => m.tournament_id === t.id)
+
+          if (isTorneioEliminatoria(t)) {
+            const rounds = Array.from(new Set(jogosDaProva.map(m => m.matchday || 1))).sort((a, b) => a - b)
+            // Fase ativa: primeira com jogo nosso por realizar, ou primeira com jogos por realizar, ou última
+            const roundEmFoco =
+              rounds.find(r =>
+                jogosDaProva.some(m => {
+                  if ((m.matchday || 1) !== r || jogoTerminado(m)) return false
+                  const metaR = obterMetaJogoKnockout(t.rules, m, jogosDaProva)
+                  const c = resolverEquipaKnockout('home', m, metaR, jogosDaProva, equipasDaProva, clubSettings, t.rules)
+                  const f = resolverEquipaKnockout('away', m, metaR, jogosDaProva, equipasDaProva, clubSettings, t.rules)
+                  return c.eOClube || f.eOClube
+                }),
+              ) ??
+              rounds.find(r => jogosDaProva.some(m => (m.matchday || 1) === r && !jogoTerminado(m))) ??
+              rounds[rounds.length - 1] ??
+              2
+
+            const jogosFase = jogosDaProva
+              .filter(m => (m.matchday || 1) === roundEmFoco)
+              .sort((a, b) => {
+                const ma = obterMetaJogoKnockout(t.rules, a, jogosDaProva)
+                const mb = obterMetaJogoKnockout(t.rules, b, jogosDaProva)
+                return (ma?.match_number ?? 99) - (mb?.match_number ?? 99)
+              })
+              .map((m, idx) => {
+                const meta = obterMetaJogoKnockout(t.rules, m, jogosDaProva)
+                const c = resolverEquipaKnockout('home', m, meta, jogosDaProva, equipasDaProva, clubSettings, t.rules)
+                const f = resolverEquipaKnockout('away', m, meta, jogosDaProva, equipasDaProva, clubSettings, t.rules)
+                const term = jogoTerminado(m)
+                return {
+                  id: m.id || `${t.id}-${idx}`,
+                  numero: meta?.match_number ?? idx + 1,
+                  casaNome: c.sigla,
+                  foraNome: f.sigla,
+                  data: m.match_date || '',
+                  hora: meta?.match_time || null,
+                  resultado: term ? `${m.home_score} - ${m.away_score}` : null,
+                  nosso: c.eOClube || f.eOClube,
+                }
+              })
+
+            return {
+              id: t.id,
+              nome: t.name,
+              epoca: t.season,
+              jornadas: rounds.length,
+              grupo: obterRotuloEliminatoria(roundEmFoco),
+              linhas: [],
+              eliminatoria: {
+                nomeFase: obterRotuloEliminatoria(roundEmFoco),
+                jogos: jogosFase,
+              },
+            }
+          }
+
           const gruposDaProva = grupos
             .filter(gr => gr.tournament_id === t.id)
             .sort((a, b) => (b.phase ?? 1) - (a.phase ?? 1))
-          const equipasDaProva = equipas.filter(e => e.tournament_id === t.id)
           /* O grupo que interessa é aquele em que estamos, na fase mais
              adiantada; sem nós na prova, o primeiro que tenha equipas. */
           const grupo =
@@ -391,7 +403,7 @@ const Home: React.FC = () => {
             ? janelaDoClube(
                 calcularClassificacao(
                   equipasDaProva,
-                  jogosSerie.filter(m => m.tournament_id === t.id),
+                  jogosDaProva,
                   grupo.id,
                   t.rules,
                 ),
@@ -399,7 +411,7 @@ const Home: React.FC = () => {
             : []
 
           const jornadasDaProva = new Set(
-            jogosSerie.filter(m => m.tournament_id === t.id).map(m => m.matchday),
+            jogosDaProva.map(m => m.matchday),
           )
 
           return {
@@ -419,10 +431,6 @@ const Home: React.FC = () => {
           }
         }))
 
-        // Aniversários deste mês, e não só de hoje: é o que o 4a mostra.
-        // O mês e o dia saem do texto AAAA-MM-DD sem passar por `new Date()`,
-        // como o `fmtData` — uma data de nascimento não tem hora nenhuma a
-        // preservar, só o dia certo.
         const mesDeHoje = new Date().getMonth() + 1
         setAniversariantes(
           ((plantel ?? []) as {
@@ -455,7 +463,7 @@ const Home: React.FC = () => {
 
     carregar()
     return () => { cancelado = true }
-  }, [profile, isUnassigned, estadoDaFicha])
+  }, [profile, isUnassigned, estadoDaFicha, clubSettings])
 
   const responder = async (eventId: string, status: 'confirmed' | 'declined') => {
     if (!profile) return
@@ -482,17 +490,6 @@ const Home: React.FC = () => {
         : 'Resposta registada.'
     )
 
-    /*
-      O momento em que a pergunta dos avisos se explica sozinha: a pessoa
-      acabou de vir cá responder, e a alternativa é não ter de vir.
-
-      **Mas só quando não fica nada por responder.** Quem tem dois
-      compromissos à espera está a meio de uma tarefa, e uma persiana a subir
-      entre o primeiro e o segundo tapa o botão do segundo — é literalmente
-      pôr-se à frente de quem está a fazer o que queríamos que fizesse. Fica
-      para o fim da fila; e quem nunca lá chegar tem a faixa, que não tapa
-      nada.
-    */
     const faltaResponder =
       pendentes.some(p => p.id !== eventId) ||
       jogos.some(j => j.id !== eventId && j.minhaResposta === 'called' && j.fechada === null)
@@ -511,15 +508,12 @@ const Home: React.FC = () => {
   const sigla = formatClubSigla(clubSettings?.initials)
   return (
     <div className="space-y-4 pb-2">
-      {/* O cabeçalho (clube, época, canto) é o da moldura — `CabecalhoApp`. */}
-
       {estadoDaFicha === 'a-verificar' ? (
         <CartaoSimples className="h-40 animate-pulse" />
       ) : semFicha ? (
         <FichaPorLigar perfil={profile} />
       ) : (
         <>
-          {/* Eventos por convocar, só a quem gere (4c). */}
           <FaixaSemConvocatoria eventos={eventosSemConvocatoria} aoAbrir={() => setAlertaAberto(true)} />
           <PersianaSemConvocatoria
             aberto={alertaAberto}
@@ -551,10 +545,8 @@ const Home: React.FC = () => {
             </CartaoSimples>
           ))}
 
-          {/* Alerta de votação pendente de MVP */}
           <AlertaMvpPendente />
 
-          {/* O próximo jogo, uma página por jogo marcado. */}
           {aCarregar ? (
             <CartaoVidro className="h-56 animate-pulse" />
           ) : jogos.length > 0 ? (
@@ -591,12 +583,6 @@ const Home: React.FC = () => {
             aoResponder={responder}
           />
 
-          {/*
-            O convite vem logo a seguir ao que está por responder, e não acima
-            do jogo: ali competia com o título do ecrã por uma coisa que é uma
-            oferta e não um alerta, e aqui lê-se como o que é — "ou podíamos
-            simplesmente avisar-te".
-          */}
           {convite.oferecer && <FaixaConvidarAvisos aoAbrir={() => abrirConvite('faixa')} />}
 
           {ultimo && <UltimoJogo jogo={ultimo} siglaClube={sigla} />}

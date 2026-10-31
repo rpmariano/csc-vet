@@ -406,7 +406,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
         // Verificação de Castigos / Suspensões se este evento pertence a um torneio
         if (event?.tournament_id) {
-          const rules = tournamentRules || {}
+          const rules = rulesState || tournamentRules || {}
 
           // 1. Suspensão por Cartão Vermelho direto (se a regra estiver ativa, por omissão sim)
           const redCardSuspensionEnabled = rules.red_card_suspension !== false

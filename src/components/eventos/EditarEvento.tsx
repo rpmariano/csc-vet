@@ -18,37 +18,17 @@ import { QuickOpponentModal } from '../QuickOpponentModal'
 import { ResendCallupsModal } from '../ResendCallupsModal'
 import { ConfirmModal } from '../ConfirmModal'
 import { Botao } from '../ui'
-import type { TournamentRules } from '../clube/torneios'
+import {
+  verificarElegibilidadeIdadeTorneio,
+  isTorneioEliminatoria,
+  obterRotuloEliminatoria,
+  type TournamentRules,
+} from '../clube/torneios'
 import { mensagemDeErro } from '../../lib/erros'
 import { eAdepto } from '../../lib/papeis'
 import { convocarAdeptosParaJogo, removerAdeptosSeSemJogadores } from '../../lib/convocatoriasAdeptos'
 import { triggerHaptic } from '../../utils/haptics'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../ui/formulario'
-
-/**
- * Editar um evento — o mesmo ecrã na Agenda e nos Eventos.
- *
- * Existia em duas cópias, uma em cada página, e tinham divergido: data e hora
- * juntas numa e separadas na outra, o jogo intitulado "Jogo vs Adversário"
- * numa e "Jogo" na outra, a pergunta de reenvio sempre numa e só quando fazia
- * sentido na outra, as regras da prova (inscritos, suspensos, limite de
- * convocados, exceções de idade) só nos Eventos, a formação e as ocorrências
- * da ficha de jogo guardadas na descrição só numa, e o `max_players` apagado
- * pela outra a cada gravação. Este componente fica com o comportamento mais
- * completo de cada uma, e as duas páginas usam-no.
- *
- * **Tem o seu estado e a sua gravação.** A página diz que evento edita, que
- * listas há (plantel, campos, adversários, provas) e o que fazer depois de
- * gravar — tipicamente recarregar —, e mais nada.
- *
- * **Sair é sempre deliberado** (`sempre` no guarda): gravar pode reenviar os
- * pedidos de resposta ao plantel todo, por isso o "‹" pergunta sempre.
- *
- * **A convocatória é o que está em `callups`** (ver CLAUDE.md): um convocado
- * que entretanto ficou lesionado, inativo ou fora da prova continua marcado,
- * com o impedimento escrito, e pode ser tirado; quem não pode ir e não está
- * convocado não se pode marcar.
- */
 
 export interface EventoEditavel {
   id: string
@@ -78,7 +58,7 @@ export interface AdversarioDoEvento {
   away_kit_color_1?: string | null
   away_kit_color_2?: string | null
 }
-export interface ProvaDoEvento { id: string; name: string; season?: string | null }
+export interface ProvaDoEvento { id: string; name: string; season?: string | null; rules?: Partial<TournamentRules> | null }
 
 /** Uma linha de `callups` do evento, com o atleta aninhado quando vem. */
 export interface ConvocadoDoEvento {
@@ -115,9 +95,6 @@ export interface EditarEventoProps {
 const ROTULO_TIPO = { match: 'Jogo', practice: 'Treino', gathering: 'Convívio' } as const
 
 const nomeDoCampo = (c: CampoDoEvento) => (c.address ? `${c.name} (${c.address})` : c.name)
-
-const idade = (nascimento: string) =>
-  Math.floor((Date.now() - new Date(nascimento).getTime()) / 3.15576e10)
 
 /** Um jogo de prova diz sempre em que jornada conta — é o que o põe na tabela. */
 const faltaAJornada = (tipo: string, amigavel: boolean, prova: string, jornada: string) =>
@@ -165,8 +142,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   const [perguntaReenvio, setPerguntaReenvio] = useState(false)
   const [aGravar, setAGravar] = useState(false)
   const [aConvocar, setAConvocar] = useState(false)
-  // Guarda síncrona contra duplo toque: o estado só trava o botão no repaint
-  // seguinte, e um segundo toque entretanto convocava em duplicado.
   const aConvocarRef = useRef(false)
   const [confirmarLimpar, setConfirmarLimpar] = useState(false)
   const [adeptosAberto, setAdeptosAberto] = useState(true)
@@ -210,9 +185,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     aGravar: false,
   })
 
-  /* As regras da prova escolhida: quem está inscrito, quem está suspenso, e
-     os limites. Carregam-se aqui, e não na página, para as duas páginas
-     aplicarem as mesmas — a Agenda não as aplicava de todo. */
   const [inscritos, setInscritos] = useState<Set<string> | null>(null)
   const [suspensos, setSuspensos] = useState<Set<string>>(new Set())
   const [motivosSuspensao, setMotivosSuspensao] = useState<Map<string, string>>(new Map())
@@ -240,7 +212,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     setCasaFora(evento.home_away || 'home')
     setPublicado(evento.is_active !== false)
     setProcura('')
-    // Só ao mudar de evento: os campos chegarem depois não repõe o formulário.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evento?.id])
 
@@ -271,8 +242,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     return () => { cancelado = true }
   }, [aberto, provaDaConvocatoria])
 
-  /* O campo de casa do clube: o de `club_settings`, e só na falta dele os
-     restos de antes (o guardado no aparelho, um nome que o denuncie). */
   const campoDeCasa = useMemo(() => {
     const porId = (id?: string | null) => (id ? campos.find(c => c.id === id) : undefined)
     let guardado: string | null = null
@@ -302,12 +271,9 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
 
   const guarda = useAlteracoesPorGravar({
     aberto,
-    // É um ecrã: o retroceder do browser é o "‹".
     ecraDeFormulario: true,
-    // A caixa de procura fica de fora: escrever nela não altera o evento.
     valores: [titulo, tipo, data, hora, concentracao, campoId, local, descricao, amigavel, provaId, jornada, adversarioId, casaFora, publicado],
     sempre: true,
-    // Gravar a partir do aviso é o mesmo caminho do botão, com a pergunta de reenvio.
     aoGravar: () => pedirGravacao(),
     aoSair: aoFechar,
     descricao: 'As alterações a este evento ainda não foram gravadas. Se saíres agora, perdem-se.',
@@ -319,7 +285,10 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   const impedimento = (p: Profile): string | null => {
     if (p.status === 'inactive') return 'Inativo'
     if (provaDaConvocatoria && inscritos) {
-      if (!inscritos.has(p.id)) return 'Não inscrito na prova'
+      // Se o torneio tem inscritos definidos (ou não é de plantel ilimitado sem lista), validar inscrição
+      if (!regras?.unlimited_squad || inscritos.size > 0) {
+        if (!inscritos.has(p.id)) return 'Não inscrito na prova'
+      }
       if (suspensos.has(p.id)) return motivosSuspensao.get(p.id) || 'Suspenso'
     }
     if (tipo === 'gathering') return null
@@ -332,8 +301,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
   const convocadoDe = (p: Profile) =>
     convocatorias.find(c => c.player_id === p.id || c.player?.id === p.id)
 
-  // Os adeptos nunca aparecem na lista de escolha de jogadores da convocatória.
-  // São convocados automaticamente e aparecem na secção própria "Adeptos a apoiar".
   const plantelAtletas = useMemo(() => {
     return plantel.filter(p => !eAdepto(p))
   }, [plantel])
@@ -363,7 +330,7 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
 
   const aptos = useMemo(() => {
     return plantelAtletas.filter(p => impedimento(p) === null)
-  }, [plantelAtletas, provaDaConvocatoria, inscritos, suspensos, tipo])
+  }, [plantelAtletas, provaDaConvocatoria, inscritos, suspensos, tipo, regras])
 
   const porConvocar = useMemo(() => {
     return aptos.filter(p => !convocadoDe(p))
@@ -406,8 +373,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     aConvocarRef.current = true
     setAConvocar(true)
     try {
-      // Contra a base, e não contra a lista em memória: outra ação pode ter
-      // convocado alguém entretanto.
       const { data: existentes } = await supabase.from('callups').select('player_id').eq('event_id', evento.id)
       const ja = new Set(((existentes ?? []) as { player_id: string }[]).map(c => c.player_id))
       let novos = Array.from(new Set(quem.map(p => p.id))).filter(id => !ja.has(id))
@@ -463,19 +428,29 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     }
   }
 
-  /** As regras da prova para mais um convocado: o limite e as exceções de idade. */
+  /** As regras da prova para mais um convocado: o limite e as exceções de idade/ano de nascimento. */
   const regraQueImpede = (p: Profile): string | null => {
     if (!regras) return null
     if (regras.max_match_players && convocatoriasAtletas.length >= regras.max_match_players) {
       return `A convocatória atingiu o limite da prova (${regras.max_match_players} convocados).`
     }
-    if (p.birth_date && regras.min_age && regras.exceptions_allowed && idade(p.birth_date) < regras.min_age) {
-      const excecoes = convocatoriasAtletas.filter(c => {
-        const q = plantel.find(pl => pl.id === c.player_id)
-        return q?.birth_date ? idade(q.birth_date) < (regras.min_age ?? 0) : false
-      }).length
-      if (excecoes >= (regras.exceptions_count ?? 0)) {
-        return `Não podes convocar mais jogadores abaixo dos ${regras.min_age} anos. O limite (${regras.exceptions_count}) já foi atingido.`
+    if (p.birth_date) {
+      const elig = verificarElegibilidadeIdadeTorneio(p.birth_date, regras)
+      if (elig.isInvalidByAge) {
+        return regras.max_birth_year
+          ? `A prova apenas permite jogadores nascidos até ${regras.max_birth_year} (ou exceção ${regras.exceptions_max_birth_year || ''}).`
+          : `O jogador não cumpre a idade mínima da prova (${regras.min_age} anos).`
+      }
+      if (elig.isTooYoung && elig.isExceptionButValid) {
+        const excecoes = convocatoriasAtletas.filter(c => {
+          const q = plantel.find(pl => pl.id === c.player_id)
+          return q?.birth_date ? verificarElegibilidadeIdadeTorneio(q.birth_date, regras).isTooYoung : false
+        }).length
+        if (excecoes >= (regras.exceptions_count ?? 0)) {
+          return regras.max_birth_year
+            ? `Não podes convocar mais exceções de ano de nascimento (${regras.exceptions_max_birth_year}). O limite (${regras.exceptions_count}) já foi atingido.`
+            : `Não podes convocar mais jogadores abaixo dos ${regras.min_age} anos. O limite (${regras.exceptions_count}) já foi atingido.`
+        }
       }
     }
     return null
@@ -483,8 +458,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
 
   const alternar = async (p: Profile) => {
     if (!evento) return
-    /* Só pelo id: a linha é apagada a seguir, e por nome tirar um homónimo
-       apagava a do outro, com a resposta dele dentro. */
     const existente = convocadoDe(p)
     if (existente) {
       const { error } = await supabase.from('callups').delete().eq('id', existente.id)
@@ -522,11 +495,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
 
   /* ------------------------------------------------------------------ gravar */
 
-  /*
-    A pergunta "reenviar o pedido de resposta?" só faz sentido quando há
-    convocados e alguém vai ser avisado: num rascunho, ou sem convocatória,
-    grava-se logo e as respostas ficam.
-  */
   const pedirGravacao = () => {
     if (faltaAJornada(tipo, amigavel, provaId, jornada)) {
       toast.warning('Escolhe a jornada em que este jogo conta para a prova.')
@@ -554,16 +522,12 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     try {
       const adversario = adversarios.find(a => a.id === adversarioId)
       const prova = provas.find(t => t.id === provaId)
-      // O mesmo título que o criar dá.
       const tituloFinal = tipo === 'match'
         ? (adversario ? `Jogo vs ${adversario.name}` : amigavel ? 'Jogo Amigável' : prova ? `Jogo ${prova.name}` : 'Jogo')
         : tipo === 'practice'
           ? 'Treino'
           : (titulo.trim() || 'Convívio')
 
-      /* A formação e as ocorrências da ficha de jogo vivem na descrição, numa
-         etiqueta escondida; a descrição que se edita é a limpa, e a etiqueta
-         volta a juntar-se ao gravar. */
       const original = parseMatchReportMetadata(evento.description)
       const temFicha = (original.tacticalFormation !== '4-3-3' && original.tacticalFormation !== '1-4-3-3') || original.occurrences
       const descricaoFinal = temFicha
@@ -576,7 +540,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
         date_time: new Date(`${data}T${hora}:00`).toISOString(),
         meeting_time: concentracao ? (concentracao.trim().length === 5 ? `${concentracao.trim()}:00` : concentracao.trim()) : null,
         field_id: campoId || null,
-        // O campo ganha (`localDoEvento()`): o texto livre é só para eventos sem campo.
         location: !campoId ? (local.trim() || null) : null,
         description: descricaoFinal,
         is_friendly: tipo === 'match' ? amigavel : false,
@@ -598,8 +561,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
         }
       }
 
-      /* A jornada acompanha: mudar de prova, de jornada, de adversário ou de
-         casa/fora reescreve a linha da tabela, e tirar a prova tira-o de lá. */
       const espelho = await sincronizarJogoNaJornada({ ...evento, ...payload } as unknown as EventoParaJornada)
       if (espelho.estado === 'sem-equipas') toast.warning(AVISO_SEM_EQUIPAS)
       if (espelho.estado === 'erro') toast.warning('O jogo ficou gravado, mas não entrou na tabela da prova: ' + espelho.mensagem)
@@ -693,6 +654,9 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     String(p.jersey_number ?? '').includes(q),
   )
 
+  const provaSelecionada = provas.find(t => t.id === provaId)
+  const ehProvaTaca = isTorneioEliminatoria({ name: provaSelecionada?.name, rules: regras ?? provaSelecionada?.rules })
+
   return (
     <>
       <EcraDetalhe
@@ -759,30 +723,37 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
               </label>
 
               {!amigavel && (
-                <div className="flex gap-2.5">
-                  <div className="flex-1 min-w-0">
-                    <label className={ETIQUETA} htmlFor="editar-evento-prova">Torneio / competição</label>
-                    <select id="editar-evento-prova" value={provaId} onChange={e => setProvaId(e.target.value)} className={CAMPO}>
-                      <option value="">-- Selecionar torneio --</option>
-                      {provas.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}{t.season ? ` (${t.season})` : ''}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {provaId && (
-                    <div className="w-[96px] flex-none">
-                      <label className={ETIQUETA} htmlFor="editar-evento-jornada">Jornada *</label>
-                      <input
-                        id="editar-evento-jornada"
-                        type="number"
-                        min="1"
-                        inputMode="numeric"
-                        value={jornada}
-                        onChange={e => setJornada(e.target.value)}
-                        placeholder="1"
-                        className={CAMPO}
-                      />
+                <div className="space-y-1.5">
+                  <div className="flex gap-2.5">
+                    <div className="flex-1 min-w-0">
+                      <label className={ETIQUETA} htmlFor="editar-evento-prova">Torneio / competição</label>
+                      <select id="editar-evento-prova" value={provaId} onChange={e => setProvaId(e.target.value)} className={CAMPO}>
+                        <option value="">-- Selecionar torneio --</option>
+                        {provas.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}{t.season ? ` (${t.season})` : ''}</option>
+                        ))}
+                      </select>
                     </div>
+                    {provaId && (
+                      <div className="w-[96px] flex-none">
+                        <label className={ETIQUETA} htmlFor="editar-evento-jornada">Jornada *</label>
+                        <input
+                          id="editar-evento-jornada"
+                          type="number"
+                          min="1"
+                          inputMode="numeric"
+                          value={jornada}
+                          onChange={e => setJornada(e.target.value)}
+                          placeholder="1"
+                          className={CAMPO}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {ehProvaTaca && provaId && (
+                    <p className="text-[10.5px] text-csc-gold/85 font-semibold">
+                      Eliminatória da Taça: {Number(jornada) ? `${jornada} — ${obterRotuloEliminatoria(Number(jornada))}` : '1 = Oitavos · 2 = Quartos · 3 = Meias · 4 = Final'}
+                    </p>
                   )}
                 </div>
               )}
@@ -958,7 +929,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
               >
                 Limpar
               </Botao>
-              {/* Nos convívios vai toda a gente, e aí faz sentido separar. */}
               {tipo === 'gathering' && (
                 <>
                   <Botao
@@ -992,7 +962,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
               {lista.map(p => {
                 const convocado = Boolean(convocadoDe(p))
                 const motivo = impedimento(p)
-                // Quem não pode ir e não está convocado não se marca; quem está, tira-se.
                 const bloqueado = Boolean(motivo) && !convocado
                 const respostaDisp = tipo === 'match' ? disponibilidades[p.id] : null
                 return (
@@ -1126,7 +1095,6 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
             </span>
           </label>
 
-          {/* Sair sem gravar é o "‹" do topo; aqui fica só gravar. */}
           <div className="pt-2">
             <Botao type="submit" largo disabled={aGravar}>
               <Save size={16} />

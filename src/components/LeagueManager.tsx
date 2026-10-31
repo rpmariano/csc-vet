@@ -9,6 +9,7 @@ import { EcraDetalhe } from './EcraDetalhe'
 import { CLUBE_SIGLA } from '../lib/clube'
 import { useClub } from '../context/ClubContext'
 import { equipaDoTorneio } from '../lib/classificacao'
+import { isTorneioEliminatoria } from './clube/torneios'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
 import { mensagemDeErro } from '../lib/erros'
@@ -115,7 +116,12 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     ])
 
     if (tourRes.data) setTournament(tourRes.data)
-    if (groupsRes.data) setGroups(groupsRes.data)
+    if (groupsRes.data) {
+      setGroups(groupsRes.data)
+      if (groupsRes.data.length === 1) {
+        setSelectedGroupForTeam(groupsRes.data[0].id)
+      }
+    }
     if (teamsRes.data) setTeams(teamsRes.data)
     if (oppsRes.data) setOpponents(oppsRes.data)
 
@@ -170,7 +176,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       return
     }
 
-    setSelectedGroupForTeam('')
+    if (groups.length !== 1) setSelectedGroupForTeam('')
     setSelectedOpponentToAdd('')
     fetchData()
   }
@@ -193,13 +199,15 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
     })
   }
 
+  const ehTaca = isTorneioEliminatoria(tournament)
+
   return (
     <>
     <EcraDetalhe
       aberto
       voltarPara="Torneios"
       aoVoltar={onClose}
-      sobrancelha="Grupos e equipas"
+      sobrancelha={ehTaca ? 'Equipas da Taça' : 'Grupos e equipas'}
       titulo={tournament?.name ?? 'Torneio'}
       legenda={[tournament?.season, tournament?.organizer_name ? `Organização: ${tournament.organizer_name}` : null]
         .filter(Boolean).join(' · ') || undefined}
@@ -210,20 +218,31 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
           ) : (
             <div className="space-y-6">
               {/* "Grupos e equipas" é a sobrancelha do ecrã; aqui fica só a ação. */}
-              <Botao aparencia="vidro" largo onClick={() => setIsNewGroupModalOpen(true)}>
+              <Botao
+                aparencia="vidro"
+                largo
+                onClick={() => {
+                  if (ehTaca && groups.length === 0) setNewGroupName('Quadro Competitivo')
+                  setIsNewGroupModalOpen(true)
+                }}
+              >
                 <Plus size={15} />
-                Novo grupo
+                {ehTaca && groups.length === 0 ? 'Criar Quadro Competitivo' : 'Novo grupo'}
               </Botao>
 
               <p className="text-xs text-white/62 -mt-2">
-                As jornadas (jogos, datas e resultados) gerem-se na página de Classificações, depois de criares aqui os grupos e as equipas.
+                {ehTaca
+                  ? 'As eliminatórias (jogos 1 a 8, datas, horários, locais e resultados) gerem-se na página de Classificações.'
+                  : 'As jornadas (jogos, datas e resultados) gerem-se na página de Classificações, depois de criares aqui os grupos e as equipas.'}
               </p>
 
               {/* Add Team UI */}
               {groups.length > 0 && (
                 <div className="cartao-simples p-4 flex flex-wrap gap-3 items-end">
                   <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs font-bold text-white/60 mb-1">Grupo</label>
+                    <label className="block text-xs font-bold text-white/60 mb-1">
+                      {ehTaca ? 'Quadro / Grupo' : 'Grupo'}
+                    </label>
                     <select
                       value={selectedGroupForTeam}
                       onChange={e => setSelectedGroupForTeam(e.target.value)}
@@ -261,7 +280,9 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
 
               {groups.length === 0 ? (
                 <div className="text-center py-6 bg-white/4 rounded-xl border border-dashed border-white/15 text-white/62 text-sm">
-                  Nenhum grupo configurado. Cria o "Grupo Único" ou "Grupo A", "Grupo B".
+                  {ehTaca
+                    ? 'Nenhum quadro configurado. Cria o "Quadro Competitivo" para associar as equipas participantes.'
+                    : 'Nenhum grupo configurado. Cria o "Grupo Único" ou "Grupo A", "Grupo B".'}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">

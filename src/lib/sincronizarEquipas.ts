@@ -184,7 +184,7 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     awayKit1: 'Azul',
     awayKit2: null,
     grupo: 'Grupo B',
-    aliases: ['cacem', 'cacém', 'bola', 'bola cacem', 'bcac', 'zambujeiro'],
+    aliases: ['cacem', 'cacém', 'bola', 'bola cacem', 'bcac'],
     emblema: 'emblemas/zambujeiro.jpg',
   },
   {
@@ -214,6 +214,76 @@ export const EQUIPAS_OFICIAIS: EquipaOficialDef[] = [
     emblema: 'cascais-emblem.png',
   },
 ]
+
+export const EQUIPAS_TACA_OFICIAIS: EquipaOficialDef[] = [
+  {
+    nome: 'Zambujeiro',
+    sigla: 'ZAMB',
+    campoNome: 'Malveira da Serra',
+    campoMorada: 'Campo da Malveira da Serra, Cascais',
+    homeKit1: 'Branco',
+    homeKit2: 'Azul',
+    awayKit1: 'Azul',
+    awayKit2: null,
+    grupo: 'Grupo B',
+    aliases: ['zambujeiro', 'usd zambujeiro', 'zamb'],
+    emblema: 'emblemas/zambujeiro.jpg',
+  },
+  {
+    nome: 'Carcavelos',
+    sigla: 'CARC',
+    campoNome: 'Carcavelos',
+    campoMorada: 'Campo do GS Carcavelos, Carcavelos',
+    homeKit1: 'Azul',
+    homeKit2: 'Branco',
+    awayKit1: 'Branco',
+    awayKit2: null,
+    grupo: 'Grupo A',
+    aliases: ['carcavelos', 'gs carcavelos', 'carc'],
+    emblema: '',
+  },
+  {
+    nome: 'Central 32',
+    sigla: 'C32',
+    campoNome: 'Carcavelos',
+    campoMorada: 'Campo do GS Carcavelos, Carcavelos',
+    homeKit1: 'Preto',
+    homeKit2: 'Branco',
+    awayKit1: 'Branco',
+    awayKit2: null,
+    grupo: 'Grupo A',
+    aliases: ['central 32', 'central32', 'c32'],
+    emblema: '',
+  },
+  {
+    nome: 'Malveira da Serra',
+    sigla: 'MALV',
+    campoNome: 'Malveira da Serra',
+    campoMorada: 'Campo da Malveira da Serra, Cascais',
+    homeKit1: 'Verde',
+    homeKit2: 'Branco',
+    awayKit1: 'Branco',
+    awayKit2: null,
+    grupo: 'Grupo A',
+    aliases: ['malveira', 'malveira da serra', 'gd malveira', 'malv'],
+    emblema: '',
+  },
+  {
+    nome: 'Estoril Praia',
+    sigla: 'EST',
+    campoNome: 'Estoril Praia',
+    campoMorada: 'Centro de Excelência do Estoril Praia, Estoril',
+    homeKit1: 'Amarelo',
+    homeKit2: 'Azul',
+    awayKit1: 'Branco',
+    awayKit2: null,
+    grupo: 'Grupo A',
+    aliases: ['estoril', 'estoril praia', 'gd estoril praia', 'est'],
+    emblema: '',
+  },
+]
+
+const TODAS_EQUIPAS_OFICIAIS: EquipaOficialDef[] = [...EQUIPAS_OFICIAIS, ...EQUIPAS_TACA_OFICIAIS]
 
 function normalizarTexto(s: string): string {
   return (s || '')
@@ -290,7 +360,7 @@ export function correspondeEquipaOficial(
  */
 export function encontrarDefinicaoOficial(nomeOuSigla: string | null | undefined): EquipaOficialDef | null {
   if (!nomeOuSigla) return null
-  return EQUIPAS_OFICIAIS.find(eq => correspondeEquipaOficial(eq, nomeOuSigla, nomeOuSigla)) ?? null
+  return TODAS_EQUIPAS_OFICIAIS.find(eq => correspondeEquipaOficial(eq, nomeOuSigla, nomeOuSigla)) ?? null
 }
 
 /**

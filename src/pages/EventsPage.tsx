@@ -730,8 +730,10 @@ const EventsPage: React.FC = () => {
     
     // Se for um jogo de um torneio específico, verificar se está inscrito e se não está suspenso
     if (eventType === 'match' && tId) {
+      const tourObj = tournaments.find(t => t.id === tId)
+      const hasAnyRegistered = tournamentPlayersMap.some(tp => tp.tournament_id === tId)
       const isRegistered = tournamentPlayersMap.some(tp => tp.tournament_id === tId && tp.player_id === player.id)
-      if (!isRegistered) return false
+      if ((!tourObj?.rules || !(tourObj.rules as any).unlimited_squad || hasAnyRegistered) && !isRegistered) return false
 
       const isSuspended = tournamentSuspensions.some(ts => ts.tournament_id === tId && ts.player_id === player.id && ts.status === 'active')
       if (isSuspended) return false

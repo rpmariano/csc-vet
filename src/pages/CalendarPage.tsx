@@ -1956,15 +1956,14 @@ const CalendarPage: React.FC = () => {
                   const oppAway2 = opp.away_kit_color_2 || ofc?.away2 || null
 
                   const fora = selectedEvent.home_away === 'away'
-                  // Se jogamos fora, o adversário joga em casa (usa a camisola principal).
-                  // Se jogamos em casa, o adversário joga fora (usa a camisola alternativa, se tiver).
-                  const cor1 = fora ? oppHome1 : (oppAway1 || oppHome1)
-                  const cor2 = fora ? oppHome2 : (oppAway1 ? oppAway2 : oppHome2)
+                  const mudaCasa = selectedEvent.tournament?.rules?.kit_conflict_rule === 'home_changes'
+                  // Na regra normal, muda o visitante; na Taça (kit_conflict_rule === 'home_changes'), muda o visitado (casa).
+                  const usaAlternativa = mudaCasa ? fora : !fora
+                  const cor1 = !usaAlternativa ? oppHome1 : (oppAway1 || oppHome1)
+                  const cor2 = !usaAlternativa ? oppHome2 : (oppAway1 ? oppAway2 : oppHome2)
                   const tipoUso = fora
-                    ? 'Principal (em casa)'
-                    : oppAway1 && oppAway1.toUpperCase() !== 'X'
-                      ? 'Alternativa (fora)'
-                      : 'Principal'
+                    ? (mudaCasa && oppAway1 && oppAway1.toUpperCase() !== 'X' ? 'Em casa (muda se conflito)' : 'Principal (em casa)')
+                    : (mudaCasa ? 'Principal (visitante)' : (oppAway1 && oppAway1.toUpperCase() !== 'X' ? 'Alternativa (fora)' : 'Principal'))
 
                   if (!cor1 && !cor2) return null
 

@@ -9,39 +9,29 @@ import { triggerHaptic } from '../../utils/haptics'
 
 /**
  * "Classificação" (bloco 5 da Home): uma página por prova a decorrer, e em
- * cada uma o pedaço da tabela onde estamos.
- *
- * **São cinco linhas em torno da nossa**, e não a tabela toda: numa Home não
- * cabem doze equipas, e a que se procura é sempre a do clube. Quem lidera vê o
- * topo, quem vai em último vê o fim — a `janelaDoClube` trata disso, e o
- * número da posição é o real.
- *
- * A conta é a mesma da Classificação: vive em `src/lib/classificacao.ts` desde
- * que este cartão precisou dela. Duplicar aqui os desempates dava duas tabelas
- * que podiam discordar — que é pior do que não ter nenhuma, e foi por isso que
- * durante meses este cartão só soube dizer quantas jornadas havia.
- *
- * **Só entram provas ativas.** Uma prova agendada não tem tabela nenhuma para
- * mostrar, e o cartão levaria a um ecrã vazio.
- *
- * Escolhe-se a prova arrastando o carrossel, como no próximo jogo; tocar leva
- * à classificação **dessa** prova (`?torneio=`), e não à primeira da lista.
+ * cada uma o pedaço da tabela onde estamos (ou o quadro da eliminatória em
+ * provas tipo Taça de Portugal).
  */
 
 export interface LinhaDaHome {
   id: string
   posicao: number
-  /*
-    A equipa em bruto, e não a sigla já feita: o emblema e a sigla do próprio
-    clube vêm de `club_settings`, que chega por contexto e pode chegar **depois**
-    desta consulta. Resolvidos aqui, no render, a linha do clube nunca fica com
-    o escudo genérico à espera da segunda volta.
-  */
   equipa: { opponent_id: string | null; opponent?: { name?: string; initials?: string | null; logo_url?: string | null } | null }
   /** Jogos, diferença de golos e pontos. */
   j: number
   dg: number
   p: number
+}
+
+export interface JogoEliminatoriaDaHome {
+  id: string
+  numero: number
+  casaNome: string
+  foraNome: string
+  data: string
+  hora: string | null
+  resultado: string | null
+  nosso: boolean
 }
 
 export interface ProvaDaHome {
@@ -54,6 +44,11 @@ export interface ProvaDaHome {
   grupo: string | null
   /** A janela da classificação: nós e os vizinhos. Vazia enquanto não houver. */
   linhas: LinhaDaHome[]
+  /** Para torneios de Taça / Eliminatórias. */
+  eliminatoria?: {
+    nomeFase: string
+    jogos: JogoEliminatoriaDaHome[]
+  }
 }
 
 const CABECALHO = 'font-display font-extrabold text-[8.5px] tracking-[0.12em] uppercase text-white/45'
@@ -78,7 +73,40 @@ export const ProvasEmCurso: React.FC<{ provas: ProvaDaHome[] }> = ({ provas }) =
         {prova.epoca && <span className="text-[10px] text-white/62 flex-none">{prova.epoca}</span>}
       </div>
 
-      {prova.linhas.length === 0 ? (
+      {prova.eliminatoria ? (
+        <>
+          <div className="flex items-center justify-between gap-2 mt-2.5 mb-1">
+            <span className={`${CABECALHO} text-csc-gold`}>{prova.eliminatoria.nomeFase}</span>
+            <span className={CABECALHO}>Taça / Eliminatórias</span>
+          </div>
+          <div className="space-y-1">
+            {prova.eliminatoria.jogos.map(jg => (
+              <div
+                key={jg.id}
+                className={`flex items-center justify-between gap-2 h-[30px] px-2 rounded-lg text-[11px] ${
+                  jg.nosso ? 'bg-csc-gold/15 text-csc-gold font-bold' : 'bg-white/5 text-white/85'
+                }`}
+              >
+                <span className="text-[9.5px] font-display font-black uppercase text-white/50 shrink-0">
+                  J{jg.numero}
+                </span>
+                <span className="flex-1 min-w-0 truncate font-display font-bold text-right">
+                  {jg.casaNome}
+                </span>
+                <span className="shrink-0 px-1.5 py-0.5 rounded bg-white/10 font-display font-black text-[10px] text-csc-gold tabular-nums">
+                  {jg.resultado ?? (jg.hora || 'VS')}
+                </span>
+                <span className="flex-1 min-w-0 truncate font-display font-bold">
+                  {jg.foraNome}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-white/50 mt-2">
+            Ver o quadro completo das eliminatórias e normas da prova
+          </p>
+        </>
+      ) : prova.linhas.length === 0 ? (
         <div className="flex items-center gap-3 mt-3">
           <span
             className="w-[34px] h-[34px] rounded-xl bg-white/5 border border-dashed border-white/18
@@ -124,8 +152,6 @@ export const ProvasEmCurso: React.FC<{ provas: ProvaDaHome[] }> = ({ provas }) =
                     {logo ? (
                       <img src={logo} alt="" className="w-full h-full object-contain bg-white" />
                     ) : (
-                      /* Sem emblema desenha-se um escudo e nunca as iniciais — a
-                         sigla está já ao lado. */
                       <Shield size={10} className={eOClube ? 'text-csc-gold' : 'text-white/30'} />
                     )}
                   </span>

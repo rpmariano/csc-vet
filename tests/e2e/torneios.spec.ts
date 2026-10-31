@@ -203,3 +203,131 @@ test('a linha do nosso jogo abre a ficha, e distingue quem ainda não a tem', as
   await expect(page).toHaveURL(/ver=fichas&jogo=ev1/)
   await expect(page.getByRole('region', { name: / vs / })).toBeVisible()
 })
+
+/**
+ * Novo tipo de torneio: Taça / Eliminatórias (Sistema "Taça de Portugal") —
+ * 3ª Taça de Veteranos - Cascais 2026 (UCFFCC).
+ *
+ * Testa:
+ * 1. A configuração e edição de todas as regras da Taça no gestor de torneios.
+ * 2. A apresentação do Quadro Competitivo (Oitavos, Quartos, Meias e Final — Jogos 1 a 8)
+ *    e a progressão automática de "VENCEDOR JOGO 1" quando o Jogo 1 termina.
+ */
+test('suporta torneio tipo Taça / Eliminatórias com regras editáveis e quadro oficial (Jogos 1 a 8)', async ({ page }) => {
+  const TACA_FIXTURES = {
+    club_settings: [{
+      id: 1, name: 'Grupo Dramático e Sportivo de Cascais', initials: 'GDS Cascais',
+      logo_url: EMBLEMA, primary_color: '#1c1c1c', home_field_id: null,
+    }],
+    tournaments: [{
+      id: 'taca-2026',
+      name: '3ª Taça de Veteranos - Cascais 2026',
+      season: '2026/2027',
+      status: 'ativo',
+      organizer_name: 'UCFFCC',
+      image_url: '/csc-vet/emblemas/ucffcc.jpg',
+      rules: {
+        format: 'knockout',
+        knockout_tiebreaker: 'penalties',
+        knockout_starting_round: 'round_of_16',
+        min_age: 36,
+        max_birth_year: 1990,
+        exceptions_allowed: true,
+        exceptions_count: 1,
+        exceptions_min_age: 35,
+        exceptions_max_birth_year: 1991,
+        unlimited_squad: true,
+        max_squad_size: 999,
+        max_match_players: 20,
+        min_match_players: 7,
+        forbid_fpf_federated: true,
+        require_id_document: true,
+        require_medical_exam: true,
+        medical_exam_valid_until: '2026-12-21',
+        require_insurance: true,
+        exclusive_club_representation: true,
+        roster_update_deadline: 'Até às 17h00 da 5ª feira anterior ao jogo',
+        match_duration_mins: 70,
+        half_duration_mins: 35,
+        halftime_duration_mins: 10,
+        rolling_subs: true,
+        kit_conflict_rule: 'home_changes',
+        yellow_cards_to_suspension: 2,
+        yellow_cards_suspension_enabled: true,
+        red_card_suspension: true,
+        double_yellow_suspension: true,
+        violent_conduct_expulsion: true,
+        suspensions_carry_over: true,
+        walkover_score: '3-0',
+        max_walkovers_allowed: 1,
+        delay_tolerance_mins: 15,
+        referee_entity: 'NAFLS (Associação de Futebol de Lisboa)',
+        referee_fee_per_match: 50,
+        knockout_matches: {
+          m1: { match_id: 'm1', match_number: 1, matchday: 1, round_label: 'Oitavos de Final', home_placeholder: null, away_placeholder: null, location: 'Carcavelos', match_date: '2026-11-29', match_time: '15H00' },
+          m2: { match_id: 'm2', match_number: 2, matchday: 2, round_label: 'Quartos de Final', home_placeholder: null, away_placeholder: null, location: 'Cascais', match_date: '2026-12-06', match_time: '15H00' },
+          m3: { match_id: 'm3', match_number: 3, matchday: 2, round_label: 'Quartos de Final', home_placeholder: null, away_placeholder: null, location: 'Malveira da Serra', match_date: '2026-12-06', match_time: '15H00' },
+          m4: { match_id: 'm4', match_number: 4, matchday: 2, round_label: 'Quartos de Final', home_placeholder: null, away_placeholder: 'VENCEDOR JOGO 1', location: 'Torre', match_date: '2026-12-06', match_time: '15H00' },
+          m5: { match_id: 'm5', match_number: 5, matchday: 2, round_label: 'Quartos de Final', home_placeholder: null, away_placeholder: null, location: 'Malveira da Serra', match_date: '2026-12-06', match_time: '17H00' },
+          m6: { match_id: 'm6', match_number: 6, matchday: 3, round_label: 'Meias Finais', home_placeholder: 'VENCEDOR JOGO 2', away_placeholder: 'VENCEDOR JOGO 3', location: null, match_date: '2026-12-13', match_time: null },
+          m7: { match_id: 'm7', match_number: 7, matchday: 3, round_label: 'Meias Finais', home_placeholder: 'VENCEDOR JOGO 5', away_placeholder: 'VENCEDOR JOGO 4', location: null, match_date: '2026-12-13', match_time: null },
+          m8: { match_id: 'm8', match_number: 8, matchday: 4, round_label: 'Final', home_placeholder: 'VENCEDOR JOGO 6', away_placeholder: 'VENCEDOR JOGO 7', location: null, match_date: '2026-12-20', match_time: null },
+        },
+      },
+    }],
+    tournament_groups: [{ id: 'g-taca', tournament_id: 'taca-2026', name: 'Quadro Competitivo', phase: 1 }],
+    tournament_teams: [
+      { id: 'tt-csc', tournament_id: 'taca-2026', group_id: 'g-taca', opponent_id: null, opponent: null },
+      { id: 'tt-carc', tournament_id: 'taca-2026', group_id: 'g-taca', opponent_id: 'o-carc', opponent: { id: 'o-carc', name: 'Carcavelos', initials: 'CARC', logo_url: null } },
+      { id: 'tt-c32', tournament_id: 'taca-2026', group_id: 'g-taca', opponent_id: 'o-c32', opponent: { id: 'o-c32', name: 'Central 32', initials: 'C32', logo_url: null } },
+      { id: 'tt-tir', tournament_id: 'taca-2026', group_id: 'g-taca', opponent_id: 'o-tir', opponent: { id: 'o-tir', name: 'Tires', initials: 'TIR', logo_url: null } },
+      { id: 'tt-malv', tournament_id: 'taca-2026', group_id: 'g-taca', opponent_id: 'o-malv', opponent: { id: 'o-malv', name: 'Malveira da Serra', initials: 'MALV', logo_url: null } },
+      { id: 'tt-est', tournament_id: 'taca-2026', group_id: 'g-taca', opponent_id: 'o-est', opponent: { id: 'o-est', name: 'Estoril Praia', initials: 'EST', logo_url: null } },
+      { id: 'tt-tor', tournament_id: 'taca-2026', group_id: 'g-taca', opponent_id: 'o-tor', opponent: { id: 'o-tor', name: 'Torre', initials: 'TOR', logo_url: null } },
+      { id: 'tt-zamb', tournament_id: 'taca-2026', group_id: 'g-taca', opponent_id: 'o-zamb', opponent: { id: 'o-zamb', name: 'Zambujeiro', initials: 'ZAMB', logo_url: null } },
+      { id: 'tt-lcas', tournament_id: 'taca-2026', group_id: 'g-taca', opponent_id: 'o-lcas', opponent: { id: 'o-lcas', name: 'Lisbon Casuals', initials: 'LCAS', logo_url: null } },
+    ],
+    tournament_matches: [
+      { id: 'm1', tournament_id: 'taca-2026', group_id: 'g-taca', matchday: 1, match_date: '2026-11-29', home_team_id: 'tt-carc', away_team_id: 'tt-c32', status: 'scheduled', home_score: null, away_score: null },
+      { id: 'm2', tournament_id: 'taca-2026', group_id: 'g-taca', matchday: 2, match_date: '2026-12-06', home_team_id: 'tt-csc', away_team_id: 'tt-tir', status: 'scheduled', home_score: null, away_score: null },
+      { id: 'm3', tournament_id: 'taca-2026', group_id: 'g-taca', matchday: 2, match_date: '2026-12-06', home_team_id: 'tt-malv', away_team_id: 'tt-est', status: 'scheduled', home_score: null, away_score: null },
+      { id: 'm4', tournament_id: 'taca-2026', group_id: 'g-taca', matchday: 2, match_date: '2026-12-06', home_team_id: 'tt-tor', away_team_id: null, status: 'scheduled', home_score: null, away_score: null },
+      { id: 'm5', tournament_id: 'taca-2026', group_id: 'g-taca', matchday: 2, match_date: '2026-12-06', home_team_id: 'tt-zamb', away_team_id: 'tt-lcas', status: 'scheduled', home_score: null, away_score: null },
+      { id: 'm6', tournament_id: 'taca-2026', group_id: 'g-taca', matchday: 3, match_date: '2026-12-13', home_team_id: null, away_team_id: null, status: 'scheduled', home_score: null, away_score: null },
+      { id: 'm7', tournament_id: 'taca-2026', group_id: 'g-taca', matchday: 3, match_date: '2026-12-13', home_team_id: null, away_team_id: null, status: 'scheduled', home_score: null, away_score: null },
+      { id: 'm8', tournament_id: 'taca-2026', group_id: 'g-taca', matchday: 4, match_date: '2026-12-20', home_team_id: null, away_team_id: null, status: 'scheduled', home_score: null, away_score: null },
+    ],
+  }
+
+  await montarSupabaseFalso(page, TACA_FIXTURES)
+  await page.goto('/csc-vet/competicao?ver=classificacoes')
+  await page.waitForLoadState('networkidle')
+
+  // 1. Verifica que mostra o cabeçalho das Normas da Taça e todas as fases da eliminatória
+  await expect(page.getByText(/Normas de Participação e Regras/i)).toBeVisible()
+  await page.getByText(/Normas de Participação e Regras/i).click()
+  await expect(page.getByText(/Nascidos ≤ 1990/)).toBeVisible()
+  await expect(page.getByText(/Suspensão ao 2º amarelo/)).toBeVisible()
+  await expect(page.getByText(/Muda a equipa considerada a jogar em casa/i)).toBeVisible()
+
+  // 2. Verifica os Jogos 1 a 8 do calendário oficial
+  await expect(page.getByText('Jogo 1', { exact: true })).toBeVisible()
+  await expect(page.getByText('Carcavelos', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Central 32', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Jogo 2', { exact: true })).toBeVisible()
+  await expect(page.getByText('Tires', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('VENCEDOR JOGO 1', { exact: true })).toBeVisible()
+  await expect(page.getByText('Jogo 8', { exact: true })).toBeVisible()
+
+  // 3. Edita o Jogo 1 (empate 1-1 e vitória do Carcavelos por 4-3 nas grandes penalidades)
+  await page.getByRole('button', { name: 'Editar Jogo 1' }).click()
+  await page.getByLabel('Golos Visitado').fill('1')
+  await page.getByLabel('Golos Visitante').fill('1')
+  await page.getByLabel('Penalties Visitado (se empate)').fill('4')
+  await page.getByLabel('Penalties Visitante (se empate)').fill('3')
+  await page.getByRole('button', { name: 'Guardar jogo' }).click()
+
+  // O Jogo 1 mostra o resultado e os penalties (4-3 gp), e o Jogo 4 resolve automaticamente "Carcavelos" como Vencedor do Jogo 1!
+  await expect(page.getByText('(4-3 gp)')).toBeVisible()
+  await expect(page.getByText('(VENCEDOR JOGO 1)')).toBeVisible()
+})
