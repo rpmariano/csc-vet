@@ -102,7 +102,7 @@ export interface LinhaClassificacao<T extends EquipaDoGrupo = EquipaDoGrupo> {
 
 /** Um jogo só conta para a classificação com estado e placar. */
 export const jogoTerminado = (m: { status?: string | null; home_score: number | null; away_score: number | null }) =>
-  m.status === 'finished' && m.home_score !== null && m.away_score !== null
+  (m.status === 'finished' || (m.home_score !== null && m.home_score !== undefined && m.away_score !== null && m.away_score !== undefined)) && m.home_score !== null && m.away_score !== null
 
 /**
  * A tabela de um grupo, já ordenada: pontos, confronto direto (pontos,

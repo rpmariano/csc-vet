@@ -236,64 +236,94 @@ const EQUIPAS_ADVERSARIAS_TACA: {
  * Obtém os metadados de eliminatória (nº do jogo, local, hora, placeholders, penalties)
  * para uma linha de `tournament_matches`.
  */
+export function inferirNumeroJogoTaca(match: any, allMatches: any[] = []): number {
+  if (!match) return 1
+  const round = Number(match.matchday ?? 1)
+  if (round === 1) return 1 // Único jogo dos Oitavos
+  if (round === 4) return 8 // Final
+
+  if (round === 2) {
+    const quartos = allMatches.filter(m => Number(m.matchday ?? 1) === 2)
+    if (quartos.length > 0) {
+      const idx = quartos.findIndex(m => m.id === match.id)
+      if (idx >= 0) return idx + 2
+    }
+    return 2
+  }
+
+  if (round === 3) {
+    const meias = allMatches.filter(m => Number(m.matchday ?? 1) === 3)
+    if (meias.length > 0) {
+      const idx = meias.findIndex(m => m.id === match.id)
+      if (idx >= 0) return idx + 6
+    }
+    return 6
+  }
+
+  return 1
+}
+
+/**
+ * Obtém os metadados de eliminatória (nº do jogo, local, hora, placeholders, penalties)
+ * para uma linha de `tournament_matches`.
+ */
 export function obterMetaJogoKnockout(
   rules: Partial<TournamentRules> | null | undefined,
   match: any,
   allMatches: any[] = [],
 ): KnockoutMatchMeta {
-  const kmMap = rules?.knockout_matches ?? {}
+  const kmMap = (rules?.knockout_matches && typeof rules.knockout_matches === 'object' && !Array.isArray(rules.knockout_matches))
+    ? rules.knockout_matches
+    : {}
 
   // 1. Por ID direto na chave do dicionário
-  if (match?.id && kmMap[match.id]) {
-    return {
-      ...kmMap[match.id],
-      match_id: match.id,
-      matchday: match.matchday ?? kmMap[match.id].matchday ?? 1,
-    }
-  }
+  let salvo: KnockoutMatchMeta | undefined = match?.id ? kmMap[match.id] : undefined
 
   // 2. Por match_id guardado dentro do objeto
-  if (match?.id) {
-    const porIdInterno = Object.values(kmMap).find(k => k.match_id === match.id)
-    if (porIdInterno) {
-      return {
-        ...porIdInterno,
-        match_id: match.id,
-        matchday: match.matchday ?? porIdInterno.matchday ?? 1,
-      }
-    }
+  if (!salvo && match?.id) {
+    salvo = Object.values(kmMap).find(k => k && k.match_id === match.id)
   }
 
-  // 3. Por índice ordenado (fallback para matches que ainda não tinham ID ligado na chave)
-  const ordenados = [...allMatches].sort((a, b) => {
-    const mdDiff = (a.matchday ?? 1) - (b.matchday ?? 1)
-    if (mdDiff !== 0) return mdDiff
-    return String(a.created_at ?? a.id ?? '').localeCompare(String(b.created_at ?? b.id ?? ''))
-  })
-  const idx = ordenados.findIndex(m => m.id === match?.id)
-  const inferredNumber = idx >= 0 ? idx + 1 : 1
-  const porNumero = kmMap[`jogo_${inferredNumber}`] ?? Object.values(kmMap).find(k => k.match_number === inferredNumber)
+  // 3. Determinar número oficial do jogo
+  let matchNumber = salvo?.match_number
+  if (!matchNumber) {
+    matchNumber = inferirNumeroJogoTaca(match, allMatches)
+  }
+
+  // 4. Se ainda não temos 'salvo', tentar por chave `jogo_${matchNumber}` ou find match_number
+  if (!salvo && matchNumber) {
+    salvo = kmMap[`jogo_${matchNumber}`] ?? Object.values(kmMap).find(k => k && k.match_number === matchNumber)
+  }
+
+  // 5. Definição oficial estática da Taça como garantia permanente de integridade
+  const defOficial = JOGOS_OFICIAIS_TACA_2026.find(j => j.match_number === matchNumber)
 
   const rawDate = match?.match_date ? String(match.match_date) : null
-  const dateOnly = rawDate ? rawDate.slice(0, 10) : (porNumero?.match_date ?? null)
-  let timeOnly = porNumero?.match_time ?? null
+  const dateOnly = rawDate ? rawDate.slice(0, 10) : (salvo?.match_date ?? defOficial?.match_date ?? null)
+  let timeOnly = salvo?.match_time ?? defOficial?.match_time ?? null
   if (!timeOnly && rawDate && rawDate.includes('T')) {
     const tPart = rawDate.split('T')[1]?.slice(0, 5)
     if (tPart && tPart !== '00:00') timeOnly = tPart
   }
 
+  const roundNum = Number(match?.matchday ?? salvo?.matchday ?? defOficial?.matchday ?? 1)
+
   return {
-    match_id: match?.id,
-    match_number: porNumero?.match_number ?? inferredNumber,
-    matchday: match?.matchday ?? porNumero?.matchday ?? 1,
-    round_label: porNumero?.round_label ?? obterRotuloEliminatoria(match?.matchday ?? 1),
-    home_placeholder: porNumero?.home_placeholder ?? null,
-    away_placeholder: porNumero?.away_placeholder ?? null,
-    location: porNumero?.location ?? null,
+    match_id: match?.id ?? salvo?.match_id,
+    match_number: matchNumber,
+    matchday: roundNum,
+    round_label: salvo?.round_label ?? defOficial?.round_label ?? obterRotuloEliminatoria(roundNum),
+    home_placeholder: (salvo?.home_placeholder !== undefined && salvo?.home_placeholder !== null && salvo?.home_placeholder !== '')
+      ? salvo.home_placeholder
+      : (defOficial?.home_placeholder ?? null),
+    away_placeholder: (salvo?.away_placeholder !== undefined && salvo?.away_placeholder !== null && salvo?.away_placeholder !== '')
+      ? salvo.away_placeholder
+      : (defOficial?.away_placeholder ?? null),
+    location: salvo?.location ?? defOficial?.location ?? null,
     match_date: dateOnly,
     match_time: timeOnly,
-    home_penalties: porNumero?.home_penalties ?? null,
-    away_penalties: porNumero?.away_penalties ?? null,
+    home_penalties: salvo?.home_penalties ?? null,
+    away_penalties: salvo?.away_penalties ?? null,
   }
 }
 
@@ -305,20 +335,24 @@ export function determinarVencedorKnockout(
   match: any,
   meta?: KnockoutMatchMeta | null,
 ): 'home' | 'away' | null {
-  if (!match || match.status !== 'finished' || match.home_score === null || match.away_score === null) {
-    return null
-  }
+  if (!match) return null
+  const temScore = match.home_score !== null && match.home_score !== undefined &&
+                   match.away_score !== null && match.away_score !== undefined
+  if (!temScore) return null
+
   const h = Number(match.home_score)
   const a = Number(match.away_score)
   if (h > a) return 'home'
   if (a > h) return 'away'
 
-  if (meta?.home_penalties !== null && meta?.home_penalties !== undefined &&
-      meta?.away_penalties !== null && meta?.away_penalties !== undefined) {
-    const hp = Number(meta.home_penalties)
-    const ap = Number(meta.away_penalties)
-    if (hp > ap) return 'home'
-    if (ap > hp) return 'away'
+  // Empate nos 70 minutos: desempate por grandes penalidades
+  const hp = meta?.home_penalties ?? match?.home_penalties
+  const ap = meta?.away_penalties ?? match?.away_penalties
+  if (hp !== null && hp !== undefined && ap !== null && ap !== undefined) {
+    const numHp = Number(hp)
+    const numAp = Number(ap)
+    if (numHp > numAp) return 'home'
+    if (numAp > numHp) return 'away'
   }
   return null
 }
@@ -352,15 +386,21 @@ export function resolverEquipaKnockout(
   const teamId = lado === 'home' ? match?.home_team_id : match?.away_team_id
   const placeholder = (lado === 'home' ? meta?.home_placeholder : meta?.away_placeholder)?.trim() || null
 
-  // Se existe placeholder "VENCEDOR JOGO X" e o jogo X já terminou com vencedor,
-  // podemos resolver dinamicamente (ou usar a equipa explicitamente escolhida)
-  if (!teamId && placeholder && depth < 5) {
-    const m = placeholder.match(/vencedor\s+jogo\s+(\d+)/i)
+  // Se existe placeholder "VENCEDOR JOGO X" e não há equipa fixa,
+  // ou se o lugar depender do jogo anterior e este já terminou com vencedor:
+  if (!teamId && placeholder && depth < 6) {
+    const m = placeholder.match(/vencedors+jogos+(d+)/i)
     if (m) {
       const targetNum = Number(m[1])
-      const sourceMatch = allMatches.find(
-        cand => obterMetaJogoKnockout(rules, cand, allMatches).match_number === targetNum
+      // 1ª busca: por match_number inferido ou em meta
+      let sourceMatch = allMatches.find(
+        cand => cand && obterMetaJogoKnockout(rules, cand, allMatches).match_number === targetNum
       )
+      // 2ª busca (fallback): por ronda se for Jogo 1 ou Jogo 8
+      if (!sourceMatch && targetNum === 1) {
+        sourceMatch = allMatches.find(cand => cand && Number(cand.matchday ?? 1) === 1)
+      }
+
       if (sourceMatch) {
         const sourceMeta = obterMetaJogoKnockout(rules, sourceMatch, allMatches)
         const vencedor = determinarVencedorKnockout(sourceMatch, sourceMeta)
@@ -458,13 +498,17 @@ export async function garantirTacaVeteranos2026(opcoes?: { forcar?: boolean }): 
         t => /ta[cç]a de veteranos/i.test(t.name || '')
       )
 
-      // Se já existe e já tem jogos e não estamos a forçar o restauro, marcamos como verificado
-      if (torneio && !opcoes?.forcar) {
+      // Se já existe, tem metadados completos de eliminatória e os 8 jogos, marcamos como verificado
+      const kmExistente = torneio?.rules?.knockout_matches
+      const temMetaCompleto = torneio?.rules?.format === 'knockout' &&
+        kmExistente && typeof kmExistente === 'object' && Object.keys(kmExistente).length >= 8
+
+      if (torneio && !opcoes?.forcar && temMetaCompleto) {
         const { count } = await supabase
           .from('tournament_matches')
           .select('id', { count: 'exact', head: true })
           .eq('tournament_id', torneio.id)
-        if ((count ?? 0) > 0 && torneio.rules?.format === 'knockout') {
+        if ((count ?? 0) >= 8) {
           try { sessionStorage.setItem('csc_taca_2026_checked', '1') } catch { /* ignore */ }
           return torneio.id
         }
@@ -645,65 +689,86 @@ export async function garantirTacaVeteranos2026(opcoes?: { forcar?: boolean }): 
         ...(torneio.rules?.knockout_matches ?? {}),
       }
 
-      if (!matchesExistentes || matchesExistentes.length === 0 || opcoes?.forcar) {
-        if (opcoes?.forcar && matchesExistentes && matchesExistentes.length > 0) {
-          await supabase.from('tournament_matches').delete().eq('tournament_id', tournamentId)
-        }
+      if (opcoes?.forcar && matchesExistentes && matchesExistentes.length > 0) {
+        await supabase.from('tournament_matches').delete().eq('tournament_id', tournamentId)
+      }
 
-        // Verificar ou criar o evento oficial de Jogo 2 (Cascais vs Tires, 06/12/2026 15:00)
-        const oppTiresId = mapaOpponentId.get('Tires') ?? null
-        let eventoJogo2Id: string | null = null
-        if (oppTiresId) {
-          const { data: evExistente } = await supabase
+      const listaExistentes = (opcoes?.forcar ? [] : (matchesExistentes ?? []))
+
+      // Verificar ou criar o evento oficial de Jogo 2 (Cascais vs Tires, 06/12/2026 15:00)
+      const oppTiresId = mapaOpponentId.get('Tires') ?? null
+      let eventoJogo2Id: string | null = null
+      if (oppTiresId) {
+        const { data: evExistente } = await supabase
+          .from('events')
+          .select('id')
+          .eq('type', 'match')
+          .eq('opponent_id', oppTiresId)
+          .gte('date_time', '2026-12-06T00:00:00Z')
+          .lte('date_time', '2026-12-06T23:59:59Z')
+          .maybeSingle()
+
+        if (evExistente) {
+          eventoJogo2Id = evExistente.id
+          await supabase
             .from('events')
+            .update({
+              tournament_id: tournamentId,
+              matchday: 2,
+              home_away: 'home',
+              field_id: idCampoCascais,
+            })
+            .eq('id', evExistente.id)
+        } else {
+          const { data: novoEv } = await supabase
+            .from('events')
+            .insert([{
+              title: 'Jogo vs Tires',
+              type: 'match',
+              date_time: new Date('2026-12-06T15:00:00').toISOString(),
+              meeting_time: '14:00:00',
+              field_id: idCampoCascais,
+              is_friendly: false,
+              is_active: true,
+              tournament_id: tournamentId,
+              matchday: 2,
+              opponent_id: oppTiresId,
+              home_away: 'home',
+              description: 'Quartos de Final (Jogo 2) — 3ª Taça de Veteranos UCFFCC',
+            }])
             .select('id')
-            .eq('type', 'match')
-            .eq('opponent_id', oppTiresId)
-            .gte('date_time', '2026-12-06T00:00:00Z')
-            .lte('date_time', '2026-12-06T23:59:59Z')
             .maybeSingle()
+          if (novoEv) eventoJogo2Id = novoEv.id
+        }
+      }
 
-          if (evExistente) {
-            eventoJogo2Id = evExistente.id
-            await supabase
-              .from('events')
-              .update({
-                tournament_id: tournamentId,
-                matchday: 2,
-                home_away: 'home',
-                field_id: idCampoCascais,
-              })
-              .eq('id', evExistente.id)
-          } else {
-            const { data: novoEv } = await supabase
-              .from('events')
-              .insert([{
-                title: 'Jogo vs Tires',
-                type: 'match',
-                date_time: new Date('2026-12-06T15:00:00').toISOString(),
-                meeting_time: '14:00:00',
-                field_id: idCampoCascais,
-                is_friendly: false,
-                is_active: true,
-                tournament_id: tournamentId,
-                matchday: 2,
-                opponent_id: oppTiresId,
-                home_away: 'home',
-                description: 'Quartos de Final (Jogo 2) — 3ª Taça de Veteranos UCFFCC',
-              }])
-              .select('id')
-              .maybeSingle()
-            if (novoEv) eventoJogo2Id = novoEv.id
-          }
+      for (const j of JOGOS_OFICIAIS_TACA_2026) {
+        const homeTeamId = j.home_team_name ? (mapaTeamIdPorNome.get(j.home_team_name) ?? null) : null
+        const awayTeamId = j.away_team_name ? (mapaTeamIdPorNome.get(j.away_team_name) ?? null) : null
+        const isoDate = j.match_time
+          ? `${j.match_date}T${j.match_time}:00Z`
+          : `${j.match_date}T15:00:00Z`
+
+        // Procurar se já existe correspondência em matches existentes sem apagar resultados já registados
+        let mExistente = listaExistentes.find(cand => {
+          if (cand.matchday !== j.matchday) return false
+          if (j.match_number === 1 && cand.matchday === 1) return true
+          if (j.match_number === 8 && cand.matchday === 4) return true
+          if (j.match_number === 2 && (cand.home_team_id === homeTeamId || cand.away_team_id === awayTeamId)) return true
+          if (j.match_number === 3 && (cand.home_team_id === homeTeamId || cand.away_team_id === awayTeamId)) return true
+          if (j.match_number === 4 && cand.home_team_id === homeTeamId) return true
+          if (j.match_number === 5 && (cand.home_team_id === homeTeamId || cand.away_team_id === awayTeamId)) return true
+          return false
+        })
+
+        if (!mExistente && j.matchday === 3) {
+          const meias = listaExistentes.filter(c => c.matchday === 3)
+          if (j.match_number === 6 && meias[0]) mExistente = meias[0]
+          if (j.match_number === 7 && meias[1]) mExistente = meias[1]
         }
 
-        for (const j of JOGOS_OFICIAIS_TACA_2026) {
-          const homeTeamId = j.home_team_name ? (mapaTeamIdPorNome.get(j.home_team_name) ?? null) : null
-          const awayTeamId = j.away_team_name ? (mapaTeamIdPorNome.get(j.away_team_name) ?? null) : null
-          const isoDate = j.match_time
-            ? `${j.match_date}T${j.match_time}:00Z`
-            : `${j.match_date}T15:00:00Z`
-
+        let matchIdReal = mExistente?.id
+        if (!matchIdReal) {
           const payload: Record<string, any> = {
             tournament_id: tournamentId,
             group_id: groupId,
@@ -716,46 +781,46 @@ export async function garantirTacaVeteranos2026(opcoes?: { forcar?: boolean }): 
           if (j.match_number === 2 && eventoJogo2Id) {
             payload.event_id = eventoJogo2Id
           }
-
           const { data: mInserido } = await supabase
             .from('tournament_matches')
             .insert([payload])
             .select('id')
             .maybeSingle()
-
-          const metaEntry: KnockoutMatchMeta = {
-            match_id: mInserido?.id,
-            match_number: j.match_number,
-            matchday: j.matchday,
-            round_label: j.round_label,
-            home_placeholder: j.home_placeholder,
-            away_placeholder: j.away_placeholder,
-            location: j.location,
-            match_date: j.match_date,
-            match_time: j.match_time,
-            home_penalties: null,
-            away_penalties: null,
-          }
-          if (mInserido?.id) {
-            knockoutMatchesMeta[mInserido.id] = metaEntry
-          }
-          knockoutMatchesMeta[`jogo_${j.match_number}`] = metaEntry
+          matchIdReal = mInserido?.id
         }
 
-        const novasRegras: TournamentRules = {
-          ...regrasIniciais,
-          format: 'knockout',
-          knockout_matches: knockoutMatchesMeta,
+        const metaEntry: KnockoutMatchMeta = {
+          match_id: matchIdReal,
+          match_number: j.match_number,
+          matchday: j.matchday,
+          round_label: j.round_label,
+          home_placeholder: j.home_placeholder,
+          away_placeholder: j.away_placeholder,
+          location: j.location,
+          match_date: j.match_date,
+          match_time: j.match_time,
+          home_penalties: null,
+          away_penalties: null,
         }
-        await supabase
-          .from('tournaments')
-          .update({
-            rules: novasRegras,
-            organizer_name: torneio.organizer_name || ORGANIZADOR_TACA_VETERANOS_2026,
-            image_url: torneio.image_url || imagemTaca,
-          })
-          .eq('id', tournamentId)
+        if (matchIdReal) {
+          knockoutMatchesMeta[matchIdReal] = metaEntry
+        }
+        knockoutMatchesMeta[`jogo_${j.match_number}`] = metaEntry
       }
+
+      const novasRegras: TournamentRules = {
+        ...regrasIniciais,
+        format: 'knockout',
+        knockout_matches: knockoutMatchesMeta,
+      }
+      await supabase
+        .from('tournaments')
+        .update({
+          rules: novasRegras,
+          organizer_name: torneio.organizer_name || ORGANIZADOR_TACA_VETERANOS_2026,
+          image_url: torneio.image_url || imagemTaca,
+        })
+        .eq('id', tournamentId)
 
       try { sessionStorage.setItem('csc_taca_2026_checked', '1') } catch { /* ignore */ }
       return tournamentId
