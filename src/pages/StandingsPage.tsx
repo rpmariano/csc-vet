@@ -19,6 +19,7 @@ import {
   isTorneioEliminatoria,
   obterRotuloEliminatoria,
   obterFasesEliminatoria,
+  DEFAULT_TOURNAMENT_RULES,
   DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
   type KnockoutMatchMeta,
 } from '../components/clube/torneios'
@@ -1021,7 +1022,91 @@ export const StandingsPage = () => {
             : 'A classificação aparece assim que a direção configurar os grupos desta prova.'}
         />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
+
+          {/* Normas e Regras do Campeonato (colapsável - idêntico à Taça) */}
+          {(() => {
+            const rules = { ...DEFAULT_TOURNAMENT_RULES, ...(selectedTournament?.rules || {}) }
+            return (
+              <details className="cartao-simples overflow-hidden group">
+                <summary className="px-4 py-3 cursor-pointer flex items-center justify-between gap-2 hover:bg-white/5 transition-colors">
+                  <div className="min-w-0">
+                    <p className="font-display font-bold text-[9px] tracking-[0.12em] uppercase text-csc-gold">
+                      {rules.format === 'two_phases'
+                        ? 'Campeonato · Liga 2 Fases (Grupos + Fase Final)'
+                        : 'Campeonato · Liga Corrida'}
+                    </p>
+                    <p className="font-display font-extrabold text-[13px] text-white truncate mt-0.5">
+                      Normas de Participação e Regras ({rules.match_duration_mins ?? 70}' · Máx. {rules.max_match_players ?? 18}/jogo)
+                    </p>
+                  </div>
+                  <ChevronDown size={16} className="text-white/60 shrink-0 group-open:rotate-180 transition-transform" />
+                </summary>
+                <div className="px-4 pb-3.5 pt-2 border-t border-white/10 space-y-2 text-[11.5px] text-white/80">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-white/5 rounded-xl p-2.5">
+                      <p className="text-[9.5px] font-bold uppercase tracking-wider text-white/55">Duração e Subs</p>
+                      <p className="font-bold text-white mt-0.5">
+                        {rules.match_duration_mins ?? 70} min (2×{rules.half_duration_mins ?? 35}' + {rules.halftime_duration_mins ?? 10}' int.)
+                      </p>
+                      <p className="text-[10.5px] text-white/65 mt-0.5">
+                        {rules.rolling_subs !== false ? 'Substituições volantes sem limite' : 'Substituições limitadas'}
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-2.5">
+                      <p className="text-[9.5px] font-bold uppercase tracking-wider text-white/55">Pontuação e Desempate</p>
+                      <p className="font-bold text-white mt-0.5">
+                        Vitória 3 pts · Empate 1 pt
+                      </p>
+                      <p className="text-[10.5px] text-white/65 mt-0.5">
+                        Desempate por {rules.tiebreaker === 'head_to_head' ? 'Confronto direto' : rules.tiebreaker === 'goal_difference' ? 'Diferença de golos' : 'Golos marcados'}
+                        {rules.format === 'two_phases' ? ` · Apuram-se os ${rules.promotion_spots ?? 2} primeiros` : ''}
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-2.5">
+                      <p className="text-[9.5px] font-bold uppercase tracking-wider text-white/55">Idades e Plantel</p>
+                      <p className="font-bold text-white mt-0.5">
+                        {rules.max_birth_year ? `Nascidos ≤ ${rules.max_birth_year}` : `Mín. ${rules.min_age ?? 35} anos`}
+                      </p>
+                      <p className="text-[10.5px] text-white/65 mt-0.5">
+                        {rules.exceptions_allowed
+                          ? `${rules.exceptions_count ?? 3} exceções (${rules.exceptions_max_birth_year ? `nasc. ${rules.exceptions_max_birth_year}` : `≥ ${rules.exceptions_min_age ?? 30} anos`})`
+                          : 'Sem exceções de idade'}
+                        {' · '}
+                        {rules.unlimited_squad ? 'Inscritos ilimitados' : `Máx. ${rules.max_squad_size ?? 40} inscritos`}
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-xl p-2.5">
+                      <p className="text-[9.5px] font-bold uppercase tracking-wider text-white/55">Disciplina e Árbitros</p>
+                      <p className="font-bold text-white mt-0.5">
+                        Suspensão ao {rules.yellow_cards_to_suspension ?? 3}º amarelo
+                      </p>
+                      <p className="text-[10.5px] text-white/65 mt-0.5">
+                        {rules.referee_entity || 'Sideline Events'}
+                        {rules.referee_fee_per_match ? ` (${rules.referee_fee_per_match}€/jogo)` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-csc-gold/10 border border-csc-gold/25 rounded-xl px-3 py-2 text-[11px] text-white/85 space-y-1">
+                    <p>
+                      <span className="font-bold text-csc-gold">Equipamento Alternativo:</span>{' '}
+                      {rules.kit_conflict_rule === 'home_changes'
+                        ? 'Muda a equipa considerada a jogar em casa (visitado).'
+                        : 'Muda a equipa visitante (fora).'}
+                    </p>
+                    <p>
+                      <span className="font-bold text-csc-gold">Falta de Comparência:</span> Derrota por {rules.walkover_score || '3-0'} (tolerância de {rules.delay_tolerance_mins ?? 20} minutos).
+                    </p>
+                    {rules.roster_update_deadline && (
+                      <p>
+                        <span className="font-bold text-csc-gold">Inscrições:</span> {rules.roster_update_deadline}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </details>
+            )
+          })()}
 
           {phasesAvailable.length > 1 && (
             <div className="sem-barra-rolagem flex gap-2 overflow-x-auto pb-0.5">

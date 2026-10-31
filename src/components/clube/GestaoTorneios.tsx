@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useVoltarDaFicha } from '../../hooks/useVoltarDaFicha'
-import { Trophy, Shield, Trash2, Save, ChevronDown, Pencil } from 'lucide-react'
+import { Trophy, Shield, Trash2, Save, ChevronDown, Pencil, Sparkles } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { extractRolesFromProfile } from '../../context/AuthContext'
 import { toast } from '../../context/ToastContext'
@@ -16,6 +16,8 @@ import { CAMPO, ETIQUETA } from './comum'
 import {
   DEFAULT_TOURNAMENT_RULES,
   DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
+  DEFAULT_SIDELINE_TOURNAMENT_RULES,
+  DEFAULT_TACA_CASCAIS_RULES,
   obterFasesEliminatoria,
   type KnockoutRoundDef,
   redistributeInstallments,
@@ -136,18 +138,30 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
     setIsTourModalOpen(true)
   }
 
-  const aplicarModeloTacaVeteranos = () => {
+  const aplicarModeloTacaCascais = () => {
     triggerHaptic('light')
     if (!tourName.trim()) setTourName(NOME_TACA_VETERANOS_2026)
     if (!tourSeason.trim()) setTourSeason(EPOCA_TACA_VETERANOS_2026)
     if (!tourOrganizerName.trim()) setTourOrganizerName(ORGANIZADOR_TACA_VETERANOS_2026)
     if (!existingTourImageUrl && !tourImage) setExistingTourImageUrl(IMAGEM_TACA_VETERANOS_2026)
     setTourRules(prev => ({
-      ...DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
+      ...DEFAULT_TACA_CASCAIS_RULES,
       registration_fee: prev.registration_fee,
       knockout_matches: prev.knockout_matches,
     }))
-    toast.success('Normas da Taça de Veteranos (UCFFCC) aplicadas!')
+    toast.success('Regras da Taça de Cascais (UCFFCC) aplicadas!')
+  }
+
+  const aplicarModeloSideline = () => {
+    triggerHaptic('light')
+    if (!tourName.trim()) setTourName('Liga Masters +35')
+    if (!tourSeason.trim()) setTourSeason('2026/2027')
+    if (!tourOrganizerName.trim()) setTourOrganizerName('Sideline Events')
+    setTourRules(prev => ({
+      ...DEFAULT_SIDELINE_TOURNAMENT_RULES,
+      registration_fee: prev.registration_fee,
+    }))
+    toast.success('Regras da Liga Sideline (+35) aplicadas!')
   }
 
   const abrirEdicao = async (t: Torneio) => {
@@ -499,15 +513,27 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                   <ChevronDown size={15} className="text-white/62 group-open:rotate-180 transition-transform" />
                 </summary>
                 <div className="p-4 border-t border-white/10 grid grid-cols-1 gap-3 max-h-[380px] overflow-y-auto">
-                  <div className="flex items-center justify-between gap-2 pb-1 border-b border-white/10">
+                  <div className="flex items-center justify-between gap-2 pb-1 border-b border-white/10 flex-wrap">
                     <h4 className="text-xs font-black text-white/62 uppercase tracking-wider">Formato da Competição</h4>
-                    <button
-                      type="button"
-                      onClick={aplicarModeloTacaVeteranos}
-                      className="text-[11px] font-bold text-csc-gold hover:underline text-right"
-                    >
-                      Aplicar normas Taça de Veteranos (UCFFCC)
-                    </button>
+                    {isFormatoTaca ? (
+                      <button
+                        type="button"
+                        onClick={aplicarModeloTacaCascais}
+                        className="text-[11px] font-bold text-csc-gold hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Sparkles size={11} />
+                        Predefinir com regras da Taça de Cascais (UCFFCC)
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={aplicarModeloSideline}
+                        className="text-[11px] font-bold text-csc-gold hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Sparkles size={11} />
+                        Predefinir com regras da Sideline (Liga +35)
+                      </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 col-span-1">

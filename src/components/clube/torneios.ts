@@ -159,11 +159,31 @@ export const DEFAULT_TOURNAMENT_RULES: TournamentRules = {
   double_yellow_suspension: true,
   violent_conduct_expulsion: false,
   suspensions_carry_over: false,
-  walkover_score: '5-0',
+  walkover_score: '3-0',
   max_walkovers_allowed: 3,
   delay_tolerance_mins: 20,
-  referee_entity: null,
+  referee_entity: 'Sideline Events',
   referee_fee_per_match: null,
+}
+
+/**
+ * Regras oficiais da Liga Sideline Events (Liga Masters +35):
+ * - Formato: 2 Fases (Grupos + Fase Final com apuramento dos 2 primeiros de cada grupo)
+ * - Critério de Desempate: Confronto Direto
+ * - Idades: Mínimo 35 anos, com até 3 exceções (mínimo 30 anos)
+ * - Plantel: Máximo 40 inscritos, 18 convocados por jogo
+ * - Duração: 70 minutos (2 partes de 35 min, 10 min intervalo) com substituições volantes
+ * - Disciplina: Suspensão ao 3º cartão amarelo
+ * - Conflito de Equipamentos: Muda a equipa visitante (fora)
+ * - Falta de Comparência: 3-0 com tolerância de 20 minutos
+ * - Árbitros: Sideline Events
+ */
+export const DEFAULT_SIDELINE_TOURNAMENT_RULES: TournamentRules = {
+  ...DEFAULT_TOURNAMENT_RULES,
+  format: 'two_phases',
+  promotion_spots: 2,
+  referee_entity: 'Sideline Events',
+  walkover_score: '3-0',
 }
 
 /**
@@ -229,6 +249,8 @@ export const DEFAULT_KNOCKOUT_TOURNAMENT_RULES: TournamentRules = {
   referee_entity: 'NAFLS (Associação de Futebol de Lisboa)',
   referee_fee_per_match: 50,
 }
+
+export const DEFAULT_TACA_CASCAIS_RULES = DEFAULT_KNOCKOUT_TOURNAMENT_RULES
 
 export const ROTULOS_ELIMINATORIA: Record<number, string> = {
   1: 'Oitavos de Final',
