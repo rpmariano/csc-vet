@@ -312,7 +312,7 @@ export function obterMetaJogoKnockout(
     match_id: match?.id ?? salvo?.match_id,
     match_number: matchNumber,
     matchday: roundNum,
-    round_label: salvo?.round_label ?? defOficial?.round_label ?? obterRotuloEliminatoria(roundNum),
+    round_label: salvo?.round_label ?? defOficial?.round_label ?? obterRotuloEliminatoria(roundNum, null, rules),
     home_placeholder: (salvo?.home_placeholder !== undefined && salvo?.home_placeholder !== null && salvo?.home_placeholder !== '')
       ? salvo.home_placeholder
       : (defOficial?.home_placeholder ?? null),

@@ -12,6 +12,13 @@ export type KnockoutTiebreaker = 'penalties' | 'extra_time_penalties' | 'two_leg
 export type KnockoutRoundKey = 'round_of_16' | 'quarter_finals' | 'semi_finals' | 'final'
 export type KitConflictRule = 'away_changes' | 'home_changes'
 
+export interface KnockoutRoundDef {
+  /** Número da eliminatória (ex: 1, 2, 3...) */
+  round: number
+  /** Nome legível da fase (ex: 'Oitavos de Final', 'Quartos de Final', 'Meias Finais', 'Final') */
+  name: string
+}
+
 export interface KnockoutMatchMeta {
   /** ID do jogo em tournament_matches (opcional, usado para cruzar) */
   match_id?: string
@@ -25,6 +32,14 @@ export interface KnockoutMatchMeta {
   home_placeholder?: string | null
   /** Origem/placeholder quando a equipa visitante vem de outro jogo (ex: "VENCEDOR JOGO 1") */
   away_placeholder?: string | null
+  /** Tipo estruturado de origem do visitado */
+  home_source_type?: 'team' | 'winner' | 'loser' | 'custom'
+  /** Número do jogo de origem do visitado (se winner ou loser) */
+  home_source_match_num?: number | null
+  /** Tipo estruturado de origem do visitante */
+  away_source_type?: 'team' | 'winner' | 'loser' | 'custom'
+  /** Número do jogo de origem do visitante (se winner ou loser) */
+  away_source_match_num?: number | null
   /** Local do jogo (ex: "Carcavelos", "Cascais", "Malveira da Serra", "Torre") */
   location?: string | null
   /** Data do jogo YYYY-MM-DD (ex: "2026-11-29") */
@@ -96,6 +111,9 @@ export interface TournamentRules {
   /** Custos de arbitragem pagos por cada clube por jogo realizado (€) (ex: 50). */
   referee_fee_per_match?: number | null
   /** Metadados dos jogos do quadro competitivo (Taça / Eliminatórias), indexados por ID do jogo ou "jogo_<n>". */
+  /** Fases e eliminatórias configuráveis da prova (editável: ex: Oitavos, Quartos, Meias, Final, etc.) */
+  knockout_rounds?: KnockoutRoundDef[]
+  /** Metadados dos jogos do quadro competitivo (Taça / Eliminatórias), indexados por ID do jogo ou "jogo_<n>". */
   knockout_matches?: Record<string, KnockoutMatchMeta>
   /** Inscrição na prova — valor total e, opcionalmente, um plano de tranches com prazo
    * individual cada. Cada tranche liga-se à despesa (transactions) que a liquidou.
@@ -164,8 +182,16 @@ export const DEFAULT_TOURNAMENT_RULES: TournamentRules = {
  * - Lista de participantes atualizada até às 17h00 da 5ª feira anterior ao jogo
  * - Equipamento alternativo: muda a equipa considerada a jogar em casa (lado esquerdo do calendário)
  */
+export const FASES_ELIMINATORIA_PADRAO: KnockoutRoundDef[] = [
+  { round: 1, name: 'Oitavos de Final' },
+  { round: 2, name: 'Quartos de Final' },
+  { round: 3, name: 'Meias Finais' },
+  { round: 4, name: 'Final' },
+]
+
 export const DEFAULT_KNOCKOUT_TOURNAMENT_RULES: TournamentRules = {
   format: 'knockout',
+  knockout_rounds: FASES_ELIMINATORIA_PADRAO,
   tiebreaker: 'head_to_head',
   knockout_tiebreaker: 'penalties',
   knockout_starting_round: 'round_of_16',
@@ -211,9 +237,53 @@ export const ROTULOS_ELIMINATORIA: Record<number, string> = {
   4: 'Final',
 }
 
-export const obterRotuloEliminatoria = (matchday?: number | null, customLabel?: string | null): string => {
+export const obterFasesEliminatoria = (
+  rules?: Partial<TournamentRules> | null,
+  matches?: any[],
+): KnockoutRoundDef[] => {
+  if (rules?.knockout_rounds && rules.knockout_rounds.length > 0) {
+    return [...rules.knockout_rounds].sort((a, b) => a.round - b.round)
+  }
+  const rSet = new Set<number>()
+  if (matches && matches.length > 0) {
+    matches.forEach(m => {
+      const r = Number(m.matchday ?? 1)
+      if (r > 0) rSet.add(r)
+    })
+  }
+  if (rSet.size > 0) {
+    return Array.from(rSet).sort((a, b) => a - b).map(r => ({
+      round: r,
+      name: ROTULOS_ELIMINATORIA[r] || `${r}ª Eliminatória`,
+    }))
+  }
+  if (rules?.knockout_starting_round === 'quarter_finals') {
+    return [
+      { round: 1, name: 'Quartos de Final' },
+      { round: 2, name: 'Meias Finais' },
+      { round: 3, name: 'Final' },
+    ]
+  }
+  if (rules?.knockout_starting_round === 'semi_finals') {
+    return [
+      { round: 1, name: 'Meias Finais' },
+      { round: 2, name: 'Final' },
+    ]
+  }
+  return FASES_ELIMINATORIA_PADRAO
+}
+
+export const obterRotuloEliminatoria = (
+  matchday?: number | null,
+  customLabel?: string | null,
+  rules?: Partial<TournamentRules> | null,
+): string => {
   if (customLabel && customLabel.trim()) return customLabel.trim()
   if (!matchday) return 'Eliminatória'
+  if (rules?.knockout_rounds && rules.knockout_rounds.length > 0) {
+    const achado = rules.knockout_rounds.find(f => f.round === matchday)
+    if (achado && achado.name && achado.name.trim()) return achado.name.trim()
+  }
   return ROTULOS_ELIMINATORIA[matchday] || `${matchday}ª Eliminatória`
 }
 

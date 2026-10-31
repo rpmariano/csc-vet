@@ -16,6 +16,8 @@ import { CAMPO, ETIQUETA } from './comum'
 import {
   DEFAULT_TOURNAMENT_RULES,
   DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
+  obterFasesEliminatoria,
+  type KnockoutRoundDef,
   redistributeInstallments,
   isTorneioEliminatoria,
   verificarElegibilidadeIdadeTorneio,
@@ -568,15 +570,88 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
                         <label className={ETIQUETA}>Fase Inicial da Prova</label>
                         <select
                           value={tourRules.knockout_starting_round || 'round_of_16'}
-                          onChange={e => setTourRules({ ...tourRules, knockout_starting_round: e.target.value as any })}
+                          onChange={e => {
+                            const sr = e.target.value as any
+                            const novasFases: KnockoutRoundDef[] = sr === 'quarter_finals'
+                              ? [{ round: 1, name: 'Quartos de Final' }, { round: 2, name: 'Meias Finais' }, { round: 3, name: 'Final' }]
+                              : sr === 'semi_finals'
+                              ? [{ round: 1, name: 'Meias Finais' }, { round: 2, name: 'Final' }]
+                              : [{ round: 1, name: 'Oitavos de Final' }, { round: 2, name: 'Quartos de Final' }, { round: 3, name: 'Meias Finais' }, { round: 4, name: 'Final' }]
+                            setTourRules({
+                              ...tourRules,
+                              knockout_starting_round: sr,
+                              knockout_rounds: novasFases,
+                            })
+                          }}
                           className={CAMPO}
                         >
-                          <option value="round_of_16">Oitavos de Final</option>
-                          <option value="quarter_finals">Quartos de Final</option>
-                          <option value="semi_finals">Meias Finais</option>
-                          <option value="final">Final</option>
+                          <option value="round_of_16">Oitavos de Final (4 Fases)</option>
+                          <option value="quarter_finals">Quartos de Final (3 Fases)</option>
+                          <option value="semi_finals">Meias Finais (2 Fases)</option>
+                          <option value="final">Apenas Final (1 Fase)</option>
                         </select>
-                        <p className="text-[10px] text-white/50 mt-0.5">Sistema "Taça de Portugal" com jogos a eliminar até à Final.</p>
+                        <p className="text-[10px] text-white/50 mt-0.5">Define a estrutura inicial de eliminatórias da competição.</p>
+                      </div>
+
+                      {/* Lista configurável de Fases da Prova */}
+                      <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-[11px] font-bold text-white uppercase tracking-wider">
+                            Fases Configuradas ({obterFasesEliminatoria(tourRules).length})
+                          </label>
+                          <span className="text-[10px] text-csc-gold font-bold">Editável</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          {obterFasesEliminatoria(tourRules).map((f, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-md bg-csc-gold/20 text-csc-gold font-display font-black text-[11px] flex items-center justify-center shrink-0">
+                                {idx + 1}
+                              </span>
+                              <input
+                                type="text"
+                                value={f.name}
+                                onChange={e => {
+                                  const novoNome = e.target.value
+                                  const fasesAtuais = obterFasesEliminatoria(tourRules)
+                                  const atualizadas = fasesAtuais.map((item, i) => (i === idx ? { ...item, name: novoNome } : item))
+                                  setTourRules({ ...tourRules, knockout_rounds: atualizadas })
+                                }}
+                                placeholder="Nome da Fase"
+                                className={`${CAMPO} flex-1 py-1.5 text-xs`}
+                              />
+                              {obterFasesEliminatoria(tourRules).length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const fasesAtuais = obterFasesEliminatoria(tourRules)
+                                    const filtradas = fasesAtuais.filter((_, i) => i !== idx).map((item, i) => ({ ...item, round: i + 1 }))
+                                    setTourRules({ ...tourRules, knockout_rounds: filtradas })
+                                  }}
+                                  title="Remover esta fase"
+                                  className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-md shrink-0 cursor-pointer"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const fasesAtuais = obterFasesEliminatoria(tourRules)
+                            const novaLista = [
+                              ...fasesAtuais,
+                              { round: fasesAtuais.length + 1, name: `Fase ${fasesAtuais.length + 1}` },
+                            ]
+                            setTourRules({ ...tourRules, knockout_rounds: novaLista })
+                          }}
+                          className="w-full py-1.5 rounded-lg border border-dashed border-csc-gold/30 text-csc-gold hover:bg-csc-gold/10 font-display font-bold text-[10.5px] flex items-center justify-center gap-1 cursor-pointer mt-1"
+                        >
+                          + Adicionar Fase
+                        </button>
                       </div>
                     </div>
                   ) : (

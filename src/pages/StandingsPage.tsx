@@ -18,9 +18,12 @@ import { calcularClassificacao, equipaDoTorneio, jogoTerminado } from '../lib/cl
 import {
   isTorneioEliminatoria,
   obterRotuloEliminatoria,
+  obterFasesEliminatoria,
   DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
   type KnockoutMatchMeta,
+  type KnockoutRoundDef,
 } from '../components/clube/torneios'
+import { Layers } from 'lucide-react'
 import {
   garantirTacaVeteranos2026,
   obterMetaJogoKnockout,
@@ -92,6 +95,17 @@ export const StandingsPage = () => {
   const [koHomePenalties, setKoHomePenalties] = useState('')
   const [koAwayPenalties, setKoAwayPenalties] = useState('')
   const [savingKnockout, setSavingKnockout] = useState(false)
+
+  // Encadeamento de equipas no jogo a eliminar
+  const [koHomeSourceType, setKoHomeSourceType] = useState<'team' | 'winner' | 'loser' | 'custom'>('team')
+  const [koHomeSourceMatch, setKoHomeSourceMatch] = useState('1')
+  const [koAwaySourceType, setKoAwaySourceType] = useState<'team' | 'winner' | 'loser' | 'custom'>('team')
+  const [koAwaySourceMatch, setKoAwaySourceMatch] = useState('1')
+
+  // Configuração das fases da eliminatória
+  const [fasesModalOpen, setFasesModalOpen] = useState(false)
+  const [editandoFases, setEditandoFases] = useState<KnockoutRoundDef[]>([])
+  const [salvandoFases, setSalvandoFases] = useState(false)
 
   // Jornadas — só admin/coach mexem aqui; a introdução de resultados vive na Classificação
   // (junto da tabela que alimenta), em vez de num ecrã de administração à parte.
@@ -319,7 +333,42 @@ export const StandingsPage = () => {
     fetchStandingsData()
   }
 
-  // --- KNOCKOUT / ELIMINATÓRIAS (Taça de Portugal) ---
+  // --- KNOCKOUT / ELIMINATÓRIAS (Fases e Encadeamentos Dinâmicos) ---
+  const abrirConfiguracaoFases = () => {
+    triggerHaptic('light')
+    const fasesAtuais = obterFasesEliminatoria(selectedTournament?.rules, matches)
+    setEditandoFases(fasesAtuais.map(f => ({ ...f })))
+    setFasesModalOpen(true)
+  }
+
+  const handleSalvarFases = async () => {
+    if (!selectedTourId || !selectedTournament) return
+    setSalvandoFases(true)
+    try {
+      const currentRules = selectedTournament.rules || DEFAULT_KNOCKOUT_TOURNAMENT_RULES
+      const novasRegras = {
+        ...currentRules,
+        knockout_rounds: editandoFases.map((f, i) => ({
+          round: i + 1,
+          name: f.name.trim() || `Fase ${i + 1}`,
+        })),
+      }
+      const { error } = await supabase
+        .from('tournaments')
+        .update({ rules: novasRegras })
+        .eq('id', selectedTourId)
+      if (error) throw error
+
+      setTournaments(prev => prev.map(t => (t.id === selectedTourId ? { ...t, rules: novasRegras } : t)))
+      toast.success('Fases da eliminatória atualizadas com sucesso!')
+      setFasesModalOpen(false)
+    } catch (err: any) {
+      toast.error('Erro ao guardar fases: ' + mensagemDeErro(err))
+    } finally {
+      setSalvandoFases(false)
+    }
+  }
+
   const openNewKnockoutMatch = (defaultRound = 1) => {
     triggerHaptic('light')
     const existingNums = matches.map((m, idx) => {
@@ -334,6 +383,10 @@ export const StandingsPage = () => {
     setKoAwayTeamId('')
     setKoHomePlaceholder('')
     setKoAwayPlaceholder('')
+    setKoHomeSourceType('team')
+    setKoHomeSourceMatch('1')
+    setKoAwaySourceType('team')
+    setKoAwaySourceMatch('1')
     setKoDate('')
     setKoTime('15H00')
     setKoLocation('')
@@ -354,6 +407,51 @@ export const StandingsPage = () => {
     setKoAwayTeamId(m.away_team_id || '')
     setKoHomePlaceholder(meta?.home_placeholder || '')
     setKoAwayPlaceholder(meta?.away_placeholder || '')
+
+    // Determinar tipo de origem e número de jogo encadeado (visitado)
+    if (m.home_team_id) {
+      setKoHomeSourceType('team')
+      setKoHomeSourceMatch('1')
+    } else {
+      const hp = (meta?.home_placeholder || '').trim()
+      const mWin = hp.match(/vencedor\s+(?:do\s+)?jogo\s+(\d+)/i)
+      const mLos = hp.match(/(?:derrotado|perdedor)\s+(?:do\s+)?jogo\s+(\d+)/i)
+      if (mWin) {
+        setKoHomeSourceType('winner')
+        setKoHomeSourceMatch(mWin[1])
+      } else if (mLos) {
+        setKoHomeSourceType('loser')
+        setKoHomeSourceMatch(mLos[1])
+      } else if (hp) {
+        setKoHomeSourceType('custom')
+      } else {
+        setKoHomeSourceType('team')
+        setKoHomeSourceMatch('1')
+      }
+    }
+
+    // Determinar tipo de origem e número de jogo encadeado (visitante)
+    if (m.away_team_id) {
+      setKoAwaySourceType('team')
+      setKoAwaySourceMatch('1')
+    } else {
+      const ap = (meta?.away_placeholder || '').trim()
+      const mWin = ap.match(/vencedor\s+(?:do\s+)?jogo\s+(\d+)/i)
+      const mLos = ap.match(/(?:derrotado|perdedor)\s+(?:do\s+)?jogo\s+(\d+)/i)
+      if (mWin) {
+        setKoAwaySourceType('winner')
+        setKoAwaySourceMatch(mWin[1])
+      } else if (mLos) {
+        setKoAwaySourceType('loser')
+        setKoAwaySourceMatch(mLos[1])
+      } else if (ap) {
+        setKoAwaySourceType('custom')
+      } else {
+        setKoAwaySourceType('team')
+        setKoAwaySourceMatch('1')
+      }
+    }
+
     setKoDate(m.match_date ? String(m.match_date).slice(0, 10) : '')
     setKoTime(meta?.match_time || '')
     setKoLocation(meta?.location || '')
@@ -371,13 +469,55 @@ export const StandingsPage = () => {
     const hasScore = koHomeScore !== '' && koAwayScore !== ''
     const hasPens = koHomePenalties !== '' && koAwayPenalties !== ''
 
-    if (!koHomeTeamId && !koHomePlaceholder.trim()) {
-      toast.warning('Escolhe a equipa visitada (casa) ou indica a referência (ex: VENCEDOR JOGO 1).')
-      return
+    // Calcular placeholders e ids com base no encadeamento configurado
+    let finalHomeTeamId: string | null = null
+    let finalHomePlaceholder: string | null = null
+    let homeSourceType = koHomeSourceType
+    let homeSourceMatchNum: number | null = null
+
+    if (koHomeSourceType === 'team') {
+      finalHomeTeamId = koHomeTeamId || null
+      if (!finalHomeTeamId) {
+        toast.warning('Escolhe a equipa visitada (casa).')
+        return
+      }
+    } else if (koHomeSourceType === 'winner') {
+      homeSourceMatchNum = parseInt(koHomeSourceMatch, 10) || 1
+      finalHomePlaceholder = `VENCEDOR JOGO ${homeSourceMatchNum}`
+    } else if (koHomeSourceType === 'loser') {
+      homeSourceMatchNum = parseInt(koHomeSourceMatch, 10) || 1
+      finalHomePlaceholder = `DERROTADO JOGO ${homeSourceMatchNum}`
+    } else {
+      finalHomePlaceholder = koHomePlaceholder.trim() || null
+      if (!finalHomePlaceholder) {
+        toast.warning('Indica a referência da equipa visitada (ex: 1º Grupo A).')
+        return
+      }
     }
-    if (!koAwayTeamId && !koAwayPlaceholder.trim()) {
-      toast.warning('Escolhe a equipa visitante (fora) ou indica a referência (ex: VENCEDOR JOGO 2).')
-      return
+
+    let finalAwayTeamId: string | null = null
+    let finalAwayPlaceholder: string | null = null
+    let awaySourceType = koAwaySourceType
+    let awaySourceMatchNum: number | null = null
+
+    if (koAwaySourceType === 'team') {
+      finalAwayTeamId = koAwayTeamId || null
+      if (!finalAwayTeamId) {
+        toast.warning('Escolhe a equipa visitante (fora).')
+        return
+      }
+    } else if (koAwaySourceType === 'winner') {
+      awaySourceMatchNum = parseInt(koAwaySourceMatch, 10) || 1
+      finalAwayPlaceholder = `VENCEDOR JOGO ${awaySourceMatchNum}`
+    } else if (koAwaySourceType === 'loser') {
+      awaySourceMatchNum = parseInt(koAwaySourceMatch, 10) || 1
+      finalAwayPlaceholder = `DERROTADO JOGO ${awaySourceMatchNum}`
+    } else {
+      finalAwayPlaceholder = koAwayPlaceholder.trim() || null
+      if (!finalAwayPlaceholder) {
+        toast.warning('Indica a referência da equipa visitante (ex: VENCEDOR JOGO 1).')
+        return
+      }
     }
 
     setSavingKnockout(true)
@@ -398,8 +538,8 @@ export const StandingsPage = () => {
         tournament_id: selectedTourId,
         group_id: groupId,
         matchday: roundNum,
-        home_team_id: koHomeTeamId || null,
-        away_team_id: koAwayTeamId || null,
+        home_team_id: finalHomeTeamId,
+        away_team_id: finalAwayTeamId,
         match_date: koDate || null,
         home_score: hasScore ? parseInt(koHomeScore, 10) : null,
         away_score: hasScore ? parseInt(koAwayScore, 10) : null,
@@ -426,13 +566,18 @@ export const StandingsPage = () => {
         ...(currentRules.knockout_matches && !Array.isArray(currentRules.knockout_matches) ? currentRules.knockout_matches : {}),
       }
 
+      const roundLabelCalculado = obterRotuloEliminatoria(roundNum, null, currentRules)
       const newMeta: KnockoutMatchMeta = {
         match_id: savedMatchId || undefined,
         match_number: matchNum,
         matchday: roundNum,
-        round_label: obterRotuloEliminatoria(roundNum),
-        home_placeholder: koHomeTeamId ? null : (koHomePlaceholder.trim() || null),
-        away_placeholder: koAwayTeamId ? null : (koAwayPlaceholder.trim() || null),
+        round_label: roundLabelCalculado,
+        home_placeholder: finalHomePlaceholder,
+        away_placeholder: finalAwayPlaceholder,
+        home_source_type: homeSourceType,
+        home_source_match_num: homeSourceMatchNum,
+        away_source_type: awaySourceType,
+        away_source_match_num: awaySourceMatchNum,
         location: koLocation.trim() || null,
         match_date: koDate || null,
         match_time: koTime.trim() || null,
@@ -590,7 +735,8 @@ export const StandingsPage = () => {
            ===================================================================== */
         (() => {
           const rules = { ...DEFAULT_KNOCKOUT_TOURNAMENT_RULES, ...(selectedTournament?.rules || {}) }
-          const rounds = [1, 2, 3, 4]
+          const fasesDisponiveis = obterFasesEliminatoria(rules, matches)
+          const rounds = fasesDisponiveis.map(f => f.round)
           const visibleRounds = eliminatoriaFiltro === 0 ? rounds : rounds.filter(r => r === eliminatoriaFiltro)
 
           return (
@@ -688,26 +834,37 @@ export const StandingsPage = () => {
                   >
                     Todas
                   </Pastilha>
-                  {rounds.map(r => (
+                  {fasesDisponiveis.map(f => (
                     <Pastilha
-                      key={r}
-                      ativa={eliminatoriaFiltro === r}
-                      onClick={() => { triggerHaptic('selection'); setEliminatoriaFiltro(r) }}
+                      key={f.round}
+                      ativa={eliminatoriaFiltro === f.round}
+                      onClick={() => { triggerHaptic('selection'); setEliminatoriaFiltro(f.round) }}
                       className="flex-none"
                     >
-                      {obterRotuloEliminatoria(r)}
+                      {f.name}
                     </Pastilha>
                   ))}
                 </div>
                 {canManage && (
-                  <button
-                    type="button"
-                    onClick={() => openNewKnockoutMatch(eliminatoriaFiltro || 1)}
-                    className="min-h-10 px-3 rounded-[18px] bg-csc-gold/15 text-csc-gold font-display font-extrabold text-[10.5px] flex items-center gap-1 shrink-0 cursor-pointer transition-transform duration-150 active:scale-97"
-                  >
-                    <Plus size={12} />
-                    Novo jogo
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={abrirConfiguracaoFases}
+                      title="Configurar nomes e número de fases da eliminatória"
+                      className="min-h-10 px-2.5 rounded-[18px] bg-white/10 hover:bg-white/15 text-white/85 font-display font-bold text-[10.5px] flex items-center gap-1 shrink-0 cursor-pointer transition-transform duration-150 active:scale-97"
+                    >
+                      <Layers size={12} />
+                      Fases
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openNewKnockoutMatch(eliminatoriaFiltro || 1)}
+                      className="min-h-10 px-3 rounded-[18px] bg-csc-gold/15 text-csc-gold font-display font-extrabold text-[10.5px] flex items-center gap-1 shrink-0 cursor-pointer transition-transform duration-150 active:scale-97"
+                    >
+                      <Plus size={12} />
+                      Novo jogo
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -726,7 +883,7 @@ export const StandingsPage = () => {
                     <div className="bg-csc-dark px-4 py-3 border-b-2 border-csc-gold flex items-center justify-between gap-2">
                       <div>
                         <h3 className="font-display font-black text-white text-[15px] leading-tight">
-                          {obterRotuloEliminatoria(roundNum)}
+                          {fasesDisponiveis.find(f => f.round === roundNum)?.name || obterRotuloEliminatoria(roundNum, null, rules)}
                         </h3>
                         <p className="text-[10.5px] text-white/62 mt-0.5">
                           {selectedTournament?.name}
@@ -1322,6 +1479,74 @@ export const StandingsPage = () => {
         </div>
       )}
 
+      {/* MODAL: Configurar Fases da Eliminatória */}
+      <Modal
+        isOpen={fasesModalOpen}
+        onClose={() => setFasesModalOpen(false)}
+        title="Configurar Fases da Taça"
+        description="Define os nomes e a ordem das eliminatórias desta competição"
+        footer={
+          <>
+            <Botao aparencia="vidro" onClick={() => setFasesModalOpen(false)}>
+              Cancelar
+            </Botao>
+            <Botao onClick={handleSalvarFases} disabled={salvandoFases}>
+              {salvandoFases ? 'A guardar…' : 'Guardar fases'}
+            </Botao>
+          </>
+        }
+      >
+        <div className="space-y-3.5">
+          <p className="text-[11.5px] text-white/70">
+            Podes renomear qualquer fase, alterar a ordem ou adicionar novas eliminatórias (ex: Pré-Eliminatória, Meias Finais, Apuramento 3º Lugar, Final).
+          </p>
+
+          <div className="space-y-2">
+            {editandoFases.map((f, idx) => (
+              <div key={idx} className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
+                <span className="w-7 h-7 rounded-lg bg-csc-gold/20 text-csc-gold font-display font-black text-[12px] flex items-center justify-center shrink-0">
+                  {idx + 1}
+                </span>
+                <input
+                  type="text"
+                  value={f.name}
+                  onChange={e => {
+                    const novo = e.target.value
+                    setEditandoFases(prev => prev.map((item, i) => (i === idx ? { ...item, name: novo } : item)))
+                  }}
+                  placeholder="Nome da Fase (ex: Quartos de Final)"
+                  className={`${CAMPO} flex-1`}
+                />
+                {editandoFases.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setEditandoFases(prev => prev.filter((_, i) => i !== idx))}
+                    title="Remover esta fase"
+                    className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg shrink-0 cursor-pointer"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEditandoFases(prev => [
+                ...prev,
+                { round: prev.length + 1, name: `Fase ${prev.length + 1}` },
+              ])
+            }}
+            className="w-full py-2.5 rounded-xl border border-dashed border-csc-gold/40 text-csc-gold hover:bg-csc-gold/10 font-display font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Plus size={13} />
+            Adicionar nova fase
+          </button>
+        </div>
+      </Modal>
+
       {/* MODAL: Editar / Novo Jogo de Eliminatória (Taça) */}
       <Modal
         isOpen={knockoutModalOpen}
@@ -1354,23 +1579,25 @@ export const StandingsPage = () => {
         }
       >
         <div className="space-y-3.5">
+          {/* Seleção dinâmica de Eliminatória e Número do Jogo */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={ETIQUETA} htmlFor="ko-round">Eliminatória</label>
+              <label className={ETIQUETA} htmlFor="ko-round">Fase / Eliminatória</label>
               <select
                 id="ko-round"
                 value={koRound}
                 onChange={e => setKoRound(e.target.value)}
                 className={CAMPO}
               >
-                <option value="1">Oitavos de Final</option>
-                <option value="2">Quartos de Final</option>
-                <option value="3">Meias Finais</option>
-                <option value="4">Final</option>
+                {obterFasesEliminatoria(selectedTournament?.rules, matches).map(f => (
+                  <option key={f.round} value={f.round}>
+                    {f.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
-              <label className={ETIQUETA} htmlFor="ko-match-num">Jogo Nº</label>
+              <label className={ETIQUETA} htmlFor="ko-match-num">Número Oficial do Jogo</label>
               <input
                 id="ko-match-num"
                 type="number"
@@ -1382,64 +1609,209 @@ export const StandingsPage = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-            <div>
-              <label className={ETIQUETA} htmlFor="ko-home-team">Visitado (Equipa da Casa — Lado Esquerdo)</label>
+          {/* Encadeamento configurável: Visitado (Equipa da Casa) */}
+          <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className={ETIQUETA}>Visitado (Casa — Lado Esquerdo)</label>
+              <span className="text-[10px] text-csc-gold font-bold uppercase tracking-wider">
+                {koHomeSourceType === 'team' ? 'Equipa Fixa' :
+                 koHomeSourceType === 'winner' ? `Vencedor Jogo ${koHomeSourceMatch}` :
+                 koHomeSourceType === 'loser' ? `Derrotado Jogo ${koHomeSourceMatch}` : 'Referência'}
+              </span>
+            </div>
+
+            {/* Pastilhas de Tipo de Origem */}
+            <div className="sem-barra-rolagem flex gap-1.5 overflow-x-auto pb-0.5">
+              <Pastilha
+                ativa={koHomeSourceType === 'team'}
+                onClick={() => setKoHomeSourceType('team')}
+                className="flex-none text-[10px] py-1"
+              >
+                Equipa
+              </Pastilha>
+              <Pastilha
+                ativa={koHomeSourceType === 'winner'}
+                onClick={() => setKoHomeSourceType('winner')}
+                className="flex-none text-[10px] py-1"
+              >
+                Vencedor de Jogo
+              </Pastilha>
+              <Pastilha
+                ativa={koHomeSourceType === 'loser'}
+                onClick={() => setKoHomeSourceType('loser')}
+                className="flex-none text-[10px] py-1"
+              >
+                Derrotado de Jogo
+              </Pastilha>
+              <Pastilha
+                ativa={koHomeSourceType === 'custom'}
+                onClick={() => setKoHomeSourceType('custom')}
+                className="flex-none text-[10px] py-1"
+              >
+                Referência Livre
+              </Pastilha>
+            </div>
+
+            {koHomeSourceType === 'team' && (
               <select
                 id="ko-home-team"
                 value={koHomeTeamId}
-                onChange={e => {
-                  setKoHomeTeamId(e.target.value)
-                  if (e.target.value) setKoHomePlaceholder('')
-                }}
+                onChange={e => setKoHomeTeamId(e.target.value)}
                 className={CAMPO}
               >
-                <option value="">Por definir / Vencedor de jogo anterior…</option>
+                <option value="">Escolhe a equipa...</option>
                 {teams.map(t => (
                   <option key={t.id} value={t.id}>
                     {t.opponent_id === null ? (clubSettings?.name || 'Cascais') : (t.opponent?.name || equipaDoTorneio(t, clubSettings).sigla)} ({equipaDoTorneio(t, clubSettings).sigla})
                   </option>
                 ))}
               </select>
-              {!koHomeTeamId && (
-                <input
-                  type="text"
-                  value={koHomePlaceholder}
-                  onChange={e => setKoHomePlaceholder(e.target.value)}
-                  placeholder="Ex: VENCEDOR JOGO 2"
-                  className={`${CAMPO} mt-1.5`}
-                />
-              )}
+            )}
+
+            {(koHomeSourceType === 'winner' || koHomeSourceType === 'loser') && (
+              <div>
+                <label className="text-[10.5px] text-white/60 font-semibold mb-1 block">
+                  Encadear com o {koHomeSourceType === 'winner' ? 'vencedor' : 'derrotado'} do jogo:
+                </label>
+                <select
+                  value={koHomeSourceMatch}
+                  onChange={e => setKoHomeSourceMatch(e.target.value)}
+                  className={CAMPO}
+                >
+                  {matches
+                    .filter(m => m.id !== knockoutEditId)
+                    .map((m, idx) => {
+                      const metaCand = obterMetaJogoKnockout(selectedTournament?.rules, m, matches)
+                      const num = metaCand.match_number || idx + 1
+                      const c = resolverEquipaKnockout('home', m, metaCand, matches, teams, clubSettings, selectedTournament?.rules)
+                      const f = resolverEquipaKnockout('away', m, metaCand, matches, teams, clubSettings, selectedTournament?.rules)
+                      return (
+                        <option key={m.id || num} value={num}>
+                          Jogo {num} ({metaCand.round_label || `Fase ${m.matchday || 1}`}) — {c.sigla} vs {f.sigla}
+                        </option>
+                      )
+                    })}
+                  {/* Se ainda não houver jogos criados suficientes, permitir selecionar número 1 a 16 */}
+                  {Array.from({ length: 16 }, (_, i) => i + 1).map(n => (
+                    <option key={`fallback-${n}`} value={n}>
+                      Jogo {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {koHomeSourceType === 'custom' && (
+              <input
+                type="text"
+                value={koHomePlaceholder}
+                onChange={e => setKoHomePlaceholder(e.target.value)}
+                placeholder="Ex: 1º Grupo A / Vencedor Playoff"
+                className={CAMPO}
+              />
+            )}
+          </div>
+
+          {/* Encadeamento configurável: Visitante (Equipa de Fora) */}
+          <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className={ETIQUETA}>Visitante (Fora — Lado Direito)</label>
+              <span className="text-[10px] text-csc-gold font-bold uppercase tracking-wider">
+                {koAwaySourceType === 'team' ? 'Equipa Fixa' :
+                 koAwaySourceType === 'winner' ? `Vencedor Jogo ${koAwaySourceMatch}` :
+                 koAwaySourceType === 'loser' ? `Derrotado Jogo ${koAwaySourceMatch}` : 'Referência'}
+              </span>
             </div>
 
-            <div>
-              <label className={ETIQUETA} htmlFor="ko-away-team">Visitante (Equipa de Fora — Lado Direito)</label>
+            {/* Pastilhas de Tipo de Origem */}
+            <div className="sem-barra-rolagem flex gap-1.5 overflow-x-auto pb-0.5">
+              <Pastilha
+                ativa={koAwaySourceType === 'team'}
+                onClick={() => setKoAwaySourceType('team')}
+                className="flex-none text-[10px] py-1"
+              >
+                Equipa
+              </Pastilha>
+              <Pastilha
+                ativa={koAwaySourceType === 'winner'}
+                onClick={() => setKoAwaySourceType('winner')}
+                className="flex-none text-[10px] py-1"
+              >
+                Vencedor de Jogo
+              </Pastilha>
+              <Pastilha
+                ativa={koAwaySourceType === 'loser'}
+                onClick={() => setKoAwaySourceType('loser')}
+                className="flex-none text-[10px] py-1"
+              >
+                Derrotado de Jogo
+              </Pastilha>
+              <Pastilha
+                ativa={koAwaySourceType === 'custom'}
+                onClick={() => setKoAwaySourceType('custom')}
+                className="flex-none text-[10px] py-1"
+              >
+                Referência Livre
+              </Pastilha>
+            </div>
+
+            {koAwaySourceType === 'team' && (
               <select
                 id="ko-away-team"
                 value={koAwayTeamId}
-                onChange={e => {
-                  setKoAwayTeamId(e.target.value)
-                  if (e.target.value) setKoAwayPlaceholder('')
-                }}
+                onChange={e => setKoAwayTeamId(e.target.value)}
                 className={CAMPO}
               >
-                <option value="">Por definir / Vencedor de jogo anterior…</option>
+                <option value="">Escolhe a equipa...</option>
                 {teams.map(t => (
                   <option key={t.id} value={t.id}>
                     {t.opponent_id === null ? (clubSettings?.name || 'Cascais') : (t.opponent?.name || equipaDoTorneio(t, clubSettings).sigla)} ({equipaDoTorneio(t, clubSettings).sigla})
                   </option>
                 ))}
               </select>
-              {!koAwayTeamId && (
-                <input
-                  type="text"
-                  value={koAwayPlaceholder}
-                  onChange={e => setKoAwayPlaceholder(e.target.value)}
-                  placeholder="Ex: VENCEDOR JOGO 1"
-                  className={`${CAMPO} mt-1.5`}
-                />
-              )}
-            </div>
+            )}
+
+            {(koAwaySourceType === 'winner' || koAwaySourceType === 'loser') && (
+              <div>
+                <label className="text-[10.5px] text-white/60 font-semibold mb-1 block">
+                  Encadear com o {koAwaySourceType === 'winner' ? 'vencedor' : 'derrotado'} do jogo:
+                </label>
+                <select
+                  value={koAwaySourceMatch}
+                  onChange={e => setKoAwaySourceMatch(e.target.value)}
+                  className={CAMPO}
+                >
+                  {matches
+                    .filter(m => m.id !== knockoutEditId)
+                    .map((m, idx) => {
+                      const metaCand = obterMetaJogoKnockout(selectedTournament?.rules, m, matches)
+                      const num = metaCand.match_number || idx + 1
+                      const c = resolverEquipaKnockout('home', m, metaCand, matches, teams, clubSettings, selectedTournament?.rules)
+                      const f = resolverEquipaKnockout('away', m, metaCand, matches, teams, clubSettings, selectedTournament?.rules)
+                      return (
+                        <option key={m.id || num} value={num}>
+                          Jogo {num} ({metaCand.round_label || `Fase ${m.matchday || 1}`}) — {c.sigla} vs {f.sigla}
+                        </option>
+                      )
+                    })}
+                  {Array.from({ length: 16 }, (_, i) => i + 1).map(n => (
+                    <option key={`fallback-away-${n}`} value={n}>
+                      Jogo {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {koAwaySourceType === 'custom' && (
+              <input
+                type="text"
+                value={koAwayPlaceholder}
+                onChange={e => setKoAwayPlaceholder(e.target.value)}
+                placeholder="Ex: VENCEDOR JOGO 1 / 2º Série B"
+                className={CAMPO}
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2.5">
