@@ -699,7 +699,19 @@ export const StandingsPage = () => {
           const rules = { ...DEFAULT_KNOCKOUT_TOURNAMENT_RULES, ...(selectedTournament?.rules || {}) }
           const fasesDisponiveis = obterFasesEliminatoria(rules, matches)
           const rounds = fasesDisponiveis.map(f => f.round)
-          const visibleRounds = eliminatoriaFiltro === 0 ? rounds : rounds.filter(r => r === eliminatoriaFiltro)
+
+          // Fase ativa: exatamente como a jornadaAtiva do campeonato
+          const fasePorDefeito = rounds.find(r => matches.some(m => (m.matchday || 1) === r && !jogoTerminado(m))) ?? rounds[0] ?? 1
+          const faseAtiva = eliminatoriaFiltro > 0 && rounds.includes(eliminatoriaFiltro) ? eliminatoriaFiltro : fasePorDefeito
+          const faseAtivaObj = fasesDisponiveis.find(f => f.round === faseAtiva)
+
+          const jogosDaFase = matches
+            .filter(m => (m.matchday || 1) === faseAtiva)
+            .sort((a, b) => {
+              const metaA = obterMetaJogoKnockout(selectedTournament?.rules, a, matches)
+              const metaB = obterMetaJogoKnockout(selectedTournament?.rules, b, matches)
+              return (metaA?.match_number ?? 99) - (metaB?.match_number ?? 99)
+            })
 
           return (
             <div className="space-y-4">
@@ -786,208 +798,217 @@ export const StandingsPage = () => {
                 </div>
               </details>
 
-              {/* Navegação por Eliminatória + Botão Adicionar Jogo */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="sem-barra-rolagem flex gap-1.5 overflow-x-auto pb-0.5">
-                  <Pastilha
-                    ativa={eliminatoriaFiltro === 0}
-                    onClick={() => { triggerHaptic('selection'); setEliminatoriaFiltro(0) }}
-                    className="flex-none"
-                  >
-                    Todas
-                  </Pastilha>
-                  {fasesDisponiveis.map(f => (
-                    <Pastilha
-                      key={f.round}
-                      ativa={eliminatoriaFiltro === f.round}
-                      onClick={() => { triggerHaptic('selection'); setEliminatoriaFiltro(f.round) }}
-                      className="flex-none"
+              {/* Quadro Único da Eliminatória (UX idêntica à do Campeonato) */}
+              <div className="cartao-simples overflow-hidden">
+                {/* Cabeçalho da Prova e Ação */}
+                <div className="bg-csc-dark px-4 py-3 border-b border-white/10 flex items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-display font-black text-white text-[15px] leading-tight flex items-center gap-2">
+                      <Trophy size={16} className="text-csc-gold" />
+                      <span>{faseAtivaObj?.name || 'Eliminatória'}</span>
+                    </h3>
+                    <p className="text-[10.5px] text-white/62 mt-0.5">
+                      {selectedTournament?.name}
+                      {selectedTournament?.season ? ` · ${selectedTournament.season}` : ''}
+                    </p>
+                  </div>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => openNewKnockoutMatch(faseAtiva)}
+                      className="min-h-10 px-3 rounded-[18px] bg-csc-gold/15 text-csc-gold font-display font-extrabold text-[10.5px] flex items-center gap-1.5 shrink-0 cursor-pointer transition-transform duration-150 active:scale-97"
                     >
-                      {f.name}
-                    </Pastilha>
-                  ))}
+                      <Plus size={12} />
+                      <span>Novo jogo</span>
+                    </button>
+                  )}
                 </div>
-                {canManage && (
-                  <button
-                    type="button"
-                    onClick={() => openNewKnockoutMatch(eliminatoriaFiltro || 1)}
-                    className="min-h-10 px-3 rounded-[18px] bg-csc-gold/15 text-csc-gold font-display font-extrabold text-[10.5px] flex items-center gap-1 shrink-0 cursor-pointer transition-transform duration-150 active:scale-97"
-                  >
-                    <Plus size={12} />
-                    Novo jogo
-                  </button>
+
+                {/* Seletor de Fases (estilo Jornadas: J1, J2...) */}
+                {fasesDisponiveis.length > 1 && (
+                  <div className="border-b border-white/10 px-3.5 py-3 bg-csc-dark/20 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-display font-extrabold text-[9px] tracking-[0.14em] uppercase text-white/62 flex items-center gap-1.5">
+                        <CalendarDays size={12} className="text-csc-gold/70" />
+                        Fases da Prova
+                      </span>
+                      <span className="text-[10.5px] text-white/60 font-semibold">
+                        {jogosDaFase.length} {jogosDaFase.length === 1 ? 'jogo' : 'jogos'}
+                      </span>
+                    </div>
+
+                    <div className="sem-barra-rolagem flex gap-1.5 overflow-x-auto pb-0.5">
+                      {fasesDisponiveis.map(f => {
+                        const total = matches.filter(m => (m.matchday || 1) === f.round).length
+                        const porRealizar = matches.filter(m => (m.matchday || 1) === f.round && !jogoTerminado(m)).length
+                        const ativa = f.round === faseAtiva
+
+                        return (
+                          <Pastilha
+                            key={f.round}
+                            ativa={ativa}
+                            onClick={() => { triggerHaptic('selection'); setEliminatoriaFiltro(f.round) }}
+                            className="flex-none gap-1.5 px-3"
+                          >
+                            <span>{f.name}</span>
+                            {porRealizar > 0 ? (
+                              <span className={`w-1.5 h-1.5 rounded-full ${ativa ? 'bg-csc-tinta/45' : 'bg-csc-gold'}`} />
+                            ) : total > 0 ? (
+                              <span className="text-[9px] opacity-60">✓</span>
+                            ) : null}
+                          </Pastilha>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )}
-              </div>
 
-              {/* Quadro de Eliminatórias */}
-              {visibleRounds.map(roundNum => {
-                const roundMatches = matches
-                  .filter(m => (m.matchday || 1) === roundNum)
-                  .sort((a, b) => {
-                    const metaA = obterMetaJogoKnockout(selectedTournament?.rules, a, matches)
-                    const metaB = obterMetaJogoKnockout(selectedTournament?.rules, b, matches)
-                    return (metaA?.match_number ?? 99) - (metaB?.match_number ?? 99)
-                  })
-
-                return (
-                  <div key={roundNum} className="cartao-simples overflow-hidden">
-                    <div className="bg-csc-dark px-4 py-3 border-b-2 border-csc-gold flex items-center justify-between gap-2">
-                      <div>
-                        <h3 className="font-display font-black text-white text-[15px] leading-tight">
-                          {fasesDisponiveis.find(f => f.round === roundNum)?.name || obterRotuloEliminatoria(roundNum, null, rules)}
-                        </h3>
-                        <p className="text-[10.5px] text-white/62 mt-0.5">
-                          {selectedTournament?.name}
-                          {selectedTournament?.season ? ` · ${selectedTournament.season}` : ''}
-                        </p>
-                      </div>
+                {/* Jogos da Fase Ativa */}
+                <div className="p-3.5 space-y-2.5 bg-csc-dark/30">
+                  {jogosDaFase.length === 0 ? (
+                    <div className="text-center py-8 px-4 space-y-2">
+                      <p className="text-xs text-white/60 italic">
+                        Ainda não há jogos registados em {faseAtivaObj?.name || `Fase ${faseAtiva}`}.
+                      </p>
                       {canManage && (
                         <button
                           type="button"
-                          onClick={() => openNewKnockoutMatch(roundNum)}
-                          className="min-h-9 px-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-csc-gold font-display font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                          onClick={() => openNewKnockoutMatch(faseAtiva)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-csc-gold/15 text-csc-gold font-display font-bold text-[11px] cursor-pointer hover:bg-csc-gold/25 transition-colors"
                         >
-                          <Plus size={11} />
-                          Jogo
+                          <Plus size={12} />
+                          <span>Criar jogo nesta fase</span>
                         </button>
                       )}
                     </div>
+                  ) : (
+                    jogosDaFase.map((m, idx) => {
+                      const meta = obterMetaJogoKnockout(selectedTournament?.rules, m, matches)
+                      const matchNumber = meta?.match_number ?? idx + 1
+                      const casa = resolverEquipaKnockout('home', m, meta, matches, teams, clubSettings, selectedTournament?.rules)
+                      const fora = resolverEquipaKnockout('away', m, meta, matches, teams, clubSettings, selectedTournament?.rules)
+                      const terminado = jogoTerminado(m)
+                      const vencedor = determinarVencedorKnockout(m, meta)
+                      const nosso = casa.eOClube || fora.eOClube
+                      const daFicha = Boolean(m.event_id)
+                      const temFicha = daFicha && terminado
+                      const dataFormatada = m.match_date
+                        ? new Date(m.match_date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                        : 'Data a definir'
 
-                    <div className="p-3 space-y-2.5 bg-csc-dark/30">
-                      {roundMatches.length === 0 ? (
-                        <p className="text-[11px] text-white/55 italic py-2 text-center">
-                          Sem jogos registados nesta eliminatória.
-                        </p>
-                      ) : (
-                        roundMatches.map((m, idx) => {
-                          const meta = obterMetaJogoKnockout(selectedTournament?.rules, m, matches)
-                          const matchNumber = meta?.match_number ?? idx + 1
-                          const casa = resolverEquipaKnockout('home', m, meta, matches, teams, clubSettings, selectedTournament?.rules)
-                          const fora = resolverEquipaKnockout('away', m, meta, matches, teams, clubSettings, selectedTournament?.rules)
-                          const terminado = jogoTerminado(m)
-                          const vencedor = determinarVencedorKnockout(m, meta)
-                          const nosso = casa.eOClube || fora.eOClube
-                          const daFicha = Boolean(m.event_id)
-                          const temFicha = daFicha && terminado
-                          const dataFormatada = m.match_date
-                            ? new Date(m.match_date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                            : 'Data a definir'
+                      const corEquipa = (lado: 'home' | 'away', eq: typeof casa) => {
+                        if (eq.eOClube) return 'text-csc-gold'
+                        if (eq.isPlaceholder) return 'text-white/65 italic'
+                        if (!terminado || !vencedor) return 'text-white/90'
+                        return vencedor === lado ? 'text-white font-black' : 'text-white/45'
+                      }
 
-                          const corEquipa = (lado: 'home' | 'away', eq: typeof casa) => {
-                            if (eq.eOClube) return 'text-csc-gold'
-                            if (eq.isPlaceholder) return 'text-white/65 italic'
-                            if (!terminado || !vencedor) return 'text-white/90'
-                            return vencedor === lado ? 'text-white font-black' : 'text-white/45'
-                          }
+                      return (
+                        <div
+                          key={m.id}
+                          className={`rounded-[15px] p-3 border-l-[3px] space-y-2 ${
+                            nosso ? 'border-l-csc-gold bg-csc-gold/10' : 'border-l-white/20 bg-white/5'
+                          }`}
+                        >
+                          {/* Topo do cartão do jogo: Jogo N | Data | Hora | Local */}
+                          <div className="flex items-center justify-between gap-2 text-[10px] text-white/65 flex-wrap">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="px-2 py-0.5 rounded-md bg-csc-gold/20 text-csc-gold font-display font-black uppercase tracking-wider">
+                                Jogo {matchNumber}
+                              </span>
+                              <span className="font-bold text-white/80 tabular-nums">{dataFormatada}</span>
+                              {meta?.match_time && (
+                                <span className="inline-flex items-center gap-0.5 text-csc-gold/90 font-bold">
+                                  <Clock size={10} />
+                                  {meta.match_time}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {meta?.location && (
+                                <span className="inline-flex items-center gap-1 text-white/70 font-semibold">
+                                  <MapPin size={10} className="text-csc-gold/75" />
+                                  {meta.location}
+                                </span>
+                              )}
+                              {temFicha && (
+                                <Link
+                                  to={`/competicao?ver=fichas&jogo=${m.event_id}`}
+                                  state={{ origem: 'Classificações' }}
+                                  onClick={() => triggerHaptic('light')}
+                                  title="Abrir Ficha de Jogo"
+                                  className="p-1 rounded-lg bg-csc-gold/20 text-csc-gold hover:bg-csc-gold/30"
+                                >
+                                  <ScrollText size={12} />
+                                </Link>
+                              )}
+                              {canManage && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEditKnockoutMatch(m, matchNumber)}
+                                  aria-label={`Editar Jogo ${matchNumber}`}
+                                  className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/75 cursor-pointer"
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
 
-                          return (
-                            <div
-                              key={m.id}
-                              className={`rounded-[15px] p-3 border-l-[3px] space-y-2 ${
-                                nosso ? 'border-l-csc-gold bg-csc-gold/10' : 'border-l-white/20 bg-white/5'
-                              }`}
-                            >
-                              {/* Topo do cartão do jogo: Jogo N | Data | Hora | Local */}
-                              <div className="flex items-center justify-between gap-2 text-[10px] text-white/65 flex-wrap">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="px-2 py-0.5 rounded-md bg-csc-gold/20 text-csc-gold font-display font-black uppercase tracking-wider">
-                                    Jogo {matchNumber}
-                                  </span>
-                                  <span className="font-bold text-white/80 tabular-nums">{dataFormatada}</span>
-                                  {meta?.match_time && (
-                                    <span className="inline-flex items-center gap-0.5 text-csc-gold/90 font-bold">
-                                      <Clock size={10} />
-                                      {meta.match_time}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  {meta?.location && (
-                                    <span className="inline-flex items-center gap-1 text-white/70 font-semibold">
-                                      <MapPin size={10} className="text-csc-gold/75" />
-                                      {meta.location}
-                                    </span>
-                                  )}
-                                  {temFicha && (
-                                    <Link
-                                      to={`/competicao?ver=fichas&jogo=${m.event_id}`}
-                                      state={{ origem: 'Classificações' }}
-                                      onClick={() => triggerHaptic('light')}
-                                      title="Abrir Ficha de Jogo"
-                                      className="p-1 rounded-lg bg-csc-gold/20 text-csc-gold hover:bg-csc-gold/30"
-                                    >
-                                      <ScrollText size={12} />
-                                    </Link>
-                                  )}
-                                  {canManage && (
-                                    <button
-                                      type="button"
-                                      onClick={() => openEditKnockoutMatch(m, matchNumber)}
-                                      aria-label={`Editar Jogo ${matchNumber}`}
-                                      className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/75 cursor-pointer"
-                                    >
-                                      <Pencil size={12} />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Linha Visitado vs Visitante */}
-                              <div className="flex items-center gap-2 pt-0.5">
-                                <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0 text-right">
-                                  <div className="min-w-0">
-                                    <p className={`truncate font-display font-bold text-[12px] ${corEquipa('home', casa)}`}>
-                                      {casa.nome}
-                                    </p>
-                                    {casa.placeholder && casa.resolvidoDePlaceholder && (
-                                      <p className="text-[9px] text-csc-gold font-bold uppercase tracking-wider">
-                                        ({casa.placeholder})
-                                      </p>
-                                    )}
-                                  </div>
-                                  {!casa.isPlaceholder && <EmblemaTorneio logo={casa.logo} eOClube={casa.eOClube} />}
-                                </div>
-
-                                {terminado ? (
-                                  <div className="shrink-0 flex flex-col items-center">
-                                    <span className="px-2.5 py-1 rounded-lg bg-white text-csc-tinta font-display font-black text-[12.5px] tabular-nums">
-                                      {m.home_score} - {m.away_score}
-                                    </span>
-                                    {meta?.home_penalties !== null && meta?.home_penalties !== undefined &&
-                                      meta?.away_penalties !== null && meta?.away_penalties !== undefined && (
-                                        <span className="text-[9.5px] font-bold text-csc-gold mt-0.5 tabular-nums">
-                                          ({meta.home_penalties}-{meta.away_penalties} gp)
-                                        </span>
-                                      )}
-                                  </div>
-                                ) : (
-                                  <span className="shrink-0 w-10 text-center font-display font-black text-[11px] tracking-[0.08em] text-csc-gold/85">
-                                    VS
-                                  </span>
+                          {/* Linha Visitado vs Visitante */}
+                          <div className="flex items-center gap-2 pt-0.5">
+                            <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0 text-right">
+                              <div className="min-w-0">
+                                <p className={`truncate font-display font-bold text-[12px] ${corEquipa('home', casa)}`}>
+                                  {casa.nome}
+                                </p>
+                                {casa.placeholder && casa.resolvidoDePlaceholder && (
+                                  <p className="text-[9px] text-csc-gold font-bold uppercase tracking-wider">
+                                    ({casa.placeholder})
+                                  </p>
                                 )}
+                              </div>
+                              {!casa.isPlaceholder && <EmblemaTorneio logo={casa.logo} eOClube={casa.eOClube} />}
+                            </div>
 
-                                <div className="flex-1 flex items-center gap-1.5 min-w-0">
-                                  {!fora.isPlaceholder && <EmblemaTorneio logo={fora.logo} eOClube={fora.eOClube} />}
-                                  <div className="min-w-0">
-                                    <p className={`truncate font-display font-bold text-[12px] ${corEquipa('away', fora)}`}>
-                                      {fora.nome}
-                                    </p>
-                                    {fora.placeholder && fora.resolvidoDePlaceholder && (
-                                      <p className="text-[9px] text-csc-gold font-bold uppercase tracking-wider">
-                                        ({fora.placeholder})
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
+                            {terminado ? (
+                              <div className="shrink-0 flex flex-col items-center">
+                                <span className="px-2.5 py-1 rounded-lg bg-white text-csc-tinta font-display font-black text-[12.5px] tabular-nums">
+                                  {m.home_score} - {m.away_score}
+                                </span>
+                                {meta?.home_penalties !== null && meta?.home_penalties !== undefined &&
+                                  meta?.away_penalties !== null && meta?.away_penalties !== undefined && (
+                                    <span className="text-[9.5px] font-bold text-csc-gold mt-0.5 tabular-nums">
+                                      ({meta.home_penalties}-{meta.away_penalties} gp)
+                                    </span>
+                                  )}
+                              </div>
+                            ) : (
+                              <span className="shrink-0 w-10 text-center font-display font-black text-[11px] tracking-[0.08em] text-csc-gold/85">
+                                VS
+                              </span>
+                            )}
+
+                            <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                              {!fora.isPlaceholder && <EmblemaTorneio logo={fora.logo} eOClube={fora.eOClube} />}
+                              <div className="min-w-0">
+                                <p className={`truncate font-display font-bold text-[12px] ${corEquipa('away', fora)}`}>
+                                  {fora.nome}
+                                </p>
+                                {fora.placeholder && fora.resolvidoDePlaceholder && (
+                                  <p className="text-[9px] text-csc-gold font-bold uppercase tracking-wider">
+                                    ({fora.placeholder})
+                                  </p>
+                                )}
                               </div>
                             </div>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
             </div>
           )
         })()

@@ -466,9 +466,41 @@ export function resolverEquipaKnockout(
           rules,
           depth + 1,
         )
-        if (!resolvida.isPlaceholder) {
+        const nomeLimpo = resolvida.nome?.trim()
+        const ehPlaceholderInvalido = !nomeLimpo ||
+          nomeLimpo.toLowerCase() === 'por definir' ||
+          Boolean(extrairEncadeamentoJogo(nomeLimpo))
+
+        if (!ehPlaceholderInvalido) {
+          let logo = resolvida.logo
+          let sigla = resolvida.sigla
+          let teamId = resolvida.teamId
+          let eOClube = resolvida.eOClube
+
+          // Se ainda não tem logo nem teamId, procurar nas equipas do torneio por nome
+          if (!teamId && teams && teams.length > 0) {
+            const encontrada = teams.find((t: any) => {
+              const info = equipaDoTorneio(t, clubSettings)
+              const nome = t.opponent_id === null ? (clubSettings?.name || 'Cascais') : (t.opponent?.name || info.sigla)
+              return nome.toLowerCase() === nomeLimpo.toLowerCase() || info.sigla.toLowerCase() === nomeLimpo.toLowerCase()
+            })
+            if (encontrada) {
+              const info = equipaDoTorneio(encontrada, clubSettings)
+              logo = info.logo
+              sigla = info.sigla
+              teamId = encontrada.id
+              eOClube = info.eOClube
+            }
+          }
+
           return {
             ...resolvida,
+            sigla,
+            nome: nomeLimpo,
+            logo,
+            teamId,
+            eOClube,
+            isPlaceholder: false,
             placeholder: placeholder || (isWinner ? `VENCEDOR JOGO ${targetNum}` : `DERROTADO JOGO ${targetNum}`),
             resolvidoDePlaceholder: true,
           }
@@ -477,7 +509,30 @@ export function resolverEquipaKnockout(
     }
   }
 
-  // 3. Lugar ainda por apurar: mostra o placeholder amigável ou 'Por definir'
+  // 3. Se não há encadeamento, mas o placeholder é o nome direto de uma equipa do torneio
+  if (placeholder && teams && teams.length > 0) {
+    const nomeLimpo = placeholder.trim()
+    const encontrada = teams.find((t: any) => {
+      const info = equipaDoTorneio(t, clubSettings)
+      const nome = t.opponent_id === null ? (clubSettings?.name || 'Cascais') : (t.opponent?.name || info.sigla)
+      return nome.toLowerCase() === nomeLimpo.toLowerCase() || info.sigla.toLowerCase() === nomeLimpo.toLowerCase()
+    })
+    if (encontrada) {
+      const info = equipaDoTorneio(encontrada, clubSettings)
+      return {
+        sigla: info.sigla,
+        nome: encontrada.opponent_id === null ? (clubSettings?.name || 'Cascais') : (encontrada.opponent?.name || info.sigla),
+        logo: info.logo,
+        eOClube: info.eOClube,
+        teamId: encontrada.id,
+        placeholder: null,
+        isPlaceholder: false,
+        resolvidoDePlaceholder: false,
+      }
+    }
+  }
+
+  // 4. Lugar ainda por apurar: mostra o placeholder amigável ou 'Por definir'
   const label = placeholder || 'Por definir'
   return {
     sigla: label,
