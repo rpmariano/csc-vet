@@ -988,11 +988,6 @@ export const StandingsPage = () => {
                                     <p className={`truncate font-display font-bold text-[12px] ${corEquipa('home', casa)}`}>
                                       {casa.nome}
                                     </p>
-                                    {casa.placeholder && casa.resolvidoDePlaceholder && (
-                                      <p className="text-[9px] text-csc-gold/80 font-bold uppercase">
-                                        ({casa.placeholder})
-                                      </p>
-                                    )}
                                   </div>
                                   {!casa.isPlaceholder && <EmblemaTorneio logo={casa.logo} eOClube={casa.eOClube} />}
                                 </div>
@@ -1021,11 +1016,6 @@ export const StandingsPage = () => {
                                     <p className={`truncate font-display font-bold text-[12px] ${corEquipa('away', fora)}`}>
                                       {fora.nome}
                                     </p>
-                                    {fora.placeholder && fora.resolvidoDePlaceholder && (
-                                      <p className="text-[9px] text-csc-gold/80 font-bold uppercase">
-                                        ({fora.placeholder})
-                                      </p>
-                                    )}
                                   </div>
                                 </div>
                               </div>

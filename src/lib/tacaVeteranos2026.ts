@@ -369,9 +369,32 @@ export interface EquipaResolvidaKnockout {
 }
 
 /**
+ * Extrai o encadeamento de um jogo (vencedor ou derrotado) a partir do placeholder ou dos campos estruturados.
+ */
+export function extrairEncadeamentoJogo(
+  placeholder: string | null | undefined,
+  sourceType?: 'team' | 'winner' | 'loser' | 'custom',
+  sourceMatchNum?: number | null,
+): { tipo: 'winner' | 'loser'; num: number } | null {
+  if (sourceType === 'winner' && sourceMatchNum) {
+    return { tipo: 'winner', num: Number(sourceMatchNum) }
+  }
+  if (sourceType === 'loser' && sourceMatchNum) {
+    return { tipo: 'loser', num: Number(sourceMatchNum) }
+  }
+  if (!placeholder) return null
+  const texto = placeholder.trim()
+  const mWin = texto.match(/(?:vencedor|venc\.?)\s*(?:do\s*)?jogo\s*(\d+)/i)
+  if (mWin) return { tipo: 'winner', num: Number(mWin[1]) }
+  const mLos = texto.match(/(?:derrotado|perdedor|derr\.?)\s*(?:do\s*)?jogo\s*(\d+)/i)
+  if (mLos) return { tipo: 'loser', num: Number(mLos[1]) }
+  return null
+}
+
+/**
  * Resolve a equipa a apresentar num lado ('home' | 'away') de um jogo de eliminatória.
- * Se o lugar depender de um jogo anterior ("VENCEDOR JOGO X") e esse jogo já tiver vencedor,
- * resolve automaticamente a equipa apurada.
+ * Se o lugar depender de um jogo anterior (ex: "VENCEDOR JOGO 1") e esse jogo já tiver vencedor,
+ * resolve e mostra automaticamente a equipa apurada com o seu emblema.
  */
 export function resolverEquipaKnockout(
   lado: 'home' | 'away',
@@ -385,48 +408,10 @@ export function resolverEquipaKnockout(
 ): EquipaResolvidaKnockout {
   const teamId = lado === 'home' ? match?.home_team_id : match?.away_team_id
   const placeholder = (lado === 'home' ? meta?.home_placeholder : meta?.away_placeholder)?.trim() || null
+  const sourceType = lado === 'home' ? meta?.home_source_type : meta?.away_source_type
+  const sourceMatchNum = lado === 'home' ? meta?.home_source_match_num : meta?.away_source_match_num
 
-  // Se existe placeholder "VENCEDOR JOGO X" e não há equipa fixa,
-  // ou se o lugar depender do jogo anterior e este já terminou com vencedor:
-  if (!teamId && placeholder && depth < 6) {
-    const m = placeholder.match(/vencedors+jogos+(d+)/i)
-    if (m) {
-      const targetNum = Number(m[1])
-      // 1ª busca: por match_number inferido ou em meta
-      let sourceMatch = allMatches.find(
-        cand => cand && obterMetaJogoKnockout(rules, cand, allMatches).match_number === targetNum
-      )
-      // 2ª busca (fallback): por ronda se for Jogo 1 ou Jogo 8
-      if (!sourceMatch && targetNum === 1) {
-        sourceMatch = allMatches.find(cand => cand && Number(cand.matchday ?? 1) === 1)
-      }
-
-      if (sourceMatch) {
-        const sourceMeta = obterMetaJogoKnockout(rules, sourceMatch, allMatches)
-        const vencedor = determinarVencedorKnockout(sourceMatch, sourceMeta)
-        if (vencedor) {
-          const resolvida = resolverEquipaKnockout(
-            vencedor,
-            sourceMatch,
-            sourceMeta,
-            allMatches,
-            teams,
-            clubSettings,
-            rules,
-            depth + 1,
-          )
-          if (!resolvida.isPlaceholder) {
-            return {
-              ...resolvida,
-              placeholder,
-              resolvidoDePlaceholder: true,
-            }
-          }
-        }
-      }
-    }
-  }
-
+  // 1. Se tem equipa fixa atribuída, apresenta essa equipa SEM texto de placeholder
   if (teamId) {
     const teamObj = teams.find(t => t.id === teamId)
     if (teamObj) {
@@ -440,13 +425,59 @@ export function resolverEquipaKnockout(
         logo: info.logo,
         eOClube: info.eOClube,
         teamId,
-        placeholder,
+        placeholder: null,
         isPlaceholder: false,
-        resolvidoDePlaceholder: Boolean(placeholder),
+        resolvidoDePlaceholder: false,
       }
     }
   }
 
+  // 2. Se não tem equipa fixa, verificar se há encadeamento com jogo anterior (Vencedor ou Derrotado)
+  const encadeamento = extrairEncadeamentoJogo(placeholder, sourceType, sourceMatchNum)
+
+  if (encadeamento && depth < 6) {
+    const targetNum = encadeamento.num
+    const isWinner = encadeamento.tipo === 'winner'
+
+    // Procurar o jogo de origem pelo match_number
+    let sourceMatch = allMatches.find(
+      cand => cand && obterMetaJogoKnockout(rules, cand, allMatches).match_number === targetNum
+    )
+    // Fallback: se targetNum for 1, o jogo da ronda 1 é o Jogo 1
+    if (!sourceMatch && targetNum === 1) {
+      sourceMatch = allMatches.find(cand => cand && Number(cand.matchday ?? 1) === 1)
+    }
+
+    if (sourceMatch) {
+      const sourceMeta = obterMetaJogoKnockout(rules, sourceMatch, allMatches)
+      const ladoApurado = isWinner
+        ? determinarVencedorKnockout(sourceMatch, sourceMeta)
+        : (determinarVencedorKnockout(sourceMatch, sourceMeta) === 'home' ? 'away' :
+           determinarVencedorKnockout(sourceMatch, sourceMeta) === 'away' ? 'home' : null)
+
+      if (ladoApurado) {
+        const resolvida = resolverEquipaKnockout(
+          ladoApurado,
+          sourceMatch,
+          sourceMeta,
+          allMatches,
+          teams,
+          clubSettings,
+          rules,
+          depth + 1,
+        )
+        if (!resolvida.isPlaceholder) {
+          return {
+            ...resolvida,
+            placeholder: placeholder || (isWinner ? `VENCEDOR JOGO ${targetNum}` : `DERROTADO JOGO ${targetNum}`),
+            resolvidoDePlaceholder: true,
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Lugar ainda por apurar: mostra o placeholder amigável ou 'Por definir'
   const label = placeholder || 'Por definir'
   return {
     sigla: label,
