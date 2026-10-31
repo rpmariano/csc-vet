@@ -9,6 +9,7 @@ import { mensagemDeErro } from '../../lib/erros'
 import { convocarAdeptosParaJogo } from '../../lib/convocatoriasAdeptos'
 import { eAdepto } from '../../lib/papeis'
 import { obterTodasDisponibilidadesDoJogo, type RespostaDisponibilidade } from '../../lib/disponibilidadeJogo'
+import { verificarElegibilidadeIdadeTorneio, type TournamentRules } from '../clube/torneios'
 
 /**
  * Convocar, logo a seguir a guardar o evento (ecrãs 4f e 4g).
@@ -46,6 +47,7 @@ export interface AtletaConvocavel {
   jersey_number?: number | null
   position?: string | null
   status?: string | null
+  birth_date?: string | null
 }
 
 export interface EventoCriado {
@@ -55,6 +57,9 @@ export interface EventoCriado {
   quando: string
   local?: string | null
   ativo: boolean
+  torneioId?: string | null
+  maxJogadores?: number | null
+  regras?: TournamentRules | null
 }
 
 const ROTULO_TIPO: Record<EventoCriado['tipo'], string> = {
@@ -85,6 +90,8 @@ export const ConvocatoriaAoCriar: React.FC<{
 
   const idsAptos = new Set(aptos.map(p => p.id))
   const eTreino = evento?.tipo === 'practice'
+  const regras = evento?.regras ?? null
+  const limiteMax = evento?.maxJogadores || regras?.max_match_players || null
 
   useEffect(() => {
     if (!evento) return
@@ -102,12 +109,85 @@ export const ConvocatoriaAoCriar: React.FC<{
 
   const alternar = (id: string) => {
     triggerHaptic('selection')
+    if (escolhidos.has(id)) {
+      setEscolhidos(atual => {
+        const seguinte = new Set(atual)
+        seguinte.delete(id)
+        return seguinte
+      })
+      return
+    }
+
+    const p = todos.find(x => x.id === id)
+    if (!idsAptos.has(id)) {
+      toast.warning(`${p ? nomeCurto(p) : 'Este atleta'} não está elegível para este evento (inativo, lesionado, não inscrito ou suspenso).`)
+      return
+    }
+
+    if (limiteMax && escolhidos.size >= limiteMax) {
+      toast.error(`A convocatória atingiu o limite configurado (${limiteMax} convocados).`)
+      return
+    }
+
+    if (regras && p?.birth_date) {
+      const elig = verificarElegibilidadeIdadeTorneio(p.birth_date, regras)
+      if (elig.isInvalidByAge) {
+        toast.error(
+          regras.max_birth_year
+            ? `A prova apenas permite jogadores nascidos até ${regras.max_birth_year} (ou exceção ${regras.exceptions_max_birth_year || ''}).`
+            : `O jogador não cumpre a idade mínima da prova (${regras.min_age} anos).`
+        )
+        return
+      }
+      if (elig.isTooYoung && elig.isExceptionButValid) {
+        const excecoesAtuais = Array.from(escolhidos).filter(eid => {
+          const q = todos.find(pl => pl.id === eid)
+          return q?.birth_date ? verificarElegibilidadeIdadeTorneio(q.birth_date, regras).isTooYoung : false
+        }).length
+        if (excecoesAtuais >= (regras.exceptions_count ?? 0)) {
+          toast.error(
+            regras.max_birth_year
+              ? `Não podes convocar mais exceções de ano de nascimento (${regras.exceptions_max_birth_year}). O limite (${regras.exceptions_count}) já foi atingido.`
+              : `Não podes convocar mais jogadores abaixo dos ${regras.min_age} anos. O limite (${regras.exceptions_count}) já foi atingido.`
+          )
+          return
+        }
+      }
+    }
+
     setEscolhidos(atual => {
       const seguinte = new Set(atual)
-      if (seguinte.has(id)) seguinte.delete(id)
-      else seguinte.add(id)
+      seguinte.add(id)
       return seguinte
     })
+  }
+
+  const selecionarTodosAptos = () => {
+    triggerHaptic('light')
+    let candidatos = aptos.map(p => p.id)
+
+    if (regras) {
+      let excecoes = 0
+      const maxExcecoes = regras.exceptions_allowed ? (regras.exceptions_count ?? 0) : 0
+      candidatos = candidatos.filter(id => {
+        const pl = todos.find(x => x.id === id)
+        if (!pl?.birth_date) return true
+        const elig = verificarElegibilidadeIdadeTorneio(pl.birth_date, regras)
+        if (elig.isInvalidByAge) return false
+        if (elig.isTooYoung) {
+          if (excecoes >= maxExcecoes) return false
+          excecoes += 1
+        }
+        return true
+      })
+    }
+
+    if (limiteMax && candidatos.length > limiteMax) {
+      toast.warning(`Limite de ${limiteMax} convocados atingido. Só foram selecionados os primeiros ${limiteMax} atletas aptos.`)
+      candidatos = candidatos.slice(0, limiteMax)
+    }
+
+    setEscolhidos(new Set(candidatos))
   }
 
   const repetirUltima = async () => {
@@ -122,10 +202,13 @@ export const ConvocatoriaAoCriar: React.FC<{
       .limit(1)
 
     const anterior = (data ?? [])[0] as { callups?: { player_id: string }[] } | undefined
-    const ids = (anterior?.callups ?? []).map(c => c.player_id)
+    let ids = (anterior?.callups ?? []).map(c => c.player_id).filter(id => idsAptos.has(id))
     if (ids.length === 0) {
       toast.warning('Não há convocatória anterior deste tipo para repetir.')
       return
+    }
+    if (limiteMax && ids.length > limiteMax) {
+      ids = ids.slice(0, limiteMax)
     }
     setEscolhidos(new Set(ids))
     toast.success(`Repetida a última convocatória: ${ids.length} atletas.`)
@@ -228,14 +311,14 @@ export const ConvocatoriaAoCriar: React.FC<{
                 Quem convocas?
               </p>
               <p className="font-display font-black text-[11px] text-csc-gold shrink-0">
-                {escolhidos.size} {escolhidos.size === 1 ? 'escolhido' : 'escolhidos'}
+                {escolhidos.size}{limiteMax ? ` / ${limiteMax}` : ''} {escolhidos.size === 1 ? 'escolhido' : 'escolhidos'}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => { triggerHaptic('light'); setEscolhidos(new Set(aptos.map(p => p.id))) }}
+                onClick={selecionarTodosAptos}
                 className="min-h-11 px-3.5 rounded-[22px] bg-csc-light/15 text-csc-verde-texto
                   font-display font-extrabold text-[11px] flex items-center gap-1.5 cursor-pointer
                   transition-transform duration-150 active:scale-97

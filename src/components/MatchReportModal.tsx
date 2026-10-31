@@ -380,6 +380,28 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
       if (espelho.estado === 'sem-equipas') toast.warning(AVISO_SEM_EQUIPAS)
 
       const participatingPlayers = playerStats.filter(p => p.lineup_status !== 'none' || p.goals > 0 || p.yellow_cards > 0 || p.red_cards > 0)
+      const participatingIds = new Set(participatingPlayers.map(p => p.player_id))
+
+      // Se este jogo pertence a um torneio, dar como cumpridas ('served') as suspensões de 1 jogo
+      // dos atletas que estavam suspensos ANTES deste jogo e que efetivamente não alinharam nele.
+      let activeSuspensionsBefore: { id: string; player_id: string; reason: string }[] = []
+      if (event?.tournament_id) {
+        const { data: currSusps } = await supabase
+          .from('tournament_suspensions')
+          .select('id, player_id, reason')
+          .eq('tournament_id', event.tournament_id)
+          .eq('status', 'active')
+        activeSuspensionsBefore = (currSusps ?? []) as { id: string; player_id: string; reason: string }[]
+        const servedIds = activeSuspensionsBefore
+          .filter(s => !participatingIds.has(s.player_id) && !s.reason?.toLowerCase().includes('agressão') && !s.reason?.toLowerCase().includes('expulsão da prova'))
+          .map(s => s.id)
+        if (servedIds.length > 0) {
+          await supabase
+            .from('tournament_suspensions')
+            .update({ status: 'served' })
+            .in('id', servedIds)
+        }
+      }
       
       const newSuspensions = []
 

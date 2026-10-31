@@ -290,6 +290,10 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
         if (!inscritos.has(p.id)) return 'Não inscrito na prova'
       }
       if (suspensos.has(p.id)) return motivosSuspensao.get(p.id) || 'Suspenso'
+      if (regras && p.birth_date) {
+        const elig = verificarElegibilidadeIdadeTorneio(p.birth_date, regras)
+        if (elig.isInvalidByAge) return 'Sem idade para a prova'
+      }
     }
     if (tipo === 'gathering') return null
     // Jogos e treinos são de quem tem o papel de Jogador.
@@ -375,13 +379,36 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
     try {
       const { data: existentes } = await supabase.from('callups').select('player_id').eq('event_id', evento.id)
       const ja = new Set(((existentes ?? []) as { player_id: string }[]).map(c => c.player_id))
-      let novos = Array.from(new Set(quem.map(p => p.id))).filter(id => !ja.has(id))
-      
-      // Se há limite da prova para convocados por jogo, respeitar vagas restantes
-      if (regras?.max_match_players) {
-        const vagas = Math.max(0, regras.max_match_players - ja.size)
+      const idsAtletas = new Set(plantelAtletas.map(p => p.id))
+      const atletasJa = Array.from(ja).filter(id => idsAtletas.has(id))
+      let novos = Array.from(new Set(quem.map(p => p.id))).filter(id => !ja.has(id) && idsAtletas.has(id))
+
+      // Respeitar o limite de exceções de idade/ano de nascimento da prova em convocatórias em lote
+      if (regras) {
+        let excecoesAtuais = atletasJa.filter(id => {
+          const pl = plantel.find(x => x.id === id)
+          return pl?.birth_date ? verificarElegibilidadeIdadeTorneio(pl.birth_date, regras).isTooYoung : false
+        }).length
+        const maxExcecoes = regras.exceptions_allowed ? (regras.exceptions_count ?? 0) : 0
+        novos = novos.filter(id => {
+          const pl = plantel.find(x => x.id === id)
+          if (!pl?.birth_date) return true
+          const elig = verificarElegibilidadeIdadeTorneio(pl.birth_date, regras)
+          if (elig.isInvalidByAge) return false
+          if (elig.isTooYoung) {
+            if (excecoesAtuais >= maxExcecoes) return false
+            excecoesAtuais += 1
+          }
+          return true
+        })
+      }
+
+      // Se há limite da prova ou do evento para convocados por jogo, respeitar vagas restantes
+      const limiteMax = evento.max_players || regras?.max_match_players
+      if (limiteMax) {
+        const vagas = Math.max(0, limiteMax - atletasJa.length)
         if (novos.length > vagas) {
-          toast.warning(`Limite de ${regras.max_match_players} convocados atingido. Só foram adicionados ${vagas} atleta(s).`)
+          toast.warning(`Limite de ${limiteMax} convocados atingido. Só foram adicionados ${vagas} atleta(s).`)
           novos = novos.slice(0, vagas)
         }
       }
@@ -430,10 +457,11 @@ export const EditarEvento: React.FC<EditarEventoProps> = ({
 
   /** As regras da prova para mais um convocado: o limite e as exceções de idade/ano de nascimento. */
   const regraQueImpede = (p: Profile): string | null => {
-    if (!regras) return null
-    if (regras.max_match_players && convocatoriasAtletas.length >= regras.max_match_players) {
-      return `A convocatória atingiu o limite da prova (${regras.max_match_players} convocados).`
+    const limiteMax = evento?.max_players || regras?.max_match_players
+    if (limiteMax && convocatoriasAtletas.length >= limiteMax) {
+      return `A convocatória atingiu o limite configurado (${limiteMax} convocados).`
     }
+    if (!regras) return null
     if (p.birth_date) {
       const elig = verificarElegibilidadeIdadeTorneio(p.birth_date, regras)
       if (elig.isInvalidByAge) {

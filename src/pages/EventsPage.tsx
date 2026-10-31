@@ -737,6 +737,10 @@ const EventsPage: React.FC = () => {
 
       const isSuspended = tournamentSuspensions.some(ts => ts.tournament_id === tId && ts.player_id === player.id && ts.status === 'active')
       if (isSuspended) return false
+      if (tourObj?.rules && player.birth_date) {
+        const elig = verificarElegibilidadeIdadeTorneio(player.birth_date, tourObj.rules)
+        if (elig.isInvalidByAge) return false
+      }
     }
 
     if (eventType === 'gathering') return true
@@ -999,6 +1003,9 @@ const EventsPage: React.FC = () => {
             quando: createdEvent.date_time,
             local: createdEvent.field_id ? getFieldName(createdEvent.field_id) : (createdEvent.location || null),
             ativo: isActiveOnCreate,
+            torneioId: createdEvent.tournament_id,
+            maxJogadores: createdEvent.max_players,
+            regras: tourObj?.rules ?? null,
           })
           setPreEscolhidos(await ensurePlayerIdsForSupabase(preEscolha, allPlayers))
         }
@@ -2347,7 +2354,7 @@ const EventsPage: React.FC = () => {
       <ConvocatoriaAoCriar
         evento={eventoAConvocar}
         aoFechar={() => setEventoAConvocar(null)}
-        aptos={allPlayers.filter(p => !eAdepto(p) && isPlayerEligible(p, eventoAConvocar?.tipo ?? 'match'))}
+        aptos={allPlayers.filter(p => !eAdepto(p) && isPlayerEligible(p, eventoAConvocar?.tipo ?? 'match', eventoAConvocar?.torneioId))}
         todos={allPlayers.filter(p => !eAdepto(p))}
         preEscolhidos={preEscolhidos}
         aoConvocar={() => { fetchData() }}
