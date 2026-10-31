@@ -21,9 +21,7 @@ import {
   obterFasesEliminatoria,
   DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
   type KnockoutMatchMeta,
-  type KnockoutRoundDef,
 } from '../components/clube/torneios'
-import { Layers } from 'lucide-react'
 import {
   garantirTacaVeteranos2026,
   obterMetaJogoKnockout,
@@ -102,10 +100,7 @@ export const StandingsPage = () => {
   const [koAwaySourceType, setKoAwaySourceType] = useState<'team' | 'winner' | 'loser' | 'custom'>('team')
   const [koAwaySourceMatch, setKoAwaySourceMatch] = useState('1')
 
-  // Configuração das fases da eliminatória
-  const [fasesModalOpen, setFasesModalOpen] = useState(false)
-  const [editandoFases, setEditandoFases] = useState<KnockoutRoundDef[]>([])
-  const [salvandoFases, setSalvandoFases] = useState(false)
+
 
   // Jornadas — só admin/coach mexem aqui; a introdução de resultados vive na Classificação
   // (junto da tabela que alimenta), em vez de num ecrã de administração à parte.
@@ -334,40 +329,7 @@ export const StandingsPage = () => {
   }
 
   // --- KNOCKOUT / ELIMINATÓRIAS (Fases e Encadeamentos Dinâmicos) ---
-  const abrirConfiguracaoFases = () => {
-    triggerHaptic('light')
-    const fasesAtuais = obterFasesEliminatoria(selectedTournament?.rules, matches)
-    setEditandoFases(fasesAtuais.map(f => ({ ...f })))
-    setFasesModalOpen(true)
-  }
 
-  const handleSalvarFases = async () => {
-    if (!selectedTourId || !selectedTournament) return
-    setSalvandoFases(true)
-    try {
-      const currentRules = selectedTournament.rules || DEFAULT_KNOCKOUT_TOURNAMENT_RULES
-      const novasRegras = {
-        ...currentRules,
-        knockout_rounds: editandoFases.map((f, i) => ({
-          round: i + 1,
-          name: f.name.trim() || `Fase ${i + 1}`,
-        })),
-      }
-      const { error } = await supabase
-        .from('tournaments')
-        .update({ rules: novasRegras })
-        .eq('id', selectedTourId)
-      if (error) throw error
-
-      setTournaments(prev => prev.map(t => (t.id === selectedTourId ? { ...t, rules: novasRegras } : t)))
-      toast.success('Fases da eliminatória atualizadas com sucesso!')
-      setFasesModalOpen(false)
-    } catch (err: any) {
-      toast.error('Erro ao guardar fases: ' + mensagemDeErro(err))
-    } finally {
-      setSalvandoFases(false)
-    }
-  }
 
   const openNewKnockoutMatch = (defaultRound = 1) => {
     triggerHaptic('light')
@@ -846,25 +808,14 @@ export const StandingsPage = () => {
                   ))}
                 </div>
                 {canManage && (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={abrirConfiguracaoFases}
-                      title="Configurar nomes e número de fases da eliminatória"
-                      className="min-h-10 px-2.5 rounded-[18px] bg-white/10 hover:bg-white/15 text-white/85 font-display font-bold text-[10.5px] flex items-center gap-1 shrink-0 cursor-pointer transition-transform duration-150 active:scale-97"
-                    >
-                      <Layers size={12} />
-                      Fases
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openNewKnockoutMatch(eliminatoriaFiltro || 1)}
-                      className="min-h-10 px-3 rounded-[18px] bg-csc-gold/15 text-csc-gold font-display font-extrabold text-[10.5px] flex items-center gap-1 shrink-0 cursor-pointer transition-transform duration-150 active:scale-97"
-                    >
-                      <Plus size={12} />
-                      Novo jogo
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openNewKnockoutMatch(eliminatoriaFiltro || 1)}
+                    className="min-h-10 px-3 rounded-[18px] bg-csc-gold/15 text-csc-gold font-display font-extrabold text-[10.5px] flex items-center gap-1 shrink-0 cursor-pointer transition-transform duration-150 active:scale-97"
+                  >
+                    <Plus size={12} />
+                    Novo jogo
+                  </button>
                 )}
               </div>
 
@@ -988,6 +939,11 @@ export const StandingsPage = () => {
                                     <p className={`truncate font-display font-bold text-[12px] ${corEquipa('home', casa)}`}>
                                       {casa.nome}
                                     </p>
+                                    {casa.placeholder && casa.resolvidoDePlaceholder && (
+                                      <p className="text-[9px] text-csc-gold font-bold uppercase tracking-wider">
+                                        ({casa.placeholder})
+                                      </p>
+                                    )}
                                   </div>
                                   {!casa.isPlaceholder && <EmblemaTorneio logo={casa.logo} eOClube={casa.eOClube} />}
                                 </div>
@@ -1016,6 +972,11 @@ export const StandingsPage = () => {
                                     <p className={`truncate font-display font-bold text-[12px] ${corEquipa('away', fora)}`}>
                                       {fora.nome}
                                     </p>
+                                    {fora.placeholder && fora.resolvidoDePlaceholder && (
+                                      <p className="text-[9px] text-csc-gold font-bold uppercase tracking-wider">
+                                        ({fora.placeholder})
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1468,74 +1429,6 @@ export const StandingsPage = () => {
           </div>
         </div>
       )}
-
-      {/* MODAL: Configurar Fases da Eliminatória */}
-      <Modal
-        isOpen={fasesModalOpen}
-        onClose={() => setFasesModalOpen(false)}
-        title="Configurar Fases da Taça"
-        description="Define os nomes e a ordem das eliminatórias desta competição"
-        footer={
-          <>
-            <Botao aparencia="vidro" onClick={() => setFasesModalOpen(false)}>
-              Cancelar
-            </Botao>
-            <Botao onClick={handleSalvarFases} disabled={salvandoFases}>
-              {salvandoFases ? 'A guardar…' : 'Guardar fases'}
-            </Botao>
-          </>
-        }
-      >
-        <div className="space-y-3.5">
-          <p className="text-[11.5px] text-white/70">
-            Podes renomear qualquer fase, alterar a ordem ou adicionar novas eliminatórias (ex: Pré-Eliminatória, Meias Finais, Apuramento 3º Lugar, Final).
-          </p>
-
-          <div className="space-y-2">
-            {editandoFases.map((f, idx) => (
-              <div key={idx} className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
-                <span className="w-7 h-7 rounded-lg bg-csc-gold/20 text-csc-gold font-display font-black text-[12px] flex items-center justify-center shrink-0">
-                  {idx + 1}
-                </span>
-                <input
-                  type="text"
-                  value={f.name}
-                  onChange={e => {
-                    const novo = e.target.value
-                    setEditandoFases(prev => prev.map((item, i) => (i === idx ? { ...item, name: novo } : item)))
-                  }}
-                  placeholder="Nome da Fase (ex: Quartos de Final)"
-                  className={`${CAMPO} flex-1`}
-                />
-                {editandoFases.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setEditandoFases(prev => prev.filter((_, i) => i !== idx))}
-                    title="Remover esta fase"
-                    className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg shrink-0 cursor-pointer"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setEditandoFases(prev => [
-                ...prev,
-                { round: prev.length + 1, name: `Fase ${prev.length + 1}` },
-              ])
-            }}
-            className="w-full py-2.5 rounded-xl border border-dashed border-csc-gold/40 text-csc-gold hover:bg-csc-gold/10 font-display font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <Plus size={13} />
-            Adicionar nova fase
-          </button>
-        </div>
-      </Modal>
 
       {/* MODAL: Editar / Novo Jogo de Eliminatória (Taça) */}
       <Modal

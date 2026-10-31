@@ -9,7 +9,12 @@ import { EcraDetalhe } from './EcraDetalhe'
 import { CLUBE_SIGLA } from '../lib/clube'
 import { useClub } from '../context/ClubContext'
 import { equipaDoTorneio } from '../lib/classificacao'
-import { isTorneioEliminatoria } from './clube/torneios'
+import {
+  isTorneioEliminatoria,
+  obterFasesEliminatoria,
+  DEFAULT_KNOCKOUT_TOURNAMENT_RULES,
+  type KnockoutRoundDef,
+} from './clube/torneios'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from './UnsavedChangesModal'
 import { mensagemDeErro } from '../lib/erros'
@@ -69,6 +74,10 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   const [adversarioEmEdicao, setAdversarioEmEdicao] = useState<{ id: string; name: string; initials: string } | null>(null)
   const [gravandoAdversario, setGravandoAdversario] = useState(false)
 
+  // Fases da Taça / Eliminatória
+  const [fasesTaca, setFasesTaca] = useState<KnockoutRoundDef[]>([])
+  const [gravandoFases, setGravandoFases] = useState(false)
+
   const handleGravarAdversario = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!adversarioEmEdicao) return
@@ -115,7 +124,10 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       supabase.from('opponents').select('*').order('name')
     ])
 
-    if (tourRes.data) setTournament(tourRes.data)
+    if (tourRes.data) {
+      setTournament(tourRes.data)
+      setFasesTaca(obterFasesEliminatoria(tourRes.data.rules))
+    }
     if (groupsRes.data) {
       setGroups(groupsRes.data)
       if (groupsRes.data.length === 1) {
@@ -136,6 +148,28 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
   useEffect(() => {
     fetchData()
   }, [tournamentId])
+
+  const handleSalvarFasesTaca = async () => {
+    setGravandoFases(true)
+    try {
+      const currentRules = tournament?.rules || DEFAULT_KNOCKOUT_TOURNAMENT_RULES
+      const novasRegras = {
+        ...currentRules,
+        knockout_rounds: fasesTaca.map((f, i) => ({
+          round: i + 1,
+          name: f.name.trim() || `Fase ${i + 1}`,
+        })),
+      }
+      const { error } = await supabase.from('tournaments').update({ rules: novasRegras }).eq('id', tournamentId)
+      if (error) throw error
+      toast.success('Fases da eliminatória guardadas com sucesso!')
+      setTournament((prev: any) => ({ ...prev, rules: novasRegras }))
+    } catch (err: any) {
+      toast.error('Erro ao guardar fases: ' + mensagemDeErro(err))
+    } finally {
+      setGravandoFases(false)
+    }
+  }
 
   const handleAddGroup = async () => {
     if (!newGroupName.trim()) return
@@ -207,7 +241,7 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
       aberto
       voltarPara="Torneios"
       aoVoltar={onClose}
-      sobrancelha={ehTaca ? 'Equipas da Taça' : 'Grupos e equipas'}
+      sobrancelha={ehTaca ? 'Fases e equipas da Taça' : 'Grupos e equipas'}
       titulo={tournament?.name ?? 'Torneio'}
       legenda={[tournament?.season, tournament?.organizer_name ? `Organização: ${tournament.organizer_name}` : null]
         .filter(Boolean).join(' · ') || undefined}
@@ -217,24 +251,77 @@ export const LeagueManager: React.FC<LeagueManagerProps> = ({ tournamentId, onCl
             <div className="text-center py-10 text-white/62 font-bold">A carregar...</div>
           ) : (
             <div className="space-y-6">
-              {/* "Grupos e equipas" é a sobrancelha do ecrã; aqui fica só a ação. */}
-              <Botao
-                aparencia="vidro"
-                largo
-                onClick={() => {
-                  if (ehTaca && groups.length === 0) setNewGroupName('Quadro Competitivo')
-                  setIsNewGroupModalOpen(true)
-                }}
-              >
-                <Plus size={15} />
-                {ehTaca && groups.length === 0 ? 'Criar Quadro Competitivo' : 'Novo grupo'}
-              </Botao>
+              {ehTaca ? (
+                /* Configuração das Fases da Taça (estilo campeonato) */
+                <div className="cartao-simples p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
+                    <div>
+                      <h4 className="font-display font-black text-white text-[14px]">
+                        Fases da Eliminatória ({fasesTaca.length})
+                      </h4>
+                      <p className="text-[11px] text-white/60 mt-0.5">
+                        Define a sequência e os nomes das eliminatórias desta competição.
+                      </p>
+                    </div>
+                    <Botao onClick={handleSalvarFasesTaca} disabled={gravandoFases}>
+                      {gravandoFases ? 'A guardar…' : 'Guardar fases'}
+                    </Botao>
+                  </div>
 
-              <p className="text-xs text-white/62 -mt-2">
-                {ehTaca
-                  ? 'As eliminatórias (jogos 1 a 8, datas, horários, locais e resultados) gerem-se na página de Classificações.'
-                  : 'As jornadas (jogos, datas e resultados) gerem-se na página de Classificações, depois de criares aqui os grupos e as equipas.'}
-              </p>
+                  <div className="space-y-2">
+                    {fasesTaca.map((f, idx) => (
+                      <div key={idx} className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
+                        <span className="w-7 h-7 rounded-lg bg-csc-gold/20 text-csc-gold font-display font-black text-[12px] flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={f.name}
+                          onChange={e => {
+                            const val = e.target.value
+                            setFasesTaca(prev => prev.map((item, i) => (i === idx ? { ...item, name: val } : item)))
+                          }}
+                          placeholder="Nome da Fase (ex: Quartos de Final)"
+                          className={CLASSE_CAMPO}
+                        />
+                        {fasesTaca.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setFasesTaca(prev => prev.filter((_, i) => i !== idx))}
+                            title="Remover esta fase"
+                            className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg shrink-0 cursor-pointer"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setFasesTaca(prev => [...prev, { round: prev.length + 1, name: `Fase ${prev.length + 1}` }])}
+                    className="w-full py-2 rounded-xl border border-dashed border-csc-gold/40 text-csc-gold hover:bg-csc-gold/10 font-display font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    Adicionar nova fase
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <Botao
+                    aparencia="vidro"
+                    largo
+                    onClick={() => setIsNewGroupModalOpen(true)}
+                  >
+                    <Plus size={15} />
+                    Novo grupo
+                  </Botao>
+                  <p className="text-xs text-white/62 -mt-2">
+                    As jornadas (jogos, datas e resultados) gerem-se na página de Classificações, depois de criares aqui os grupos e as equipas.
+                  </p>
+                </>
+              )}
 
               {/* Add Team UI */}
               {groups.length > 0 && (
