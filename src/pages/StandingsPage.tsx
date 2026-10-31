@@ -6,7 +6,7 @@ import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import {
   Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check,
-  Calendar, CalendarDays, ScrollText, SlidersHorizontal, MapPin, Clock, ChevronDown,
+  Calendar, CalendarDays, ScrollText, SlidersHorizontal, MapPin, Clock, ChevronDown, Sparkles,
 } from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
@@ -29,6 +29,7 @@ import {
   resolverEquipaKnockout,
   determinarVencedorKnockout,
 } from '../lib/tacaVeteranos2026'
+import { garantirSidelineVeteranos2026 } from '../lib/sidelineVeteranos2026'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { mensagemDeErro } from '../lib/erros'
@@ -697,6 +698,24 @@ export const StandingsPage = () => {
   const selectedTournament = tournaments.find(t => t.id === selectedTourId)
   const jornadaModalGroup = groups.find(g => g.id === jornadaModalGroupId)
   const ehTorneioTaca = isTorneioEliminatoria(selectedTournament)
+  const isSidelineTournament = Boolean(
+    selectedTournament && (
+      (selectedTournament.name || '').toLowerCase().includes('sideline') ||
+      (selectedTournament.organizer_name || '').toLowerCase().includes('sideline') ||
+      (selectedTournament.name || '').toLowerCase().includes('liga masters') ||
+      (selectedTournament.name || '').toLowerCase().includes('masters 35')
+    )
+  )
+
+  useEffect(() => {
+    if (!selectedTourId || !isSidelineTournament) return
+    garantirSidelineVeteranos2026({ tournamentId: selectedTourId }).then(res => {
+      if (res && res.totalCriados > 0) {
+        fetchStandingsData()
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTourId, isSidelineTournament])
 
   return (
     <div className="space-y-4">
@@ -1418,24 +1437,47 @@ export const StandingsPage = () => {
                         <CalendarDays size={12} className="text-csc-gold/70" />
                         Jornadas
                       </h4>
-                      {canManage && (() => {
-                        const groupTeamCount = teams.filter(t => t.group_id === g.id).length
-                        return (
+                      <div className="flex items-center gap-2">
+                        {canManage && isSidelineTournament && (g.name || '').toLowerCase().includes('b') && (
                           <button
                             type="button"
-                            onClick={() => { triggerHaptic('light'); openJornadaModal(g.id) }}
-                            disabled={groupTeamCount < 2}
-                            title={groupTeamCount < 2 ? 'Adiciona pelo menos duas equipas ao grupo primeiro' : undefined}
-                            className="min-h-11 px-3 rounded-[18px] bg-csc-gold/15 text-csc-gold
+                            onClick={async () => {
+                              triggerHaptic('light')
+                              const res = await garantirSidelineVeteranos2026({ tournamentId: selectedTourId, groupId: g.id, forcar: true })
+                              if (res) {
+                                toast.success(res.mensagem)
+                                fetchStandingsData()
+                              }
+                            }}
+                            className="min-h-11 px-3 rounded-[18px] bg-csc-light/15 text-csc-verde-texto
                               font-display font-extrabold text-[10.5px] flex items-center gap-1.5 cursor-pointer
-                              transition-transform duration-150 active:scale-97 disabled:opacity-40 disabled:cursor-not-allowed
+                              transition-transform duration-150 active:scale-97 hover:bg-csc-light/25
                               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                            title="Preenche com segurança as jornadas oficiais da Sideline sem apagar dados existentes"
                           >
-                            <Plus size={12} />
-                            Nova jornada
+                            <Sparkles size={12} />
+                            Sincronizar Oficial
                           </button>
-                        )
-                      })()}
+                        )}
+                        {canManage && (() => {
+                          const groupTeamCount = teams.filter(t => t.group_id === g.id).length
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => { triggerHaptic('light'); openJornadaModal(g.id) }}
+                              disabled={groupTeamCount < 2}
+                              title={groupTeamCount < 2 ? 'Adiciona pelo menos duas equipas ao grupo primeiro' : undefined}
+                              className="min-h-11 px-3 rounded-[18px] bg-csc-gold/15 text-csc-gold
+                                font-display font-extrabold text-[10.5px] flex items-center gap-1.5 cursor-pointer
+                                transition-transform duration-150 active:scale-97 disabled:opacity-40 disabled:cursor-not-allowed
+                                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
+                            >
+                              <Plus size={12} />
+                              Nova jornada
+                            </button>
+                          )
+                        })()}
+                      </div>
                     </div>
 
                     {canManage && teams.filter(t => t.group_id === g.id).length < 2 && (

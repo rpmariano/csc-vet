@@ -33,6 +33,7 @@ import {
   ORGANIZADOR_TACA_VETERANOS_2026,
   IMAGEM_TACA_VETERANOS_2026,
 } from '../../lib/tacaVeteranos2026'
+import { garantirSidelineVeteranos2026 } from '../../lib/sidelineVeteranos2026'
 import { mensagemDeErro } from '../../lib/erros'
 import { ProcuraEFiltros } from '../ProcuraEFiltros'
 import type { PropsDaSeccao } from './seccao'
@@ -107,6 +108,9 @@ export const GestaoTorneios: React.FC<PropsDaSeccao> = ({ cabecalho }) => {
     carregar()
     garantirTacaVeteranos2026().then(id => {
       if (id) carregar()
+    })
+    garantirSidelineVeteranos2026().then(res => {
+      if (res?.totalCriados) carregar()
     })
   }, [])
 
