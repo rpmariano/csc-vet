@@ -6,7 +6,7 @@ import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import {
   Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check,
-  CalendarDays, ScrollText, SlidersHorizontal, MapPin, Clock, ChevronDown,
+  Calendar, CalendarDays, ScrollText, SlidersHorizontal, MapPin, Clock, ChevronDown,
 } from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
@@ -41,6 +41,56 @@ const ROTULO_PROVAS = { current: 'Em curso e agendadas', history: 'Terminadas' }
  * desenha um escudo e nunca as iniciais: a sigla está ao lado, e repeti-la era
  * lê-la duas vezes.
  */
+const isEquipaDoClube = (team: any, clubSettings: any): boolean => {
+  if (!team) return false
+  if (team.opponent_id === null || team.opponent_id === undefined || team.opponent_id === '') return true
+  const oppName = (team.opponent?.name || '').toLowerCase().trim()
+  const oppSigla = (team.opponent?.initials || '').toLowerCase().trim()
+  const cscName = (clubSettings?.name || 'cascais').toLowerCase().trim()
+  const cscSigla = (clubSettings?.initials || 'csc').toLowerCase().trim()
+  if (oppName === 'cascais' || oppName.includes('veteranos cascais') || oppName.includes('gds cascais') || oppName === cscName) return true
+  if (oppSigla === 'csc' || oppSigla === cscSigla) return true
+  return false
+}
+
+const verificarSeJogoDoClube = (
+  match: any,
+  meta: any,
+  allMatches: any[],
+  teams: any[],
+  clubSettings: any,
+  rules?: any
+): boolean => {
+  if (!match) return false
+  if (match.event_id) return true
+
+  // 1. Equipas resolvidas no confronto
+  const casa = resolverEquipaKnockout('home', match, meta, allMatches, teams, clubSettings, rules)
+  const fora = resolverEquipaKnockout('away', match, meta, allMatches, teams, clubSettings, rules)
+  if (casa.eOClube || fora.eOClube) return true
+
+  // 2. Nomes e siglas
+  const nomeCasa = (casa.nome || '').toLowerCase()
+  const nomeFora = (fora.nome || '').toLowerCase()
+  const siglaCasa = (casa.sigla || '').toLowerCase()
+  const siglaFora = (fora.sigla || '').toLowerCase()
+  if (nomeCasa.includes('cascais') || siglaCasa === 'csc') return true
+  if (nomeFora.includes('cascais') || siglaFora === 'csc') return true
+
+  // 3. IDs em tournament_teams
+  const cscTeam = teams.find(t => isEquipaDoClube(t, clubSettings))
+  if (cscTeam) {
+    if (match.home_team_id === cscTeam.id || match.away_team_id === cscTeam.id) return true
+  }
+
+  // 4. Placeholders
+  const hp = (meta?.home_placeholder || '').toLowerCase()
+  const ap = (meta?.away_placeholder || '').toLowerCase()
+  if (hp.includes('cascais') || ap.includes('cascais')) return true
+
+  return false
+}
+
 const EmblemaTorneio = ({ logo, eOClube }: { logo: string | null; eOClube: boolean }) => (
   <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
     {logo ? (
@@ -229,7 +279,7 @@ export const StandingsPage = () => {
     const loadedMatches = matchesRes.data || []
     const loadedTeams = teamsRes.data || []
     const loadedEvents = eventsRes.data || []
-    const cscTeam = loadedTeams.find(t => t.opponent_id === null)
+    const cscTeam = loadedTeams.find(t => isEquipaDoClube(t, clubSettings))
 
     // Sincronizar e auto-ligar jogos do Cascais que ainda não tenham event_id
     if (cscTeam) {
@@ -952,7 +1002,7 @@ export const StandingsPage = () => {
                       const fora = resolverEquipaKnockout('away', m, meta, matches, teams, clubSettings, selectedTournament?.rules)
                       const terminado = jogoTerminado(m)
                       const vencedor = determinarVencedorKnockout(m, meta)
-                      const nosso = casa.eOClube || fora.eOClube
+                      const nosso = verificarSeJogoDoClube(m, meta, matches, teams, clubSettings, selectedTournament?.rules)
                       const daFicha = Boolean(m.event_id)
                       const temFicha = daFicha && terminado
                       const dataFormatada = m.match_date
@@ -1018,7 +1068,18 @@ export const StandingsPage = () => {
                                   <span>Preencher Ficha</span>
                                 </Link>
                               )}
-                              {canManage && (
+                              {!daFicha && nosso && (
+                                <Link
+                                  to="/eventos"
+                                  onClick={() => triggerHaptic('light')}
+                                  title="Criar jogo na Agenda"
+                                  className="p-1 px-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 flex items-center gap-1 text-[10.5px] font-semibold"
+                                >
+                                  <Calendar size={12} />
+                                  <span>Agendar</span>
+                                </Link>
+                              )}
+                              {canManage && !nosso && (
                                 <button
                                   type="button"
                                   onClick={() => openEditKnockoutMatch(m, matchNumber)}
@@ -1436,7 +1497,7 @@ export const StandingsPage = () => {
                                       ? 'text-white/45'
                                       : 'text-white/75'
 
-                            if (editingMatchId === m.id && !daFicha) {
+                            if (editingMatchId === m.id && !daFicha && !nosso) {
                               return (
                                 <div key={m.id} className="rounded-[14px] bg-csc-gold/10 p-2.5 space-y-2">
                                   <div className="flex items-center gap-2">
@@ -1586,7 +1647,7 @@ export const StandingsPage = () => {
                               )
                             }
 
-                            return canManage && !daFicha ? (
+                            return canManage && !daFicha && !nosso ? (
                               <button
                                 key={m.id}
                                 type="button"
@@ -1928,10 +1989,10 @@ export const StandingsPage = () => {
           {/* Se for jogo do Cascais, o resultado é exclusivamente através da Ficha de Jogo */}
           {(() => {
             const matchAEditar = matches.find(m => m.id === knockoutEditId)
-            const cscTeamObj = teams.find(t => t.opponent_id === null)
-            const ehJogoCascais = matchAEditar
-              ? (matchAEditar.home_team_id === cscTeamObj?.id || matchAEditar.away_team_id === cscTeamObj?.id || Boolean(matchAEditar.event_id))
-              : (koHomeTeamId === cscTeamObj?.id || koAwayTeamId === cscTeamObj?.id)
+            const metaAEditar = matchAEditar ? obterMetaJogoKnockout(selectedTournament?.rules, matchAEditar, matches) : null
+            const cscTeamObj = teams.find(t => isEquipaDoClube(t, clubSettings))
+            const ehJogoCascais = verificarSeJogoDoClube(matchAEditar, metaAEditar, matches, teams, clubSettings, selectedTournament?.rules)
+              || (cscTeamObj ? (koHomeTeamId === cscTeamObj.id || koAwayTeamId === cscTeamObj.id) : false)
 
             if (ehJogoCascais) {
               const temPlacar = matchAEditar && jogoTerminado(matchAEditar)
