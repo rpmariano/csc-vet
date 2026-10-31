@@ -236,3 +236,39 @@ test('Equipas fixas (ex: Lisbon Casuals ou Tires) têm sempre resolvidoDePlaceho
   assert.equal(fora.resolvidoDePlaceholder, false)
   assert.equal(fora.placeholder, null)
 })
+
+test('Determinar vencedor de eliminatória com desempate por penáltis', () => {
+  const match = { id: 'm-ko', home_score: 1, away_score: 1 }
+  const meta = { home_penalties: 4, away_penalties: 3 }
+  assert.equal(determinarVencedorKnockout(match, meta), 'home')
+
+  const metaAway = { home_penalties: 2, away_penalties: 4 }
+  assert.equal(determinarVencedorKnockout(match, metaAway), 'away')
+})
+
+test('Ficha de jogo: extração de metadados com penáltis para eliminatórias', () => {
+  function parseMatchReportMetadata(desc) {
+    if (!desc) return { tacticalFormation: '4-3-3', occurrences: '', cleanDescription: '', penalties: null }
+    const reportTagMatch = desc.match(/\[MATCH_REPORT:([\s\S]*?)\]/)
+    if (reportTagMatch && reportTagMatch[1]) {
+      try {
+        const parsed = JSON.parse(reportTagMatch[1])
+        const cleanDescription = desc.replace(/\[MATCH_REPORT:[\s\S]*?\]/, '').trim()
+        const rawFormation = parsed.tactical || '4-3-3'
+        return {
+          tacticalFormation: rawFormation.replace(/^1-/, ''),
+          occurrences: parsed.occurrences || '',
+          penalties: (parsed.penalties && typeof parsed.penalties === 'object') ? parsed.penalties : null,
+          cleanDescription
+        }
+      } catch {}
+    }
+    return { tacticalFormation: '4-3-3', occurrences: '', cleanDescription: desc || '', penalties: null }
+  }
+
+  const desc = 'Jogo muito disputado.\\n\\n[MATCH_REPORT:{"tactical":"4-3-3","occurrences":"Golo aos 12\'","penalties":{"home":4,"away":3}}]'
+  const res = parseMatchReportMetadata(desc)
+  assert.equal(res.tacticalFormation, '4-3-3')
+  assert.equal(res.occurrences, "Golo aos 12'")
+  assert.deepEqual(res.penalties, { home: 4, away: 3 })
+})

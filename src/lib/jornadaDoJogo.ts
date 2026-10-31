@@ -1,23 +1,18 @@
 import { supabase } from './supabaseClient'
+import { isTorneioEliminatoria } from '../components/clube/torneios'
+import { parseMatchReportMetadata } from '../components/MatchReportModal'
 
 /**
  * O nosso jogo, espelhado na jornada do torneio.
  *
  * Um jogo do clube vive em `events` — é lá que estão a convocatória, a
- * concentração e a ficha de jogo. A classificação lê `tournament_matches`.
- * Eram dois sítios sem ligação nenhuma: quem quisesse o jogo na tabela tinha
- * de o escrever outra vez à mão como jornada, e o resultado da ficha ficava
- * de fora (a `StandingsPage` procurava-o por `status = 'finished'` e
- * `home_away = 'casa'`, valores que este esquema não tem — nunca dava).
+ * concentração e a ficha de jogo. A classificação e o quadro da prova leem
+ * `tournament_matches`.
  *
- * Agora o evento diz em que jornada conta, e esta função escreve a linha da
- * jornada a partir dele: ao criar o jogo nasce "por realizar", e a ficha de
- * jogo lança o resultado nos dois sítios ao mesmo tempo. A linha traz
- * `event_id`, por isso não há como duplicar nem como perder de vista de onde
- * veio.
- *
- * **A casa e a visita são as do evento**, não as nossas: num jogo fora,
- * `home_score` é o do adversário — é assim que a app inteira lê o placar.
+ * Tanto no campeonato como na taça (eliminatória), os jogos do Cascais
+ * seguem a mesma regra: o resultado, golos e marcadores são lançados através
+ * das fichas de jogo oficiais, e esta função mantém a tabela/quadro da prova
+ * atualizados automaticamente.
  */
 
 export interface EventoParaJornada {
@@ -29,6 +24,8 @@ export interface EventoParaJornada {
   home_score?: number | null
   away_score?: number | null
   date_time?: string | null
+  penalties?: { home: number; away: number } | null
+  description?: string | null
 }
 
 export type ResultadoSincronizacao =
@@ -51,7 +48,7 @@ export const sincronizarJogoNaJornada = async (
 ): Promise<ResultadoSincronizacao> => {
   const { data: espelhoAtual, error: erroEspelho } = await supabase
     .from('tournament_matches')
-    .select('id')
+    .select('id, matchday, home_team_id, away_team_id, group_id')
     .eq('event_id', evento.id)
     .maybeSingle()
   if (erroEspelho) return { estado: 'erro', mensagem: erroEspelho.message }
@@ -64,7 +61,7 @@ export const sincronizarJogoNaJornada = async (
     return error ? error.message : null
   }
 
-  if (!evento.tournament_id || !evento.matchday || !evento.opponent_id) {
+  if (!evento.tournament_id || !evento.opponent_id) {
     const erro = await tirarEspelho()
     return erro ? { estado: 'erro', mensagem: erro } : { estado: 'sem-jornada' }
   }
@@ -111,49 +108,135 @@ export const sincronizarJogoNaJornada = async (
     return { estado: 'sem-equipas' }
   }
 
-  const fora = evento.home_away === 'away'
+  // Buscar todos os jogos existentes deste torneio para encontrar o jogo correspondente
+  const { data: matchesExistentes, error: erroMatches } = await supabase
+    .from('tournament_matches')
+    .select('id, matchday, home_team_id, away_team_id, event_id, group_id')
+    .eq('tournament_id', evento.tournament_id)
+  if (erroMatches) return { estado: 'erro', mensagem: erroMatches.message }
+
+  // 1) Já associado a este evento
+  const jaLigado = (matchesExistentes || []).find(m => m.event_id === evento.id)
+
+  // 2) Correspondência pelas duas equipas (nossa e adversário, em casa ou fora)
+  const confrontos = (matchesExistentes || []).filter(m =>
+    (m.home_team_id === nossa.id && m.away_team_id === deles.id) ||
+    (m.home_team_id === deles.id && m.away_team_id === nossa.id)
+  )
+
+  const aMao = jaLigado
+    || (evento.matchday ? confrontos.find(m => m.matchday === evento.matchday) : null)
+    || confrontos.find(m => !m.event_id)
+    || confrontos[0]
+
+  if (!evento.matchday && !aMao) {
+    const erro = await tirarEspelho()
+    return erro ? { estado: 'erro', mensagem: erro } : { estado: 'sem-jornada' }
+  }
+
+  const matchAlvo = jaLigado || aMao
+  const cascaisEVisitanteNoEvento = evento.home_away === 'away'
   const temResultado = evento.home_score !== null && evento.home_score !== undefined
     && evento.away_score !== null && evento.away_score !== undefined
 
+  // No evento, home_score é do visitado (da casa) e away_score é do visitante (de fora)
+  const cascaisScore = cascaisEVisitanteNoEvento ? evento.away_score : evento.home_score
+  const elesScore = cascaisEVisitanteNoEvento ? evento.home_score : evento.away_score
+
+  let homeTeamIdFinal = cascaisEVisitanteNoEvento ? deles.id : nossa.id
+  let awayTeamIdFinal = cascaisEVisitanteNoEvento ? nossa.id : deles.id
+  let homeScoreFinal = temResultado ? (cascaisEVisitanteNoEvento ? elesScore : cascaisScore) : null
+  let awayScoreFinal = temResultado ? (cascaisEVisitanteNoEvento ? cascaisScore : elesScore) : null
+
+  // Se o jogo já estava desenhado na tabela/eliminatória, respeitar a equipa da casa oficial
+  if (matchAlvo) {
+    if (matchAlvo.home_team_id === nossa.id && matchAlvo.away_team_id === deles.id) {
+      homeTeamIdFinal = nossa.id
+      awayTeamIdFinal = deles.id
+      homeScoreFinal = temResultado ? cascaisScore : null
+      awayScoreFinal = temResultado ? elesScore : null
+    } else if (matchAlvo.home_team_id === deles.id && matchAlvo.away_team_id === nossa.id) {
+      homeTeamIdFinal = deles.id
+      awayTeamIdFinal = nossa.id
+      homeScoreFinal = temResultado ? elesScore : null
+      awayScoreFinal = temResultado ? cascaisScore : null
+    }
+  }
+
+  const matchdayFinal = matchAlvo?.matchday || evento.matchday || 1
+
   const linha = {
     tournament_id: evento.tournament_id,
-    group_id: grupoId,
-    matchday: evento.matchday,
-    home_team_id: fora ? deles.id : nossa.id,
-    away_team_id: fora ? nossa.id : deles.id,
+    group_id: matchAlvo?.group_id || grupoId,
+    matchday: matchdayFinal,
+    home_team_id: homeTeamIdFinal,
+    away_team_id: awayTeamIdFinal,
     match_date: evento.date_time ? evento.date_time.slice(0, 10) : null,
     status: temResultado ? 'finished' : 'scheduled',
-    home_score: temResultado ? evento.home_score : null,
-    away_score: temResultado ? evento.away_score : null,
+    home_score: homeScoreFinal,
+    away_score: awayScoreFinal,
     event_id: evento.id,
   }
 
-  if (espelhoAtual) {
-    const { error } = await supabase.from('tournament_matches').update(linha).eq('id', espelhoAtual.id)
-    return error ? { estado: 'erro', mensagem: error.message } : { estado: 'gravado' }
+  let matchIdFinal: string | null = null
+
+  if (matchAlvo) {
+    const { error } = await supabase.from('tournament_matches').update(linha).eq('id', matchAlvo.id)
+    if (error) return { estado: 'erro', mensagem: error.message }
+    matchIdFinal = matchAlvo.id
+  } else {
+    const { data: inserido, error } = await supabase.from('tournament_matches').insert([linha]).select('id').single()
+    if (error) return { estado: 'erro', mensagem: error.message }
+    matchIdFinal = inserido?.id ?? null
   }
 
-  /* Antes de inserir, adotar a linha que a direção possa ter escrito à mão
-     para este mesmo jogo — senão a jornada ficava com o jogo duas vezes, e a
-     classificação a contá-lo a dobrar. */
-  const { data: aMao, error: erroAMao } = await supabase
-    .from('tournament_matches')
-    .select('id')
-    .eq('tournament_id', evento.tournament_id)
-    .eq('matchday', evento.matchday)
-    .eq('home_team_id', linha.home_team_id)
-    .eq('away_team_id', linha.away_team_id)
-    .is('event_id', null)
-    .maybeSingle()
-  if (erroAMao) return { estado: 'erro', mensagem: erroAMao.message }
-
-  if (aMao) {
-    const { error } = await supabase.from('tournament_matches').update(linha).eq('id', aMao.id)
-    return error ? { estado: 'erro', mensagem: error.message } : { estado: 'gravado' }
+  // Se for torneio de eliminatória e houver desempate por penáltis, sincronizar com tournaments.rules.knockout_matches
+  let penalties = evento.penalties
+  if (!penalties && evento.description) {
+    const parsed = parseMatchReportMetadata(evento.description)
+    if (parsed.penalties) penalties = parsed.penalties
   }
 
-  const { error } = await supabase.from('tournament_matches').insert([linha])
-  return error ? { estado: 'erro', mensagem: error.message } : { estado: 'gravado' }
+  if (matchIdFinal && penalties) {
+    try {
+      const { data: tourData } = await supabase
+        .from('tournaments')
+        .select('name, rules')
+        .eq('id', evento.tournament_id)
+        .single()
+
+      if (tourData && isTorneioEliminatoria(tourData)) {
+        const rules = tourData.rules || {}
+        const kmMap = { ...(rules.knockout_matches && !Array.isArray(rules.knockout_matches) ? rules.knockout_matches : {}) }
+        const metaExistente = kmMap[matchIdFinal] || Object.values(kmMap).find((k: any) => k?.match_id === matchIdFinal) || {}
+
+        const cascaisPens = cascaisEVisitanteNoEvento ? penalties.away : penalties.home
+        const elesPens = cascaisEVisitanteNoEvento ? penalties.home : penalties.away
+
+        const homePens = homeTeamIdFinal === nossa.id ? cascaisPens : elesPens
+        const awayPens = awayTeamIdFinal === nossa.id ? cascaisPens : elesPens
+
+        const updatedMeta = {
+          ...metaExistente,
+          match_id: matchIdFinal,
+          home_penalties: homePens,
+          away_penalties: awayPens,
+        }
+        kmMap[matchIdFinal] = updatedMeta
+
+        await supabase.from('tournaments').update({
+          rules: {
+            ...rules,
+            knockout_matches: kmMap,
+          }
+        }).eq('id', evento.tournament_id)
+      }
+    } catch (errPens) {
+      console.warn('Não foi possível sincronizar penáltis da eliminatória:', errPens)
+    }
+  }
+
+  return { estado: 'gravado' }
 }
 
 /** O aviso a dar quando o jogo não coube na tabela, para os ecrãs dizerem o mesmo. */

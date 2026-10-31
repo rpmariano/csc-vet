@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { compararPorCamisola } from '../lib/eventos'
 import { Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock, AlertTriangle } from 'lucide-react'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJogo'
+import { isTorneioEliminatoria } from './clube/torneios'
 import { supabase } from '../lib/supabaseClient'
 import { formatClubSigla, formatOpponentSigla } from '../lib/siglas'
 import { obterEmblemaEfetivo } from '../lib/sincronizarEquipas'
@@ -62,8 +63,15 @@ const TACTICAL_FORMATIONS = [
   'Personalizado'
 ]
 
-export const parseMatchReportMetadata = (desc?: string | null) => {
-  if (!desc) return { tacticalFormation: '4-3-3', occurrences: '', cleanDescription: '' }
+export interface MatchReportParsed {
+  tacticalFormation: string
+  occurrences: string
+  cleanDescription: string
+  penalties: { home: number; away: number } | null
+}
+
+export const parseMatchReportMetadata = (desc?: string | null): MatchReportParsed => {
+  if (!desc) return { tacticalFormation: '4-3-3', occurrences: '', cleanDescription: '', penalties: null }
   
   const reportTagMatch = desc.match(/\[MATCH_REPORT:([\s\S]*?)\]/)
   if (reportTagMatch && reportTagMatch[1]) {
@@ -74,24 +82,29 @@ export const parseMatchReportMetadata = (desc?: string | null) => {
       return {
         tacticalFormation: rawFormation.replace(/^1-/, ''),
         occurrences: parsed.occurrences || '',
-        cleanDescription
+        cleanDescription,
+        penalties: (parsed.penalties && typeof parsed.penalties === 'object') ? parsed.penalties : null,
       }
     } catch {
       // Fallback
     }
   }
 
-  return { tacticalFormation: '4-3-3', occurrences: '', cleanDescription: desc || '' }
+  return { tacticalFormation: '4-3-3', occurrences: '', cleanDescription: desc || '', penalties: null }
 }
 
 export const buildDescriptionWithMatchReport = (
   cleanDesc: string,
   tacticalFormation: string,
-  occurrences: string
+  occurrences: string,
+  penalties?: { home: number; away: number } | null
 ) => {
-  const metaObj = {
+  const metaObj: any = {
     tactical: tacticalFormation,
     occurrences: occurrences.trim()
+  }
+  if (penalties && (penalties.home !== null || penalties.away !== null)) {
+    metaObj.penalties = penalties
   }
   const metaString = `[MATCH_REPORT:${JSON.stringify(metaObj)}]`
   return `${cleanDesc.trim()}\n\n${metaString}`.trim()
@@ -118,6 +131,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
   const [golosSemMarcador, setGolosSemMarcador] = useState(false)
   const [homeScore, setHomeScore] = useState<number | null>(event?.home_score ?? null)
   const [awayScore, setAwayScore] = useState<number | null>(event?.away_score ?? null)
+  const [homePenalties, setHomePenalties] = useState<number | null>(null)
+  const [awayPenalties, setAwayPenalties] = useState<number | null>(null)
 
   // Tactical & Notes
   const [tacticalFormation, setTacticalFormation] = useState('4-3-3')
@@ -169,6 +184,8 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         setCleanDescription(parsed.cleanDescription)
         setHomeScore(event?.home_score ?? null)
         setAwayScore(event?.away_score ?? null)
+        setHomePenalties(parsed.penalties?.home ?? null)
+        setAwayPenalties(parsed.penalties?.away ?? null)
 
         // Se coach/admin, sem resultado ainda, e o jogo já se realizou, entra logo em modo de edição.
         // Jogos futuros nunca entram em modo de edição — ainda não há nada para reportar.
@@ -350,10 +367,17 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     setSaving(true)
     setSaveSuccess(false)
     try {
+      const ehTaca = isTorneioEliminatoria({ rules: rulesState || tournamentRules })
+      const isDraw = homeScore !== null && awayScore !== null && homeScore === awayScore
+      const penaltiesPayload = (ehTaca && isDraw && (homePenalties !== null || awayPenalties !== null))
+        ? { home: homePenalties ?? 0, away: awayPenalties ?? 0 }
+        : null
+
       const updatedDescription = buildDescriptionWithMatchReport(
         cleanDescription,
         tacticalFormation,
-        occurrences
+        occurrences,
+        penaltiesPayload
       )
 
       await supabase
@@ -366,16 +390,17 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
         .eq('id', eventId)
 
       /*
-        E o resultado entra na tabela da prova sozinho: a linha da jornada é o
-        espelho deste jogo, pela jornada que se escolheu ao criá-lo. Era este
-        o passo que faltava — quem lançava a ficha tinha de ir à Classificação
-        escrever o mesmo resultado outra vez à mão.
+        E o resultado entra na tabela da prova sozinho: tanto no campeonato
+        como na taça, o resultado oficial dos jogos do Cascais é o da ficha de
+        jogo.
       */
       const espelho = await sincronizarJogoNaJornada({
         ...event,
         id: eventId,
         home_score: homeScore,
         away_score: awayScore,
+        penalties: penaltiesPayload,
+        description: updatedDescription,
       })
       if (espelho.estado === 'sem-equipas') toast.warning(AVISO_SEM_EQUIPAS)
 
@@ -565,7 +590,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     // A ficha vem da rede depois de o diálogo abrir; sem isto o próprio
     // carregamento contava como alteração do utilizador.
     pronto: !loading,
-    valores: [homeScore, awayScore, tacticalFormation, occurrences, playerStats],
+    valores: [homeScore, awayScore, homePenalties, awayPenalties, tacticalFormation, occurrences, playerStats],
     aoGravar: () => handleSaveReport(),
     aoSair: () => {
       const antes = fichaAoEditar.current
@@ -725,6 +750,11 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                   <span className="text-[10px] uppercase font-bold tracking-widest text-csc-verde-texto">
                     {homeScore !== null ? 'Resultado Final' : 'Sem Resultado'}
                   </span>
+                  {homePenalties !== null && awayPenalties !== null && (
+                    <span className="text-[11px] font-black text-csc-gold tracking-wide tabular-nums">
+                      ({homePenalties} - {awayPenalties} gp)
+                    </span>
+                  )}
                   {rulesState?.match_duration_mins && (
                     <span className="text-[9.5px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full mt-0.5" title={`Duração regulamentar: ${rulesState.half_duration_mins ? `2x${rulesState.half_duration_mins}m` : `${rulesState.match_duration_mins}m`}`}>
                       ⏱️ {rulesState.half_duration_mins ? `2x${rulesState.half_duration_mins}'` : `${rulesState.match_duration_mins}'`}
@@ -1040,6 +1070,55 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 >
                   Vitória {rightSigla}
                 </button>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Desempate por grandes penalidades (se taça e empate) */}
+        {(() => {
+          const ehTaca = isTorneioEliminatoria({ rules: rulesState || tournamentRules })
+          const isDraw = homeScore !== null && awayScore !== null && homeScore === awayScore
+          if (!ehTaca || !isDraw) return null
+
+          return (
+            <div className="p-3.5 rounded-xl bg-csc-gold/10 border border-csc-gold/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-csc-gold uppercase tracking-wider">
+                  Desempate por Grandes Penalidades (G.P.)
+                </span>
+                <span className="text-[10px] text-white/60 font-bold">Taça / Eliminatória</span>
+              </div>
+              <p className="text-[11px] text-white/70">
+                Empate no tempo regulamentar. Regista os golos marcados no desempate por penáltis para apurar o vencedor da eliminatória.
+              </p>
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
+                    Penáltis {leftSigla}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={homePenalties ?? ''}
+                    onChange={e => setHomePenalties(e.target.value === '' ? null : parseInt(e.target.value, 10))}
+                    placeholder="0"
+                    className="w-full h-11 text-center bg-white text-csc-tinta font-display text-[16px] font-black rounded-xl border border-csc-gold outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1">
+                    Penáltis {rightSigla}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={awayPenalties ?? ''}
+                    onChange={e => setAwayPenalties(e.target.value === '' ? null : parseInt(e.target.value, 10))}
+                    placeholder="0"
+                    className="w-full h-11 text-center bg-white text-csc-tinta font-display text-[16px] font-black rounded-xl border border-csc-gold outline-none focus-visible:ring-2 focus-visible:ring-csc-gold"
+                  />
+                </div>
               </div>
             </div>
           )

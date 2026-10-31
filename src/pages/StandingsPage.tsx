@@ -215,7 +215,7 @@ export const StandingsPage = () => {
 
   const fetchStandingsData = async () => {
     setLoading(true)
-    const [groupsRes, teamsRes, matchesRes] = await Promise.all([
+    const [groupsRes, teamsRes, matchesRes, eventsRes] = await Promise.all([
       supabase.from('tournament_groups').select('*').eq('tournament_id', selectedTourId).order('name'),
       supabase.from('tournament_teams').select('*, opponent:opponents(*)').eq('tournament_id', selectedTourId),
       // Todas as jornadas (agendadas e realizadas) — a classificação só conta as realizadas,
@@ -223,15 +223,58 @@ export const StandingsPage = () => {
       /* Os nossos jogos estão aqui também: o evento espelha-se na jornada
          que se lhe escolheu, e a ficha de jogo lança-lhe o resultado. */
       supabase.from('tournament_matches').select('*').eq('tournament_id', selectedTourId).order('matchday'),
+      supabase.from('events').select('id, opponent_id, matchday, home_score, away_score, home_away, date_time, is_active').eq('tournament_id', selectedTourId),
     ])
+
+    const loadedMatches = matchesRes.data || []
+    const loadedTeams = teamsRes.data || []
+    const loadedEvents = eventsRes.data || []
+    const cscTeam = loadedTeams.find(t => t.opponent_id === null)
+
+    // Sincronizar e auto-ligar jogos do Cascais que ainda não tenham event_id
+    if (cscTeam) {
+      for (const m of loadedMatches) {
+        const isCscMatch = m.home_team_id === cscTeam.id || m.away_team_id === cscTeam.id
+        if (isCscMatch && !m.event_id) {
+          const otherTeamId = m.home_team_id === cscTeam.id ? m.away_team_id : m.home_team_id
+          const otherTeam = loadedTeams.find(t => t.id === otherTeamId)
+          const oppId = otherTeam?.opponent_id ?? null
+
+          const matchedEv = loadedEvents.find(ev => {
+            if (oppId && ev.opponent_id === oppId) return true
+            if (m.matchday && ev.matchday === m.matchday) return true
+            return false
+          })
+
+          if (matchedEv) {
+            m.event_id = matchedEv.id
+            const temScore = matchedEv.home_score !== null && matchedEv.home_score !== undefined
+              && matchedEv.away_score !== null && matchedEv.away_score !== undefined
+            if (temScore) {
+              const cascaisScore = matchedEv.home_away === 'away' ? matchedEv.away_score : matchedEv.home_score
+              const elesScore = matchedEv.home_away === 'away' ? matchedEv.home_score : matchedEv.away_score
+              m.home_score = m.home_team_id === cscTeam.id ? cascaisScore : elesScore
+              m.away_score = m.home_team_id === cscTeam.id ? elesScore : cascaisScore
+              m.status = 'finished'
+            }
+            supabase.from('tournament_matches').update({
+              event_id: matchedEv.id,
+              home_score: m.home_score,
+              away_score: m.away_score,
+              status: m.status,
+            }).eq('id', m.id).then()
+          }
+        }
+      }
+    }
 
     if (groupsRes.data) {
       setGroups(groupsRes.data)
       const phases = Array.from(new Set(groupsRes.data.map(g => g.phase))).sort((a, b) => a - b)
       setActivePhase(prev => (phases.includes(prev) ? prev : (phases[0] ?? 1)))
     }
-    if (teamsRes.data) setTeams(teamsRes.data)
-    if (matchesRes.data) setMatches(matchesRes.data)
+    if (teamsRes.data) setTeams(loadedTeams)
+    if (matchesRes.data) setMatches(loadedMatches)
 
     setLoading(false)
   }
@@ -497,16 +540,35 @@ export const StandingsPage = () => {
         groupId = novoGrupo.id
       }
 
-      const payload = {
+      const matchAEditar = matches.find(m => m.id === knockoutEditId)
+      const cscTeamObj = teams.find(t => t.opponent_id === null)
+      const ehJogoCascais = matchAEditar
+        ? (matchAEditar.home_team_id === cscTeamObj?.id || matchAEditar.away_team_id === cscTeamObj?.id || Boolean(matchAEditar.event_id))
+        : (finalHomeTeamId === cscTeamObj?.id || finalAwayTeamId === cscTeamObj?.id)
+
+      let finalHomeScore = hasScore ? parseInt(koHomeScore, 10) : null
+      let finalAwayScore = hasScore ? parseInt(koAwayScore, 10) : null
+      let finalStatus = hasScore ? 'finished' : 'scheduled'
+
+      if (ehJogoCascais && matchAEditar) {
+        finalHomeScore = matchAEditar.home_score
+        finalAwayScore = matchAEditar.away_score
+        finalStatus = matchAEditar.status
+      }
+
+      const payload: any = {
         tournament_id: selectedTourId,
         group_id: groupId,
         matchday: roundNum,
         home_team_id: finalHomeTeamId,
         away_team_id: finalAwayTeamId,
         match_date: koDate || null,
-        home_score: hasScore ? parseInt(koHomeScore, 10) : null,
-        away_score: hasScore ? parseInt(koAwayScore, 10) : null,
-        status: hasScore ? 'finished' : 'scheduled',
+        home_score: finalHomeScore,
+        away_score: finalAwayScore,
+        status: finalStatus,
+      }
+      if (matchAEditar?.event_id) {
+        payload.event_id = matchAEditar.event_id
       }
 
       let savedMatchId = knockoutEditId
@@ -938,9 +1000,22 @@ export const StandingsPage = () => {
                                   state={{ origem: 'Classificações' }}
                                   onClick={() => triggerHaptic('light')}
                                   title="Abrir Ficha de Jogo"
-                                  className="p-1 rounded-lg bg-csc-gold/20 text-csc-gold hover:bg-csc-gold/30"
+                                  className="p-1 px-2 rounded-lg bg-csc-gold/20 text-csc-gold hover:bg-csc-gold/30 flex items-center gap-1 text-[10.5px] font-bold"
                                 >
                                   <ScrollText size={12} />
+                                  <span>Ficha de Jogo</span>
+                                </Link>
+                              )}
+                              {daFicha && !terminado && (
+                                <Link
+                                  to={`/competicao?ver=fichas&jogo=${m.event_id}`}
+                                  state={{ origem: 'Classificações' }}
+                                  onClick={() => triggerHaptic('light')}
+                                  title="Preencher Ficha de Jogo"
+                                  className="p-1 px-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 flex items-center gap-1 text-[10.5px] font-semibold"
+                                >
+                                  <ScrollText size={12} />
+                                  <span>Preencher Ficha</span>
                                 </Link>
                               )}
                               {canManage && (
@@ -974,9 +1049,21 @@ export const StandingsPage = () => {
 
                             {terminado ? (
                               <div className="shrink-0 flex flex-col items-center">
-                                <span className="px-2.5 py-1 rounded-lg bg-white text-csc-tinta font-display font-black text-[12.5px] tabular-nums">
-                                  {m.home_score} - {m.away_score}
-                                </span>
+                                {temFicha ? (
+                                  <Link
+                                    to={`/competicao?ver=fichas&jogo=${m.event_id}`}
+                                    state={{ origem: 'Classificações' }}
+                                    onClick={() => triggerHaptic('light')}
+                                    className="px-2.5 py-1 rounded-lg bg-white text-csc-tinta font-display font-black text-[12.5px] tabular-nums hover:bg-csc-gold hover:text-white transition-colors cursor-pointer"
+                                    title="Abrir Ficha de Jogo"
+                                  >
+                                    {m.home_score} - {m.away_score}
+                                  </Link>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-lg bg-white text-csc-tinta font-display font-black text-[12.5px] tabular-nums">
+                                    {m.home_score} - {m.away_score}
+                                  </span>
+                                )}
                                 {meta?.home_penalties !== null && meta?.home_penalties !== undefined &&
                                   meta?.away_penalties !== null && meta?.away_penalties !== undefined && (
                                     <span className="text-[9.5px] font-bold text-csc-gold mt-0.5 tabular-nums">
@@ -1838,56 +1925,106 @@ export const StandingsPage = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-            <div>
-              <label className={ETIQUETA} htmlFor="ko-home-score">Golos Visitado</label>
-              <input
-                id="ko-home-score"
-                type="number"
-                min="0"
-                value={koHomeScore}
-                onChange={e => setKoHomeScore(e.target.value)}
-                placeholder="—"
-                className={`${CAMPO} text-center font-black`}
-              />
-            </div>
-            <div>
-              <label className={ETIQUETA} htmlFor="ko-away-score">Golos Visitante</label>
-              <input
-                id="ko-away-score"
-                type="number"
-                min="0"
-                value={koAwayScore}
-                onChange={e => setKoAwayScore(e.target.value)}
-                placeholder="—"
-                className={`${CAMPO} text-center font-black`}
-              />
-            </div>
-            <div>
-              <label className={ETIQUETA} htmlFor="ko-home-pens">Penalties Visitado (se empate)</label>
-              <input
-                id="ko-home-pens"
-                type="number"
-                min="0"
-                value={koHomePenalties}
-                onChange={e => setKoHomePenalties(e.target.value)}
-                placeholder="Opcional"
-                className={`${CAMPO} text-center`}
-              />
-            </div>
-            <div>
-              <label className={ETIQUETA} htmlFor="ko-away-pens">Penalties Visitante (se empate)</label>
-              <input
-                id="ko-away-pens"
-                type="number"
-                min="0"
-                value={koAwayPenalties}
-                onChange={e => setKoAwayPenalties(e.target.value)}
-                placeholder="Opcional"
-                className={`${CAMPO} text-center`}
-              />
-            </div>
-          </div>
+          {/* Se for jogo do Cascais, o resultado é exclusivamente através da Ficha de Jogo */}
+          {(() => {
+            const matchAEditar = matches.find(m => m.id === knockoutEditId)
+            const cscTeamObj = teams.find(t => t.opponent_id === null)
+            const ehJogoCascais = matchAEditar
+              ? (matchAEditar.home_team_id === cscTeamObj?.id || matchAEditar.away_team_id === cscTeamObj?.id || Boolean(matchAEditar.event_id))
+              : (koHomeTeamId === cscTeamObj?.id || koAwayTeamId === cscTeamObj?.id)
+
+            if (ehJogoCascais) {
+              const temPlacar = matchAEditar && jogoTerminado(matchAEditar)
+              return (
+                <div className="p-3.5 rounded-xl bg-csc-gold/10 border border-csc-gold/30 space-y-2">
+                  <div className="flex items-start gap-2.5">
+                    <ScrollText size={16} className="text-csc-gold shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display font-black text-xs text-csc-gold uppercase tracking-wider">
+                        Jogo do Cascais · Resultado via Ficha de Jogo
+                      </p>
+                      <p className="text-[11.5px] text-white/80 mt-1 leading-relaxed">
+                        Tal como no campeonato, os golos, marcadores e resultado dos jogos do Cascais são geridos exclusivamente através da Ficha de Jogo oficial.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10 flex-wrap">
+                    <span className="text-xs font-bold text-white">
+                      Resultado atual: {temPlacar ? `${matchAEditar.home_score} - ${matchAEditar.away_score}` : 'Por realizar'}
+                    </span>
+                    {matchAEditar?.event_id ? (
+                      <Link
+                        to={`/competicao?ver=fichas&jogo=${matchAEditar.event_id}`}
+                        state={{ origem: 'Classificações' }}
+                        onClick={() => { triggerHaptic('light'); setKnockoutModalOpen(false) }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-csc-gold text-csc-tinta font-display font-black text-[11px] hover:bg-csc-gold/90 transition-transform active:scale-97 cursor-pointer"
+                      >
+                        <ScrollText size={12} />
+                        {temPlacar ? 'Ver / Editar Ficha de Jogo' : 'Preencher Ficha de Jogo'}
+                      </Link>
+                    ) : (
+                      <span className="text-[10.5px] text-white/50 italic">
+                        Ainda sem evento ligado na Agenda
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                <div>
+                  <label className={ETIQUETA} htmlFor="ko-home-score">Golos Visitado</label>
+                  <input
+                    id="ko-home-score"
+                    type="number"
+                    min="0"
+                    value={koHomeScore}
+                    onChange={e => setKoHomeScore(e.target.value)}
+                    placeholder="—"
+                    className={`${CAMPO} text-center font-black`}
+                  />
+                </div>
+                <div>
+                  <label className={ETIQUETA} htmlFor="ko-away-score">Golos Visitante</label>
+                  <input
+                    id="ko-away-score"
+                    type="number"
+                    min="0"
+                    value={koAwayScore}
+                    onChange={e => setKoAwayScore(e.target.value)}
+                    placeholder="—"
+                    className={`${CAMPO} text-center font-black`}
+                  />
+                </div>
+                <div>
+                  <label className={ETIQUETA} htmlFor="ko-home-pens">Penalties Visitado (se empate)</label>
+                  <input
+                    id="ko-home-pens"
+                    type="number"
+                    min="0"
+                    value={koHomePenalties}
+                    onChange={e => setKoHomePenalties(e.target.value)}
+                    placeholder="Opcional"
+                    className={`${CAMPO} text-center`}
+                  />
+                </div>
+                <div>
+                  <label className={ETIQUETA} htmlFor="ko-away-pens">Penalties Visitante (se empate)</label>
+                  <input
+                    id="ko-away-pens"
+                    type="number"
+                    min="0"
+                    value={koAwayPenalties}
+                    onChange={e => setKoAwayPenalties(e.target.value)}
+                    placeholder="Opcional"
+                    className={`${CAMPO} text-center`}
+                  />
+                </div>
+              </div>
+            )
+          })()}
           <p className="text-[10.5px] text-white/60">
             Quando um jogo termina, qualquer jogo seguinte com referência <span className="text-csc-gold font-bold">VENCEDOR JOGO {koMatchNumber}</span> passa automaticamente a mostrar a equipa vencedora.
           </p>

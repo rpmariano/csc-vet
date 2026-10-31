@@ -1,4 +1,4 @@
-import { verificarElegibilidadeIdadeTorneio, type TournamentRules } from '../components/clube/torneios'
+import { verificarElegibilidadeIdadeTorneio, isTorneioEliminatoria, obterRotuloEliminatoria, type TournamentRules } from '../components/clube/torneios'
 import React, { useEffect, useRef, useState } from 'react'
 import {
   Trash2,
@@ -1378,36 +1378,47 @@ const EventsPage: React.FC = () => {
                   /* A jornada aparece ao lado assim que há prova escolhida: é
                      ela que põe o jogo na tabela da prova, e sem ela a ficha
                      de jogo não tem onde lançar o resultado. */
-                  <div className="flex gap-2.5">
-                    <div className="flex-1 min-w-0">
-                      <label className={ETIQUETA_FORM} htmlFor="prova-nova">Torneio / Competição</label>
-                      <select
-                        id="prova-nova"
-                        value={tournamentId}
-                        onChange={(e) => setTournamentId(e.target.value)}
-                        className={CAMPO_FORM}
-                      >
-                        <option value="">-- Selecionar Torneio --</option>
-                        {tournaments.map(t => (
-                          <option key={t.id} value={t.id}>{t.name} ({t.season})</option>
-                        ))}
-                      </select>
-                    </div>
-                    {tournamentId && (
-                      <div className="w-[96px] flex-none">
-                        <label className={ETIQUETA_FORM} htmlFor="jornada-nova">Jornada *</label>
-                        <input
-                          id="jornada-nova"
-                          type="number"
-                          min="1"
-                          inputMode="numeric"
-                          value={matchday}
-                          onChange={e => setMatchday(e.target.value)}
-                          placeholder="1"
+                  <div className="space-y-1.5">
+                    <div className="flex gap-2.5">
+                      <div className="flex-1 min-w-0">
+                        <label className={ETIQUETA_FORM} htmlFor="prova-nova">Torneio / Competição</label>
+                        <select
+                          id="prova-nova"
+                          value={tournamentId}
+                          onChange={(e) => setTournamentId(e.target.value)}
                           className={CAMPO_FORM}
-                        />
+                        >
+                          <option value="">-- Selecionar Torneio --</option>
+                          {tournaments.map(t => (
+                            <option key={t.id} value={t.id}>{t.name} ({t.season})</option>
+                          ))}
+                        </select>
                       </div>
-                    )}
+                      {tournamentId && (
+                        <div className="w-[96px] flex-none">
+                          <label className={ETIQUETA_FORM} htmlFor="jornada-nova">Jornada *</label>
+                          <input
+                            id="jornada-nova"
+                            type="number"
+                            min="1"
+                            inputMode="numeric"
+                            value={matchday}
+                            onChange={e => setMatchday(e.target.value)}
+                            placeholder="1"
+                            className={CAMPO_FORM}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {(() => {
+                      const selTour = tournaments.find(t => t.id === tournamentId)
+                      if (!selTour || !isTorneioEliminatoria(selTour)) return null
+                      return (
+                        <p className="text-[10.5px] text-csc-gold/85 font-semibold">
+                          Eliminatória da Taça: {Number(matchday) ? `${matchday} — ${obterRotuloEliminatoria(Number(matchday), null, selTour.rules)}` : '1 = Pré/Oitavos · 2 = Quartos · 3 = Meias · 4 = Final'}
+                        </p>
+                      )
+                    })()}
                   </div>
                 )}
 
