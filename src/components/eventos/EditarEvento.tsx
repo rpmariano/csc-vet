@@ -45,6 +45,7 @@ export interface EventoEditavel {
   matchday?: number | null
   opponent_id?: string | null
   home_away?: 'home' | 'away' | 'neutral' | null
+  max_players?: number | null
 }
 
 export interface CampoDoEvento { id: string; name: string; address?: string | null }

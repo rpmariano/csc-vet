@@ -1,3 +1,4 @@
+import { verificarElegibilidadeIdadeTorneio, type TournamentRules } from '../components/clube/torneios'
 import React, { useEffect, useRef, useState } from 'react'
 import {
   Trash2,
@@ -190,22 +191,6 @@ interface Opponent {
   home_kit_color_2?: string | null
   away_kit_color_1?: string | null
   away_kit_color_2?: string | null
-}
-interface TournamentRules {
-  min_age: number;
-  exceptions_allowed: boolean;
-  exceptions_count: number;
-  exceptions_min_age: number;
-  max_squad_size: number;
-  max_match_players: number;
-  min_match_players: number;
-  match_duration_mins: number;
-  half_duration_mins: number;
-  rolling_subs: boolean;
-  yellow_cards_to_suspension: number;
-  walkover_score: string;
-  max_walkovers_allowed: number;
-  delay_tolerance_mins: number;
 }
 interface Tournament { id: string; name: string; season: string; rules?: TournamentRules }
 interface TournamentPlayer { tournament_id: string; player_id: string }
