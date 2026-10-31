@@ -190,6 +190,13 @@ test('programador (rpmariano@gmail.com) vê "Ver a app como" e pode alternar per
   let simulatedRoleNoStorage = await page.evaluate(() => window.localStorage.getItem('csc_simulated_role'))
   expect(simulatedRoleNoStorage).toBe('coach')
 
+  // Clicar em Jogador deve ativar a simulação de player
+  const btnJogador = page.getByRole('button', { name: 'Jogador' })
+  await expect(btnJogador).toBeVisible()
+  await btnJogador.click()
+  simulatedRoleNoStorage = await page.evaluate(() => window.localStorage.getItem('csc_simulated_role'))
+  expect(simulatedRoleNoStorage).toBe('player')
+
   // Clicar em Sem perfil deve ativar a simulação de unassigned
   await btnSemPerfil.click()
   simulatedRoleNoStorage = await page.evaluate(() => window.localStorage.getItem('csc_simulated_role'))

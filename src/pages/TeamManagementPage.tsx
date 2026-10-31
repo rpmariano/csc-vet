@@ -926,6 +926,10 @@ const TeamManagementPage: React.FC = () => {
         }
       }
 
+      if (currentUserProfile && (currentUserProfile.id === savedPlayerId || currentUserProfile.id === formId)) {
+        await refreshProfile()
+      }
+
       setIsFormModalOpen(false)
       fetchProfiles()
     } catch (err: any) {

@@ -54,7 +54,7 @@ const SECCAO =
   'flex items-center gap-2 mb-2.5'
 
 const SettingsPage: React.FC = () => {
-  const { profile, assignedRoles, actualRole, isUnassigned, canSimulateRoles, setSimulatedRole, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
+  const { profile, assignedRoles, actualRole, isUnassigned, canSimulateRoles, isSimulatingRole, setSimulatedRole, toggleClinicalStatus, refreshProfile, signOut } = useAuth()
   const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
   const { clubSettings } = useClub()
   const navegar = useNavigate()
@@ -606,7 +606,7 @@ const SettingsPage: React.FC = () => {
                       : papel === 'supporter'
                       ? 'Adepto'
                       : 'Sem perfil'}
-                    {papel === actualRole && ' (real)'}
+                    {papel === actualRole && isSimulatingRole && ' (real)'}
                   </button>
                 )
               })}

@@ -384,10 +384,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [canSimulateRoles])
 
+  const primaryAssignedRole: UserRole = assignedRoles.includes('admin')
+    ? 'admin'
+    : assignedRoles.includes('coach')
+    ? 'coach'
+    : assignedRoles.includes('player')
+    ? 'player'
+    : assignedRoles.includes('supporter')
+    ? 'supporter'
+    : (actualProfile?.role ?? 'player')
+
   const setSimulatedRole = (role: UserRole | null) => {
     if (!actualProfile || !canSimulateRoles) return
 
-    if (role && role !== actualProfile.role) {
+    if (role && role !== primaryAssignedRole) {
       localStorage.setItem('csc_simulated_role', role)
       setSimulatedRoleState(role)
     } else {
@@ -448,10 +458,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false)
   }
 
-  const actualRole = actualProfile?.role ?? null
+  const actualRole = primaryAssignedRole
   const isSimulatingRole = Boolean(
     canSimulateRoles &&
-    simulatedRole !== null
+    simulatedRole !== null &&
+    simulatedRole !== primaryAssignedRole
   )
 
   const isEffectivelyUnassigned = Boolean(
@@ -466,16 +477,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     : isSimulatingRole && simulatedRole
     ? [simulatedRole]
     : assignedRoles
-
-  const primaryAssignedRole: UserRole = assignedRoles.includes('admin')
-    ? 'admin'
-    : assignedRoles.includes('coach')
-    ? 'coach'
-    : assignedRoles.includes('player')
-    ? 'player'
-    : assignedRoles.includes('supporter')
-    ? 'supporter'
-    : (actualProfile?.role ?? 'player')
 
   const effectiveProfile: Profile | null = actualProfile
     ? {
