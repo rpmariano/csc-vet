@@ -90,8 +90,10 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
     window.addEventListener('csc_match_availability_updated', handleAtualizacao)
 
     // Subscrever alterações em tempo real via Supabase Realtime
+    // Usamos um identificador único de subscrição para evitar colisões no cliente Supabase se o componente for remontado
+    const channelName = `rt_painel_match_avail_${jogo?.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
     const channel = supabase
-      .channel(`rt_painel_match_avail_${jogo?.id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'match_availabilities', filter: `match_id=eq.${jogo?.id}` },
