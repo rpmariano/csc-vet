@@ -107,6 +107,7 @@ const Home: React.FC = () => {
   const [jogos, setJogos] = useState<JogoDaHome[]>([])
   const [pendentes, setPendentes] = useState<PendenteDaHome[]>([])
   const [plantelEquipa, setPlantelEquipa] = useState<Profile[]>([])
+  const [eventosFuturos, setEventosFuturos] = useState<EventoComDataETipo[]>([])
   const [ultimo, setUltimo] = useState<UltimoJogoDaHome | null>(null)
   const [provas, setProvas] = useState<ProvaDaHome[]>([])
   const [aniversariantes, setAniversariantes] = useState<AniversarianteDaHome[]>([])
@@ -184,6 +185,7 @@ const Home: React.FC = () => {
 
         // Rascunhos ficam de fora: a Home mostra o que está marcado a sério.
         const marcados = ((futuros as unknown as EventoBruto[]) ?? []).filter(e => e.is_active !== false)
+        setEventosFuturos(marcados as unknown as EventoComDataETipo[])
 
         /* As convocatórias destes eventos, numa consulta só: preciso da minha
            resposta e de quantos já confirmaram. */
@@ -580,6 +582,7 @@ const Home: React.FC = () => {
             clubeSigla={sigla}
             isCoachOrAdmin={Boolean(eGestao)}
             plantel={plantelEquipa}
+            todosEventos={eventosFuturos}
             aoResponder={responder}
           />
 

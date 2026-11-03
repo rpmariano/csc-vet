@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { Trophy, CheckCircle2, XCircle, Users, ChevronDown, ChevronUp, UserCheck, AlertCircle } from 'lucide-react'
+import { Trophy, CheckCircle2, XCircle, Users, ChevronDown, ChevronUp, UserCheck, AlertCircle, Clock } from 'lucide-react'
 import type { EventoComDataETipo, RespostaDisponibilidade } from '../../lib/disponibilidadeJogo'
 import {
   obterDisponibilidadeAtleta,
   obterTodasDisponibilidadesDoJogo,
   gravarDisponibilidadeAtleta,
+  sondagemJogoAbertaParaResposta,
 } from '../../lib/disponibilidadeJogo'
 import type { Profile } from '../../context/AuthContext'
 import { getPlayerDisplayName } from '../../lib/eventos'
@@ -18,6 +19,7 @@ export interface PainelDisponibilidadeJogoProps {
   isCoachOrAdmin?: boolean
   compacto?: boolean
   plantel?: readonly Profile[]
+  todosEventos?: readonly EventoComDataETipo[]
   aoEditarConvocatoria?: () => void
 }
 
@@ -27,6 +29,7 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
   isCoachOrAdmin = false,
   compacto = false,
   plantel = [],
+  todosEventos = [],
   aoEditarConvocatoria,
 }) => {
   const [minhaResposta, setMinhaResposta] = useState<RespostaDisponibilidade | null>(null)
@@ -34,6 +37,11 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
   const [aGravar, setAGravar] = useState(false)
   const [aMostrarLista, setAMostrarLista] = useState(false)
   const [plantelFallback, setPlantelFallback] = useState<Profile[]>([])
+
+  // Sondagem para atletas só abre quando o treino antecedente (ou a janela) está disponibilizado para votação
+  const abertaParaVotacao = useMemo(() => {
+    return sondagemJogoAbertaParaResposta(jogo, todosEventos.length > 0 ? todosEventos : [jogo])
+  }, [jogo, todosEventos])
 
   // Se o plantel não tiver sido fornecido, carregar perfis ativos da BD
   useEffect(() => {
@@ -161,6 +169,24 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
   const totalRespostas = todosDisponiveis.length + todosIndisponiveis.length
 
   if (compacto) {
+    // Se ainda não abriu para votação e não é treinador/admin (e o jogador não tinha resposta anterior),
+    // avisar que a sondagem abre quando o treino for disponibilizado
+    if (!abertaParaVotacao && !isCoachOrAdmin && !minhaResposta) {
+      return (
+        <div className="mt-3 p-3 rounded-2xl bg-white/5 border border-white/10 text-white space-y-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Clock size={13} className="text-csc-gold shrink-0" />
+            <span className="font-display font-extrabold text-[10.5px] text-csc-gold uppercase tracking-wider truncate">
+              Sondagem Pré-Jogo
+            </span>
+          </div>
+          <p className="text-[10.5px] text-white/60 leading-relaxed">
+            A resposta de disponibilidade abre quando o treino associado for disponibilizado.
+          </p>
+        </div>
+      )
+    }
+
     return (
       <div className="mt-3 p-3 rounded-2xl bg-csc-gold/10 border border-csc-gold/30 text-white space-y-2">
         <div className="flex items-center justify-between gap-2">
@@ -187,7 +213,7 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
           )}
         </div>
 
-        {playerId && !minhaResposta && (
+        {playerId && !minhaResposta && abertaParaVotacao && (
           <div className="flex gap-2 pt-1">
             <button
               type="button"
@@ -265,39 +291,46 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
               )}
             </div>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={aGravar}
-                onClick={() => responder('available')}
-                className={`flex-1 h-9 rounded-xl font-display font-bold text-xs cursor-pointer
-                  flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                    minhaResposta === 'available'
-                      ? 'bg-csc-light text-csc-tinta shadow-sm font-black'
-                      : 'bg-white/10 text-white hover:bg-white/15'
-                  }`}
-              >
-                {minhaResposta === 'available' && <CheckCircle2 size={13} />}
-                Estou Disponível
-              </button>
+            {!abertaParaVotacao && !minhaResposta ? (
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-xs">
+                <Clock size={14} className="text-csc-gold shrink-0" />
+                <span>A resposta de disponibilidade abre quando o treino associado for disponibilizado para votação.</span>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={aGravar}
+                  onClick={() => responder('available')}
+                  className={`flex-1 h-9 rounded-xl font-display font-bold text-xs cursor-pointer
+                    flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      minhaResposta === 'available'
+                        ? 'bg-csc-light text-csc-tinta shadow-sm font-black'
+                        : 'bg-white/10 text-white hover:bg-white/15'
+                    }`}
+                >
+                  {minhaResposta === 'available' && <CheckCircle2 size={13} />}
+                  Estou Disponível
+                </button>
 
-              <button
-                type="button"
-                disabled={aGravar}
-                onClick={() => responder('unavailable')}
-                className={`flex-1 h-9 rounded-xl font-display font-bold text-xs cursor-pointer
-                  flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                    minhaResposta === 'unavailable'
-                      ? 'bg-white/90 text-csc-tinta shadow-sm font-black'
-                      : 'bg-white/10 text-white hover:bg-white/15'
-                  }`}
-              >
-                {minhaResposta === 'unavailable' && <XCircle size={13} />}
-                Não Posso Ir
-              </button>
-            </div>
+                <button
+                  type="button"
+                  disabled={aGravar}
+                  onClick={() => responder('unavailable')}
+                  className={`flex-1 h-9 rounded-xl font-display font-bold text-xs cursor-pointer
+                    flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      minhaResposta === 'unavailable'
+                        ? 'bg-white/90 text-csc-tinta shadow-sm font-black'
+                        : 'bg-white/10 text-white hover:bg-white/15'
+                    }`}
+                >
+                  {minhaResposta === 'unavailable' && <XCircle size={13} />}
+                  Não Posso Ir
+                </button>
+              </div>
+            )}
           </div>
         )}
 

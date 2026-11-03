@@ -2180,6 +2180,7 @@ const EventsPage: React.FC = () => {
                 playerId={profile?.id}
                 isCoachOrAdmin={Boolean(isCoachOrAdmin)}
                 plantel={allPlayers}
+                todosEventos={events}
                 aoEditarConvocatoria={isCoachOrAdmin ? () => openEditModal(activeCallupModalEvent) : undefined}
               />
             )}

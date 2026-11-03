@@ -5,6 +5,7 @@ import {
   obterDisponibilidadeAtleta,
   obterTodasDisponibilidadesDoJogo,
   gravarDisponibilidadeAtleta,
+  treinoAbertoParaResposta,
 } from '../../lib/disponibilidadeJogo'
 import { localDoEvento } from '../../lib/eventos'
 import type { Profile } from '../../context/AuthContext'
@@ -22,6 +23,7 @@ export interface SondagemDisponibilidadeJogoProps {
   compacto?: boolean
   isCoachOrAdmin?: boolean
   plantel?: readonly Profile[]
+  treinoAssociado?: EventoComDataETipo | null
   aoResponder?: (status: RespostaDisponibilidade) => void
 }
 
@@ -33,6 +35,7 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
   compacto = false,
   isCoachOrAdmin = false,
   plantel = [],
+  treinoAssociado,
   aoResponder,
 }) => {
   const [minhaResposta, setMinhaResposta] = useState<RespostaDisponibilidade | null>(null)
@@ -40,6 +43,12 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
   const [aGravar, setAGravar] = useState(false)
   const [aMostrarEquipa, setAMostrarEquipa] = useState(false)
   const [plantelFallback, setPlantelFallback] = useState<Profile[]>([])
+
+  // Sondagem associada ao treino só abre quando a votação do treino estiver aberta
+  const abertaParaVotacao = useMemo(() => {
+    if (!treinoAssociado) return true
+    return treinoAbertoParaResposta(treinoAssociado)
+  }, [treinoAssociado])
 
   // Se o plantel não tiver sido passado pelo componente pai, carregar os perfis ativos da BD
   useEffect(() => {
@@ -184,6 +193,22 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
   const todosIndisponiveis = useMemo(() => [...indisponiveis, ...outrosIndisponiveis], [indisponiveis, outrosIndisponiveis])
 
   if (compacto) {
+    if (!abertaParaVotacao && !isCoachOrAdmin && !minhaResposta) {
+      return (
+        <div className="mt-3 p-3 rounded-2xl bg-white/5 border border-white/10 text-white space-y-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Clock size={13} className="text-csc-gold shrink-0" />
+            <span className="font-display font-extrabold text-[10.5px] text-csc-gold uppercase tracking-wider truncate">
+              Sondagem para o jogo · {confronto}
+            </span>
+          </div>
+          <p className="text-[10.5px] text-white/60 leading-relaxed">
+            A resposta de disponibilidade abre quando a convocatória deste treino estiver disponível.
+          </p>
+        </div>
+      )
+    }
+
     return (
       <div className="mt-3 p-3 rounded-2xl bg-csc-gold/10 border border-csc-gold/30 text-white space-y-2.5">
         <div className="flex items-center justify-between gap-2">
@@ -202,44 +227,51 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
           Estás disponível para ser convocado para este jogo?
         </p>
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={aGravar}
-            onClick={e => {
-              e.stopPropagation()
-              responder('available')
-            }}
-            className={`flex-1 h-9 rounded-xl font-display font-bold text-[11.5px] cursor-pointer
-              flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                minhaResposta === 'available'
-                  ? 'bg-csc-light text-csc-tinta shadow-sm'
-                  : 'bg-white/10 text-white hover:bg-white/15'
-              }`}
-          >
-            {minhaResposta === 'available' && <CheckCircle2 size={13} />}
-            Disponível
-          </button>
-          <button
-            type="button"
-            disabled={aGravar}
-            onClick={e => {
-              e.stopPropagation()
-              responder('unavailable')
-            }}
-            className={`flex-1 h-9 rounded-xl font-display font-bold text-[11.5px] cursor-pointer
-              flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                minhaResposta === 'unavailable'
-                  ? 'bg-white/90 text-csc-tinta shadow-sm'
-                  : 'bg-white/10 text-white hover:bg-white/15'
-              }`}
-          >
-            {minhaResposta === 'unavailable' && <XCircle size={13} />}
-            Indisponível
-          </button>
-        </div>
+        {abertaParaVotacao ? (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={aGravar}
+              onClick={e => {
+                e.stopPropagation()
+                responder('available')
+              }}
+              className={`flex-1 h-9 rounded-xl font-display font-bold text-[11.5px] cursor-pointer
+                flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                  minhaResposta === 'available'
+                    ? 'bg-csc-light text-csc-tinta shadow-sm'
+                    : 'bg-white/10 text-white hover:bg-white/15'
+                }`}
+            >
+              {minhaResposta === 'available' && <CheckCircle2 size={13} />}
+              Disponível
+            </button>
+            <button
+              type="button"
+              disabled={aGravar}
+              onClick={e => {
+                e.stopPropagation()
+                responder('unavailable')
+              }}
+              className={`flex-1 h-9 rounded-xl font-display font-bold text-[11.5px] cursor-pointer
+                flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                  minhaResposta === 'unavailable'
+                    ? 'bg-white/90 text-csc-tinta shadow-sm'
+                    : 'bg-white/10 text-white hover:bg-white/15'
+                }`}
+            >
+              {minhaResposta === 'unavailable' && <XCircle size={13} />}
+              Indisponível
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/10 text-white/70 text-[11px]">
+            <Clock size={13} className="text-csc-gold shrink-0" />
+            <span>Abre quando este treino estiver disponibilizado.</span>
+          </div>
+        )}
 
         {isCoachOrAdmin && (
           <div className="pt-1 border-t border-white/10 flex items-center justify-between text-[10.5px]">
@@ -315,39 +347,46 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
         </div>
 
         {/* Botões de Resposta do Atleta */}
-        <div className="flex gap-2.5 pt-0.5">
-          <button
-            type="button"
-            disabled={aGravar}
-            onClick={() => responder('available')}
-            className={`flex-1 min-h-11 px-4 rounded-[22px] font-display font-bold text-[12.5px] cursor-pointer
-              flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                minhaResposta === 'available'
-                  ? 'bg-csc-light text-csc-tinta shadow-md font-extrabold'
-                  : 'bg-white/10 text-white hover:bg-white/15'
-              }`}
-          >
-            {minhaResposta === 'available' && <CheckCircle2 size={15} />}
-            Sim, disponível
-          </button>
+        {!abertaParaVotacao && !minhaResposta ? (
+          <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-xs">
+            <Clock size={15} className="text-csc-gold shrink-0" />
+            <span>A resposta de disponibilidade para o jogo abre quando este treino for disponibilizado para votação.</span>
+          </div>
+        ) : (
+          <div className="flex gap-2.5 pt-0.5">
+            <button
+              type="button"
+              disabled={aGravar}
+              onClick={() => responder('available')}
+              className={`flex-1 min-h-11 px-4 rounded-[22px] font-display font-bold text-[12.5px] cursor-pointer
+                flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                  minhaResposta === 'available'
+                    ? 'bg-csc-light text-csc-tinta shadow-md font-extrabold'
+                    : 'bg-white/10 text-white hover:bg-white/15'
+                }`}
+            >
+              {minhaResposta === 'available' && <CheckCircle2 size={15} />}
+              Sim, disponível
+            </button>
 
-          <button
-            type="button"
-            disabled={aGravar}
-            onClick={() => responder('unavailable')}
-            className={`flex-1 min-h-11 px-4 rounded-[22px] font-display font-bold text-[12.5px] cursor-pointer
-              flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                minhaResposta === 'unavailable'
-                  ? 'bg-white/90 text-csc-tinta shadow-md font-extrabold'
-                  : 'bg-white/10 text-white hover:bg-white/15'
-              }`}
-          >
-            {minhaResposta === 'unavailable' && <XCircle size={15} />}
-            Não disponível
-          </button>
-        </div>
+            <button
+              type="button"
+              disabled={aGravar}
+              onClick={() => responder('unavailable')}
+              className={`flex-1 min-h-11 px-4 rounded-[22px] font-display font-bold text-[12.5px] cursor-pointer
+                flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                  minhaResposta === 'unavailable'
+                    ? 'bg-white/90 text-csc-tinta shadow-md font-extrabold'
+                    : 'bg-white/10 text-white hover:bg-white/15'
+                }`}
+            >
+              {minhaResposta === 'unavailable' && <XCircle size={15} />}
+              Não disponível
+            </button>
+          </div>
+        )}
 
         {/* Indicador de Resposta Pessoal */}
         <div className="flex items-center justify-between text-[11px] pt-1">

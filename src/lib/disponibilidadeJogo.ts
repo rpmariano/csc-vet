@@ -64,6 +64,73 @@ export function obterJogoAntecedidoPeloTreino<T extends EventoComDataETipo>(
   return jogosNoIntervalo.length > 0 ? jogosNoIntervalo[0].evento : null
 }
 
+/**
+ * Determina qual é o treino que antecede um determinado jogo (a relação inversa).
+ * É o último treino ativo anterior ao jogo, desde que não haja outro jogo entre ambos.
+ */
+export function obterTreinoQueAntecedeJogo<T extends EventoComDataETipo>(
+  jogo: T,
+  todosEventos: readonly T[],
+): T | null {
+  if (jogo.type !== 'match') return null
+  const dataJogo = new Date(jogo.date_time).getTime()
+  if (isNaN(dataJogo)) return null
+
+  // Treinos anteriores a este jogo
+  const treinosAnteriores = todosEventos
+    .filter(e => e.type === 'practice' && e.is_active !== false)
+    .map(e => ({ evento: e, timestamp: new Date(e.date_time).getTime() }))
+    .filter(e => !isNaN(e.timestamp) && e.timestamp < dataJogo)
+    .sort((a, b) => b.timestamp - a.timestamp) // Mais recente primeiro
+
+  for (const item of treinosAnteriores) {
+    const jogoDoTreino = obterJogoAntecedidoPeloTreino(item.evento, todosEventos)
+    if (jogoDoTreino?.id === jogo.id) {
+      return item.evento
+    }
+  }
+
+  return null
+}
+
+/**
+ * Verifica se a convocatória de um treino está atualmente disponibilizada/aberta para respostas.
+ * No CSC, o treino abre para respostas quando não está em rascunho (is_active !== false)
+ * e faltam no máximo DIAS_JANELA_TREINO (6 dias) até ao início do treino.
+ */
+export function treinoAbertoParaResposta(treino?: EventoComDataETipo | null): boolean {
+  if (!treino || treino.is_active === false || !treino.date_time) return false
+  const comeca = new Date(treino.date_time).getTime()
+  const agora = Date.now()
+  if (isNaN(comeca)) return false
+  // Não aceita se já começou ou se ainda faltam mais de 6 dias
+  if (agora >= comeca) return false
+  if (comeca - agora > 6 * 864e5) return false
+  return true
+}
+
+/**
+ * Verifica se a sondagem de disponibilidade para um jogo está atualmente aberta para resposta dos atletas.
+ * Regra do CSC: a sondagem de um jogo só está disponível a partir do momento em que o treino
+ * associado que o antecede está disponibilizado para votação (não em rascunho e dentro da janela de 6 dias).
+ * Se não houver treino anterior associado (ex: jogo isolado), verifica a janela de 6 dias do próprio jogo.
+ */
+export function sondagemJogoAbertaParaResposta<T extends EventoComDataETipo>(
+  jogo: T,
+  todosEventos: readonly T[],
+): boolean {
+  if (!jogo || jogo.is_active === false) return false
+  const treino = obterTreinoQueAntecedeJogo(jogo, todosEventos)
+  if (treino) {
+    return treinoAbertoParaResposta(treino)
+  }
+  // Se não tiver treino antecedente agendado, usa a janela padrão de 6 dias antes do jogo
+  const comeca = new Date(jogo.date_time).getTime()
+  const agora = Date.now()
+  if (isNaN(comeca) || agora >= comeca) return false
+  return comeca - agora <= 6 * 864e5
+}
+
 const chaveLocal = (matchId: string, playerId: string) => `csc_avail_${matchId}_${playerId}`
 
 /**

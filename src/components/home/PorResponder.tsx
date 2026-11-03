@@ -45,6 +45,7 @@ export interface PorResponderProps {
   clubeSigla?: string
   isCoachOrAdmin?: boolean
   plantel?: readonly Profile[]
+  todosEventos?: readonly EventoComDataETipo[]
   aoResponder: (id: string, status: 'confirmed' | 'declined') => void
 }
 
@@ -55,6 +56,7 @@ export const PorResponder: React.FC<PorResponderProps> = ({
   clubeSigla,
   isCoachOrAdmin = false,
   plantel = [],
+  todosEventos = [],
   aoResponder,
 }) => {
   const navegar = useNavigate()
@@ -138,6 +140,7 @@ export const PorResponder: React.FC<PorResponderProps> = ({
               compacto
               isCoachOrAdmin={isCoachOrAdmin}
               plantel={plantel}
+              treinoAssociado={p.eventoOriginal}
             />
           </div>
         )}
@@ -151,6 +154,7 @@ export const PorResponder: React.FC<PorResponderProps> = ({
               isCoachOrAdmin={isCoachOrAdmin}
               compacto
               plantel={plantel}
+              todosEventos={todosEventos}
             />
           </div>
         )}

@@ -1279,6 +1279,7 @@ const CalendarPage: React.FC = () => {
                         compacto
                         isCoachOrAdmin={Boolean(isCoachOrAdmin)}
                         plantel={allPlayers}
+                        treinoAssociado={event}
                       />
                     </div>
                   )
@@ -1295,6 +1296,7 @@ const CalendarPage: React.FC = () => {
                         isCoachOrAdmin={Boolean(isCoachOrAdmin)}
                         compacto
                         plantel={allPlayers}
+                        todosEventos={events}
                       />
                     </div>
                   )
@@ -2159,6 +2161,7 @@ const CalendarPage: React.FC = () => {
                       clubeSigla={clubSettings?.initials}
                       isCoachOrAdmin={Boolean(isCoachOrAdmin)}
                       plantel={allPlayers}
+                      treinoAssociado={selectedEvent}
                     />
                   )
                 })()}
@@ -2172,6 +2175,7 @@ const CalendarPage: React.FC = () => {
                       playerId={profile?.id}
                       isCoachOrAdmin={Boolean(isCoachOrAdmin)}
                       plantel={allPlayers}
+                      todosEventos={events}
                       aoEditarConvocatoria={isCoachOrAdmin ? () => {
                         navigate(`/events?convocatoria=${selectedEvent.id}`, {
                           state: { origem: nomeDoEcra(location.pathname, location.search) },
