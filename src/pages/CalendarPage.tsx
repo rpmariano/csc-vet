@@ -892,9 +892,10 @@ const CalendarPage: React.FC = () => {
   }
 
   const selectedDayEvents = selectedDate ? getEventsForDate(selectedDate) : []
+  const selectedDayIds = new Set(selectedDayEvents.map(e => e.id))
 
   /** A lista de eventos por realizar ou realizados, sempre ordenada cronologicamente por data. */
-  const eventosDaLista = [...filteredEvents].sort(
+  const eventosDaLista = filteredEvents.filter(e => !selectedDayIds.has(e.id)).sort(
     (a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime(),
   )
 
@@ -1577,9 +1578,9 @@ const CalendarPage: React.FC = () => {
               "Por realizar" e o passado fica de fora: sem esta linha, quem
               procura o jogo do mês passado não tem como saber que ele existe
               — o filtro está atrás do funil e não se vê. */}
-          {eventosDaLista.length > 0 && (
+          {(eventosDaLista.length > 0 || (filteredEvents.length > 0 && statusFilter === ESTADO_POR_OMISSAO && haRealizados)) && (
             <div className="flex items-center gap-2">
-              <EtiquetaSeccao className="flex-1">{ROTULOS_ESTADO[statusFilter]}</EtiquetaSeccao>
+              {eventosDaLista.length > 0 ? <EtiquetaSeccao className="flex-1">{ROTULOS_ESTADO[statusFilter]}</EtiquetaSeccao> : <div className="flex-1" />}
               {statusFilter === ESTADO_POR_OMISSAO && haRealizados && (
                 <button
                   type="button"
@@ -1594,7 +1595,7 @@ const CalendarPage: React.FC = () => {
             </div>
           )}
 
-          {eventosDaLista.length === 0 ? (
+          {filteredEvents.length === 0 ? (
             /*
               Dois vazios diferentes, e a diferença importa: com filtro posto o
               que falta é tirá-lo; sem filtro nenhum não há mesmo nada marcado,
