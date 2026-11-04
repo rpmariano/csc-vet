@@ -614,7 +614,7 @@ const EventsPage: React.FC = () => {
         // Plantel: a vista traz só as colunas de equipa (sem IBAN, NIF, morada,
         // contactos ou notas médicas), por isso qualquer membro a pode ler.
         supabase.from('v_players_public').select('*').order('name', { ascending: true }),
-        fetchAllCallups('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, jersey_number, role, roles, position)'),
+        fetchAllCallups('id, event_id, player_id, status, responded_at'),
         supabase.from('tournament_players').select('tournament_id, player_id'),
         supabase.from('tournament_suspensions').select('*').eq('status', 'active')
       ])

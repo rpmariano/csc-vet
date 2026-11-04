@@ -7,6 +7,7 @@ import {
 } from '../lib/finance'
 import type { FinancialSettings, QuotaEligiblePlayer } from '../lib/finance'
 import { eAdepto, eJogador } from '../lib/papeis'
+import { obterDefinicoesFinanceiras } from './useEpocaAtual'
 
 /**
  * Tudo o que uma pessoa deve ao clube, num sítio só — quotas e encargos.
@@ -106,7 +107,7 @@ export function useEstadoPagamentos(
           { data: participacoes },
           { data: pagamentos },
         ] = await Promise.all([
-          supabase.from('financial_settings').select('*').eq('id', 1).maybeSingle(),
+          obterDefinicoesFinanceiras(),
           temPapelDeJogador
             ? supabase.from('dues').select('month_year').eq('player_id', jogadorId)
             : Promise.resolve({ data: [] }),

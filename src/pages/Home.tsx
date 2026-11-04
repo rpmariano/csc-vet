@@ -465,7 +465,7 @@ const Home: React.FC = () => {
 
     carregar()
     return () => { cancelado = true }
-  }, [profile, isUnassigned, estadoDaFicha, clubSettings])
+  }, [profile?.id, profile?.role, profile?.status, isUnassigned, estadoDaFicha, clubSettings?.id, clubSettings?.name, clubSettings?.initials])
 
   const responder = async (eventId: string, status: 'confirmed' | 'declined') => {
     if (!profile) return

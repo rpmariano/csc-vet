@@ -596,7 +596,7 @@ export async function garantirTacaVeteranos2026(opcoes?: { forcar?: boolean }): 
           .eq('tournament_id', torneio.id)
         if ((count ?? 0) >= 8) {
           try { sessionStorage.setItem('csc_taca_2026_checked', '1') } catch { /* ignore */ }
-          return torneio.id
+          return null
         }
       }
 

@@ -133,70 +133,26 @@ export function sondagemJogoAbertaParaResposta<T extends EventoComDataETipo>(
 
 const chaveLocal = (matchId: string, playerId: string) => `csc_avail_${matchId}_${playerId}`
 
+const CACHE_TTL_MS = 15_000
+const cacheDisponibilidadesJogo = new Map<
+  string,
+  { timestamp: number; mapa: Record<string, RespostaDisponibilidade> }
+>()
+const pedidosDisponibilidadeEmCurso = new Map<
+  string,
+  Promise<Record<string, RespostaDisponibilidade>>
+>()
+
 /**
  * Obtém a resposta de disponibilidade de um atleta para um jogo específico.
+ * Reutiliza o carregamento deduplicado e em cache do jogo para evitar pedidos duplicados.
  */
 export async function obterDisponibilidadeAtleta(
   matchId: string,
   playerId: string,
 ): Promise<RespostaDisponibilidade | null> {
-  let dbStatus: RespostaDisponibilidade | null = null
-
-  // 1. Procurar na base de dados primeiro (tabela match_availabilities)
-  try {
-    const { data, error } = await supabase
-      .from('match_availabilities')
-      .select('status')
-      .eq('match_id', matchId)
-      .eq('player_id', playerId)
-      .maybeSingle()
-
-    if (!error && data?.status) {
-      dbStatus = data.status as RespostaDisponibilidade
-      try {
-        localStorage.setItem(chaveLocal(matchId, playerId), dbStatus)
-      } catch {
-        // Ignorar
-      }
-      return dbStatus
-    }
-  } catch (err) {
-    console.warn('Erro ao ler disponibilidade da BD:', err)
-  }
-
-  // 2. Verificar cache local como fallback
-  try {
-    const salvoLocal = localStorage.getItem(chaveLocal(matchId, playerId))
-    if (salvoLocal === 'available' || salvoLocal === 'unavailable') {
-      // Se estava em cache local e não existia na base de dados, sincronizar automaticamente com o Supabase
-      if (!dbStatus) {
-        Promise.resolve(
-          supabase
-            .from('match_availabilities')
-            .upsert(
-              {
-                match_id: matchId,
-                player_id: playerId,
-                status: salvoLocal,
-                responded_at: new Date().toISOString(),
-              },
-              { onConflict: 'match_id,player_id' },
-            ),
-        )
-          .then(({ error }) => {
-            if (error) {
-              console.warn('Falha na sincronização em background de disponibilidade local:', error.message)
-            }
-          })
-          .catch(() => {})
-      }
-      return salvoLocal as RespostaDisponibilidade
-    }
-  } catch {
-    // Ignorar erro de localStorage
-  }
-
-  return null
+  const mapa = await obterTodasDisponibilidadesDoJogo(matchId)
+  return mapa[playerId] ?? null
 }
 
 /**
@@ -205,74 +161,97 @@ export async function obterDisponibilidadeAtleta(
 export async function obterTodasDisponibilidadesDoJogo(
   matchId: string,
 ): Promise<Record<string, RespostaDisponibilidade>> {
-  const mapa: Record<string, RespostaDisponibilidade> = {}
-
-  // 1. Carregar valores em localStorage que pertençam a este jogo
-  try {
-    const prefixo = `csc_avail_${matchId}_`
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i)
-      if (k && k.startsWith(prefixo)) {
-        const playerId = k.slice(prefixo.length)
-        const valor = localStorage.getItem(k)
-        if (valor === 'available' || valor === 'unavailable') {
-          mapa[playerId] = valor
-        }
-      }
-    }
-  } catch {
-    // Ignorar
+  const agora = Date.now()
+  const emCache = cacheDisponibilidadesJogo.get(matchId)
+  if (emCache && agora - emCache.timestamp < CACHE_TTL_MS) {
+    return { ...emCache.mapa }
   }
 
-  // 2. Carregar da base de dados se a tabela existir
-  try {
-    const { data, error } = await supabase
-      .from('match_availabilities')
-      .select('player_id, status')
-      .eq('match_id', matchId)
+  const emCurso = pedidosDisponibilidadeEmCurso.get(matchId)
+  if (emCurso) {
+    const res = await emCurso
+    return { ...res }
+  }
 
-    if (error) {
-      console.warn('Erro ao ler todas as disponibilidades do jogo:', error.message)
-    } else if (data) {
-      const dbIds = new Set<string>()
-      for (const row of data as { player_id: string; status: string }[]) {
-        if (row.status === 'available' || row.status === 'unavailable') {
-          mapa[row.player_id] = row.status as RespostaDisponibilidade
-          dbIds.add(row.player_id)
-          try {
-            localStorage.setItem(chaveLocal(matchId, row.player_id), row.status)
-          } catch {
-            // Ignorar
+  const promessa = (async () => {
+    const mapa: Record<string, RespostaDisponibilidade> = {}
+
+    // 1. Carregar valores em localStorage que pertençam a este jogo
+    try {
+      const prefixo = `csc_avail_${matchId}_`
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.startsWith(prefixo)) {
+          const playerId = k.slice(prefixo.length)
+          const valor = localStorage.getItem(k)
+          if (valor === 'available' || valor === 'unavailable') {
+            mapa[playerId] = valor
           }
         }
       }
-
-      // Se o utilizador atual tem resposta guardada localmente que ainda não estava na BD, sincronizar agora
-      try {
-        const { data: authData } = await supabase.auth.getUser()
-        const currentUserId = authData?.user?.id
-        if (currentUserId && mapa[currentUserId] && !dbIds.has(currentUserId)) {
-          await supabase
-            .from('match_availabilities')
-            .upsert(
-              {
-                match_id: matchId,
-                player_id: currentUserId,
-                status: mapa[currentUserId],
-                responded_at: new Date().toISOString(),
-              },
-              { onConflict: 'match_id,player_id' },
-            )
-        }
-      } catch {
-        // Ignorar
-      }
+    } catch {
+      // Ignorar
     }
-  } catch (err) {
-    console.warn('Exceção ao obter disponibilidades do jogo:', err)
-  }
 
-  return mapa
+    // 2. Carregar da base de dados se a tabela existir
+    try {
+      const { data, error } = await supabase
+        .from('match_availabilities')
+        .select('player_id, status')
+        .eq('match_id', matchId)
+
+      if (error) {
+        console.warn('Erro ao ler todas as disponibilidades do jogo:', error.message)
+      } else if (data) {
+        const dbIds = new Set<string>()
+        for (const row of data as { player_id: string; status: string }[]) {
+          if (row.status === 'available' || row.status === 'unavailable') {
+            mapa[row.player_id] = row.status as RespostaDisponibilidade
+            dbIds.add(row.player_id)
+            try {
+              localStorage.setItem(chaveLocal(matchId, row.player_id), row.status)
+            } catch {
+              // Ignorar
+            }
+          }
+        }
+
+        // Se o utilizador atual tem resposta guardada localmente que ainda não estava na BD, sincronizar agora
+        try {
+          const { data: sessionData } = await supabase.auth.getSession()
+          const currentUserId = sessionData?.session?.user?.id
+          if (currentUserId && mapa[currentUserId] && !dbIds.has(currentUserId)) {
+            await supabase
+              .from('match_availabilities')
+              .upsert(
+                {
+                  match_id: matchId,
+                  player_id: currentUserId,
+                  status: mapa[currentUserId],
+                  responded_at: new Date().toISOString(),
+                },
+                { onConflict: 'match_id,player_id' },
+              )
+          }
+        } catch {
+          // Ignorar
+        }
+      }
+    } catch (err) {
+      console.warn('Exceção ao obter disponibilidades do jogo:', err)
+    }
+
+    cacheDisponibilidadesJogo.set(matchId, { timestamp: Date.now(), mapa: { ...mapa } })
+    return mapa
+  })()
+
+  pedidosDisponibilidadeEmCurso.set(matchId, promessa)
+  try {
+    const resultado = await promessa
+    return { ...resultado }
+  } finally {
+    pedidosDisponibilidadeEmCurso.delete(matchId)
+  }
 }
 
 /**
@@ -284,6 +263,13 @@ export async function gravarDisponibilidadeAtleta(
   status: RespostaDisponibilidade,
 ): Promise<boolean> {
   triggerHaptic('selection')
+
+  // Atualizar cache em memória imediatamente
+  const existente = cacheDisponibilidadesJogo.get(matchId)
+  if (existente) {
+    existente.mapa[playerId] = status
+    existente.timestamp = Date.now()
+  }
 
   // 1. Guardar imediatamente em localStorage
   try {

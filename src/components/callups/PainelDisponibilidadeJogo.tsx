@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { Trophy, CheckCircle2, XCircle, Users, ChevronDown, ChevronUp, UserCheck, AlertCircle, Clock } from 'lucide-react'
 import type { EventoComDataETipo, RespostaDisponibilidade } from '../../lib/disponibilidadeJogo'
 import {
-  obterDisponibilidadeAtleta,
   obterTodasDisponibilidadesDoJogo,
   gravarDisponibilidadeAtleta,
   sondagemJogoAbertaParaResposta,
@@ -75,11 +74,12 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
   const carregarDados = () => {
     if (!jogo?.id) return
 
-    if (playerId) {
-      obterDisponibilidadeAtleta(jogo.id, playerId).then(setMinhaResposta)
-    }
-
-    obterTodasDisponibilidadesDoJogo(jogo.id).then(setTodasRespostas)
+    obterTodasDisponibilidadesDoJogo(jogo.id).then(mapa => {
+      setTodasRespostas(mapa)
+      if (playerId) {
+        setMinhaResposta(mapa[playerId] ?? null)
+      }
+    })
   }
 
   useEffect(() => {
@@ -97,8 +97,15 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
 
     window.addEventListener('csc_match_availability_updated', handleAtualizacao)
 
-    // Subscrever alterações em tempo real via Supabase Realtime
-    // Usamos um identificador único de subscrição para evitar colisões no cliente Supabase se o componente for remontado
+    // Nos cartões compactos de lista evitamos abrir dezenas de canais WebSocket simultâneos;
+    // a atualização local imediata já é assegurada pelo evento 'csc_match_availability_updated'.
+    if (compacto) {
+      return () => {
+        window.removeEventListener('csc_match_availability_updated', handleAtualizacao)
+      }
+    }
+
+    // Subscrever alterações em tempo real via Supabase Realtime apenas na vista expandida (detalhe)
     const channelName = `rt_painel_match_avail_${jogo?.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
     const channel = supabase
       .channel(channelName)
@@ -121,7 +128,7 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
       window.removeEventListener('csc_match_availability_updated', handleAtualizacao)
       supabase.removeChannel(channel)
     }
-  }, [jogo?.id, playerId])
+  }, [jogo?.id, playerId, compacto])
 
   const responder = async (status: RespostaDisponibilidade) => {
     if (!playerId || aGravar) return

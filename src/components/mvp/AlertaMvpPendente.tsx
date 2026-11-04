@@ -113,7 +113,7 @@ export const AlertaMvpPendente: React.FC = () => {
     } catch (err) {
       console.warn('Erro ao verificar votos pendentes de MVP:', err)
     }
-  }, [profile])
+  }, [profile?.id])
 
   useEffect(() => {
     fecharNotificacoesMvp()

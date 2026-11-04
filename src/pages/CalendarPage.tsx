@@ -321,11 +321,11 @@ const CalendarPage: React.FC = () => {
   const fetchEventsAndData = async () => {
     setLoading(true)
     try {
-      const myCallupsPromise = profile?.id
+      const myCallupsPromise = false && profile?.id
         ? supabase
             .from('callups')
             .select('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)')
-            .eq('player_id', profile.id)
+            .eq('player_id', profile?.id || '')
         : Promise.resolve({ data: [] } as any)
 
       const [evRes, callupsRes, myCallupsRes, profilesRes, fieldsRes] = await Promise.all([
@@ -333,14 +333,14 @@ const CalendarPage: React.FC = () => {
           .from('events')
           .select('*, opponent:opponents(name, initials, logo_url, home_kit_color_1, home_kit_color_2, away_kit_color_1, away_kit_color_2), tournament:tournaments(id, name, season, image_url, organizer_name, rules), field:fields(id, name, address)')
           .order('date_time', { ascending: true }),
-        fetchAllCallups('id, event_id, player_id, status, responded_at, player:v_players_public(id, name, photo_url, shirt_name, jersey_number, nickname, role, roles, position, status)'),
+        fetchAllCallups('id, event_id, player_id, status, responded_at'),
         myCallupsPromise,
         // Plantel: a vista traz só as colunas de equipa (sem IBAN, NIF, morada,
         // contactos ou notas médicas), por isso qualquer membro a pode ler.
         supabase
           .from('v_players_public')
           .select('*')
-          .neq('status', 'inactive')
+          // Perfis inativos são filtrados em setAllPlayers mas mantidos em playerMap
           .order('name', { ascending: true }),
         supabase
           .from('fields')
@@ -360,7 +360,7 @@ const CalendarPage: React.FC = () => {
       let mergedPlayers: Profile[] = []
       if (profilesRes.data) {
         mergedPlayers = ordenarPlantel((profilesRes.data as Profile[]) || [])
-        setAllPlayers(mergedPlayers)
+        setAllPlayers(mergedPlayers.filter(p => p.status !== 'inactive'))
       }
 
       const allRawCallups = [
@@ -515,7 +515,7 @@ const CalendarPage: React.FC = () => {
         const d = new Date(target.date_time)
         setSelectedDate(d)
         setCurrentDate(d)
-        fetchCallupsForTarget(eventIdParam)
+        if (!eventCallups[eventIdParam]?.length) fetchCallupsForTarget(eventIdParam)
         return
       }
     }
@@ -539,14 +539,14 @@ const CalendarPage: React.FC = () => {
           const d = new Date(data.date_time)
           setSelectedDate(d)
           setCurrentDate(d)
-          fetchCallupsForTarget(eventIdParam)
+          if (!eventCallups[eventIdParam]?.length) fetchCallupsForTarget(eventIdParam)
         }
       } catch (err) {
         console.error('Erro ao carregar evento do link:', err)
       }
     }
     fetchTargetEvent()
-  }, [searchParams, events, profile])
+  }, [searchParams, events, profile?.id])
 
   const isCoachOrAdmin = Boolean(eTreinadorOuAdmin(profile))
   const isAdepto = eAdepto(profile)

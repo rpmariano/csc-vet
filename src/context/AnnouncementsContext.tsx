@@ -134,7 +134,7 @@ export const AnnouncementsProvider: React.FC<{ children: React.ReactNode }> = ({
     } finally {
       setLoading(false)
     }
-  }, [profile, migrarLeiturasLocais])
+  }, [profile?.id, profile?.role, migrarLeiturasLocais])
 
   useEffect(() => {
     fetchAnnouncements()

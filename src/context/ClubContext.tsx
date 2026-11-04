@@ -67,7 +67,7 @@ export const ClubProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       setLoading(false)
     }
-  }, [user])
+  }, [user?.id])
 
   return (
     <ClubContext.Provider value={{ clubSettings, loading, refreshSettings: fetchSettings }}>

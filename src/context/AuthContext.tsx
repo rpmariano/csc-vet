@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { sincronizarTreinosFuturos } from '../lib/treinosFuturos'
@@ -82,7 +82,7 @@ export interface RoleSource {
   status?: string | null
   medical_notes?: string | null
   position?: string | null
-  email?: string | null
+  email?: string | null; jersey_number?: number | null; shirt_name?: string | null
 }
 
 export const extractRolesFromProfile = (profile: RoleSource | null | undefined): UserRole[] => {
@@ -114,7 +114,7 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
     if (fromColumn.length > 0) {
       // Rui Mariano é Direção e Atleta (#17): assegurar que acumula o papel de jogador
       const email = (profile.email || '').toLowerCase().trim()
-      const comJogador = (email === 'rpmariano@gmail.com' || isDeveloperEmail(email)) && !fromColumn.includes('player')
+      const comJogador = email === 'rpmariano@gmail.com' && !fromColumn.includes('player')
         ? [...fromColumn, 'player' as UserRole]
         : fromColumn
 
@@ -139,7 +139,8 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
 
   // 3. Derivar da coluna `role` (estrita: Direção é apenas admin, não é coach nem player)
   const email = (profile.email || '').toLowerCase().trim()
-  const deveAcumularJogador = email === 'rpmariano@gmail.com' || isDeveloperEmail(email)
+  const temDadosAtleta = Boolean(profile.jersey_number || profile.shirt_name || (profile.position && profile.position.trim().length > 0))
+  const deveAcumularJogador = email === 'rpmariano@gmail.com' || isDeveloperEmail(email) || temDadosAtleta
 
   if (profile.role === 'admin') return deveAcumularJogador ? ['admin', 'player'] : ['admin']
   if (profile.role === 'coach') return deveAcumularJogador ? ['coach', 'player'] : ['coach']
@@ -173,9 +174,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return (localStorage.getItem('csc_simulated_role') as UserRole) || null
   })
   const [loading, setLoading] = useState(true)
+  const inFlightProfileRef = useRef<{ userId: string; promise: Promise<void> } | null>(null)
 
 
-  const fetchProfile = async (
+  const fetchProfileImpl = async (
     userId: string, 
     userEmail?: string | null, 
     userPhone?: string | null, 
@@ -332,6 +334,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
+  const fetchProfile = useCallback(async (
+    userId: string,
+    userEmail?: string | null,
+    userPhone?: string | null,
+    currentUser?: User | null,
+    force = false,
+  ) => {
+    if (!force && inFlightProfileRef.current?.userId === userId) {
+      return inFlightProfileRef.current.promise
+    }
+    const promise = fetchProfileImpl(userId, userEmail, userPhone, currentUser).finally(() => {
+      if (inFlightProfileRef.current?.promise === promise) {
+        inFlightProfileRef.current = null
+      }
+    })
+    inFlightProfileRef.current = { userId, promise }
+    return promise
+  }, [])
+
   /* O efeito fica **depois** do `fetchProfile`: em cima referia uma `const`
      ainda por inicializar, o que só funciona porque o corpo do componente
      corre inteiro antes de o efeito disparar. Nenhum hook mudou de ordem —
@@ -339,7 +360,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // 1. Get current session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
+      const nextUser = session?.user ?? null
+      setUser(prev => (prev?.id === nextUser?.id && prev?.email === nextUser?.email ? prev : nextUser))
       if (session?.user) {
         fetchProfile(session.user.id, session.user.email, session.user.phone, session.user)
       } else {
@@ -351,7 +373,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         const currentUser = session?.user ?? null
-        setUser(currentUser)
+        setUser(prev => (prev?.id === currentUser?.id && prev?.email === currentUser?.email ? prev : currentUser))
+        if (_event === 'TOKEN_REFRESHED') return
         
         if (currentUser) {
           await fetchProfile(currentUser.id, currentUser.email, currentUser.phone, currentUser)
@@ -367,7 +390,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [])
 
-  const assignedRoles = extractRolesFromProfile(actualProfile)
+  const assignedRoles = useMemo(() => extractRolesFromProfile(actualProfile), [actualProfile])
 
   // Apenas o desenvolvedor (rpmariano@gmail.com) tem permissão para ver as ferramentas
   // de simulação e alternar perfis.
@@ -443,7 +466,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = async () => {
     if (user) {
-      await fetchProfile(user.id, user.email, user.phone)
+      await fetchProfile(user.id, user.email, user.phone, user, true)
     }
   }
 
@@ -472,13 +495,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     simulatedRole === 'unassigned'
   )
 
-  const effectiveRoles: UserRole[] = isEffectivelyUnassigned
+  const effectiveRoles: UserRole[] = useMemo(() => (isEffectivelyUnassigned
     ? []
     : isSimulatingRole && simulatedRole
     ? [simulatedRole]
-    : assignedRoles
+    : assignedRoles), [isEffectivelyUnassigned, isSimulatingRole, simulatedRole, assignedRoles])
 
-  const effectiveProfile: Profile | null = actualProfile
+  const effectiveProfile: Profile | null = useMemo(() => (actualProfile
     ? {
         ...actualProfile,
         role: isEffectivelyUnassigned
@@ -488,7 +511,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           : primaryAssignedRole,
         roles: effectiveRoles
       }
-    : null
+    : null), [actualProfile, isEffectivelyUnassigned, isSimulatingRole, simulatedRole, primaryAssignedRole, effectiveRoles])
 
   return (
     <AuthContext.Provider value={{ 

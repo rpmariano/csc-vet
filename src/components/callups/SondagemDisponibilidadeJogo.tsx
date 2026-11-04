@@ -106,8 +106,16 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
 
     window.addEventListener('csc_match_availability_updated', handleAtualizacao)
 
-    // Subscrever alterações em tempo real via Supabase Realtime
-    // Usamos um identificador único de subscrição para evitar colisões no cliente Supabase se o componente for remontado
+    // Nos cartões compactos de lista evitamos abrir canais WebSocket por cada cartão;
+    // a sincronização imediata na janela é assegurada pelo evento 'csc_match_availability_updated'.
+    if (compacto) {
+      return () => {
+        ativo = false
+        window.removeEventListener('csc_match_availability_updated', handleAtualizacao)
+      }
+    }
+
+    // Subscrever alterações em tempo real via Supabase Realtime apenas no modal de detalhe
     const channelName = `rt_match_avail_${jogo?.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
     const channel = supabase
       .channel(channelName)
@@ -131,7 +139,7 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
       window.removeEventListener('csc_match_availability_updated', handleAtualizacao)
       supabase.removeChannel(channel)
     }
-  }, [jogo?.id, playerId, isCoachOrAdmin])
+  }, [jogo?.id, playerId, isCoachOrAdmin, compacto])
 
   const responder = async (status: RespostaDisponibilidade) => {
     if (aGravar) return
