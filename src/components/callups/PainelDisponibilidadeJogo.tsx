@@ -5,6 +5,7 @@ import {
   obterTodasDisponibilidadesDoJogo,
   gravarDisponibilidadeAtleta,
   sondagemJogoAbertaParaResposta,
+  sondagemJogoFechadaPorPrazo,
 } from '../../lib/disponibilidadeJogo'
 import type { Profile } from '../../context/AuthContext'
 import { getPlayerDisplayName } from '../../lib/eventos'
@@ -37,7 +38,9 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
   const [aMostrarLista, setAMostrarLista] = useState(false)
   const [plantelFallback, setPlantelFallback] = useState<Profile[]>([])
 
-  // Sondagem para atletas só abre quando o treino antecedente (ou a janela) está disponibilizado para votação
+  const fechadaPorPrazo = useMemo(() => sondagemJogoFechadaPorPrazo(jogo), [jogo])
+
+  // Sondagem para atletas abre quando o treino antecedente está disponibilizado e fecha 12h antes do jogo
   const abertaParaVotacao = useMemo(() => {
     return sondagemJogoAbertaParaResposta(jogo, todosEventos.length > 0 ? todosEventos : [jogo])
   }, [jogo, todosEventos])
@@ -188,7 +191,9 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
             </span>
           </div>
           <p className="text-[10.5px] text-white/60 leading-relaxed">
-            A resposta de disponibilidade abre quando o treino associado for disponibilizado.
+            {fechadaPorPrazo
+              ? 'A sondagem de disponibilidade encerrou (fecha 12h antes da hora do jogo).'
+              : 'A resposta de disponibilidade abre quando o treino associado for disponibilizado.'}
           </p>
         </div>
       )
@@ -298,10 +303,14 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
               )}
             </div>
 
-            {!abertaParaVotacao && !minhaResposta ? (
+            {!abertaParaVotacao ? (
               <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-xs">
                 <Clock size={14} className="text-csc-gold shrink-0" />
-                <span>A resposta de disponibilidade abre quando o treino associado for disponibilizado para votação.</span>
+                <span>
+                  {fechadaPorPrazo
+                    ? 'A sondagem de disponibilidade encerrou (fecha 12h antes da hora do jogo).'
+                    : 'A resposta de disponibilidade abre quando o treino associado for disponibilizado para votação.'}
+                </span>
               </div>
             ) : (
               <div className="flex gap-2">

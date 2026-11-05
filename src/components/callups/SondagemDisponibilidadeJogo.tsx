@@ -5,7 +5,8 @@ import {
   obterDisponibilidadeAtleta,
   obterTodasDisponibilidadesDoJogo,
   gravarDisponibilidadeAtleta,
-  treinoAbertoParaResposta,
+  sondagemJogoAbertaParaResposta,
+  sondagemJogoFechadaPorPrazo,
 } from '../../lib/disponibilidadeJogo'
 import { localDoEvento } from '../../lib/eventos'
 import type { Profile } from '../../context/AuthContext'
@@ -44,11 +45,16 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
   const [aMostrarEquipa, setAMostrarEquipa] = useState(false)
   const [plantelFallback, setPlantelFallback] = useState<Profile[]>([])
 
-  // Sondagem associada ao treino só abre quando a votação do treino estiver aberta
+  const fechadaPorPrazo = useMemo(() => sondagemJogoFechadaPorPrazo(jogo), [jogo])
+
+  // Sondagem abre quando o treino associado abre e fecha 12h antes do jogo
   const abertaParaVotacao = useMemo(() => {
-    if (!treinoAssociado) return true
-    return treinoAbertoParaResposta(treinoAssociado)
-  }, [treinoAssociado])
+    return sondagemJogoAbertaParaResposta(
+      jogo,
+      treinoAssociado ? [treinoAssociado, jogo] : [jogo],
+      treinoAssociado ?? null,
+    )
+  }, [jogo, treinoAssociado])
 
   // Se o plantel não tiver sido passado pelo componente pai, carregar os perfis ativos da BD
   useEffect(() => {
@@ -211,7 +217,9 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
             </span>
           </div>
           <p className="text-[10.5px] text-white/60 leading-relaxed">
-            A resposta de disponibilidade abre quando a convocatória deste treino estiver disponível.
+            {fechadaPorPrazo
+              ? 'A sondagem de disponibilidade encerrou (fecha 12h antes da hora do jogo).'
+              : 'A resposta de disponibilidade abre quando a convocatória deste treino estiver disponível.'}
           </p>
         </div>
       )
@@ -277,7 +285,11 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
         ) : (
           <div className="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/10 text-white/70 text-[11px]">
             <Clock size={13} className="text-csc-gold shrink-0" />
-            <span>Abre quando este treino estiver disponibilizado.</span>
+            <span>
+              {fechadaPorPrazo
+                ? 'Sondagem encerrada (fecha 12h antes da hora do jogo).'
+                : 'Abre quando este treino estiver disponibilizado.'}
+            </span>
           </div>
         )}
 
@@ -355,10 +367,14 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
         </div>
 
         {/* Botões de Resposta do Atleta */}
-        {!abertaParaVotacao && !minhaResposta ? (
+        {!abertaParaVotacao ? (
           <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-xs">
             <Clock size={15} className="text-csc-gold shrink-0" />
-            <span>A resposta de disponibilidade para o jogo abre quando este treino for disponibilizado para votação.</span>
+            <span>
+              {fechadaPorPrazo
+                ? 'A sondagem de disponibilidade encerrou (fecha 12h antes da hora do jogo).'
+                : 'A resposta de disponibilidade para o jogo abre quando este treino for disponibilizado para votação.'}
+            </span>
           </div>
         ) : (
           <div className="flex gap-2.5 pt-0.5">

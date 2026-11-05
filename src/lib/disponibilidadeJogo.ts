@@ -93,6 +93,19 @@ export function obterTreinoQueAntecedeJogo<T extends EventoComDataETipo>(
   return null
 }
 
+export const HORAS_FECHO_SONDAGEM_JOGO = 12
+
+/**
+ * Verifica se a sondagem de disponibilidade de um jogo já encerrou por prazo:
+ * a sondagem fecha 12 horas antes da hora do jogo.
+ */
+export function sondagemJogoFechadaPorPrazo(jogo?: EventoComDataETipo | null): boolean {
+  if (!jogo?.date_time) return false
+  const comecaJogo = new Date(jogo.date_time).getTime()
+  if (isNaN(comecaJogo)) return false
+  return Date.now() >= comecaJogo - HORAS_FECHO_SONDAGEM_JOGO * 3_600_000
+}
+
 /**
  * Verifica se a convocatória de um treino está atualmente disponibilizada/aberta para respostas.
  * No CSC, o treino abre para respostas quando não está em rascunho (is_active !== false)
@@ -111,24 +124,38 @@ export function treinoAbertoParaResposta(treino?: EventoComDataETipo | null): bo
 
 /**
  * Verifica se a sondagem de disponibilidade para um jogo está atualmente aberta para resposta dos atletas.
- * Regra do CSC: a sondagem de um jogo só está disponível a partir do momento em que o treino
- * associado que o antecede está disponibilizado para votação (não em rascunho e dentro da janela de 6 dias).
- * Se não houver treino anterior associado (ex: jogo isolado), verifica a janela de 6 dias do próprio jogo.
+ * Regra do CSC:
+ * 1. Abre a partir do momento em que o treino associado que antecede o jogo fica disponibilizado
+ *    para votação (não em rascunho e a <= 6 dias do início do treino), mantendo-se aberta mesmo
+ *    depois de esse treino terminar.
+ * 2. Se não houver treino anterior associado, abre 6 dias antes do jogo.
+ * 3. Fecha sempre 12 horas antes da hora do jogo.
  */
 export function sondagemJogoAbertaParaResposta<T extends EventoComDataETipo>(
   jogo: T,
   todosEventos: readonly T[],
+  treinoExplicito?: EventoComDataETipo | null,
 ): boolean {
-  if (!jogo || jogo.is_active === false) return false
-  const treino = obterTreinoQueAntecedeJogo(jogo, todosEventos)
-  if (treino) {
-    return treinoAbertoParaResposta(treino)
-  }
-  // Se não tiver treino antecedente agendado, usa a janela padrão de 6 dias antes do jogo
-  const comeca = new Date(jogo.date_time).getTime()
+  if (!jogo || jogo.is_active === false || !jogo.date_time) return false
+  if (sondagemJogoFechadaPorPrazo(jogo)) return false
+
   const agora = Date.now()
-  if (isNaN(comeca) || agora >= comeca) return false
-  return comeca - agora <= 6 * 864e5
+  const treino = treinoExplicito !== undefined
+    ? treinoExplicito
+    : obterTreinoQueAntecedeJogo(jogo, todosEventos)
+
+  if (treino) {
+    if (treino.is_active === false || !treino.date_time) return false
+    const comecaTreino = new Date(treino.date_time).getTime()
+    if (isNaN(comecaTreino)) return false
+    // Já entrou na janela de 6 dias do treino (e permanece aberta mesmo após o treino decorrer, até 12h antes do jogo)
+    return comecaTreino - agora <= 6 * 864e5
+  }
+
+  // Se não tiver treino antecedente agendado, abre 6 dias antes do próprio jogo (até 12h antes do jogo)
+  const comecaJogo = new Date(jogo.date_time).getTime()
+  if (isNaN(comecaJogo)) return false
+  return comecaJogo - agora <= 6 * 864e5
 }
 
 const chaveLocal = (matchId: string, playerId: string) => `csc_avail_${matchId}_${playerId}`
