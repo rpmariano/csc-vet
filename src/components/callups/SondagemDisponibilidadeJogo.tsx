@@ -9,9 +9,9 @@ import {
   sondagemJogoFechadaPorPrazo,
 } from '../../lib/disponibilidadeJogo'
 import { localDoEvento } from '../../lib/eventos'
-import type { Profile } from '../../context/AuthContext'
+import { useAuth, type Profile } from '../../context/AuthContext'
 import { getPlayerDisplayName } from '../../lib/eventos'
-import { eAdepto } from '../../lib/papeis'
+import { eJogadorElegivelSondagem } from '../../lib/papeis'
 import { CLUBE_SIGLA } from '../../lib/clube'
 import { triggerHaptic } from '../../utils/haptics'
 import { supabase } from '../../lib/supabaseClient'
@@ -39,6 +39,7 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
   treinoAssociado,
   aoResponder,
 }) => {
+  const { profile: authProfile } = useAuth()
   const [minhaResposta, setMinhaResposta] = useState<RespostaDisponibilidade | null>(null)
   const [todasRespostas, setTodasRespostas] = useState<Record<string, RespostaDisponibilidade>>({})
   const [aGravar, setAGravar] = useState(false)
@@ -62,8 +63,8 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
 
     let ativo = true
     supabase
-      .from('profiles')
-      .select('id, name, nickname, jersey_number, role, roles, status')
+      .from('v_players_public')
+      .select('id, name, nickname, shirt_name, jersey_number, position, role, roles, status')
       .eq('status', 'active')
       .then(({ data, error }) => {
         if (!error && data && ativo) {
@@ -80,10 +81,18 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
     return plantel && plantel.length > 0 ? plantel : plantelFallback
   }, [plantel, plantelFallback])
 
-  // Filtrar apenas atletas (não adeptos)
+  // Filtrar apenas jogadores aptos (excluindo lesionados, inativos, direção/treinador exclusivos, adeptos e conta de teste)
   const atletas = useMemo(() => {
-    return listaPlantel.filter(p => !eAdepto(p))
+    return listaPlantel.filter(p => eJogadorElegivelSondagem(p))
   }, [listaPlantel])
+
+  const souAtletaElegivel = useMemo(() => {
+    if (!playerId) return false
+    const naLista = listaPlantel.find(p => p.id === playerId)
+    if (naLista) return eJogadorElegivelSondagem(naLista)
+    if (authProfile && authProfile.id === playerId) return eJogadorElegivelSondagem(authProfile)
+    return false
+  }, [playerId, listaPlantel, authProfile])
 
   // Carregar disponibilidade deste atleta e do jogo
   useEffect(() => {
@@ -188,23 +197,12 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
     return atletas.filter(p => !todasRespostas[p.id])
   }, [atletas, todasRespostas])
 
-  // Atletas que eventualmente responderam mas não constam na lista filtrada de atletas
-  const outrosDisponiveis = useMemo(() => {
-    const idsJa = new Set(disponiveis.map(p => p.id))
-    return Object.entries(todasRespostas)
-      .filter(([id, st]) => st === 'available' && !idsJa.has(id))
-      .map(([id]) => listaPlantel.find(p => p.id === id) || ({ id, name: 'Atleta' } as Profile))
-  }, [todasRespostas, disponiveis, listaPlantel])
+  const todosDisponiveis = disponiveis
+  const todosIndisponiveis = indisponiveis
 
-  const outrosIndisponiveis = useMemo(() => {
-    const idsJa = new Set(indisponiveis.map(p => p.id))
-    return Object.entries(todasRespostas)
-      .filter(([id, st]) => st === 'unavailable' && !idsJa.has(id))
-      .map(([id]) => listaPlantel.find(p => p.id === id) || ({ id, name: 'Atleta' } as Profile))
-  }, [todasRespostas, indisponiveis, listaPlantel])
-
-  const todosDisponiveis = useMemo(() => [...disponiveis, ...outrosDisponiveis], [disponiveis, outrosDisponiveis])
-  const todosIndisponiveis = useMemo(() => [...indisponiveis, ...outrosIndisponiveis], [indisponiveis, outrosIndisponiveis])
+  if (!souAtletaElegivel && !isCoachOrAdmin) {
+    return null
+  }
 
   if (compacto) {
     if (!abertaParaVotacao && !isCoachOrAdmin && !minhaResposta) {
@@ -239,58 +237,62 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
           </span>
         </div>
 
-        <p className="text-[11.5px] text-white/90 font-medium">
-          Estás disponível para ser convocado para este jogo?
-        </p>
+        {souAtletaElegivel && (
+          <>
+            <p className="text-[11.5px] text-white/90 font-medium">
+              Estás disponível para ser convocado para este jogo?
+            </p>
 
-        {abertaParaVotacao ? (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={aGravar}
-              onClick={e => {
-                e.stopPropagation()
-                responder('available')
-              }}
-              className={`flex-1 h-9 rounded-xl font-display font-bold text-[11.5px] cursor-pointer
-                flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                  minhaResposta === 'available'
-                    ? 'bg-csc-light text-csc-tinta shadow-sm'
-                    : 'bg-white/10 text-white hover:bg-white/15'
-                }`}
-            >
-              {minhaResposta === 'available' && <CheckCircle2 size={13} />}
-              Disponível
-            </button>
-            <button
-              type="button"
-              disabled={aGravar}
-              onClick={e => {
-                e.stopPropagation()
-                responder('unavailable')
-              }}
-              className={`flex-1 h-9 rounded-xl font-display font-bold text-[11.5px] cursor-pointer
-                flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                  minhaResposta === 'unavailable'
-                    ? 'bg-white/90 text-csc-tinta shadow-sm'
-                    : 'bg-white/10 text-white hover:bg-white/15'
-                }`}
-            >
-              {minhaResposta === 'unavailable' && <XCircle size={13} />}
-              Indisponível
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/10 text-white/70 text-[11px]">
-            <Clock size={13} className="text-csc-gold shrink-0" />
-            <span>
-              {fechadaPorPrazo
-                ? 'Sondagem encerrada (fecha 12h antes da hora do jogo).'
-                : 'Abre quando este treino estiver disponibilizado.'}
-            </span>
-          </div>
+            {abertaParaVotacao ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={aGravar}
+                  onClick={e => {
+                    e.stopPropagation()
+                    responder('available')
+                  }}
+                  className={`flex-1 h-9 rounded-xl font-display font-bold text-[11.5px] cursor-pointer
+                    flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      minhaResposta === 'available'
+                        ? 'bg-csc-light text-csc-tinta shadow-sm'
+                        : 'bg-white/10 text-white hover:bg-white/15'
+                    }`}
+                >
+                  {minhaResposta === 'available' && <CheckCircle2 size={13} />}
+                  Disponível
+                </button>
+                <button
+                  type="button"
+                  disabled={aGravar}
+                  onClick={e => {
+                    e.stopPropagation()
+                    responder('unavailable')
+                  }}
+                  className={`flex-1 h-9 rounded-xl font-display font-bold text-[11.5px] cursor-pointer
+                    flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      minhaResposta === 'unavailable'
+                        ? 'bg-white/90 text-csc-tinta shadow-sm'
+                        : 'bg-white/10 text-white hover:bg-white/15'
+                    }`}
+                >
+                  {minhaResposta === 'unavailable' && <XCircle size={13} />}
+                  Indisponível
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/10 text-white/70 text-[11px]">
+                <Clock size={13} className="text-csc-gold shrink-0" />
+                <span>
+                  {fechadaPorPrazo
+                    ? 'Sondagem encerrada (fecha 12h antes da hora do jogo).'
+                    : 'Abre quando este treino estiver disponibilizado.'}
+                </span>
+              </div>
+            )}
+          </>
         )}
 
         {isCoachOrAdmin && (
@@ -356,80 +358,84 @@ export const SondagemDisponibilidadeJogo: React.FC<SondagemDisponibilidadeJogoPr
           )}
         </div>
 
-        {/* Questão de Disponibilidade */}
-        <div className="pt-1">
-          <p className="font-display font-extrabold text-[13px] text-white leading-snug">
-            Estás disponível para ser convocado para este jogo?
-          </p>
-          <p className="text-[10.5px] text-white/65 mt-0.5 leading-relaxed">
-            Informa a equipa técnica da tua disponibilidade antes de ser elaborada a convocatória oficial do jogo.
-          </p>
-        </div>
+        {souAtletaElegivel && (
+          <>
+            {/* Questão de Disponibilidade */}
+            <div className="pt-1">
+              <p className="font-display font-extrabold text-[13px] text-white leading-snug">
+                Estás disponível para ser convocado para este jogo?
+              </p>
+              <p className="text-[10.5px] text-white/65 mt-0.5 leading-relaxed">
+                Informa a equipa técnica da tua disponibilidade antes de ser elaborada a convocatória oficial do jogo.
+              </p>
+            </div>
 
-        {/* Botões de Resposta do Atleta */}
-        {!abertaParaVotacao ? (
-          <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-xs">
-            <Clock size={15} className="text-csc-gold shrink-0" />
-            <span>
-              {fechadaPorPrazo
-                ? 'A sondagem de disponibilidade encerrou (fecha 12h antes da hora do jogo).'
-                : 'A resposta de disponibilidade para o jogo abre quando este treino for disponibilizado para votação.'}
-            </span>
-          </div>
-        ) : (
-          <div className="flex gap-2.5 pt-0.5">
-            <button
-              type="button"
-              disabled={aGravar}
-              onClick={() => responder('available')}
-              className={`flex-1 min-h-11 px-4 rounded-[22px] font-display font-bold text-[12.5px] cursor-pointer
-                flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                  minhaResposta === 'available'
-                    ? 'bg-csc-light text-csc-tinta shadow-md font-extrabold'
-                    : 'bg-white/10 text-white hover:bg-white/15'
-                }`}
-            >
-              {minhaResposta === 'available' && <CheckCircle2 size={15} />}
-              Sim, disponível
-            </button>
+            {/* Botões de Resposta do Atleta */}
+            {!abertaParaVotacao ? (
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-xs">
+                <Clock size={15} className="text-csc-gold shrink-0" />
+                <span>
+                  {fechadaPorPrazo
+                    ? 'A sondagem de disponibilidade encerrou (fecha 12h antes da hora do jogo).'
+                    : 'A resposta de disponibilidade para o jogo abre quando este treino for disponibilizado para votação.'}
+                </span>
+              </div>
+            ) : (
+              <div className="flex gap-2.5 pt-0.5">
+                <button
+                  type="button"
+                  disabled={aGravar}
+                  onClick={() => responder('available')}
+                  className={`flex-1 min-h-11 px-4 rounded-[22px] font-display font-bold text-[12.5px] cursor-pointer
+                    flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      minhaResposta === 'available'
+                        ? 'bg-csc-light text-csc-tinta shadow-md font-extrabold'
+                        : 'bg-white/10 text-white hover:bg-white/15'
+                    }`}
+                >
+                  {minhaResposta === 'available' && <CheckCircle2 size={15} />}
+                  Sim, disponível
+                </button>
 
-            <button
-              type="button"
-              disabled={aGravar}
-              onClick={() => responder('unavailable')}
-              className={`flex-1 min-h-11 px-4 rounded-[22px] font-display font-bold text-[12.5px] cursor-pointer
-                flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
-                focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
-                  minhaResposta === 'unavailable'
-                    ? 'bg-white/90 text-csc-tinta shadow-md font-extrabold'
-                    : 'bg-white/10 text-white hover:bg-white/15'
-                }`}
-            >
-              {minhaResposta === 'unavailable' && <XCircle size={15} />}
-              Não disponível
-            </button>
-          </div>
+                <button
+                  type="button"
+                  disabled={aGravar}
+                  onClick={() => responder('unavailable')}
+                  className={`flex-1 min-h-11 px-4 rounded-[22px] font-display font-bold text-[12.5px] cursor-pointer
+                    flex items-center justify-center gap-1.5 transition-transform duration-150 active:scale-97
+                    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold ${
+                      minhaResposta === 'unavailable'
+                        ? 'bg-white/90 text-csc-tinta shadow-md font-extrabold'
+                        : 'bg-white/10 text-white hover:bg-white/15'
+                    }`}
+                >
+                  {minhaResposta === 'unavailable' && <XCircle size={15} />}
+                  Não disponível
+                </button>
+              </div>
+            )}
+
+            {/* Indicador de Resposta Pessoal */}
+            <div className="flex items-center justify-between text-[11px] pt-1">
+              {minhaResposta === 'available' ? (
+                <span className="text-csc-verde-texto font-bold flex items-center gap-1.5">
+                  <CheckCircle2 size={13} />
+                  Marcaste presença como disponível para o jogo
+                </span>
+              ) : minhaResposta === 'unavailable' ? (
+                <span className="text-csc-vermelho-texto font-bold flex items-center gap-1.5">
+                  <XCircle size={13} />
+                  Marcaste que não estás disponível para o jogo
+                </span>
+              ) : (
+                <span className="text-white/55 italic">
+                  Ainda não indicaste a tua disponibilidade para este jogo.
+                </span>
+              )}
+            </div>
+          </>
         )}
-
-        {/* Indicador de Resposta Pessoal */}
-        <div className="flex items-center justify-between text-[11px] pt-1">
-          {minhaResposta === 'available' ? (
-            <span className="text-csc-verde-texto font-bold flex items-center gap-1.5">
-              <CheckCircle2 size={13} />
-              Marcaste presença como disponível para o jogo
-            </span>
-          ) : minhaResposta === 'unavailable' ? (
-            <span className="text-csc-vermelho-texto font-bold flex items-center gap-1.5">
-              <XCircle size={13} />
-              Marcaste que não estás disponível para o jogo
-            </span>
-          ) : (
-            <span className="text-white/55 italic">
-              Ainda não indicaste a tua disponibilidade para este jogo.
-            </span>
-          )}
-        </div>
 
         {/* Resumo da equipa para treinadores/admins */}
         {isCoachOrAdmin && (

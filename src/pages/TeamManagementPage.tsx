@@ -58,7 +58,7 @@ import {
 import { mensagemDeErro } from '../lib/erros'
 import { CLASSE_CAMPO as CAMPO, CLASSE_ETIQUETA_CAMPO as ETIQUETA } from '../components/ui/formulario'
 import { fmtData } from '../lib/datas'
-import { eJogador, eAdepto, eSemPerfil } from '../lib/papeis'
+import { eJogador, eAdepto, eSemPerfil, eContaDeTeste } from '../lib/papeis'
 import { contemTexto } from '../lib/texto'
 import { sincronizarNovoAdeptoEmJogosFuturos } from '../lib/convocatoriasAdeptos'
 
@@ -248,7 +248,7 @@ const TeamManagementPage: React.FC = () => {
 
   const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
     // A base de dados é a única fonte do plantel — ver nota em CalendarPage.
-    return [...remoteProfiles].sort(compararPorCamisola)
+    return remoteProfiles.filter(p => !eContaDeTeste(p)).sort(compararPorCamisola)
   }
 
   const fetchProfiles = async () => {
@@ -270,6 +270,21 @@ const TeamManagementPage: React.FC = () => {
       setLoading(false)
     }
 
+    if (isAdmin) {
+      supabase.from('profiles').select('id, name, nickname, shirt_name, email').then(({ data: perfisParaAuditar }) => {
+        const contasTeste = (perfisParaAuditar || []).filter(p => eContaDeTeste(p));
+        contasTeste.forEach(async (tp) => {
+          try {
+            await supabase.from('match_availabilities').delete().eq('player_id', tp.id);
+            await supabase.from('callups').delete().eq('player_id', tp.id);
+            await supabase.from('profiles').delete().eq('id', tp.id);
+          } catch (e) {
+            console.error('Erro ao purgar conta de teste:', tp.id, e);
+          }
+        });
+      });
+    }
+
     supabase.rpc('admin_linked_profile_ids').then(({ data }) => {
       if (data && Array.isArray(data)) {
         setLinkedProfileIds(new Set((data as string[]) || []))
@@ -277,19 +292,8 @@ const TeamManagementPage: React.FC = () => {
     })
 
     if (isAdmin) {
-      supabase.rpc('admin_sincronizar_contas_sem_perfil').then(({ data: inseridos, error: sincErr }) => {
-        if (!sincErr && typeof inseridos === 'number' && inseridos > 0) {
-          supabase
-            .from('profiles')
-            .select('*')
-            .order('name', { ascending: true })
-            .then(({ data: novosPerfis }) => {
-              if (novosPerfis) setProfiles(ordenarPlantel((novosPerfis as Profile[]) || []))
-            })
-        }
-      })
       supabase.rpc('admin_contas_por_ligar').then(({ data }) => {
-        setContasPorLigar((data as typeof contasPorLigar) ?? [])
+        setContasPorLigar(((data as typeof contasPorLigar) ?? []).filter(c => !eContaDeTeste(c as any)))
       })
     }
   }
@@ -300,19 +304,8 @@ const TeamManagementPage: React.FC = () => {
 
   useEffect(() => {
     if (isAdmin) {
-      supabase.rpc('admin_sincronizar_contas_sem_perfil').then(({ data: inseridos, error: sincErr }) => {
-        if (!sincErr && typeof inseridos === 'number' && inseridos > 0) {
-          supabase
-            .from('profiles')
-            .select('*')
-            .order('name', { ascending: true })
-            .then(({ data: novosPerfis }) => {
-              if (novosPerfis) setProfiles(ordenarPlantel((novosPerfis as Profile[]) || []))
-            })
-        }
-      })
       supabase.rpc('admin_contas_por_ligar').then(({ data }) => {
-        setContasPorLigar((data as typeof contasPorLigar) ?? [])
+        setContasPorLigar(((data as typeof contasPorLigar) ?? []).filter(c => !eContaDeTeste(c as any)))
       })
       supabase.rpc('admin_linked_profile_ids').then(({ data }) => {
         setLinkedProfileIds(new Set((data as string[]) || []))

@@ -27,7 +27,7 @@ import { partilharConvocatoriaWhatsApp, copiarLinkConvocatoria } from '../lib/co
 import { useAuth, extractRolesFromProfile, type Profile } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
-import { eAdepto, eTreinadorOuAdmin } from '../lib/papeis'
+import { eAdepto, eTreinadorOuAdmin, eContaDeTeste } from '../lib/papeis'
 import { convocarAdeptosParaJogo, removerAdeptosSeSemJogadores } from '../lib/convocatoriasAdeptos'
 import { UnsavedChangesModal } from '../components/UnsavedChangesModal'
 import { useAlteracoesPorGravar } from '../hooks/useAlteracoesPorGravar'
@@ -92,7 +92,7 @@ const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
   // ficheiro que continha dados pessoais reais (NIF, IBAN, morada) e que por isso ia
   // parar ao JavaScript servido publicamente. Foi removido.
   // Por ordem alfabética do nome da camisola, como todas as listas de atletas.
-  return [...remoteProfiles].sort(compararPorCamisola)
+  return remoteProfiles.filter(p => !eContaDeTeste(p)).sort(compararPorCamisola)
 }
 
 const ensurePlayerIdsForSupabase = async (pIds: string[], _playerList: Profile[]): Promise<string[]> => {

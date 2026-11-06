@@ -139,7 +139,7 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
 
   // 3. Derivar da coluna `role` (estrita: Direção é apenas admin, não é coach nem player)
   const email = (profile.email || '').toLowerCase().trim()
-  const temDadosAtleta = Boolean(profile.jersey_number || profile.shirt_name || (profile.position && profile.position.trim().length > 0))
+  const temDadosAtleta = Boolean(profile.jersey_number)
   const deveAcumularJogador = email === 'rpmariano@gmail.com' || isDeveloperEmail(email) || temDadosAtleta
 
   if (profile.role === 'admin') return deveAcumularJogador ? ['admin', 'player'] : ['admin']

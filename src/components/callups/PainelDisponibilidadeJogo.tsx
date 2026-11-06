@@ -7,9 +7,9 @@ import {
   sondagemJogoAbertaParaResposta,
   sondagemJogoFechadaPorPrazo,
 } from '../../lib/disponibilidadeJogo'
-import type { Profile } from '../../context/AuthContext'
+import { useAuth, type Profile } from '../../context/AuthContext'
 import { getPlayerDisplayName } from '../../lib/eventos'
-import { eAdepto } from '../../lib/papeis'
+import { eJogadorElegivelSondagem } from '../../lib/papeis'
 import { triggerHaptic } from '../../utils/haptics'
 import { supabase } from '../../lib/supabaseClient'
 
@@ -32,6 +32,7 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
   todosEventos = [],
   aoEditarConvocatoria,
 }) => {
+  const { profile: authProfile } = useAuth()
   const [minhaResposta, setMinhaResposta] = useState<RespostaDisponibilidade | null>(null)
   const [todasRespostas, setTodasRespostas] = useState<Record<string, RespostaDisponibilidade>>({})
   const [aGravar, setAGravar] = useState(false)
@@ -51,8 +52,8 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
 
     let ativo = true
     supabase
-      .from('profiles')
-      .select('id, name, nickname, jersey_number, role, roles, status')
+      .from('v_players_public')
+      .select('id, name, nickname, shirt_name, jersey_number, position, role, roles, status')
       .eq('status', 'active')
       .then(({ data, error }) => {
         if (!error && data && ativo) {
@@ -69,10 +70,18 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
     return plantel && plantel.length > 0 ? plantel : plantelFallback
   }, [plantel, plantelFallback])
 
-  // Filtrar apenas atletas (não adeptos nem staff puro se aplicável)
+  // Filtrar apenas jogadores aptos (excluindo lesionados, inativos, direção/treinador exclusivos, adeptos e conta de teste)
   const atletas = useMemo(() => {
-    return listaPlantel.filter(p => !eAdepto(p))
+    return listaPlantel.filter(p => eJogadorElegivelSondagem(p))
   }, [listaPlantel])
+
+  const souAtletaElegivel = useMemo(() => {
+    if (!playerId) return false
+    const naLista = listaPlantel.find(p => p.id === playerId)
+    if (naLista) return eJogadorElegivelSondagem(naLista)
+    if (authProfile && authProfile.id === playerId) return eJogadorElegivelSondagem(authProfile)
+    return false
+  }, [playerId, listaPlantel, authProfile])
 
   const carregarDados = () => {
     if (!jogo?.id) return
@@ -158,25 +167,14 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
     return atletas.filter(p => !todasRespostas[p.id])
   }, [atletas, todasRespostas])
 
-  // Atletas que eventualmente responderam mas não constam na lista filtrada
-  const outrosDisponiveis = useMemo(() => {
-    const idsJa = new Set(disponiveis.map(p => p.id))
-    return Object.entries(todasRespostas)
-      .filter(([id, st]) => st === 'available' && !idsJa.has(id))
-      .map(([id]) => listaPlantel.find(p => p.id === id) || ({ id, name: 'Atleta' } as Profile))
-  }, [todasRespostas, disponiveis, listaPlantel])
-
-  const outrosIndisponiveis = useMemo(() => {
-    const idsJa = new Set(indisponiveis.map(p => p.id))
-    return Object.entries(todasRespostas)
-      .filter(([id, st]) => st === 'unavailable' && !idsJa.has(id))
-      .map(([id]) => listaPlantel.find(p => p.id === id) || ({ id, name: 'Atleta' } as Profile))
-  }, [todasRespostas, indisponiveis, listaPlantel])
-
-  const todosDisponiveis = useMemo(() => [...disponiveis, ...outrosDisponiveis], [disponiveis, outrosDisponiveis])
-  const todosIndisponiveis = useMemo(() => [...indisponiveis, ...outrosIndisponiveis], [indisponiveis, outrosIndisponiveis])
+  const todosDisponiveis = disponiveis
+  const todosIndisponiveis = indisponiveis
 
   const totalRespostas = todosDisponiveis.length + todosIndisponiveis.length
+
+  if (!souAtletaElegivel && !isCoachOrAdmin) {
+    return null
+  }
 
   if (compacto) {
     // Se ainda não abriu para votação e não é treinador/admin (e o jogador não tinha resposta anterior),
@@ -225,7 +223,7 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
           )}
         </div>
 
-        {playerId && !minhaResposta && abertaParaVotacao && (
+        {souAtletaElegivel && !minhaResposta && abertaParaVotacao && (
           <div className="flex gap-2 pt-1">
             <button
               type="button"
@@ -280,8 +278,8 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
       </div>
 
       <div className="p-3.5 space-y-3.5">
-        {/* Bloco do próprio atleta (se aplicável) */}
-        {playerId && (
+        {/* Bloco do próprio atleta (apenas para jogadores aptos elegíveis) */}
+        {souAtletaElegivel && (
           <div className="p-3 rounded-xl bg-white/5 border border-white/8 space-y-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-display font-bold text-white/90 flex items-center gap-1.5">

@@ -14,7 +14,7 @@ import {
   Heart
 } from 'lucide-react'
 import { useAuth, extractRolesFromProfile } from '../context/AuthContext'
-import { eAdepto, eTreinadorOuAdmin } from '../lib/papeis'
+import { eAdepto, eTreinadorOuAdmin, eContaDeTeste } from '../lib/papeis'
 import { contemTexto } from '../lib/texto'
 import { useClub } from '../context/ClubContext'
 import { supabase } from '../lib/supabaseClient'
@@ -91,7 +91,7 @@ const ordenarPlantel = (remoteProfiles: Profile[]): Profile[] => {
   // ficheiro que continha dados pessoais reais (NIF, IBAN, morada) e que por isso ia
   // parar ao JavaScript servido publicamente. Foi removido.
   // Por ordem alfabética do nome da camisola, como todas as listas de atletas.
-  return [...remoteProfiles].sort(compararPorCamisola)
+  return remoteProfiles.filter(p => !eContaDeTeste(p)).sort(compararPorCamisola)
 }
 
 // A tabela `callups` cresce sem parar (uma linha por atleta por evento, anos de jogos e
@@ -190,7 +190,7 @@ const isPlayerEligible = (player: Profile, eventType: string) => {
   // Jogos e treinos são só para quem tem o papel de Jogador — membros só
   // Treinador ou só Direção ficam disponíveis apenas nos convívios.
   if (!extractRolesFromProfile(player).includes('player')) return false
-  return player.status === 'active'
+  return player.status === 'active' && !eContaDeTeste(player)
 }
 
 const CalendarPage: React.FC = () => {

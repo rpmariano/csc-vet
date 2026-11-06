@@ -6,7 +6,7 @@ import { CLUBE_NOME } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
 import { toast } from '../context/ToastContext'
 import { formatClubSigla } from '../lib/siglas'
-import { eAdepto, eTreinadorOuAdmin } from '../lib/papeis'
+import { eAdepto, eTreinadorOuAdmin, eContaDeTeste } from '../lib/papeis'
 import { convocatoriaFechada, textoConvocatoriaFechada } from '../lib/eventos'
 import { triggerHaptic } from '../utils/haptics'
 import { CartaoVidro, CartaoSimples, EtiquetaSeccao } from '../components/ui'
@@ -177,11 +177,11 @@ const Home: React.FC = () => {
           /* Só as provas a decorrer: uma prova agendada não tem tabela para
              mostrar, e o cartão levava a um ecrã vazio. */
           supabase.from('tournaments').select('id, name, season, status, rules').eq('status', 'ativo'),
-          supabase.from('v_players_public').select('id, name, nickname, shirt_name, birth_date, status, photo_url, role, roles'),
+          supabase.from('v_players_public').select('id, name, nickname, shirt_name, jersey_number, position, birth_date, status, photo_url, role, roles'),
         ])
 
         if (cancelado) return
-        setPlantelEquipa(((plantel ?? []) as unknown as Profile[]))
+        setPlantelEquipa(((plantel ?? []) as unknown as Profile[]).filter(p => !eContaDeTeste(p)))
 
         // Rascunhos ficam de fora: a Home mostra o que está marcado a sério.
         const marcados = ((futuros as unknown as EventoBruto[]) ?? []).filter(e => e.is_active !== false)
