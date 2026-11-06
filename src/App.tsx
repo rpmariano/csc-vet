@@ -5,6 +5,7 @@ import { ClubProvider } from './context/ClubContext'
 import { ToastProvider } from './context/ToastContext'
 import { AnnouncementsProvider } from './context/AnnouncementsContext'
 import { SaidaGuardadaProvider } from './context/SaidaGuardadaContext'
+import { ModoSimplesProvider } from './context/ModoSimplesContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import { SubirAoTopo } from './components/SubirAoTopo'
@@ -245,7 +246,9 @@ const App: React.FC = () => {
       <ClubProvider>
         <ToastProvider>
           <AnnouncementsProvider>
+            <ModoSimplesProvider>
             <RouterProvider router={router} />
+          </ModoSimplesProvider>
           </AnnouncementsProvider>
         </ToastProvider>
       </ClubProvider>

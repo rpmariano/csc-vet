@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import { Sparkles } from 'lucide-react'
+import { useModoSimples } from '../../context/ModoSimplesContext'
+import { triggerHaptic } from '../../utils/haptics'
 import { useAuth } from '../../context/AuthContext'
 import { useClub } from '../../context/ClubContext'
 import { useEpocaAtual } from '../../hooks/useEpocaAtual'
@@ -9,37 +12,15 @@ import { AvatarPerfil, PastilhaEstado } from '../ui'
 import { AnnouncementsInboxButton } from '../AnnouncementsInbox'
 import { SinalPagamentos } from '../SinalPagamentos'
 
-/**
- * O cabeçalho da app: o clube e a época à esquerda, e no canto o sinal de
- * pagamentos, o estado clínico, o sino dos comunicados e a fotografia.
- *
- * **Um só, na moldura, e igual em todos os ecrãs.** Até 2026-09-25 era da
- * Home; os outros ecrãs tinham uma linha de canto dentro do seu próprio
- * cabeçalho, à direita da sobrancelha. Eram o mesmo canto desenhado em dois
- * sítios, e o clube só se via na Home. Hoje o `<CabecalhoEcra>` de cada ecrã
- * fica com a sobrancelha e o título, e o que é de toda a app vive aqui.
- *
- * **Fica preso ao topo ao rolar**, como a barra de baixo fica presa ao fundo:
- * o canto é para onde se vai ver se há comunicados ou pagamentos, e não deve
- * ser preciso voltar ao princípio de uma lista comprida para lá chegar. Por
- * cima da faixa do topo é transparente, como sempre foi; quando o conteúdo
- * começa a passar por baixo, ganha fundo e uma linha, senão o texto que
- * rolasse por trás lia-se através dele. Tem ~62px — ocupa pouco ecrã de
- * propósito, porque fica lá sempre.
- *
- * O título de cada ecrã não sobe para aqui: rola com o conteúdo. A barra de
- * baixo já diz em que lugar se está, e um título que mudasse de sítio ao
- * rolar era mais uma coisa a mexer.
- */
 export const CabecalhoApp: React.FC = () => {
   const { profile, assignedRoles, isUnassigned } = useAuth()
   const { clubSettings } = useClub()
   const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
   const estadoDaFicha = useFichaPorLigar(profile, assignedRoles)
-  // Sem ficha ligada ou sem perfil não há estado clínico nem contas para mostrar.
   const semFicha = semPerfil || estadoDaFicha === 'por-ligar'
 
   const epoca = useEpocaAtual()
+  const { modoSimples, alternarModoSimples } = useModoSimples()
 
   const [rolado, setRolado] = useState(false)
   useEffect(() => {
@@ -62,8 +43,6 @@ export const CabecalhoApp: React.FC = () => {
           : 'bg-transparent border-transparent'
       }`}
     >
-      {/* 8px entre as peças do canto, e não 12: com o € no canto, a 390px o
-          nome do clube cortava-se ("CSC Vetera…"). */}
       <div className="flex items-center gap-2 px-[18px] py-3">
         <img
           src={emblema}
@@ -74,6 +53,23 @@ export const CabecalhoApp: React.FC = () => {
           <p className="font-display font-extrabold text-[13.5px] text-white truncate">{sigla} Veteranos</p>
           <p className="text-[10.5px] text-white/60 truncate mt-px">Época {epoca}</p>
         </div>
+
+        {/* Botão de alternância do Modo Simples no cabeçalho */}
+        <button
+          type="button"
+          onClick={() => { triggerHaptic('selection'); alternarModoSimples() }}
+          title={modoSimples ? 'Modo Simples (Ativo) - Toca para voltar ao menu completo' : 'Toca para ativar o Modo Simples'}
+          aria-label={`Modo Simples: ${modoSimples ? 'ativado' : 'desativado'}`}
+          className={`h-9 px-2.5 rounded-full flex items-center gap-1.5 font-display font-black text-[11px] transition-all cursor-pointer border ${
+            modoSimples
+              ? 'bg-csc-gold text-csc-tinta border-csc-gold shadow-[0_0_12px_rgba(227,192,77,0.5)]'
+              : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+          }`}
+        >
+          <Sparkles size={14} className={modoSimples ? 'text-csc-tinta' : 'text-csc-gold'} />
+          <span>{modoSimples ? 'Simples' : 'Modo'}</span>
+        </button>
+
         {!semFicha && <SinalPagamentos />}
         {!semFicha && <PastilhaEstado />}
         {!semPerfil && <AnnouncementsInboxButton tone="dark" size="md" />}

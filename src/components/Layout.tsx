@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Home, Calendar, Trophy, Shield } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useModoSimples } from '../context/ModoSimplesContext'
 import { FaixaTopo } from './ui'
 import { BarraNavegacao, type ItemNavegacao } from './nav/BarraNavegacao'
 import { FolhaCriar } from './nav/FolhaCriar'
@@ -59,6 +60,7 @@ const ITENS_GESTAO: readonly ItemNavegacao[] = [
 
 const Layout: React.FC = () => {
   const { profile, isUnassigned } = useAuth()
+  const { modoSimples } = useModoSimples()
   const location = useLocation()
 
   const [criarAberto, setCriarAberto] = useState(false)
@@ -72,7 +74,7 @@ const Layout: React.FC = () => {
   // acima dela — com `margin-bottom`, não `padding-bottom`: com padding, o
   // último cartão fica dentro da caixa de scroll mas por baixo da barra.
   // Se não tiver perfil atribuído, não há barra de navegação.
-  const margemFinal = semPerfil ? 24 : (gere ? 110 : 104)
+  const margemFinal = semPerfil || modoSimples ? 24 : (gere ? 110 : 104)
 
   return (
     <div className="relative min-h-dvh flex flex-col">
@@ -97,7 +99,7 @@ const Layout: React.FC = () => {
         </AreaDoEcra>
       </main>
 
-      {!semPerfil && (
+      {!semPerfil && !modoSimples && (
         <>
           {/* O conteúdo passa por trás da barra translúcida; sem este esbatimento
               a barra deixa de se ler quando lhe passa texto por baixo. */}

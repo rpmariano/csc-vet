@@ -23,6 +23,9 @@ import {
   PersianaConvidarAvisos,
 } from '../components/ConvidarAvisos'
 import { AlertaMvpPendente } from '../components/mvp/AlertaMvpPendente'
+import { useModoSimples } from '../context/ModoSimplesContext'
+import { BotaoToggleModoSimples } from '../components/home/BotaoToggleModoSimples'
+import { VistaModoSimples } from '../components/home/VistaModoSimples'
 import { CarrosselCartoes } from '../components/home/CarrosselCartoes'
 import { CartaoProximoJogo, type JogoDaHome } from '../components/home/CartaoProximoJogo'
 import { PorResponder, type PendenteDaHome } from '../components/home/PorResponder'
@@ -103,6 +106,7 @@ interface JogoSerieBruto {
 const Home: React.FC = () => {
   const { profile, assignedRoles, isUnassigned } = useAuth()
   const { clubSettings } = useClub()
+  const { modoSimples, alternarModoSimples, setModoSimples } = useModoSimples()
 
   const [jogos, setJogos] = useState<JogoDaHome[]>([])
   const [pendentes, setPendentes] = useState<PendenteDaHome[]>([])
@@ -502,21 +506,32 @@ const Home: React.FC = () => {
   if (!profile) return null
 
   const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
-  if (semPerfil) {
-    return <SemPerfilAtribuido />
-  }
 
   const emblema = obterEmblemaEfetivo(clubSettings?.logo_url, 'Cascais', 'CSC') || '/csc-vet/cascais-emblem.png'
   const sigla = formatClubSigla(clubSettings?.initials)
   return (
     <div className="space-y-4 pb-2">
-      {estadoDaFicha === 'a-verificar' ? (
+      <BotaoToggleModoSimples modoSimples={modoSimples} aoAlternar={alternarModoSimples} />
+
+      {modoSimples ? (
+        <VistaModoSimples
+          profile={profile}
+          clubSettings={clubSettings}
+          jogos={jogos}
+          pendentes={pendentes}
+          provas={provas}
+          aoResponder={responder}
+          aoSairModoSimples={() => setModoSimples(false)}
+        />
+      ) : semPerfil ? (
+        <SemPerfilAtribuido />
+      ) : estadoDaFicha === 'a-verificar' ? (
         <CartaoSimples className="h-40 animate-pulse" />
       ) : semFicha ? (
         <FichaPorLigar perfil={profile} />
       ) : (
         <>
-          <FaixaSemConvocatoria eventos={eventosSemConvocatoria} aoAbrir={() => setAlertaAberto(true)} />
+              <FaixaSemConvocatoria eventos={eventosSemConvocatoria} aoAbrir={() => setAlertaAberto(true)} />
           <PersianaSemConvocatoria
             aberto={alertaAberto}
             aoFechar={() => setAlertaAberto(false)}
