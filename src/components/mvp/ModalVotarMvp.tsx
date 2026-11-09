@@ -264,34 +264,32 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
   const secondPlayer = players.find(p => p.id === secondChoiceId)
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} title="Votação de MVP">
-      <div className="space-y-4 pb-2">
-        {/* Cabeçalho do jogo */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-display font-extrabold text-[10px] tracking-wider uppercase text-csc-gold flex items-center gap-1.5">
-              <Award size={14} className="text-csc-gold" />
-              Melhor em Campo
-            </span>
-            {scoreText && (
-              <span className="font-display font-black text-xs text-white/90 bg-white/10 px-2 py-0.5 rounded-md">
-                {scoreText}
-              </span>
-            )}
-          </div>
-          <h3 className="font-display font-extrabold text-base text-white mt-1 truncate">
-            {eventTitle}
-          </h3>
-          {eventDate && (
-            <p className="text-xs text-white/60 mt-0.5 capitalize">{eventDate}</p>
-          )}
-
-          <div className="mt-3 pt-3 border-t border-white/10 flex items-start gap-2 text-xs text-white/80">
-            <Sparkles size={15} className="text-csc-gold shrink-0 mt-0.5" />
-            <p className="leading-snug">
-              Vota no que consideras o <strong>Melhor (3 pontos)</strong> e no <strong>Segundo Melhor (1 ponto)</strong>. O jogador com mais pontos no total deste jogo será eleito o MVP!
+    <BottomSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Votação de MVP"
+      description={eventTitle ? `${eventTitle}${eventDate ? ` · ${eventDate}` : ''}` : 'Melhor em campo'}
+      tone="dark"
+      icon={
+        <div className="w-9 h-9 rounded-xl bg-csc-gold/20 text-csc-gold flex items-center justify-center shrink-0 border border-csc-gold/30">
+          <Award size={18} />
+        </div>
+      }
+    >
+      <div className="space-y-3 pb-2">
+        {/* Instrução da votação */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles size={16} className="text-csc-gold shrink-0" />
+            <p className="text-xs text-white/85 leading-snug">
+              Vota no <strong>1º Lugar (3 pts)</strong> e no <strong>2º Lugar (1 pt)</strong>
             </p>
           </div>
+          {scoreText && (
+            <span className="font-display font-black text-xs text-white/90 bg-white/10 px-2 py-0.5 rounded-md shrink-0">
+              {scoreText}
+            </span>
+          )}
         </div>
 
         {votacaoEncerrada && (

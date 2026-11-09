@@ -282,12 +282,12 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
         </button>
 
         {temCabecalho && (
-          <div className={`flex items-start gap-3 px-5 pb-3 pt-1 border-b ${corBordo} shrink-0`}>
+          <div className={`flex ${description ? 'items-start pt-1.5 pb-3.5' : 'items-center py-2.5'} gap-3 px-5 border-b ${corBordo} shrink-0`}>
             {icon && <div className="shrink-0 mt-0.5">{icon}</div>}
 
             <div className="flex-1 min-w-0">
               {title && (
-                <h2 id={tituloId} className={`text-lg font-black leading-tight ${corTitulo}`}>
+                <h2 id={tituloId} className={`text-base font-black leading-tight ${corTitulo}`}>
                   {title}
                 </h2>
               )}
@@ -299,9 +299,9 @@ export const BottomSheet = forwardRef<HTMLDivElement, BottomSheetProps>(function
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className={`shrink-0 -mt-2.5 -mr-2.5 w-11 h-11 flex items-center justify-center rounded-xl transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-light ${corBotaoFechar}`}
+                className={`shrink-0 ${description ? '-mt-1 -mr-2' : '-mr-2'} w-9 h-9 flex items-center justify-center rounded-xl transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-light ${corBotaoFechar}`}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             )}
           </div>
