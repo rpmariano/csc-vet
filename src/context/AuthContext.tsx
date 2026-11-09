@@ -149,6 +149,36 @@ export const extractRolesFromProfile = (profile: RoleSource | null | undefined):
   return []
 }
 
+const PROFILE_CACHE_KEY_PREFIX = 'csc_cached_profile_'
+const LAST_USER_ID_KEY = 'csc_last_user_id'
+
+export const getCachedProfile = (userId: string): Profile | null => {
+  try {
+    const raw = localStorage.getItem(`${PROFILE_CACHE_KEY_PREFIX}${userId}`)
+    if (!raw) return null
+    return JSON.parse(raw) as Profile
+  } catch {
+    return null
+  }
+}
+
+export const setCachedProfile = (userId: string, profile: Profile): void => {
+  try {
+    localStorage.setItem(LAST_USER_ID_KEY, userId)
+    localStorage.setItem(`${PROFILE_CACHE_KEY_PREFIX}${userId}`, JSON.stringify(profile))
+  } catch {}
+}
+
+export const removeCachedProfile = (userId?: string): void => {
+  try {
+    const id = userId || localStorage.getItem(LAST_USER_ID_KEY)
+    if (id) {
+      localStorage.removeItem(`${PROFILE_CACHE_KEY_PREFIX}${id}`)
+    }
+    localStorage.removeItem(LAST_USER_ID_KEY)
+  } catch {}
+}
+
 interface AuthContextType {
   user: User | null
   profile: Profile | null
@@ -185,61 +215,108 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ) => {
     try {
       // 1. Procurar perfil pelo ID do utilizador (auth.uid)
-      let { data } = await supabase
+      let { data, error: selectErr } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle()
 
-      // 2. Ligar esta conta à ficha que o clube já lhe tinha criado.
-      //
-      // **A identidade é o email, e mais nada.** Se não houver ficha com o
-      // email do registo, a conta fica por ligar e é a direção que resolve no
-      // ecrã 3d — ver `supabase_identidade_por_email_migration.sql`. Antes
-      // valiam também o telefone e o primeiro-e-último nome, e o telefone da
-      // própria ficha é auto-editável: dava para reclamar a ficha de outra
-      // pessoa, com o NIF e o IBAN lá dentro.
-      //
-      // As duas operações correm no servidor: `find_my_profile_match` (que só
-      // devolve campos não sensíveis) e `associate_my_profile`, que faz a
-      // cópia, transfere as referências e apaga a ficha antiga numa transação
-      // só. Com a RLS fechada o cliente já não lê as fichas dos outros — e
-      // ainda bem, que elas têm NIF e IBAN.
-      //
-      // `p_email_only` continua a ser passado porque a função ainda o aceita,
-      // mas é ignorado: hoje a correspondência é sempre só por email.
-      const jaTemFichaDoClube = Boolean(data?.jersey_number || data?.shirt_name || data?.role === 'supporter')
-      let fichaLigadaAgora = false
-      if (userEmail && !jaTemFichaDoClube) {
-        const { data: matches } = await supabase.rpc('find_my_profile_match', { p_email_only: true })
-        const alvo = Array.isArray(matches) ? matches[0] : matches
+      // Se ocorreu erro (como token expirado ou falha transitória de rede):
+      if (selectErr) {
+        console.warn('Erro ao carregar perfil do utilizador:', selectErr.message)
+        const isAuthError =
+          selectErr.message?.toLowerCase().includes('jwt') ||
+          selectErr.message?.toLowerCase().includes('token') ||
+          selectErr.message?.toLowerCase().includes('unauthorized') ||
+          selectErr.code === 'PGRST301' ||
+          selectErr.code === '401'
 
-        if (alvo?.id) {
-          // Consultar o papel da ficha pré-existente antes da fusão
-          const { data: fichaOriginal } = await supabase
-            .from('profiles')
-            .select('role, roles')
-            .eq('id', alvo.id)
-            .maybeSingle()
-
-          const { data: associado, error: assocErr } = await supabase.rpc('associate_my_profile', { target_id: alvo.id })
-          if (assocErr) {
-            console.error('Erro ao ligar a conta à ficha do clube:', assocErr.message)
-          } else if (associado) {
-            data = (Array.isArray(associado) ? associado[0] : associado) as Profile
-            fichaLigadaAgora = true
-
-            // Se a ficha original era de adepto (ou outro papel específico do clube) e a conta ficou com 'player' por omissão:
-            if (fichaOriginal?.role && fichaOriginal.role !== 'player') {
-              data.role = fichaOriginal.role
-              data.roles = fichaOriginal.roles && fichaOriginal.roles.length > 0 ? fichaOriginal.roles : [fichaOriginal.role]
+        if (isAuthError) {
+          try {
+            const { data: refData } = await supabase.auth.refreshSession()
+            if (refData?.session?.user) {
+              const retry = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .maybeSingle()
+              if (!retry.error && retry.data) {
+                data = retry.data
+                selectErr = null
+              }
             }
+          } catch (refreshErr) {
+            console.error('Erro ao refrescar sessão do Supabase:', refreshErr)
           }
         }
       }
 
+      // Se a consulta falhou por erro de rede/servidor, NUNCA assumir que o utilizador não tem perfil!
+      if (selectErr && !data) {
+        const cached = getCachedProfile(userId)
+        if (cached) {
+          setActualProfile(cached)
+          setIsUnassigned(isDeveloperEmail(cached.email || userEmail) ? false : cached.role === 'unassigned' || cached.status === 'inactive')
+          return
+        }
+
+        if (isDeveloperEmail(userEmail)) {
+          const devProfile: Profile = {
+            id: userId,
+            name: 'Rui Mariano',
+            nickname: 'Mariano',
+            shirt_name: 'Mariano',
+            email: userEmail || 'rpmariano@gmail.com',
+            role: 'player',
+            roles: ['admin', 'player'],
+            status: 'active',
+            jersey_number: 17,
+          }
+          setActualProfile(devProfile)
+          setIsUnassigned(false)
+          setCachedProfile(userId, devProfile)
+          return
+        }
+
+        return
+      }
+
+      // 2. Ligar esta conta à ficha que o clube já lhe tinha criado.
+      const jaTemFichaDoClube = Boolean(data?.jersey_number || data?.shirt_name || data?.role === 'supporter' || ['admin', 'coach'].includes(data?.role || ''))
+      let fichaLigadaAgora = false
+      if (userEmail && !jaTemFichaDoClube && !data) {
+        try {
+          const { data: matches } = await supabase.rpc('find_my_profile_match', { p_email_only: true })
+          const alvo = Array.isArray(matches) ? matches[0] : matches
+
+          if (alvo?.id) {
+            const { data: fichaOriginal } = await supabase
+              .from('profiles')
+              .select('role, roles')
+              .eq('id', alvo.id)
+              .maybeSingle()
+
+            const { data: associado, error: assocErr } = await supabase.rpc('associate_my_profile', { target_id: alvo.id })
+            if (assocErr) {
+              console.error('Erro ao ligar a conta à ficha do clube:', assocErr.message)
+            } else if (associado) {
+              data = (Array.isArray(associado) ? associado[0] : associado) as Profile
+              fichaLigadaAgora = true
+
+              if (fichaOriginal?.role && fichaOriginal.role !== 'player') {
+                data.role = fichaOriginal.role
+                data.roles = fichaOriginal.roles && fichaOriginal.roles.length > 0 ? fichaOriginal.roles : [fichaOriginal.role]
+              }
+            }
+          }
+        } catch (findErr) {
+          console.warn('Erro ao procurar correspondência de perfil:', findErr)
+        }
+      }
+
       // 3. Se ainda não existir perfil (nem no DB nem associado a atleta), criar novo membro base como 'unassigned'
-      if (!data) {
+      // Só executa se NÃO houve erro e data é estritamente null (registo verdadeiramente novo)
+      if (!data && !selectErr) {
         const googleName = currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name
 
         const newProfile: Partial<Profile> = {
@@ -248,8 +325,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: userEmail ? userEmail.trim().toLowerCase() : '',
           phone: userPhone || null,
           photo_url: null,
-          role: 'unassigned',
-          roles: [],
+          role: isDeveloperEmail(userEmail) ? 'player' : 'unassigned',
+          roles: isDeveloperEmail(userEmail) ? ['admin', 'player'] : [],
           status: 'active'
         }
 
@@ -265,25 +342,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (createErr) {
             console.error('Erro ao criar perfil base:', createErr.message)
           }
-          // Garante fallback imediato para nunca deixar o utilizador sem objeto de perfil
           data = {
             ...newProfile,
-            role: 'unassigned',
-            roles: [],
+            role: isDeveloperEmail(userEmail) ? 'player' : 'unassigned',
+            roles: isDeveloperEmail(userEmail) ? ['admin', 'player'] : [],
           } as Profile
         }
       }
 
       let unassigned = false
       if (data) {
-        // Se o perfil está marcado como inativo ou já tem role unassigned, o comportamento é sempre sem perfil
-        if (data.status === 'inactive' || data.role === 'unassigned') {
+        if (isDeveloperEmail(data.email || userEmail)) {
+          unassigned = false
+        } else if (data.status === 'inactive' || data.role === 'unassigned') {
           unassigned = true
         } else if (!fichaLigadaAgora) {
-          // Se a conta não acabou de ser ligada a uma ficha do clube:
           const temPapelReconhecido =
             ['admin', 'coach', 'supporter'].includes(data.role) ||
-            (Array.isArray(data.roles) && data.roles.some((r: string) => ['admin', 'coach', 'supporter'].includes(r)))
+            (Array.isArray(data.roles) && data.roles.some((r: string) => ['admin', 'coach', 'supporter'].includes(r))) ||
+            isDeveloperEmail(data.email) ||
+            isDeveloperEmail(userEmail)
 
           const temAtributosDeAtleta = Boolean(
             data.jersey_number ||
@@ -292,39 +370,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           )
 
           if (!temPapelReconhecido && !temAtributosDeAtleta) {
-            // Conta nova sem ficha desportiva atribuída: se nunca foi convocada, não tem perfil atribuído
             try {
-              const { data: callupsList } = await supabase
+              const { data: callupsList, error: callupsErr } = await supabase
                 .from('callups')
                 .select('id')
                 .eq('player_id', data.id)
                 .limit(1)
 
-              if (!callupsList || callupsList.length === 0) {
+              if (!callupsErr && (!callupsList || callupsList.length === 0)) {
                 unassigned = true
               }
             } catch {
-              unassigned = true
+              // Em caso de erro de rede na verificação de convocatórias, não marcar unassigned
             }
           }
         }
       } else {
-        unassigned = true
+        unassigned = !isDeveloperEmail(userEmail)
       }
 
       setIsUnassigned(unassigned)
 
       if (data) {
         if (unassigned) {
-          // Quando é criado um registo novo e não existe correspondência na BD,
-          // deixa de ser associado ao perfil Jogador.
-          setActualProfile({
+          const unassignedProfile = {
             ...data,
-            role: 'unassigned',
-            roles: []
-          } as Profile)
+            role: 'unassigned' as UserRole,
+            roles: [] as UserRole[]
+          } as Profile
+          setActualProfile(unassignedProfile)
+          setCachedProfile(userId, unassignedProfile)
         } else {
           setActualProfile(data as Profile)
+          setCachedProfile(userId, data as Profile)
         }
       }
     } catch (err) {
@@ -363,22 +441,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const nextUser = session?.user ?? null
       setUser(prev => (prev?.id === nextUser?.id && prev?.email === nextUser?.email ? prev : nextUser))
       if (session?.user) {
+        const cached = getCachedProfile(session.user.id)
+        if (cached) {
+          setActualProfile(cached)
+          if (!isDeveloperEmail(cached.email || session.user.email)) {
+            setIsUnassigned(cached.role === 'unassigned' || cached.status === 'inactive')
+          } else {
+            setIsUnassigned(false)
+          }
+          setLoading(false)
+        }
         fetchProfile(session.user.id, session.user.email, session.user.phone, session.user)
       } else {
+        removeCachedProfile()
+        setActualProfile(null)
         setLoading(false)
       }
     })
 
     // 2. Listen to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         const currentUser = session?.user ?? null
         setUser(prev => (prev?.id === currentUser?.id && prev?.email === currentUser?.email ? prev : currentUser))
-        if (_event === 'TOKEN_REFRESHED') return
-        
+
+        if (event === 'TOKEN_REFRESHED') {
+          if (currentUser) {
+            // Se o token foi renovado pelo Supabase, recarrega o perfil com force=true
+            // garantindo que recupera de imediato caso a abertura inicial tenha apanhado um token expirado
+            await fetchProfile(currentUser.id, currentUser.email, currentUser.phone, currentUser, true)
+          }
+          return
+        }
+
         if (currentUser) {
           await fetchProfile(currentUser.id, currentUser.email, currentUser.phone, currentUser)
         } else {
+          removeCachedProfile()
           setActualProfile(null)
           setLoading(false)
         }
