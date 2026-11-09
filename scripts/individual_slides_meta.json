@@ -1,0 +1,124 @@
+[
+  {
+    "name": "scene_00_intro.png",
+    "duration": 4.8,
+    "path": "scripts\\individual_slides\\scene_00_intro.png"
+  },
+  {
+    "name": "scene_01_title.png",
+    "duration": 2.2,
+    "path": "scripts\\individual_slides\\scene_01_title.png"
+  },
+  {
+    "name": "player_01_Rocha.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_01_Rocha.png",
+    "playerName": "Rocha"
+  },
+  {
+    "name": "player_02_PP.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_02_PP.png",
+    "playerName": "PP"
+  },
+  {
+    "name": "player_03_Duarte.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_03_Duarte.png",
+    "playerName": "Duarte"
+  },
+  {
+    "name": "player_04_Mariano.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_04_Mariano.png",
+    "playerName": "Mariano"
+  },
+  {
+    "name": "player_05_Matuto.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_05_Matuto.png",
+    "playerName": "Matuto"
+  },
+  {
+    "name": "player_06_Talisson.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_06_Talisson.png",
+    "playerName": "Talisson"
+  },
+  {
+    "name": "player_07_Chaveiro.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_07_Chaveiro.png",
+    "playerName": "Chaveiro"
+  },
+  {
+    "name": "player_08_J__Costa.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_08_J__Costa.png",
+    "playerName": "J. Costa"
+  },
+  {
+    "name": "player_09_Natalino.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_09_Natalino.png",
+    "playerName": "Natalino"
+  },
+  {
+    "name": "player_10_Marinho.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_10_Marinho.png",
+    "playerName": "Marinho"
+  },
+  {
+    "name": "player_11_Argolo.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_11_Argolo.png",
+    "playerName": "Argolo"
+  },
+  {
+    "name": "player_12_Albano.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_12_Albano.png",
+    "playerName": "Albano"
+  },
+  {
+    "name": "player_13_Rios.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_13_Rios.png",
+    "playerName": "Rios"
+  },
+  {
+    "name": "player_14_Chris.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_14_Chris.png",
+    "playerName": "Chris"
+  },
+  {
+    "name": "player_15_Marcelo.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_15_Marcelo.png",
+    "playerName": "Marcelo"
+  },
+  {
+    "name": "player_16_Gui.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_16_Gui.png",
+    "playerName": "Gui"
+  },
+  {
+    "name": "player_17_Borges.png",
+    "duration": 1.6,
+    "path": "scripts\\individual_slides\\player_17_Borges.png",
+    "playerName": "Borges"
+  },
+  {
+    "name": "scene_19_full_roster.png",
+    "duration": 5.8,
+    "path": "scripts\\individual_slides\\scene_19_full_roster.png"
+  },
+  {
+    "name": "scene_20_outro.png",
+    "duration": 9.29,
+    "path": "scripts\\individual_slides\\scene_20_outro.png"
+  }
+]

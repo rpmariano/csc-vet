@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import {
   Vote,
+  MessageCircle,
+  Copy,
   Check,
   Clock,
   ChevronDown,
@@ -10,7 +12,7 @@ import {
   Lock,
   Unlock,
 } from 'lucide-react'
-import type { EleitorMvpInfo } from '../../lib/mvp'
+import { partilharVotacaoMvpWhatsApp, copiarLinkVotacaoMvp, type EleitorMvpInfo } from '../../lib/mvp'
 import { triggerHaptic } from '../../utils/haptics'
 
 interface SecaoEleitoresMvpProps {
@@ -20,6 +22,14 @@ interface SecaoEleitoresMvpProps {
   podeGerirVotacao?: boolean
   onToggleVotacao?: () => void
   onVotarClick?: () => void
+  evento?: any
+  opcoesEvento?: {
+    adversarioNome?: string | null
+    adversarioSigla?: string | null
+    clubeNome?: string | null
+    clubeSigla?: string | null
+    campos?: readonly { id: string; name: string; address?: string | null }[]
+  }
 }
 
 type FiltroVoto = 'todos' | 'pendentes' | 'votaram'
@@ -31,7 +41,19 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
   podeGerirVotacao = false,
   onToggleVotacao,
   onVotarClick,
+  evento,
+  opcoesEvento,
 }) => {
+  const [linkCopiado, setLinkCopiado] = useState(false)
+
+  const handleCopiarLink = async () => {
+    if (!evento?.id) return
+    const sucesso = await copiarLinkVotacaoMvp(evento.id)
+    if (sucesso) {
+      setLinkCopiado(true)
+      setTimeout(() => setLinkCopiado(false), 2500)
+    }
+  }
   const [expandido, setExpandido] = useState(true)
   const [filtro, setFiltro] = useState<FiltroVoto>('todos')
 
@@ -108,6 +130,21 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {evento && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                triggerHaptic('light')
+                partilharVotacaoMvpWhatsApp(evento, opcoesEvento)
+              }}
+              className="text-[10px] font-display font-bold px-2 py-1 rounded-xl border border-[#25D366]/40 bg-[#25D366]/20 text-[#25D366] hover:bg-[#25D366]/30 transition-all flex items-center gap-1 cursor-pointer"
+              title="Partilhar votação no WhatsApp"
+            >
+              <MessageCircle size={12} />
+              <span className="hidden sm:inline">WhatsApp</span>
+            </button>
+          )}
           {podeGerirVotacao && onToggleVotacao && (
             <button
               type="button"
@@ -174,6 +211,33 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
                 className="px-3 py-1 rounded-lg bg-csc-gold text-csc-tinta font-display font-black text-xs hover:bg-csc-gold/90 transition-all shrink-0 cursor-pointer active:scale-97 shadow-sm"
               >
                 Votar agora
+              </button>
+            </div>
+          )}
+
+          {/* Partilha de Votação no WhatsApp */}
+          {evento && (
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.04] border border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light')
+                  partilharVotacaoMvpWhatsApp(evento, opcoesEvento)
+                }}
+                className="flex-1 py-2 px-3 rounded-xl bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] border border-[#25D366]/35 font-display font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-97 shadow-xs"
+                title="Partilhar link de votação no WhatsApp"
+              >
+                <MessageCircle size={15} />
+                <span>Partilhar Votação no WhatsApp</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleCopiarLink}
+                className="py-2 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 border border-white/15 font-display font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-97 shrink-0"
+                title="Copiar link de votação MVP"
+              >
+                {linkCopiado ? <Check size={14} className="text-csc-verde-texto" /> : <Copy size={14} />}
+                <span>{linkCopiado ? 'Copiado' : 'Copiar link'}</span>
               </button>
             </div>
           )}

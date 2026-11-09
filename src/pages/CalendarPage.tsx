@@ -2177,11 +2177,6 @@ const CalendarPage: React.FC = () => {
                       isCoachOrAdmin={Boolean(isCoachOrAdmin)}
                       plantel={allPlayers}
                       todosEventos={events}
-                      aoEditarConvocatoria={isCoachOrAdmin ? () => {
-                        navigate(`/events?convocatoria=${selectedEvent.id}`, {
-                          state: { origem: nomeDoEcra(location.pathname, location.search) },
-                        })
-                      } : undefined}
                     />
                   )
                 })()}

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { Award, Check, Sparkles, AlertCircle, ArrowLeftRight, X, Trophy, Medal, Lock } from 'lucide-react'
+import { Award, Check, Sparkles, AlertCircle, ArrowLeftRight, X, Trophy, Medal, Lock, MessageCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import { eAdepto } from '../../lib/papeis'
 import { compararPorCamisola } from '../../lib/eventos'
-import { registarVotoMvp, obterVotosDoJogo, isVotacaoMvpAberta, salvarVotoMvpLocal, obterVotoMvpLocal, type MvpVote, type PlayerSummary } from '../../lib/mvp'
+import { registarVotoMvp, partilharVotacaoMvpWhatsApp, obterVotosDoJogo, isVotacaoMvpAberta, salvarVotoMvpLocal, obterVotoMvpLocal, type MvpVote, type PlayerSummary } from '../../lib/mvp'
 import { triggerHaptic } from '../../utils/haptics'
 import { toast } from '../../context/ToastContext'
 import { BottomSheet } from '../BottomSheet'
@@ -546,13 +546,27 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
               Votação Encerrada (Fechar)
             </Botao>
           ) : initialVote ? (
-            <Botao
-              onClick={onClose}
-              aparencia="vidro"
-              className="w-full justify-center text-sm py-3"
-            >
-              Voto já submetido (Fechar)
-            </Botao>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light')
+                  partilharVotacaoMvpWhatsApp(eventProp || { id: eventId })
+                }}
+                className="w-full py-2.5 px-3 rounded-2xl bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] border border-[#25D366]/35 font-display font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-97 shadow-xs"
+                title="Partilhar votação no WhatsApp"
+              >
+                <MessageCircle size={15} />
+                <span>Partilhar votação no WhatsApp</span>
+              </button>
+              <Botao
+                onClick={onClose}
+                aparencia="vidro"
+                className="w-full justify-center text-sm py-2.5"
+              >
+                Voto já submetido (Fechar)
+              </Botao>
+            </div>
           ) : (
             <Botao
               onClick={handleSubmit}

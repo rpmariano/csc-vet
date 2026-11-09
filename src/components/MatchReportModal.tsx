@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { compararPorCamisola } from '../lib/eventos'
 import { Award, Footprints, Save, CheckCircle2, Lock, Users, Pencil, Clock, AlertTriangle } from 'lucide-react'
 import { sincronizarJogoNaJornada, AVISO_SEM_EQUIPAS } from '../lib/jornadaDoJogo'
@@ -144,6 +145,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
   // MVP & Partilha
   const { profile } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [modalVotarMvpAberto, setModalVotarMvpAberto] = useState(false)
   const [mostrarPartilha, setMostrarPartilha] = useState(false)
   const [meuVotoMvp, setMeuVotoMvp] = useState<MvpVote | null>(null)
@@ -160,6 +162,15 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     setRulesState(tournamentRules || null)
   }, [tournamentRules])
 
+
+  // Se o link contiver 'votarMvp=1', abre automaticamente o modal de votação
+  useEffect(() => {
+    if (!isOpen || !eventId || loading) return
+    const votar = searchParams.get('votarMvp')
+    if (votar === '1' || votar === 'true') {
+      setModalVotarMvpAberto(true)
+    }
+  }, [isOpen, eventId, loading, searchParams])
   useEffect(() => {
     if (!isOpen || !eventId) return
 
@@ -791,6 +802,16 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                     ? () => setModalVotarMvpAberto(true)
                     : undefined
                 }
+                evento={{
+                  ...(eventoCompletoMvp || event),
+                  id: eventId,
+                  home_score: homeScore,
+                  away_score: awayScore,
+                }}
+                opcoesEvento={{
+                  adversarioNome: rightName,
+                  adversarioSigla: rightSigla,
+                }}
               />
             )}
 
@@ -1347,7 +1368,14 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
 
     <ModalVotarMvp
       isOpen={modalVotarMvpAberto}
-      onClose={() => setModalVotarMvpAberto(false)}
+      onClose={() => {
+        setModalVotarMvpAberto(false)
+        if (searchParams.has('votarMvp')) {
+          const seguintes = new URLSearchParams(searchParams)
+          seguintes.delete('votarMvp')
+          setSearchParams(seguintes, { replace: true })
+        }
+      }}
       eventId={eventId}
       event={eventoCompletoMvp || event}
       eventTitle={`${leftSigla} vs ${rightSigla}`}

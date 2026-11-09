@@ -31,6 +31,14 @@ export const caminhoFichaJogo = (idEvento: string): string =>
 export const enderecoFichaJogo = (idEvento: string): string =>
   `${window.location.origin}${caminhoFichaJogo(idEvento)}`
 
+/** Caminho absoluto (sem domínio) para a votação de MVP de um jogo. */
+export const caminhoVotacaoMvp = (idEvento: string): string =>
+  `${BASE}competicao?ver=fichas&jogo=${encodeURIComponent(idEvento)}&votarMvp=1`
+
+/** Endereço completo (com domínio) para a votação de MVP de um jogo. */
+export const enderecoVotacaoMvp = (idEvento: string): string =>
+  `${window.location.origin}${caminhoVotacaoMvp(idEvento)}`
+
 /**
  * O nome do ecrã em que se está, para o "‹" de quem se abrir a partir dele.
  *

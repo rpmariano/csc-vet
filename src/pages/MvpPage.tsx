@@ -11,12 +11,13 @@ import {
   Calendar,
   SlidersHorizontal,
   FileText,
+  MessageCircle,
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { toast } from '../context/ToastContext'
-import { temAcessoMVP, obterTodosVotosMvp, isVotacaoMvpAberta, podeGerirVotacaoMvp, alternarEstadoVotacaoMvp, type MvpVote, type PlayerSummary } from '../lib/mvp'
+import { temAcessoMVP, partilharVotacaoMvpWhatsApp, obterTodosVotosMvp, isVotacaoMvpAberta, podeGerirVotacaoMvp, alternarEstadoVotacaoMvp, type MvpVote, type PlayerSummary } from '../lib/mvp'
 import { ACarregar, EstadoVazio, FilaSeparadores, Botao } from '../components/ui'
 import { BottomSheet } from '../components/BottomSheet'
 import { ProcuraEFiltros } from '../components/ProcuraEFiltros'
@@ -913,17 +914,32 @@ export const MvpPage: React.FC = () => {
                       <span className="text-[11px] text-white/30 italic">Sem ocorrências de voto</span>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('light')
-                        setEventoParaFicha(m)
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-[11px] font-display font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <FileText size={12} className="text-csc-gold" />
-                      <span>Ficha de jogo</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light')
+                          partilharVotacaoMvpWhatsApp(m)
+                        }}
+                        className="px-2 py-1 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] text-[11px] font-display font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-[#25D366]/30"
+                        title="Partilhar votação no WhatsApp"
+                      >
+                        <MessageCircle size={12} />
+                        <span>WhatsApp</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light')
+                          setEventoParaFicha(m)
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-[11px] font-display font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <FileText size={12} className="text-csc-gold" />
+                        <span>Ficha de jogo</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Detalhe Expandido de Votação do Jogo */}

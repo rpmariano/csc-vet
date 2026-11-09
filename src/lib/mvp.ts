@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient'
 import { isDeveloperEmail } from '../context/AuthContext'
-import { enderecoFichaJogo } from './rotas'
+import { enderecoFichaJogo, enderecoVotacaoMvp } from './rotas'
 import { localDoEvento } from './eventos'
 import { CLUBE_SIGLA } from './clube'
 import { triggerHaptic } from '../utils/haptics'
@@ -789,6 +789,109 @@ export function partilharFichaJogoWhatsApp(
   const url = `https://wa.me/?text=${encodeURIComponent(texto)}`
   window.open(url, '_blank', 'noopener,noreferrer')
 }
+
+/** Constrói o texto formatado para apelo de Votação MVP no WhatsApp. */
+export function textoVotacaoMvpWhatsApp(
+  evento: any,
+  opcoes?: {
+    adversarioNome?: string | null
+    adversarioSigla?: string | null
+    clubeNome?: string | null
+    clubeSigla?: string | null
+    campos?: readonly { id: string; name: string; address?: string | null }[]
+  }
+): string {
+  const url = enderecoVotacaoMvp(evento.id)
+  const d = new Date(evento.date_time)
+
+  const dataFormatada = d.toLocaleDateString('pt-PT', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+  const dataCapitalizada = dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1)
+  const horaFormatada = d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
+
+  const csc = opcoes?.clubeSigla || CLUBE_SIGLA
+  const opp =
+    opcoes?.adversarioSigla ||
+    opcoes?.adversarioNome ||
+    evento.opponent?.initials ||
+    evento.opponent?.name ||
+    'Adversário'
+  const confronto = evento.home_away === 'away' ? `${opp} vs ${csc}` : `${csc} vs ${opp}`
+
+  let placar = ''
+  if (
+    evento.home_score !== null &&
+    evento.home_score !== undefined &&
+    evento.away_score !== null &&
+    evento.away_score !== undefined
+  ) {
+    placar =
+      evento.home_away === 'away'
+        ? `${evento.away_score} - ${evento.home_score}`
+        : `${evento.home_score} - ${evento.away_score}`
+  }
+
+  const { nome: localNome } = localDoEvento(evento, opcoes?.campos || [])
+
+  const linhas: string[] = [
+    `🏆 *VOTAÇÃO MVP — ${opcoes?.clubeNome || opcoes?.clubeSigla || CLUBE_SIGLA}*`,
+    `⚽ *${confronto}*${placar ? ` (${placar})` : ''}`,
+    `📅 ${dataCapitalizada} às ${horaFormatada}`,
+  ]
+
+  if (localNome) {
+    linhas.push(`📍 Local: ${localNome}`)
+  }
+
+  linhas.push('')
+  linhas.push('━━━━━━━━━━━━━━━━━━━━━')
+  linhas.push('⭐ *Quem foram os melhores em campo?*')
+  linhas.push('Vota no *Melhor (3 pts)* e no *2º Melhor (1 pt)*:')
+  linhas.push('')
+  linhas.push(`👉 ${url}`)
+  linhas.push('━━━━━━━━━━━━━━━━━━━━━')
+
+  return linhas.join('\n')
+}
+
+/** Copia o link direto de votação MVP para a área de transferência. */
+export async function copiarLinkVotacaoMvp(idEvento: string): Promise<boolean> {
+  const url = enderecoVotacaoMvp(idEvento)
+  triggerHaptic('light')
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url)
+      toast.success('Link de votação MVP copiado!')
+      return true
+    }
+    throw new Error('Sem suporte para área de transferência')
+  } catch {
+    toast.error('Não foi possível copiar o link.')
+    return false
+  }
+}
+
+/** Abre o WhatsApp com a mensagem formatada para apelo de votação MVP. */
+export function partilharVotacaoMvpWhatsApp(
+  evento: any,
+  opcoes?: {
+    adversarioNome?: string | null
+    adversarioSigla?: string | null
+    clubeNome?: string | null
+    clubeSigla?: string | null
+    campos?: readonly { id: string; name: string; address?: string | null }[]
+  }
+): void {
+  if (!evento?.id) return
+  triggerHaptic('light')
+  const texto = textoVotacaoMvpWhatsApp(evento, opcoes)
+  const url = `https://wa.me/?text=${encodeURIComponent(texto)}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 
 /**
  * Processamento de notificação de publicação da Ficha de Jogo:

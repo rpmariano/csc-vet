@@ -1,0 +1,244 @@
+[
+  {
+    "id": "1c17a4b6-dcdf-4af5-87d7-74c1fef9732a",
+    "name": "Jorge Rocha",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Rocha",
+    "position": "Guarda-redes",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792172256203_f0rrf.jpeg",
+    "shirt_name": "Rocha",
+    "jersey_number": 1,
+    "local_photo": "scripts\\player_photos\\1_Rocha.jpeg"
+  },
+  {
+    "id": "24159f53-2bf3-45b8-a757-5b34d60c8275",
+    "name": "Christian Zorzytzky",
+    "role": "admin",
+    "roles": [
+      "player",
+      "admin"
+    ],
+    "nickname": "Chris",
+    "position": "Médio Ofensivo, Ponta de Lança (Dir)",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792172998178_23reg.jpeg",
+    "shirt_name": "Chris",
+    "jersey_number": 81,
+    "local_photo": "scripts\\player_photos\\81_Chris.jpeg"
+  },
+  {
+    "id": "24c8e543-63d8-411c-8e0a-5758699d7de0",
+    "name": "Luis Guillermo Mendiguri Barros",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Gui",
+    "position": "Avançado Centro",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792173064710_gnqt0.jpeg",
+    "shirt_name": "Gui",
+    "jersey_number": 9,
+    "local_photo": "scripts\\player_photos\\9_Gui.jpeg"
+  },
+  {
+    "id": "2b4bb797-dceb-423d-b1a6-7a15f7e10f40",
+    "name": "João Carlos Morais Sarmento Silva Matuto",
+    "role": "admin",
+    "roles": [
+      "player",
+      "admin"
+    ],
+    "nickname": "Matuto",
+    "position": "Defesa Central Esquerdo, Defesa Central Direito",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792173173295_qiacx.jpeg",
+    "shirt_name": "Matuto",
+    "jersey_number": 22,
+    "local_photo": "scripts\\player_photos\\22_Matuto.jpeg"
+  },
+  {
+    "id": "4527e752-e6e0-40e6-a326-c69f56770827",
+    "name": "Talisson",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Talisson",
+    "position": "Lateral Esquerdo",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792173299162_s3e6f.jpeg",
+    "shirt_name": "Talisson",
+    "jersey_number": 59,
+    "local_photo": "scripts\\player_photos\\59_Talisson.jpeg"
+  },
+  {
+    "id": "595cba1c-f1f7-41a7-9b40-20d1220f6da8",
+    "name": "Rui Pedro Rito Mariano",
+    "role": "player",
+    "roles": [
+      "admin",
+      "player"
+    ],
+    "nickname": "Mariano",
+    "position": "Defesa Central Direito, Lateral Direito",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792173139863_h4vu3.jpeg",
+    "shirt_name": "Mariano",
+    "jersey_number": 17,
+    "local_photo": "scripts\\player_photos\\17_Mariano.jpeg"
+  },
+  {
+    "id": "63a86a1d-ca55-40d4-a94e-cf39a1b47143",
+    "name": "Ricardo Fernando Mesquita Duarte",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Duarte",
+    "position": "Lateral Esquerdo, Lateral Direito",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792173046387_6xld4.jpeg",
+    "shirt_name": "Duarte",
+    "jersey_number": 12,
+    "local_photo": "scripts\\player_photos\\12_Duarte.jpeg"
+  },
+  {
+    "id": "8541f936-2bd5-427a-a5f0-f5f93d58746d",
+    "name": "Bruno Argolo",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Argolo",
+    "position": "Médio Centro",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792172939431_xdkmd.jpeg",
+    "shirt_name": "Argolo",
+    "jersey_number": 39,
+    "local_photo": "scripts\\player_photos\\39_Argolo.jpeg"
+  },
+  {
+    "id": "a8156498-c02c-4ca6-be6a-557520e0cbef",
+    "name": "raul borges",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Borges",
+    "position": "Médio Ofensivo, Ponta de Lança (Dir), Ponta de Lança (Esq)",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1793978000373_jx8tr.jpeg",
+    "shirt_name": "Borges",
+    "jersey_number": 82,
+    "local_photo": "scripts\\player_photos\\82_Borges.jpeg"
+  },
+  {
+    "id": "aae5906d-815f-46d7-9b45-ea8ed1fedd6a",
+    "name": "Nuno Luís Gonçalves Pereira Chaveiro",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Chaveiro",
+    "position": "Médio Centro",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792172972838_hopsd.jpeg",
+    "shirt_name": "Chaveiro",
+    "jersey_number": 13,
+    "local_photo": "scripts\\player_photos\\13_Chaveiro.jpeg"
+  },
+  {
+    "id": "b58071be-0571-4f42-b2c8-49b4db80f10a",
+    "name": "Paulo Ricardo Santos",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "PP",
+    "position": "Defesa Central Direito, Defesa Central Esquerdo",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792173230255_24r0c.jpeg",
+    "shirt_name": "PP",
+    "jersey_number": 4,
+    "local_photo": "scripts\\player_photos\\4_PP.jpeg"
+  },
+  {
+    "id": "befb3cd9-3afb-4d9f-acd5-90f5e20fe382",
+    "name": "Mario Martins",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Marinho",
+    "position": "Médio Direito, Lateral Direito, Médio Centro",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792173156239_xzwic.jpeg",
+    "shirt_name": "Marinho",
+    "jersey_number": 23,
+    "local_photo": "scripts\\player_photos\\23_Marinho.jpeg"
+  },
+  {
+    "id": "c8783ba4-1478-4d82-91d5-66ffc1d25b10",
+    "name": "Jorge Daniel Ferreira Costa",
+    "role": "admin",
+    "roles": [
+      "player",
+      "admin"
+    ],
+    "nickname": "J. Costa",
+    "position": "Médio Direito, Ponta de Lança (Dir), Lateral Direito, Ponta de Lança (Esq), Médio Ofensivo, Médio Esquerdo",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792173083286_6rp3u.jpeg",
+    "shirt_name": "J. Costa",
+    "jersey_number": 16,
+    "local_photo": "scripts\\player_photos\\16_J._Costa.jpeg"
+  },
+  {
+    "id": "c94e5920-3806-41cf-9237-ff6d3d4714c9",
+    "name": "Diogo Rios Silva",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Rios",
+    "position": "Médio Centro, Defesa Central Direito, Defesa Central Esquerdo",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792173244687_4519j.jpeg",
+    "shirt_name": "Rios",
+    "jersey_number": 63,
+    "local_photo": "scripts\\player_photos\\63_Rios.jpeg"
+  },
+  {
+    "id": "e5702e25-7c47-41a8-ae94-712a73931b93",
+    "name": "Albano Franco",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Albano",
+    "position": "Médio Centro",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792172917508_lon3d.jpeg",
+    "shirt_name": "Albano",
+    "jersey_number": 45,
+    "local_photo": "scripts\\player_photos\\45_Albano.jpeg"
+  },
+  {
+    "id": "f0f26e4e-285f-45f3-a201-7708afd16fc5",
+    "name": "Natalino Monteiro",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Natalino",
+    "position": "Médio Esquerdo, Médio Direito",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792849133003_iecdh.jpeg",
+    "shirt_name": "Natalino",
+    "jersey_number": 18,
+    "local_photo": "scripts\\player_photos\\18_Natalino.jpeg"
+  },
+  {
+    "id": "f70d1673-2b94-46c9-9950-7abd1480bb6c",
+    "name": "Marcelo",
+    "role": "player",
+    "roles": [
+      "player"
+    ],
+    "nickname": "Marcelo",
+    "position": "Médio Centro, Médio Ofensivo",
+    "photo_url": "https://vwvsfrzwcwdvbuaxftoh.supabase.co/storage/v1/object/public/club_assets/member_photo_1792849119375_ncdg0.jpeg",
+    "shirt_name": "Marcelo",
+    "jersey_number": 88,
+    "local_photo": "scripts\\player_photos\\88_Marcelo.jpeg"
+  }
+]

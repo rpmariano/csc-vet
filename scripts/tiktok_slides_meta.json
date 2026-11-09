@@ -1,0 +1,52 @@
+[
+  {
+    "name": "tt_slide_01_intro.png",
+    "duration": 4.5,
+    "path": "scripts\\tiktok_frames\\tt_slide_01_intro.png"
+  },
+  {
+    "name": "tt_slide_02_convocatoria.png",
+    "duration": 3.5,
+    "path": "scripts\\tiktok_frames\\tt_slide_02_convocatoria.png"
+  },
+  {
+    "name": "tt_slide_03_keeper.png",
+    "duration": 4,
+    "path": "scripts\\tiktok_frames\\tt_slide_03_keeper.png"
+  },
+  {
+    "name": "tt_slide_04_defenders.png",
+    "duration": 4.5,
+    "path": "scripts\\tiktok_frames\\tt_slide_04_defenders.png"
+  },
+  {
+    "name": "tt_slide_05_midfielders1.png",
+    "duration": 3.5,
+    "path": "scripts\\tiktok_frames\\tt_slide_05_midfielders1.png"
+  },
+  {
+    "name": "tt_slide_06_midfielders2.png",
+    "duration": 5,
+    "path": "scripts\\tiktok_frames\\tt_slide_06_midfielders2.png"
+  },
+  {
+    "name": "tt_slide_07_attackers.png",
+    "duration": 5,
+    "path": "scripts\\tiktok_frames\\tt_slide_07_attackers.png"
+  },
+  {
+    "name": "tt_slide_08_full_roster.png",
+    "duration": 6,
+    "path": "scripts\\tiktok_frames\\tt_slide_08_full_roster.png"
+  },
+  {
+    "name": "tt_slide_09_spine.png",
+    "duration": 6,
+    "path": "scripts\\tiktok_frames\\tt_slide_09_spine.png"
+  },
+  {
+    "name": "tt_slide_10_outro.png",
+    "duration": 7.29,
+    "path": "scripts\\tiktok_frames\\tt_slide_10_outro.png"
+  }
+]

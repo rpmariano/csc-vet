@@ -20,7 +20,6 @@ export interface PainelDisponibilidadeJogoProps {
   compacto?: boolean
   plantel?: readonly Profile[]
   todosEventos?: readonly EventoComDataETipo[]
-  aoEditarConvocatoria?: () => void
 }
 
 export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps> = ({
@@ -30,7 +29,6 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
   compacto = false,
   plantel = [],
   todosEventos = [],
-  aoEditarConvocatoria,
 }) => {
   const { profile: authProfile } = useAuth()
   const [minhaResposta, setMinhaResposta] = useState<RespostaDisponibilidade | null>(null)
@@ -464,20 +462,6 @@ export const PainelDisponibilidadeJogo: React.FC<PainelDisponibilidadeJogoProps>
                     </div>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Ação rápida para o treinador */}
-            {aoEditarConvocatoria && (
-              <div className="pt-2 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={aoEditarConvocatoria}
-                  className="w-full py-2 px-3 rounded-xl bg-csc-gold/15 hover:bg-csc-gold/25 border border-csc-gold/30 text-csc-gold font-display font-black text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Trophy size={13} />
-                  Gerir Convocatória do Jogo
-                </button>
               </div>
             )}
           </div>

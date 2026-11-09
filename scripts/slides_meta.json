@@ -1,0 +1,47 @@
+[
+  {
+    "name": "slide_01_intro.png",
+    "duration": 3.5,
+    "path": "scripts\\video_frames\\slide_01_intro.png"
+  },
+  {
+    "name": "slide_02_convocatoria.png",
+    "duration": 2.5,
+    "path": "scripts\\video_frames\\slide_02_convocatoria.png"
+  },
+  {
+    "name": "slide_03_keeper.png",
+    "duration": 3,
+    "path": "scripts\\video_frames\\slide_03_keeper.png"
+  },
+  {
+    "name": "slide_04_defenders.png",
+    "duration": 3.8,
+    "path": "scripts\\video_frames\\slide_04_defenders.png"
+  },
+  {
+    "name": "slide_05_midfielders1.png",
+    "duration": 3.8,
+    "path": "scripts\\video_frames\\slide_05_midfielders1.png"
+  },
+  {
+    "name": "slide_06_midfielders2.png",
+    "duration": 3.5,
+    "path": "scripts\\video_frames\\slide_06_midfielders2.png"
+  },
+  {
+    "name": "slide_07_attackers.png",
+    "duration": 3.2,
+    "path": "scripts\\video_frames\\slide_07_attackers.png"
+  },
+  {
+    "name": "slide_08_full_roster.png",
+    "duration": 4,
+    "path": "scripts\\video_frames\\slide_08_full_roster.png"
+  },
+  {
+    "name": "slide_09_outro.png",
+    "duration": 3.2,
+    "path": "scripts\\video_frames\\slide_09_outro.png"
+  }
+]

@@ -223,7 +223,7 @@ export const MatchReportsPage: React.FC = () => {
     setSearchParams(seguintes)
   }
 
-  const { voltarPara: voltarDaFicha, aoVoltar: fecharFicha } = useVoltarDaFicha(['jogo'], 'Fichas de Jogo')
+  const { voltarPara: voltarDaFicha, aoVoltar: fecharFicha } = useVoltarDaFicha(['jogo', 'votarMvp'], 'Fichas de Jogo')
 
   /*
     A ficha aberta pelo endereço. Só enche o jogo — quem manda em estar aberta
