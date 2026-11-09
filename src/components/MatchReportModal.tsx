@@ -20,7 +20,7 @@ import { CLASSE_CAMPO } from './ui/formulario'
 import { PartilharFichaJogo } from './mvp/PartilharFichaJogo'
 import { ModalVotarMvp } from './mvp/ModalVotarMvp'
 import { SecaoEleitoresMvp } from './mvp/SecaoEleitoresMvp'
-import { notificarFichaJogoPublicada, obterVotosDoJogo, calcularEleitoresDoJogo, isVotacaoMvpAberta, podeGerirVotacaoMvp, alternarEstadoVotacaoMvp, type MvpVote, type EleitorMvpInfo } from '../lib/mvp'
+import { notificarFichaJogoPublicada, obterVotosDoJogo, calcularEleitoresDoJogo, isVotacaoMvpAberta, podeGerirVotacaoMvp, alternarEstadoVotacaoMvp, resetVotoMvpUtilizador, type MvpVote, type EleitorMvpInfo } from '../lib/mvp'
 
 interface MatchReportModalProps {
   isOpen: boolean
@@ -662,6 +662,36 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
     }
   }
 
+  const handleResetVotoEleitor = async (eleitorId: string) => {
+    if (!eventId) return
+    const eleitor = eleitoresDoJogo.find(e => e.id === eleitorId)
+    const nome = eleitor?.shirt_name || eleitor?.name || 'este atleta'
+    if (!window.confirm(`Tens a certeza de que queres anular o voto de ${nome} para poder votar de novo?`)) {
+      return
+    }
+    const res = await resetVotoMvpUtilizador(eventId, eleitorId)
+    if (res.ok) {
+      toast.success(`Voto de ${nome} anulado com sucesso! Já pode votar novamente.`)
+      // Recarregar os votos e eleitores
+      const votos = await obterVotosDoJogo(eventId, profile?.id)
+      setMeuVotoMvp(votos.find(v => v.voter_id === profile?.id) || null)
+      try {
+        const [{ data: perfisNovos }, { data: callupsNovos }, { data: statsNovos }] = await Promise.all([
+          supabase.from('v_players_public').select('id, name, shirt_name, jersey_number, photo_url, position, role, roles').order('jersey_number', { ascending: true, nullsFirst: false }),
+          supabase.from('callups').select('player_id, status, notes').eq('event_id', eventId),
+          supabase.from('stats').select('*').eq('event_id', eventId)
+        ])
+        const lista = calcularEleitoresDoJogo(perfisNovos || [], callupsNovos || [], statsNovos || [], votos, profile?.id)
+        setEleitoresDoJogo(lista)
+      } catch (err) {
+        console.warn('Erro ao atualizar eleitores após reset de voto:', err)
+      }
+      if (onSaved) onSaved()
+    } else {
+      toast.error(res.error || 'Não foi possível repor o voto.')
+    }
+  }
+
   return (
     <>
     <EcraDetalhe
@@ -797,6 +827,7 @@ export const MatchReportModal: React.FC<MatchReportModalProps> = ({
                 votacaoAberta={votacaoMvpAberta}
                 podeGerirVotacao={podeGerirVotacao}
                 onToggleVotacao={podeGerirVotacao ? toggleVotacaoMvp : undefined}
+                onResetVoto={podeGerirVotacao ? handleResetVotoEleitor : undefined}
                 onVotarClick={
                   votacaoMvpAberta && profile?.id && !meuVotoMvp
                     ? () => setModalVotarMvpAberto(true)

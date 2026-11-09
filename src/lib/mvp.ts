@@ -143,6 +143,52 @@ export function obterVotoMvpLocal(eventId: string, voterId: string): MvpVote | n
   }
 }
 
+/** Remove o voto guardado em cache local para permitir novo voto. */
+export function limparVotoMvpLocal(eventId?: string, voterId?: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (eventId && voterId) {
+      localStorage.removeItem(`csc_mvp_voto_${eventId}_${voterId}`)
+      localStorage.removeItem(`csc_mvp_alerta_dispensado_${eventId}`)
+    } else if (eventId) {
+      const prefix = `csc_mvp_voto_${eventId}_`
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith(prefix)) {
+          localStorage.removeItem(key)
+        }
+      }
+      localStorage.removeItem(`csc_mvp_alerta_dispensado_${eventId}`)
+    }
+  } catch (e) {
+    console.debug('Erro ao limpar voto local:', e)
+  }
+}
+
+/** Faz reset ao voto de MVP de um utilizador específico num determinado jogo (BD + cache local). */
+export async function resetVotoMvpUtilizador(
+  eventId: string,
+  voterId: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('mvp_votes')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('voter_id', voterId)
+
+    if (error) {
+      console.error('Erro ao eliminar voto da BD:', error)
+      return { ok: false, error: error.message }
+    }
+
+    limparVotoMvpLocal(eventId, voterId)
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Erro inesperado' }
+  }
+}
+
 /** Obtém todos os votos do utilizador atual (BD + cache local). */
 export async function obterVotosDoUtilizador(voterId: string): Promise<MvpVote[]> {
   if (!voterId) return []
@@ -206,9 +252,13 @@ export async function obterVotosDoJogo(eventId: string, voterId?: string): Promi
     if (voterId) {
       const temVoto = votos.some(v => v.voter_id === voterId)
       if (!temVoto) {
-        const local = obterVotoMvpLocal(eventId, voterId)
-        if (local) {
-          votos = [...votos, local]
+        if (error) {
+          const local = obterVotoMvpLocal(eventId, voterId)
+          if (local) {
+            votos = [...votos, local]
+          }
+        } else {
+          limparVotoMvpLocal(eventId, voterId)
         }
       }
     }

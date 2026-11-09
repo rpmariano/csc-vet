@@ -22,6 +22,7 @@ interface SecaoEleitoresMvpProps {
   podeGerirVotacao?: boolean
   onToggleVotacao?: () => void
   onVotarClick?: () => void
+  onResetVoto?: (eleitorId: string) => void
   evento?: any
   opcoesEvento?: {
     adversarioNome?: string | null
@@ -41,6 +42,7 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
   podeGerirVotacao = false,
   onToggleVotacao,
   onVotarClick,
+  onResetVoto,
   evento,
   opcoesEvento,
 }) => {
@@ -366,10 +368,25 @@ export const SecaoEleitoresMvp: React.FC<SecaoEleitoresMvpProps> = ({
                     {/* Estado do Voto */}
                     <div className="shrink-0 flex items-center gap-1.5">
                       {e.jaVotou ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-csc-verde-suave/20 text-csc-verde-texto border border-csc-verde-suave/30">
-                          <Check size={12} strokeWidth={2.5} />
-                          <span>Votou</span>
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-csc-verde-suave/20 text-csc-verde-texto border border-csc-verde-suave/30">
+                            <Check size={12} strokeWidth={2.5} />
+                            <span>Votou</span>
+                          </span>
+                          {podeGerirVotacao && onResetVoto && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light')
+                                onResetVoto(e.id)
+                              }}
+                              className="px-1.5 py-0.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 text-[10px] font-bold border border-red-500/25 transition-all cursor-pointer"
+                              title={`Anular voto de ${displayName} para poder votar novamente`}
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         <div className="flex items-center gap-1.5">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-500/15 text-amber-300 border border-amber-500/30">

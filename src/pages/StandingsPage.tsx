@@ -6,7 +6,7 @@ import { toast } from '../context/ToastContext'
 import { triggerHaptic } from '../utils/haptics'
 import {
   Trophy, Shield, Info, Plus, Pencil, Trash2, X, Check,
-  Calendar, CalendarDays, ScrollText, SlidersHorizontal, MapPin, Clock, ChevronDown, Sparkles,
+  Calendar, CalendarDays, ScrollText, SlidersHorizontal, MapPin, Clock, ChevronDown, 
 } from 'lucide-react'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Modal } from '../components/Modal'
@@ -1438,27 +1438,6 @@ export const StandingsPage = () => {
                         Jornadas
                       </h4>
                       <div className="flex items-center gap-2">
-                        {canManage && isSidelineTournament && (g.name || '').toLowerCase().includes('b') && (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              triggerHaptic('light')
-                              const res = await garantirSidelineVeteranos2026({ tournamentId: selectedTourId, groupId: g.id, forcar: true })
-                              if (res) {
-                                toast.success(res.mensagem)
-                                fetchStandingsData()
-                              }
-                            }}
-                            className="min-h-11 px-3 rounded-[18px] bg-csc-light/15 text-csc-verde-texto
-                              font-display font-extrabold text-[10.5px] flex items-center gap-1.5 cursor-pointer
-                              transition-transform duration-150 active:scale-97 hover:bg-csc-light/25
-                              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-csc-gold"
-                            title="Preenche com segurança as jornadas oficiais da Sideline sem apagar dados existentes"
-                          >
-                            <Sparkles size={12} />
-                            Sincronizar Oficial
-                          </button>
-                        )}
                         {canManage && (() => {
                           const groupTeamCount = teams.filter(t => t.group_id === g.id).length
                           return (

@@ -628,7 +628,7 @@ export const MvpPage: React.FC = () => {
                               {p.shirt_name || p.name}
                             </p>
                             <p className="text-[10px] text-white/50 truncate">
-                              {p.position || 'Jogador'} • {p.totalVotes} {p.totalVotes === 1 ? 'voto recebido' : 'votos recebidos'}
+                              {p.totalVotes} {p.totalVotes === 1 ? 'voto recebido' : 'votos recebidos'}
                             </p>
                           </div>
                         </div>
@@ -698,7 +698,7 @@ export const MvpPage: React.FC = () => {
                               {p.shirt_name || p.name}
                             </p>
                             <p className="text-[10px] text-white/50 truncate">
-                              {p.position || 'Jogador'} • {p.matchesVotedIn} {p.matchesVotedIn === 1 ? 'jogo c/ votos' : 'jogos c/ votos'}
+                              {p.matchesVotedIn} {p.matchesVotedIn === 1 ? 'jogo c/ votos' : 'jogos c/ votos'}
                             </p>
                           </div>
                         </div>

@@ -496,8 +496,7 @@ export const ModalVotarMvp: React.FC<ModalVotarMvpProps> = ({
                           {displayName}
                         </p>
                         <div className="flex items-center gap-1.5 text-[10px] text-white/60 flex-wrap mt-0.5">
-                          {p.position && <span>{p.position}</span>}
-                          {p.goals ? (
+                                                    {p.goals ? (
                             <span className="text-csc-gold font-bold">⚽ {p.goals} golo{p.goals > 1 ? 's' : ''}</span>
                           ) : null}
                           {p.assists ? (
