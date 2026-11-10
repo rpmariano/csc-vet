@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 import { useModoSimples } from '../../context/ModoSimplesContext'
 import { triggerHaptic } from '../../utils/haptics'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth, isDeveloperEmail } from '../../context/AuthContext'
 import { useClub } from '../../context/ClubContext'
 import { useEpocaAtual } from '../../hooks/useEpocaAtual'
 import { formatClubSigla } from '../../lib/siglas'
@@ -15,7 +15,7 @@ import { SinalPagamentos } from '../SinalPagamentos'
 export const CabecalhoApp: React.FC = () => {
   const { profile, assignedRoles, isUnassigned } = useAuth()
   const { clubSettings } = useClub()
-  const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
+  const semPerfil = !isDeveloperEmail(profile?.email) && (isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive')
   const estadoDaFicha = useFichaPorLigar(profile, assignedRoles)
   const semFicha = semPerfil || estadoDaFicha === 'por-ligar'
 

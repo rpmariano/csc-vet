@@ -1,6 +1,6 @@
 import React from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, isDeveloperEmail } from '../context/AuthContext'
 import type { UserRole } from '../context/AuthContext'
 import { ACarregar } from './ui'
 import {
@@ -46,7 +46,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
     }
   }
 
-  const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
+  const semPerfil = !isDeveloperEmail(profile?.email || user?.email) && (isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive')
 
   // Sem perfil atribuído pelo clube, o utilizador só tem acesso à Home e ao seu Perfil (/settings para logout).
   if (semPerfil && location.pathname !== '/' && location.pathname !== '/settings') {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Home, Calendar, Trophy, Shield } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, isDeveloperEmail } from '../context/AuthContext'
 import { useModoSimples } from '../context/ModoSimplesContext'
 import { FaixaTopo } from './ui'
 import { BarraNavegacao, type ItemNavegacao } from './nav/BarraNavegacao'
@@ -65,7 +65,7 @@ const Layout: React.FC = () => {
 
   const [criarAberto, setCriarAberto] = useState(false)
 
-  const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
+  const semPerfil = !isDeveloperEmail(profile?.email) && (isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive')
   const eAdmin = !semPerfil && profile?.role === 'admin'
   const eTreinador = !semPerfil && profile?.role === 'coach'
   const gere = eAdmin || eTreinador

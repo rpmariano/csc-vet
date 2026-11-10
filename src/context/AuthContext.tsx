@@ -198,8 +198,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [actualProfile, setActualProfile] = useState<Profile | null>(null)
-  const [isUnassigned, setIsUnassigned] = useState(false)
+  const [actualProfile, setActualProfile] = useState<Profile | null>(() => {
+    try {
+      const lastId = localStorage.getItem(LAST_USER_ID_KEY)
+      if (lastId) {
+        return getCachedProfile(lastId)
+      }
+    } catch {}
+    return null
+  })
+  const [isUnassigned, setIsUnassigned] = useState<boolean>(() => {
+    try {
+      const lastId = localStorage.getItem(LAST_USER_ID_KEY)
+      if (lastId) {
+        const cached = getCachedProfile(lastId)
+        if (cached) {
+          if (isDeveloperEmail(cached.email)) return false
+          return cached.role === 'unassigned' || cached.status === 'inactive'
+        }
+      }
+    } catch {}
+    return false
+  })
   const [simulatedRole, setSimulatedRoleState] = useState<UserRole | null>(() => {
     return (localStorage.getItem('csc_simulated_role') as UserRole) || null
   })
@@ -588,10 +608,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   )
 
   const isEffectivelyUnassigned = Boolean(
-    isUnassigned ||
-    actualProfile?.role === 'unassigned' ||
-    actualProfile?.status === 'inactive' ||
-    simulatedRole === 'unassigned'
+    !isDeveloperEmail(actualProfile?.email || user?.email) &&
+    (
+      isUnassigned ||
+      actualProfile?.role === 'unassigned' ||
+      actualProfile?.status === 'inactive' ||
+      simulatedRole === 'unassigned'
+    )
   )
 
   const effectiveRoles: UserRole[] = useMemo(() => (isEffectivelyUnassigned

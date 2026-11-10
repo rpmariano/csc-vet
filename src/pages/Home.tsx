@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { ShieldAlert, X } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, isDeveloperEmail } from '../context/AuthContext'
 import { useClub } from '../context/ClubContext'
 import { CLUBE_NOME } from '../lib/clube'
 import { supabase } from '../lib/supabaseClient'
@@ -505,7 +505,7 @@ const Home: React.FC = () => {
 
   if (!profile) return null
 
-  const semPerfil = isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive'
+  const semPerfil = !isDeveloperEmail(profile?.email) && (isUnassigned || profile?.role === 'unassigned' || profile?.status === 'inactive')
 
   const emblema = obterEmblemaEfetivo(clubSettings?.logo_url, 'Cascais', 'CSC') || '/csc-vet/cascais-emblem.png'
   const sigla = formatClubSigla(clubSettings?.initials)
